@@ -1,0 +1,122 @@
+<div class="register-page">
+  <div class="register-card">
+    <div class="register-header">
+      <div class="logo-mark">b</div>
+      <h1>Create your account</h1>
+      <p>Join Budojo and get started today</p>
+    </div>
+
+    @if (error()) {
+      <p-message severity="error" [text]="error()!" styleClass="w-full" />
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="field">
+        <label for="name">Full name</label>
+        <input
+          pInputText
+          id="name"
+          type="text"
+          formControlName="name"
+          placeholder="Mario Rossi"
+          autocomplete="name"
+          [class.ng-invalid]="name.invalid && name.touched"
+          [class.ng-dirty]="name.touched"
+        />
+        @if (name.invalid && name.touched) {
+          <small class="field-error">
+            @if (name.errors?.['required']) {
+              Name is required.
+            } @else if (name.errors?.['minlength']) {
+              At least 2 characters.
+            }
+          </small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          pInputText
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="mario@example.com"
+          autocomplete="email"
+          [class.ng-invalid]="email.invalid && email.touched"
+          [class.ng-dirty]="email.touched"
+        />
+        @if (email.invalid && email.touched) {
+          <small class="field-error">
+            @if (email.errors?.['required']) {
+              Email is required.
+            } @else if (email.errors?.['email']) {
+              Enter a valid email address.
+            }
+          </small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <p-password
+          inputId="password"
+          formControlName="password"
+          placeholder="Min. 8 characters"
+          autocomplete="new-password"
+          [feedback]="false"
+          [toggleMask]="true"
+          styleClass="w-full"
+          [inputStyleClass]="
+            'w-full' +
+            (password.invalid && password.touched ? ' ng-invalid ng-dirty' : '')
+          "
+        />
+        @if (password.invalid && password.touched) {
+          <small class="field-error">
+            @if (password.errors?.['required']) {
+              Password is required.
+            } @else if (password.errors?.['minlength']) {
+              At least 8 characters.
+            }
+          </small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="password_confirmation">Confirm password</label>
+        <p-password
+          inputId="password_confirmation"
+          formControlName="password_confirmation"
+          placeholder="Repeat your password"
+          autocomplete="new-password"
+          [feedback]="false"
+          [toggleMask]="true"
+          styleClass="w-full"
+          [inputStyleClass]="
+            'w-full' +
+            (form.errors?.['mismatch'] && passwordConfirmation.touched
+              ? ' ng-invalid ng-dirty'
+              : '')
+          "
+        />
+        @if (form.errors?.['mismatch'] && passwordConfirmation.touched) {
+          <small class="field-error">Passwords do not match.</small>
+        }
+      </div>
+
+      <p-button
+        type="submit"
+        label="Create account"
+        styleClass="submit-btn"
+        [loading]="loading()"
+        [disabled]="loading()"
+      />
+    </form>
+
+    <p class="login-link">
+      Already have an account?
+      <a routerLink="/auth/login">Sign in</a>
+    </p>
+  </div>
+</div>
