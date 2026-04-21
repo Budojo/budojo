@@ -12,7 +12,6 @@ server/.php-cs-fixer.cache
 
 # Node (root tooling)
 node_modules/
-package-lock.json
 
 # Angular
 client/node_modules/
