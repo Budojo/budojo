@@ -4,11 +4,14 @@ on:
   push:
     branches: [main, develop]
 
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   issues: write
   pull-requests: write
-  id-token: write
 
 jobs:
   release:
@@ -25,7 +28,7 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Release
         env:

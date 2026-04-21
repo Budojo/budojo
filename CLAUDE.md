@@ -181,7 +181,7 @@ git checkout -b hotfix/token-expiry-crash
 # 2. Fix, test (TDD), commit
 git commit -m "fix(auth): prevent crash on expired token decode"
 
-# 3. Open PR → main, merge (release-please will tag automatically)
+# 3. Open PR → main, merge (semantic-release will tag automatically)
 # 4. Backport: open a second PR → develop to keep branches in sync
 ```
 
