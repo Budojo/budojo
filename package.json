@@ -1,0 +1,20 @@
+{
+  "name": "budojo",
+  "private": true,
+  "type": "module",
+  "description": "Budojo monorepo dev tooling — Husky, commitlint, lint-staged",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.8.0",
+    "husky": "^9.1.0",
+    "lint-staged": "^15.5.0"
+  },
+  "lint-staged": {
+    "server/**/*.php": [
+      "server/vendor/bin/php-cs-fixer fix --config=server/.php-cs-fixer.php --allow-risky=yes"
+    ]
+  }
+}

@@ -117,41 +117,73 @@ Examples:
 
 ### PR Rules
 - **No direct commits to `main` or `develop`** — ever, not even for hotfixes.
-- Every PR must have: passing PHPStan + PEST (or Angular lint + tests), a clear title in conventional commit format, and at least a self-review checklist.
-- **Squash merge** into `develop` to keep history linear and readable.
-- **Merge commit** (no squash) from `release/*` into `main` to preserve the release boundary in history.
+- All feature/fix/chore branches open PRs **exclusively toward `develop`**.
+- `develop` → `main` only via a `release/*` branch when shipping.
+- **Squash merge only** into `develop`. One clean commit per feature.
+- **Merge commit** (no squash) from `release/*` into `main`.
 - Delete the branch after merge.
 
-### Release Flow
+### PR Checklist for Claude — every PR must include
 
-```bash
-# Cut release branch from develop
-git checkout develop && git pull
-git checkout -b release/1.0.0
+1. **Title** — conventional commit format: `type(scope): description`
+2. **Description** — filled template (What / Why / How / Checklist / References) in English with emoji
+3. **Assignee** — always assign `m-bonanno` (`gh pr create --assignee m-bonanno`)
+4. **Labels** — apply one **type** label + the appropriate **status** label on open.
 
-# Bump version, update changelog, final QA
-# Then merge into main AND back into develop
-git checkout main && git merge --no-ff release/1.0.0
-git tag -a v1.0.0 -m "release: v1.0.0"
-git checkout develop && git merge --no-ff release/1.0.0
-git branch -d release/1.0.0
-```
+#### Type labels (one per PR)
+
+| Branch prefix | Label |
+|--------------|-------|
+| `feat/*` | `✨ feature` |
+| `fix/*` | `🐛 bug fix` |
+| `hotfix/*` | `🚑 hotfix` |
+| `chore/*` | `🔧 maintenance` |
+| `ci/*` | `⚙️ pipeline` |
+| `docs/*` | `📝 documentation` |
+| `refactor/*` | `♻️ refactor` |
+| `release/*` | `🔖 release` |
+| `test/*` | `🧪 testing` |
+
+Add `💥 breaking change` as a second type label when the PR contains a `BREAKING CHANGE` footer.
+
+#### Status labels (update as the PR progresses)
+
+| Moment | Label |
+|--------|-------|
+| Still being worked on | `🚧 wip` |
+| All review comments resolved, ready to merge | `🟢 ready to merge` |
+| Waiting on a dependency or decision | `🔴 blocked` |
+
+Use `gh pr create --label "✨ feature"` for the type label at open time. Add `🟢 ready to merge` once Copilot review comments are addressed.
+
+### Release Flow (automated via release-please)
+
+Versioning and changelogs are fully automated. No manual tagging or version bumps.
+
+**Beta release** — every merge to `develop`:
+1. release-please reads conventional commits since the last tag
+2. Opens (or updates) a release PR on `develop` with bumped version + CHANGELOG
+3. When that PR is merged → creates tag `vX.Y.Z-beta.N` + GitHub pre-release
+
+**Stable release** — when `develop` is ready to ship:
+1. Merge `develop` → `main` (via PR)
+2. release-please opens a release PR on `main`
+3. When merged → creates tag `vX.Y.Z` + GitHub Release with full changelog
+
+**Version source of truth:** `version.txt` (managed exclusively by release-please). Do not edit it manually and do not add a `version` field to `package.json`.
 
 ### Hotfix Flow
 
 ```bash
-# Cut from main, not develop
-git checkout main && git pull
+# 1. Cut from main, not develop
+git checkout main && git pull origin main
 git checkout -b hotfix/token-expiry-crash
 
-# Fix, test, commit
+# 2. Fix, test (TDD), commit
 git commit -m "fix(auth): prevent crash on expired token decode"
 
-# Merge into main AND develop
-git checkout main && git merge --no-ff hotfix/token-expiry-crash
-git tag -a v1.0.1 -m "fix: v1.0.1"
-git checkout develop && git merge --no-ff hotfix/token-expiry-crash
-git branch -d hotfix/token-expiry-crash
+# 3. Open PR → main, merge (release-please will tag automatically)
+# 4. Backport: open a second PR → develop to keep branches in sync
 ```
 
 ---
