@@ -156,36 +156,34 @@ Add `💥 breaking change` as a second type label when the PR contains a `BREAKI
 
 Use `gh pr create --label "✨ feature"` for the type label at open time. Add `🟢 ready to merge` once Copilot review comments are addressed.
 
-### Release Flow
+### Release Flow (automated via release-please)
 
-```bash
-# Cut release branch from develop
-git checkout develop && git pull
-git checkout -b release/1.0.0
+Versioning and changelogs are fully automated. No manual tagging or version bumps.
 
-# Bump version, update changelog, final QA
-# Then merge into main AND back into develop
-git checkout main && git merge --no-ff release/1.0.0
-git tag -a v1.0.0 -m "release: v1.0.0"
-git checkout develop && git merge --no-ff release/1.0.0
-git branch -d release/1.0.0
-```
+**Beta release** — every merge to `develop`:
+1. release-please reads conventional commits since the last tag
+2. Opens (or updates) a release PR on `develop` with bumped version + CHANGELOG
+3. When that PR is merged → creates tag `vX.Y.Z-beta.N` + GitHub pre-release
+
+**Stable release** — when `develop` is ready to ship:
+1. Merge `develop` → `main` (via PR)
+2. release-please opens a release PR on `main`
+3. When merged → creates tag `vX.Y.Z` + GitHub Release with full changelog
+
+**Version source of truth:** `version.txt` (managed exclusively by release-please). Do not edit it manually and do not add a `version` field to `package.json`.
 
 ### Hotfix Flow
 
 ```bash
-# Cut from main, not develop
-git checkout main && git pull
+# 1. Cut from main, not develop
+git checkout main && git pull origin main
 git checkout -b hotfix/token-expiry-crash
 
-# Fix, test, commit
+# 2. Fix, test (TDD), commit
 git commit -m "fix(auth): prevent crash on expired token decode"
 
-# Merge into main AND develop
-git checkout main && git merge --no-ff hotfix/token-expiry-crash
-git tag -a v1.0.1 -m "fix: v1.0.1"
-git checkout develop && git merge --no-ff hotfix/token-expiry-crash
-git branch -d hotfix/token-expiry-crash
+# 3. Open PR → main, merge (release-please will tag automatically)
+# 4. Backport: open a second PR → develop to keep branches in sync
 ```
 
 ---

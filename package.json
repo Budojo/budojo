@@ -1,6 +1,5 @@
 {
   "name": "budojo",
-  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Budojo monorepo dev tooling — Husky, commitlint, lint-staged",
