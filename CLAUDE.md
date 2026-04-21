@@ -31,11 +31,14 @@ The two containers communicate over a shared Docker network. A dedicated build s
 |-------|-----------|---------|
 | Server framework | Laravel | 13 |
 | Database | MySQL | 8.4 LTS |
-| PHP static analysis | PHPStan | 2 (level max) |
+| PHP static analysis | PHPStan | 2 (level 9) |
+| PHP code style | PHP CS Fixer | 3 |
 | PHP test runner | PEST | 4 |
 | Client framework | Angular | 21 |
 | UI component library | PrimeNG | 21 |
 | Containerization | Docker + Docker Compose | latest |
+| Release automation | semantic-release | 24 |
+| Commit enforcement | Husky 9 + commitlint | — |
 
 ---
 
@@ -54,15 +57,15 @@ main
 
 | Branch | Purpose | Merge target |
 |--------|---------|-------------|
-| `main` | Production-ready code only. Tagged on every release. | — |
-| `develop` | Integration branch. All features land here first. | `main` (via release) |
+| `main` | Production-ready code only. Every merge creates a stable tag. | — |
+| `develop` | Integration branch. All features land here first. Every merge creates a beta tag. | `main` (via PR) |
 | `feat/*` | New features. Cut from `develop`, merged back via PR. | `develop` |
 | `fix/*` | Bug fixes on develop flow. | `develop` |
 | `hotfix/*` | Urgent production fixes. Cut from `main`. | `main` + `develop` |
-| `release/*` | Release stabilisation (bump version, changelog). | `main` + `develop` |
 | `chore/*` | Tooling, deps, CI, Docker — no business logic. | `develop` |
 | `refactor/*` | Code restructuring with no behaviour change. | `develop` |
 | `docs/*` | Documentation only. | `develop` |
+| `ci/*` | CI/CD pipeline changes. | `develop` |
 
 ### Daily Development Flow
 
@@ -95,13 +98,12 @@ Examples:
 - `hotfix/token-expiry-crash`
 - `refactor/auth-service-cleanup`
 - `chore/update-dependencies`
-- `release/1.2.0`
 
-**Types:** `feat`, `fix`, `hotfix`, `refactor`, `test`, `chore`, `docs`, `style`, `perf`, `ci`, `release`
+**Types:** `feat`, `fix`, `hotfix`, `refactor`, `test`, `chore`, `docs`, `style`, `perf`, `ci`
 
 ### Commit Messages (Angular Conventional Commits)
 ```
-<type>(<scope>): <short description in imperative mood>
+<type>(<scope>): <short description in imperative mood, lower-case>
 
 [optional body — explain WHY, not what]
 
@@ -115,12 +117,14 @@ Examples:
 - `refactor(users): extract registration logic into RegisterUserAction`
 - `BREAKING CHANGE` in footer when a public API contract changes
 
+> Commitlint enforces this format locally via Husky. The subject must be lower-case.
+
 ### PR Rules
 - **No direct commits to `main` or `develop`** — ever, not even for hotfixes.
 - All feature/fix/chore branches open PRs **exclusively toward `develop`**.
-- `develop` → `main` only via a `release/*` branch when shipping.
+- `develop` → `main` only via a PR (no intermediate release branch needed — semantic-release handles tagging automatically).
 - **Squash merge only** into `develop`. One clean commit per feature.
-- **Merge commit** (no squash) from `release/*` into `main`.
+- **Merge commit** (no squash) from `develop` into `main`.
 - Delete the branch after merge.
 
 ### PR Checklist for Claude — every PR must include
@@ -141,7 +145,6 @@ Examples:
 | `ci/*` | `⚙️ pipeline` |
 | `docs/*` | `📝 documentation` |
 | `refactor/*` | `♻️ refactor` |
-| `release/*` | `🔖 release` |
 | `test/*` | `🧪 testing` |
 
 Add `💥 breaking change` as a second type label when the PR contains a `BREAKING CHANGE` footer.
@@ -154,22 +157,24 @@ Add `💥 breaking change` as a second type label when the PR contains a `BREAKI
 | All review comments resolved, ready to merge | `🟢 ready to merge` |
 | Waiting on a dependency or decision | `🔴 blocked` |
 
-Use `gh pr create --label "✨ feature"` for the type label at open time. Add `🟢 ready to merge` once Copilot review comments are addressed.
+Open with the type label. Switch to `🟢 ready to merge` once Copilot review comments are addressed.
 
 ### Release Flow (automated via semantic-release)
 
-Versioning and changelogs are fully automated. No manual tagging or version bumps.
+Versioning, changelogs, and **Git tags** are fully automated — no manual tagging or version bumps ever.
 
-**Beta release** — every merge to `develop`:
+**Beta release** — every squash merge to `develop`:
 1. semantic-release reads conventional commits since the last tag
-2. Determines the next version bump (patch/minor/major)
-3. Creates tag `vX.Y.Z-beta.N` + GitHub pre-release + updates `CHANGELOG.md`
+2. Determines the next version bump (`fix` → patch, `feat` → minor, `BREAKING CHANGE` → major)
+3. Creates Git tag `vX.Y.Z-beta.N` on the repo + GitHub pre-release + updates `CHANGELOG.md`
 
-**Stable release** — every merge to `main`:
+**Stable release** — every merge commit from `develop` → `main`:
 1. semantic-release reads conventional commits since the last stable tag
-2. Creates tag `vX.Y.Z` + GitHub Release with full changelog
+2. Creates Git tag `vX.Y.Z` on the repo + GitHub Release with full changelog
 
-**Config:** `.releaserc.json` at the repo root. Do not create a `version` field in `package.json` — semantic-release owns versioning entirely.
+**Config:** `.releaserc.json` at the repo root.
+- Do not create a `version` field in `package.json` — semantic-release owns versioning entirely.
+- `package-lock.json` is committed; always run `npm install` after changing `package.json`.
 
 ### Hotfix Flow
 
@@ -184,6 +189,15 @@ git commit -m "fix(auth): prevent crash on expired token decode"
 # 3. Open PR → main, merge (semantic-release will tag automatically)
 # 4. Backport: open a second PR → develop to keep branches in sync
 ```
+
+### Copilot Review Workflow
+
+When the user says "Copilot ha lasciato commenti":
+1. Fetch all review comments via `gh api repos/m-bonanno/budojo/pulls/<N>/comments`
+2. For each comment: evaluate, fix if valid, skip if not applicable
+3. Commit fixes with `fix(<scope>): address copilot review comments`
+4. Reply to each comment thread via `gh api repos/m-bonanno/budojo/pulls/<N>/comments/<id>/replies -X POST --field body="..."`
+5. Push and update label to `🟢 ready to merge`
 
 ---
 
@@ -202,15 +216,22 @@ git commit -m "fix(auth): prevent crash on expired token decode"
 - Config: `phpstan.neon` in `/server`.
 - CI blocks merge if PHPStan reports errors.
 
+### Code Style (PHP CS Fixer)
+- Config: `server/.php-cs-fixer.php`
+- Rulesets: `@PHP84Migration`, `@PSR12`, `@PSR12:risky`
+- Key rules: `declare_strict_types`, `use_arrow_functions`, `ordered_imports`, `single_trait_insert_per_statement`
+- Scans: `app/`, `routes/`, `tests/` (config/ and database/ excluded — Laravel boilerplate)
+- CI blocks merge if any file needs fixing
+
 ### Testing (PEST 4)
-- Feature tests hit real DB via `RefreshDatabase`.
-- Unit tests mock external dependencies.
-- Coverage target: **80% minimum** on business logic.
+- Feature tests hit real DB via `RefreshDatabase` (SQLite `:memory:` in CI via `phpunit.xml`)
+- Unit tests mock external dependencies
+- Coverage is generated on every PR; no global minimum threshold — grows with TDD
 
 ### API conventions
 - Versioned routes: `/api/v1/...`
-- JSON:API-style responses with consistent error envelope.
-- Authentication via **Laravel Sanctum** (token-based for SPA).
+- JSON:API-style responses with consistent error envelope
+- Authentication via **Laravel Sanctum** (token-based for SPA)
 
 ---
 
@@ -250,16 +271,15 @@ git commit -m "fix(auth): prevent crash on expired token decode"
 
 ## CI/CD (GitHub Actions)
 
-On every PR to `develop`:
-1. PHPStan analysis (level 9)
-2. PEST test suite (with coverage)
-3. Angular lint + build check
-4. Docker build smoke test
+### On every PR to `develop` — `.github/workflows/pr-checks.yml`
+1. **PHPStan** (level 9) — static analysis
+2. **PEST** (parallel, with coverage) — full test suite
+3. **PHP CS Fixer** (dry-run) — code style check
 
-On merge to `main` (release):
-1. All of the above
-2. Docker build & push to registry
-3. Deploy to production
+### On every push to `develop` or `main` — `.github/workflows/release.yml`
+- **semantic-release** runs automatically
+- Creates a Git tag and GitHub Release/pre-release based on conventional commits
+- Concurrency group per branch — no concurrent releases on the same branch
 
 ---
 
@@ -272,6 +292,8 @@ On merge to `main` (release):
 5. **Explain FE decisions** in plain terms (the developer is BE-focused).
 6. **Never commit to `main` or `develop` directly** — always cut a branch, then open a PR.
 7. **Always suggest the branch name** before starting any work (`feat/...`, `fix/...`, etc.).
-8. **Use conventional commits** in every `git commit` suggestion.
+8. **Use conventional commits** with lower-case subject in every `git commit`.
 9. **Rebase, don't merge**, when updating a feature branch from `develop`.
-10. **Squash merge** PRs into `develop`; merge commit into `main` for releases.
+10. **Squash merge** PRs into `develop`; merge commit into `main`.
+11. **Never create a `version` field** in `package.json` — semantic-release owns versioning.
+12. **Reply to all Copilot comments** after fixing, using the review workflow above.
