@@ -1,0 +1,26 @@
+name: Stable Release (main)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: "🎉 Release Please (stable)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target-branch: main
+
+      - name: Release summary
+        if: steps.release.outputs.release_created
+        run: |
+          echo "### 🎉 Stable release: ${{ steps.release.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "Changelog: ${{ steps.release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY

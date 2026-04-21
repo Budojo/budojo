@@ -117,10 +117,41 @@ Examples:
 
 ### PR Rules
 - **No direct commits to `main` or `develop`** — ever, not even for hotfixes.
-- Every PR must have: passing PHPStan + PEST (or Angular lint + tests), a clear title in conventional commit format, and at least a self-review checklist.
-- **Squash merge** into `develop` to keep history linear and readable.
-- **Merge commit** (no squash) from `release/*` into `main` to preserve the release boundary in history.
+- All feature/fix/chore branches open PRs **exclusively toward `develop`**.
+- `develop` → `main` only via a `release/*` branch when shipping.
+- **Squash merge only** into `develop`. One clean commit per feature.
+- **Merge commit** (no squash) from `release/*` into `main`.
 - Delete the branch after merge.
+
+### PR Checklist for Claude — every PR must include
+
+1. **Title** — conventional commit format: `type(scope): description`
+2. **Description** — filled template (What / Why / How / Checklist / References) in English with emoji
+3. **Assignee** — always assign `m-bonanno` (`gh pr create --assignee m-bonanno`)
+4. **Label** — apply the label matching the branch type:
+
+| Branch prefix | Label |
+|--------------|-------|
+| `feat/*` | `feature` |
+| `fix/*` | `bug` |
+| `hotfix/*` | `hotfix` |
+| `chore/*` | `chore` |
+| `ci/*` | `ci` |
+| `docs/*` | `documentation` |
+| `refactor/*` | `refactor` |
+| `release/*` | `release` |
+
+Use `gh pr create --label "<label>"`. If the label does not exist on the repo yet, create it first with `gh label create "<label>" --color "<hex>" --description "<desc>"`.
+
+Standard label colours:
+- `feature` → `#0075ca`
+- `bug` → `#d73a4a`
+- `hotfix` → `#e4e669`
+- `chore` → `#e4e669`
+- `ci` → `#0e8a16`
+- `documentation` → `#0075ca`
+- `refactor` → `#cfd3d7`
+- `release` → `#6f42c1`
 
 ### Release Flow
 

@@ -9,6 +9,10 @@ server/.env
 server/storage/logs/*.log
 server/bootstrap/cache/*.php
 
+# Node (root tooling)
+node_modules/
+package-lock.json
+
 # Angular
 client/node_modules/
 client/dist/
