@@ -156,21 +156,20 @@ Add `💥 breaking change` as a second type label when the PR contains a `BREAKI
 
 Use `gh pr create --label "✨ feature"` for the type label at open time. Add `🟢 ready to merge` once Copilot review comments are addressed.
 
-### Release Flow (automated via release-please)
+### Release Flow (automated via semantic-release)
 
 Versioning and changelogs are fully automated. No manual tagging or version bumps.
 
 **Beta release** — every merge to `develop`:
-1. release-please reads conventional commits since the last tag
-2. Opens (or updates) a release PR on `develop` with bumped version + CHANGELOG
-3. When that PR is merged → creates tag `vX.Y.Z-beta.N` + GitHub pre-release
+1. semantic-release reads conventional commits since the last tag
+2. Determines the next version bump (patch/minor/major)
+3. Creates tag `vX.Y.Z-beta.N` + GitHub pre-release + updates `CHANGELOG.md`
 
-**Stable release** — when `develop` is ready to ship:
-1. Merge `develop` → `main` (via PR)
-2. release-please opens a release PR on `main`
-3. When merged → creates tag `vX.Y.Z` + GitHub Release with full changelog
+**Stable release** — every merge to `main`:
+1. semantic-release reads conventional commits since the last stable tag
+2. Creates tag `vX.Y.Z` + GitHub Release with full changelog
 
-**Version source of truth:** `version.txt` (managed exclusively by release-please). Do not edit it manually and do not add a `version` field to `package.json`.
+**Config:** `.releaserc.json` at the repo root. Do not create a `version` field in `package.json` — semantic-release owns versioning entirely.
 
 ### Hotfix Flow
 
@@ -182,7 +181,7 @@ git checkout -b hotfix/token-expiry-crash
 # 2. Fix, test (TDD), commit
 git commit -m "fix(auth): prevent crash on expired token decode"
 
-# 3. Open PR → main, merge (release-please will tag automatically)
+# 3. Open PR → main, merge (semantic-release will tag automatically)
 # 4. Backport: open a second PR → develop to keep branches in sync
 ```
 
