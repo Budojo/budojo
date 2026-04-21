@@ -1,0 +1,27 @@
+# Environment files
+.env
+.env.production
+.env.*.local
+
+# Laravel
+server/vendor/
+server/.env
+server/storage/logs/*.log
+server/bootstrap/cache/*.php
+
+# Angular
+client/node_modules/
+client/dist/
+client/.angular/
+
+# Docker volumes
+db_data/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db

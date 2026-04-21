@@ -1,0 +1,63 @@
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    container_name: budojo_api
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./server:/var/www/api
+    env_file:
+      - .env
+    networks:
+      - budojo_network
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    build:
+      context: ./client
+      dockerfile: ../docker/client/Dockerfile
+    container_name: budojo_client
+    restart: unless-stopped
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    networks:
+      - budojo_network
+    depends_on:
+      - api
+
+  db:
+    image: mysql:8.4
+    container_name: budojo_db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - budojo_network
+
+networks:
+  budojo_network:
+    driver: bridge
+
+volumes:
+  db_data:
