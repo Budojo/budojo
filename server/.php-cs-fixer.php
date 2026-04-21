@@ -5,14 +5,16 @@ declare(strict_types=1);
 use PhpCsFixer\Config;
 use PhpCsFixer\Finder;
 
+$directories = array_values(array_filter([
+    __DIR__ . '/app',
+    __DIR__ . '/config',
+    __DIR__ . '/database',
+    __DIR__ . '/routes',
+    __DIR__ . '/tests',
+], 'is_dir'));
+
 $finder = Finder::create()
-    ->in([
-        __DIR__ . '/app',
-        __DIR__ . '/config',
-        __DIR__ . '/database',
-        __DIR__ . '/routes',
-        __DIR__ . '/tests',
-    ])
+    ->in($directories)
     ->name('*.php')
     ->notName('*.blade.php')
     ->ignoreDotFiles(true)
