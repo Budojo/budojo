@@ -1,0 +1,13 @@
+@use 'primeicons/primeicons.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--p-font-family, system-ui, sans-serif);
+}
