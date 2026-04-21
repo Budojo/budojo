@@ -8,6 +8,7 @@ server/vendor/
 server/.env
 server/storage/logs/*.log
 server/bootstrap/cache/*.php
+server/.php-cs-fixer.cache
 
 # Node (root tooling)
 node_modules/
