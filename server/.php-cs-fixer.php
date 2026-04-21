@@ -7,8 +7,6 @@ use PhpCsFixer\Finder;
 
 $directories = array_values(array_filter([
     __DIR__ . '/app',
-    __DIR__ . '/config',
-    __DIR__ . '/database',
     __DIR__ . '/routes',
     __DIR__ . '/tests',
 ], 'is_dir'));
@@ -25,10 +23,9 @@ return (new Config())
     ->setCacheFile(__DIR__ . '/.php-cs-fixer.cache')
     ->setRules([
         // ── Rulesets ──────────────────────────────────────────────────────
-        '@PHP84Migration'        => true,
-        '@PHP84Migration:risky'  => true,
-        '@PSR12'                 => true,
-        '@PSR12:risky'           => true,
+        '@PHP84Migration' => true,
+        '@PSR12'          => true,
+        '@PSR12:risky'    => true,
 
         // ── Imports ───────────────────────────────────────────────────────
         'ordered_imports'              => ['sort_algorithm' => 'alpha'],
