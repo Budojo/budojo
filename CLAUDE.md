@@ -128,30 +128,36 @@ Examples:
 1. **Title** — conventional commit format: `type(scope): description`
 2. **Description** — filled template (What / Why / How / Checklist / References) in English with emoji
 3. **Assignee** — always assign `m-bonanno` (`gh pr create --assignee m-bonanno`)
-4. **Label** — apply the label matching the branch type:
+4. **Labels** — apply one **type** label + the appropriate **status** label on open.
+
+#### Type labels (one per PR)
 
 | Branch prefix | Label |
 |--------------|-------|
-| `feat/*` | `feature` |
-| `fix/*` | `bug` |
-| `hotfix/*` | `hotfix` |
-| `chore/*` | `chore` |
-| `ci/*` | `ci` |
-| `docs/*` | `documentation` |
-| `refactor/*` | `refactor` |
-| `release/*` | `release` |
+| `feat/*` | `✨ feature` |
+| `fix/*` | `🐛 bug fix` |
+| `hotfix/*` | `🚑 hotfix` |
+| `chore/*` | `🔧 maintenance` |
+| `ci/*` | `⚙️ pipeline` |
+| `docs/*` | `📝 documentation` |
+| `refactor/*` | `♻️ refactor` |
+| `release/*` | `🔖 release` |
+| `test/*` | `🧪 testing` |
 
-Use `gh pr create --label "<label>"`. If the label does not exist on the repo yet, create it first with `gh label create "<label>" --color "<hex>" --description "<desc>"`.
+Add `💥 breaking change` as a second type label when the PR contains a `BREAKING CHANGE` footer.
 
-Standard label colours:
-- `feature` → `#0075ca`
-- `bug` → `#d73a4a`
-- `hotfix` → `#e4e669`
-- `chore` → `#e4e669`
-- `ci` → `#0e8a16`
-- `documentation` → `#0075ca`
-- `refactor` → `#cfd3d7`
-- `release` → `#6f42c1`
+#### Status labels (update as the PR progresses)
+
+| Moment | Label |
+|--------|-------|
+| PR just opened | `🟡 in review` |
+| Copilot/human review resolved, ready to merge | `🟢 ready to merge` |
+| Waiting on a dependency or decision | `🔴 blocked` |
+| Still being worked on | `🚧 wip` |
+
+Remove `🟡 in review` and add `🟢 ready to merge` when all review comments are resolved.
+
+Use `gh pr create --label "✨ feature,🟡 in review"` (comma-separated, no spaces around comma).
 
 ### Release Flow
 
