@@ -69,6 +69,10 @@ jobs:
           fi
         working-directory: server
 
+      - name: Generate app key
+        run: php artisan key:generate --ansi
+        working-directory: server
+
       - name: Run PEST (parallel, with coverage)
         run: vendor/bin/pest --parallel --coverage --min=80
         working-directory: server

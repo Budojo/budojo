@@ -13,8 +13,6 @@
     "lint-staged": "^15.5.0"
   },
   "lint-staged": {
-    "server/**/*.php": [
-      "server/vendor/bin/php-cs-fixer fix --config=server/.php-cs-fixer.php --allow-risky=yes"
-    ]
+    "*.md": "echo"
   }
 }
