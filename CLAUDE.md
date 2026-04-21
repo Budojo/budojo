@@ -150,14 +150,11 @@ Add `💥 breaking change` as a second type label when the PR contains a `BREAKI
 
 | Moment | Label |
 |--------|-------|
-| PR just opened | `🟡 in review` |
-| Copilot/human review resolved, ready to merge | `🟢 ready to merge` |
-| Waiting on a dependency or decision | `🔴 blocked` |
 | Still being worked on | `🚧 wip` |
+| All review comments resolved, ready to merge | `🟢 ready to merge` |
+| Waiting on a dependency or decision | `🔴 blocked` |
 
-Remove `🟡 in review` and add `🟢 ready to merge` when all review comments are resolved.
-
-Use `gh pr create --label "✨ feature,🟡 in review"` (comma-separated, no spaces around comma).
+Use `gh pr create --label "✨ feature"` for the type label at open time. Add `🟢 ready to merge` once Copilot review comments are addressed.
 
 ### Release Flow
 
