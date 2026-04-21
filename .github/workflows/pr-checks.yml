@@ -1,0 +1,103 @@
+name: PR Quality Gates
+
+on:
+  pull_request:
+    branches: [develop]
+
+jobs:
+
+  phpstan:
+    name: "🔬 PHPStan (level 9)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo, pdo_sqlite, mbstring, bcmath, gd, zip, intl
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: server/vendor
+          key: composer-${{ hashFiles('server/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+        working-directory: server
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --no-progress --error-format=github
+        working-directory: server
+
+  pest:
+    name: "🧪 PEST Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo, pdo_sqlite, mbstring, bcmath, gd, zip, intl
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: server/vendor
+          key: composer-${{ hashFiles('server/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+        working-directory: server
+
+      - name: Copy .env for testing
+        run: |
+          if [ -f .env.example ]; then
+            cp .env.example .env
+          else
+            touch .env
+          fi
+        working-directory: server
+
+      - name: Run PEST (parallel, with coverage)
+        run: vendor/bin/pest --parallel --coverage --min=80
+        working-directory: server
+
+  php-cs-fixer:
+    name: "🎨 PHP CS Fixer (dry-run)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: server/vendor
+          key: composer-${{ hashFiles('server/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+        working-directory: server
+
+      - name: Run PHP CS Fixer (dry-run)
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff --ansi --show-progress=none
+        working-directory: server
