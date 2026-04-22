@@ -146,22 +146,32 @@ Examples:
 
 ### GitHub Project Board — PO workflow
 
-The board tracks **issues only**. PRs are linked to issues and never added as separate board items.
+The board tracks **both issues and their open PRs**. Issues are the primary items; PRs are added alongside them so the connection is visible directly on the board. The "Linked pull requests" field on the issue card shows the PR automatically when the PR body contains `Closes #N`.
 
-#### Issue lifecycle on the board
+#### Issue + PR lifecycle on the board
 
 | Status | When |
 |--------|------|
 | `Todo` | Issue created |
-| `In Progress` | Branch created / PR opened |
-| `Done` | Closing PR merged (GitHub auto-closes the issue) |
+| `In Progress` | PR opened (set on both the issue item AND the PR item) |
+| `Done` | PR merged → GitHub auto-closes issue → both items move to Done |
 
-#### Rules
+#### Standard flow — step by step
 
-1. **Only issues go on the board.** Never add a PR as a standalone project item.
-2. **Branch names include the issue number** (`feat/13-academy-setup`) — this is the traceability link.
-3. **Every PR body must contain `Closes #N`** (or `Fixes #N`) for each issue it resolves. GitHub uses this to auto-close issues on merge and to show the linked PR on the issue page.
-4. **When opening a PR**, manually set the linked issue(s) to `In Progress` on the board:
+1. **Create issue** → it lands on the board as `Todo`.
+2. **Cut branch** named `<type>/<issue-number>-<description>` (e.g. `feat/13-academy-setup`).
+3. **Open PR** with `Closes #N` in the body.
+4. **Add the PR to the project board** (GitHub does NOT do this automatically):
+   ```bash
+   PR_NODE_ID=$(gh pr view <N> --json id --jq '.id')
+   gh api graphql -f query='
+   mutation($projectId: ID!, $contentId: ID!) {
+     addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+       item { id }
+     }
+   }' -f projectId="PVT_kwHOAsnvsM4BVW8P" -f contentId="$PR_NODE_ID"
+   ```
+5. **Set both the issue item AND the PR item to `In Progress`**:
    ```bash
    gh api graphql -f query='mutation { updateProjectV2ItemFieldValue(input: {
      projectId: "PVT_kwHOAsnvsM4BVW8P"
@@ -171,11 +181,19 @@ The board tracks **issues only**. PRs are linked to issues and never added as se
    }) { projectV2Item { id } } }'
    ```
    Status option IDs: `f75ad846` = Todo · `47fc9ee4` = In Progress · `98236657` = Done
+6. **When the PR is merged**, GitHub auto-closes the linked issue. The board automation moves both items to `Done`.
+
+#### Rules
+
+1. **Branch names include the issue number** (`feat/13-academy-setup`) — this is the traceability link.
+2. **Every PR body must contain `Closes #N`** (or `Fixes #N`) for each issue it resolves.
+3. **Always add the PR to the project board** right after opening it (step 4 above).
+4. **The "Linked pull requests" field** on the issue card shows the PR automatically — no extra wiring needed beyond `Closes #N` + both items being on the board.
 5. **When a PR is merged**, GitHub auto-closes the linked issues. The board status moves to `Done` automatically if the project has the built-in automation enabled (check Settings → Workflows on the project).
 
-#### Finding an issue's project item ID
+#### Finding an issue's or PR's project item ID
 ```bash
-gh project item-list 2 --owner m-bonanno --format json | grep -A3 '"number":<ISSUE_N>'
+gh project item-list 2 --owner m-bonanno --format json
 ```
 
 ### PR Rules
@@ -354,6 +372,7 @@ When the user says "Copilot ha lasciato commenti":
 4. **Use Form Requests** for all Laravel validation.
 5. **Explain FE decisions** in plain terms (the developer is BE-focused).
 6. **Never commit to `main` or `develop` directly** — always cut a branch, then open a PR.
+   After opening, **add the PR to the GitHub Project board** and set both the issue and the PR item to `In Progress`.
 7. **Always suggest the branch name** before starting any work (`feat/...`, `fix/...`, etc.).
 8. **Use conventional commits** with lower-case subject in every `git commit`.
 9. **Rebase, don't merge**, when updating a feature branch from `develop`.
