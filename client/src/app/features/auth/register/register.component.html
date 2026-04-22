@@ -68,8 +68,7 @@
           [toggleMask]="true"
           styleClass="w-full"
           [inputStyleClass]="
-            'w-full' +
-            (password.invalid && password.touched ? ' ng-invalid ng-dirty' : '')
+            'w-full' + (password.invalid && password.touched ? ' ng-invalid ng-dirty' : '')
           "
         />
         @if (password.invalid && password.touched) {

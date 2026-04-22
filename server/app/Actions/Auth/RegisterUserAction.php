@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Actions\Auth;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 class RegisterUserAction
 {
@@ -14,7 +13,7 @@ class RegisterUserAction
         return User::create([
             'name' => $name,
             'email' => $email,
-            'password' => Hash::make($password),
+            'password' => $password,
         ]);
     }
 }

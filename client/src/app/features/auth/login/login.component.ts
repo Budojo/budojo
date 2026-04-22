@@ -9,7 +9,7 @@ import { PasswordModule } from 'primeng/password';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
-  selector: 'app-register',
+  selector: 'app-login',
   imports: [
     ReactiveFormsModule,
     RouterLink,
@@ -18,10 +18,10 @@ import { AuthService } from '../../../core/services/auth.service';
     MessageModule,
     PasswordModule,
   ],
-  templateUrl: './register.component.html',
-  styleUrl: './register.component.scss',
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
 })
-export class RegisterComponent {
+export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -29,21 +29,10 @@ export class RegisterComponent {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
-  readonly form = this.fb.group(
-    {
-      name: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
-      password_confirmation: ['', Validators.required],
-    },
-    { validators: this.passwordsMatch },
-  );
-
-  private passwordsMatch(g: import('@angular/forms').AbstractControl) {
-    const pw = g.get('password')?.value;
-    const confirm = g.get('password_confirmation')?.value;
-    return pw === confirm ? null : { mismatch: true };
-  }
+  readonly form = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', Validators.required],
+  });
 
   submit(): void {
     if (this.form.invalid) {
@@ -55,31 +44,23 @@ export class RegisterComponent {
     this.error.set(null);
 
     this.auth
-      .register({
-        name: this.form.value.name!,
+      .login({
         email: this.form.value.email!,
         password: this.form.value.password!,
-        password_confirmation: this.form.value.password_confirmation!,
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => this.router.navigate(['/dashboard']),
         error: (err) => {
-          this.error.set(err?.error?.message ?? 'Something went wrong. Please try again.');
+          this.error.set(err?.error?.message ?? 'Invalid credentials. Please try again.');
         },
       });
   }
 
-  get name() {
-    return this.form.get('name')!;
-  }
   get email() {
     return this.form.get('email')!;
   }
   get password() {
     return this.form.get('password')!;
-  }
-  get passwordConfirmation() {
-    return this.form.get('password_confirmation')!;
   }
 }
