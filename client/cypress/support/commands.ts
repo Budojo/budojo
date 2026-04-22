@@ -8,7 +8,7 @@ declare global {
        * Visit a URL with a fake auth token pre-seeded in localStorage.
        * The Angular app reads auth_token on init, so the authGuard passes.
        */
-      visitAuthenticated(url: string, token?: string): void;
+      visitAuthenticated(url: string, token?: string): Chainable<void>;
     }
   }
 }
