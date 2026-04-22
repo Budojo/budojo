@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 it('registers a new user and returns a token', function (): void {
     $response = $this->postJson('/api/v1/auth/register', [
@@ -18,6 +19,16 @@ it('registers a new user and returns a token', function (): void {
     ]);
 
     $this->assertDatabaseHas('users', ['email' => 'mario@example.com']);
+
+    $user = User::where('email', 'mario@example.com')->firstOrFail();
+
+    expect($user->password)->not->toBe('Password1!');
+    expect(Hash::check('Password1!', $user->password))->toBeTrue();
+
+    $this->assertDatabaseHas('personal_access_tokens', [
+        'tokenable_type' => User::class,
+        'tokenable_id' => $user->id,
+    ]);
 });
 
 it('fails registration when email is already taken', function (): void {
