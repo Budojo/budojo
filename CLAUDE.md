@@ -280,6 +280,11 @@ When the user says "Copilot ha lasciato commenti":
 4. Reply to each comment thread via `gh api repos/m-bonanno/budojo/pulls/<N>/comments/<id>/replies -X POST --field body="..."`
 5. Push and update label to `🟢 ready to merge`
 
+**Reply rules (mandatory):**
+- **Always write in English** — never Italian, regardless of the comment language.
+- **Always reference the fix commit** — include the short SHA in every reply, e.g. `Fixed in abc1234.`
+- Keep replies concise: one sentence explaining what was done + the commit reference.
+
 ---
 
 ## Server (Laravel 13)
@@ -378,6 +383,6 @@ When the user says "Copilot ha lasciato commenti":
 9. **Rebase, don't merge**, when updating a feature branch from `develop`.
 10. **Squash merge** PRs into `develop`; merge commit into `main`.
 11. **Never create a `version` field** in `package.json` — semantic-release owns versioning.
-12. **Reply to all Copilot comments** after fixing, using the review workflow above.
+12. **Reply to all Copilot comments** after fixing, using the review workflow above. Replies must be in **English** and always cite the short commit SHA that resolved the issue (e.g. `Fixed in abc1234.`).
 13. **Before pushing PHP changes**: run `vendor/bin/php-cs-fixer fix` then `vendor/bin/phpstan analyse --no-progress` — both must be clean.
 14. **Before pushing Angular changes**: run `node_modules/.bin/prettier --write "src/**/*.{ts,html,scss}"` then `npm run lint` — both must be clean.
