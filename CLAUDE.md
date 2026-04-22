@@ -6,7 +6,7 @@
 - **Server** — REST API built with Laravel 13 (PHP), served via Docker
 - **Client** — SPA built with Angular 21 + PrimeNG 21, served via Docker
 
-The two containers communicate over a shared Docker network. A dedicated build script handles production deployment.
+The two containers communicate over a shared Docker network. A `.env` file at the repo root holds the configuration for docker-compose and is injected into the `api` container via `env_file`.
 
 ---
 
@@ -14,14 +14,30 @@ The two containers communicate over a shared Docker network. A dedicated build s
 
 ### Code Quality
 - **SOLID** — every class has a single responsibility; depend on abstractions, not concretions.
-- **DRY** — no duplicated logic; extract shared behaviour into services, traits, or utilities.
+- **DRY** — no duplicated logic; extract shared behaviour into Actions, services, traits, or utilities.
 - **KISS** — prefer the simplest solution that works; add complexity only when genuinely required.
 
 ### Test-Driven Development (TDD)
-- **Always write the test first**, then the implementation.
-- PHP: use **PEST 4** for both unit and feature tests.
-- Angular: use **Jest** for unit tests and **Cypress** for e2e.
-- No untested business logic is merged to `main`.
+
+**Always write the failing test first, then write the minimum code to make it pass.**
+
+Four test layers are mandatory — all must be green before a PR is opened:
+
+| Layer | Stack | Scope |
+|-------|-------|-------|
+| **PHP unit** | PEST 4 | Isolated classes — Actions, validators, value objects |
+| **PHP feature** | PEST 4 + `RefreshDatabase` | Full HTTP round-trips against an in-memory SQLite DB |
+| **Angular unit** | Vitest 4 | Components and services in isolation |
+| **Angular E2E** | Cypress 13 | User flows in a real browser; all API calls intercepted with `cy.intercept()` |
+
+**TDD cycle:**
+```
+Write failing PEST spec       →  implement PHP code        →  all PEST tests green
+Write failing Vitest spec     →  implement Angular code    →  all Vitest tests green
+Write failing Cypress spec    →  verify navigation/flows   →  all Cypress tests green
+```
+
+No untested business logic is merged to `develop`.
 
 ---
 
@@ -36,6 +52,8 @@ The two containers communicate over a shared Docker network. A dedicated build s
 | PHP test runner | PEST | 4 |
 | Client framework | Angular | 21 |
 | UI component library | PrimeNG | 21 |
+| Angular unit tests | Vitest | 4 |
+| Angular E2E tests | Cypress | 13 |
 | Containerization | Docker + Docker Compose | latest |
 | Release automation | semantic-release | 24 |
 | Commit enforcement | Husky 9 + commitlint | — |
@@ -49,9 +67,9 @@ The two containers communicate over a shared Docker network. A dedicated build s
 ```
 main
  └── develop
-      ├── feat/user-authentication
-      ├── feat/user-profile
-      ├── fix/login-validation-error
+      ├── feat/13-academy-setup
+      ├── feat/16-athletes-list
+      ├── fix/22-login-validation-error
       └── ...
 ```
 
@@ -65,6 +83,7 @@ main
 | `chore/*` | Tooling, deps, CI, Docker — no business logic. | `develop` |
 | `refactor/*` | Code restructuring with no behaviour change. | `develop` |
 | `docs/*` | Documentation only. | `develop` |
+| `test/*` | Test-only additions or fixes. | `develop` |
 | `ci/*` | CI/CD pipeline changes. | `develop` |
 
 ### Daily Development Flow
@@ -73,43 +92,56 @@ main
 # 1. Always start from an up-to-date develop
 git checkout develop && git pull origin develop
 
-# 2. Cut a feature branch
-git checkout -b feat/user-registration
+# 2. Cut a feature branch (include issue number)
+git checkout -b feat/16-athletes-list
 
-# 3. Work in small, atomic commits (TDD cycle: test → implement → refactor)
-git commit -m "test(users): add PEST feature test for registration endpoint"
-git commit -m "feat(users): implement RegisterUserAction"
-git commit -m "feat(users): add UserResource and registration controller"
+# 3. TDD cycle: test → implement → refactor (small atomic commits)
+git commit -m "test(athletes): add pest feature test for list endpoint"
+git commit -m "feat(athletes): implement athlete list with belt/status filters"
+git commit -m "test(e2e): add cypress spec for athletes page navigation"
 
-# 4. Keep the branch up to date with develop (rebase preferred over merge)
+# 4. Keep the branch up to date with develop (rebase, never merge)
 git fetch origin && git rebase origin/develop
 
-# 5. Open PR → develop when the feature is complete and tests pass
+# 5. Open PR → develop when all tests pass
 ```
 
-### Pre-push Checklist — run these before every `git push`
+### Pre-push Checklist — run before every `git push`
 
 **Whenever PHP files were changed:**
 ```bash
-# 1. Auto-fix code style
-cd server && vendor/bin/php-cs-fixer fix
+cd server
 
-# 2. Static analysis — must report 0 errors before pushing
-cd server && vendor/bin/phpstan analyse --no-progress
+# 1. Auto-fix code style
+vendor/bin/php-cs-fixer fix
+
+# 2. Static analysis — must report 0 errors
+vendor/bin/phpstan analyse --no-progress
+
+# 3. Full test suite — must be all green
+vendor/bin/pest --parallel
 ```
 
 **Whenever Angular files were changed:**
 ```bash
-# 1. Auto-fix formatting
-cd client && node_modules/.bin/prettier --write "src/**/*.{ts,html,scss}"
+cd client
 
-# 2. Lint — must report 0 errors before pushing
-cd client && npm run lint
+# 1. Auto-fix formatting
+npx prettier --write "src/**/*.{ts,html,scss}"
+
+# 2. Lint — must report 0 errors
+npm run lint
+
+# 3. Unit tests — must be all green
+npm test -- --watch=false
 ```
+
+> Cypress E2E tests require `ng serve` running — they are validated in CI.
+> Run `npm run cy:open` locally when you need to debug a specific E2E spec.
 
 > Run formatters/fixers **before staging** so the fixed files are included in the commit.
 > Run static analysis / lint **after staging** to verify the final state.
-> Never rely on CI to catch these issues — fix locally first.
+> Never rely on CI to catch these — fix locally first.
 
 ### Branch Naming
 ```
@@ -117,10 +149,10 @@ cd client && npm run lint
 ```
 Examples:
 - `feat/13-academy-setup`
-- `feat/14-athlete-crud`
+- `feat/16-athletes-list`
 - `fix/22-login-validation-error`
 - `hotfix/31-token-expiry-crash`
-- `chore/9-update-dependencies`
+- `test/25-e2e-cypress`
 
 Always include the **issue number** — it creates a traceable link between branch, PR, and the board item.
 
@@ -135,18 +167,18 @@ Always include the **issue number** — it creates a traceable link between bran
 [optional footer: BREAKING CHANGE: ..., closes #issue]
 ```
 Examples:
-- `feat(auth): add JWT refresh token endpoint`
-- `fix(users): handle duplicate email on registration`
-- `test(auth): add PEST feature test for login flow`
+- `feat(auth): add jwt refresh token endpoint`
+- `fix(athletes): handle duplicate email on create`
+- `test(auth): add pest feature test for login flow`
+- `test(e2e): add cypress spec for setup redirect guard`
 - `chore(docker): add production build script`
-- `refactor(users): extract registration logic into RegisterUserAction`
-- `BREAKING CHANGE` in footer when a public API contract changes
+- `refactor(athletes): extract list logic into a dedicated action`
 
-> Commitlint enforces this format locally via Husky. The subject must be lower-case.
+> Commitlint enforces this format locally via Husky. The **subject must be lower-case**.
 
 ### GitHub Project Board — PO workflow
 
-The board tracks **both issues and their open PRs**. Issues are the primary items; PRs are added alongside them so the connection is visible directly on the board. The "Linked pull requests" field on the issue card shows the PR automatically when the PR body contains `Closes #N`.
+The board tracks **both issues and their open PRs**. Issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
 
 #### Issue + PR lifecycle on the board
 
@@ -159,7 +191,7 @@ The board tracks **both issues and their open PRs**. Issues are the primary item
 #### Standard flow — step by step
 
 1. **Create issue** → it lands on the board as `Todo`.
-2. **Cut branch** named `<type>/<issue-number>-<description>` (e.g. `feat/13-academy-setup`).
+2. **Cut branch** named `<type>/<issue-number>-<description>`.
 3. **Open PR** with `Closes #N` in the body.
 4. **Add the PR to the project board** (GitHub does NOT do this automatically):
    ```bash
@@ -181,17 +213,16 @@ The board tracks **both issues and their open PRs**. Issues are the primary item
    }) { projectV2Item { id } } }'
    ```
    Status option IDs: `f75ad846` = Todo · `47fc9ee4` = In Progress · `98236657` = Done
-6. **When the PR is merged**, GitHub auto-closes the linked issue. The board automation moves both items to `Done`.
+6. **When the PR is merged**, GitHub auto-closes the linked issue and both items move to `Done`.
 
 #### Rules
 
-1. **Branch names include the issue number** (`feat/13-academy-setup`) — this is the traceability link.
+1. **Branch names include the issue number** — this is the traceability link.
 2. **Every PR body must contain `Closes #N`** (or `Fixes #N`) for each issue it resolves.
-3. **Always add the PR to the project board** right after opening it (step 4 above).
-4. **The "Linked pull requests" field** on the issue card shows the PR automatically — no extra wiring needed beyond `Closes #N` + both items being on the board.
-5. **When a PR is merged**, GitHub auto-closes the linked issues. The board status moves to `Done` automatically if the project has the built-in automation enabled (check Settings → Workflows on the project).
+3. **Always add the PR to the project board** right after opening it.
+4. **Assign `m-bonanno`** and apply the correct type label on every PR.
 
-#### Finding an issue's or PR's project item ID
+#### Finding a project item ID
 ```bash
 gh project item-list 2 --owner m-bonanno --format json
 ```
@@ -199,7 +230,7 @@ gh project item-list 2 --owner m-bonanno --format json
 ### PR Rules
 - **No direct commits to `main` or `develop`** — ever, not even for hotfixes.
 - All feature/fix/chore branches open PRs **exclusively toward `develop`**.
-- `develop` → `main` only via a PR (no intermediate release branch needed — semantic-release handles tagging automatically).
+- `develop` → `main` only via a PR (semantic-release handles tagging automatically).
 - **Squash merge only** into `develop`. One clean commit per feature.
 - **Merge commit** (no squash) from `develop` into `main`.
 - Delete the branch after merge.
@@ -207,13 +238,15 @@ gh project item-list 2 --owner m-bonanno --format json
 ### PR Checklist for Claude — every PR must include
 
 1. **Title** — conventional commit format: `type(scope): description`
-2. **Description** — filled template (What / Why / How / Checklist / References) in English with emoji
+2. **Description** — filled template (What / Why / How / Checklist / References) in English
 3. **Assignee** — always assign `m-bonanno` (`gh pr edit <N> --add-assignee m-bonanno`)
-4. **Labels** — apply the **type** label at creation. Do NOT add `🚧 wip` unless explicitly asked.
-5. **No footer — ever** — do NOT append "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic/AI attribution to PR bodies, commit messages, or code comments.
+4. **Labels** — apply the type label at creation (see table below).
+5. **Project board** — add the PR, set to `In Progress`.
+6. **No AI attribution — ever** — do NOT add "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic/AI text anywhere: PR bodies, commit messages, code comments, docs.
 
-> **Important — PR body formatting:** Always write the body to a temp file (`.claude/pr-body.md`) and use `gh pr edit <N> --body-file .claude/pr-body.md`.
-> Never pass the body inline via `--body "..."` or a bash heredoc — backticks and special characters get escaped and render as literal `\`` in GitHub.
+> **PR body formatting:** Always write the body to `.claude/pr-body.md` and pass it with
+> `gh pr create --body-file .claude/pr-body.md` or `gh pr edit <N> --body-file .claude/pr-body.md`.
+> Never use `--body "..."` or a bash heredoc — special characters get mangled.
 
 #### Type labels (one per PR)
 
@@ -228,9 +261,9 @@ gh project item-list 2 --owner m-bonanno --format json
 | `refactor/*` | `♻️ refactor` |
 | `test/*` | `🧪 testing` |
 
-Add `💥 breaking change` as a second type label when the PR contains a `BREAKING CHANGE` footer.
+Add `💥 breaking change` as a second label when the PR contains a `BREAKING CHANGE` footer.
 
-#### Status labels (update as the PR progresses)
+#### Status labels
 
 | Moment | Label |
 |--------|-------|
@@ -238,23 +271,23 @@ Add `💥 breaking change` as a second type label when the PR contains a `BREAKI
 | All review comments resolved, ready to merge | `🟢 ready to merge` |
 | Waiting on a dependency or decision | `🔴 blocked` |
 
-Open with the type label. Switch to `🟢 ready to merge` once Copilot review comments are addressed.
+Open with the type label only. Switch to `🟢 ready to merge` once all Copilot comments are addressed.
 
 ### Release Flow (automated via semantic-release)
 
-Versioning, changelogs, and **Git tags** are fully automated — no manual tagging or version bumps ever.
+Versioning, changelogs, and Git tags are fully automated — no manual tagging or version bumps ever.
 
 **Beta release** — every squash merge to `develop`:
 1. semantic-release reads conventional commits since the last tag
 2. Determines the next version bump (`fix` → patch, `feat` → minor, `BREAKING CHANGE` → major)
-3. Creates Git tag `vX.Y.Z-beta.N` on the repo + GitHub pre-release + updates `CHANGELOG.md`
+3. Creates tag `vX.Y.Z-beta.N` + GitHub pre-release + updates `CHANGELOG.md`
 
 **Stable release** — every merge commit from `develop` → `main`:
 1. semantic-release reads conventional commits since the last stable tag
-2. Creates Git tag `vX.Y.Z` on the repo + GitHub Release with full changelog
+2. Creates tag `vX.Y.Z` + GitHub Release with full changelog
 
 **Config:** `.releaserc.json` at the repo root.
-- Do not create a `version` field in `package.json` — semantic-release owns versioning entirely.
+- Do not create a `version` field in `package.json` — semantic-release owns versioning.
 - `package-lock.json` is committed; always run `npm install` after changing `package.json`.
 
 ### Hotfix Flow
@@ -262,80 +295,160 @@ Versioning, changelogs, and **Git tags** are fully automated — no manual taggi
 ```bash
 # 1. Cut from main, not develop
 git checkout main && git pull origin main
-git checkout -b hotfix/token-expiry-crash
+git checkout -b hotfix/31-token-expiry-crash
 
-# 2. Fix, test (TDD), commit
+# 2. Write test, fix, commit
 git commit -m "fix(auth): prevent crash on expired token decode"
 
-# 3. Open PR → main, merge (semantic-release will tag automatically)
-# 4. Backport: open a second PR → develop to keep branches in sync
+# 3. PR → main (semantic-release tags automatically)
+# 4. Backport: second PR → develop to keep branches in sync
 ```
 
 ### Copilot Review Workflow
 
-When the user says "Copilot ha lasciato commenti":
-1. Fetch all review comments via `gh api repos/m-bonanno/budojo/pulls/<N>/comments`
-2. For each comment: evaluate, fix if valid, skip if not applicable
-3. Commit fixes with `fix(<scope>): address copilot review comments`
-4. Reply to each comment thread via `gh api repos/m-bonanno/budojo/pulls/<N>/comments/<id>/replies -X POST --field body="..."`
-5. Push and update label to `🟢 ready to merge`
+When Copilot leaves review comments on a PR:
+1. Fetch all comments: `gh api repos/m-bonanno/budojo/pulls/<N>/comments`
+2. For each comment: evaluate, fix if valid, skip with explanation if not applicable
+3. Commit all fixes in one commit: `fix(<scope>): address copilot review comments`
+4. Reply to every comment thread: `gh api repos/m-bonanno/budojo/pulls/<N>/comments/<id>/replies -X POST -f body="..."`
+5. **Re-read the PR body and update it if the fixes changed anything it describes** (counts, paths, commands, structure, examples). A stale PR body misleads reviewers. Rewrite `.claude/pr-body.md` and push with `gh pr edit <N> --body-file .claude/pr-body.md`.
+6. Push and switch label to `🟢 ready to merge`.
 
 **Reply rules (mandatory):**
 - **Always write in English** — never Italian, regardless of the comment language.
-- **Always reference the fix commit** — include the short SHA in every reply, e.g. `Fixed in abc1234.`
-- Keep replies concise: one sentence explaining what was done + the commit reference.
+- **Always reference the fix commit** — include the short SHA in every reply: `Fixed in abc1234.`
+- Keep replies concise: one sentence on what changed + the commit SHA.
 
 ---
 
 ## Server (Laravel 13)
 
 ### Structure conventions
-- **Controllers** — thin; delegate all logic to services.
-- **Services** — contain business logic; injected via constructor DI.
-- **Repositories** (optional) — abstract Eloquent queries when models are complex.
-- **Form Requests** — all input validation lives here, never in controllers.
-- **Resources** — all API responses go through Laravel API Resources.
-- **Actions** — single-responsibility classes for complex operations (e.g. `RegisterUserAction`).
+
+```
+server/app/
+├── Actions/        # Single-responsibility business operations (e.g. CreateAcademyAction)
+├── Enums/          # Backed PHP enums (Belt, AthleteStatus, …)
+├── Http/
+│   ├── Controllers/  # Thin — validate input via Form Request, call Action, return Resource
+│   ├── Requests/     # All input validation lives here, never in controllers
+│   └── Resources/    # All API response shaping — never return raw Eloquent models
+└── Models/         # Eloquent models — relations, scopes, casts only; no business logic
+```
+
+- **Controllers** — thin: receive request → delegate to Action → return Resource.
+- **Actions** — contain all business logic; one class, one operation.
+- **Form Requests** — validation and authorisation gates.
+- **Resources** — shape every API response; never expose raw model attributes.
+- **Models** — relations, scopes, casts. No business logic.
 
 ### Static Analysis
-- PHPStan runs at **level 9** (max).
-- Config: `phpstan.neon` in `/server`.
-- CI blocks merge if PHPStan reports errors.
+- PHPStan at **level 9** (max). Config: `server/phpstan.neon`.
+- CI blocks merge on any error.
 
 ### Code Style (PHP CS Fixer)
 - Config: `server/.php-cs-fixer.php`
 - Rulesets: `@PHP84Migration`, `@PSR12`, `@PSR12:risky`
-- Key rules: `declare_strict_types`, `use_arrow_functions`, `ordered_imports`, `single_trait_insert_per_statement`
-- Scans: `app/`, `routes/`, `tests/` (config/ and database/ excluded — Laravel boilerplate)
-- CI blocks merge if any file needs fixing
+- Key rules: `declare_strict_types`, `use_arrow_functions`, `ordered_imports`
+- CI blocks merge if any file needs fixing.
 
 ### Testing (PEST 4)
-- Feature tests hit real DB via `RefreshDatabase` (SQLite `:memory:` in CI via `phpunit.xml`)
-- Unit tests mock external dependencies
-- Coverage is generated on every PR; no global minimum threshold — grows with TDD
+
+```bash
+cd server
+
+# Run all tests
+vendor/bin/pest --parallel
+
+# Run a single file
+vendor/bin/pest tests/Feature/Athlete/AthleteTest.php
+```
+
+- **Feature tests** hit a real SQLite `:memory:` DB via `RefreshDatabase`; run full HTTP round-trips.
+- **Unit tests** mock external dependencies.
+- Coverage generated on every PR; grows with TDD — no enforced minimum threshold.
 
 ### API conventions
-- Versioned routes: `/api/v1/...`
+- Versioned routes: `/api/v1/...` defined in `routes/api_v1.php`
 - JSON:API-style responses with consistent error envelope
-- Authentication via **Laravel Sanctum** (token-based for SPA)
+- Auth via **Laravel Sanctum** Bearer tokens (token per session, not cookie)
 
 ---
 
 ## Client (Angular 21 + PrimeNG 21)
 
-> **Note for Claude:** The developer has no frontend experience. Always explain Angular/TypeScript decisions clearly, suggest the simplest PrimeNG component that fits the use case, and avoid over-engineering the FE.
+> **Note for Claude:** The developer is BE-focused. Always explain Angular/TypeScript decisions clearly, suggest the simplest PrimeNG component that fits, and avoid over-engineering.
 
 ### Structure conventions
-- Feature modules under `src/app/features/<feature-name>/`
-- Shared components in `src/app/shared/`
-- HTTP calls only in `*.service.ts` files (never in components)
+
+```
+client/src/app/
+├── core/
+│   ├── guards/        # Route guards (authGuard, hasAcademyGuard, noAcademyGuard)
+│   ├── interceptors/  # HTTP interceptors (auth token attachment)
+│   └── services/      # AuthService, AcademyService, AthleteService — HTTP only here
+├── features/
+│   ├── auth/          # Login, Register pages
+│   ├── academy/       # Setup page
+│   ├── athletes/      # List page (and future detail/edit)
+│   └── dashboard/     # Layout shell (sidebar + router-outlet)
+└── shared/
+    └── components/    # BeltBadge and other reusable presentational components
+```
+
+- Feature folders under `src/app/features/<feature>/`
+- HTTP calls only in `*.service.ts` — never inside components
 - Components use **OnPush** change detection by default
-- State management via **Angular Signals** (no NgRx unless complexity demands it)
+- State via **Angular Signals** — no NgRx unless complexity genuinely demands it
+- Standalone components only (no NgModules)
 
 ### UI
-- All UI components come from **PrimeNG 21**.
-- Use PrimeFlex for layout utilities.
+- All UI components from **PrimeNG 21** — check the docs before rolling custom components.
+- Layout utilities from **PrimeFlex**.
 - Follow PrimeNG's theming system; no inline styles.
+
+### Testing — Vitest 4 (unit) + Cypress 13 (E2E)
+
+#### Unit tests (Vitest)
+
+```bash
+cd client
+npm test -- --watch=false       # single run
+npm test                        # watch mode
+```
+
+- Test components, services, and guards in isolation.
+- Mock `HttpClient` with `provideHttpClientTesting()`.
+- Config: `vitest.config.ts` at `client/`.
+
+#### E2E tests (Cypress)
+
+```bash
+cd client
+npm run cy:open                 # interactive mode (requires ng serve running)
+npm run cy:run                  # headless run (CI mode, requires ng serve running)
+```
+
+**Rules:**
+- **Always mock every HTTP call** with `cy.intercept()` — E2E tests must not depend on a live backend.
+- Use `cy.visitAuthenticated(url)` (custom command in `cypress/support/commands.ts`) to pre-seed `auth_token` in localStorage before Angular boots, satisfying the `authGuard`.
+- When the **same endpoint is called multiple times in a test** (e.g. `GET /api/v1/academy` fires once for `noAcademyGuard` on page load and again for `hasAcademyGuard` after a redirect), use `times: 1` in the `beforeEach` intercept and add a second intercept in the specific test for the post-action call:
+  ```typescript
+  // beforeEach: allows access to /setup
+  cy.intercept({ method: 'GET', url: '/api/v1/academy', times: 1 }, { statusCode: 404 }).as('guard');
+
+  // inside redirect test: satisfies hasAcademyGuard after POST
+  cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: {...} } }).as('guardAfter');
+  ```
+- Specs live in `cypress/e2e/*.cy.ts`; config in `cypress.config.ts`.
+
+**Spec coverage:**
+
+| File | What it tests |
+|------|--------------|
+| `navigation.cy.ts` | All guard redirect scenarios (unauthenticated, auth+no-academy, auth+has-academy) |
+| `auth.cy.ts` | Login/register form rendering, validation, successful flows, nav links |
+| `setup.cy.ts` | Academy setup form, validation, successful create → `/dashboard/athletes` |
 
 ---
 
@@ -344,46 +457,73 @@ When the user says "Copilot ha lasciato commenti":
 ### Services
 | Container | Purpose | Port |
 |-----------|---------|------|
-| `api` | Laravel PHP-FPM + Nginx | 8000 |
-| `client` | Angular dev server / Nginx (prod) | 4200 / 80 |
-| `db` | MySQL 8.4 | 3306 |
+| `budojo_api` | Laravel PHP-FPM + Nginx | 8000 |
+| `budojo_client` | Angular dev server | 4200 |
+| `budojo_db` | MySQL 8.4 | 3306 |
 
-### Scripts
-- `docker/dev.sh` — start full dev environment
-- `docker/build-prod.sh` — build optimised production images
-- All secrets via `.env` (never committed)
+### Useful commands
+```bash
+# Start full stack
+docker compose up --build
+
+# Generate APP_KEY (required on first run if APP_KEY is empty)
+docker exec budojo_api php artisan key:generate
+
+# Run migrations manually
+docker exec budojo_api php artisan migrate
+
+# Seed test data (requires LOCAL_ADMIN_PASSWORD set in .env)
+docker exec budojo_api php artisan db:seed
+
+# Angular shell
+docker exec -it budojo_client sh
+
+# PHP shell
+docker exec -it budojo_api sh
+```
+
+All secrets via `.env` at the repo root (never committed). Copy `.env.example` to start.
 
 ---
 
 ## CI/CD (GitHub Actions)
 
 ### On every PR to `develop` — `.github/workflows/pr-checks.yml`
-1. **PHPStan** (level 9) — static analysis
-2. **PEST** (parallel, with coverage) — full test suite
-3. **PHP CS Fixer** (dry-run) — code style check
+
+All 7 checks must pass before merge:
+
+| Job | Tool | What it checks |
+|-----|------|---------------|
+| `phpstan` | PHPStan level 9 | PHP static analysis |
+| `pest` | PEST 4 (parallel + coverage) | PHP unit + feature tests |
+| `php-cs-fixer` | PHP CS Fixer (dry-run) | PHP code style |
+| `angular-test` | Vitest 4 | Angular unit tests |
+| `angular-lint` | ESLint | Angular TypeScript/template lint |
+| `angular-format` | Prettier | Angular code formatting |
+| `cypress-e2e` | Cypress 13 (Chrome headless) | Angular E2E flows |
+
+The `cypress-e2e` job uses `cypress-io/github-action@v6` with `start: npm run start` and `wait-on: http://localhost:4200` — no backend needed, all API calls are intercepted.
 
 ### On every push to `develop` or `main` — `.github/workflows/release.yml`
-- **semantic-release** runs automatically
-- Creates a Git tag and GitHub Release/pre-release based on conventional commits
-- Concurrency group per branch — no concurrent releases on the same branch
+- **semantic-release** creates a Git tag and GitHub Release automatically based on conventional commits.
+- Concurrency group per branch — no concurrent releases on the same branch.
 
 ---
 
 ## What Claude Should Always Do
 
-1. **Write the PEST test first**, then the implementation (TDD).
-2. **Suggest PrimeNG components** by name when building any UI element.
-3. **Keep controllers thin** — business logic in Services or Actions.
-4. **Use Form Requests** for all Laravel validation.
+1. **Write tests first across all three layers** — PEST spec → Vitest spec → Cypress spec — before writing any implementation.
+2. **Suggest PrimeNG components** by name when building any UI element; check PrimeNG 21 docs.
+3. **Keep controllers thin** — validate via Form Request, delegate logic to an Action, return a Resource.
+4. **Use Form Requests** for all Laravel validation; never validate in controllers.
 5. **Explain FE decisions** in plain terms (the developer is BE-focused).
-6. **Never commit to `main` or `develop` directly** — always cut a branch, then open a PR.
-   After opening, **add the PR to the GitHub Project board** and set both the issue and the PR item to `In Progress`.
-7. **Always suggest the branch name** before starting any work (`feat/...`, `fix/...`, etc.).
+6. **Never commit to `main` or `develop` directly** — always cut a branch, then open a PR. After opening, add the PR to the GitHub Project board and set both the issue and PR items to `In Progress`.
+7. **Always suggest the branch name** (including issue number) before starting any work.
 8. **Use conventional commits** with lower-case subject in every `git commit`.
 9. **Rebase, don't merge**, when updating a feature branch from `develop`.
-10. **Squash merge** PRs into `develop`; merge commit into `main`.
-11. **Never create a `version` field** in `package.json` — semantic-release owns versioning.
-12. **Reply to all Copilot comments** after fixing, using the review workflow above. Replies must be in **English** and always cite the short commit SHA that resolved the issue (e.g. `Fixed in abc1234.`).
-13. **Before pushing PHP changes**: run `vendor/bin/php-cs-fixer fix` then `vendor/bin/phpstan analyse --no-progress` — both must be clean.
-14. **Before pushing Angular changes**: run `node_modules/.bin/prettier --write "src/**/*.{ts,html,scss}"` then `npm run lint` — both must be clean.
-15. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere: not in PR bodies, commit messages, code comments, or documentation.
+10. **Squash merge** PRs into `develop`; merge commit (no squash) into `main`.
+11. **Never create a `version` field** in `package.json` — semantic-release owns versioning entirely.
+12. **Reply to all Copilot comments** after fixing: English only, always cite the short commit SHA (`Fixed in abc1234.`), re-read and update the PR body if the fixes changed anything it describes, then switch label to `🟢 ready to merge`.
+13. **Before pushing PHP changes**: `php-cs-fixer fix` → `phpstan analyse` → `pest --parallel` — all must be clean.
+14. **Before pushing Angular changes**: `prettier --write` → `npm run lint` → `npm test -- --watch=false` — all must be clean. Cypress runs in CI.
+15. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere.
