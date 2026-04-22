@@ -25,11 +25,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/health",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "health"]
-            },
+            "url": "{{base_url}}/api/v1/health",
             "description": "Returns `{\"status\":\"ok\"}` when the API is up and running."
           },
           "response": [
@@ -78,11 +74,7 @@
                 "raw": { "language": "json" }
               }
             },
-            "url": {
-              "raw": "{{base_url}}/api/v1/auth/register",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "register"]
-            },
+            "url": "{{base_url}}/api/v1/auth/register",
             "description": "Creates a new user account and returns the user data plus a Sanctum Bearer token.\n\n**Validation rules**\n- `name` — required, string, max 255\n- `email` — required, valid e-mail, unique\n- `password` — required, min 8, must include uppercase, lowercase, digit and symbol; confirmed via `password_confirmation`\n\n**Response `201 Created`**\n```json\n{\n  \"data\": { \"id\": 1, \"name\": \"Mario Rossi\", \"email\": \"mario@example.com\" },\n  \"token\": \"<sanctum-plain-text-token>\"\n}\n```"
           },
           "response": [
@@ -144,11 +136,7 @@
                 "raw": { "language": "json" }
               }
             },
-            "url": {
-              "raw": "{{base_url}}/api/v1/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "login"]
-            },
+            "url": "{{base_url}}/api/v1/auth/login",
             "description": "Authenticates an existing user and returns a new Sanctum Bearer token.\n\n**Validation rules**\n- `email` — required, valid e-mail\n- `password` — required, string\n\n**Response `200 OK`**\n```json\n{\n  \"data\": { \"id\": 1, \"name\": \"Mario Rossi\", \"email\": \"mario@example.com\" },\n  \"token\": \"<sanctum-plain-text-token>\"\n}\n```"
           },
           "response": [
