@@ -1,0 +1,66 @@
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="logo-mark">b</div>
+      <h1>Set up your academy</h1>
+      <p>You're almost there — tell us about your gym</p>
+    </div>
+
+    @if (error()) {
+      <p-message severity="error" [text]="error()!" styleClass="w-full" />
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="field">
+        <label for="name">Academy name <span class="required">*</span></label>
+        <input
+          pInputText
+          id="name"
+          type="text"
+          formControlName="name"
+          placeholder="Gracie Barra Lisboa"
+          autocomplete="organization"
+          [class.ng-invalid]="name.invalid && name.touched"
+          [class.ng-dirty]="name.touched"
+        />
+        @if (name.invalid && name.touched) {
+          <small class="field-error">
+            @if (name.errors?.['required'] || name.errors?.['whitespace']) {
+              Academy name is required.
+            } @else if (name.errors?.['maxlength']) {
+              Maximum 255 characters.
+            }
+          </small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="address">Address <span class="optional">(optional)</span></label>
+        <textarea
+          pTextarea
+          id="address"
+          formControlName="address"
+          placeholder="Rua Example 123, Lisboa"
+          rows="3"
+          [class.ng-invalid]="address.invalid && address.touched"
+          [class.ng-dirty]="address.touched"
+        ></textarea>
+        @if (address.invalid && address.touched) {
+          <small class="field-error">
+            @if (address.errors?.['maxlength']) {
+              Maximum 500 characters.
+            }
+          </small>
+        }
+      </div>
+
+      <p-button
+        type="submit"
+        label="Create academy"
+        styleClass="submit-btn"
+        [loading]="loading()"
+        [disabled]="loading()"
+      />
+    </form>
+  </div>
+</div>
