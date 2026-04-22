@@ -6,7 +6,7 @@
 - **Server** — REST API built with Laravel 13 (PHP), served via Docker
 - **Client** — SPA built with Angular 21 + PrimeNG 21, served via Docker
 
-The two containers communicate over a shared Docker network. A `.env` file at the repo root supplies environment variables to both containers via `env_file`.
+The two containers communicate over a shared Docker network. A `.env` file at the repo root holds the configuration for docker-compose and is injected into the `api` container via `env_file`.
 
 ---
 
@@ -21,7 +21,7 @@ The two containers communicate over a shared Docker network. A `.env` file at th
 
 **Always write the failing test first, then write the minimum code to make it pass.**
 
-Three test layers are mandatory — all must be green before a PR is opened:
+Four test layers are mandatory — all must be green before a PR is opened:
 
 | Layer | Stack | Scope |
 |-------|-------|-------|
@@ -110,26 +110,30 @@ git fetch origin && git rebase origin/develop
 
 **Whenever PHP files were changed:**
 ```bash
+cd server
+
 # 1. Auto-fix code style
-cd server && vendor/bin/php-cs-fixer fix
+vendor/bin/php-cs-fixer fix
 
 # 2. Static analysis — must report 0 errors
-cd server && vendor/bin/phpstan analyse --no-progress
+vendor/bin/phpstan analyse --no-progress
 
 # 3. Full test suite — must be all green
-cd server && vendor/bin/pest --parallel
+vendor/bin/pest --parallel
 ```
 
 **Whenever Angular files were changed:**
 ```bash
+cd client
+
 # 1. Auto-fix formatting
-cd client && npx prettier --write "src/**/*.{ts,html,scss}"
+npx prettier --write "src/**/*.{ts,html,scss}"
 
 # 2. Lint — must report 0 errors
-cd client && npm run lint
+npm run lint
 
 # 3. Unit tests — must be all green
-cd client && npm test -- --watch=false
+npm test -- --watch=false
 ```
 
 > Cypress E2E tests require `ng serve` running — they are validated in CI.
@@ -168,7 +172,7 @@ Examples:
 - `test(auth): add pest feature test for login flow`
 - `test(e2e): add cypress spec for setup redirect guard`
 - `chore(docker): add production build script`
-- `refactor(athletes): extract list logic into athleteListAction`
+- `refactor(athletes): extract list logic into a dedicated action`
 
 > Commitlint enforces this format locally via Husky. The **subject must be lower-case**.
 
@@ -350,11 +354,13 @@ server/app/
 ### Testing (PEST 4)
 
 ```bash
+cd server
+
 # Run all tests
-cd server && vendor/bin/pest --parallel
+vendor/bin/pest --parallel
 
 # Run a single file
-cd server && vendor/bin/pest tests/Feature/AthleteTest.php
+vendor/bin/pest tests/Feature/Athlete/AthleteTest.php
 ```
 
 - **Feature tests** hit a real SQLite `:memory:` DB via `RefreshDatabase`; run full HTTP round-trips.
@@ -405,8 +411,9 @@ client/src/app/
 #### Unit tests (Vitest)
 
 ```bash
-cd client && npm test -- --watch=false       # single run
-cd client && npm test                        # watch mode
+cd client
+npm test -- --watch=false       # single run
+npm test                        # watch mode
 ```
 
 - Test components, services, and guards in isolation.
@@ -416,8 +423,9 @@ cd client && npm test                        # watch mode
 #### E2E tests (Cypress)
 
 ```bash
-cd client && npm run cy:open     # interactive mode (requires ng serve running)
-cd client && npm run cy:run      # headless run (CI mode, requires ng serve running)
+cd client
+npm run cy:open                 # interactive mode (requires ng serve running)
+npm run cy:run                  # headless run (CI mode, requires ng serve running)
 ```
 
 **Rules:**
