@@ -165,3 +165,24 @@ jobs:
       - name: Check formatting
         run: npm run format:check
         working-directory: client
+
+  cypress-e2e:
+    name: "🎭 Cypress E2E"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: client
+          start: npm run start
+          wait-on: "http://localhost:4200"
+          wait-on-timeout: 120
+          browser: chrome
