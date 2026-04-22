@@ -111,17 +111,18 @@ cd client && npm run lint
 > Run static analysis / lint **after staging** to verify the final state.
 > Never rely on CI to catch these issues — fix locally first.
 
-### Branch Naming (Angular convention)
+### Branch Naming
 ```
-<type>/<short-description-in-kebab-case>
+<type>/<issue-number>-<short-description-in-kebab-case>
 ```
 Examples:
-- `feat/user-authentication`
-- `feat/user-profile`
-- `fix/login-validation-error`
-- `hotfix/token-expiry-crash`
-- `refactor/auth-service-cleanup`
-- `chore/update-dependencies`
+- `feat/13-academy-setup`
+- `feat/14-athlete-crud`
+- `fix/22-login-validation-error`
+- `hotfix/31-token-expiry-crash`
+- `chore/9-update-dependencies`
+
+Always include the **issue number** — it creates a traceable link between branch, PR, and the board item.
 
 **Types:** `feat`, `fix`, `hotfix`, `refactor`, `test`, `chore`, `docs`, `style`, `perf`, `ci`
 
@@ -142,6 +143,40 @@ Examples:
 - `BREAKING CHANGE` in footer when a public API contract changes
 
 > Commitlint enforces this format locally via Husky. The subject must be lower-case.
+
+### GitHub Project Board — PO workflow
+
+The board tracks **issues only**. PRs are linked to issues and never added as separate board items.
+
+#### Issue lifecycle on the board
+
+| Status | When |
+|--------|------|
+| `Todo` | Issue created |
+| `In Progress` | Branch created / PR opened |
+| `Done` | Closing PR merged (GitHub auto-closes the issue) |
+
+#### Rules
+
+1. **Only issues go on the board.** Never add a PR as a standalone project item.
+2. **Branch names include the issue number** (`feat/13-academy-setup`) — this is the traceability link.
+3. **Every PR body must contain `Closes #N`** (or `Fixes #N`) for each issue it resolves. GitHub uses this to auto-close issues on merge and to show the linked PR on the issue page.
+4. **When opening a PR**, manually set the linked issue(s) to `In Progress` on the board:
+   ```bash
+   gh api graphql -f query='mutation { updateProjectV2ItemFieldValue(input: {
+     projectId: "PVT_kwHOAsnvsM4BVW8P"
+     itemId: "<ITEM_ID>"
+     fieldId: "PVTSSF_lAHOAsnvsM4BVW8PzhQzRlk"
+     value: { singleSelectOptionId: "47fc9ee4" }
+   }) { projectV2Item { id } } }'
+   ```
+   Status option IDs: `f75ad846` = Todo · `47fc9ee4` = In Progress · `98236657` = Done
+5. **When a PR is merged**, GitHub auto-closes the linked issues. The board status moves to `Done` automatically if the project has the built-in automation enabled (check Settings → Workflows on the project).
+
+#### Finding an issue's project item ID
+```bash
+gh project item-list 2 --owner m-bonanno --format json | grep -A3 '"number":<ISSUE_N>'
+```
 
 ### PR Rules
 - **No direct commits to `main` or `develop`** — ever, not even for hotfixes.
