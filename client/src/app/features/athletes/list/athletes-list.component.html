@@ -1,0 +1,123 @@
+<p-toast position="top-right" />
+<p-confirmpopup />
+
+<div class="athletes-page">
+  <header class="athletes-page__header">
+    <div class="athletes-page__title-area">
+      <h1 class="athletes-page__title">Athletes</h1>
+      @if (!loading() && totalRecords() > 0) {
+        <span class="athletes-page__count">{{ totalRecords() }} total</span>
+      }
+    </div>
+    <p-button
+      label="Add athlete"
+      icon="pi pi-plus"
+      size="small"
+      disabled
+      pTooltip="Coming soon"
+      tooltipPosition="left"
+    />
+  </header>
+
+  <!-- Filters -->
+  <div class="athletes-page__filters">
+    <p-select
+      [options]="beltOptions"
+      [ngModel]="selectedBelt()"
+      (ngModelChange)="onBeltChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Belt"
+      styleClass="filter-select"
+    />
+    <p-select
+      [options]="statusOptions"
+      [ngModel]="selectedStatus()"
+      (ngModelChange)="onStatusChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Status"
+      styleClass="filter-select"
+    />
+  </div>
+
+  <!-- Table -->
+  <div class="athletes-page__table-wrapper">
+    <p-table
+      [value]="athletes()"
+      [loading]="loading()"
+      [rows]="20"
+      [first]="first()"
+      [totalRecords]="totalRecords()"
+      [paginator]="totalRecords() > 20"
+      (onPage)="onPageChange($event)"
+      [lazy]="true"
+      responsiveLayout="scroll"
+      styleClass="p-datatable-sm"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Name</th>
+          <th>Belt</th>
+          <th style="width: 3rem; text-align: center">Stripes</th>
+          <th>Status</th>
+          <th>Email</th>
+          <th>Joined</th>
+          <th style="width: 4rem"></th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-athlete>
+        <tr>
+          <td class="athlete-name">
+            {{ athlete.first_name }} {{ athlete.last_name }}
+          </td>
+          <td>
+            <app-belt-badge [belt]="athlete.belt" />
+          </td>
+          <td class="text-center">
+            <span class="stripes">{{ athlete.stripes }}</span>
+          </td>
+          <td>
+            <p-tag
+              [value]="statusLabel(athlete.status)"
+              [severity]="statusSeverity(athlete.status)"
+              [rounded]="true"
+            />
+          </td>
+          <td class="athlete-email">{{ athlete.email ?? '—' }}</td>
+          <td class="athlete-date">{{ athlete.joined_at }}</td>
+          <td class="athlete-actions">
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              size="small"
+              (onClick)="confirmDelete($event, athlete)"
+              pTooltip="Delete"
+              tooltipPosition="left"
+            />
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="7" class="empty-message">
+            @if (loading()) {
+              Loading athletes…
+            } @else {
+              <div class="empty-state">
+                <i class="pi pi-users empty-state__icon"></i>
+                <p class="empty-state__text">No athletes found.</p>
+                @if (selectedBelt() || selectedStatus()) {
+                  <p class="empty-state__hint">Try clearing your filters.</p>
+                }
+              </div>
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>
