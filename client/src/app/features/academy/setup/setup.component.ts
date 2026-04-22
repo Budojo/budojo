@@ -1,5 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -7,6 +13,9 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { TextareaModule } from 'primeng/textarea';
 import { AcademyService } from '../../../core/services/academy.service';
+
+const noWhitespace: ValidatorFn = (control: AbstractControl) =>
+  control.value?.trim() ? null : { whitespace: true };
 
 @Component({
   selector: 'app-setup',
@@ -24,7 +33,7 @@ export class SetupComponent {
   readonly error = signal<string | null>(null);
 
   readonly form = this.fb.group({
-    name: ['', [Validators.required, Validators.maxLength(255)]],
+    name: ['', [Validators.required, Validators.maxLength(255), noWhitespace]],
     address: ['', Validators.maxLength(500)],
   });
 
@@ -37,7 +46,7 @@ export class SetupComponent {
     this.loading.set(true);
     this.error.set(null);
 
-    const name = this.form.value.name!;
+    const name = this.form.value.name!.trim();
     const address = this.form.value.address?.trim() || undefined;
 
     this.academyService

@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, map, tap, catchError, throwError } from 'rxjs';
 
 export interface Academy {
   id: number;
@@ -29,6 +29,12 @@ export class AcademyService {
     return this.http.get<AcademyResponse>(this.base).pipe(
       tap((res) => this.academy.set(res.data)),
       map((res) => res.data),
+      catchError((err: HttpErrorResponse) => {
+        if (err.status === 404 || err.status === 401) {
+          this.academy.set(null);
+        }
+        return throwError(() => err);
+      }),
     );
   }
 
@@ -37,5 +43,9 @@ export class AcademyService {
       tap((res) => this.academy.set(res.data)),
       map((res) => res.data),
     );
+  }
+
+  clear(): void {
+    this.academy.set(null);
   }
 }

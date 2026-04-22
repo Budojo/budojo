@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { AcademyService } from './academy.service';
 
 export interface RegisterPayload {
   name: string;
@@ -24,6 +25,7 @@ const TOKEN_KEY = 'auth_token';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly academyService = inject(AcademyService);
   private readonly base = '/api/v1/auth';
 
   readonly isLoggedIn = signal<boolean>(!!localStorage.getItem(TOKEN_KEY));
@@ -40,6 +42,7 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
     this.isLoggedIn.set(false);
+    this.academyService.clear();
   }
 
   register(payload: RegisterPayload): Observable<AuthResponse> {
