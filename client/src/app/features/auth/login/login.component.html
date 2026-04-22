@@ -1,0 +1,70 @@
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="logo-mark">b</div>
+      <h1>Welcome back</h1>
+      <p>Sign in to your Budojo account</p>
+    </div>
+
+    @if (error()) {
+      <p-message severity="error" [text]="error()!" styleClass="w-full" />
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          pInputText
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="mario@example.com"
+          autocomplete="email"
+          [class.ng-invalid]="email.invalid && email.touched"
+          [class.ng-dirty]="email.touched"
+        />
+        @if (email.invalid && email.touched) {
+          <small class="field-error">
+            @if (email.errors?.['required']) {
+              Email is required.
+            } @else if (email.errors?.['email']) {
+              Enter a valid email address.
+            }
+          </small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <p-password
+          inputId="password"
+          formControlName="password"
+          placeholder="Your password"
+          autocomplete="current-password"
+          [feedback]="false"
+          [toggleMask]="true"
+          styleClass="w-full"
+          [inputStyleClass]="
+            'w-full' + (password.invalid && password.touched ? ' ng-invalid ng-dirty' : '')
+          "
+        />
+        @if (password.invalid && password.touched) {
+          <small class="field-error">Password is required.</small>
+        }
+      </div>
+
+      <p-button
+        type="submit"
+        label="Sign in"
+        styleClass="submit-btn"
+        [loading]="loading()"
+        [disabled]="loading()"
+      />
+    </form>
+
+    <p class="auth-nav-link">
+      Don't have an account?
+      <a routerLink="/auth/register">Create one</a>
+    </p>
+  </div>
+</div>

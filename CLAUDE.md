@@ -87,6 +87,30 @@ git fetch origin && git rebase origin/develop
 # 5. Open PR → develop when the feature is complete and tests pass
 ```
 
+### Pre-push Checklist — run these before every `git push`
+
+**Whenever PHP files were changed:**
+```bash
+# 1. Auto-fix code style
+cd server && vendor/bin/php-cs-fixer fix
+
+# 2. Static analysis — must report 0 errors before pushing
+cd server && vendor/bin/phpstan analyse --no-progress
+```
+
+**Whenever Angular files were changed:**
+```bash
+# 1. Auto-fix formatting
+cd client && node_modules/.bin/prettier --write "src/**/*.{ts,html,scss}"
+
+# 2. Lint — must report 0 errors before pushing
+cd client && npm run lint
+```
+
+> Run formatters/fixers **before staging** so the fixed files are included in the commit.
+> Run static analysis / lint **after staging** to verify the final state.
+> Never rely on CI to catch these issues — fix locally first.
+
 ### Branch Naming (Angular convention)
 ```
 <type>/<short-description-in-kebab-case>
@@ -133,6 +157,9 @@ Examples:
 2. **Description** — filled template (What / Why / How / Checklist / References) in English with emoji
 3. **Assignee** — always assign `m-bonanno` (`gh pr create --assignee m-bonanno`)
 4. **Labels** — apply one **type** label + the appropriate **status** label on open.
+
+> **Important — PR body formatting:** Always write the body to a temp file (`.claude/pr-body.md`) and use `gh pr edit <N> --body-file .claude/pr-body.md`.
+> Never pass the body inline via `--body "..."` or a bash heredoc — backticks and special characters get escaped and render as literal `\`` in GitHub.
 
 #### Type labels (one per PR)
 
@@ -297,3 +324,5 @@ When the user says "Copilot ha lasciato commenti":
 10. **Squash merge** PRs into `develop`; merge commit into `main`.
 11. **Never create a `version` field** in `package.json` — semantic-release owns versioning.
 12. **Reply to all Copilot comments** after fixing, using the review workflow above.
+13. **Before pushing PHP changes**: run `vendor/bin/php-cs-fixer fix` then `vendor/bin/phpstan analyse --no-progress` — both must be clean.
+14. **Before pushing Angular changes**: run `node_modules/.bin/prettier --write "src/**/*.{ts,html,scss}"` then `npm run lint` — both must be clean.
