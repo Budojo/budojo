@@ -30,6 +30,16 @@ export const routes: Routes = [
     canActivate: [authGuard, hasAcademyGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    children: [
+      { path: '', redirectTo: 'athletes', pathMatch: 'full' },
+      {
+        path: 'athletes',
+        loadComponent: () =>
+          import('./features/athletes/list/athletes-list.component').then(
+            (m) => m.AthletesListComponent,
+          ),
+      },
+    ],
   },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
 ];

@@ -210,7 +210,7 @@ gh project item-list 2 --owner m-bonanno --format json
 2. **Description** — filled template (What / Why / How / Checklist / References) in English with emoji
 3. **Assignee** — always assign `m-bonanno` (`gh pr edit <N> --add-assignee m-bonanno`)
 4. **Labels** — apply the **type** label at creation. Do NOT add `🚧 wip` unless explicitly asked.
-5. **No footer** — do not append any "Generated with Claude Code" or similar footer to PR bodies.
+5. **No footer — ever** — do NOT append "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic/AI attribution to PR bodies, commit messages, or code comments.
 
 > **Important — PR body formatting:** Always write the body to a temp file (`.claude/pr-body.md`) and use `gh pr edit <N> --body-file .claude/pr-body.md`.
 > Never pass the body inline via `--body "..."` or a bash heredoc — backticks and special characters get escaped and render as literal `\`` in GitHub.
@@ -279,6 +279,11 @@ When the user says "Copilot ha lasciato commenti":
 3. Commit fixes with `fix(<scope>): address copilot review comments`
 4. Reply to each comment thread via `gh api repos/m-bonanno/budojo/pulls/<N>/comments/<id>/replies -X POST --field body="..."`
 5. Push and update label to `🟢 ready to merge`
+
+**Reply rules (mandatory):**
+- **Always write in English** — never Italian, regardless of the comment language.
+- **Always reference the fix commit** — include the short SHA in every reply, e.g. `Fixed in abc1234.`
+- Keep replies concise: one sentence explaining what was done + the commit reference.
 
 ---
 
@@ -378,6 +383,7 @@ When the user says "Copilot ha lasciato commenti":
 9. **Rebase, don't merge**, when updating a feature branch from `develop`.
 10. **Squash merge** PRs into `develop`; merge commit into `main`.
 11. **Never create a `version` field** in `package.json` — semantic-release owns versioning.
-12. **Reply to all Copilot comments** after fixing, using the review workflow above.
+12. **Reply to all Copilot comments** after fixing, using the review workflow above. Replies must be in **English** and always cite the short commit SHA that resolved the issue (e.g. `Fixed in abc1234.`).
 13. **Before pushing PHP changes**: run `vendor/bin/php-cs-fixer fix` then `vendor/bin/phpstan analyse --no-progress` — both must be clean.
 14. **Before pushing Angular changes**: run `node_modules/.bin/prettier --write "src/**/*.{ts,html,scss}"` then `npm run lint` — both must be clean.
+15. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere: not in PR bodies, commit messages, code comments, or documentation.

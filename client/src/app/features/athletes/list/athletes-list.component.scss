@@ -1,0 +1,112 @@
+.athletes-page {
+  padding: 1.75rem 2rem;
+  max-width: 1200px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  &__title-area {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--p-surface-900, #111827);
+  }
+
+  &__count {
+    font-size: 0.875rem;
+    color: var(--p-surface-500, #6b7280);
+  }
+
+  &__filters {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__table-wrapper {
+    background: #fff;
+    border-radius: var(--p-border-radius-lg, 8px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+  }
+}
+
+// ── Table cells ────────────────────────────────────────────────────────────────
+
+.athlete-name {
+  font-weight: 500;
+  color: var(--p-surface-900, #111827);
+}
+
+.athlete-email {
+  font-size: 0.875rem;
+  color: var(--p-surface-600, #4b5563);
+}
+
+.athlete-date {
+  font-size: 0.875rem;
+  color: var(--p-surface-500, #6b7280);
+  white-space: nowrap;
+}
+
+.athlete-actions {
+  text-align: right;
+}
+
+.stripes {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--p-surface-600, #4b5563);
+}
+
+.text-center {
+  text-align: center;
+}
+
+// ── Empty state ────────────────────────────────────────────────────────────────
+
+.empty-message {
+  text-align: center !important;
+  padding: 3rem 0 !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  &__icon {
+    font-size: 2.5rem;
+    color: var(--p-surface-300, #d1d5db);
+  }
+
+  &__text {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--p-surface-500, #6b7280);
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-surface-400, #9ca3af);
+  }
+}
+
+// ── Filter select width ────────────────────────────────────────────────────────
+
+:host ::ng-deep .filter-select {
+  min-width: 160px;
+}
