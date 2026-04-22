@@ -155,8 +155,9 @@ Examples:
 
 1. **Title** — conventional commit format: `type(scope): description`
 2. **Description** — filled template (What / Why / How / Checklist / References) in English with emoji
-3. **Assignee** — always assign `m-bonanno` (`gh pr create --assignee m-bonanno`)
-4. **Labels** — apply one **type** label + the appropriate **status** label on open.
+3. **Assignee** — always assign `m-bonanno` (`gh pr edit <N> --add-assignee m-bonanno`)
+4. **Labels** — apply the **type** label at creation. Do NOT add `🚧 wip` unless explicitly asked.
+5. **No footer** — do not append any "Generated with Claude Code" or similar footer to PR bodies.
 
 > **Important — PR body formatting:** Always write the body to a temp file (`.claude/pr-body.md`) and use `gh pr edit <N> --body-file .claude/pr-body.md`.
 > Never pass the body inline via `--body "..."` or a bash heredoc — backticks and special characters get escaped and render as literal `\`` in GitHub.
