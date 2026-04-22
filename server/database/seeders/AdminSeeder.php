@@ -14,15 +14,26 @@ class AdminSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@example.it'],
-            [
-                'name' => 'Admin Budojo',
-                'password' => Hash::make('password'),
+        if (! app()->environment(['local', 'testing'])) {
+            $this->command->warn('AdminSeeder skipped — only runs in local/testing environments.');
+
+            return;
+        }
+
+        $password = config('seeder.local_admin_password');
+
+        if (! \is_string($password) || $password === '') {
+            throw new \RuntimeException('LOCAL_ADMIN_PASSWORD must be set in .env before running AdminSeeder.');
+        }
+
+        $admin = User::firstOrCreate(['email' => 'admin@example.it'], ['name' => 'Admin Budojo', 'password' => Hash::make($password)]);
+
+        if ($admin->wasRecentlyCreated) {
+            $admin->forceFill([
                 'email_verified_at' => now(),
                 'remember_token' => Str::random(10),
-            ],
-        );
+            ])->save();
+        }
 
         if ($admin->academy === null) {
             Academy::create([
