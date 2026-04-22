@@ -70,7 +70,9 @@
     color: var(--p-surface-300, #d1d5db);
     text-decoration: none;
     font-size: 0.9375rem;
-    transition: background 0.15s, color 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     i {
       font-size: 1rem;

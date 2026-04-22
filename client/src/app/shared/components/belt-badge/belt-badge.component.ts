@@ -19,13 +19,7 @@ const BELT_STYLES: Record<Belt, BeltStyle> = {
   selector: 'app-belt-badge',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TagModule],
-  template: `
-    <p-tag
-      [value]="label()"
-      [style]="style()"
-      [rounded]="true"
-    />
-  `,
+  template: ` <p-tag [value]="label()" [style]="style()" [rounded]="true" /> `,
   styles: [
     `
       :host {

@@ -1,10 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -13,6 +7,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmPopup } from 'primeng/confirmpopup';
+import { Tooltip } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import {
   Athlete,
@@ -39,6 +34,7 @@ interface SelectOption<T extends string> {
     TagModule,
     ToastModule,
     ConfirmPopup,
+    Tooltip,
     BeltBadgeComponent,
   ],
   providers: [ConfirmationService, MessageService],
@@ -58,7 +54,6 @@ export class AthletesListComponent implements OnInit {
   selectedStatus = signal<AthleteStatus | ''>('');
 
   private page = 1;
-  private readonly perPage = 20;
 
   readonly first = signal(0);
 
@@ -143,6 +138,16 @@ export class AthletesListComponent implements OnInit {
         next: (res) => {
           this.athletes.set(res.data);
           this.totalRecords.set(res.meta.total);
+        },
+        error: () => {
+          this.athletes.set([]);
+          this.totalRecords.set(0);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Could not load athletes. Please try again.',
+            life: 4000,
+          });
         },
       });
   }

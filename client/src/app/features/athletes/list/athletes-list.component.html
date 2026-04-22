@@ -69,9 +69,7 @@
 
       <ng-template pTemplate="body" let-athlete>
         <tr>
-          <td class="athlete-name">
-            {{ athlete.first_name }} {{ athlete.last_name }}
-          </td>
+          <td class="athlete-name">{{ athlete.first_name }} {{ athlete.last_name }}</td>
           <td>
             <app-belt-badge [belt]="athlete.belt" />
           </td>
@@ -94,6 +92,7 @@
               [text]="true"
               size="small"
               (onClick)="confirmDelete($event, athlete)"
+              [ariaLabel]="'Delete ' + athlete.first_name + ' ' + athlete.last_name"
               pTooltip="Delete"
               tooltipPosition="left"
             />

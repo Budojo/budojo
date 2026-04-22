@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -14,8 +14,10 @@ import { AuthService } from '../../core/services/auth.service';
 export class DashboardComponent {
   protected readonly academyService = inject(AcademyService);
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   logout(): void {
     this.authService.logout();
+    void this.router.navigate(['/auth/login']);
   }
 }
