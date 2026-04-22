@@ -1,0 +1,35 @@
+@use '../../auth/auth-page';
+
+.required {
+  color: #e05577;
+}
+
+.optional {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: #8b8fa8;
+}
+
+textarea.p-textarea {
+  width: 100%;
+  background: #faf8ff;
+  font-size: 0.95rem;
+  color: #1a1a2e;
+  padding: 0.65rem 0.85rem;
+  outline: none;
+  resize: vertical;
+  transition: background 0.15s;
+  font-family: inherit;
+
+  &::placeholder {
+    color: #c0bcd6;
+  }
+
+  &:focus {
+    background: #f0ebff;
+  }
+
+  &.ng-invalid.ng-dirty {
+    background: #fff0f3;
+  }
+}

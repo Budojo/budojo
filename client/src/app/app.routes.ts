@@ -1,4 +1,7 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+import { hasAcademyGuard } from './core/guards/has-academy.guard';
+import { noAcademyGuard } from './core/guards/no-academy.guard';
 
 export const routes: Routes = [
   {
@@ -17,7 +20,14 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'setup',
+    canActivate: [authGuard, noAcademyGuard],
+    loadComponent: () =>
+      import('./features/academy/setup/setup.component').then((m) => m.SetupComponent),
+  },
+  {
     path: 'dashboard',
+    canActivate: [authGuard, hasAcademyGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
   },
