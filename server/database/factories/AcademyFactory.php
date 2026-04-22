@@ -26,7 +26,7 @@ class AcademyFactory extends Factory
         return [
             'user_id' => User::factory(),
             'name'    => $name,
-            'slug'    => Str::slug($name).'-'.Str::random(4),
+            'slug'    => Str::slug($name).'-'.Str::lower(Str::random(8)),
             'address' => $this->faker->optional()->address(),
         ];
     }

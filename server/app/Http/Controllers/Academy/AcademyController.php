@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Academy\StoreAcademyRequest;
 use App\Http\Resources\AcademyResource;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -23,15 +24,15 @@ class AcademyController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy()->exists()) {
+        try {
+            $academy = $this->createAction->execute(
+                user: $user,
+                name: $request->string('name')->toString(),
+                address: $request->filled('address') ? $request->string('address')->toString() : null,
+            );
+        } catch (UniqueConstraintViolationException) {
             return response()->json(['message' => 'Academy already exists.'], 409);
         }
-
-        $academy = $this->createAction->execute(
-            user: $user,
-            name: $request->string('name')->toString(),
-            address: $request->string('address')->toString() ?: null,
-        );
 
         return response()->json(['data' => new AcademyResource($academy)], 201);
     }

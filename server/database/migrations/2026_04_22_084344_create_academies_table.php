@@ -12,10 +12,10 @@ return new class extends Migration
     {
         Schema::create('academies', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->string('slug')->unique();
-            $table->string('address')->nullable();
+            $table->string('address', 500)->nullable();
             $table->timestamps();
         });
     }

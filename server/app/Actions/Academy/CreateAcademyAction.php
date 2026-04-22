@@ -22,15 +22,6 @@ class CreateAcademyAction
 
     private function uniqueSlug(string $name): string
     {
-        $base = Str::slug($name);
-        $slug = $base;
-        $i = 1;
-
-        while (Academy::where('slug', $slug)->exists()) {
-            $slug = "{$base}-{$i}";
-            $i++;
-        }
-
-        return $slug;
+        return Str::slug($name) . '-' . Str::lower(Str::random(8));
     }
 }
