@@ -13,8 +13,12 @@ RUN mkdir -p /var/www/api && chown -R www-data:www-data /var/www/api
 COPY docker/api/nginx.conf /etc/nginx/sites-available/default
 COPY docker/api/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+COPY docker/api/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 WORKDIR /var/www/api
 
 EXPOSE 80
 
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

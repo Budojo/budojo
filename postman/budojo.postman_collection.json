@@ -1,0 +1,175 @@
+{
+  "info": {
+    "name": "Budojo API",
+    "description": "Budojo REST API — v1. Import this collection into Postman and set the `base_url` variable (default: http://localhost:8000).\n\nAfter a successful login or register the `token` collection variable is stored automatically via the test script.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/health",
+            "description": "Returns `{\"status\":\"ok\"}` when the API is up and running."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\"status\":\"ok\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) {",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mario Rossi\",\n  \"email\": \"mario@example.com\",\n  \"password\": \"Password1!\",\n  \"password_confirmation\": \"Password1!\"\n}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            },
+            "url": "{{base_url}}/api/v1/auth/register",
+            "description": "Creates a new user account and returns the user data plus a Sanctum Bearer token.\n\n**Validation rules**\n- `name` — required, string, max 255\n- `email` — required, valid e-mail, unique\n- `password` — required, min 8, must include uppercase, lowercase, digit and symbol; confirmed via `password_confirmation`\n\n**Response `201 Created`**\n```json\n{\n  \"data\": { \"id\": 1, \"name\": \"Mario Rossi\", \"email\": \"mario@example.com\" },\n  \"token\": \"<sanctum-plain-text-token>\"\n}\n```"
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Mario Rossi\",\n    \"email\": \"mario@example.com\"\n  },\n  \"token\": \"1|abc123xyz...\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity — email taken",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"message\": \"The email has already been taken.\",\n  \"errors\": {\n    \"email\": [\"The email has already been taken.\"]\n  }\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity — missing fields",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"message\": \"The name field is required. (and 2 more errors)\",\n  \"errors\": {\n    \"name\": [\"The name field is required.\"],\n    \"email\": [\"The email field is required.\"],\n    \"password\": [\"The password field is required.\"]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) {",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"mario@example.com\",\n  \"password\": \"Password1!\"\n}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            },
+            "url": "{{base_url}}/api/v1/auth/login",
+            "description": "Authenticates an existing user and returns a new Sanctum Bearer token.\n\n**Validation rules**\n- `email` — required, valid e-mail\n- `password` — required, string\n\n**Response `200 OK`**\n```json\n{\n  \"data\": { \"id\": 1, \"name\": \"Mario Rossi\", \"email\": \"mario@example.com\" },\n  \"token\": \"<sanctum-plain-text-token>\"\n}\n```"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"Mario Rossi\",\n    \"email\": \"mario@example.com\"\n  },\n  \"token\": \"2|def456uvw...\"\n}"
+            },
+            {
+              "name": "401 Unauthorized — wrong credentials",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"message\": \"Invalid credentials.\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity — missing fields",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": "{\n  \"message\": \"The email field is required. (and 1 more error)\",\n  \"errors\": {\n    \"email\": [\"The email field is required.\"],\n    \"password\": [\"The password field is required.\"]\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
