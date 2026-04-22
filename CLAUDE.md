@@ -158,6 +158,9 @@ Examples:
 3. **Assignee** — always assign `m-bonanno` (`gh pr create --assignee m-bonanno`)
 4. **Labels** — apply one **type** label + the appropriate **status** label on open.
 
+> **Important — PR body formatting:** Always write the body to a temp file (`.claude/pr-body.md`) and use `gh pr edit <N> --body-file .claude/pr-body.md`.
+> Never pass the body inline via `--body "..."` or a bash heredoc — backticks and special characters get escaped and render as literal `\`` in GitHub.
+
 #### Type labels (one per PR)
 
 | Branch prefix | Label |
