@@ -1,0 +1,40 @@
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <span class="sidebar__logo" aria-hidden="true">🥋</span>
+      <span class="sidebar__name">Budojo</span>
+    </div>
+
+    @if (academyService.academy(); as academy) {
+      <div class="sidebar__academy">
+        <span class="sidebar__academy-name">{{ academy.name }}</span>
+      </div>
+    }
+
+    <nav class="sidebar__nav">
+      <a
+        routerLink="athletes"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item"
+      >
+        <i class="pi pi-users"></i>
+        <span>Athletes</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__footer">
+      <p-button
+        label="Logout"
+        icon="pi pi-sign-out"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        (onClick)="logout()"
+      />
+    </div>
+  </aside>
+
+  <main class="main">
+    <router-outlet />
+  </main>
+</div>
