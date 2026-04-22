@@ -11,7 +11,7 @@ Budojo is a web application for Brazilian Jiu-Jitsu instructors. It replaces the
 | Area | Status | Details |
 |------|--------|---------|
 | **Authentication** | ✅ Live | Register, login, logout |
-| **Academy setup** | ✅ Live | Create your gym profile (name + address) |
+| **Academy setup** | ✅ Live | Create your gym profile (name; address optional) |
 | **Athletes — API** | ✅ Live | Full CRUD: create, list, update, soft-delete |
 | **Athletes — UI** | ✅ Live | Paginated list with belt/status filters and per-row delete |
 | **Documents** | 📋 Planned | — |
@@ -29,8 +29,9 @@ Budojo is a web application for Brazilian Jiu-Jitsu instructors. It replaces the
 - A `.env` file at the repo root (copy `.env.example` and fill in the values)
 
 ```bash
-cp .env.example .env   # then edit DB passwords etc.
+cp .env.example .env   # fill in DB_ROOT_PASSWORD, DB_PASSWORD, LOCAL_ADMIN_PASSWORD, etc.
 docker compose up --build
+docker exec budojo_api php artisan key:generate   # generates APP_KEY on first run
 ```
 
 | Service | URL |
@@ -48,8 +49,9 @@ docker exec budojo_api php artisan db:seed
 ```
 
 This creates:
-- `admin@example.it` / `password` — admin user with a pre-configured academy and a full roster of seeded athletes
+- `admin@example.it` / `<LOCAL_ADMIN_PASSWORD>` — admin user with a pre-configured academy (no athletes seeded for this account)
 - 5 additional users each with their own academy
+- 3 additional users without an academy (to exercise the `/setup` first-login flow)
 
 ---
 
@@ -210,10 +212,19 @@ All athlete endpoints return 403 if the authenticated user has no academy.
 ```json
 {
   "data": [ /* array of athlete objects */ ],
+  "links": {
+    "first": "http://localhost:8000/api/v1/athletes?page=1",
+    "last":  "http://localhost:8000/api/v1/athletes?page=3",
+    "prev":  null,
+    "next":  "http://localhost:8000/api/v1/athletes?page=2"
+  },
   "meta": {
     "current_page": 1,
+    "from": 1,
     "last_page": 3,
+    "path": "http://localhost:8000/api/v1/athletes",
     "per_page": 20,
+    "to": 20,
     "total": 47
   }
 }
@@ -252,9 +263,10 @@ Belt promotion history, attendance reports, PDF/Excel export, analytics dashboar
 budojo/
 ├── server/               # Laravel 13 REST API
 │   ├── app/
+│   │   ├── Actions/          # Single-responsibility business operations
 │   │   ├── Enums/            # Belt, AthleteStatus
 │   │   ├── Http/
-│   │   │   ├── Controllers/  # Thin — delegate to services
+│   │   │   ├── Controllers/  # Thin — delegate to Actions
 │   │   │   ├── Requests/     # All input validation
 │   │   │   └── Resources/    # All API response shaping
 │   │   └── Models/           # Eloquent models
