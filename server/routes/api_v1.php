@@ -13,4 +13,7 @@ Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class);
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'store']);
     Route::get('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'show']);
+
+    Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
+        ->only(['index', 'store', 'show', 'update', 'destroy']);
 });
