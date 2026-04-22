@@ -311,7 +311,8 @@ When Copilot leaves review comments on a PR:
 2. For each comment: evaluate, fix if valid, skip with explanation if not applicable
 3. Commit all fixes in one commit: `fix(<scope>): address copilot review comments`
 4. Reply to every comment thread: `gh api repos/m-bonanno/budojo/pulls/<N>/comments/<id>/replies -X POST -f body="..."`
-5. Push and switch label to `🟢 ready to merge`
+5. **Re-read the PR body and update it if the fixes changed anything it describes** (counts, paths, commands, structure, examples). A stale PR body misleads reviewers. Rewrite `.claude/pr-body.md` and push with `gh pr edit <N> --body-file .claude/pr-body.md`.
+6. Push and switch label to `🟢 ready to merge`.
 
 **Reply rules (mandatory):**
 - **Always write in English** — never Italian, regardless of the comment language.
@@ -522,7 +523,7 @@ The `cypress-e2e` job uses `cypress-io/github-action@v6` with `start: npm run st
 9. **Rebase, don't merge**, when updating a feature branch from `develop`.
 10. **Squash merge** PRs into `develop`; merge commit (no squash) into `main`.
 11. **Never create a `version` field** in `package.json` — semantic-release owns versioning entirely.
-12. **Reply to all Copilot comments** after fixing: English only, always cite the short commit SHA (`Fixed in abc1234.`), switch label to `🟢 ready to merge`.
+12. **Reply to all Copilot comments** after fixing: English only, always cite the short commit SHA (`Fixed in abc1234.`), re-read and update the PR body if the fixes changed anything it describes, then switch label to `🟢 ready to merge`.
 13. **Before pushing PHP changes**: `php-cs-fixer fix` → `phpstan analyse` → `pest --parallel` — all must be clean.
 14. **Before pushing Angular changes**: `prettier --write` → `npm run lint` → `npm test -- --watch=false` — all must be clean. Cypress runs in CI.
 15. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere.
