@@ -26,7 +26,7 @@ class AthleteFactory extends Factory
             'academy_id'    => Academy::factory(),
             'first_name'    => $this->faker->firstName(),
             'last_name'     => $this->faker->lastName(),
-            'email'         => $this->faker->optional(0.7)->safeEmail(),
+            'email'         => $this->faker->boolean(70) ? $this->faker->unique()->safeEmail() : null,
             'phone'         => $this->faker->optional(0.5)->phoneNumber(),
             'date_of_birth' => $this->faker->optional(0.6)->dateTimeBetween('-50 years', '-16 years')?->format('Y-m-d'),
             'belt'          => $this->faker->randomElement(Belt::cases())->value,

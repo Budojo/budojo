@@ -122,6 +122,40 @@ it('returns 422 when belt value is invalid', function (): void {
         ->assertJsonValidationErrors(['belt']);
 });
 
+it('returns 422 when email is already used in the same academy', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create(['email' => 'mario@example.com']);
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/athletes', [
+            'first_name' => 'Luigi',
+            'last_name' => 'Verdi',
+            'email' => $athlete->email,
+            'belt' => 'white',
+            'status' => 'active',
+            'joined_at' => '2024-01-15',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['email']);
+});
+
+it('allows the same email in a different academy', function (): void {
+    $user = userWithAcademy();
+    $otherAcademy = Academy::factory()->create();
+    Athlete::factory()->for($otherAcademy)->create(['email' => 'mario@example.com']);
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/athletes', [
+            'first_name' => 'Mario',
+            'last_name' => 'Rossi',
+            'email' => 'mario@example.com',
+            'belt' => 'white',
+            'status' => 'active',
+            'joined_at' => '2024-01-15',
+        ])
+        ->assertCreated();
+});
+
 it('returns 401 on store without auth', function (): void {
     $this->postJson('/api/v1/athletes', [])->assertUnauthorized();
 });
@@ -180,6 +214,26 @@ it('updates an athlete', function (): void {
         ->putJson("/api/v1/athletes/{$athlete->id}", ['belt' => 'blue'])
         ->assertOk()
         ->assertJsonPath('data.belt', 'blue');
+});
+
+it('allows updating an athlete with their own email', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create(['email' => 'mario@example.com']);
+
+    $this->actingAs($user)
+        ->putJson("/api/v1/athletes/{$athlete->id}", ['email' => 'mario@example.com'])
+        ->assertOk();
+});
+
+it('returns 422 when updating email to one already used in the same academy', function (): void {
+    $user = userWithAcademy();
+    $athlete1 = Athlete::factory()->for($user->academy)->create(['email' => 'mario@example.com']);
+    $athlete2 = Athlete::factory()->for($user->academy)->create(['email' => 'luigi@example.com']);
+
+    $this->actingAs($user)
+        ->putJson("/api/v1/athletes/{$athlete2->id}", ['email' => $athlete1->email])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['email']);
 });
 
 it('returns 403 when updating an athlete that belongs to another academy', function (): void {

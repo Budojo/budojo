@@ -13,7 +13,9 @@ class StoreAthleteRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+
+        return $user !== null && $user->academy !== null;
     }
 
     /**
@@ -21,10 +23,19 @@ class StoreAthleteRequest extends FormRequest
      */
     public function rules(): array
     {
+        $academyId = $this->user()?->academy?->id;
+
         return [
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('athletes', 'email')
+                    ->where('academy_id', $academyId)
+                    ->whereNull('deleted_at'),
+            ],
             'phone' => ['nullable', 'string', 'max:30'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'belt' => ['required', Rule::enum(Belt::class)],
