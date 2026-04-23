@@ -389,11 +389,14 @@ paths:
       parameters:
         - name: days
           in: query
-          description: Look-ahead window in days. Must be ≥ 1. Defaults to 30.
+          description: |
+            Look-ahead window in days. Clamped server-side to [1, 365];
+            values outside the range are silently corrected.
           required: false
           schema:
             type: integer
             minimum: 1
+            maximum: 365
             default: 30
       responses:
         '200':

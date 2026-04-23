@@ -22,7 +22,10 @@ class AthleteObserver
      */
     public function deleting(Athlete $athlete): void
     {
-        foreach ($athlete->documents as $document) {
+        // lazy() streams rows from the DB in chunks of 1000 rather than
+        // hydrating the entire relation into memory — keeps cascade deletion
+        // cheap even if an athlete has accumulated many historical documents.
+        foreach ($athlete->documents()->lazy() as $document) {
             $this->deleteDocument->execute($document);
         }
     }

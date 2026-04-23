@@ -19,6 +19,14 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
 {
+    /**
+     * Max look-ahead window the dashboard endpoint accepts. A year out is
+     * enough for every real use case of the "expiring soon" widget; capping
+     * it prevents a caller from pulling the entire academy history by
+     * passing an absurd `days` value.
+     */
+    private const int MAX_EXPIRING_DAYS = 365;
+
     public function __construct(
         private readonly DeleteDocumentAction $deleteAction,
         private readonly GetExpiringDocumentsAction $expiringAction,
@@ -36,9 +44,7 @@ class DocumentController extends Controller
 
         $daysParam = $request->input('days', 30);
         $days = is_numeric($daysParam) ? (int) $daysParam : 30;
-        if ($days < 1) {
-            $days = 30;
-        }
+        $days = max(1, min($days, self::MAX_EXPIRING_DAYS));
 
         $documents = $this->expiringAction->execute($user->academy, $days);
 

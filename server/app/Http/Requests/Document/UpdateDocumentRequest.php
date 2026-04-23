@@ -18,6 +18,11 @@ class UpdateDocumentRequest extends FormRequest
     }
 
     /**
+     * Only metadata is updateable via PUT. `file`, `file_path`, and
+     * `athlete_id` are intentionally NOT in the rules — Laravel's default
+     * `validated()` excludes any key without a validation rule, so those
+     * fields cannot reach `$document->update($request->validated())`.
+     *
      * @return array<string, mixed>
      */
     public function rules(): array
@@ -28,21 +33,5 @@ class UpdateDocumentRequest extends FormRequest
             'expires_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:issued_at'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function validated($key = null, $default = null): array
-    {
-        // Whitelist: the file cannot be replaced via PUT — clients must upload a
-        // brand new document row instead. We also strip athlete_id and any
-        // accidental file_path from the validated payload before it reaches
-        // the model ->update() call.
-        /** @var array<string, mixed> $data */
-        $data = parent::validated();
-        unset($data['file'], $data['file_path'], $data['athlete_id']);
-
-        return $data;
     }
 }
