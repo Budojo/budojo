@@ -59,9 +59,10 @@ describe('Athlete documents page', () => {
     cy.get('h1').should('contain', 'Mario Rossi');
     cy.contains('Documents').should('be.visible');
     cy.contains('No documents yet').should('be.visible');
+    // Post-M3.3: the Add button is enabled when the athlete id is known.
     // p-button wraps an inner <button>; the disabled pseudo-class lives there,
     // not on the custom element.
-    cy.get('[data-cy="add-document-btn"] button').should('be.disabled');
+    cy.get('[data-cy="add-document-btn"] button').should('not.be.disabled');
   });
 
   it('lists only active documents when the toggle is off', () => {
@@ -134,6 +135,96 @@ describe('Athlete documents page', () => {
     cy.get('[data-cy="show-cancelled-toggle"]').click();
     cy.wait('@getDocs');
     cy.window().its('localStorage').invoke('getItem', 'documents.showCancelled').should('be.null');
+  });
+
+  it('uploads a document via the dialog, closes on success, prepends the row + shows a toast', () => {
+    cy.intercept('GET', '/api/v1/athletes/42/documents*', {
+      statusCode: 200,
+      body: { data: [] },
+    }).as('getDocs');
+
+    // The POST returns the server-authoritative Document. The client prepends
+    // it optimistically without refetching.
+    cy.intercept('POST', '/api/v1/athletes/42/documents', {
+      statusCode: 201,
+      body: {
+        data: doc({
+          id: 777,
+          original_name: 'medical_2026.pdf',
+          type: 'medical_certificate',
+          issued_at: '2026-01-15',
+          expires_at: '2027-01-15',
+        }),
+      },
+    }).as('uploadDoc');
+
+    cy.visitAuthenticated('/dashboard/athletes/42/documents');
+    cy.wait(['@academy', '@getAthlete', '@getDocs']);
+
+    cy.get('[data-cy="add-document-btn"] button').click();
+    cy.get('[data-cy="upload-document-dialog"]').should('be.visible');
+
+    // p-select opens an overlay; we target the item by its label text.
+    cy.get('[data-cy="doc-type"]').click();
+    cy.contains('li', 'Medical certificate').click();
+
+    // Attach the file into p-fileUpload's hidden native input — `force: true`
+    // because the input is visually hidden behind a styled "Choose file" label.
+    cy.get('[data-cy="doc-file"] input[type="file"]').selectFile(
+      {
+        contents: Cypress.Buffer.from('%PDF-1.4 stub'),
+        fileName: 'medical_2026.pdf',
+        mimeType: 'application/pdf',
+      },
+      { force: true },
+    );
+
+    cy.get('[data-cy="upload-submit"] button').click();
+
+    cy.wait('@uploadDoc')
+      .its('request.headers.content-type')
+      .should('match', /multipart\/form-data; boundary=/);
+
+    // The Angular `<p-dialog>` host element stays in the DOM — only the modal
+    // overlay mask (`.p-dialog-mask`) mounts/unmounts. Targeting it gives a
+    // reliable signal for "dialog is closed".
+    cy.get('.p-dialog-mask').should('not.exist');
+    cy.contains('[data-cy="documents-table"]', 'medical_2026.pdf').should('be.visible');
+    cy.contains('Document uploaded').should('be.visible');
+  });
+
+  it('keeps the dialog open and surfaces a 422 error banner on server validation failure', () => {
+    cy.intercept('GET', '/api/v1/athletes/42/documents*', {
+      statusCode: 200,
+      body: { data: [] },
+    }).as('getDocs');
+    cy.intercept('POST', '/api/v1/athletes/42/documents', {
+      statusCode: 422,
+      body: {
+        message: 'The file field is required.',
+        errors: { file: ['The file field is required.'] },
+      },
+    }).as('uploadDoc');
+
+    cy.visitAuthenticated('/dashboard/athletes/42/documents');
+    cy.wait(['@academy', '@getAthlete', '@getDocs']);
+
+    cy.get('[data-cy="add-document-btn"] button').click();
+    cy.get('[data-cy="doc-type"]').click();
+    cy.contains('li', 'Other').click();
+    cy.get('[data-cy="doc-file"] input[type="file"]').selectFile(
+      {
+        contents: Cypress.Buffer.from('stub'),
+        fileName: 'x.pdf',
+        mimeType: 'application/pdf',
+      },
+      { force: true },
+    );
+    cy.get('[data-cy="upload-submit"] button').click();
+
+    cy.wait('@uploadDoc');
+    cy.get('[data-cy="upload-document-dialog"]').should('be.visible');
+    cy.contains('The file field is required').should('be.visible');
   });
 
   it('navigates to the documents page from the athletes list folder icon', () => {

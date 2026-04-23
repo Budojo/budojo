@@ -26,6 +26,7 @@ import {
   DocumentType,
 } from '../../../../core/services/document.service';
 import { ExpiryStatusBadgeComponent } from '../../../../shared/components/expiry-status-badge/expiry-status-badge.component';
+import { UploadDocumentDialogComponent } from '../upload-document-dialog/upload-document-dialog.component';
 
 const TOGGLE_STORAGE_KEY = 'documents.showCancelled';
 
@@ -43,6 +44,7 @@ const TOGGLE_STORAGE_KEY = 'documents.showCancelled';
     ToggleSwitchModule,
     Tooltip,
     ExpiryStatusBadgeComponent,
+    UploadDocumentDialogComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './documents-list.component.html',
@@ -59,6 +61,7 @@ export class DocumentsListComponent implements OnInit {
   readonly loading = signal(true);
   readonly athleteId = signal<number | null>(null);
   readonly showCancelled = signal<boolean>(readTogglePersisted());
+  readonly uploadDialogOpen = signal(false);
 
   readonly activeCount = computed(() => this.documents().filter((d) => !d.deleted_at).length);
   readonly cancelledCount = computed(() => this.documents().filter((d) => !!d.deleted_at).length);
@@ -115,6 +118,24 @@ export class DocumentsListComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.delete(doc),
+    });
+  }
+
+  openUploadDialog(): void {
+    this.uploadDialogOpen.set(true);
+  }
+
+  onUploaded(doc: Document): void {
+    // Prepend optimistically — the server-created Document is the authoritative
+    // value, no refetch needed for the row. The toggle state (active-only vs
+    // include cancelled) doesn't matter here because uploaded docs are always
+    // active, so the new row is always visible.
+    this.documents.update((list) => [doc, ...list]);
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Document uploaded',
+      detail: doc.original_name,
+      life: 3000,
     });
   }
 

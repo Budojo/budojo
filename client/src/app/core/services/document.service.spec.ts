@@ -66,6 +66,49 @@ describe('DocumentService', () => {
     });
   });
 
+  describe('upload', () => {
+    it('POSTs multipart /api/v1/athletes/:id/documents and returns the created Document', () => {
+      const file = new File(['pdf'], 'med_2026.pdf', { type: 'application/pdf' });
+      const body = new FormData();
+      body.append('type', 'medical_certificate');
+      body.append('file', file);
+      body.append('issued_at', '2026-01-01');
+
+      let received: Document | undefined;
+      service.upload(42, body).subscribe((d) => (received = d));
+
+      const req = httpMock.expectOne('/api/v1/athletes/42/documents');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toBe(body);
+      // Angular HttpClient auto-sets the Content-Type with boundary for FormData.
+      // We assert we did NOT force `application/json` — that would break multipart.
+      expect(req.request.headers.get('Content-Type')).toBeNull();
+
+      req.flush({ data: makeDoc({ id: 101, original_name: 'med_2026.pdf' }) });
+
+      expect(received?.id).toBe(101);
+      expect(received?.original_name).toBe('med_2026.pdf');
+    });
+
+    it('propagates 422 errors to the subscriber (no swallow, no retry)', () => {
+      const body = new FormData();
+      body.append('type', 'medical_certificate');
+
+      let status: number | undefined;
+      service.upload(42, body).subscribe({ error: (e: { status: number }) => (status = e.status) });
+
+      httpMock.expectOne('/api/v1/athletes/42/documents').flush(
+        {
+          message: 'The file field is required.',
+          errors: { file: ['The file field is required.'] },
+        },
+        { status: 422, statusText: 'Unprocessable Entity' },
+      );
+
+      expect(status).toBe(422);
+    });
+  });
+
   describe('delete', () => {
     it('DELETEs /api/v1/documents/:id', () => {
       service.delete(7).subscribe();
