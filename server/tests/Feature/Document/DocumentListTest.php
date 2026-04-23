@@ -62,3 +62,60 @@ it('returns 403 on list when athlete belongs to another academy', function (): v
         ->getJson("/api/v1/athletes/{$athlete->id}/documents")
         ->assertForbidden();
 });
+
+// ─── Cancelled visibility (P0.7b) ────────────────────────────────────────────
+
+it('includes soft-deleted documents when ?trashed=1 is passed', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $active = Document::factory(2)->for($athlete)->create();
+    $cancelled = Document::factory()->for($athlete)->create(['deleted_at' => now()]);
+
+    $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}/documents?trashed=1")
+        ->assertOk()
+        ->assertJsonCount(3, 'data');
+});
+
+it('exposes the deleted_at timestamp on tombstone rows', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $deletedAt = now()->subDays(3)->startOfDay();
+    Document::factory()->for($athlete)->create(['deleted_at' => $deletedAt]);
+
+    $response = $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}/documents?trashed=1")
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+
+    expect($response->json('data.0.deleted_at'))->not->toBeNull();
+});
+
+it('omits deleted_at (or sets it null) on active rows', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    Document::factory()->for($athlete)->create();
+
+    $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}/documents")
+        ->assertOk()
+        ->assertJsonPath('data.0.deleted_at', null);
+});
+
+it('orders soft-deleted and active documents together by newest first', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $old = Document::factory()->for($athlete)->create(['created_at' => now()->subWeek()]);
+    $middle = Document::factory()->for($athlete)->create([
+        'created_at' => now()->subDays(3),
+        'deleted_at' => now()->subDay(),
+    ]);
+    $new = Document::factory()->for($athlete)->create(['created_at' => now()]);
+
+    $response = $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}/documents?trashed=1")
+        ->assertOk();
+
+    $ids = collect($response->json('data'))->pluck('id')->all();
+    expect($ids)->toBe([$new->id, $middle->id, $old->id]);
+});

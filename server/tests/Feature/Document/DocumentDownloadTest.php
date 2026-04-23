@@ -78,6 +78,22 @@ it('files on the private disk are not served from the web root', function (): vo
     expect($response->status())->toBeIn([403, 404]);
 });
 
+it('returns 410 Gone when downloading a soft-deleted document', function (): void {
+    // P0.7b: soft-deleted documents are tombstones — the file has been wiped
+    // by DeleteDocumentAction. The DB row may still be visible via ?trashed=1
+    // on the list endpoint, but the file is permanently gone.
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $document = Document::factory()->for($athlete)->create([
+        'file_path' => 'documents/gone.pdf',
+        'deleted_at' => now()->subDay(),
+    ]);
+
+    $this->actingAs($user)
+        ->get("/api/v1/documents/{$document->id}/download")
+        ->assertStatus(410);
+});
+
 it('returns 404 when the file is missing on disk but the row exists', function (): void {
     // Edge case: if someone nukes the file out-of-band, we do not 500.
     $user = userWithAcademy();

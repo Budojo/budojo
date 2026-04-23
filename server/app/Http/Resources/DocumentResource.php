@@ -32,6 +32,9 @@ class DocumentResource extends JsonResource
             'expires_at' => $d->expires_at?->toDateString(),
             'notes' => $d->notes,
             'created_at' => $d->created_at?->toIso8601String(),
+            // Null on active documents, set on tombstones (see PRD P0.7b).
+            // Consumers use this field to distinguish active from cancelled.
+            'deleted_at' => $d->deleted_at?->toIso8601String(),
             'athlete' => $this->whenLoaded('athlete', function () use ($d): ?array {
                 $athlete = $d->athlete;
                 if ($athlete === null) {

@@ -30,7 +30,14 @@ class AthleteDocumentController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        $documents = $athlete->documents()
+        // ?trashed=1 opts in to the tombstone view: soft-deleted rows appear
+        // in the list alongside the active ones so the UI can render them
+        // behind a "Show cancelled" toggle. See PRD P0.7b for the contract.
+        $query = $request->boolean('trashed')
+            ? $athlete->documents()->withTrashed()
+            : $athlete->documents();
+
+        $documents = $query
             ->orderBy('created_at', 'desc')
             ->paginate(50);
 
