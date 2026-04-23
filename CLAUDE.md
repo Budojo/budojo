@@ -54,6 +54,8 @@ No untested business logic is merged to `develop`.
 | UI component library | PrimeNG | 21 |
 | Angular unit tests | Vitest | 4 |
 | Angular E2E tests | Cypress | 13 |
+| API contract | OpenAPI | 3.0.3 |
+| OpenAPI linter | Spectral | 6 |
 | Containerization | Docker + Docker Compose | latest |
 | Release automation | semantic-release | 24 |
 | Commit enforcement | Husky 9 + commitlint | — |
@@ -452,6 +454,44 @@ npm run cy:run                  # headless run (CI mode, requires ng serve runni
 
 ---
 
+## Documentation discipline
+
+The repo ships its own domain documentation in `docs/` — it is **source of truth**, not decoration:
+
+```
+docs/
+├── README.md              # index
+├── entities/*.md          # one file per persisted entity (user, academy, athlete, …)
+├── api/
+│   ├── README.md          # how to view the spec (Swagger UI, Redocly)
+│   └── v1.yaml            # OpenAPI 3.0 contract for /api/v1
+└── specs/*.md             # milestone PRDs (M3 etc.)
+```
+
+### When a doc update is REQUIRED in the same PR
+
+Any change that alters the **observable contract** or **persisted domain shape** demands a matching doc update, delivered in the same PR:
+
+- **New or altered migration** — new table, new column with domain meaning, changed constraint, new index → update `docs/entities/<entity>.md` (or create it for a new entity)
+- **New backed enum case or value** (e.g. adding `Red` to `Belt`) → update the enum table in the relevant entity doc AND update `docs/api/v1.yaml` enum definitions
+- **New or altered API route** — new endpoint, new query param, changed request/response shape, new status code with semantic meaning → update `docs/api/v1.yaml`
+- **New business rule expressed in code but not in schema** (e.g. new academy-scoping rule, new soft-delete semantics) → document under "Business rules" in the relevant entity doc
+- **New milestone kick-off** → drop the PRD in `docs/specs/<milestone>.md` before opening the first implementation PR
+
+### When a doc update is NOT required
+
+- Pure internal refactor (rename a private method, extract a helper, move a file without changing its public API)
+- Code formatting, dependency bumps, test-only additions, CI tweaks
+- Copy changes in UI that don't correspond to a domain concept
+
+### Enforcement
+
+- **Spectral** lints `docs/api/v1.yaml` in CI (`🔬 OpenAPI Lint` job) — malformed YAML, missing `operationId`, `$ref` typos, and summary-less operations block merge
+- **Claude's rule #16** below — any PR you open must include the docs delta in the same commit history when the rule above triggers; do not defer to "later"
+- **Reviewer duty** — a reviewer should reject a PR where code and docs disagree
+
+---
+
 ## Docker
 
 ### Services
@@ -490,7 +530,7 @@ All secrets via `.env` at the repo root (never committed). Copy `.env.example` t
 
 ### On every PR to `develop` — `.github/workflows/pr-checks.yml`
 
-All 7 checks must pass before merge:
+All 8 checks must pass before merge:
 
 | Job | Tool | What it checks |
 |-----|------|---------------|
@@ -501,8 +541,10 @@ All 7 checks must pass before merge:
 | `angular-lint` | ESLint | Angular TypeScript/template lint |
 | `angular-format` | Prettier | Angular code formatting |
 | `cypress-e2e` | Cypress 13 (Chrome headless) | Angular E2E flows |
+| `openapi-lint` | Spectral 6 | OpenAPI spec wellness (malformed YAML, ghost `$ref`, missing `operationId`/summary) |
 
 The `cypress-e2e` job uses `cypress-io/github-action@v6` with `start: npm run start` and `wait-on: http://localhost:4200` — no backend needed, all API calls are intercepted.
+The `openapi-lint` job runs `npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml` against the ruleset at `.spectral.yaml`.
 
 ### On every push to `develop` or `main` — `.github/workflows/release.yml`
 - **semantic-release** creates a Git tag and GitHub Release automatically based on conventional commits.
@@ -527,3 +569,4 @@ The `cypress-e2e` job uses `cypress-io/github-action@v6` with `start: npm run st
 13. **Before pushing PHP changes**: `php-cs-fixer fix` → `phpstan analyse` → `pest --parallel` — all must be clean.
 14. **Before pushing Angular changes**: `prettier --write` → `npm run lint` → `npm test -- --watch=false` — all must be clean. Cypress runs in CI.
 15. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere.
+16. **Keep `docs/` in sync** — every PR that changes a migration, an enum, an API route, a request/response shape, or a business rule must update the relevant file in `docs/entities/` or `docs/api/v1.yaml` in the same commit history. See the "Documentation discipline" section for what counts as "substantial" and what doesn't. Internal refactors, formatting, and dependency bumps are exempt.

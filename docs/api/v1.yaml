@@ -1,0 +1,709 @@
+openapi: 3.0.3
+info:
+  title: Budojo API
+  version: "1.0.0"
+  description: |
+    REST API powering the Budojo SPA. All authenticated endpoints accept a Laravel Sanctum
+    Bearer token obtained via `/auth/login` or `/auth/register`. Academy-scoping is enforced
+    in the controllers: every authenticated user has (at most) one academy, and all reads
+    and writes are implicitly filtered to that academy.
+
+    Kept in sync with code per the discipline in `CLAUDE.md` §"Documentation discipline" —
+    any PR that changes a route, payload, or response shape must update this file in the
+    same commit history.
+  contact:
+    name: Matteo Bonanno
+    url: https://github.com/m-bonanno/budojo
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local dev (Docker)
+  - url: https://budojo.example/api/v1
+    description: Production (placeholder)
+
+tags:
+  - name: health
+    description: Liveness probe
+  - name: auth
+    description: Registration, login, and Sanctum token issuance
+  - name: academy
+    description: The tenant entity — one per user
+  - name: athletes
+    description: Roster of students belonging to the authenticated user's academy
+
+paths:
+
+  /health:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      description: Returns 200 if the API process is up. Does not check DB connectivity.
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: The API is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      description: |
+        Creates a new user and issues a Sanctum Bearer token. The user is created without
+        an academy; the SPA routes newly-registered users to `/setup` via `noAcademyGuard`.
+      operationId: authRegister
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created, token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Authenticate and obtain a Bearer token
+      description: |
+        Validates the supplied email and password against the `users` table and,
+        on success, issues a new Sanctum personal access token. The plain-text
+        token is returned in the response and must be stored by the client — it
+        cannot be retrieved again.
+      operationId: authLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Credentials accepted, token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Invalid credentials.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy:
+    post:
+      tags: [academy]
+      summary: Create the authenticated user's academy
+      description: |
+        One-shot creation. The slug is server-generated as
+        `slugify(name) + '-' + 8 random lowercase chars`.
+        Attempts to create a second academy for the same user return 409.
+      operationId: academyCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyCreateRequest'
+      responses:
+        '201':
+          description: Academy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '409':
+          description: User already has an academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Academy already exists.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    get:
+      tags: [academy]
+      summary: Fetch the authenticated user's academy
+      description: |
+        The SPA's `hasAcademyGuard` uses this endpoint to detect first-login state —
+        a 404 response routes the user to `/setup`.
+      operationId: academyShow
+      responses:
+        '200':
+          description: The user's academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: The user has not set up an academy yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: No academy found.
+
+  /athletes:
+    get:
+      tags: [athletes]
+      summary: Paginated list of athletes in the authenticated academy
+      description: |
+        Returns 20 athletes per page, newest first. Soft-deleted athletes are
+        never returned. Optional filters `belt` and `status` narrow the set;
+        both filters match exactly one enum value.
+      operationId: athleteList
+      parameters:
+        - name: belt
+          in: query
+          description: Filter by belt rank
+          required: false
+          schema:
+            $ref: '#/components/schemas/Belt'
+        - name: status
+          in: query
+          description: Filter by enrollment status
+          required: false
+          schema:
+            $ref: '#/components/schemas/AthleteStatus'
+        - name: page
+          in: query
+          description: Page number, starting at 1. Page size is fixed at 20.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        '200':
+          description: Paginated list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AthleteList'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NoAcademy'
+
+    post:
+      tags: [athletes]
+      summary: Create an athlete in the authenticated academy
+      description: |
+        The new athlete is automatically attached to the authenticated user's
+        academy — the client does not send `academy_id`. Email uniqueness is
+        scoped per academy; a previously soft-deleted row with the same email
+        does not block creation.
+      operationId: athleteCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AthleteCreateRequest'
+      responses:
+        '201':
+          description: Athlete created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AthleteEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NoAcademy'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /athletes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+
+    get:
+      tags: [athletes]
+      summary: Fetch a single athlete
+      description: |
+        Returns the athlete if it exists and belongs to the authenticated user's
+        academy. Soft-deleted athletes are not accessible via this endpoint.
+      operationId: athleteShow
+      responses:
+        '200':
+          description: The athlete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AthleteEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [athletes]
+      summary: Partially update an athlete
+      description: All body fields are optional — only the ones present are updated.
+      operationId: athleteUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AthleteUpdateRequest'
+      responses:
+        '200':
+          description: Athlete updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AthleteEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [athletes]
+      summary: Soft-delete an athlete
+      description: Sets `deleted_at`; the row is preserved and no longer appears in list responses.
+      operationId: athleteDelete
+      responses:
+        '204':
+          description: Soft-deleted successfully. Response body is empty.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+      description: |
+        Laravel Sanctum personal-access token obtained from `/auth/login` or `/auth/register`.
+        Send as `Authorization: Bearer <token>`.
+
+  parameters:
+    AthleteId:
+      name: id
+      in: path
+      required: true
+      description: Athlete primary key
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+  responses:
+    Unauthenticated:
+      description: Missing or invalid Bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: Unauthenticated.
+
+    NoAcademy:
+      description: The authenticated user has not set up an academy
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: No academy found.
+
+    ForbiddenAthlete:
+      description: The athlete does not belong to the authenticated user's academy
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: Forbidden.
+
+    NotFound:
+      description: |
+        Resource not found. The response body carries a `message` field but its exact text
+        is currently Laravel's default handling of `ModelNotFoundException` (e.g.
+        `"No query results for model [App\\Models\\Athlete] 42"` in debug mode, `"Not Found"`
+        in production). A normalized API-wide 404 payload is tracked as a future refinement;
+        consumers should treat the status code as the contract and the message as advisory.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+
+    ValidationError:
+      description: Request payload failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorBody'
+
+  schemas:
+
+    # ── Enums ─────────────────────────────────────────────────────────────
+
+    Belt:
+      type: string
+      description: IBJJF adult belt ranks
+      enum: [white, blue, purple, brown, black]
+
+    AthleteStatus:
+      type: string
+      description: Enrollment status for an athlete
+      enum: [active, suspended, inactive]
+
+    # ── Generic envelopes ─────────────────────────────────────────────────
+
+    ErrorMessage:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ValidationErrorBody:
+      type: object
+      required: [message, errors]
+      properties:
+        message:
+          type: string
+          example: The given data was invalid.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            email:
+              - The email has already been taken.
+
+    PaginationMeta:
+      type: object
+      description: Laravel pagination metadata for AnonymousResourceCollection responses
+      required: [current_page, from, last_page, path, per_page, to, total]
+      properties:
+        current_page:
+          type: integer
+        from:
+          type: integer
+          nullable: true
+        last_page:
+          type: integer
+        path:
+          type: string
+        per_page:
+          type: integer
+          example: 20
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+
+    PaginationLinks:
+      type: object
+      required: [first, last, prev, next]
+      properties:
+        first:
+          type: string
+          nullable: true
+        last:
+          type: string
+          nullable: true
+        prev:
+          type: string
+          nullable: true
+        next:
+          type: string
+          nullable: true
+
+    # ── Auth ──────────────────────────────────────────────────────────────
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: Mario Rossi
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: mario@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+        password_confirmation:
+          type: string
+          format: password
+          description: Must match `password`
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      required: [data, token]
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: Plain-text Sanctum Bearer token. Returned once, never again.
+          example: "1|aBc123XyZ..."
+
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+
+    # ── Academy ───────────────────────────────────────────────────────────
+
+    AcademyCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: Gracie Barra Lisboa
+        address:
+          type: string
+          maxLength: 500
+          nullable: true
+          example: Rua Example 123, Lisboa
+
+    Academy:
+      type: object
+      required: [id, name, slug, address]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        slug:
+          type: string
+          example: gracie-barra-lisboa-a3f9kx2b
+          description: Server-generated, immutable, unique across the system
+        address:
+          type: string
+          nullable: true
+
+    AcademyEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Academy'
+
+    # ── Athlete ───────────────────────────────────────────────────────────
+
+    AthleteCreateRequest:
+      type: object
+      required: [first_name, last_name, belt, status, joined_at]
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+          example: Mario
+        last_name:
+          type: string
+          maxLength: 100
+          example: Rossi
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          nullable: true
+          description: Unique per academy (scoped, ignoring soft-deleted rows)
+        phone:
+          type: string
+          maxLength: 30
+          nullable: true
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+          description: Must be strictly before today
+        belt:
+          $ref: '#/components/schemas/Belt'
+        stripes:
+          type: integer
+          minimum: 0
+          maximum: 4
+          default: 0
+        status:
+          $ref: '#/components/schemas/AthleteStatus'
+        joined_at:
+          type: string
+          format: date
+
+    AthleteUpdateRequest:
+      type: object
+      description: All properties are optional — send only the fields you want to change.
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          nullable: true
+        phone:
+          type: string
+          maxLength: 30
+          nullable: true
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        belt:
+          $ref: '#/components/schemas/Belt'
+        stripes:
+          type: integer
+          minimum: 0
+          maximum: 4
+        status:
+          $ref: '#/components/schemas/AthleteStatus'
+        joined_at:
+          type: string
+          format: date
+
+    Athlete:
+      type: object
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - phone
+        - date_of_birth
+        - belt
+        - stripes
+        - status
+        - joined_at
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        belt:
+          $ref: '#/components/schemas/Belt'
+        stripes:
+          type: integer
+          minimum: 0
+          maximum: 4
+        status:
+          $ref: '#/components/schemas/AthleteStatus'
+        joined_at:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    AthleteEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Athlete'
+
+    AthleteList:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Athlete'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+security:
+  - bearerAuth: []
