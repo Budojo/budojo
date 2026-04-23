@@ -24,10 +24,21 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
-# SQLite test/local databases. PEST creates these per-worker during parallel
-# runs (`budojo_test_1`, `budojo_test_2`, …); `budojo` itself is the local
-# sqlite DB used by `database.default=sqlite` in testing.
+# SQLite local/test databases + their sidecars (journal, WAL, SHM).
+#
+# phpunit.xml configures CI tests with DB_CONNECTION=sqlite + DB_DATABASE=:memory:
+# so CI leaves no file behind. The file `server/budojo` only materialises when
+# the local .env sets DB_DATABASE to a filesystem path for dev/tinker, or when
+# PEST parallel workers shard the DB per worker (`budojo_test_1`, `budojo_test_2`,
+# …).
+#
+# SQLite also writes `<db>-journal`, `<db>-wal`, `<db>-shm` alongside the DB
+# file, so matching just the base name isn't enough — the `budojo-*` and the
+# `*.sqlite-*` patterns cover both extension-less and extensioned DBs.
 budojo
+budojo-*
 budojo_test_*
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
