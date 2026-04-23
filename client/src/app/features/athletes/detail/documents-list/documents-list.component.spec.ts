@@ -208,7 +208,4 @@ describe('DocumentsListComponent', () => {
     expect(cmp.cancelledOn(makeDoc({ deleted_at: null }))).toBe(null);
     httpMock.verify();
   });
-
-  // Silences the "of import unused if no test uses it" — of is used in setupTestBed.
-  void of;
 });

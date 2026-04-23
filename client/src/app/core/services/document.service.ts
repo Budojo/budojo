@@ -15,8 +15,12 @@ export interface Document {
   expires_at: string | null;
   notes: string | null;
   created_at: string | null;
-  /** Set on tombstones (soft-deleted docs). Null / absent on active ones. */
-  deleted_at?: string | null;
+  /**
+   * Soft-delete marker. **Always present** in the API response:
+   * `null` on active documents, ISO-8601 timestamp on tombstones
+   * (returned only when the list endpoint is called with `includeCancelled: true`).
+   */
+  deleted_at: string | null;
 }
 
 export interface DocumentMeta {
@@ -46,10 +50,9 @@ export class DocumentService {
     if (options.includeCancelled) {
       params = params.set('trashed', '1');
     }
-    return this.http.get<DocumentListResponse>(
-      `${this.base}/athletes/${athleteId}/documents`,
-      { params },
-    );
+    return this.http.get<DocumentListResponse>(`${this.base}/athletes/${athleteId}/documents`, {
+      params,
+    });
   }
 
   delete(id: number): Observable<void> {
@@ -57,12 +60,13 @@ export class DocumentService {
   }
 
   /**
-   * Build the authenticated download URL for a document. The auth interceptor
-   * attaches the Bearer token to every outgoing request, so a plain <a href>
-   * or a `window.open()` from the browser WILL NOT authenticate — the caller
-   * must either use an HttpClient.get stream or a solution that forwards the
-   * token. For M3.2 we surface this URL in the UI as an anchor that triggers
-   * an HttpClient GET which honours the interceptor.
+   * Build the download URL for a document. The auth interceptor attaches
+   * the Bearer token to every outgoing HttpClient request, so a plain
+   * `<a href>` or a `window.open()` WILL NOT authenticate — callers must
+   * use an HttpClient-based flow (e.g. `download()` below, which returns
+   * a Blob and honours the interceptor). This method exists as the single
+   * source of truth for the path; both `download()` and any future
+   * consumer rely on it.
    */
   downloadUrl(id: number): string {
     return `${this.base}/documents/${id}/download`;

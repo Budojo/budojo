@@ -334,9 +334,10 @@ paths:
         - name: trashed
           in: query
           description: |
-            When `1`, soft-deleted documents are included in the response as
-            tombstones. Any other value (including absent) returns only active
-            rows. Tombstones are identified by `deleted_at` being non-null.
+            Opt-in flag. The only supported/defined value is `1`, which
+            includes soft-deleted documents (tombstones) in the response.
+            Omit the parameter to receive only active rows. Tombstones are
+            identified by `deleted_at` being non-null.
           required: false
           schema:
             type: string
@@ -1063,10 +1064,13 @@ components:
           format: date-time
           nullable: true
           description: |
-            ISO-8601 timestamp of when the document was soft-deleted (tombstone),
-            or `null` for active documents. Only visible when the list endpoint
-            is called with `?trashed=1`. The physical file has been wiped when
-            this field is set — `GET /documents/{id}/download` returns 410 Gone.
+            Soft-delete marker. **Always present** in the response: `null`
+            for active documents, ISO-8601 timestamp for tombstones.
+            Tombstone rows are only returned by the list endpoint when it is
+            called with `?trashed=1` — active callers (toggle off) never see
+            a non-null `deleted_at` because those rows are filtered out.
+            When this field is set the physical file has been wiped, so
+            `GET /documents/{id}/download` returns 410 Gone.
         athlete:
           $ref: '#/components/schemas/AthleteSummary'
 
