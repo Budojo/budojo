@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 export type DocumentType = 'id_card' | 'medical_certificate' | 'insurance' | 'other';
 
@@ -44,6 +44,21 @@ export interface DocumentListOptions {
 export class DocumentService {
   private readonly http = inject(HttpClient);
   private readonly base = '/api/v1';
+
+  /**
+   * Upload a new document for the given athlete. `body` is a pre-built
+   * `FormData` — the caller assembles the multipart fields (`type`, `file`,
+   * optional `issued_at`, `expires_at`, `notes`) so the service stays
+   * transport-agnostic. Angular HttpClient auto-sets the multipart
+   * `Content-Type` boundary when the body is a `FormData` instance; we
+   * must NOT attach our own `Content-Type` header or the server won't
+   * be able to parse the boundary.
+   */
+  upload(athleteId: number, body: FormData): Observable<Document> {
+    return this.http
+      .post<{ data: Document }>(`${this.base}/athletes/${athleteId}/documents`, body)
+      .pipe(map((res) => res.data));
+  }
 
   list(athleteId: number, options: DocumentListOptions = {}): Observable<DocumentListResponse> {
     let params = new HttpParams();

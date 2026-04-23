@@ -33,13 +33,20 @@
         label="Add document"
         icon="pi pi-plus"
         size="small"
-        disabled
-        pTooltip="Upload coming in M3.3"
-        tooltipPosition="left"
+        [disabled]="athleteId() === null"
+        (onClick)="openUploadDialog()"
         data-cy="add-document-btn"
       />
     </div>
   </header>
+
+  @if (athleteId(); as id) {
+    <app-upload-document-dialog
+      [(visible)]="uploadDialogOpen"
+      [athleteId]="id"
+      (uploaded)="onUploaded($event)"
+    />
+  }
 
   <p-table
     [value]="documents()"
@@ -131,7 +138,9 @@
                   No documents yet.
                 }
               </p>
-              <p class="documents-list__empty-hint">Upload the first one in M3.3.</p>
+              <p class="documents-list__empty-hint">
+                Use <strong>Add document</strong> above to upload the first one.
+              </p>
             </div>
           }
         </td>
