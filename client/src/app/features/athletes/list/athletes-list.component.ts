@@ -105,6 +105,10 @@ export class AthletesListComponent implements OnInit {
     void this.router.navigate(['/dashboard/athletes', athlete.id, 'edit']);
   }
 
+  goToDocuments(athlete: Athlete): void {
+    void this.router.navigate(['/dashboard/athletes', athlete.id, 'documents']);
+  }
+
   confirmDelete(event: Event, athlete: Athlete): void {
     this.confirmationService.confirm({
       target: event.target as EventTarget,

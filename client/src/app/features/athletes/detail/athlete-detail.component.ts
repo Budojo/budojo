@@ -1,0 +1,79 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { finalize } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { TagModule } from 'primeng/tag';
+import { Athlete, AthleteService, AthleteStatus } from '../../../core/services/athlete.service';
+import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
+
+@Component({
+  selector: 'app-athlete-detail',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterOutlet, RouterLink, ButtonModule, TagModule, BeltBadgeComponent],
+  templateUrl: './athlete-detail.component.html',
+  styleUrl: './athlete-detail.component.scss',
+})
+export class AthleteDetailComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly athleteService = inject(AthleteService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
+  readonly athlete = signal<Athlete | null>(null);
+
+  readonly fullName = computed(() => {
+    const a = this.athlete();
+    return a ? `${a.first_name} ${a.last_name}` : '';
+  });
+
+  ngOnInit(): void {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((paramMap) => {
+      const idParam = paramMap.get('id');
+      if (!idParam) return;
+      const id = Number(idParam);
+      if (!Number.isFinite(id)) {
+        void this.router.navigate(['/dashboard/athletes']);
+        return;
+      }
+      this.loadAthlete(id);
+    });
+  }
+
+  statusSeverity(status: AthleteStatus): 'success' | 'warn' | 'secondary' {
+    switch (status) {
+      case 'active':
+        return 'success';
+      case 'suspended':
+        return 'warn';
+      case 'inactive':
+        return 'secondary';
+    }
+  }
+
+  statusLabel(status: AthleteStatus): string {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+
+  private loadAthlete(id: number): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.athleteService
+      .get(id)
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (a) => this.athlete.set(a),
+        error: () => this.error.set('Could not load this athlete.'),
+      });
+  }
+}
