@@ -13,9 +13,22 @@ The two containers communicate over a shared Docker network. A `.env` file at th
 ## Principles
 
 ### Code Quality
-- **SOLID** — every class has a single responsibility; depend on abstractions, not concretions.
-- **DRY** — no duplicated logic; extract shared behaviour into Actions, services, traits, or utilities.
-- **KISS** — prefer the simplest solution that works; add complexity only when genuinely required.
+
+Non-negotiable baseline. Full canon in the **Code craftsmanship** section below.
+
+**SOLID** — each letter is a concrete obligation, not a slogan:
+
+- **S — Single Responsibility.** A class changes for one reason and one reason only. If a class has two obvious callers with different motives to edit it, split it. Controllers orchestrate, Actions do one business operation, FormRequests validate, Resources shape responses. No class wears multiple hats.
+- **O — Open/Closed.** Code is open to extension, closed to modification. Prefer adding a new Action over editing an existing one. Prefer a new `DocumentType` enum case over an `if/else` chain in a service.
+- **L — Liskov Substitution.** A subtype must be usable wherever the supertype is expected, without surprises. In practice here: don't override a method to throw or to return a different shape; respect the parent contract (see the Copilot comment on `UpdateDocumentRequest::validated()` in PR #33 for a real case we actually fixed).
+- **I — Interface Segregation.** Consumers shouldn't depend on methods they don't use. Favor small, focused contracts. In Laravel this mostly shows up in FormRequest classes (one per operation) and in Action classes (one `execute(...)` method each).
+- **D — Dependency Inversion.** High-level policy doesn't depend on low-level detail; both depend on abstractions. Injecting services/Actions via constructor instead of `Container::make()` inside methods is the first concrete application.
+
+**DRY** — no duplicated logic. Extract shared behaviour into Actions, services, traits, or test helpers (we did this for `userWithAcademy()` in `tests/Pest.php`). **But:** duplication that looks accidental is different from shared knowledge — don't prematurely extract a second-occurrence match if the two sites will evolve independently.
+
+**KISS** — the simplest thing that could possibly work. Add complexity only when a real requirement demands it. If a future M5 email reminder "might" want something, don't build it today.
+
+**Boy Scout Rule** — leave the code cleaner than you found it. Touched a file to fix a bug? Rename an unclear variable, delete a dead comment, tighten an overly clever expression in the same PR. But keep these changes tightly scoped — a 200-line PR that "also does some cleanup" is harder to review than two focused PRs.
 
 ### Test-Driven Development (TDD)
 
@@ -38,6 +51,70 @@ Write failing Cypress spec    →  verify navigation/flows   →  all Cypress te
 ```
 
 No untested business logic is merged to `develop`.
+
+---
+
+## Code craftsmanship — the Uncle Bob canon
+
+This project is written (and reviewed) in the spirit of Robert C. Martin's "Clean" series. When a reviewer asks "why did you do it that way?" the intended default reference is one of these four books, by name. They are our shared vocabulary for judging code.
+
+| Book | What we take from it |
+|------|----------------------|
+| **Clean Code** (2008) | Function hygiene, naming, comments, tests as first-class code |
+| **The Clean Coder** (2011) | Professional discipline — saying no, owning estimates, refusing to ship slop under pressure |
+| **Clean Architecture** (2017) | SOLID in depth, the Dependency Rule, layered boundaries between policy and I/O |
+| **Clean Agile** (2019) | XP practices — TDD, pair programming, continuous refactoring, small releases |
+
+If a reviewer (human or Copilot) cites one of these books and the commit diff violates it, the citation is a valid argument on its own. Push back only with a specific, pragmatic reason (e.g. "Laravel's conventions override here, see the Active Record note below"). "I prefer it this way" is not a reason.
+
+### Clean Code — daily practice
+
+These are concrete obligations when you write PHP or TypeScript in this repo:
+
+- **Meaningful names.** `createAcademy` is good, `handle` is lazy, `$a` is banned outside a two-line lambda. Class names are nouns (`UploadDocumentAction`). Method names are verbs (`execute`, `list`, `download`). Boolean variables read as questions (`$isExpired`, `$hasAcademy`). Avoid Hungarian notation, abbreviations, and "manager/processor/data" suffixes that say nothing.
+- **Small functions.** If a method doesn't fit on a screen, it's too long. If it has more than two levels of indentation, extract. Controller action > ~20 lines is a smell; most of ours sit at 10–15.
+- **One thing per function.** A function either does, decides, or returns — not all three. `execute()` on an Action returns the created model; it doesn't also send an email. Side-effects are deliberate and named.
+- **Few arguments.** Zero is ideal, 1–2 is fine, 3 is a stretch, 4+ is a refactor. If you're reaching for a 5-argument method, you need a DTO / value object (see `AthletePayload` on the Angular side).
+- **No flag arguments.** A boolean that flips the function's behaviour is two functions in a trench coat. Split it.
+- **Comments are a failure.** Self-documenting code first. Comments only for *why*, never *what*. If the code needs a comment to explain what it does, the code is not clear enough — rename, extract, restructure. Exception: Laravel/Symfony quirks and non-obvious business rules (e.g. "We wipe the file before soft-deleting the row because …") — those are worth explaining.
+- **Tests are first-class code.** Same naming standards, same cleanliness, same refactoring discipline. A test that's hard to read is a test that lies when it passes.
+
+### Clean Architecture — how this codebase maps
+
+Uncle Bob's clean architecture pushes I/O (DB, web, filesystem, UI) to the edges and keeps business rules at the center. This Laravel codebase isn't a pure Clean Architecture shop — but we approximate it deliberately:
+
+| Clean Architecture layer | Where it lives in Budojo |
+|--------------------------|---------------------------|
+| **Entities** (enterprise business rules) | `App\Enums` + domain invariants enforced in `Actions` |
+| **Use Cases / Interactors** | `App\Actions\*` (e.g. `UploadDocumentAction`, `DeleteDocumentAction`) — one public `execute` method each |
+| **Interface Adapters** | `App\Http\Requests` (inbound boundary), `App\Http\Resources` (outbound boundary), `App\Http\Controllers` (thin orchestration) |
+| **Frameworks & Drivers** | Laravel itself (routing, container, Eloquent), Angular, PrimeNG, Cypress, PEST |
+
+**The Dependency Rule.** Dependencies point inward. A Controller can call an Action; an Action MUST NOT depend on a Controller. A Model/Action MUST NOT depend on an HTTP Request — accept typed arguments instead. If a new Action needs user context, it takes a `User $user` parameter; it does NOT call `auth()->user()`.
+
+**Humble Object pattern.** Controllers, Observers, and Resources are "humble" — minimal logic, easy to leave alone. All conditional business rules live in Actions, which are framework-light and unit-testable without Laravel's HTTP stack.
+
+### The Active Record caveat — pragmatic, not dogmatic
+
+Laravel's Eloquent Model is an **Active Record**. Clean Architecture would prefer a plain-data Entity with a separate Repository. We consciously accept Active Record because:
+
+1. Laravel's whole ecosystem (migrations, relations, factories, seeders, broadcasting) assumes it.
+2. Fighting the framework creates more accidental complexity than decoupling saves.
+3. Our real-world blast radius is small (a single webapp, no multi-client SDK).
+
+**The compensating discipline**: we keep the Model skinny. No business logic in models — only relations, casts, scopes, and `#[ObservedBy]` wiring. Business logic lives in Actions. This preserves 90% of the testability and reasoning benefits of the Clean split, at 10% of the friction.
+
+If this assumption ever breaks (e.g. we grow a CLI tool that needs to write documents without booting the full Laravel HTTP stack) we revisit. Until then, Active Record stands.
+
+### Clean Agile — the meta-rule
+
+Agile is the 90s practices XP put on the map, not the ceremony that corporations grafted on top in 2010. In this repo that means:
+
+- **TDD is default, not optional.** See the TDD section above — four layers, test first, no exceptions for "simple" code.
+- **Refactor continuously.** Every time you touch a file, scan for dead code, unclear names, missed extractions. Apply the Boy Scout Rule with discipline.
+- **Small releases.** Each PR ships independently — M2 was four PRs, M3 is four PRs. The mega-PR-merging-weeks-of-work style is forbidden here.
+- **Honesty about estimates.** If a task is harder than expected, say so. Don't silently compress scope to look on-track.
+- **Say no.** When a feature request violates scope or craftsmanship ("just slap it in, we'll fix it later"), refuse in writing and propose the right way.
 
 ---
 
@@ -570,3 +647,4 @@ The `openapi-lint` job runs `npx -y @stoplight/spectral-cli@6 lint docs/api/v1.y
 14. **Before pushing Angular changes**: `prettier --write` → `npm run lint` → `npm test -- --watch=false` — all must be clean. Cypress runs in CI.
 15. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere.
 16. **Keep `docs/` in sync** — every PR that changes a migration, an enum, an API route, a request/response shape, or a business rule must update the relevant file in `docs/entities/` or `docs/api/v1.yaml` in the same commit history. See the "Documentation discipline" section for what counts as "substantial" and what doesn't. Internal refactors, formatting, and dependency bumps are exempt.
+17. **Write code in the Uncle Bob canon.** SOLID, small single-purpose functions, intention-revealing names, comments only for *why*, tests-first, Dependency Rule (dependencies point inward). See the "Code craftsmanship" section for the full ruleset and the explicit mapping of our Laravel layers to Clean Architecture layers. When a reviewer cites Clean Code / Clean Architecture / Clean Agile by name, that citation is a valid critique on its own — push back only with a specific pragmatic reason, never with taste.
