@@ -22,7 +22,7 @@ import { FileUpload, FileUploadModule } from 'primeng/fileupload';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
-import { finalize } from 'rxjs';
+import { Subject, finalize, takeUntil } from 'rxjs';
 import {
   Document,
   DocumentService,
@@ -111,6 +111,16 @@ export class UploadDocumentDialogComponent {
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
 
+  /**
+   * Cancel token for the in-flight upload subscription. Emitting here
+   * (via `close()`) triggers `takeUntil` downstream, unsubscribing from the
+   * HttpClient observable — Angular's XhrBackend aborts the underlying
+   * request, so we also stop the server round-trip, not just the callback.
+   * Prevents ghost `uploaded` emits from a request whose dialog was
+   * already dismissed (mask click / Escape / close icon / route change).
+   */
+  private readonly cancelled$ = new Subject<void>();
+
   /** Exposed to the template for the p-fileUpload `accept` attribute and the size chip. */
   readonly acceptAttr = ACCEPT_ATTR;
   readonly maxFileBytes = MAX_FILE_BYTES;
@@ -184,7 +194,10 @@ export class UploadDocumentDialogComponent {
 
     this.documentService
       .upload(this.athleteId(), body)
-      .pipe(finalize(() => this.submitting.set(false)))
+      .pipe(
+        takeUntil(this.cancelled$),
+        finalize(() => this.submitting.set(false)),
+      )
       .subscribe({
         next: (doc) => {
           this.uploaded.emit(doc);
@@ -212,6 +225,12 @@ export class UploadDocumentDialogComponent {
   }
 
   private close(fileUpload?: FileUpload): void {
+    // Abort any in-flight upload first — idempotent, no-op if the
+    // subscription already completed naturally (success path). Must come
+    // before resetting state so a racing `next` callback can't sneak a
+    // stale `uploaded.emit` or toast through after the dialog is closed.
+    this.cancelled$.next();
+    this.submitting.set(false);
     this.form.reset({ notes: '' });
     this.error.set(null);
     fileUpload?.clear();

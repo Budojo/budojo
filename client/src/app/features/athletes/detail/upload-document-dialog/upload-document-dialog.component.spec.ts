@@ -211,5 +211,27 @@ describe('UploadDocumentDialogComponent', () => {
       expect(dialog.form.controls.file.value).toBeNull();
       httpMock.expectNone('/api/v1/athletes/42/documents');
     });
+
+    it('cancelling mid-upload aborts the HTTP subscription so no ghost `uploaded` fires', () => {
+      const { fixture, dialog } = mount();
+      const host = fixture.componentInstance;
+
+      dialog.form.patchValue({ type: 'medical_certificate', file: tinyPdfFile() });
+      dialog.submit();
+
+      const req = httpMock.expectOne('/api/v1/athletes/42/documents');
+      expect(req.cancelled).toBe(false);
+      expect(dialog.submitting()).toBe(true);
+
+      // takeUntil(cancelled$) unsubscribes the HTTP observable. In the
+      // browser Angular's XhrBackend aborts the underlying request;
+      // HttpTestingController reflects that as `req.cancelled === true`.
+      dialog.cancel();
+
+      expect(req.cancelled).toBe(true);
+      expect(host.emitted()).toBeNull();
+      expect(dialog.submitting()).toBe(false);
+      expect(host.visible).toBe(false);
+    });
   });
 });
