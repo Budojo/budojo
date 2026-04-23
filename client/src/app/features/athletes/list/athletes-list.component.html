@@ -62,7 +62,7 @@
           <th>Status</th>
           <th>Email</th>
           <th>Joined</th>
-          <th style="width: 6rem"></th>
+          <th style="width: 8rem"></th>
         </tr>
       </ng-template>
 
@@ -85,6 +85,17 @@
           <td class="athlete-email">{{ athlete.email ?? '—' }}</td>
           <td class="athlete-date">{{ athlete.joined_at }}</td>
           <td class="athlete-actions">
+            <p-button
+              icon="pi pi-folder"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              (onClick)="goToDocuments(athlete)"
+              [ariaLabel]="'Documents of ' + athlete.first_name + ' ' + athlete.last_name"
+              pTooltip="Documents"
+              tooltipPosition="left"
+              data-cy="documents-btn"
+            />
             <p-button
               icon="pi pi-pencil"
               severity="secondary"

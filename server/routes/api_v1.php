@@ -25,7 +25,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // `/expiring` must come before `/{document}` routes or Laravel tries to
     // bind the literal "expiring" as a document id.
     Route::get('/documents/expiring', [\App\Http\Controllers\Document\DocumentController::class, 'expiring']);
-    Route::get('/documents/{document}/download', [\App\Http\Controllers\Document\DocumentController::class, 'download']);
+    // Download allows binding soft-deleted rows so the controller can return
+    // 410 Gone (tombstone) instead of the generic 404. See PRD P0.7b.
+    Route::get('/documents/{document}/download', [\App\Http\Controllers\Document\DocumentController::class, 'download'])
+        ->withTrashed();
     Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
     Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
 });

@@ -156,6 +156,8 @@ Rules:
 
 A new route `/dashboard/athletes/:id/documents` renders a list of that athlete's documents. Each row shows document type, issue date, expiry date, a color badge, a download action, and a delete action (with confirmation).
 
+The list shows **only non-soft-deleted documents by default.** A "Show cancelled" toggle above the table (off by default, state persisted in `localStorage`) reveals the soft-deleted rows inline as **tombstones** — see P0.7b.
+
 Badge rules:
 - **Green** — `expires_at` is more than 30 days in the future.
 - **Yellow** — `expires_at` is 30 days or less in the future.
@@ -170,6 +172,32 @@ Badge rules:
 - Given an athlete has an ID card with `expires_at = null`
 - When the owner opens the page
 - Then that row shows no badge (neutral).
+
+#### P0.7b — Cancelled documents visibility (tombstone view)
+
+When the "Show cancelled" toggle is on, soft-deleted documents appear in the same list **as tombstones**. A tombstone row:
+
+- Is visually de-emphasized: grayed / reduced opacity, strikethrough on the filename
+- Carries a dedicated "Cancelled on YYYY-MM-DD" badge (red/neutral — distinct from the expiry badge)
+- Does NOT show download / edit / delete action buttons — the file has been physically wiped from disk (per the P0.6 policy), so these actions have no target
+- Is read-only metadata: type, dates, notes, cancelled-at timestamp. Nothing more.
+
+There is **no restore** for a soft-deleted document. Even if the DB row were un-deleted, the file is gone. This is intentional and GDPR-consistent.
+
+Backend support: the list endpoint accepts `?trashed=1` (or equivalent) to include soft-deleted rows. The response continues to return the same `Document` schema — consumers identify tombstones by the presence of `deleted_at`. The download endpoint returns **410 Gone** (not 404) for a soft-deleted document — the resource once existed but is permanently gone.
+
+**Acceptance:**
+- Given an athlete has 2 active documents and 1 soft-deleted document
+- When the owner opens the page with the "Show cancelled" toggle OFF
+- Then only the 2 active documents are visible.
+
+- Given the same state
+- When the owner flips the toggle ON
+- Then all 3 documents are visible, the soft-deleted one rendered as a tombstone with strikethrough styling and no action buttons.
+
+- Given a soft-deleted document
+- When the owner attempts `GET /api/v1/documents/{id}/download`
+- Then the response is **410 Gone** with a message explaining the document was cancelled.
 
 #### P0.8 — Upload dialog
 
@@ -250,7 +278,7 @@ Budojo has no real users yet at the time of M3 kick-off. The targets above are a
 
 Blocking (must answer before or during implementation):
 
-- **(engineering)** How do we version old documents in the UI without cluttering the P0.7 list? P0 shows only non-deleted rows; if an athlete replaces a certificate three times in a year, the list will show three rows simultaneously. Acceptable for P0 or do we hide superseded ones by default and add a "show history" toggle? Proposed answer: show all non-deleted rows in P0, revisit if the UX is noisy — but decide explicitly before M3.2.
+- ~~**(engineering)** How do we version old documents in the UI without cluttering the P0.7 list?~~ **Resolved at M3.2 kick-off.** P0.7 shows all non-deleted rows in a single flat list — no history toggle needed, since the implicit versioning (newest medical cert first, older ones still listed but with expired badge) is already meaningful. The separate concern of *cancelled* documents (soft-deleted) is handled by the new P0.7b "Show cancelled" toggle that reveals tombstone rows on demand.
 
 Non-blocking (can resolve during or after):
 

@@ -60,6 +60,16 @@ class DocumentController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        // Tombstone: soft-deleted documents are visible in the list (via
+        // ?trashed=1) but the file has been wiped — 410 Gone is the correct
+        // status for a resource that once existed and is permanently gone.
+        if ($document->trashed()) {
+            return response()->json(
+                ['message' => 'This document has been cancelled and is no longer available.'],
+                410,
+            );
+        }
+
         if (! Storage::disk('local')->exists($document->file_path)) {
             return response()->json(['message' => 'File not found.'], 404);
         }

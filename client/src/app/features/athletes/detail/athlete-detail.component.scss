@@ -1,0 +1,82 @@
+// MD3 8dp baseline grid throughout — every spacing is a multiple of 0.5rem.
+// Color via PrimeNG theme tokens only (see client/CLAUDE.md § design canon).
+
+.athlete-detail-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--p-text-muted-color);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    width: fit-content;
+    padding: 0.5rem;
+    margin-left: -0.5rem; // optical alignment to page edge (Fitts: still reachable)
+    border-radius: 0.5rem;
+    transition: background 200ms cubic-bezier(0.2, 0, 0, 1);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+      color: var(--p-text-color);
+    }
+
+    i {
+      font-size: 0.875rem;
+    }
+  }
+
+  &__loading,
+  &__error {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 0.75rem;
+    color: var(--p-text-muted-color);
+
+    i {
+      font-size: 1.25rem;
+    }
+  }
+
+  &__error {
+    color: var(--p-red-600);
+    border-color: var(--p-red-200);
+    background: var(--p-red-50);
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__name {
+    margin: 0;
+    font-size: 1.875rem; // MD3 display-small
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__meta {
+    margin: 0;
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+  }
+}
