@@ -99,6 +99,38 @@ describe('AcademyService', () => {
       httpMock.expectOne('/api/v1/academy').flush({ data: makeAcademy() });
     });
 
+    it('clear() during an in-flight get() prevents the late response from repopulating the signal', () => {
+      // Logout correctness: user clicks logout while /api/v1/academy is pending.
+      // The late tap() must not write stale session data back into the signal.
+      service.get().subscribe({ next: () => void 0, error: () => void 0 });
+      const req = httpMock.expectOne('/api/v1/academy');
+
+      service.clear();
+      expect(service.academy()).toBeNull();
+
+      req.flush({ data: makeAcademy({ name: 'Stale session academy' }) });
+
+      expect(service.academy()).toBeNull();
+    });
+
+    it('forceRefresh starting mid-flight does not let the old response clobber the new one', () => {
+      // Start an initial in-flight request.
+      service.get().subscribe({ next: () => void 0, error: () => void 0 });
+      const firstReq = httpMock.expectOne('/api/v1/academy');
+
+      // Force a new request before the first one resolves.
+      let latest: Academy | undefined;
+      service.get({ forceRefresh: true }).subscribe((a) => (latest = a));
+      const secondReq = httpMock.expectOne('/api/v1/academy');
+
+      // Flush the OLD one last — it must NOT overwrite the signal.
+      secondReq.flush({ data: makeAcademy({ name: 'Fresh' }) });
+      firstReq.flush({ data: makeAcademy({ name: 'Stale' }) });
+
+      expect(latest?.name).toBe('Fresh');
+      expect(service.academy()?.name).toBe('Fresh');
+    });
+
     it('does not poison the cache on a failed fetch — next call retries', () => {
       let capturedError: HttpErrorResponse | undefined;
       service.get().subscribe({ error: (e) => (capturedError = e) });
@@ -112,13 +144,16 @@ describe('AcademyService', () => {
       httpMock.expectOne('/api/v1/academy').flush({ data: makeAcademy() });
     });
 
-    it('clears the signal on 404 / 401 so the guard can redirect', () => {
-      service.get().subscribe({ error: () => void 0 });
-      httpMock
-        .expectOne('/api/v1/academy')
-        .flush('not found', { status: 404, statusText: 'Not Found' });
+    [
+      { status: 404, statusText: 'Not Found' },
+      { status: 401, statusText: 'Unauthorized' },
+    ].forEach(({ status, statusText }) => {
+      it(`clears the signal on ${status} so the guard can redirect`, () => {
+        service.get().subscribe({ error: () => void 0 });
+        httpMock.expectOne('/api/v1/academy').flush('request failed', { status, statusText });
 
-      expect(service.academy()).toBeNull();
+        expect(service.academy()).toBeNull();
+      });
     });
   });
 

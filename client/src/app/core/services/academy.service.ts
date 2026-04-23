@@ -34,6 +34,15 @@ export class AcademyService {
   private inflight$: Observable<Academy> | null = null;
 
   /**
+   * Monotonic request epoch. Bumped by `clear()` and by each new request
+   * (incl. `forceRefresh`). Any in-flight request whose captured epoch no
+   * longer matches the current value is considered stale: its `tap()` and
+   * 404/401-handler are no-ops, so a late response from the previous
+   * session can never repopulate the signal (logout correctness).
+   */
+  private epoch = 0;
+
+  /**
    * Resolves the current academy. Reads from the cached `academy` signal
    * when possible — subsequent guard runs across `/dashboard/*` navigations
    * complete synchronously instead of blocking on a network round-trip.
@@ -52,22 +61,36 @@ export class AcademyService {
       }
     }
 
-    this.inflight$ = this.http.get<AcademyResponse>(this.base).pipe(
-      tap((res) => this.academy.set(res.data)),
+    const requestEpoch = ++this.epoch;
+    const req$: Observable<Academy> = this.http.get<AcademyResponse>(this.base).pipe(
+      tap((res) => {
+        // Drop writes from stale epochs — logout / forceRefresh bumped the
+        // epoch while this response was in flight, so the caller that started
+        // it no longer represents the current session.
+        if (requestEpoch === this.epoch) {
+          this.academy.set(res.data);
+        }
+      }),
       map((res) => res.data),
       catchError((err: HttpErrorResponse) => {
-        if (err.status === 404 || err.status === 401) {
+        if (requestEpoch === this.epoch && (err.status === 404 || err.status === 401)) {
           this.academy.set(null);
         }
         return throwError(() => err);
       }),
       finalize(() => {
-        this.inflight$ = null;
+        // Only clear the pointer if this request is still the tracked one.
+        // A concurrent `forceRefresh` or `clear()` may have already swapped
+        // in a newer `inflight$`; we must not null that one out.
+        if (this.inflight$ === req$) {
+          this.inflight$ = null;
+        }
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
 
-    return this.inflight$;
+    this.inflight$ = req$;
+    return req$;
   }
 
   create(payload: CreateAcademyPayload): Observable<Academy> {
@@ -77,8 +100,15 @@ export class AcademyService {
     );
   }
 
+  /**
+   * Invalidates the cached academy. Any in-flight `get()` started before the
+   * call will complete silently — its `tap()` is gated on the pre-clear epoch
+   * and will be skipped — so stale data from a previous session cannot
+   * repopulate the signal (e.g. logout while `/api/v1/academy` was pending).
+   */
   clear(): void {
     this.academy.set(null);
     this.inflight$ = null;
+    this.epoch++;
   }
 }
