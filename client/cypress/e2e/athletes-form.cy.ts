@@ -42,6 +42,8 @@ describe('Athlete create form', () => {
   beforeEach(() => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
+    // M3.4 widget fires on /dashboard/athletes load; stub to keep logs clean.
+    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
   it('opens the create form from the athletes list', () => {

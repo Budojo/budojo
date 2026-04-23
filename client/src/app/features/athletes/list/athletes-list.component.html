@@ -18,6 +18,10 @@
     />
   </header>
 
+  <!-- Document health signal — fetches on init, links to the full cross-athlete
+       expiring list. Its own state: the page never waits on it. -->
+  <app-expiring-documents-widget />
+
   <!-- Filters -->
   <div class="athletes-page__filters">
     <p-select

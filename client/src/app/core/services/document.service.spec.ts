@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Document, DocumentService } from './document.service';
+import { Document, DocumentService, ExpiringDocument } from './document.service';
 
 function makeDoc(overrides: Partial<Document> = {}): Document {
   return {
@@ -115,6 +115,39 @@ describe('DocumentService', () => {
       const req = httpMock.expectOne('/api/v1/documents/7');
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
+    });
+  });
+
+  describe('listExpiring', () => {
+    it('GETs /api/v1/documents/expiring with ?days=30 by default', () => {
+      service.listExpiring().subscribe();
+      const req = httpMock.expectOne(
+        (r) => r.url === '/api/v1/documents/expiring' && r.params.get('days') === '30',
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush({ data: [] });
+    });
+
+    it('accepts a custom days parameter', () => {
+      service.listExpiring(7).subscribe();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/documents/expiring' && r.params.get('days') === '7')
+        .flush({ data: [] });
+    });
+
+    it('unwraps the data envelope and surfaces the eager-loaded athlete identity', () => {
+      let result: ExpiringDocument[] = [];
+      service.listExpiring(30).subscribe((docs) => (result = docs));
+
+      const expanded: ExpiringDocument = {
+        ...makeDoc({ id: 1, type: 'medical_certificate', expires_at: '2026-05-10' }),
+        athlete: { id: 42, first_name: 'Mario', last_name: 'Rossi' },
+      };
+      httpMock.expectOne((r) => r.url === '/api/v1/documents/expiring').flush({ data: [expanded] });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].athlete.first_name).toBe('Mario');
+      expect(result[0].expires_at).toBe('2026-05-10');
     });
   });
 

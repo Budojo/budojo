@@ -40,6 +40,23 @@ export interface DocumentListOptions {
   includeCancelled?: boolean;
 }
 
+/**
+ * Shape returned by `GET /api/v1/documents/expiring`. Extends the base
+ * `Document` with the eager-loaded athlete identity — the endpoint
+ * always includes it (backend calls `->with('athlete')`), so the list
+ * view and widget can render the athlete name without chaining a
+ * second lookup per row. Only the fields needed for cross-athlete
+ * display are surfaced; full athlete details still live under
+ * `/api/v1/athletes/:id`.
+ */
+export interface ExpiringDocument extends Document {
+  athlete: {
+    id: number;
+    first_name: string;
+    last_name: string;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class DocumentService {
   private readonly http = inject(HttpClient);
@@ -57,6 +74,19 @@ export class DocumentService {
   upload(athleteId: number, body: FormData): Observable<Document> {
     return this.http
       .post<{ data: Document }>(`${this.base}/athletes/${athleteId}/documents`, body)
+      .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Cross-athlete query of documents that are expired OR expiring within
+   * `days` days. Used by the dashboard widget and the full expiring list
+   * view. Backend enforces a max days ceiling and a hard result cap; we
+   * just forward `days` and consume whatever comes back.
+   */
+  listExpiring(days: number = 30): Observable<ExpiringDocument[]> {
+    const params = new HttpParams().set('days', String(days));
+    return this.http
+      .get<{ data: ExpiringDocument[] }>(`${this.base}/documents/expiring`, { params })
       .pipe(map((res) => res.data));
   }
 

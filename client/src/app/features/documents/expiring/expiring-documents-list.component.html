@@ -1,0 +1,97 @@
+<section class="expiring-page">
+  <header class="expiring-page__header">
+    <a routerLink="/dashboard/athletes" class="expiring-page__back" data-cy="back-to-athletes">
+      <i class="pi pi-chevron-left" aria-hidden="true"></i>
+      <span>Athletes</span>
+    </a>
+    <div class="expiring-page__title-area">
+      <h1 class="expiring-page__title">Expiring documents</h1>
+      @if (!loading() && !errored()) {
+        <span class="expiring-page__count">
+          {{ count() }}
+          {{ count() === 1 ? 'document' : 'documents' }} within 30 days
+        </span>
+      }
+    </div>
+  </header>
+
+  @if (errored()) {
+    <div class="expiring-page__empty-state" data-cy="expiring-list-error">
+      <i class="pi pi-exclamation-circle"></i>
+      <p class="expiring-page__empty-title">Couldn't load expiring documents.</p>
+      <p class="expiring-page__empty-hint">Refresh the page to try again.</p>
+    </div>
+  } @else {
+    <p-table
+      [value]="documents()"
+      [loading]="loading()"
+      responsiveLayout="scroll"
+      styleClass="p-datatable-sm expiring-page__table"
+      data-cy="expiring-table"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Athlete</th>
+          <th>Type</th>
+          <th>Expires</th>
+          <th>Status</th>
+          <th style="width: 4rem"></th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-doc>
+        <tr>
+          <td>
+            <a
+              [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
+              class="expiring-page__athlete-link"
+              data-cy="athlete-link"
+            >
+              {{ athleteNameFor(doc) }}
+            </a>
+          </td>
+          <td>{{ labelFor(doc) }}</td>
+          <td>{{ doc.expires_at ?? '—' }}</td>
+          <td>
+            <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
+          </td>
+          <td>
+            <p-button
+              icon="pi pi-download"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              (onClick)="download(doc)"
+              [ariaLabel]="'Download ' + doc.original_name"
+              pTooltip="Download"
+              tooltipPosition="left"
+              data-cy="download-btn"
+            />
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="5" class="expiring-page__empty">
+            @if (loading()) {
+              <div class="expiring-page__skeleton">
+                <p-skeleton height="1.5rem" styleClass="mb-2"></p-skeleton>
+                <p-skeleton height="1.5rem" styleClass="mb-2"></p-skeleton>
+                <p-skeleton height="1.5rem"></p-skeleton>
+              </div>
+            } @else {
+              <div class="expiring-page__empty-state" data-cy="expiring-list-empty">
+                <i class="pi pi-check-circle"></i>
+                <p class="expiring-page__empty-title">All documents up to date.</p>
+                <p class="expiring-page__empty-hint">
+                  No expirations in the next 30 days. Check back later.
+                </p>
+              </div>
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+</section>

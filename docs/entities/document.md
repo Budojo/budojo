@@ -76,7 +76,13 @@ Documents are the first entity in the system that owns **physical files on disk*
 
 - `athletes` — see [`athlete.md`](./athlete.md)
 
+## Related UI
+
+- **Per-athlete list** — `/dashboard/athletes/:id/documents` (`DocumentsListComponent`)
+- **Upload dialog** — `UploadDocumentDialogComponent` mounted inside the per-athlete list; reactive form + multipart POST
+- **Dashboard widget** — `ExpiringDocumentsWidgetComponent` rendered on `/dashboard/athletes`, shows count and deep-links to the full list
+- **Cross-athlete expiring list** — `/dashboard/documents/expiring` (`ExpiringDocumentsListComponent`)
+
 ## Future
 
-- **M3.2 / M3.3 / M3.4** — Angular UI layers on top of this API (per-athlete list, upload dialog, dashboard expiring widget).
 - **M5** — Email reminders before expiry. Reads `expires_at` via the same `GetExpiringDocumentsAction`. No schema change needed.

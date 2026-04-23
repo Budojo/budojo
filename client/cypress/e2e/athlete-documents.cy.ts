@@ -43,6 +43,9 @@ describe('Athlete documents page', () => {
     cy.intercept('GET', '/api/v1/athletes/42', { statusCode: 200, body: { data: ATHLETE } }).as(
       'getAthlete',
     );
+    // One test in this suite lands on /dashboard/athletes where the M3.4
+    // widget fires; keep it from reaching the dev proxy.
+    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
   it('renders the athlete header and an empty documents table', () => {
