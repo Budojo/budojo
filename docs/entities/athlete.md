@@ -26,6 +26,7 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 ## Relations
 
 - `belongsTo(Academy::class)` — inverse of `Academy::athletes()`
+- `hasMany(Document::class)` — athlete's uploaded documents (ID, medical cert, etc.). See [`document.md`](./document.md).
 
 ## Indexes
 
@@ -59,6 +60,7 @@ Represents IBJJF adult belt ranks. Kids/youth belts are not modeled — they are
 
 - **Academy scoping.** Every athlete query on every endpoint is filtered by `academy_id = auth()->user()->academy->id`. The controller, not a global scope, enforces this — matching the rest of the codebase.
 - **Soft-delete semantics.** `DELETE /api/v1/athletes/{id}` sets `deleted_at` but never removes the row. Future reports (attendance history, belt promotions) can still reference historic athletes. The list endpoint never returns soft-deleted rows.
+- **Soft-delete cascades to documents.** An `AthleteObserver` (wired via `#[ObservedBy]` on the model) catches the `deleting` event and, for every `Document` belonging to the athlete, soft-deletes the row AND wipes the file from the `local` disk via `Storage::delete`. This is the GDPR-friendly policy locked in the M3 PRD — there is no "restore athlete → restore documents" flow.
 - **Email uniqueness ignores soft-deleted rows.** You can re-add a previously-deleted Mario Rossi with the same email, and the Form Request's `whereNull('deleted_at')` clause allows it.
 - **Stripes range `0..4`.** Enforced at the FormRequest level via `min:0|max:4`. The DB column is an unsigned tinyint with no CHECK constraint.
 - **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (single enum value) and `status` (single enum value). Page via `?page=N`.
@@ -77,5 +79,5 @@ Represents IBJJF adult belt ranks. Kids/youth belts are not modeled — they are
 
 ## Future
 
-- **M3** will add a `documents` table with `athlete_id` FK. Cascade policy on athlete soft-delete to be decided (see M3 PRD "Open Questions").
 - **M4** will add an `attendance` table with `athlete_id` FK.
+- **M6** — Belt promotion history (changes to `belt` / `stripes` recorded in a dedicated table instead of just mutating the athlete row).
