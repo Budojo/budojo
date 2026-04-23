@@ -23,3 +23,11 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# SQLite test/local databases. PEST creates these per-worker during parallel
+# runs (`budojo_test_1`, `budojo_test_2`, …); `budojo` itself is the local
+# sqlite DB used by `database.default=sqlite` in testing.
+budojo
+budojo_test_*
+*.sqlite
+*.sqlite-journal
