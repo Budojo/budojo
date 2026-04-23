@@ -1,9 +1,5 @@
 export {};
 
-const ACADEMY_OK = {
-  statusCode: 200,
-  body: { data: { id: 1, name: 'My Academy', slug: 'my-academy', address: null } },
-};
 const ATHLETES_EMPTY = {
   statusCode: 200,
   body: {
@@ -45,31 +41,34 @@ describe('Academy setup page', () => {
   });
 
   it('successful setup redirects to /dashboard/athletes', () => {
-    // hasAcademyGuard fires when router.navigate(['/dashboard']) is called after creation
-    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academyAfterCreate');
+    // Note: `hasAcademyGuard` no longer fires a GET /api/v1/academy after a
+    // successful POST — `AcademyService.create()` sets the cached signal via
+    // `tap()`, and the guard short-circuits off that cache (see #40).
+    // We assert the user-visible outcome: create, redirect, land on the list.
     cy.intercept('POST', '/api/v1/academy', {
       statusCode: 201,
       body: { data: { id: 1, name: 'My Academy', slug: 'my-academy', address: null } },
     }).as('createAcademy');
-    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletesList');
 
     cy.get('input[id="name"]').type('My Academy');
     cy.get('button[type="submit"]').click();
 
     cy.wait('@createAcademy');
-    cy.wait('@academyAfterCreate');
+    cy.wait('@athletesList');
     cy.url().should('include', '/dashboard/athletes');
   });
 
   it('can optionally fill in address', () => {
-    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academyAfterCreate');
+    // Post-#40: `hasAcademyGuard` reads the cached signal populated by `create()`,
+    // so no follow-up GET /api/v1/academy fires after the redirect.
     cy.intercept('POST', '/api/v1/academy', {
       statusCode: 201,
       body: {
         data: { id: 1, name: 'My Academy', slug: 'my-academy', address: 'Via Roma 1, Milano' },
       },
     }).as('createAcademy');
-    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletesList');
 
     cy.get('input[id="name"]').type('My Academy');
     cy.get('textarea[id="address"]').type('Via Roma 1, Milano');
@@ -79,7 +78,7 @@ describe('Academy setup page', () => {
       name: 'My Academy',
       address: 'Via Roma 1, Milano',
     });
-    cy.wait('@academyAfterCreate');
+    cy.wait('@athletesList');
     cy.url().should('include', '/dashboard/athletes');
   });
 
