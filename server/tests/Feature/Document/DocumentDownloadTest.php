@@ -6,7 +6,6 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\Document;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -39,7 +38,10 @@ it('streams a document file with the original filename', function (): void {
 it('returns 401 on download without auth', function (): void {
     $document = Document::factory()->create();
 
-    $this->get("/api/v1/documents/{$document->id}/download")
+    // Explicit Accept: application/json so Laravel returns a 401 JSON response
+    // instead of the HTML login redirect the auth middleware does by default.
+    $this->withHeaders(['Accept' => 'application/json'])
+        ->get("/api/v1/documents/{$document->id}/download")
         ->assertUnauthorized();
 });
 

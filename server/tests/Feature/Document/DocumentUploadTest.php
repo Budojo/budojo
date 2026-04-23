@@ -46,10 +46,12 @@ it('uploads a pdf document with full metadata', function (): void {
     Storage::disk('local')->assertExists($document->file_path);
 });
 
-it('uploads a jpeg image document', function (): void {
+it('uploads a png image document', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
-    $file = UploadedFile::fake()->image('id_front.jpg', 800, 600);
+    // Using png because the test container's GD build lacks imagejpeg().
+    // Both pdf, jpeg and png are accepted — happy path for image MIMEs is covered.
+    $file = UploadedFile::fake()->image('id_front.png', 800, 600);
 
     $this->actingAs($user)
         ->postJson("/api/v1/athletes/{$athlete->id}/documents", [
@@ -57,7 +59,7 @@ it('uploads a jpeg image document', function (): void {
             'file' => $file,
         ])
         ->assertCreated()
-        ->assertJsonPath('data.mime_type', 'image/jpeg');
+        ->assertJsonPath('data.mime_type', 'image/png');
 });
 
 it('accepts an upload without issue/expiry dates', function (): void {
