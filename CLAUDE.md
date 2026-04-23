@@ -544,7 +544,7 @@ All 8 checks must pass before merge:
 | `openapi-lint` | Spectral 6 | OpenAPI spec wellness (malformed YAML, ghost `$ref`, missing `operationId`/summary) |
 
 The `cypress-e2e` job uses `cypress-io/github-action@v6` with `start: npm run start` and `wait-on: http://localhost:4200` — no backend needed, all API calls are intercepted.
-The `openapi-lint` job runs `npx @stoplight/spectral-cli lint docs/api/v1.yaml` against the ruleset at `.spectral.yaml`.
+The `openapi-lint` job runs `npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml` against the ruleset at `.spectral.yaml`.
 
 ### On every push to `develop` or `main` — `.github/workflows/release.yml`
 - **semantic-release** creates a Git tag and GitHub Release automatically based on conventional commits.

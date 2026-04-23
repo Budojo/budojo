@@ -229,9 +229,9 @@ The architecture must not preclude these. If any P0 choice would make them hard,
 
 | Metric | Target | Measurement |
 |---|---|---|
-| **Time to first upload** for a new academy, from landing on the athlete detail page to the first successful POST `/athletes/{id}/documents` | p50 under 2 minutes; p90 under 5 minutes | Instrumented on the upload dialog via client timing |
+| **Time to first upload** for a new academy, from landing on the athlete detail page to the first successful `POST /api/v1/athletes/{athlete}/documents` | p50 under 2 minutes; p90 under 5 minutes | Instrumented on the upload dialog via client timing |
 | **Activation rate** — % of academies that upload at least one `medical_certificate` in their first 30 days | ≥ 60% (success); 80% (stretch) | Query `documents` grouped by `academy_id` via athlete join |
-| **Error rate on upload** — % of `POST /documents` that return 4xx or 5xx | ≤ 5% on 422; under 1% on 5xx | API log sampling / Laravel telescope |
+| **Error rate on upload** — % of `POST /api/v1/athletes/{athlete}/documents` that return 4xx or 5xx | ≤ 5% on 422; under 1% on 5xx | API log sampling / Laravel telescope |
 | **Support tickets about expiry tracking** | 0 | Manual count from the support inbox |
 
 ### Lagging indicators — measure over 90 days

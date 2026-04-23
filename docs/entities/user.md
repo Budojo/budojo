@@ -35,7 +35,7 @@ Laravel default structure, unchanged.
 - **Registration flow** (`POST /api/v1/auth/register`) creates the user without an academy. The SPA routes newly-registered users to `/setup` via the `noAcademyGuard`.
 - **Password hashing** is handled by Laravel's `hashed` cast — callers pass plaintext and the framework hashes before insert.
 - **No soft-delete** on users. Deleting a user cascades to their academy (which cascades to athletes) via FK cascade.
-- **Sanctum tokens** issued at login do not expire by default — `expires_at` in `personal_access_tokens` is null. Logout deletes the current token from the DB.
+- **Sanctum tokens** issued at login do not expire by default — `expires_at` in `personal_access_tokens` is null. There is no `/api/v1/auth/logout` endpoint today; "logout" in the SPA is client-side only (drops the token from `localStorage`) and does **not** revoke the row in `personal_access_tokens`. Adding a server-side revoke endpoint is queued for a future PR.
 
 ## Related endpoints
 

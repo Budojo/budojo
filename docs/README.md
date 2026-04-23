@@ -43,6 +43,6 @@ If a change is purely internal (refactor, rename of a private symbol, formatting
 
 ## OpenAPI convention
 
-- Single-file monolite (`api/v1.yaml`) for now. When the file grows past ~1500 lines, split into `paths/` and `components/schemas/`.
+- Single-file monolith (`api/v1.yaml`) for now. When the file grows past ~1500 lines, split into `paths/` and `components/schemas/`.
 - OpenAPI 3.0.3 (not 3.1) — broader tooling support (Swagger UI, Redocly, Postman, Insomnia, Stoplight).
 - Every schema referenced inline must have a matching entry under `components/schemas/`. Spectral `lint` in CI blocks ghost references.

@@ -31,8 +31,10 @@ A Postman collection with pre-configured auth helpers also exists at `postman/bu
 Spectral runs in CI on every PR via the `🔬 OpenAPI Lint (Spectral)` job (see `.github/workflows/pr-checks.yml`). To run the same check locally:
 
 ```bash
-npx -y @stoplight/spectral-cli lint docs/api/v1.yaml
+npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml
 ```
+
+(Pinned to major `6` to match the CI invocation — avoids "works locally, fails in CI" on future Spectral releases.)
 
 Spectral catches:
 
@@ -53,4 +55,4 @@ We picked **3.0.3** over 3.1 for wider tooling support — Swagger UI, Redocly, 
 
 ## Structure
 
-Single-file monolite while the surface is small (~10 endpoints). Split into `paths/` + `components/schemas/` directories once the file crosses ~1500 lines.
+Single-file monolith while the surface is small (~10 endpoints). Split into `paths/` + `components/schemas/` directories once the file crosses ~1500 lines.

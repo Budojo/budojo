@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A `PersonalAccessToken` row is a **Bearer token** issued to an authenticated `User` by Laravel Sanctum. The Angular SPA obtains one on login/register (`POST /api/v1/auth/login` or `/auth/register`) and attaches it as `Authorization: Bearer <token>` on every subsequent request via the `AuthInterceptor`. Budojo does not use cookie-based Sanctum — purely stateless Bearer.
+A `PersonalAccessToken` row is a **Bearer token** issued to an authenticated `User` by Laravel Sanctum. The Angular SPA obtains one on login/register (`POST /api/v1/auth/login` or `/auth/register`) and attaches it as `Authorization: Bearer <token>` on every subsequent request via the functional `authInterceptor` in `core/interceptors/auth.interceptor.ts`. Budojo does not use cookie-based Sanctum — purely stateless Bearer.
 
 ## Schema — `personal_access_tokens`
 
@@ -13,7 +13,7 @@ Created by Sanctum's default migration; unchanged.
 | `id` | bigint unsigned | PK, auto-increment | |
 | `tokenable_type` | string | morph type | Always `App\Models\User` today — Sanctum uses a polymorphic relation |
 | `tokenable_id` | bigint unsigned | morph id | FK to `users.id` |
-| `name` | string | not null | Human-readable name (e.g. `"spa"`) — useful for debugging which device owns the token |
+| `name` | string | not null | Human-readable name of the token. Currently always `"auth"` (set by `LoginController` and `RegisterController` via `$user->createToken('auth')`). Free-text — future endpoints may differentiate per device |
 | `token` | string(64) | **unique**, not null | SHA-256 hash of the plaintext token — the plaintext is returned once at issue time and never stored |
 | `abilities` | text | nullable | JSON array of granted abilities; `["*"]` means all. Budojo does not currently scope abilities |
 | `last_used_at` | timestamp | nullable | Updated by Sanctum middleware on every authenticated request |
@@ -37,14 +37,14 @@ Created by Sanctum's default migration; unchanged.
 - **Token plaintext is returned once**, in the `token` field of the `/auth/login` and `/auth/register` responses. The DB stores only the hash. If lost, the user must re-login.
 - **No expiry enforcement today**. Budojo issues tokens with `expires_at = null`. Moving to short-lived tokens + refresh is not planned for M1–M6.
 - **Abilities are always `["*"]`** — no per-token ability scoping yet.
-- **Logout deletes the current token** via `$request->user()->currentAccessToken()->delete()`. Other devices keep working.
-- **Token name is always `"spa"`** for tokens issued to the Angular client — we do not differentiate devices.
+- **No server-side logout today.** There is no `/api/v1/auth/logout` endpoint. The Angular SPA "logs out" by removing the token from `localStorage` — the row in `personal_access_tokens` remains in the DB. Adding a revoke endpoint is tracked as a fast follow.
+- **Token name is always `"auth"`** for tokens issued by `LoginController` and `RegisterController`. There is no per-device naming yet — an authenticated user logging in from two devices has two rows both named `"auth"`.
 
 ## Related endpoints
 
 - `POST /api/v1/auth/login` — issues a token
 - `POST /api/v1/auth/register` — issues a token
-- `POST /api/v1/auth/logout` — reserved for when a logout endpoint is added; currently the SPA just drops the token from `localStorage`
+- _(planned)_ `POST /api/v1/auth/logout` — not yet implemented. Today the SPA discards the token client-side without server notification
 
 ## Related tables
 

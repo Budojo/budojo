@@ -362,13 +362,16 @@ components:
             message: Forbidden.
 
     NotFound:
-      description: Resource not found
+      description: |
+        Resource not found. The response body carries a `message` field but its exact text
+        is currently Laravel's default handling of `ModelNotFoundException` (e.g.
+        `"No query results for model [App\\Models\\Athlete] 42"` in debug mode, `"Not Found"`
+        in production). A normalized API-wide 404 payload is tracked as a future refinement;
+        consumers should treat the status code as the contract and the message as advisory.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorMessage'
-          example:
-            message: Not found.
 
     ValidationError:
       description: Request payload failed validation
