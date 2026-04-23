@@ -325,9 +325,22 @@ paths:
       tags: [documents]
       summary: Paginated list of documents for the given athlete
       description: |
-        Returns up to 50 non-deleted documents for the athlete, newest first.
-        Soft-deleted rows are not returned.
+        Returns up to 50 documents for the athlete, newest `created_at` first.
+        By default only non-soft-deleted rows are returned. Pass `?trashed=1`
+        to include soft-deleted "tombstone" rows — their `deleted_at` field is
+        non-null and the file has been wiped from disk (see PRD P0.7b).
       operationId: athleteDocumentList
+      parameters:
+        - name: trashed
+          in: query
+          description: |
+            When `1`, soft-deleted documents are included in the response as
+            tombstones. Any other value (including absent) returns only active
+            rows. Tombstones are identified by `deleted_at` being non-null.
+          required: false
+          schema:
+            type: string
+            enum: ['1']
       responses:
         '200':
           description: Paginated list of documents
@@ -421,7 +434,9 @@ paths:
         Authenticated file stream. Response body is the raw file bytes;
         `Content-Type` is the stored `mime_type`; `Content-Disposition`
         includes the original filename. A missing file on disk (e.g. wiped
-        out-of-band) returns 404 with `{"message":"File not found."}`.
+        out-of-band) returns 404. A soft-deleted document — visible in the
+        list via `?trashed=1` as a tombstone — returns **410 Gone**: the
+        resource once existed but its file has been permanently wiped.
       operationId: documentDownload
       responses:
         '200':
@@ -445,6 +460,18 @@ paths:
           $ref: '#/components/responses/ForbiddenDocument'
         '404':
           $ref: '#/components/responses/NotFound'
+        '410':
+          description: |
+            The document is soft-deleted (tombstone). The DB row still exists
+            (so the client can still render it as a cancelled entry) but the
+            file has been physically removed from disk and cannot be
+            re-downloaded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: This document has been cancelled and is no longer available.
 
   /documents/{id}:
     parameters:
@@ -1031,6 +1058,15 @@ components:
           type: string
           format: date-time
           nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            ISO-8601 timestamp of when the document was soft-deleted (tombstone),
+            or `null` for active documents. Only visible when the list endpoint
+            is called with `?trashed=1`. The physical file has been wiped when
+            this field is set — `GET /documents/{id}/download` returns 410 Gone.
         athlete:
           $ref: '#/components/schemas/AthleteSummary'
 
