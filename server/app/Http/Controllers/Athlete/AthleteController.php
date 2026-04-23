@@ -52,7 +52,7 @@ class AthleteController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy === null || $athlete->academy_id !== $user->academy->id) {
+        if (! $this->userOwns($user, $athlete)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -64,7 +64,7 @@ class AthleteController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy === null || $athlete->academy_id !== $user->academy->id) {
+        if (! $this->userOwns($user, $athlete)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -78,12 +78,23 @@ class AthleteController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy === null || $athlete->academy_id !== $user->academy->id) {
+        if (! $this->userOwns($user, $athlete)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
         $athlete->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * An athlete belongs to the authenticated user iff the user owns an academy
+     * and the athlete's academy_id matches it. Mirrors the DocumentController::userOwns()
+     * pattern for consistency.
+     */
+    private function userOwns(User $user, Athlete $athlete): bool
+    {
+        return $user->academy !== null
+            && $athlete->academy_id === $user->academy->id;
     }
 }

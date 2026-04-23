@@ -5,16 +5,34 @@ declare(strict_types=1);
 namespace App\Http\Requests\Document;
 
 use App\Enums\DocumentType;
+use App\Models\Document;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateDocumentRequest extends FormRequest
 {
+    /**
+     * Full ownership gate: the authenticated user must own an academy AND
+     * the route-bound document must belong to an athlete in that academy.
+     * Mirrors UploadDocumentRequest::authorize() so the FormRequest owns
+     * the entire authorization contract — the controller stays a humble
+     * orchestrator (server/CLAUDE.md § Clean Architecture).
+     */
     public function authorize(): bool
     {
         $user = $this->user();
+        if ($user === null || $user->academy === null) {
+            return false;
+        }
 
-        return $user !== null && $user->academy !== null;
+        /** @var Document|null $document */
+        $document = $this->route('document');
+        if ($document === null) {
+            return false;
+        }
+
+        return $document->athlete !== null
+            && $document->athlete->academy_id === $user->academy->id;
     }
 
     /**

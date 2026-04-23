@@ -83,13 +83,8 @@ class DocumentController extends Controller
 
     public function update(UpdateDocumentRequest $request, Document $document): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
-
-        if (! $this->userOwns($user, $document)) {
-            return response()->json(['message' => 'Forbidden.'], 403);
-        }
-
+        // Ownership is enforced by UpdateDocumentRequest::authorize() — a
+        // failed check short-circuits with 403 before this method runs.
         $document->update($request->validated());
 
         return response()->json(['data' => new DocumentResource($document->fresh())]);
