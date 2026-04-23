@@ -7,6 +7,7 @@ namespace App\Http\Requests\Document;
 use App\Enums\DocumentType;
 use App\Models\Document;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
 class UpdateDocumentRequest extends FormRequest
@@ -51,5 +52,20 @@ class UpdateDocumentRequest extends FormRequest
             'expires_at' => ['sometimes', 'nullable', 'date', 'after_or_equal:issued_at'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
+    }
+
+    /**
+     * Match the wire-level contract used by the rest of the API for
+     * ownership failures: `{"message":"Forbidden."}` with 403 — the exact
+     * same JSON that DocumentController::download / destroy emit via
+     * userOwns(). Without this override Laravel's default renderer would
+     * emit `{"message":"This action is unauthorized."}` instead, breaking
+     * a minor but real contract guarantee.
+     */
+    protected function failedAuthorization(): void
+    {
+        throw new HttpResponseException(
+            response()->json(['message' => 'Forbidden.'], 403),
+        );
     }
 }
