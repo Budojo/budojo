@@ -93,7 +93,10 @@ describe('Sidebar brand + sign out', () => {
 
     cy.get('.sidebar__brand').click();
     cy.get('.sidebar__brand').should('have.attr', 'aria-expanded', 'true');
-    cy.contains('.p-menu .p-menuitem-link', 'Sign out').click();
+    // Target the menu item via its ARIA role — PrimeNG's internal class names
+    // (`p-menu-item-link` vs older `p-menuitem-link`) are versioned and brittle;
+    // `role="menuitem"` is part of the a11y contract and stable across versions.
+    cy.get('[role="menuitem"]').contains('Sign out').click();
 
     cy.url().should('include', '/auth/login');
   });
