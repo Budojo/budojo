@@ -185,8 +185,10 @@ describe('Athlete documents page', () => {
       .its('request.headers.content-type')
       .should('match', /multipart\/form-data; boundary=/);
 
-    // Dialog closes (unmounted), new row is at the top, success toast visible.
-    cy.get('[data-cy="upload-document-dialog"]').should('not.exist');
+    // The Angular `<p-dialog>` host element stays in the DOM — only the modal
+    // overlay mask (`.p-dialog-mask`) mounts/unmounts. Targeting it gives a
+    // reliable signal for "dialog is closed".
+    cy.get('.p-dialog-mask').should('not.exist');
     cy.contains('[data-cy="documents-table"]', 'medical_2026.pdf').should('be.visible');
     cy.contains('Document uploaded').should('be.visible');
   });

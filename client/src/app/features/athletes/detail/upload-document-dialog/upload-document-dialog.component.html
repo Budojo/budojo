@@ -35,7 +35,11 @@
     </div>
 
     <div class="upload-form__row">
-      <label class="upload-form__label">File *</label>
+      <!-- p-fileUpload basic does not expose an inputId we can bind a <label for>
+           to (the hidden native input lives inside its shadow). Using a <span>
+           with the same class preserves the visual rhythm without triggering
+           the @angular-eslint template/label-has-associated-control rule. -->
+      <span class="upload-form__label">File *</span>
       <p-fileupload
         #fileUpload
         mode="basic"
