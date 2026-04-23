@@ -75,7 +75,7 @@ These are concrete obligations when you write PHP or TypeScript in this repo:
 - **Small functions.** If a method doesn't fit on a screen, it's too long. If it has more than two levels of indentation, extract. Controller action > ~20 lines is a smell; most of ours sit at 10–15.
 - **One thing per function.** A function either does, decides, or returns — not all three. `execute()` on an Action returns the created model; it doesn't also send an email. Side-effects are deliberate and named.
 - **Few arguments.** Zero is ideal, 1–2 is fine, 3 is a stretch, 4+ is a refactor. If you're reaching for a 5-argument method, you need a DTO / value object (see `AthletePayload` on the Angular side).
-- **No flag arguments.** A boolean that flips the function's behavior is two functions in a trench coat. Split it.
+- **No flag arguments.** A boolean that flips the function's behaviour is two functions in a trench coat. Split it.
 - **Comments are a failure.** Self-documenting code first. Comments only for *why*, never *what*. If the code needs a comment to explain what it does, the code is not clear enough — rename, extract, restructure. Exception: Laravel/Symfony quirks and non-obvious business rules (e.g. "We wipe the file before soft-deleting the row because …") — those are worth explaining.
 - **Tests are first-class code.** Same naming standards, same cleanliness, same refactoring discipline. A test that's hard to read is a test that lies when it passes.
 
