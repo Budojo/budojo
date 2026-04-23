@@ -59,7 +59,9 @@ describe('Athlete documents page', () => {
     cy.get('h1').should('contain', 'Mario Rossi');
     cy.contains('Documents').should('be.visible');
     cy.contains('No documents yet').should('be.visible');
-    cy.get('[data-cy="add-document-btn"]').should('be.disabled');
+    // p-button wraps an inner <button>; the disabled pseudo-class lives there,
+    // not on the custom element.
+    cy.get('[data-cy="add-document-btn"] button').should('be.disabled');
   });
 
   it('lists only active documents when the toggle is off', () => {
