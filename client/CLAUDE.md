@@ -136,7 +136,7 @@ npm test                        # watch mode
 
 - Test components, services, and guards in isolation.
 - Mock `HttpClient` with `provideHttpClientTesting()`.
-- Config: `vitest.config.ts` at `client/`.
+- Config: Angular's `@angular/build:unit-test` builder (see `client/angular.json`), TypeScript settings in `client/tsconfig.spec.json` (`"types": ["vitest/globals"]`), npm scripts in `client/package.json`. There is no standalone `vitest.config.ts` — the Angular builder wires Vitest up for us.
 
 ### E2E tests (Cypress)
 
