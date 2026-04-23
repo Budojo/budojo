@@ -20,7 +20,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # `fetch-depth: 0` alone is not enough — `actions/checkout@v4`
+          # defaults to `fetch-tags: false`, and annotated tags aren't
+          # reliably accessible to semantic-release without the explicit
+          # flag. Without this, semantic-release cannot see prior beta
+          # tags on develop and tries to publish v1.0.0-beta.1 from
+          # scratch (see #42).
           fetch-depth: 0
+          fetch-tags: true
           persist-credentials: false
 
       - uses: actions/setup-node@v4
