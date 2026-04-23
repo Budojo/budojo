@@ -6,6 +6,10 @@ import { of } from 'rxjs';
 import { AthleteFormComponent } from './athlete-form.component';
 import { Athlete } from '../../../core/services/athlete.service';
 
+// `of` is needed below to provide the paramMap as an Observable on the mocked
+// ActivatedRoute — the component subscribes to it (not the snapshot) so it
+// reloads if the `:id` changes while the component instance is reused.
+
 function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
   return {
     id: 1,
@@ -24,6 +28,7 @@ function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
 }
 
 function setupTestBed(routeId: string | null = null): void {
+  const paramMap = convertToParamMap(routeId ? { id: routeId } : {});
   TestBed.configureTestingModule({
     imports: [AthleteFormComponent],
     providers: [
@@ -33,9 +38,8 @@ function setupTestBed(routeId: string | null = null): void {
       {
         provide: ActivatedRoute,
         useValue: {
-          snapshot: {
-            paramMap: convertToParamMap(routeId ? { id: routeId } : {}),
-          },
+          paramMap: of(paramMap),
+          snapshot: { paramMap },
         },
       },
     ],
@@ -192,6 +196,21 @@ describe('AthleteFormComponent', () => {
     });
   });
 
-  // Silence the "of(...) import lint" rule — keeps the helper available for future tests
-  void of;
+  describe('invalid :id route param', () => {
+    beforeEach(() => setupTestBed('not-a-number'));
+
+    it('shows an error toast and redirects to /dashboard/athletes', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      fixture.detectChanges(); // ngOnInit
+
+      // No GET should fire for a NaN id
+      httpMock.expectNone((req) => req.url.startsWith('/api/v1/athletes/'));
+
+      const router = TestBed.inject(Router);
+      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes']);
+      httpMock.verify();
+    });
+  });
 });

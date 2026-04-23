@@ -1,11 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   computed,
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -42,9 +44,19 @@ function toDateString(d: Date | null | undefined): string | null {
   return `${year}-${month}-${day}`;
 }
 
-/** Parse a YYYY-MM-DD string as a local-midnight Date (no TZ shift). */
+/**
+ * Parse a YYYY-MM-DD string as a local-midnight Date.
+ * We construct the Date from numeric parts rather than parsing a string — string
+ * parsing of ISO-like strings without a TZ suffix is inconsistent across browsers
+ * (notably older Safari), while `new Date(y, mIndex, d)` always yields local midnight.
+ */
 function fromDateString(s: string | null | undefined): Date | null {
-  return s ? new Date(`${s}T00:00:00`) : null;
+  if (!s) return null;
+  const [year, month, day] = s.split('-').map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return null;
+  }
+  return new Date(year, month - 1, day);
 }
 
 @Component({
@@ -70,6 +82,7 @@ export class AthleteFormComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(false);
   readonly submitting = signal(false);
@@ -114,12 +127,28 @@ export class AthleteFormComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const idParam = this.route.snapshot.paramMap.get('id');
-    if (idParam) {
+    // Subscribe to paramMap rather than reading snapshot so the form reloads if
+    // Angular reuses the component instance when the `:id` changes.
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((paramMap) => {
+      const idParam = paramMap.get('id');
+      if (!idParam) {
+        this.athleteId.set(null);
+        return;
+      }
       const id = Number(idParam);
+      if (!Number.isFinite(id)) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Invalid athlete',
+          detail: 'The requested athlete id is invalid.',
+          life: 3000,
+        });
+        void this.router.navigate(['/dashboard/athletes']);
+        return;
+      }
       this.athleteId.set(id);
       this.loadAthlete(id);
-    }
+    });
   }
 
   submit(): void {

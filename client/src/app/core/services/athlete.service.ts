@@ -38,7 +38,7 @@ export interface AthleteFilters {
 }
 
 /**
- * Payload accepted by POST /athletes and PUT /athletes/{id}.
+ * Payload accepted by POST /api/v1/athletes and PUT /api/v1/athletes/{id}.
  * Dates are ISO date strings in YYYY-MM-DD format.
  * On update, all fields are optional (partial update).
  */

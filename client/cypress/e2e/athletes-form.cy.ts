@@ -79,16 +79,14 @@ describe('Athlete create form', () => {
     cy.get('input[id="email"]').type('mario@example.com');
     cy.contains('button', 'Create athlete').click();
 
-    cy.wait('@createAthlete')
-      .its('request.body')
-      .should('deep.include', {
-        first_name: 'Mario',
-        last_name: 'Rossi',
-        email: 'mario@example.com',
-        belt: 'white',
-        stripes: 0,
-        status: 'active',
-      });
+    cy.wait('@createAthlete').its('request.body').should('deep.include', {
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      email: 'mario@example.com',
+      belt: 'white',
+      stripes: 0,
+      status: 'active',
+    });
 
     cy.url().should('match', /\/dashboard\/athletes$/);
   });
@@ -127,9 +125,10 @@ describe('Athlete create form', () => {
 describe('Athlete edit form', () => {
   beforeEach(() => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
-    cy.intercept('GET', '/api/v1/athletes/42', { statusCode: 200, body: { data: ATHLETE_MARIO } }).as(
-      'getAthlete',
-    );
+    cy.intercept('GET', '/api/v1/athletes/42', {
+      statusCode: 200,
+      body: { data: ATHLETE_MARIO },
+    }).as('getAthlete');
   });
 
   it('loads the athlete and pre-fills the form', () => {
