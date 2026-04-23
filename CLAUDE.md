@@ -8,27 +8,28 @@
 
 The two containers communicate over a shared Docker network. A `.env` file at the repo root holds the configuration for docker-compose and is injected into the `api` container via `env_file`.
 
+## How this file is organized
+
+The repo uses a **hierarchical `CLAUDE.md`** layout. When Claude Code works inside a subdirectory it automatically loads the nearest `CLAUDE.md` and every ancestor up to the root. So:
+
+| File | Loaded when | Scope |
+|------|-------------|-------|
+| `CLAUDE.md` (this file) | Always | Cross-cutting rules — git, PRs, Copilot review, docs discipline, CI, TDD, release flow |
+| [`server/CLAUDE.md`](./server/CLAUDE.md) | Working under `server/` | Laravel patterns + **Uncle Bob canon** (Clean Code / Architecture / Agile / Coder), PHPStan/CS-Fixer/PEST conventions |
+| [`client/CLAUDE.md`](./client/CLAUDE.md) | Working under `client/` | Angular patterns + **UX canon** (Material Design 3 / Don't Make Me Think / Norman / Laws of UX), Vitest/Cypress conventions |
+
+If a rule here and a rule in a sub-file conflict, **the sub-file wins** for that scope.
+
 ---
 
-## Principles
+## Principles (cross-cutting)
 
-### Code Quality
+Every principle below applies across the stack. Domain-specific elaborations (SOLID-in-Laravel, UX laws) live in the sub-files.
 
-Non-negotiable baseline. Full canon in the **Code craftsmanship** section below.
-
-**SOLID** — each letter is a concrete obligation, not a slogan:
-
-- **S — Single Responsibility.** A class changes for one reason and one reason only. If a class has two obvious callers with different motives to edit it, split it. Controllers orchestrate, Actions do one business operation, FormRequests validate, Resources shape responses. No class wears multiple hats.
-- **O — Open/Closed.** Code is open to extension, closed to modification. Prefer adding a new Action over editing an existing one. Prefer a new `DocumentType` enum case over an `if/else` chain in a service.
-- **L — Liskov Substitution.** A subtype must be usable wherever the supertype is expected, without surprises. In practice here: don't override a method to throw or to return a different shape; respect the parent contract (see the Copilot comment on `UpdateDocumentRequest::validated()` in PR #33 for a real case we actually fixed).
-- **I — Interface Segregation.** Consumers shouldn't depend on methods they don't use. Favor small, focused contracts. In Laravel this mostly shows up in FormRequest classes (one per operation) and in Action classes (one `execute(...)` method each).
-- **D — Dependency Inversion.** High-level policy doesn't depend on low-level detail; both depend on abstractions. Injecting services/Actions via constructor instead of `Container::make()` inside methods is the first concrete application.
-
-**DRY** — no duplicated logic. Extract shared behaviour into Actions, services, traits, or test helpers (we did this for `userWithAcademy()` in `tests/Pest.php`). **But:** duplication that looks accidental is different from shared knowledge — don't prematurely extract a second-occurrence match if the two sites will evolve independently.
-
-**KISS** — the simplest thing that could possibly work. Add complexity only when a real requirement demands it. If a future M5 email reminder "might" want something, don't build it today.
-
-**Boy Scout Rule** — leave the code cleaner than you found it. Touched a file to fix a bug? Rename an unclear variable, delete a dead comment, tighten an overly clever expression in the same PR. But keep these changes tightly scoped — a 200-line PR that "also does some cleanup" is harder to review than two focused PRs.
+- **SOLID** — single responsibility, open/closed, Liskov, interface segregation, dependency inversion. Each letter has a concrete obligation; see [`server/CLAUDE.md`](./server/CLAUDE.md) § Uncle Bob canon for the backend mapping.
+- **DRY** — no duplicated logic. Extract shared behaviour into Actions, services, traits, or test helpers. **But:** duplication that looks accidental is different from shared knowledge — don't prematurely extract a second-occurrence match if the two sites will evolve independently.
+- **KISS** — the simplest thing that could possibly work. Add complexity only when a real requirement demands it. If a future M5 email reminder "might" want something, don't build it today.
+- **Boy Scout Rule** — leave the code cleaner than you found it. Touched a file to fix a bug? Rename an unclear variable, delete a dead comment, tighten an overly clever expression in the same PR. But keep these changes tightly scoped — a 200-line PR that "also does some cleanup" is harder to review than two focused PRs.
 
 ### Test-Driven Development (TDD)
 
@@ -54,70 +55,6 @@ No untested business logic is merged to `develop`.
 
 ---
 
-## Code craftsmanship — the Uncle Bob canon
-
-This project is written (and reviewed) in the spirit of Robert C. Martin's "Clean" series. When a reviewer asks "why did you do it that way?" the intended default reference is one of these four books, by name. They are our shared vocabulary for judging code.
-
-| Book | What we take from it |
-|------|----------------------|
-| **Clean Code** (2008) | Function hygiene, naming, comments, tests as first-class code |
-| **The Clean Coder** (2011) | Professional discipline — saying no, owning estimates, refusing to ship slop under pressure |
-| **Clean Architecture** (2017) | SOLID in depth, the Dependency Rule, layered boundaries between policy and I/O |
-| **Clean Agile** (2019) | XP practices — TDD, pair programming, continuous refactoring, small releases |
-
-If a reviewer (human or Copilot) cites one of these books and the commit diff violates it, the citation is a valid argument on its own. Push back only with a specific, pragmatic reason (e.g. "Laravel's conventions override here, see the Active Record note below"). "I prefer it this way" is not a reason.
-
-### Clean Code — daily practice
-
-These are concrete obligations when you write PHP or TypeScript in this repo:
-
-- **Meaningful names.** `createAcademy` is good, `handle` is lazy, `$a` is banned outside a two-line lambda. Class names are nouns (`UploadDocumentAction`). Method names are verbs (`execute`, `list`, `download`). Boolean variables read as questions (`$isExpired`, `$hasAcademy`). Avoid Hungarian notation, abbreviations, and "manager/processor/data" suffixes that say nothing.
-- **Small functions.** If a method doesn't fit on a screen, it's too long. If it has more than two levels of indentation, extract. Controller action > ~20 lines is a smell; most of ours sit at 10–15.
-- **One thing per function.** A function either does, decides, or returns — not all three. `execute()` on an Action returns the created model; it doesn't also send an email. Side-effects are deliberate and named.
-- **Few arguments.** Zero is ideal, 1–2 is fine, 3 is a stretch, 4+ is a refactor. If you're reaching for a 5-argument method, you need a DTO / value object (see `AthletePayload` on the Angular side).
-- **No flag arguments.** A boolean that flips the function's behaviour is two functions in a trench coat. Split it.
-- **Comments are a failure.** Self-documenting code first. Comments only for *why*, never *what*. If the code needs a comment to explain what it does, the code is not clear enough — rename, extract, restructure. Exception: Laravel/Symfony quirks and non-obvious business rules (e.g. "We wipe the file before soft-deleting the row because …") — those are worth explaining.
-- **Tests are first-class code.** Same naming standards, same cleanliness, same refactoring discipline. A test that's hard to read is a test that lies when it passes.
-
-### Clean Architecture — how this codebase maps
-
-Uncle Bob's clean architecture pushes I/O (DB, web, filesystem, UI) to the edges and keeps business rules at the center. This Laravel codebase isn't a pure Clean Architecture shop — but we approximate it deliberately:
-
-| Clean Architecture layer | Where it lives in Budojo |
-|--------------------------|---------------------------|
-| **Entities** (enterprise business rules) | `App\Enums` + domain invariants enforced in `Actions` |
-| **Use Cases / Interactors** | `App\Actions\*` (e.g. `UploadDocumentAction`, `DeleteDocumentAction`) — one public `execute` method each |
-| **Interface Adapters** | `App\Http\Requests` (inbound boundary), `App\Http\Resources` (outbound boundary), `App\Http\Controllers` (thin orchestration) |
-| **Frameworks & Drivers** | Laravel itself (routing, container, Eloquent), Angular, PrimeNG, Cypress, PEST |
-
-**The Dependency Rule.** Dependencies point inward. A Controller can call an Action; an Action MUST NOT depend on a Controller. A Model/Action MUST NOT depend on an HTTP Request — accept typed arguments instead. If a new Action needs user context, it takes a `User $user` parameter; it does NOT call `auth()->user()`.
-
-**Humble Object pattern.** Controllers, Observers, and Resources are "humble" — minimal logic, easy to leave alone. All conditional business rules live in Actions, which are framework-light and unit-testable without Laravel's HTTP stack.
-
-### The Active Record caveat — pragmatic, not dogmatic
-
-Laravel's Eloquent Model is an **Active Record**. Clean Architecture would prefer a plain-data Entity with a separate Repository. We consciously accept Active Record because:
-
-1. Laravel's whole ecosystem (migrations, relations, factories, seeders, broadcasting) assumes it.
-2. Fighting the framework creates more accidental complexity than decoupling saves.
-3. Our real-world blast radius is small (a single webapp, no multi-client SDK).
-
-**The compensating discipline**: we keep the Model skinny. No business logic in models — only relations, casts, scopes, and `#[ObservedBy]` wiring. Business logic lives in Actions. This preserves 90% of the testability and reasoning benefits of the Clean split, at 10% of the friction.
-
-If this assumption ever breaks (e.g. we grow a CLI tool that needs to write documents without booting the full Laravel HTTP stack) we revisit. Until then, Active Record stands.
-
-### Clean Agile — the meta-rule
-
-Agile is the 90s practices XP put on the map, not the ceremony that corporations grafted on top in 2010. In this repo that means:
-
-- **TDD is default, not optional.** See the TDD section above — four layers, test first, no exceptions for "simple" code.
-- **Refactor continuously.** Every time you touch a file, scan for dead code, unclear names, missed extractions. Apply the Boy Scout Rule with discipline.
-- **Small releases.** Each PR ships independently — M2 was four PRs, M3 is four PRs. The mega-PR-merging-weeks-of-work style is forbidden here.
-- **Honesty about estimates.** If a task is harder than expected, say so. Don't silently compress scope to look on-track.
-- **Say no.** When a feature request violates scope or craftsmanship ("just slap it in, we'll fix it later"), refuse in writing and propose the right way.
-
----
-
 ## Tech Stack
 
 | Layer | Technology | Version |
@@ -128,7 +65,8 @@ Agile is the 90s practices XP put on the map, not the ceremony that corporations
 | PHP code style | PHP CS Fixer | 3 |
 | PHP test runner | PEST | 4 |
 | Client framework | Angular | 21 |
-| UI component library | PrimeNG | 21 |
+| UI component library | PrimeNG | 21 (Material preset) |
+| Design philosophy | Material Design 3 | — |
 | Angular unit tests | Vitest | 4 |
 | Angular E2E tests | Cypress | 13 |
 | API contract | OpenAPI | 3.0.3 |
@@ -400,134 +338,27 @@ When Copilot leaves review comments on a PR:
 
 ---
 
-## Server (Laravel 13)
+## Server (Laravel 13) — backend rules
 
-### Structure conventions
+See [`server/CLAUDE.md`](./server/CLAUDE.md) for:
 
-```
-server/app/
-├── Actions/        # Single-responsibility business operations (e.g. CreateAcademyAction)
-├── Enums/          # Backed PHP enums (Belt, AthleteStatus, …)
-├── Http/
-│   ├── Controllers/  # Thin — validate input via Form Request, call Action, return Resource
-│   ├── Requests/     # All input validation lives here, never in controllers
-│   └── Resources/    # All API response shaping — never return raw Eloquent models
-└── Models/         # Eloquent models — relations, scopes, casts only; no business logic
-```
-
-- **Controllers** — thin: receive request → delegate to Action → return Resource.
-- **Actions** — contain all business logic; one class, one operation.
-- **Form Requests** — validation and authorisation gates.
-- **Resources** — shape every API response; never expose raw model attributes.
-- **Models** — relations, scopes, casts. No business logic.
-
-### Static Analysis
-- PHPStan at **level 9** (max). Config: `server/phpstan.neon`.
-- CI blocks merge on any error.
-
-### Code Style (PHP CS Fixer)
-- Config: `server/.php-cs-fixer.php`
-- Rulesets: `@PHP84Migration`, `@PSR12`, `@PSR12:risky`
-- Key rules: `declare_strict_types`, `use_arrow_functions`, `ordered_imports`
-- CI blocks merge if any file needs fixing.
-
-### Testing (PEST 4)
-
-```bash
-cd server
-
-# Run all tests
-vendor/bin/pest --parallel
-
-# Run a single file
-vendor/bin/pest tests/Feature/Athlete/AthleteTest.php
-```
-
-- **Feature tests** hit a real SQLite `:memory:` DB via `RefreshDatabase`; run full HTTP round-trips.
-- **Unit tests** mock external dependencies.
-- Coverage generated on every PR; grows with TDD — no enforced minimum threshold.
-
-### API conventions
-- Versioned routes: `/api/v1/...` defined in `routes/api_v1.php`
-- JSON:API-style responses with consistent error envelope
-- Auth via **Laravel Sanctum** Bearer tokens (token per session, not cookie)
+- **Uncle Bob canon** — Clean Code / Clean Architecture / Clean Agile / The Clean Coder — the full shared vocabulary for judging backend code, with SOLID expanded and the Active Record caveat
+- Server structure conventions (Actions, Controllers, FormRequests, Resources, Observers)
+- PHPStan level 9, PHP CS Fixer, PEST 4 conventions
+- API conventions (Sanctum, JSON envelope, academy scoping)
+- Backend-specific "What Claude Should Always Do"
 
 ---
 
-## Client (Angular 21 + PrimeNG 21)
+## Client (Angular 21 + PrimeNG 21) — frontend rules
 
-> **Note for Claude:** The developer is BE-focused. Always explain Angular/TypeScript decisions clearly, suggest the simplest PrimeNG component that fits, and avoid over-engineering.
+See [`client/CLAUDE.md`](./client/CLAUDE.md) for:
 
-### Structure conventions
-
-```
-client/src/app/
-├── core/
-│   ├── guards/        # Route guards (authGuard, hasAcademyGuard, noAcademyGuard)
-│   ├── interceptors/  # HTTP interceptors (auth token attachment)
-│   └── services/      # AuthService, AcademyService, AthleteService — HTTP only here
-├── features/
-│   ├── auth/          # Login, Register pages
-│   ├── academy/       # Setup page
-│   ├── athletes/      # List page (and future detail/edit)
-│   └── dashboard/     # Layout shell (sidebar + router-outlet)
-└── shared/
-    └── components/    # BeltBadge and other reusable presentational components
-```
-
-- Feature folders under `src/app/features/<feature>/`
-- HTTP calls only in `*.service.ts` — never inside components
-- Components use **OnPush** change detection by default
-- State via **Angular Signals** — no NgRx unless complexity genuinely demands it
-- Standalone components only (no NgModules)
-
-### UI
-- All UI components from **PrimeNG 21** — check the docs before rolling custom components.
-- Layout utilities from **PrimeFlex**.
-- Follow PrimeNG's theming system; no inline styles.
-
-### Testing — Vitest 4 (unit) + Cypress 13 (E2E)
-
-#### Unit tests (Vitest)
-
-```bash
-cd client
-npm test -- --watch=false       # single run
-npm test                        # watch mode
-```
-
-- Test components, services, and guards in isolation.
-- Mock `HttpClient` with `provideHttpClientTesting()`.
-- Config: `vitest.config.ts` at `client/`.
-
-#### E2E tests (Cypress)
-
-```bash
-cd client
-npm run cy:open                 # interactive mode (requires ng serve running)
-npm run cy:run                  # headless run (CI mode, requires ng serve running)
-```
-
-**Rules:**
-- **Always mock every HTTP call** with `cy.intercept()` — E2E tests must not depend on a live backend.
-- Use `cy.visitAuthenticated(url)` (custom command in `cypress/support/commands.ts`) to pre-seed `auth_token` in localStorage before Angular boots, satisfying the `authGuard`.
-- When the **same endpoint is called multiple times in a test** (e.g. `GET /api/v1/academy` fires once for `noAcademyGuard` on page load and again for `hasAcademyGuard` after a redirect), use `times: 1` in the `beforeEach` intercept and add a second intercept in the specific test for the post-action call:
-  ```typescript
-  // beforeEach: allows access to /setup
-  cy.intercept({ method: 'GET', url: '/api/v1/academy', times: 1 }, { statusCode: 404 }).as('guard');
-
-  // inside redirect test: satisfies hasAcademyGuard after POST
-  cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: {...} } }).as('guardAfter');
-  ```
-- Specs live in `cypress/e2e/*.cy.ts`; config in `cypress.config.ts`.
-
-**Spec coverage:**
-
-| File | What it tests |
-|------|--------------|
-| `navigation.cy.ts` | All guard redirect scenarios (unauthenticated, auth+no-academy, auth+has-academy) |
-| `auth.cy.ts` | Login/register form rendering, validation, successful flows, nav links |
-| `setup.cy.ts` | Academy setup form, validation, successful create → `/dashboard/athletes` |
+- **Design canon** — Material Design 3 / Don't Make Me Think / Design of Everyday Things / Laws of UX — the shared vocabulary for judging UI decisions
+- Client structure conventions (standalone components, OnPush, functional guards/interceptors, signals)
+- PrimeNG 21 with the Material preset — theme, components, layout
+- Vitest 4 (unit) and Cypress 13 (E2E) conventions
+- Frontend-specific "What Claude Should Always Do"
 
 ---
 
@@ -631,20 +462,16 @@ The `openapi-lint` job runs `npx -y @stoplight/spectral-cli@6 lint docs/api/v1.y
 
 ## What Claude Should Always Do
 
-1. **Write tests first across all three layers** — PEST spec → Vitest spec → Cypress spec — before writing any implementation.
-2. **Suggest PrimeNG components** by name when building any UI element; check PrimeNG 21 docs.
-3. **Keep controllers thin** — validate via Form Request, delegate logic to an Action, return a Resource.
-4. **Use Form Requests** for all Laravel validation; never validate in controllers.
-5. **Explain FE decisions** in plain terms (the developer is BE-focused).
-6. **Never commit to `main` or `develop` directly** — always cut a branch, then open a PR. After opening, add the PR to the GitHub Project board and set both the issue and PR items to `In Progress`.
-7. **Always suggest the branch name** (including issue number) before starting any work.
-8. **Use conventional commits** with lower-case subject in every `git commit`.
-9. **Rebase, don't merge**, when updating a feature branch from `develop`.
-10. **Squash merge** PRs into `develop`; merge commit (no squash) into `main`.
-11. **Never create a `version` field** in `package.json` — semantic-release owns versioning entirely.
-12. **Reply to all Copilot comments** after fixing: English only, always cite the short commit SHA (`Fixed in abc1234.`), re-read and update the PR body if the fixes changed anything it describes, then switch label to `🟢 ready to merge`.
-13. **Before pushing PHP changes**: `php-cs-fixer fix` → `phpstan analyse` → `pest --parallel` — all must be clean.
-14. **Before pushing Angular changes**: `prettier --write` → `npm run lint` → `npm test -- --watch=false` — all must be clean. Cypress runs in CI.
-15. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere.
-16. **Keep `docs/` in sync** — every PR that changes a migration, an enum, an API route, a request/response shape, or a business rule must update the relevant file in `docs/entities/` or `docs/api/v1.yaml` in the same commit history. See the "Documentation discipline" section for what counts as "substantial" and what doesn't. Internal refactors, formatting, and dependency bumps are exempt.
-17. **Write code in the Uncle Bob canon.** SOLID, small single-purpose functions, intention-revealing names, comments only for *why*, tests-first, Dependency Rule (dependencies point inward). See the "Code craftsmanship" section for the full ruleset and the explicit mapping of our Laravel layers to Clean Architecture layers. When a reviewer cites Clean Code / Clean Architecture / Clean Agile by name, that citation is a valid critique on its own — push back only with a specific pragmatic reason, never with taste.
+Cross-cutting rules. For backend-only rules (Uncle Bob canon, pre-push PHP gates, controller discipline) see [`server/CLAUDE.md`](./server/CLAUDE.md). For frontend-only rules (UX canon, PrimeNG, pre-push Angular gates) see [`client/CLAUDE.md`](./client/CLAUDE.md).
+
+1. **Write tests first across all four layers** — PEST unit/feature, Vitest unit, Cypress E2E — before writing any implementation.
+2. **Never commit to `main` or `develop` directly** — always cut a branch, then open a PR. After opening, add the PR to the GitHub Project board and set both the issue and PR items to `In Progress`.
+3. **Always suggest the branch name** (including issue number) before starting any work.
+4. **Use conventional commits** with lower-case subject in every `git commit`.
+5. **Rebase, don't merge**, when updating a feature branch from `develop`.
+6. **Squash merge** PRs into `develop`; merge commit (no squash) into `main`.
+7. **Never create a `version` field** in `package.json` — semantic-release owns versioning entirely.
+8. **Reply to all Copilot comments** after fixing: English only, always cite the short commit SHA (`Fixed in abc1234.`), re-read and update the PR body if the fixes changed anything it describes, then switch label to `🟢 ready to merge`.
+9. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere.
+10. **Keep `docs/` in sync** — every PR that changes a migration, an enum, an API route, a request/response shape, or a business rule must update the relevant file in `docs/entities/` or `docs/api/v1.yaml` in the same commit history. See the "Documentation discipline" section for what counts as "substantial" and what doesn't. Internal refactors, formatting, and dependency bumps are exempt.
+11. **Respect the local canon.** When you write backend code, apply the Uncle Bob rules in `server/CLAUDE.md`. When you write frontend code, apply the UX canon in `client/CLAUDE.md`. A reviewer's citation of any book or law in those canons is a valid critique on its own — push back only with a specific pragmatic reason, never with taste.
