@@ -13,9 +13,8 @@
       label="Add athlete"
       icon="pi pi-plus"
       size="small"
-      disabled
-      pTooltip="Coming soon"
-      tooltipPosition="left"
+      (onClick)="goToNew()"
+      data-cy="add-athlete-btn"
     />
   </header>
 
@@ -63,7 +62,7 @@
           <th>Status</th>
           <th>Email</th>
           <th>Joined</th>
-          <th style="width: 4rem"></th>
+          <th style="width: 6rem"></th>
         </tr>
       </ng-template>
 
@@ -86,6 +85,16 @@
           <td class="athlete-email">{{ athlete.email ?? '—' }}</td>
           <td class="athlete-date">{{ athlete.joined_at }}</td>
           <td class="athlete-actions">
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              (onClick)="goToEdit(athlete)"
+              [ariaLabel]="'Edit ' + athlete.first_name + ' ' + athlete.last_name"
+              pTooltip="Edit"
+              tooltipPosition="left"
+            />
             <p-button
               icon="pi pi-trash"
               severity="danger"

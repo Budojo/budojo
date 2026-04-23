@@ -39,6 +39,20 @@ export const routes: Routes = [
             (m) => m.AthletesListComponent,
           ),
       },
+      {
+        path: 'athletes/new',
+        loadComponent: () =>
+          import('./features/athletes/form/athlete-form.component').then(
+            (m) => m.AthleteFormComponent,
+          ),
+      },
+      {
+        path: 'athletes/:id/edit',
+        loadComponent: () =>
+          import('./features/athletes/form/athlete-form.component').then(
+            (m) => m.AthleteFormComponent,
+          ),
+      },
     ],
   },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },

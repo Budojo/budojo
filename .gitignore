@@ -26,6 +26,9 @@ db_data/
 .vscode/
 *.iml
 
+# Claude Code — local scratch (pr bodies, local settings)
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db
