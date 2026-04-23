@@ -1,15 +1,29 @@
 <div class="layout">
   <aside class="sidebar">
-    <div class="sidebar__brand">
+    <button
+      type="button"
+      class="sidebar__brand"
+      [attr.aria-label]="brandLabel() + ' menu'"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="menuVisible()"
+      (click)="menu.toggle($event)"
+    >
       <span class="sidebar__logo" aria-hidden="true">🥋</span>
-      <span class="sidebar__name">Budojo</span>
-    </div>
+      <span class="sidebar__brand-text">
+        <span class="sidebar__brand-eyebrow">Budojo</span>
+        <span class="sidebar__brand-name">{{ brandLabel() }}</span>
+      </span>
+      <i class="sidebar__brand-caret pi pi-angle-down" aria-hidden="true"></i>
+    </button>
 
-    @if (academyService.academy(); as academy) {
-      <div class="sidebar__academy">
-        <span class="sidebar__academy-name">{{ academy.name }}</span>
-      </div>
-    }
+    <p-menu
+      #menu
+      [model]="menuItems()"
+      [popup]="true"
+      appendTo="body"
+      (onShow)="menuVisible.set(true)"
+      (onHide)="menuVisible.set(false)"
+    />
 
     <nav class="sidebar__nav">
       <a
@@ -21,17 +35,6 @@
         <span>Athletes</span>
       </a>
     </nav>
-
-    <div class="sidebar__footer">
-      <p-button
-        label="Logout"
-        icon="pi pi-sign-out"
-        severity="secondary"
-        [text]="true"
-        size="small"
-        (onClick)="logout()"
-      />
-    </div>
   </aside>
 
   <main class="main">
