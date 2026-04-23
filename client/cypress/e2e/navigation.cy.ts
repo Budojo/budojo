@@ -66,3 +66,38 @@ describe('Navigation guards', () => {
     cy.url().should('include', '/dashboard/athletes');
   });
 });
+
+describe('Sidebar brand + sign out', () => {
+  beforeEach(() => {
+    cy.clearLocalStorage();
+  });
+
+  it('renders the academy name as the dominant sidebar brand', () => {
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
+    cy.visitAuthenticated('/dashboard/athletes');
+    cy.wait('@academy');
+    cy.wait('@athletes');
+
+    cy.get('.sidebar__brand-name').should('contain.text', 'Test Academy');
+    cy.get('.sidebar__brand').should('have.attr', 'aria-haspopup', 'menu');
+    cy.get('.sidebar__brand').should('have.attr', 'aria-expanded', 'false');
+  });
+
+  it('opens the brand menu on click and signs the user out back to /auth/login', () => {
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
+    cy.visitAuthenticated('/dashboard/athletes');
+    cy.wait('@academy');
+    cy.wait('@athletes');
+
+    cy.get('.sidebar__brand').click();
+    cy.get('.sidebar__brand').should('have.attr', 'aria-expanded', 'true');
+    // Target the menu item via its ARIA role — PrimeNG's internal class names
+    // (`p-menu-item-link` vs older `p-menuitem-link`) are versioned and brittle;
+    // `role="menuitem"` is part of the a11y contract and stable across versions.
+    cy.get('[role="menuitem"]').contains('Sign out').click();
+
+    cy.url().should('include', '/auth/login');
+  });
+});
