@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 export type Belt = 'white' | 'blue' | 'purple' | 'brown' | 'black';
 export type AthleteStatus = 'active' | 'suspended' | 'inactive';
@@ -37,6 +37,29 @@ export interface AthleteFilters {
   page?: number;
 }
 
+/**
+ * Payload accepted by POST /athletes and PUT /athletes/{id}.
+ * Dates are ISO date strings in YYYY-MM-DD format.
+ * On update, all fields are optional (partial update).
+ */
+export interface AthletePayload {
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  phone?: string | null;
+  date_of_birth?: string | null;
+  belt: Belt;
+  stripes: number;
+  status: AthleteStatus;
+  joined_at: string;
+}
+
+export type AthleteUpdatePayload = Partial<AthletePayload>;
+
+interface AthleteResponse {
+  data: Athlete;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AthleteService {
   private readonly http = inject(HttpClient);
@@ -48,6 +71,20 @@ export class AthleteService {
     if (filters.status) params = params.set('status', filters.status);
     if (filters.page) params = params.set('page', filters.page.toString());
     return this.http.get<AthleteListResponse>(this.base, { params });
+  }
+
+  get(id: number): Observable<Athlete> {
+    return this.http.get<AthleteResponse>(`${this.base}/${id}`).pipe(map((res) => res.data));
+  }
+
+  create(payload: AthletePayload): Observable<Athlete> {
+    return this.http.post<AthleteResponse>(this.base, payload).pipe(map((res) => res.data));
+  }
+
+  update(id: number, payload: AthleteUpdatePayload): Observable<Athlete> {
+    return this.http
+      .put<AthleteResponse>(`${this.base}/${id}`, payload)
+      .pipe(map((res) => res.data));
   }
 
   delete(id: number): Observable<void> {

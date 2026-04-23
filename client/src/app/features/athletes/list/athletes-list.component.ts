@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -45,6 +46,7 @@ export class AthletesListComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly router = inject(Router);
 
   readonly athletes = signal<Athlete[]>([]);
   readonly totalRecords = signal(0);
@@ -93,6 +95,14 @@ export class AthletesListComponent implements OnInit {
     this.page = Math.floor(event.first / event.rows) + 1;
     this.first.set(event.first);
     this.load();
+  }
+
+  goToNew(): void {
+    void this.router.navigate(['/dashboard/athletes/new']);
+  }
+
+  goToEdit(athlete: Athlete): void {
+    void this.router.navigate(['/dashboard/athletes', athlete.id, 'edit']);
   }
 
   confirmDelete(event: Event, athlete: Athlete): void {

@@ -62,6 +62,11 @@
 
 .athlete-actions {
   text-align: right;
+  white-space: nowrap;
+
+  p-button + p-button {
+    margin-left: 0.125rem;
+  }
 }
 
 .stripes {
