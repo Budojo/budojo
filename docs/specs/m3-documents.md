@@ -258,7 +258,7 @@ Non-blocking (can resolve during or after):
 - **(engineering)** Do we generate image thumbnails server-side for the list view? Default answer: no. The browser can render the raw JPEG/PNG at list-render time. Revisit if file sizes become a bandwidth concern.
 - **(product)** Can a single document row hold multiple files (front + back of an ID)? Default answer: no — two separate rows. Revisit with user feedback.
 - **(legal / GDPR)** The soft-delete-physical-delete policy means we cannot comply with a "restore accidentally deleted document" request. Is that acceptable tradeoff vs. GDPR right-to-erasure? Working assumption: yes, because GDPR wins. Confirm before launch.
-- **(engineering)** Retention policy when an athlete is soft-deleted — do the documents cascade-soft-delete and their files are wiped? Working assumption: yes, via the Athlete model's `deleting` event or an observer. Decide and document before M3.1.
+- ~~**(engineering)** Retention policy when an athlete is soft-deleted — do the documents cascade-soft-delete and their files are wiped?~~ **Resolved at M3.1 kick-off: yes, via an `AthleteObserver` on the `deleting` event. Soft-deleting an athlete triggers soft-delete + `Storage::delete` on every one of their documents, consistent with the per-document GDPR policy already adopted. A hypothetical future "restore athlete" flow would NOT recover the files.**
 
 ## Timeline Considerations
 

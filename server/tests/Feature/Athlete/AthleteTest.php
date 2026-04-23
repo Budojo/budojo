@@ -9,15 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
-
-function userWithAcademy(): User
-{
-    $user = User::factory()->create();
-    Academy::factory()->for($user, 'owner')->create();
-
-    return $user->fresh();
-}
+// helpers live in tests/Pest.php
 
 // ─── LIST ─────────────────────────────────────────────────────────────────────
 

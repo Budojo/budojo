@@ -6,11 +6,14 @@ namespace App\Models;
 
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Observers\AthleteObserver;
 use Database\Factories\AthleteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -30,6 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Carbon\Carbon|null     $deleted_at
  */
 #[Fillable(['academy_id', 'first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
+#[ObservedBy([AthleteObserver::class])]
 class Athlete extends Model
 {
     /** @use HasFactory<AthleteFactory> */
@@ -41,6 +45,12 @@ class Athlete extends Model
     public function academy(): BelongsTo
     {
         return $this->belongsTo(Academy::class);
+    }
+
+    /** @return HasMany<Document, $this> */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
     }
 
     /**

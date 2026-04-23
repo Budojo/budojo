@@ -11,7 +11,8 @@ docs/
 │   ├── user.md
 │   ├── personal-access-token.md
 │   ├── academy.md
-│   └── athlete.md
+│   ├── athlete.md
+│   └── document.md
 ├── api/
 │   ├── README.md          # how to view the spec locally (Swagger UI, Redocly)
 │   └── v1.yaml            # OpenAPI 3.0 — complete contract for /api/v1

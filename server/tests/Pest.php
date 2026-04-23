@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\Academy;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(
@@ -10,3 +12,15 @@ uses(
 )->in('Feature');
 
 uses(Tests\TestCase::class)->in('Unit');
+
+/**
+ * Create a user that owns an academy — the starting state for every
+ * authenticated feature test in the app.
+ */
+function userWithAcademy(): User
+{
+    $user = User::factory()->create();
+    Academy::factory()->for($user, 'owner')->create();
+
+    return $user->fresh();
+}

@@ -30,6 +30,8 @@ tags:
     description: The tenant entity — one per user
   - name: athletes
     description: Roster of students belonging to the authenticated user's academy
+  - name: documents
+    description: Files (ID, medical cert, insurance) attached to an athlete, with expiry tracking
 
 paths:
 
@@ -299,7 +301,11 @@ paths:
     delete:
       tags: [athletes]
       summary: Soft-delete an athlete
-      description: Sets `deleted_at`; the row is preserved and no longer appears in list responses.
+      description: |
+        Sets `deleted_at`; the row is preserved and no longer appears in list
+        responses. Cascades soft-delete + file wipe to every document attached
+        to the athlete (via `AthleteObserver`) — see the `documents` tag for
+        the full policy.
       operationId: athleteDelete
       responses:
         '204':
@@ -308,6 +314,187 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /athletes/{id}/documents:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+
+    get:
+      tags: [documents]
+      summary: Paginated list of documents for the given athlete
+      description: |
+        Returns up to 50 non-deleted documents for the athlete, newest first.
+        Soft-deleted rows are not returned.
+      operationId: athleteDocumentList
+      responses:
+        '200':
+          description: Paginated list of documents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentList'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [documents]
+      summary: Upload a document for the given athlete
+      description: |
+        Multipart upload. The file is stored on the private `local` disk under
+        `storage/app/private/documents/` and is NEVER reachable from the web
+        root — only via `GET /documents/{id}/download`. Server-side validates
+        size (max 10 MB) and MIME type (`application/pdf`, `image/jpeg`,
+        `image/png`); client pre-validation is advisory only.
+      operationId: athleteDocumentUpload
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentUploadRequest'
+      responses:
+        '201':
+          description: Document created and file stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /documents/expiring:
+    get:
+      tags: [documents]
+      summary: Documents expiring in the next N days (or already expired)
+      description: |
+        Cross-athlete, scoped to the authenticated academy. Returns every
+        document with `expires_at` ≤ today + `days` (default 30), ordered
+        `expires_at` ascending so the most urgent item is first. Already
+        expired documents are included. Documents with `expires_at = null`
+        are excluded. Each item inlines an `athlete` summary (id, first_name,
+        last_name) for deep-linking from the dashboard widget.
+      operationId: documentExpiring
+      parameters:
+        - name: days
+          in: query
+          description: |
+            Look-ahead window in days. Clamped server-side to [1, 365];
+            values outside the range are silently corrected.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+      responses:
+        '200':
+          description: Expiring-or-expired documents, most urgent first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentList'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NoAcademy'
+
+  /documents/{id}/download:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    get:
+      tags: [documents]
+      summary: Stream the document file
+      description: |
+        Authenticated file stream. Response body is the raw file bytes;
+        `Content-Type` is the stored `mime_type`; `Content-Disposition`
+        includes the original filename. A missing file on disk (e.g. wiped
+        out-of-band) returns 404 with `{"message":"File not found."}`.
+      operationId: documentDownload
+      responses:
+        '200':
+          description: File stream
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenDocument'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{id}:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    put:
+      tags: [documents]
+      summary: Partially update document metadata
+      description: |
+        Only `type`, `issued_at`, `expires_at`, and `notes` are updateable.
+        The request cannot replace the file — to swap the file, upload a new
+        document row and delete the old one.
+      operationId: documentUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUpdateRequest'
+      responses:
+        '200':
+          description: Document updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenDocument'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [documents]
+      summary: Soft-delete the document and wipe its file
+      description: |
+        Soft-deletes the DB row (`deleted_at`) AND removes the physical file
+        from disk via `Storage::delete`. No restore path. Idempotent if the
+        file is already missing on disk.
+      operationId: documentDelete
+      responses:
+        '204':
+          description: Deleted. Response body is empty.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenDocument'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -328,6 +515,16 @@ components:
       in: path
       required: true
       description: Athlete primary key
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+    DocumentId:
+      name: id
+      in: path
+      required: true
+      description: Document primary key
       schema:
         type: integer
         format: int64
@@ -354,6 +551,17 @@ components:
 
     ForbiddenAthlete:
       description: The athlete does not belong to the authenticated user's academy
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: Forbidden.
+
+    ForbiddenDocument:
+      description: |
+        The document does not belong to the authenticated user's academy
+        (checked transitively via `document.athlete.academy_id`).
       content:
         application/json:
           schema:
@@ -700,6 +908,147 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Athlete'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ── Document ──────────────────────────────────────────────────────────
+
+    DocumentType:
+      type: string
+      description: Kind of document attached to an athlete
+      enum: [id_card, medical_certificate, insurance, other]
+
+    DocumentUploadRequest:
+      type: object
+      required: [type, file]
+      description: |
+        Multipart payload. `file` must be a PDF, JPEG, or PNG, at most 10 MB.
+        If both `issued_at` and `expires_at` are present, `expires_at` must be
+        on or after `issued_at`.
+      properties:
+        type:
+          $ref: '#/components/schemas/DocumentType'
+        file:
+          type: string
+          format: binary
+          description: The document file (application/pdf, image/jpeg, image/png)
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        expires_at:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    DocumentUpdateRequest:
+      type: object
+      description: |
+        Partial metadata update. All fields are optional. The file cannot be
+        replaced via PUT — to swap the underlying file, upload a new document
+        row and delete the old one.
+      properties:
+        type:
+          $ref: '#/components/schemas/DocumentType'
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        expires_at:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    AthleteSummary:
+      type: object
+      description: |
+        Minimal athlete identity inlined into a document response when the
+        endpoint returns documents across athletes (e.g. `/documents/expiring`).
+        For single-athlete endpoints this is omitted.
+      required: [id, first_name, last_name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        first_name:
+          type: string
+        last_name:
+          type: string
+
+    Document:
+      type: object
+      required:
+        - id
+        - athlete_id
+        - type
+        - original_name
+        - mime_type
+        - size_bytes
+        - issued_at
+        - expires_at
+        - notes
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        athlete_id:
+          type: integer
+          format: int64
+        type:
+          $ref: '#/components/schemas/DocumentType'
+        original_name:
+          type: string
+          description: Original filename at upload time (used in `Content-Disposition` on download)
+        mime_type:
+          type: string
+          description: MIME type at upload time (used in `Content-Type` on download)
+        size_bytes:
+          type: integer
+          format: int64
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        expires_at:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        athlete:
+          $ref: '#/components/schemas/AthleteSummary'
+
+    DocumentEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Document'
+
+    DocumentList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
         links:
           $ref: '#/components/schemas/PaginationLinks'
         meta:
