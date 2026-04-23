@@ -160,18 +160,22 @@ it('returns 401 on upload without auth', function (): void {
         ->assertUnauthorized();
 });
 
-it('returns 403 when uploading to an athlete in another academy', function (): void {
+it('returns 403 with "Forbidden." body when uploading to an athlete in another academy', function (): void {
     $user = userWithAcademy();
     $otherAcademy = Academy::factory()->create();
     $athlete = Athlete::factory()->for($otherAcademy)->create();
     $file = UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf');
 
+    // UploadDocumentRequest::failedAuthorization() guarantees the body
+    // matches the controller-side userOwns() failures — consistent across
+    // the Document API (see PR #37 discussion).
     $this->actingAs($user)
         ->postJson("/api/v1/athletes/{$athlete->id}/documents", [
             'type' => 'medical_certificate',
             'file' => $file,
         ])
-        ->assertForbidden();
+        ->assertForbidden()
+        ->assertExactJson(['message' => 'Forbidden.']);
 
     expect(Document::query()->count())->toBe(0);
     Storage::disk('local')->assertDirectoryEmpty('documents');
