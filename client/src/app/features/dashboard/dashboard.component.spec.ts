@@ -112,4 +112,51 @@ describe('DashboardComponent', () => {
       expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
     });
   });
+
+  describe('mobile drawer state', () => {
+    it('starts closed — the off-canvas sidebar is hidden by default', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      const sidebar = el.querySelector('.sidebar') as HTMLElement | null;
+      expect(sidebar).not.toBeNull();
+      expect(sidebar!.classList.contains('sidebar--open')).toBe(false);
+      // Backdrop is only rendered when the drawer is open.
+      expect(el.querySelector('[data-cy="drawer-backdrop"]')).toBeNull();
+    });
+
+    it('toggleSidebar flips the open state; closeSidebar resets it', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      const component = fixture.componentInstance as unknown as {
+        toggleSidebar: () => void;
+        closeSidebar: () => void;
+        sidebarOpen: () => boolean;
+      };
+
+      expect(component.sidebarOpen()).toBe(false);
+      component.toggleSidebar();
+      expect(component.sidebarOpen()).toBe(true);
+      component.toggleSidebar();
+      expect(component.sidebarOpen()).toBe(false);
+
+      component.toggleSidebar();
+      component.closeSidebar();
+      expect(component.sidebarOpen()).toBe(false);
+    });
+
+    it('hamburger button exposes aria-expanded and aria-controls pointing at the sidebar', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const hamburger = fixture.nativeElement.querySelector(
+        '[data-cy="topbar-hamburger"]',
+      ) as HTMLButtonElement | null;
+      expect(hamburger).not.toBeNull();
+      expect(hamburger!.getAttribute('aria-expanded')).toBe('false');
+      expect(hamburger!.getAttribute('aria-controls')).toBe('app-sidebar');
+      // Accessible label flips based on open state.
+      expect(hamburger!.getAttribute('aria-label')).toBe('Open navigation');
+    });
+  });
 });
