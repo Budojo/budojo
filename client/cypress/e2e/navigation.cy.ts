@@ -133,14 +133,19 @@ describe('Topbar home link', () => {
     // hides it. Flip to a mobile viewport so the link is visible and the
     // `.click()` actionability check passes.
     cy.viewport(390, 844);
-    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
-    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
+    // Alias + wait on the guard-triggered requests, same pattern the rest
+    // of this file uses. Clicking the topbar link before hasAcademyGuard
+    // resolves can race the redirect under guard on slower CI runs.
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
 
     // Start somewhere non-home so the redirect is observable.
     cy.visitAuthenticated('/dashboard/academy');
+    cy.wait('@academy');
     cy.url().should('include', '/dashboard/academy');
 
     cy.get('[data-cy="topbar-home-link"]').click();
+    cy.wait('@athletes');
     // /dashboard redirects to /dashboard/athletes by default.
     cy.url().should('include', '/dashboard/athletes');
   });

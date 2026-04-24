@@ -73,9 +73,12 @@ export class DashboardComponent {
   }
 
   /**
-   * Public wrapper around `logout()` for the sidebar footer button.
-   * The brand menu's `MenuItem.command` still calls `logout()` directly;
-   * the template-bound footer row needs an accessible (protected) method.
+   * Template-facing wrapper around the private `logout()`. Declared
+   * `protected` so the HTML binding can call it while the real auth
+   * invalidation stays encapsulated on the class. Also closes the
+   * mobile drawer first so the user doesn't land on `/auth/login`
+   * with a drawer still slid in (Krug forgiveness — a click should
+   * complete ONE interaction, not leave trailing UI state).
    */
   protected signOut(): void {
     this.closeSidebar();
