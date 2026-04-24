@@ -83,6 +83,12 @@
   --p-border-radius-md: 12px;
   --p-border-radius-lg: 16px;
   --p-border-radius-xl: 24px;
+  // "full" is the pill-capsule radius used for tags, avatars, toggles —
+  // anything canon calls "fully rounded". 9999px is the idiomatic way to
+  // guarantee max-possible rounding regardless of element size. Without
+  // this, .p-tag { border-radius: var(--p-border-radius-full) } falls
+  // back to PrimeNG Material's default and tags look half-rounded.
+  --p-border-radius-full: 9999px;
 
   // ───── Focus ring — iOS-style 2px outer, never inset ────────────
   --p-focus-ring-width: 2px;

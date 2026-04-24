@@ -28,12 +28,12 @@
     margin: 0;
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--p-surface-900, #111827);
+    color: var(--p-surface-900);
   }
 
   &__count {
     font-size: 0.875rem;
-    color: var(--p-surface-500, #6b7280);
+    color: var(--p-surface-500);
   }
 
   &__filters {
@@ -43,10 +43,14 @@
     flex-wrap: wrap;
   }
 
+  // Flat surface-0 card with a hairline border — canon § Card anatomy
+  // ("Flat surface-0 background, 1px hairline border, 12px radius, no
+  // shadow"). The old box-shadow was Material-style elevation, wrong
+  // direction.
   &__table-wrapper {
-    background: #fff;
-    border-radius: var(--p-border-radius-lg, 8px);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    background: var(--p-surface-0);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
     overflow: hidden;
   }
 }
@@ -55,17 +59,17 @@
 
 .athlete-name {
   font-weight: 500;
-  color: var(--p-surface-900, #111827);
+  color: var(--p-surface-900);
 }
 
 .athlete-email {
   font-size: 0.875rem;
-  color: var(--p-surface-600, #4b5563);
+  color: var(--p-surface-600);
 }
 
 .athlete-date {
   font-size: 0.875rem;
-  color: var(--p-surface-500, #6b7280);
+  color: var(--p-surface-500);
   white-space: nowrap;
 }
 
@@ -73,15 +77,16 @@
   text-align: right;
   white-space: nowrap;
 
+  // Hairline gap — canon permits 4px as the minimum inter-control spacing.
   p-button + p-button {
-    margin-left: 0.125rem;
+    margin-left: 0.25rem;
   }
 }
 
 .stripes {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--p-surface-600, #4b5563);
+  color: var(--p-surface-600);
 }
 
 .text-center {
@@ -103,19 +108,19 @@
 
   &__icon {
     font-size: 2.5rem;
-    color: var(--p-surface-300, #d1d5db);
+    color: var(--p-surface-300);
   }
 
   &__text {
     margin: 0;
     font-size: 1rem;
-    color: var(--p-surface-500, #6b7280);
+    color: var(--p-surface-500);
   }
 
   &__hint {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--p-surface-400, #9ca3af);
+    color: var(--p-surface-400);
   }
 }
 

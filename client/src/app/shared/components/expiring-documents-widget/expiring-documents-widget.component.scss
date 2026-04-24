@@ -2,6 +2,14 @@
 // Canon: MD3 8dp grid, theme tokens, Fitts touch target for the whole tile,
 // affordance + signifier for the interactive states (hover / focus).
 
+// Claim vertical space in the document flow so consumer pages (athletes
+// list, future dashboard home) get consistent spacing below the widget
+// without needing to reach into this component. 1rem = 8dp × 2, canon.
+:host {
+  display: block;
+  margin-bottom: 1rem;
+}
+
 .widget {
   display: flex;
   align-items: center;
