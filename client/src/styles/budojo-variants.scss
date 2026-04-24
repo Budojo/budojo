@@ -5,18 +5,23 @@
 //   @use "./styles/budojo-theme";
 //   @use "./styles/budojo-variants";
 //
-// Nothing here adds tokens. It locks the *variant matrix* for buttons,
-// tags, inputs, and cards using the accent + neutrals + semantic colors
-// that already exist. All rules are :where()-prefixed or PrimeNG class-
-// hook overrides — no component rewrites.
+// Locks the *variant matrix* for buttons, tags, inputs, and cards using
+// the accent + neutrals + semantic colors from the base theme. Introduces
+// one token the base theme missed (`--p-border-radius-full`) plus a small
+// set of variant-scoped `--budojo-btn-*` + `--budojo-focus-ring-*` knobs
+// — these stay HERE rather than in budojo-theme.scss because they only
+// exist to support the rules below, and moving them would couple the two
+// files. The theme stays palette + surface + typography; this file stays
+// variant geometry + component class-hook overrides.
 
 // ============================================================
-// 0. Missing token (restore from v1 gap)
+// 0. Tokens owned by this file
 // ============================================================
 :root {
+  // Missing from v1 — referenced by `.p-tag`, `.p-toggleswitch-slider`, etc.
   --p-border-radius-full: 9999px;
 
-  // Variant-only knobs (new; scoped under --budojo-*)
+  // Variant-only knobs (scoped under --budojo-*)
   --budojo-btn-height-md: 48px; // canon tap target
   --budojo-btn-height-sm: 44px; // supplementary, wrap in 48px hit region
   --budojo-btn-height-lg: 56px; // primary CTA in sheets
@@ -24,15 +29,8 @@
   --budojo-btn-padding-x-sm: 14px;
   --budojo-btn-disabled-opacity: 0.36;
 
-  --budojo-outline-border: var(--p-surface-300);
-  --budojo-outline-border-hover: var(--p-surface-400);
-
   --budojo-focus-ring-width: 2px;
   --budojo-focus-ring-offset: 2px;
-}
-.dark {
-  --budojo-outline-border: rgba(255, 255, 255, 0.18);
-  --budojo-outline-border-hover: rgba(255, 255, 255, 0.28);
 }
 
 // ============================================================

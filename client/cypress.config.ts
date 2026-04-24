@@ -13,13 +13,10 @@ export default defineConfig({
     viewportWidth: 1280,
     viewportHeight: 720,
     video: false,
-    // Design inventory screenshots live under `docs/design/screenshots/`
-    // at the repo root — committed as a visual reference library. Regular
-    // test-failure screenshots land there too, but the inventory spec is
-    // the primary producer. Cypress resolves relative paths from the
-    // config file location (`client/`), so `../docs/...` points at
-    // `<repo-root>/docs/...`.
-    screenshotsFolder: '../docs/design/screenshots',
-    trashAssetsBeforeRuns: false, // don't wipe between runs — we commit these
+    // Default screenshots path — for test-failure screenshots from e2e specs.
+    // The design inventory workflow overrides this per-run via the
+    // `design:inventory` npm script so the committed reference library
+    // doesn't co-mingle with transient test failure artifacts.
+    screenshotsFolder: 'cypress/screenshots',
   },
 });

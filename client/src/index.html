@@ -15,12 +15,12 @@
     <link rel="manifest" href="manifest.webmanifest" />
 
     <!-- Favicons + installable icons.
-         Multiple sizes so every browser can pick the right tile:
          - ICO for legacy Chrome / any fallback
-         - 32 / 192 PNG for modern Chromium tabs (larger = crisper high-DPI)
+         - 192 PNG hint for modern Chromium — it downscales better than
+           the ICO's 48 px bitmap, and the `sizes` hint matches the real
+           asset so the browser can't pick a mismatched tile
          - apple-touch-icon for iOS Safari "Add to Home Screen" -->
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 

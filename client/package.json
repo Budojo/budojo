@@ -11,7 +11,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
     "cy:open": "cypress open",
     "cy:run": "cypress run",
-    "design:inventory": "cypress run --spec cypress/e2e/design-inventory.cy.ts --reporter min"
+    "design:inventory": "cypress run --spec cypress/e2e/design-inventory.cy.ts --reporter min --config screenshotsFolder=../docs/design/screenshots,trashAssetsBeforeRuns=false"
   },
   "private": true,
   "packageManager": "npm@10.9.7",

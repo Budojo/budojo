@@ -97,6 +97,18 @@ const EXPIRING_ONE = {
   },
 };
 
+/**
+ * Frozen "now" for determinism. `ExpiryStatusBadge` + friends compute
+ * relative to today; without freezing the clock, the stubbed expiry above
+ * would flip between "expiring" → "expired" as real calendar days pass,
+ * and screenshots would drift even when nothing in the codebase changed.
+ *
+ * Pick a date close to when this file was authored so the stubbed
+ * expiry still reads as "expiring within 30 days" (which is the visual
+ * state we want captured on the dashboard widget).
+ */
+const FROZEN_NOW = new Date('2026-04-24T12:00:00Z').getTime();
+
 // ── Viewports ───────────────────────────────────────────────────────────
 
 /**
@@ -133,18 +145,29 @@ function seedIntercepts(): void {
 /**
  * Render the page at every viewport and capture one screenshot per.
  * Filename format: `{slug}__{viewport}.png` — predictable, diffable,
- * sortable. Example: `dashboard-academy__mobile.png`.
+ * sortable. Example: `dashboard-academy-detail__mobile.png`.
+ *
+ * `readySelector` is an app-owned `data-cy` that must be visible before
+ * we capture — avoids the pre-Copilot-feedback flakiness of a fixed
+ * `cy.wait(400)` which varies by machine / Angular bootstrap time.
  */
-function captureAtAllViewports(route: string, slug: string): void {
+function captureAtAllViewports(route: string, slug: string, readySelector: string): void {
   VIEWPORTS.forEach((vp: Viewport) => {
     it(`${slug} @ ${vp.name} (${vp.width}×${vp.height})`, () => {
       cy.viewport(vp.width, vp.height);
       seedIntercepts();
-      cy.visitAuthenticated(route);
-      // Let the Angular animation async settle + fonts load. A tiny wait
-      // is pragmatic here; waiting on network would be fragile because
-      // not every page fires the same set of requests.
-      cy.wait(400);
+      // Freeze time BEFORE Angular bootstraps so ExpiryStatusBadge computes
+      // relative to FROZEN_NOW, not wall-clock. `onBeforeLoad` is the
+      // earliest hook Cypress exposes; `cy.clock` inside the test body
+      // would land after Angular's first change-detection cycle and miss
+      // the initial render.
+      cy.visitAuthenticated(route, undefined, {
+        onBeforeLoad(win) {
+          win.Date.now = () => FROZEN_NOW;
+        },
+      });
+      // Wait on an app-rendered signal instead of a fixed duration.
+      cy.get(readySelector, { timeout: 8000 }).should('be.visible');
       cy.screenshot(`${slug}__${vp.name}`, {
         capture: 'fullPage',
         overwrite: true,
@@ -162,9 +185,21 @@ describe('Design inventory — visual reference', () => {
   // Add back once the auth pass lands.
 
   // --- Academy -------------------------------------------------------------
-  captureAtAllViewports('/dashboard/academy', 'dashboard-academy-detail');
-  captureAtAllViewports('/dashboard/academy/edit', 'dashboard-academy-edit');
+  captureAtAllViewports(
+    '/dashboard/academy',
+    'dashboard-academy-detail',
+    '[data-cy="academy-detail"]',
+  );
+  captureAtAllViewports(
+    '/dashboard/academy/edit',
+    'dashboard-academy-edit',
+    '[data-cy="academy-form"]',
+  );
 
   // --- Athletes ------------------------------------------------------------
-  captureAtAllViewports('/dashboard/athletes', 'dashboard-athletes-list');
+  captureAtAllViewports(
+    '/dashboard/athletes',
+    'dashboard-athletes-list',
+    '[data-cy="add-athlete-btn"]',
+  );
 });
