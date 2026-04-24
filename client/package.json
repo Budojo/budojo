@@ -10,7 +10,8 @@
     "lint": "ng lint",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
     "cy:open": "cypress open",
-    "cy:run": "cypress run"
+    "cy:run": "cypress run",
+    "design:inventory": "cypress run --spec cypress/e2e/design-inventory.cy.ts --reporter min"
   },
   "private": true,
   "packageManager": "npm@10.9.7",

@@ -16,10 +16,11 @@ Everything here was read from the `m-bonanno/budojo` GitHub repo (not pre-loaded
 
 ## Index
 
-This folder (`docs/design/`) contains only the two canonical markdown files:
+This folder (`docs/design/`) contains:
 
 - **`DESIGN_SYSTEM.md`** — token inventory, per-component override specs for 13 PrimeNG atoms, ASCII mockups of the mobile screens, implementation notes + gotchas + PWA specifics. Source of truth for tokens is the live file at [`client/src/styles/budojo-theme.scss`](../../client/src/styles/budojo-theme.scss); the markdown keeps a collapsed historical snapshot for context only.
 - **`README.md`** — this file. Brand context, content fundamentals, visual foundations, iconography.
+- **[`screenshots/`](./screenshots/README.md)** — committed visual inventory of every canonical page at three viewports, regenerated on demand via `npm run design:inventory`. Start here when building a new feature: scan the folder, find the closest existing pattern, reuse it. See the folder's README for the full feature-building playbook.
 
 The original Claude Design delivery also shipped a static CSS mirror, preview cards (HTML), a React UI kit, and a `SKILL.md` manifest. Those artifacts are reference-only and live in the local (gitignored) `.design-system-dropzone/` folder on the machine that did the integration — we deliberately don't duplicate them into the repo:
 
