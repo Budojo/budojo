@@ -64,6 +64,23 @@ Format: `→` separates the symptom from the action.
 
 - Asserted `cy.get(...).should('have.text', '—')` on an element whose template is `{{ a?.field ?? '—' }}` on its own line → Angular preserves the template's leading/trailing whitespace, so `textContent` is ` — ` (newline + indent + em-dash + newline). `have.text` does an exact match → fails. Fix: `.invoke('text').then((t) => expect(t.trim()).to.equal('—'))`. Vitest's `.textContent?.trim()` sidesteps the same trap.
 
+## Design system / PrimeNG precedence
+
+- Wrote `:root { --p-primary-500: #5b6cff; … }` in `styles/budojo-theme.scss`, imported LAST from `styles.scss` → buttons still rendered green (Material default), overrides silently ignored. PrimeNG injects its theme `<style>` tag at runtime AFTER the bundled CSS, so both declarations sit at `:root` with identical specificity → source-order tiebreak → PrimeNG wins. Fix: `providePrimeNG({ theme: { …, options: { cssLayer: { name: 'primeng' } } } })`. Unlayered rules (ours) always beat layered rules (PrimeNG's) regardless of injection order — this is the *only* reliable way to override PrimeNG tokens from global app SCSS.
+- Referenced `var(--p-border-radius-full)` in the theme file without actually defining it in `:root` → `.p-tag { border-radius: var(--p-border-radius-full) }` fell through to the Material preset default (half-rounded, not a pill). Fix: every `var(--p-*)` used in our override SCSS must also be declared in our `:root` unless we genuinely intend to fall through to PrimeNG's default. Before shipping an override file, grep it against its own `:root` block.
+
+## Design inventory / Cypress in Docker
+
+- Ran `npm run design:inventory` inside the `budojo_client` Alpine container → `Your system is missing the dependency: Xvfb`. Cypress needs a display server to run headed Chrome, and the slim Alpine image doesn't ship one. Fix: run the inventory spec on the Windows host (Chrome is installed, Cypress works natively) OR use a dedicated `cypress/included` Docker image. In CI, `cypress-io/github-action@v6` provides Xvfb automatically — this only bites local-in-container runs.
+
+## Button variant picking
+
+- Used `severity="secondary" [outlined]="true"` for a button that was the **only** CTA on the page (academy-detail Edit). With v2 variants the outlined variant renders as filled `surface-100` no border — on a white page body that's visually near-invisible. Fix: a lone CTA is `primary` (filled accent, default — no severity or outlined). The secondary/ghost variants are only canonical when there's a primary adjacent (Save + Cancel pair) or as row-level subtle actions — they're deliberately subdued, so they need a loud sibling or a dense row context to read correctly.
+
+## Favicon / Chrome tab icon
+
+- Replaced `client/public/favicon.ico` but Chrome kept showing the old Angular default tile → browsers cache favicons aggressively and `<link rel="icon">` alone doesn't bust that cache. **Hard reload is not always enough.** Fix chain: (1) make sure `client/public/favicon.ico` is actually the new file (size should match the new one, not 15 KB Angular default); (2) add explicit `<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />` tags alongside the ICO so modern Chromium picks the high-DPI PNG; (3) Shift + reload, then `chrome://favicon2/?pageUrl=http://localhost:4200&size=32` to verify what Chrome thinks the favicon is. Last resort: clear site data (dev-tools → Application → Clear storage).
+
 ---
 
 ## How to use this file

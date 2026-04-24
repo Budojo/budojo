@@ -1,0 +1,426 @@
+// budojo-variants.scss
+// v2 addition to the Budojo design system. @use AFTER budojo-theme.scss:
+//
+//   // client/src/styles.scss
+//   @use "./styles/budojo-theme";
+//   @use "./styles/budojo-variants";
+//
+// Locks the *variant matrix* for buttons, tags, inputs, and cards using
+// the accent + neutrals + semantic colors from the base theme. Introduces
+// one token the base theme missed (`--p-border-radius-full`) plus a small
+// set of variant-scoped `--budojo-btn-*` + `--budojo-focus-ring-*` knobs
+// — these stay HERE rather than in budojo-theme.scss because they only
+// exist to support the rules below, and moving them would couple the two
+// files. The theme stays palette + surface + typography; this file stays
+// variant geometry + component class-hook overrides.
+
+// ============================================================
+// 0. Tokens owned by this file
+// ============================================================
+:root {
+  // Missing from v1 — referenced by `.p-tag`, `.p-toggleswitch-slider`, etc.
+  --p-border-radius-full: 9999px;
+
+  // Variant-only knobs (scoped under --budojo-*)
+  --budojo-btn-height-md: 48px; // canon tap target
+  --budojo-btn-height-sm: 44px; // supplementary, wrap in 48px hit region
+  --budojo-btn-height-lg: 56px; // primary CTA in sheets
+  --budojo-btn-padding-x-md: 18px;
+  --budojo-btn-padding-x-sm: 14px;
+  --budojo-btn-disabled-opacity: 0.36;
+
+  --budojo-focus-ring-width: 2px;
+  --budojo-focus-ring-offset: 2px;
+}
+
+// ============================================================
+// 1. BUTTON VARIANT MATRIX
+// ------------------------------------------------------------
+// primary     — filled accent.  CTA.
+// secondary   — outlined neutral. "Cancel next to Save", alternative action.
+// destructive — filled danger.  Delete / irreversible confirm.
+// ghost       — text-only + accent color, surface-100 hover background.
+//               Icon-only row actions (pencil/trash in tables).
+//
+// Height = 48 (canon). 44 only allowed for icon-only ghost in dense tables;
+// the button itself is 44, but padding makes the *hit target* 48 (see .p-button-icon-only spec).
+// Radius = 12 across all non-icon-only variants.
+// Press = opacity 0.88. Hover = color shift, no transform.
+// Disabled = opacity var(--budojo-btn-disabled-opacity), cursor not-allowed.
+// ============================================================
+
+.p-button {
+  min-height: var(--budojo-btn-height-md);
+  padding-inline: var(--budojo-btn-padding-x-md);
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: -0.003em;
+  box-shadow: none !important; // kill all MD elevation
+  transition:
+    background-color var(--budojo-motion-fast, 160ms) var(--budojo-motion-decelerate),
+    border-color var(--budojo-motion-fast, 160ms) var(--budojo-motion-decelerate),
+    color var(--budojo-motion-fast, 160ms) var(--budojo-motion-decelerate),
+    opacity var(--budojo-motion-fast, 160ms) linear;
+
+  &:active {
+    opacity: 0.88;
+    transform: none;
+  } // iOS press, no shrink
+  &:disabled,
+  &.p-disabled {
+    opacity: var(--budojo-btn-disabled-opacity);
+    cursor: not-allowed;
+  }
+}
+
+// ---- primary (default) ----
+.p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-danger):not(
+    .p-button-secondary
+  ) {
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+  border: 1px solid transparent;
+
+  &:hover:not(:disabled) {
+    background: var(--p-primary-hover-color);
+  }
+  // active handled by opacity on .p-button:active
+}
+
+// ---- secondary = filled neutral (no border) ----
+// PrimeNG hook: [outlined]="true" OR [severity]="secondary"
+// We collapse both into the same visual: filled surface-100, no border.
+.p-button-outlined,
+.p-button.p-button-secondary:not(.p-button-text) {
+  background: var(--p-surface-100);
+  color: var(--p-text-color);
+  border: 1px solid transparent;
+
+  &:hover:not(:disabled) {
+    background: var(--p-surface-200);
+  }
+}
+
+// Destructive (soft) — outlined-variant replacement for row-level "Delete"
+// when the filled-danger would compete with a primary CTA nearby.
+// Filled, no border: soft danger bg, dark danger ink.
+.p-button-outlined.p-button-danger {
+  background: var(--budojo-danger-soft, #ffe5e3);
+  color: #b42318;
+  border: 1px solid transparent;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--budojo-danger) 16%, #ffe5e3);
+  }
+}
+
+// ---- destructive = filled danger ----
+.p-button.p-button-danger:not(.p-button-outlined):not(.p-button-text) {
+  background: var(--budojo-danger);
+  color: #fff;
+  border: 1px solid transparent;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--budojo-danger) 88%, black);
+  }
+}
+
+// ---- ghost / text ----
+// PrimeNG hook: [text]="true".  Accent color text, surface-100 hover bg.
+.p-button.p-button-text {
+  background: transparent;
+  color: var(--p-primary-color);
+  border: 1px solid transparent;
+  padding-inline: 12px;
+
+  &:hover:not(:disabled) {
+    background: var(--p-surface-100);
+  }
+  &.p-button-danger {
+    color: var(--budojo-danger);
+  }
+  &.p-button-secondary,
+  &.p-button-plain {
+    color: var(--p-text-color);
+  }
+}
+
+// ---- icon-only ghost (row actions) ----
+// Force square 44×44, radius-full-inside-tile. Wrap parent gets 48px hit via padding.
+.p-button.p-button-icon-only {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: var(--p-border-radius-full);
+}
+
+// ---- Large CTA (optional — inside bottom sheets / full-width dialogs) ----
+.p-button.budojo-size-lg {
+  min-height: var(--budojo-btn-height-lg);
+  font-size: 16px;
+  border-radius: 14px;
+}
+
+// ============================================================
+// 2. TAG VARIANT MATRIX
+// ------------------------------------------------------------
+// status   — semantic fill (success/warn/danger/info). Sentence case.
+// domain   — filled with domain color (belt). Owned by the component, not a severity.
+// neutral  — surface-200 fill / surface-700 text. Counts, metadata.
+// outlined — transparent bg, hairline border, accent text.
+//            Used ONLY for "count" glyphs next to eyebrow headers.
+// ============================================================
+
+.p-tag {
+  font: 600 12px/16px var(--p-font-family);
+  letter-spacing: -0.003em;
+  padding: 3px 10px;
+  border-radius: var(--p-border-radius-full);
+  border: 1px solid transparent;
+}
+
+// Filled status — default PrimeNG severities (already mapped in v1 p-tag block)
+.p-tag.p-tag-success {
+  background: #e7f7ea;
+  color: #188038;
+}
+.p-tag.p-tag-warn,
+.p-tag.p-tag-warning {
+  background: #fff3e0;
+  color: #b45309;
+}
+.p-tag.p-tag-danger {
+  background: #ffe5e3;
+  color: #b42318;
+}
+.p-tag.p-tag-info {
+  background: #e1efff;
+  color: #0a67d9;
+}
+
+// Neutral filled (counts, metadata)
+.p-tag.p-tag-secondary,
+.p-tag.budojo-tag-neutral {
+  background: var(--p-surface-200);
+  color: var(--p-surface-700);
+}
+
+// Outlined — hairline border, transparent fill. Use for counts near eyebrow labels
+// or "ALL" / "archived" states where filled reads too loud.
+.p-tag.budojo-tag-outlined {
+  background: transparent;
+  color: var(--p-text-muted-color);
+  border-color: var(--p-surface-300);
+  font-weight: 500;
+}
+
+// Domain (belts). Always filled; per-belt colors are owned by app SCSS.
+// Exposed as [styleClass]="budojo-belt budojo-belt-{white|blue|purple|brown|black}"
+.budojo-belt {
+  font: 600 12px/16px var(--p-font-family);
+  letter-spacing: -0.003em;
+  padding: 4px 12px;
+  border-radius: var(--p-border-radius-full);
+  display: inline-block;
+
+  &.budojo-belt-white {
+    background: #f3f4f6;
+    color: #374151;
+  }
+  &.budojo-belt-blue {
+    background: #1d4ed8;
+    color: #ffffff;
+  }
+  &.budojo-belt-purple {
+    background: #7c3aed;
+    color: #ffffff;
+  }
+  &.budojo-belt-brown {
+    background: #92400e;
+    color: #ffffff;
+  }
+  &.budojo-belt-black {
+    background: #111827;
+    color: #ffffff;
+  }
+}
+
+// ============================================================
+// 3. FORM FIELD VARIANT MATRIX
+// ------------------------------------------------------------
+// ONE visual for everything: p-inputtext, p-password input, p-select,
+// p-datepicker, p-textarea, p-inputnumber.
+// State is border-color only (transparent → accent on focus).
+// Filled bg = surface-100 resting, surface-0 focus.
+//
+// Exception: p-textarea gets 16 px radius + min-height 96 (from v1).
+// All other field shapes are 12 px radius, 48 px min-height.
+// ============================================================
+
+%budojo-field {
+  background: var(--p-form-field-filled-background);
+  color: var(--p-text-color);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  min-height: 48px;
+  padding: 12px 14px;
+  font: var(--type-body, 400 17px/22px var(--p-font-family));
+  letter-spacing: -0.003em;
+  transition:
+    background-color 160ms var(--budojo-motion-decelerate),
+    border-color 160ms var(--budojo-motion-decelerate);
+
+  &::placeholder {
+    color: var(--p-form-field-placeholder-color);
+  }
+  &:hover:not(:focus):not(:disabled) {
+    background: var(--p-form-field-filled-hover-background);
+  }
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    background: var(--p-form-field-filled-focus-background);
+    border-color: var(--p-primary-color);
+  }
+  &[aria-invalid='true'],
+  &.ng-invalid.ng-touched {
+    border-color: var(--budojo-danger);
+  }
+  &:disabled {
+    opacity: var(--budojo-btn-disabled-opacity);
+    cursor: not-allowed;
+  }
+}
+
+.p-inputtext,
+.p-password input,
+.p-select,
+.p-select .p-select-label,
+.p-datepicker-input,
+.p-inputnumber-input {
+  @extend %budojo-field;
+}
+
+// Textarea: same semantics, bigger radius, min-height 96
+.p-textarea,
+textarea.p-inputtext {
+  @extend %budojo-field;
+  border-radius: 16px;
+  min-height: 96px;
+  line-height: 1.4;
+}
+
+// p-select has a wrapper — the visible pill is on .p-select itself.
+// The inner label shouldn't double-style.
+.p-select .p-select-label {
+  background: transparent;
+  border: none;
+  min-height: auto;
+  padding: 0;
+}
+
+// ============================================================
+// 4. CARD VARIANT MATRIX
+// ------------------------------------------------------------
+// ONE pattern: `surface` — surface-0 fill, NO border, 12 px radius, no shadow.
+// Internal structure via 1 px hairline row dividers ONLY inside the card.
+// NO second level. A "featured" card is still flat; differentiate with accent
+// left-inset icon, copy, or a badge — NOT elevation, NOT an outer border.
+// ============================================================
+
+.p-card,
+.budojo-card {
+  background: var(--p-content-background);
+  border: none;
+  border-radius: 12px;
+  box-shadow: none !important;
+}
+.p-card .p-card-body {
+  padding: 16px;
+}
+.p-card .p-card-title {
+  font: var(--type-title-3, 600 20px/25px var(--p-font-family));
+  letter-spacing: -0.018em;
+}
+.p-card .p-card-subtitle {
+  font: var(--type-footnote, 400 13px/18px var(--p-font-family));
+  color: var(--p-text-muted-color);
+}
+
+// Alert card (expiring-docs widget, etc.) — soft semantic fill, NO border.
+// Use [styleClass]="budojo-card-alert budojo-card-alert-{warn|danger|info|success}"
+.budojo-card-alert {
+  border-radius: 12px;
+  padding: 14px;
+  border: none;
+  &.budojo-card-alert-warn {
+    background: #fff3e0;
+    color: #7a3b00;
+  }
+  &.budojo-card-alert-danger {
+    background: #ffe5e3;
+    color: #8a1e1e;
+  }
+  &.budojo-card-alert-info {
+    background: #e1efff;
+    color: #0a4ea8;
+  }
+  &.budojo-card-alert-success {
+    background: #e7f7ea;
+    color: #156a2f;
+  }
+
+  // Icon dot inside an alert: filled glyph, no ring/border.
+  .budojo-card-alert-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    border: none;
+  }
+  &.budojo-card-alert-warn .budojo-card-alert-dot {
+    background: #ff9f0a;
+  }
+  &.budojo-card-alert-danger .budojo-card-alert-dot {
+    background: #ff3b30;
+  }
+  &.budojo-card-alert-info .budojo-card-alert-dot {
+    background: #0a84ff;
+  }
+  &.budojo-card-alert-success .budojo-card-alert-dot {
+    background: #34c759;
+  }
+}
+
+// ============================================================
+// 5. FOCUS RING — A11y decision
+// ------------------------------------------------------------
+// v1 removed the ring in favour of a border-color change on focus.
+// That's fine for :focus from pointer, but WCAG 2.4.7 expects a clear
+// focus indicator for keyboard users too. Decision: keep the border-color
+// shift AS the primary affordance, and ADD a 2 px outer ring ONLY for
+// :focus-visible (i.e. keyboard / a11y tool activation).
+// This uses the browser's :focus-visible heuristic so mouse clicks don't
+// trigger the ring — iOS minimal look preserved.
+// ============================================================
+
+:focus-visible {
+  outline: var(--budojo-focus-ring-width) solid var(--p-primary-color);
+  outline-offset: var(--budojo-focus-ring-offset);
+  border-radius: inherit;
+}
+// But: fields already go to accent border on focus. Suppress the outer ring
+// there — the border change IS the visible affordance and the ring doubles up.
+.p-inputtext:focus-visible,
+.p-password input:focus-visible,
+.p-select:focus-visible,
+.p-datepicker-input:focus-visible,
+.p-inputnumber-input:focus-visible,
+.p-textarea:focus-visible,
+textarea.p-inputtext:focus-visible {
+  outline: none;
+}

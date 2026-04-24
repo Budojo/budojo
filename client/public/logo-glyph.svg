@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Budojo">
+  <title>Budojo glyph</title>
+  <g stroke="currentColor">
+
+  
+  <path d="M14 10 L32 38 L32 54" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+  
+  <path d="M50 10 L32 38" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+  
+  <path d="M16 40 L48 40" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+  
+  <path d="M29 38 L29 44 L35 44 L35 38" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+
+  </g>
+</svg>

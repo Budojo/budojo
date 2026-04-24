@@ -15,6 +15,12 @@
 // any preset defaults. See docs/design/DESIGN_SYSTEM.md for the canon.
 @use 'styles/budojo-theme';
 
+// Budojo v2 variants — authoritative button / tag / field / card matrix
+// on top of the v1 tokens. Must be imported AFTER budojo-theme so its
+// class-hook overrides (.p-button, .p-tag, etc.) win. No new tokens,
+// only variant rules using the existing palette + semantics.
+@use 'styles/budojo-variants';
+
 * {
   box-sizing: border-box;
 }

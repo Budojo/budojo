@@ -84,7 +84,10 @@ describe('Mobile shell (390 × 844)', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.get('link[rel="manifest"]').should('have.attr', 'href', 'manifest.webmanifest');
     cy.get('link[rel="apple-touch-icon"]').should('exist');
-    cy.get('meta[name="theme-color"]').should('have.attr', 'content', '#6366f1');
+    // Canon surface-900 — matches the dark app-icon tile + manifest theme.
+    // Pre-v3 this was #6366f1 (indigo accent); v3 aligned it to the tile so
+    // Chrome's mobile status bar matches the installed icon's background.
+    cy.get('meta[name="theme-color"]').should('have.attr', 'content', '#0a0a0b');
     cy.get('meta[name="apple-mobile-web-app-capable"]').should('have.attr', 'content', 'yes');
   });
 });

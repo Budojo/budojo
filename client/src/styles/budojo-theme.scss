@@ -83,6 +83,12 @@
   --p-border-radius-md: 12px;
   --p-border-radius-lg: 16px;
   --p-border-radius-xl: 24px;
+  // "full" is the pill-capsule radius used for tags, avatars, toggles —
+  // anything canon calls "fully rounded". 9999px is the idiomatic way to
+  // guarantee max-possible rounding regardless of element size. Without
+  // this, .p-tag { border-radius: var(--p-border-radius-full) } falls
+  // back to PrimeNG Material's default and tags look half-rounded.
+  --p-border-radius-full: 9999px;
 
   // ───── Focus ring — iOS-style 2px outer, never inset ────────────
   --p-focus-ring-width: 2px;
@@ -92,9 +98,15 @@
   --p-focus-ring-shadow: 0 0 0 2px var(--p-surface-0), 0 0 0 4px var(--p-primary-500);
 
   // ───── Form field ────────────────────────────────────────────────
+  // "filled-*" variants are what v2 budojo-variants.scss addresses;
+  // the non-prefixed names stay for components that read them directly.
+  // Focus flips fill to surface-0 so the accent border reads cleanly —
+  // canon § Form field matrix.
   --p-form-field-background: var(--p-surface-100); // iOS grouped list cell
   --p-form-field-disabled-background: var(--p-surface-100);
   --p-form-field-filled-background: var(--p-surface-100);
+  --p-form-field-filled-hover-background: var(--p-surface-200);
+  --p-form-field-filled-focus-background: var(--p-surface-0);
   --p-form-field-hover-background: var(--p-surface-200);
   --p-form-field-border-color: transparent;
   --p-form-field-hover-border-color: transparent;
@@ -134,6 +146,11 @@
   --budojo-warning: #ff9f0a;
   --budojo-danger: #ff3b30;
   --budojo-info: #0a84ff;
+
+  // Soft-danger surface — used by the row-level "delete" button variant
+  // (canon § Button matrix → destructive (soft)). Defined alongside the
+  // hard danger so both render through tokens, not string literals.
+  --budojo-danger-soft: #ffe5e3;
 }
 
 // ============================================================================

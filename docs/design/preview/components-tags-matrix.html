@@ -1,0 +1,19 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="colors_and_type.css"><style>
+body{margin:0;padding:24px;background:var(--bg-app);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.wrap{display:grid;grid-template-columns:110px 1fr;gap:12px 16px;align-items:center;width:100%;max-width:720px}
+.lbl{font:var(--type-caption-1);color:var(--fg-secondary)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tag{font:600 12px/16px var(--font-sans);padding:3px 10px;border-radius:9999px;border:1px solid transparent;letter-spacing:-0.003em}
+.success{background:#e7f7ea;color:#188038}
+.warn{background:#fff3e0;color:#b45309}
+.danger{background:#ffe5e3;color:#b42318}
+.info{background:#e1efff;color:#0a67d9}
+.neutral{background:var(--budojo-surface-200);color:var(--budojo-surface-700)}
+.outlined{background:transparent;color:var(--fg-secondary);border-color:var(--budojo-surface-300);font-weight:500}
+.belt{font:600 12px/16px var(--font-sans);padding:4px 12px;border-radius:9999px;letter-spacing:-0.003em}
+</style></head><body><div class="wrap">
+<span class="lbl">Status</span><div class="row"><span class="tag success">Active</span><span class="tag warn">Expiring</span><span class="tag danger">Expired</span><span class="tag info">Invited</span><span class="tag neutral">Suspended</span></div>
+<span class="lbl">Domain (belt)</span><div class="row"><span class="belt" style="background:#f3f4f6;color:#374151">White</span><span class="belt" style="background:#1d4ed8;color:#fff">Blue</span><span class="belt" style="background:#7c3aed;color:#fff">Purple</span><span class="belt" style="background:#92400e;color:#fff">Brown</span><span class="belt" style="background:#111827;color:#fff">Black</span></div>
+<span class="lbl">Neutral (count)</span><div class="row"><span class="tag neutral">28</span><span class="tag neutral">9 expiring</span><span class="tag neutral">All</span></div>
+<span class="lbl">Outlined</span><div class="row"><span class="tag outlined">Archived</span><span class="tag outlined">All belts</span><span class="tag outlined">Draft</span></div>
+</div></body></html>

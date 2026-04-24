@@ -91,9 +91,22 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   }
 
   &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: -0.01em;
+  }
+
+  // The logo tile has its own dark background + rounded corners baked in.
+  // Size: 28 px — visually weighted against the ~16 px word mark next to it
+  // without dominating the 48 px topbar.
+  &__logo {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--p-border-radius-sm);
+    flex-shrink: 0;
   }
 }
 
@@ -178,9 +191,12 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     }
   }
 
+  // Brand logo — 32 px tile. The PNG already carries the indigo-on-dark
+  // monogram and rounded-square shape, so we only size + clip it here.
   &__logo {
-    font-size: 1.5rem;
-    line-height: 1;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--p-border-radius-sm);
     flex-shrink: 0;
   }
 
