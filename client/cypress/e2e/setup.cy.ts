@@ -24,22 +24,7 @@ describe('Academy setup page', () => {
     // dev-server proxy (no `api` host in CI) — otherwise the CI log fills
     // with `getaddrinfo EAI_AGAIN api` noise that can mask real failures.
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
-    cy.intercept('GET', '/api/v1/athletes*', {
-      statusCode: 200,
-      body: {
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 1,
-          from: null,
-          last_page: 1,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 0,
-        },
-      },
-    });
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
     cy.visitAuthenticated('/setup');
     cy.wait('@academy');
   });
