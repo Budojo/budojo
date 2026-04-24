@@ -128,6 +128,11 @@ describe('Topbar home link', () => {
   });
 
   it('navigates to /dashboard when the Budojo wordmark is tapped', () => {
+    // Topbar is mobile-only (`display: none` above the sidebar breakpoint
+    // — see dashboard.component.scss). Cypress defaults to 1280×720 which
+    // hides it. Flip to a mobile viewport so the link is visible and the
+    // `.click()` actionability check passes.
+    cy.viewport(390, 844);
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
 
