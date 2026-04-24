@@ -53,6 +53,12 @@ class Athlete extends Model
         return $this->hasMany(Document::class);
     }
 
+    /** @return HasMany<AttendanceRecord, $this> */
+    public function attendanceRecords(): HasMany
+    {
+        return $this->hasMany(AttendanceRecord::class);
+    }
+
     /**
      * @return array<string, string>
      */
