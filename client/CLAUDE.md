@@ -52,7 +52,7 @@ Wiring:
 Hard rules, on top of the MD3 bullets above:
 
 - **Never use raw hex in component SCSS.** Use `var(--p-*)` tokens or the `--budojo-*` semantics. Exceptions are belt colors (domain palette) with a rationale comment — canon § gotchas.
-- **Do not restyle PrimeNG internals.** Override via CSS custom properties; use `::ng-deep` only when an internal selector has no token exposed AND it's documented in `DESIGN_SYSTEM.md`.
+- **Do not restyle PrimeNG internals from component SCSS.** Override via CSS custom properties; use `::ng-deep` only when a token truly doesn't exist AND the pattern is already documented in `DESIGN_SYSTEM.md`. The *global* override layer (`client/src/styles/budojo-theme.scss`) is the **sanctioned exception**: it's allowed to touch selectors like `.p-button` / `.p-dialog` when token overrides alone can't express the behavior (e.g. killing Material box-shadow, mobile bottom-sheet transform). Every selector there carries a one-line comment explaining why a token isn't enough. Component SCSS never does this.
 - **Motion uses the `--budojo-motion-*` tokens**, not hand-picked `200ms ease-out`. Three durations, one curve.
 - **Sentence-case everything.** Buttons, headers, tags. No title-case, no uppercase — except eyebrow labels (`EXPIRING SOON`, `letter-spacing: 0.06em`). If you find yourself writing `text-transform: uppercase` elsewhere, you're off-canon.
 

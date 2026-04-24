@@ -8,9 +8,20 @@
 //   · 12px radius on cards/buttons, 16–24px on dialogs/sheets.
 //   · Decelerate motion, no bounce.
 //
-// This file ONLY overrides the CSS custom properties PrimeNG already reads.
-// Do not restyle PrimeNG internals — the override should degrade gracefully
-// if the preset changes upstream.
+// STRUCTURE — this file has two layers, in order:
+//   1. CSS custom property overrides on PrimeNG's --p-* tokens
+//      (:root for light, .dark for dark). This is the bulk of the file.
+//   2. A small set of surgical selector-based overrides (e.g. .p-button,
+//      .p-dialog, .p-inputtext) for the handful of cases where the
+//      Material preset has no token exposed for the behavior we need —
+//      killing the Material box-shadow, suppressing button uppercase,
+//      turning .p-dialog into a mobile bottom sheet, etc.
+//
+// This selector layer is intentional and documented: per `client/CLAUDE.md`
+// the rule "do not restyle PrimeNG internals" applies to component-local
+// SCSS. This GLOBAL override layer is the sanctioned exception. Any new
+// selector added here must have a one-line comment explaining why a token
+// alone can't express it.
 // ============================================================================
 
 // Inter — loaded via @fontsource/inter (already an approved dep).
@@ -53,7 +64,8 @@
   // ───── Content + text ────────────────────────────────────────────
   --p-content-background: var(--p-surface-0);
   --p-content-hover-background: var(--p-surface-100);
-  --p-content-border-color: #dcdce0; // hairline
+  // Hairline borders reuse surface-300 so palette tweaks stay in one place.
+  --p-content-border-color: var(--p-surface-300);
   --p-content-color: var(--p-surface-900);
   --p-content-hover-color: var(--p-surface-900);
 
@@ -93,7 +105,11 @@
   --p-form-field-padding-x: 12px;
   --p-form-field-padding-y: 12px;
   --p-form-field-shadow: none; // flat, no MD3 underline
-  --p-form-field-focus-ring-width: 2px;
+  // Focus is communicated via the border color transition on the input,
+  // not a ring — avoids double indicators when PrimeNG applies the ring
+  // on top of the border (canon § Visual foundations: "input border
+  // invisible until focus, then --budojo-accent").
+  --p-form-field-focus-ring-width: 0;
 
   // ───── Font ──────────────────────────────────────────────────────
   --p-font-family:
@@ -284,11 +300,14 @@
   border-radius: var(--p-border-radius-full);
 }
 
-// Toast — floating iOS banner
+// Toast — floating iOS banner.
+// No backdrop-filter: canon § Visual foundations calls out that backdrop
+// blur is expensive on older iPhones in standalone PWA mode, and frosted-
+// glass surfaces are discouraged globally. The translucent background +
+// shadow alone carry enough depth. See docs/design/README.md.
 .p-toast .p-toast-message {
   border-radius: var(--p-border-radius-lg);
   box-shadow: var(--budojo-elevation-floating);
-  backdrop-filter: saturate(180%) blur(20px);
   background: color-mix(in srgb, var(--p-content-background) 92%, transparent);
 }
 
@@ -308,11 +327,14 @@
 }
 
 // Utility: pressable opacity feedback for non-button interactive rows.
+// Matches .p-button:active at 0.88 — canon § Press: "opacity → 0.88, no
+// transform. Applies to every pressable." Aligning prevents visual
+// divergence between pressable rows and actual buttons.
 .budojo-pressable {
   transition: opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 }
 .budojo-pressable:active {
-  opacity: 0.72;
+  opacity: 0.88;
 }
 
 // Utility: hairline divider (1 CSS px, device pixel on retina is sharper)

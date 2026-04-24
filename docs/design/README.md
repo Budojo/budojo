@@ -12,18 +12,22 @@ Everything here was read from the `m-bonanno/budojo` GitHub repo (not pre-loaded
 - `.claude/gotchas.md` — mistakes to not repeat
 - `docs/specs/m4-attendance.md` — target for attendance mockup
 - `client/src/styles/**` — current theme entry points
-- `client/public/*` — app icons (512, 192, apple-touch, favicon) copied into `assets/`
-
-Nothing from the repo is inlined; assets are copied into `assets/` so downstream skills can read them offline.
+- `client/public/icons/*` — app icons (512, 192, apple-touch, favicon) — already shipped from M3.5, not duplicated into this folder
 
 ## Index
 
-- **`DESIGN_SYSTEM.md`** — the main deliverable. Token inventories, the full `client/src/styles/budojo-theme.scss` file (copy-paste ready), per-component override specs for 13 PrimeNG atoms, ASCII mockups of all five mobile screens, implementation notes + gotchas + PWA specifics.
-- **`colors_and_type.css`** — CSS-var mirror of the SCSS tokens; used by all preview cards, mockup HTML, and the UI kit so visual artifacts render identically outside the Angular app.
-- **`preview/`** — individual HTML cards registered against the Design System tab (Type, Colors, Spacing/Radius/Elevation/Motion, Components, Brand).
-- **`ui_kits/budojo_pwa/`** — interactive React recreation of all five mobile screens (login, athletes, documents, upload sheet, attendance). Visual-only, data is hard-coded.
-- **`assets/`** — logos, app icons copied from `client/public/`.
-- **`SKILL.md`** — Agent-Skill manifest (makes this folder usable as a Claude Code skill).
+This folder (`docs/design/`) contains only the two canonical markdown files:
+
+- **`DESIGN_SYSTEM.md`** — token inventory, per-component override specs for 13 PrimeNG atoms, ASCII mockups of the mobile screens, implementation notes + gotchas + PWA specifics. Source of truth for tokens is the live file at [`client/src/styles/budojo-theme.scss`](../../client/src/styles/budojo-theme.scss); the markdown keeps a collapsed historical snapshot for context only.
+- **`README.md`** — this file. Brand context, content fundamentals, visual foundations, iconography.
+
+The original Claude Design delivery also shipped a static CSS mirror, preview cards (HTML), a React UI kit, and a `SKILL.md` manifest. Those artifacts are reference-only and live in the local (gitignored) `.design-system-dropzone/` folder on the machine that did the integration — we deliberately don't duplicate them into the repo:
+
+- App icons (192/512/apple-touch/favicon) already ship from `client/public/icons/`.
+- The React UI kit and preview HTML are prototypes, not consumed by the Angular app.
+- The `SKILL.md` manifest was for a Claude skill workflow that's not wired into this repo.
+
+If you need any of those artifacts, re-unzip the original `Budojo Design System.zip` delivery into `.design-system-dropzone/` — both the filename and folder are gitignored for exactly this pattern.
 
 ## Content fundamentals
 
@@ -82,10 +86,11 @@ Nothing from the repo is inlined; assets are copied into `assets/` so downstream
 
 **Primary set: PrimeIcons** — already ships with PrimeNG. The repo uses `pi pi-user`, `pi pi-calendar`, `pi pi-upload`, `pi pi-pencil`, `pi pi-trash`, `pi pi-plus`, `pi pi-search`, `pi pi-ellipsis-h`, `pi pi-chevron-right`, `pi pi-exclamation-circle`, `pi pi-check-circle`. Stroke-weight is light enough to match the Apple-minimal direction. **Do not substitute SF Symbols in production** — they are Apple-system fonts and won't render in Firefox or Android.
 
-**App icon.** Copied from the codebase into `assets/`:
-- `logo-512.png` — maskable PWA icon
-- `logo-192.png` — standard PWA icon
-- `apple-touch-icon.png` — iOS home-screen icon
+**App icon.** Lives in `client/public/`:
+- `icons/icon-maskable-512.png` — maskable PWA icon
+- `icons/icon-512.png` — standard 512 px PWA icon
+- `icons/icon-192.png` — standard 192 px PWA icon
+- `icons/apple-touch-icon.png` — iOS home-screen icon
 - `favicon.ico`
 
 **SVGs.** None in the repo beyond the icon font. No custom illustrations.

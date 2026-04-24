@@ -34,7 +34,7 @@ A drop-in override layer for the `@primeuix/themes/material` preset that deliver
 | `--budojo-danger` | `#ff3b30` | same | iOS system red |
 | `--budojo-info` | `#0a84ff` | same | iOS system blue |
 
-Belt colors remain domain constants in `client/src/app/domain/ibjjf.ts` — don't move them into theme vars.
+Belt colors remain domain constants in `client/src/app/shared/components/belt-badge/belt-badge.component.scss` — don't move them into theme vars.
 
 ### 1.2 Typography (iOS HIG scale)
 
@@ -105,8 +105,41 @@ No bounce, no elastic. PWAs in standalone mode read bounce as "this app is broke
 
 ## 2. `client/src/styles/budojo-theme.scss`
 
+The theme file is the **source of truth** and lives at
+[`client/src/styles/budojo-theme.scss`](../../client/src/styles/budojo-theme.scss).
+Read it directly — not the embedded copy that used to live here. Any
+diff you see between this markdown and the real file is drift, and
+drift is what got us into this mess.
+
+Wiring in `client/src/styles.scss`:
+
 ```scss
-// budojo-theme.scss
+// Inter first — @use requires an explicit namespace because "400" isn't a
+// valid Sass identifier on its own.
+@use '@fontsource/inter/400.css' as w400;
+@use '@fontsource/inter/500.css' as w500;
+@use '@fontsource/inter/600.css' as w600;
+@use '@fontsource/inter/700.css' as w700;
+
+@use 'primeicons/primeicons.css';
+
+// Theme last so its CSS-var overrides win against preset defaults.
+@use 'styles/budojo-theme';
+```
+
+<details>
+<summary>Historical snapshot (for reference only — DO NOT trust)</summary>
+
+The original delivery inlined the full SCSS here; that copy drifted from
+the shipped file (e.g. it contained global ripple suppression, an
+`.app-shell` rule, and a `:focus-visible` selector that are not in the
+real file). We keep the snapshot collapsed below purely as a historical
+marker of the target direction. For anything you're about to change or
+copy, **open the real file**.
+
+```scss
+// budojo-theme.scss — HISTORICAL snapshot from the initial delivery.
+// Replaced by the live file at client/src/styles/budojo-theme.scss.
 // Override layer for @primeuix/themes/material. Imported once from styles.scss
 // via `@use "./styles/budojo-theme";`. Does NOT replace the preset —
 // PrimeNG registers its vars first; we override on :root / .dark.
@@ -290,13 +323,17 @@ html, body {
 }
 ```
 
-Import once:
+Import once (the historical delivery showed this minimal form; the live
+`styles.scss` additionally imports the Inter weights shown at the top of
+this section):
 
 ```scss
-// client/src/styles.scss
+// client/src/styles.scss — historical minimum
 @use "primeicons/primeicons.css";
 @use "./styles/budojo-theme";   // ← this override layer
 ```
+
+</details>
 
 ---
 
