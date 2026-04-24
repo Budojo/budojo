@@ -60,6 +60,10 @@ Format: `→` separates the symptom from the action.
 
 - After pulling a branch that adds a client npm dependency, the `budojo_client` container still runs the old `node_modules` (the volume was populated at build time). Angular barfs with `TS2307 Cannot find module '<new-dep>'`. Fix: `docker exec budojo_client sh -c "cd /app && npm install"` after `git pull`. Rule of thumb: if `package.json` changed in the diff you just pulled, sync the container before running anything.
 
+## Cypress — whitespace in interpolated text
+
+- Asserted `cy.get(...).should('have.text', '—')` on an element whose template is `{{ a?.field ?? '—' }}` on its own line → Angular preserves the template's leading/trailing whitespace, so `textContent` is ` — ` (newline + indent + em-dash + newline). `have.text` does an exact match → fails. Fix: `.invoke('text').then((t) => expect(t.trim()).to.equal('—'))`. Vitest's `.textContent?.trim()` sidesteps the same trap.
+
 ---
 
 ## How to use this file

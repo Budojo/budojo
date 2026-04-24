@@ -67,7 +67,13 @@ describe('Academy home page', () => {
     cy.visitAuthenticated('/dashboard/academy');
     cy.wait('@academyNoAddress');
 
-    cy.get('[data-cy="academy-row-address"]').should('have.text', '—');
+    // `have.text` does an exact match, but Angular preserves template
+    // whitespace (newline + indent) around interpolated text, so the raw
+    // textContent is ` — ` not `—`. Trim before comparing — the Vitest
+    // sibling test takes the same shape.
+    cy.get('[data-cy="academy-row-address"]')
+      .invoke('text')
+      .then((t) => expect(t.trim()).to.equal('—'));
   });
 
   it('navigates to the edit form via the Edit button', () => {
