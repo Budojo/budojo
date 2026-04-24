@@ -32,4 +32,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->withTrashed();
     Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
     Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
+
+    // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
+    // or Laravel binds "summary" as an attendance-record id and returns 404.
+    Route::get('/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'summary']);
+    Route::get('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'index']);
+    Route::post('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'store']);
+    Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy']);
+    Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
 });
