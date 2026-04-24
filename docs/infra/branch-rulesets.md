@@ -41,7 +41,7 @@ All other rules are identical:
 - `required_linear_history`
 - `non_fast_forward` (no force-push)
 - `deletion` forbidden (branch cannot be deleted)
-- `creation` forbidden (branch cannot be recreated via push once deleted)
+- `creation` forbidden (protected branch cannot be created via push — belt-and-suspenders alongside the `deletion` rule so the history can't be rewritten by deleting the ruleset first and pushing a new branch with the same name)
 
 **No bypass actors.** Even the repo owner goes through a PR. Emergency bypass is one UI click away (see below).
 
@@ -65,22 +65,44 @@ If GitHub ever ships a first-class API endpoint for assigning Copilot programmat
 
 ## Applying / re-applying the rulesets
 
-The JSON files in `.github/rulesets/` are the source of truth. They were applied to the repo via:
+The JSON files in `.github/rulesets/` are the source of truth. **First-time creation** uses `POST`:
 
 ```bash
+# One-shot: only when the ruleset does not exist yet on the repo.
 gh api -X POST repos/m-bonanno/budojo/rulesets --input .github/rulesets/main-protection.json
 gh api -X POST repos/m-bonanno/budojo/rulesets --input .github/rulesets/develop-protection.json
 ```
 
-To re-apply after a manual UI edit (or to review drift), pull the current state and diff against the files:
+**Updates to an existing ruleset MUST use `PUT`** (replace) or `PATCH` (partial) targeting the ruleset ID — `POST` would silently create a duplicate instead of replacing, leaving overlapping rulesets that compose in confusing ways:
+
+```bash
+# 1. Find the current ruleset IDs
+gh api repos/m-bonanno/budojo/rulesets --jq '.[] | {id, name}'
+# -> e.g. { "id": 15504731, "name": "main-protection" }
+# -> e.g. { "id": 15504735, "name": "develop-protection" }
+
+# 2. Replace the ruleset body from the JSON file (PUT = full replace)
+gh api -X PUT repos/m-bonanno/budojo/rulesets/15504731 --input .github/rulesets/main-protection.json
+gh api -X PUT repos/m-bonanno/budojo/rulesets/15504735 --input .github/rulesets/develop-protection.json
+```
+
+To **review drift** (current live state vs JSON in repo), dump each ruleset and diff:
 
 ```bash
 gh api repos/m-bonanno/budojo/rulesets --jq '.[].id' | while read id; do
-  gh api repos/m-bonanno/budojo/rulesets/$id
+  gh api repos/m-bonanno/budojo/rulesets/$id > "/tmp/ruleset-$id.json"
+  echo "Dumped ruleset $id to /tmp/ruleset-$id.json"
 done
+# Then manual compare against .github/rulesets/*.json
 ```
 
-If drift appears, decide which side to trust and either re-apply from the file or update the file to match the UI state. **Never let UI state silently diverge from the JSON** — that defeats the reproducibility goal.
+If drift appears, decide which side to trust: either re-apply from the file via `PUT` (JSON wins), or update the file to match the UI state (UI wins). **Never let UI state silently diverge from the JSON** — that defeats the reproducibility goal.
+
+**Accidental duplicate?** If a `POST` was run on an already-existing ruleset, you'll see two rulesets with the same name in `gh api repos/.../rulesets`. Delete the newer one:
+
+```bash
+gh api -X DELETE repos/m-bonanno/budojo/rulesets/{newer-id}
+```
 
 ## Emergency bypass (hotfix without PR)
 

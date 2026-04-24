@@ -2,7 +2,12 @@ name: PR Quality Gates
 
 on:
   pull_request:
-    branches: [develop]
+    # Every PR targeting a protected branch must satisfy the required status
+    # checks. Both `main` (stable) and `develop` (beta) are protected by the
+    # rulesets in `.github/rulesets/`, so both need CI to run here. Without
+    # this, PRs from develop → main would never emit the required contexts
+    # and would stay blocked indefinitely.
+    branches: [main, develop]
 
 jobs:
 
