@@ -56,6 +56,10 @@ Format: `→` separates the symptom from the action.
 - Assumed semantic-release sees all git tags in CI → `actions/checkout@v4` defaults to `fetch-tags: false`. Add `fetch-tags: true` explicitly or versioning starts from scratch.
 - Tried to assign Copilot to a PR via a GitHub Action workflow → the REST path accepts 200 but no-ops. Use the repo Settings toggle.
 
+## Docker dev-env
+
+- After pulling a branch that adds a client npm dependency, the `budojo_client` container still runs the old `node_modules` (the volume was populated at build time). Angular barfs with `TS2307 Cannot find module '<new-dep>'`. Fix: `docker exec budojo_client sh -c "cd /app && npm install"` after `git pull`. Rule of thumb: if `package.json` changed in the diff you just pulled, sync the container before running anything.
+
 ---
 
 ## How to use this file
