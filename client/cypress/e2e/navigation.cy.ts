@@ -17,6 +17,8 @@ const ATHLETES_EMPTY = {
 describe('Navigation guards', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
+    // M3.4 widget fires on /dashboard/athletes load; stub to avoid proxy noise.
+    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
   it('redirects unauthenticated visitor from / to /auth/login', () => {
@@ -70,6 +72,7 @@ describe('Navigation guards', () => {
 describe('Sidebar brand + sign out', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
+    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
   it('renders the academy name as the dominant sidebar brand', () => {

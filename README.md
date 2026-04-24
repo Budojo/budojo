@@ -243,8 +243,10 @@ Register, login, logout via Sanctum Bearer tokens. Angular login/register pages.
 - Academy: create, retrieve (API + Angular setup page)
 - Athletes: full CRUD API, list UI with belt/status filters, pagination, soft-delete
 
-### M3 — Documents & Deadlines 📋 Planned
-Upload and track key documents per athlete (ID, medical certificate). Alerts when expiry is approaching.
+### M3 — Documents & Deadlines ✅ Done
+- Documents: full CRUD API (upload, list, download, soft-delete), Angular list UI with cancelled toggle, reactive-form upload dialog, cross-athlete expiring list.
+- Dashboard widget surfaces documents expiring in the next 30 days with a deep-link to the filtered list.
+- See [`docs/specs/m3-documents.md`](docs/specs/m3-documents.md) for the PRD.
 
 ### M4 — Attendance 📋 Planned
 Log class check-ins (single or bulk). Attendance history per athlete. Monthly summary.

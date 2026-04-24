@@ -70,6 +70,13 @@ export const routes: Routes = [
           },
         ],
       },
+      {
+        path: 'documents/expiring',
+        loadComponent: () =>
+          import('./features/documents/expiring/expiring-documents-list.component').then(
+            (m) => m.ExpiringDocumentsListComponent,
+          ),
+      },
     ],
   },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
