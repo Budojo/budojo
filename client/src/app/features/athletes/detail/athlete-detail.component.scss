@@ -4,10 +4,16 @@
 .athlete-detail-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1.5rem 2rem;
+  // Mobile-first padding; scales up at the sidebar breakpoint (768px).
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+
+  @media (min-width: 768px) {
+    padding: 1.5rem 2rem;
+    gap: 1.5rem;
+  }
 
   &__back {
     display: inline-flex;

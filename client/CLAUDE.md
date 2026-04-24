@@ -60,6 +60,42 @@ Krug's three laws, translated:
 | **Aesthetic-Usability effect** | A polished UI is forgiven for minor flaws; a rough UI makes every flaw feel worse. Invest in spacing and alignment — the cheapest perceived-quality lift. |
 | **Doherty Threshold** | 400ms is the threshold above which users perceive delay. Optimistic UI (update local state before server confirms) for `DELETE` and `PUT` where rollback is cheap. |
 
+### Mobile-first is the default
+
+The primary form factor for Budojo is the phone: the instructor moves around the mat with the device in hand (check-in, look up athlete, scan a document expiring). Desktop is the **secondary** layout, not the default. Every new component, screen, and layout decision starts from the mobile viewport and scales **up**.
+
+**Breakpoint tokens** — these are the only breakpoints we use. Don't invent new ones without adding them here first.
+
+| Token | Pixel | Meaning |
+|-------|-------|---------|
+| — | < 768px | Mobile (default). Topbar + off-canvas drawer, single-column, full-bleed cards. |
+| `768px` | tablet / small desktop | Sidebar shell appears, multi-column grids can emerge. |
+| `1024px` | desktop | Full two-column dashboard, wider dialogs, more horizontal nav. |
+| `1440px` | wide desktop | Max-width content, no further scaling. |
+
+**Rules:**
+
+- **Base styles are mobile.** Write the mobile layout first; add `@media (min-width: <token>)` blocks to scale up. Never the inverse (don't write desktop and then `@media (max-width: …)` down).
+- **Touch targets ≥ 48 × 48 CSS px** for any primary CTA, nav link, icon button. Bigger where ambient noise or thumb reach demands it (bottom of screen, corners per Fitts).
+- **Dialogs** (`p-dialog`) use `[breakpoints]="{ '768px': '92vw' }"` so they never overflow on mobile.
+- **Tables** (`p-table`) either wrap in a scrollable container (horizontal scroll acceptable with visual cue) or collapse to a card layout below 768px. The choice is per-feature; attendance, list-heavy views prefer cards.
+- **Sidebar / drawer behavior.** The dashboard shell renders a **mobile topbar + off-canvas drawer** below 768px and a **static sidebar** at or above it. See `DashboardComponent` as the reference implementation.
+- **Viewport units**: prefer `100dvh` over `100vh` for full-height layouts so iOS Safari's dynamic viewport doesn't cut off the bottom. Fall back to `100vh` as progressive enhancement.
+- **Safe area**: honour `env(safe-area-inset-*)` on any pinned UI (topbar, bottom nav) when iOS notches become relevant. For now the topbar is fine without it because it isn't sticky to the very edge.
+- **Gesture-based interactions** (swipe-to-delete, pull-to-refresh) are *not* the default — they're added only where the business flow genuinely benefits (e.g. M4 attendance check-in). Otherwise plain taps + buttons.
+
+### PWA scaffold
+
+The app is installable as a PWA. Key files:
+
+- `client/public/manifest.webmanifest` — name, icons, theme, `start_url: /dashboard/athletes`, `display: standalone`
+- `client/public/icons/` — `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`
+- `client/ngsw-config.json` — Angular Service Worker cache strategy: app shell `prefetch`, `/api/v1/**` `freshness` (3s network timeout, 1h max age)
+- `client/src/index.html` — `<link rel="manifest">`, `<meta name="theme-color">`, iOS-specific meta (`apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`)
+- `client/src/app/app.config.ts` — `provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode(), registrationStrategy: 'registerWhenStable:30000' })`
+
+**Don't** register a new service worker file or bypass the Angular builder — `ngsw-worker.js` is generated at build time from `ngsw-config.json`.
+
 ### Red flags in code review
 
 A reviewer should push back when they see:
@@ -73,6 +109,9 @@ A reviewer should push back when they see:
 - A `loading` state that's not reflected in the UI (user clicks, nothing happens for 2s, then redirect)
 - Inline styles (`style="..."`) instead of a component scss file
 - A Material Design rule or Law-of-UX cited in review that was dismissed with "I prefer it this way"
+- **A new component with a `max-width: 1024px`-style hard cap that doesn't also have a mobile-first base rule**
+- **A `p-dialog` with a fixed `width` and no `[breakpoints]` for mobile**
+- **A custom breakpoint value that isn't one of `768 / 1024 / 1440`**
 
 ---
 

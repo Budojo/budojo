@@ -34,6 +34,23 @@ export class DashboardComponent {
   protected readonly menuVisible = signal(false);
 
   /**
+   * Mobile sidebar drawer state. On viewports below the sidebar breakpoint
+   * (see dashboard.component.scss @media) the sidebar is hidden off-canvas
+   * by default; tapping the hamburger in the mobile topbar flips this to
+   * `true` and CSS slides the sidebar in. Desktop viewports ignore this
+   * signal — the sidebar is always visible there.
+   */
+  protected readonly sidebarOpen = signal(false);
+
+  protected toggleSidebar(): void {
+    this.sidebarOpen.update((v) => !v);
+  }
+
+  protected closeSidebar(): void {
+    this.sidebarOpen.set(false);
+  }
+
+  /**
    * Menu items shown when the user activates the brand. Today there is only
    * one entry (Sign out), but the structure is deliberately a list so future
    * additions (Edit academy, Account settings, Theme toggle) slot in without

@@ -1,5 +1,29 @@
-<div class="layout">
-  <aside class="sidebar">
+<div class="layout" [class.layout--drawer-open]="sidebarOpen()">
+  <!-- Mobile topbar: visible only below the sidebar breakpoint (see SCSS).
+       Hamburger opens the off-canvas sidebar; the app name stays as a static
+       anchor because the full brand menu (incl. sign-out) lives in the drawer
+       where the academy name already is. -->
+  <header class="topbar" role="banner">
+    <button
+      type="button"
+      class="topbar__hamburger"
+      [attr.aria-label]="sidebarOpen() ? 'Close navigation' : 'Open navigation'"
+      [attr.aria-expanded]="sidebarOpen()"
+      aria-controls="app-sidebar"
+      (click)="toggleSidebar()"
+      data-cy="topbar-hamburger"
+    >
+      <i class="pi pi-bars" aria-hidden="true"></i>
+    </button>
+    <span class="topbar__title">🥋 Budojo</span>
+  </header>
+
+  <aside
+    id="app-sidebar"
+    class="sidebar"
+    [class.sidebar--open]="sidebarOpen()"
+    [attr.aria-hidden]="!sidebarOpen() && null"
+  >
     <button
       type="button"
       class="sidebar__brand"
@@ -30,12 +54,26 @@
         routerLink="athletes"
         routerLinkActive="sidebar__nav-item--active"
         class="sidebar__nav-item"
+        (click)="closeSidebar()"
       >
         <i class="pi pi-users"></i>
         <span>Athletes</span>
       </a>
     </nav>
   </aside>
+
+  <!-- Backdrop: only mounted when the mobile drawer is open. Click dismisses.
+       Above the main content (so a tap closes the drawer instead of interacting
+       with the page beneath) but below the sidebar (so the sidebar stays
+       interactive). -->
+  @if (sidebarOpen()) {
+    <div
+      class="layout__backdrop"
+      aria-hidden="true"
+      (click)="closeSidebar()"
+      data-cy="drawer-backdrop"
+    ></div>
+  }
 
   <main class="main">
     <router-outlet />
