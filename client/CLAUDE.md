@@ -34,6 +34,28 @@ Budojo's UI runs on **PrimeNG 21 with the Material preset**. MD3 is our **design
 - **Motion budget.** MD3's "easing standard" (cubic-bezier 0.2, 0, 0, 1) for ~200–300ms. No 1-second animations, no springs, no bounce.
 - **Accessibility baseline.** Touch target ≥ 48×48 CSS pixels (Laws of UX Fitts). Contrast ratio ≥ 4.5:1 for text. Never rely on color alone — pair with icon or text.
 
+### Design system — Apple-minimal override layer
+
+The MD3 philosophy above is the *why*; `docs/design/DESIGN_SYSTEM.md` is the *what*. It's an Apple HIG / iOS 17+ override layer on the PrimeNG Material preset — near-monochrome palette + one indigo accent (`--p-primary-500: #5b6cff`), hairline borders, max two elevation levels, 12/16/24 px radii, 160/240/360 ms motion on a decelerate cubic-bezier.
+
+Mandatory reads before any new component or screen:
+
+- **[`docs/design/DESIGN_SYSTEM.md`](../docs/design/DESIGN_SYSTEM.md)** — full token inventory, per-component override specs for 13 PrimeNG atoms, PWA gotchas.
+- **[`docs/design/README.md`](../docs/design/README.md)** — content voice (sentence-case, second-person, no emoji in UI, `·` as separator), iconography (`pi pi-*` only — no SF Symbols, no custom SVG), palette + casing rules.
+
+Wiring:
+
+- Tokens live in `client/src/styles/budojo-theme.scss` and are imported last from `client/src/styles.scss` so they win against the Material preset defaults.
+- Inter is loaded via `@fontsource/inter` (weights 400/500/600/700).
+- Dark mode: `.dark` class on `<html>`, matches `providePrimeNG({ theme: { options: { darkModeSelector: '.dark' } } })`.
+
+Hard rules, on top of the MD3 bullets above:
+
+- **Never use raw hex in component SCSS.** Use `var(--p-*)` tokens or the `--budojo-*` semantics. Exceptions are belt colors (domain palette) with a rationale comment — canon § gotchas.
+- **Do not restyle PrimeNG internals.** Override via CSS custom properties; use `::ng-deep` only when an internal selector has no token exposed AND it's documented in `DESIGN_SYSTEM.md`.
+- **Motion uses the `--budojo-motion-*` tokens**, not hand-picked `200ms ease-out`. Three durations, one curve.
+- **Sentence-case everything.** Buttons, headers, tags. No title-case, no uppercase — except eyebrow labels (`EXPIRING SOON`, `letter-spacing: 0.06em`). If you find yourself writing `text-transform: uppercase` elsewhere, you're off-canon.
+
 ### Don't Make Me Think — operational rules
 
 Krug's three laws, translated:
