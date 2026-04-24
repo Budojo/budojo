@@ -47,11 +47,22 @@ describe('Mobile shell (390 × 844)', () => {
 
     cy.get('[data-cy="topbar-hamburger"]').click();
     cy.get('[data-cy="topbar-hamburger"]').should('have.attr', 'aria-expanded', 'true');
-    cy.get('[data-cy="drawer-backdrop"]').should('be.visible');
+    // `.exist` over `.be.visible`: the backdrop is conditionally mounted
+    // via `@if (sidebarOpen())`, so existing in the DOM IS the assertion
+    // we want. Cypress' `be.visible` runs the same "not covered" check
+    // that biases the click() below — at this viewport the sidebar
+    // covers the backdrop's center and the visibility check would
+    // false-fail even though the user can clearly see the right edge.
+    cy.get('[data-cy="drawer-backdrop"]').should('exist');
     cy.get('.sidebar--open').should('exist');
     cy.get('.sidebar__brand-name').should('contain.text', 'Test Academy');
 
-    cy.get('[data-cy="drawer-backdrop"]').click();
+    // The backdrop is a full-viewport fixed element, but at 390×844 the
+    // sidebar (16 rem = 256 px) covers the left 2/3 — Cypress' default
+    // center click lands inside the sidebar's DOM box and fails the
+    // "not covered" actionability check. Click at the right edge where
+    // the backdrop is actually user-visible, same place a real user taps.
+    cy.get('[data-cy="drawer-backdrop"]').click('right');
     cy.get('[data-cy="drawer-backdrop"]').should('not.exist');
     cy.get('[data-cy="topbar-hamburger"]').should('have.attr', 'aria-expanded', 'false');
   });

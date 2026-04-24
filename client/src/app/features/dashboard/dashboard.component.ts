@@ -71,4 +71,17 @@ export class DashboardComponent {
     this.authService.logout();
     void this.router.navigate(['/auth/login']);
   }
+
+  /**
+   * Template-facing wrapper around the private `logout()`. Declared
+   * `protected` so the HTML binding can call it while the real auth
+   * invalidation stays encapsulated on the class. Also closes the
+   * mobile drawer first so the user doesn't land on `/auth/login`
+   * with a drawer still slid in (Krug forgiveness — a click should
+   * complete ONE interaction, not leave trailing UI state).
+   */
+  protected signOut(): void {
+    this.closeSidebar();
+    this.logout();
+  }
 }

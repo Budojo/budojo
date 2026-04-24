@@ -103,4 +103,50 @@ describe('Sidebar brand + sign out', () => {
 
     cy.url().should('include', '/auth/login');
   });
+
+  // The brand-menu path above still works (and a power user might keep
+  // using it), but #69 added a visible row at the bottom of the sidebar
+  // so a coach mid-class doesn't have to discover the hidden dropdown.
+  it('signs the user out via the dedicated sidebar footer button', () => {
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
+    cy.visitAuthenticated('/dashboard/athletes');
+    cy.wait('@academy');
+    cy.wait('@athletes');
+
+    cy.get('[data-cy="nav-sign-out"]').click();
+    cy.url().should('include', '/auth/login');
+  });
+});
+
+// ── #68 — topbar wordmark links to /dashboard home ──────────────────────────
+
+describe('Topbar home link', () => {
+  beforeEach(() => {
+    cy.clearLocalStorage();
+    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
+  });
+
+  it('navigates to /dashboard when the Budojo wordmark is tapped', () => {
+    // Topbar is mobile-only (`display: none` above the sidebar breakpoint
+    // — see dashboard.component.scss). Cypress defaults to 1280×720 which
+    // hides it. Flip to a mobile viewport so the link is visible and the
+    // `.click()` actionability check passes.
+    cy.viewport(390, 844);
+    // Alias + wait on the guard-triggered requests, same pattern the rest
+    // of this file uses. Clicking the topbar link before hasAcademyGuard
+    // resolves can race the redirect under guard on slower CI runs.
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
+
+    // Start somewhere non-home so the redirect is observable.
+    cy.visitAuthenticated('/dashboard/academy');
+    cy.wait('@academy');
+    cy.url().should('include', '/dashboard/academy');
+
+    cy.get('[data-cy="topbar-home-link"]').click();
+    cy.wait('@athletes');
+    // /dashboard redirects to /dashboard/athletes by default.
+    cy.url().should('include', '/dashboard/athletes');
+  });
 });

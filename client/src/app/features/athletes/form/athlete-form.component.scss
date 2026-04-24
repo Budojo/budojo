@@ -65,8 +65,10 @@
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--p-content-border-color);
+    // No border-top — the form's own 1.5rem gap already separates this
+    // action row from the fields above. A divider there read as a
+    // section break (canon § card anatomy uses hairlines INSIDE a card,
+    // not between fields and their terminal buttons).
     margin-top: 0.5rem;
   }
 }
