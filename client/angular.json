@@ -29,8 +29,7 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"],
-            "serviceWorker": "ngsw-config.json"
+            "styles": ["src/styles.scss"]
           },
           "configurations": {
             "production": {
@@ -46,7 +45,8 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "serviceWorker": "ngsw-config.json"
             },
             "development": {
               "optimization": false,

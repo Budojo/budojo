@@ -54,7 +54,10 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   border-bottom: 1px solid var(--p-surface-700);
   position: sticky;
   top: 0;
-  z-index: 20;
+  // Sits above both the backdrop (40) and the drawer sidebar (50) so the
+  // hamburger stays interactive while the drawer is open — tap it a second
+  // time to close, matching the "Close navigation" aria-label.
+  z-index: 60;
 
   @media (min-width: $sidebar-breakpoint) {
     display: none;
@@ -104,7 +107,7 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   overflow-y: auto;
 
   // Mobile: off-canvas drawer. Fixed position, slides in from left when
-  // `.sidebar--open` is applied. Sits above the backdrop (z-index ordering).
+  // `.sidebar--open` is applied. Sits above the backdrop, below the topbar.
   position: fixed;
   top: 0;
   left: 0;
@@ -113,18 +116,31 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   width: $sidebar-width;
   max-width: calc(100vw - 3rem); // never full-cover — keep a close hint
   transform: translateX(-100%);
-  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  // `visibility: hidden` hides the off-canvas drawer from assistive tech AND
+  // keyboard tab order — screen readers respect it, `transform` alone doesn't.
+  // Delayed by the transition duration so the slide-out animation still plays
+  // before the element becomes inert; on slide-in, visibility flips to `visible`
+  // immediately so the content is reachable as soon as it starts animating in.
+  visibility: hidden;
+  transition:
+    transform 200ms cubic-bezier(0.2, 0, 0, 1),
+    visibility 0s linear 200ms;
   z-index: 50;
   will-change: transform;
 
   &--open {
     transform: translateX(0);
+    visibility: visible;
+    transition:
+      transform 200ms cubic-bezier(0.2, 0, 0, 1),
+      visibility 0s linear 0s;
   }
 
-  // Desktop: static, always visible.
+  // Desktop: static, always visible — drops the off-canvas visibility logic.
   @media (min-width: $sidebar-breakpoint) {
     position: static;
     transform: none;
+    visibility: visible;
     height: auto;
     width: $sidebar-width;
     min-width: $sidebar-width;

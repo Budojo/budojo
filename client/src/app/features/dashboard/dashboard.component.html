@@ -1,8 +1,12 @@
-<div class="layout" [class.layout--drawer-open]="sidebarOpen()">
+<div class="layout">
   <!-- Mobile topbar: visible only below the sidebar breakpoint (see SCSS).
        Hamburger opens the off-canvas sidebar; the app name stays as a static
        anchor because the full brand menu (incl. sign-out) lives in the drawer
-       where the academy name already is. -->
+       where the academy name already is.
+       Topbar sits ABOVE the backdrop (z-index ordering) so the hamburger
+       stays tappable while the drawer is open — it's what closes the drawer
+       when the user taps it a second time, matching the "Close navigation"
+       aria-label. -->
   <header class="topbar" role="banner">
     <button
       type="button"
@@ -18,12 +22,11 @@
     <span class="topbar__title">🥋 Budojo</span>
   </header>
 
-  <aside
-    id="app-sidebar"
-    class="sidebar"
-    [class.sidebar--open]="sidebarOpen()"
-    [attr.aria-hidden]="!sidebarOpen() && null"
-  >
+  <!-- The sidebar is hidden from assistive tech via CSS (`visibility: hidden`)
+       when off-canvas on mobile, and always visible on desktop. No JS viewport
+       detection needed — the media query inside the SCSS handles both states.
+       See dashboard.component.scss § .sidebar for the visibility transitions. -->
+  <aside id="app-sidebar" class="sidebar" [class.sidebar--open]="sidebarOpen()">
     <button
       type="button"
       class="sidebar__brand"
@@ -63,9 +66,9 @@
   </aside>
 
   <!-- Backdrop: only mounted when the mobile drawer is open. Click dismisses.
-       Above the main content (so a tap closes the drawer instead of interacting
-       with the page beneath) but below the sidebar (so the sidebar stays
-       interactive). -->
+       Sits above the main content (so a tap closes the drawer instead of
+       interacting with the page beneath) but below the sidebar AND the topbar
+       (so both remain interactive — tap backdrop OR tap hamburger to close). -->
   @if (sidebarOpen()) {
     <div
       class="layout__backdrop"
