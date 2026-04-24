@@ -175,6 +175,41 @@ paths:
               example:
                 message: No academy found.
 
+    patch:
+      tags: [academy]
+      summary: Update the authenticated user's academy
+      description: |
+        Partial update of `name` and/or `address`. The `slug` is immutable by
+        design — renames keep the original permalink stable. A user without
+        an academy gets a 403 `{"message":"Forbidden."}` (same wire contract
+        the rest of the API uses for ownership failures), not a 404.
+      operationId: academyUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyUpdateRequest'
+      responses:
+        '200':
+          description: Academy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: The authenticated user has no academy to update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Forbidden.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /athletes:
     get:
       tags: [athletes]
@@ -770,6 +805,23 @@ components:
           maxLength: 500
           nullable: true
           example: Rua Example 123, Lisboa
+
+    AcademyUpdateRequest:
+      type: object
+      description: |
+        Partial update. Every property is optional; only keys present in the
+        payload are applied. `slug` is absent by design — it is immutable.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Gracie Barra Lisboa Centro
+        address:
+          type: string
+          maxLength: 500
+          nullable: true
+          example: Rua Example 456, Lisboa
 
     Academy:
       type: object
