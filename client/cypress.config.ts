@@ -3,12 +3,14 @@ import { defineConfig } from 'cypress';
 export default defineConfig({
   e2e: {
     baseUrl: 'http://localhost:4200',
+    // `cypress/e2e/**/*.cy.ts` — only E2E tests. The design-inventory
+    // screenshot producer lives in a sibling folder `cypress/inventory/`
+    // so it's OUT of this glob by construction, not by an exclude
+    // pattern (Cypress 13 applies excludeSpecPattern even when --spec
+    // is passed explicitly, which silently dropped our inventory runs
+    // into "no specs found"). See scripts/design-inventory.cjs for how
+    // the inventory glob gets enabled on demand.
     specPattern: 'cypress/e2e/**/*.cy.ts',
-    // The design inventory is not a test — it's a screenshot producer
-    // used on demand via `npm run design:inventory`. Keeping it out of
-    // the default glob so it doesn't add ~1min to every PR and so CI
-    // doesn't wastefully regenerate screenshots nobody will commit.
-    excludeSpecPattern: 'cypress/e2e/design-inventory.cy.ts',
     supportFile: 'cypress/support/e2e.ts',
     viewportWidth: 1280,
     viewportHeight: 720,
