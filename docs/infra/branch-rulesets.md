@@ -2,22 +2,22 @@
 
 ## What this covers
 
-Two repository rulesets on `github.com/m-bonanno/budojo` and one GitHub Actions workflow that together:
+Two repository rulesets on `github.com/m-bonanno/budojo` that together:
 
 - Forbid direct commits to `main` and `develop` — everything goes through a pull request
 - Require all 8 CI jobs to be green before merge
 - Require the PR branch to be up-to-date with its base (strict merge)
 - Keep history linear (no merge-commit ziggurats)
-- Auto-request **Copilot** as a reviewer the moment a PR is opened — so the author never has to remember it
+
+Plus a documented recipe for **Copilot auto-review**, which is a repo-level toggle (not a workflow) because GitHub's REST API silently ignores requests to add Copilot as a reviewer via `pulls.requestReviewers`.
 
 ## Files
 
-| Path                                           | Purpose                                                               |
-| ---------------------------------------------- | --------------------------------------------------------------------- |
-| `.github/rulesets/main-protection.json`        | Source of truth for the `main` branch ruleset                         |
-| `.github/rulesets/develop-protection.json`     | Source of truth for the `develop` branch ruleset                      |
-| `.github/workflows/request-copilot-review.yml` | Workflow that calls `pulls.requestReviewers` on `pull_request.opened` |
-| `docs/infra/branch-rulesets.md`                | This file                                                             |
+| Path                                       | Purpose                                          |
+| ------------------------------------------ | ------------------------------------------------ |
+| `.github/rulesets/main-protection.json`    | Source of truth for the `main` branch ruleset    |
+| `.github/rulesets/develop-protection.json` | Source of truth for the `develop` branch ruleset |
+| `docs/infra/branch-rulesets.md`            | This file                                        |
 
 ## Enforcement details
 
@@ -45,11 +45,23 @@ All other rules are identical:
 
 **No bypass actors.** Even the repo owner goes through a PR. Emergency bypass is one UI click away (see below).
 
-## Copilot auto-review workflow
+## Copilot auto-review — enable in repo Settings, not via workflow
 
-`.github/workflows/request-copilot-review.yml` runs on `pull_request.opened`, `reopened`, and `ready_for_review` (drafts are skipped). It calls `pulls.requestReviewers` via `actions/github-script@v7` with `reviewers: ['Copilot']`. If Copilot is already requested (re-open of an already-pending PR) or the org doesn't have Copilot enabled, the workflow logs a warning and exits without failing the build.
+GitHub exposes Copilot code review as a **repo-level toggle** in the web UI, not as something the standard `pulls.requestReviewers` REST API can populate:
 
-Permissions required: `pull-requests: write` only.
+- The REST API responds **200 OK** to `POST /repos/{owner}/{repo}/pulls/{n}/requested_reviewers` with `reviewers: ["Copilot"]`, but silently drops the reviewer — the request is never persisted.
+- Passing the bot login `copilot-pull-request-reviewer` instead returns **422 "Reviews may only be requested from collaborators"** — Copilot is not a collaborator in the API sense.
+- The UI button ("Request review from Copilot") uses an internal path that is not publicly documented.
+
+Given that, the correct recipe is:
+
+1. Go to **Settings → Code & automation → Code review → Copilot Code Review**
+2. Enable **`Automatically request Copilot code review on pull request`**
+3. Save
+
+After that, every new PR (opened or re-opened, drafts skipped) gets Copilot assigned automatically, and Copilot begins reviewing within ~1–3 minutes. No workflow required; no GitHub App to install; the trigger is managed by GitHub and logged in the audit log.
+
+If GitHub ever ships a first-class API endpoint for assigning Copilot programmatically (or a ruleset rule of type `required_reviewer: copilot`), swap this recipe for the committed version at that point.
 
 ## Applying / re-applying the rulesets
 
@@ -89,12 +101,3 @@ Preferred alternative: open a PR anyway, mark it `hotfix`, and merge as soon as 
 `gh api repos/m-bonanno/budojo/branches/{main,develop}/protection` still returns branch-protection rules from before rulesets were introduced. They overlap with the ruleset but are **less strict** (their `required_status_checks.contexts: []` meant no CI was actually required — the gap this PR closes). The two systems coexist and the **most restrictive wins**.
 
 **Follow-up**: after a few merges confirm the new rulesets behave correctly, remove the legacy branch protection to avoid two overlapping sources of truth. Do it in its own tiny PR with a link to this doc so the decision trail is clear.
-
-## Copilot code review — repo-level setting
-
-The workflow above handles the **reviewer assignment**. The actual review behaviour (how Copilot responds, which rules it applies) is controlled in **Settings → Code & automation → Code review → Copilot Code Review**. Current state:
-
-- `Automatically request Copilot review on pull request` — not enabled; the workflow replaces this toggle with a committed, git-visible trigger
-- `Copilot Chat for this repository` — enabled (comments and review actions land)
-
-If GitHub introduces a ruleset-native "require Copilot as reviewer" rule in the future, we can drop the workflow in favour of the ruleset rule. Until then, the workflow is the explicit path.
