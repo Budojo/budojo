@@ -33,6 +33,20 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'athletes', pathMatch: 'full' },
       {
+        path: 'academy',
+        loadComponent: () =>
+          import('./features/academy/detail/academy-detail.component').then(
+            (m) => m.AcademyDetailComponent,
+          ),
+      },
+      {
+        path: 'academy/edit',
+        loadComponent: () =>
+          import('./features/academy/form/academy-form.component').then(
+            (m) => m.AcademyFormComponent,
+          ),
+      },
+      {
         path: 'athletes',
         loadComponent: () =>
           import('./features/athletes/list/athletes-list.component').then(

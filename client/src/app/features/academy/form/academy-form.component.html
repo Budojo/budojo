@@ -1,0 +1,107 @@
+<p-toast position="top-right" />
+
+<section class="form" data-cy="academy-form">
+  <header class="form__header">
+    <p class="form__eyebrow">Academy</p>
+    <h1 class="form__title">Edit academy</h1>
+  </header>
+
+  @if (error()) {
+    <p-message
+      severity="error"
+      [text]="error()!"
+      styleClass="form__alert"
+      data-cy="academy-form-error"
+    />
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form__fields">
+    <div class="field">
+      <label for="academy-name"
+        >Name <span class="field__required" aria-hidden="true">*</span></label
+      >
+      <input
+        pInputText
+        id="academy-name"
+        type="text"
+        formControlName="name"
+        autocomplete="organization"
+        placeholder="Gracie Barra Lisboa"
+        maxlength="255"
+        data-cy="academy-form-name"
+        [class.ng-invalid]="name.invalid && name.touched"
+        [class.ng-dirty]="name.touched"
+        [attr.aria-invalid]="name.invalid && name.touched ? 'true' : null"
+        [attr.aria-describedby]="name.invalid && name.touched ? 'academy-name-error' : null"
+      />
+      @if (name.invalid && name.touched) {
+        <small id="academy-name-error" class="field__error" data-cy="academy-form-name-error">
+          @if (name.errors?.['required'] || name.errors?.['whitespace']) {
+            Academy name is required.
+          } @else if (name.errors?.['maxlength']) {
+            Maximum 255 characters.
+          }
+        </small>
+      }
+    </div>
+
+    <!--
+      Permalink: rendered as a static info line, not an input. Using an
+      <input readonly> would signal "you CAN edit this, just not right
+      now" — wrong signifier. A <p> inside a muted row communicates the
+      immutability correctly (Norman § affordance + signifier).
+    -->
+    <div class="field field--readonly">
+      <span class="field__label">Permalink</span>
+      <p class="field__readonly-value" data-cy="academy-form-slug">
+        {{ slug() || '—' }}
+      </p>
+      <small class="field__hint">
+        Stays stable across renames — bookmarks and shared links keep working.
+      </small>
+    </div>
+
+    <div class="field">
+      <label for="academy-address"> Address <span class="field__optional">(optional)</span> </label>
+      <textarea
+        pTextarea
+        id="academy-address"
+        formControlName="address"
+        placeholder="Via Roma 123, Torino"
+        rows="3"
+        maxlength="500"
+        data-cy="academy-form-address"
+        [class.ng-invalid]="address.invalid && address.touched"
+        [class.ng-dirty]="address.touched"
+      ></textarea>
+      @if (address.invalid && address.touched) {
+        <small class="field__error">
+          @if (address.errors?.['maxlength']) {
+            Maximum 500 characters.
+          }
+        </small>
+      }
+      <small class="field__hint"> Leave empty to clear the address on file. </small>
+    </div>
+
+    <div class="form__actions">
+      <p-button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        [text]="true"
+        (onClick)="cancel()"
+        styleClass="form__cancel"
+        data-cy="academy-form-cancel"
+      />
+      <p-button
+        type="submit"
+        label="Save"
+        [loading]="submitting()"
+        [disabled]="submitting()"
+        styleClass="form__save"
+        data-cy="academy-form-save"
+      />
+    </div>
+  </form>
+</section>

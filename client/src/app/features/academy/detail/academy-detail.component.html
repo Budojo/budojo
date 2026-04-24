@@ -1,0 +1,52 @@
+@let a = academy();
+
+<section class="detail" data-cy="academy-detail">
+  <header class="detail__header">
+    <div class="detail__heading">
+      <p class="detail__eyebrow">Academy</p>
+      <h1 class="detail__title" data-cy="academy-name">
+        {{ a?.name ?? '—' }}
+      </h1>
+    </div>
+
+    <p-button
+      label="Edit"
+      icon="pi pi-pencil"
+      severity="secondary"
+      [outlined]="true"
+      routerLink="/dashboard/academy/edit"
+      styleClass="detail__edit"
+      data-cy="academy-edit-link"
+    />
+  </header>
+
+  <dl class="card" aria-label="Academy details">
+    <div class="row">
+      <dt class="row__label">Name</dt>
+      <dd class="row__value" data-cy="academy-row-name">{{ a?.name ?? '—' }}</dd>
+    </div>
+
+    <div class="row">
+      <dt class="row__label">Permalink</dt>
+      <dd class="row__value row__value--mono" data-cy="academy-row-slug">
+        {{ a?.slug ?? '—' }}
+      </dd>
+    </div>
+
+    <div class="row">
+      <dt class="row__label">Address</dt>
+      <dd class="row__value" data-cy="academy-row-address">
+        {{ a?.address ?? '—' }}
+      </dd>
+    </div>
+  </dl>
+
+  <!--
+    The slug is shown but never editable. Document it inline so the
+    curious user doesn't have to ask why — follows Norman's "signifier"
+    rule (explain constraints at the affordance, not in a help doc).
+  -->
+  <p class="detail__hint">
+    Permalink stays stable across renames. Change the name anytime; the permalink never moves.
+  </p>
+</section>

@@ -172,4 +172,102 @@ describe('AcademyService', () => {
       expect(service.academy()).toEqual(created);
     });
   });
+
+  describe('update', () => {
+    it('PATCHes /api/v1/academy with a partial payload and swaps the signal', () => {
+      // Hydrate the cache so we can verify the signal actually swaps — not
+      // just gets populated.
+      service.get().subscribe();
+      httpMock.expectOne('/api/v1/academy').flush({ data: makeAcademy({ name: 'Old' }) });
+      expect(service.academy()?.name).toBe('Old');
+
+      const updated = makeAcademy({ name: 'Renamed', address: 'Via Nuova 1' });
+      let received: Academy | undefined;
+
+      service.update({ name: 'Renamed', address: 'Via Nuova 1' }).subscribe((a) => (received = a));
+      const req = httpMock.expectOne('/api/v1/academy');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ name: 'Renamed', address: 'Via Nuova 1' });
+      req.flush({ data: updated });
+
+      expect(received).toEqual(updated);
+      expect(service.academy()).toEqual(updated);
+    });
+
+    it('sends address: null on the wire when the caller explicitly clears it', () => {
+      // Distinct from "address omitted" — the server contract is that `null`
+      // clears, an omitted key leaves the previous value untouched. The
+      // service must forward the caller's intent verbatim.
+      service.update({ address: null }).subscribe();
+
+      const req = httpMock.expectOne('/api/v1/academy');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ address: null });
+      req.flush({ data: makeAcademy({ address: null }) });
+    });
+
+    it('propagates 422 server errors without clobbering the cached signal', () => {
+      const cached = makeAcademy({ name: 'Unchanged' });
+      service.get().subscribe();
+      httpMock.expectOne('/api/v1/academy').flush({ data: cached });
+
+      let capturedError: HttpErrorResponse | undefined;
+      service.update({ name: '' }).subscribe({ error: (e) => (capturedError = e) });
+      httpMock.expectOne('/api/v1/academy').flush(
+        { message: 'Invalid', errors: { name: ['required'] } },
+        {
+          status: 422,
+          statusText: 'Unprocessable',
+        },
+      );
+
+      expect(capturedError?.status).toBe(422);
+      // Signal survives a validation failure — the form can retry without
+      // a refetch and the sidebar brand label stays on-screen.
+      expect(service.academy()).toEqual(cached);
+    });
+
+    it('clears the cache on 403 so downstream guards can redirect to /setup', () => {
+      // Backend contract asymmetry: PATCH returns 403 when the user no
+      // longer has an academy, while GET returns 404 for the same state.
+      // The service turns 403 into the same net effect as a 404 from GET —
+      // cache cleared — so the next guard run re-fetches, sees 404, and
+      // redirects to /setup. Without this the sidebar would keep showing
+      // a now-vanished academy until manual reload.
+      const cached = makeAcademy({ name: 'About to vanish' });
+      service.get().subscribe();
+      httpMock.expectOne('/api/v1/academy').flush({ data: cached });
+      expect(service.academy()).toEqual(cached);
+
+      let capturedError: HttpErrorResponse | undefined;
+      service.update({ name: 'Renamed' }).subscribe({ error: (e) => (capturedError = e) });
+      httpMock
+        .expectOne('/api/v1/academy')
+        .flush({ message: 'Forbidden.' }, { status: 403, statusText: 'Forbidden' });
+
+      expect(capturedError?.status).toBe(403);
+      expect(service.academy()).toBeNull();
+    });
+
+    it('bumps the epoch so a mid-flight get() cannot clobber a successful update', () => {
+      // Race: a forceRefresh get() started BEFORE the update must not
+      // overwrite the fresh PATCH response when its (pre-update) response
+      // eventually lands. Both write to the same signal; epoch protection
+      // is the gate.
+      service.get({ forceRefresh: true }).subscribe({ next: () => void 0, error: () => void 0 });
+      const staleGet = httpMock.expectOne('/api/v1/academy');
+
+      // Update kicks off — its entry bumps the epoch.
+      service.update({ name: 'Renamed' }).subscribe();
+      const patchReq = httpMock.expectOne('/api/v1/academy');
+
+      patchReq.flush({ data: makeAcademy({ name: 'Renamed' }) });
+      // Stale get() lands AFTER the PATCH with pre-update data.
+      staleGet.flush({ data: makeAcademy({ name: 'Old' }) });
+
+      // The PATCH response wins — the stale get()'s tap() was gated off
+      // by the bumped epoch.
+      expect(service.academy()?.name).toBe('Renamed');
+    });
+  });
 });

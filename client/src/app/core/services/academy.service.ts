@@ -14,6 +14,16 @@ export interface CreateAcademyPayload {
   address?: string;
 }
 
+/**
+ * Partial update. Every key is optional; what you don't send, the server
+ * leaves untouched. `address: null` is the explicit "clear it" signal
+ * (distinct from omitting the key entirely — server contract).
+ */
+export interface UpdateAcademyPayload {
+  name?: string;
+  address?: string | null;
+}
+
 interface AcademyResponse {
   data: Academy;
 }
@@ -97,6 +107,42 @@ export class AcademyService {
     return this.http.post<AcademyResponse>(this.base, payload).pipe(
       tap((res) => this.academy.set(res.data)),
       map((res) => res.data),
+    );
+  }
+
+  /**
+   * Partial update of the authenticated user's academy. The server returns
+   * the full fresh record, which we swap into the signal so every consumer
+   * (sidebar brand label, detail page, etc.) sees the new value in the same
+   * tick without a second network round-trip.
+   *
+   * Most errors propagate to the caller without touching the cache so the
+   * form can retry or cancel without losing state. The single exception is
+   * 403: the backend returns it on PATCH when the user no longer has an
+   * academy (while GET returns 404 for the same underlying state). In that
+   * case we clear() so downstream guard runs re-fetch, get 404, and
+   * redirect the user to /setup instead of sitting on a stale cached
+   * academy they can no longer touch.
+   *
+   * The epoch bump at entry mirrors the invariant `clear()` already relies
+   * on: any `get()` request still in flight when we started must not be
+   * able to overwrite the signal with its pre-update snapshot when it
+   * eventually lands. Without this, a slow in-flight `get()` that returns
+   * AFTER the PATCH response would silently clobber the fresh update.
+   */
+  update(payload: UpdateAcademyPayload): Observable<Academy> {
+    this.epoch++;
+    this.inflight$ = null;
+
+    return this.http.patch<AcademyResponse>(this.base, payload).pipe(
+      tap((res) => this.academy.set(res.data)),
+      map((res) => res.data),
+      catchError((err: HttpErrorResponse) => {
+        if (err.status === 403) {
+          this.clear();
+        }
+        return throwError(() => err);
+      }),
     );
   }
 
