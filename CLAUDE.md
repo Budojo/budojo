@@ -3,6 +3,7 @@
 ## Project Overview
 
 **Budojo** is a full-stack web application with a decoupled architecture:
+
 - **Server** — REST API built with Laravel 13 (PHP), served via Docker
 - **Client** — SPA built with Angular 21 + PrimeNG 21, served via Docker
 
@@ -12,10 +13,10 @@ The two containers communicate over a shared Docker network. A `.env` file at th
 
 The repo uses a **hierarchical `CLAUDE.md`** layout. When Claude Code works inside a subdirectory it automatically loads the nearest `CLAUDE.md` and every ancestor up to the root. So:
 
-| File | Loaded when | Scope |
-|------|-------------|-------|
-| `CLAUDE.md` (this file) | Always | Cross-cutting rules — git, PRs, Copilot review, docs discipline, CI, TDD, release flow |
-| [`server/CLAUDE.md`](./server/CLAUDE.md) | Working under `server/` | Laravel patterns + **Uncle Bob canon** (Clean Code / Architecture / Agile / Coder), PHPStan/CS-Fixer/PEST conventions |
+| File                                     | Loaded when             | Scope                                                                                                                       |
+| ---------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE.md` (this file)                  | Always                  | Cross-cutting rules — git, PRs, Copilot review, docs discipline, CI, TDD, release flow                                      |
+| [`server/CLAUDE.md`](./server/CLAUDE.md) | Working under `server/` | Laravel patterns + **Uncle Bob canon** (Clean Code / Architecture / Agile / Coder), PHPStan/CS-Fixer/PEST conventions       |
 | [`client/CLAUDE.md`](./client/CLAUDE.md) | Working under `client/` | Angular patterns + **UX canon** (Material Design 3 / Don't Make Me Think / Norman / Laws of UX), Vitest/Cypress conventions |
 
 If a rule here and a rule in a sub-file conflict, **the sub-file wins** for that scope.
@@ -37,14 +38,15 @@ Every principle below applies across the stack. Domain-specific elaborations (SO
 
 Four test layers are mandatory — all must be green before a PR is opened:
 
-| Layer | Stack | Scope |
-|-------|-------|-------|
-| **PHP unit** | PEST 4 | Isolated classes — Actions, validators, value objects |
-| **PHP feature** | PEST 4 + `RefreshDatabase` | Full HTTP round-trips against an in-memory SQLite DB |
-| **Angular unit** | Vitest 4 | Components and services in isolation |
-| **Angular E2E** | Cypress 13 | User flows in a real browser; all API calls intercepted with `cy.intercept()` |
+| Layer            | Stack                      | Scope                                                                         |
+| ---------------- | -------------------------- | ----------------------------------------------------------------------------- |
+| **PHP unit**     | PEST 4                     | Isolated classes — Actions, validators, value objects                         |
+| **PHP feature**  | PEST 4 + `RefreshDatabase` | Full HTTP round-trips against an in-memory SQLite DB                          |
+| **Angular unit** | Vitest 4                   | Components and services in isolation                                          |
+| **Angular E2E**  | Cypress 13                 | User flows in a real browser; all API calls intercepted with `cy.intercept()` |
 
 **TDD cycle:**
+
 ```
 Write failing PEST spec       →  implement PHP code        →  all PEST tests green
 Write failing Vitest spec     →  implement Angular code    →  all Vitest tests green
@@ -57,23 +59,23 @@ No untested business logic is merged to `develop`.
 
 ## Tech Stack
 
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| Server framework | Laravel | 13 |
-| Database | MySQL | 8.4 LTS |
-| PHP static analysis | PHPStan | 2 (level 9) |
-| PHP code style | PHP CS Fixer | 3 |
-| PHP test runner | PEST | 4 |
-| Client framework | Angular | 21 |
-| UI component library | PrimeNG | 21 (Material preset) |
-| Design philosophy | Material Design 3 | — |
-| Angular unit tests | Vitest | 4 |
-| Angular E2E tests | Cypress | 13 |
-| API contract | OpenAPI | 3.0.3 |
-| OpenAPI linter | Spectral | 6 |
-| Containerization | Docker + Docker Compose | latest |
-| Release automation | semantic-release | 24 |
-| Commit enforcement | Husky 9 + commitlint | — |
+| Layer                | Technology              | Version              |
+| -------------------- | ----------------------- | -------------------- |
+| Server framework     | Laravel                 | 13                   |
+| Database             | MySQL                   | 8.4 LTS              |
+| PHP static analysis  | PHPStan                 | 2 (level 9)          |
+| PHP code style       | PHP CS Fixer            | 3                    |
+| PHP test runner      | PEST                    | 4                    |
+| Client framework     | Angular                 | 21                   |
+| UI component library | PrimeNG                 | 21 (Material preset) |
+| Design philosophy    | Material Design 3       | —                    |
+| Angular unit tests   | Vitest                  | 4                    |
+| Angular E2E tests    | Cypress                 | 13                   |
+| API contract         | OpenAPI                 | 3.0.3                |
+| OpenAPI linter       | Spectral                | 6                    |
+| Containerization     | Docker + Docker Compose | latest               |
+| Release automation   | semantic-release        | 24                   |
+| Commit enforcement   | Husky 9 + commitlint    | —                    |
 
 ---
 
@@ -90,18 +92,18 @@ main
       └── ...
 ```
 
-| Branch | Purpose | Merge target |
-|--------|---------|-------------|
-| `main` | Production-ready code only. Every merge creates a stable tag. | — |
-| `develop` | Integration branch. All features land here first. Every merge creates a beta tag. | `main` (via PR) |
-| `feat/*` | New features. Cut from `develop`, merged back via PR. | `develop` |
-| `fix/*` | Bug fixes on develop flow. | `develop` |
-| `hotfix/*` | Urgent production fixes. Cut from `main`. | `main` + `develop` |
-| `chore/*` | Tooling, deps, CI, Docker — no business logic. | `develop` |
-| `refactor/*` | Code restructuring with no behaviour change. | `develop` |
-| `docs/*` | Documentation only. | `develop` |
-| `test/*` | Test-only additions or fixes. | `develop` |
-| `ci/*` | CI/CD pipeline changes. | `develop` |
+| Branch       | Purpose                                                                           | Merge target       |
+| ------------ | --------------------------------------------------------------------------------- | ------------------ |
+| `main`       | Production-ready code only. Every merge creates a stable tag.                     | —                  |
+| `develop`    | Integration branch. All features land here first. Every merge creates a beta tag. | `main` (via PR)    |
+| `feat/*`     | New features. Cut from `develop`, merged back via PR.                             | `develop`          |
+| `fix/*`      | Bug fixes on develop flow.                                                        | `develop`          |
+| `hotfix/*`   | Urgent production fixes. Cut from `main`.                                         | `main` + `develop` |
+| `chore/*`    | Tooling, deps, CI, Docker — no business logic.                                    | `develop`          |
+| `refactor/*` | Code restructuring with no behaviour change.                                      | `develop`          |
+| `docs/*`     | Documentation only.                                                               | `develop`          |
+| `test/*`     | Test-only additions or fixes.                                                     | `develop`          |
+| `ci/*`       | CI/CD pipeline changes.                                                           | `develop`          |
 
 ### Daily Development Flow
 
@@ -126,6 +128,7 @@ git fetch origin && git rebase origin/develop
 ### Pre-push Checklist — run before every `git push`
 
 **Whenever PHP files were changed:**
+
 ```bash
 cd server
 
@@ -140,6 +143,7 @@ vendor/bin/pest --parallel
 ```
 
 **Whenever Angular files were changed:**
+
 ```bash
 cd client
 
@@ -160,11 +164,16 @@ npm test -- --watch=false
 > Run static analysis / lint **after staging** to verify the final state.
 > Never rely on CI to catch these — fix locally first.
 
+**Before the `git push`, also scan [`.claude/gotchas.md`](.claude/gotchas.md)** — a living checklist of mistakes we've made before. 30-second read vs. a 5-minute Copilot round-trip later. When Copilot flags a new non-typo mistake in review, add a `→` entry to the correct category in the SAME PR that fixes it. The file grows naturally and every future PR benefits.
+
 ### Branch Naming
+
 ```
 <type>/<issue-number>-<short-description-in-kebab-case>
 ```
+
 Examples:
+
 - `feat/13-academy-setup`
 - `feat/16-athletes-list`
 - `fix/22-login-validation-error`
@@ -176,6 +185,7 @@ Always include the **issue number** — it creates a traceable link between bran
 **Types:** `feat`, `fix`, `hotfix`, `refactor`, `test`, `chore`, `docs`, `style`, `perf`, `ci`
 
 ### Commit Messages (Angular Conventional Commits)
+
 ```
 <type>(<scope>): <short description in imperative mood, lower-case>
 
@@ -183,7 +193,9 @@ Always include the **issue number** — it creates a traceable link between bran
 
 [optional footer: BREAKING CHANGE: ..., closes #issue]
 ```
+
 Examples:
+
 - `feat(auth): add jwt refresh token endpoint`
 - `fix(athletes): handle duplicate email on create`
 - `test(auth): add pest feature test for login flow`
@@ -199,11 +211,11 @@ The board tracks **both issues and their open PRs**. Issues are the primary item
 
 #### Issue + PR lifecycle on the board
 
-| Status | When |
-|--------|------|
-| `Todo` | Issue created |
-| `In Progress` | PR opened (set on both the issue item AND the PR item) |
-| `Done` | PR merged → GitHub auto-closes issue → both items move to Done |
+| Status        | When                                                           |
+| ------------- | -------------------------------------------------------------- |
+| `Todo`        | Issue created                                                  |
+| `In Progress` | PR opened (set on both the issue item AND the PR item)         |
+| `Done`        | PR merged → GitHub auto-closes issue → both items move to Done |
 
 #### Standard flow — step by step
 
@@ -240,11 +252,13 @@ The board tracks **both issues and their open PRs**. Issues are the primary item
 4. **Assign `m-bonanno`** and apply the correct type label on every PR.
 
 #### Finding a project item ID
+
 ```bash
 gh project item-list 2 --owner m-bonanno --format json
 ```
 
 ### PR Rules
+
 - **No direct commits to `main` or `develop`** — ever, not even for hotfixes.
 - All feature/fix/chore branches open PRs **exclusively toward `develop`**.
 - `develop` → `main` only via a PR (semantic-release handles tagging automatically).
@@ -267,26 +281,26 @@ gh project item-list 2 --owner m-bonanno --format json
 
 #### Type labels (one per PR)
 
-| Branch prefix | Label |
-|--------------|-------|
-| `feat/*` | `✨ feature` |
-| `fix/*` | `🐛 bug fix` |
-| `hotfix/*` | `🚑 hotfix` |
-| `chore/*` | `🔧 maintenance` |
-| `ci/*` | `⚙️ pipeline` |
-| `docs/*` | `📝 documentation` |
-| `refactor/*` | `♻️ refactor` |
-| `test/*` | `🧪 testing` |
+| Branch prefix | Label              |
+| ------------- | ------------------ |
+| `feat/*`      | `✨ feature`       |
+| `fix/*`       | `🐛 bug fix`       |
+| `hotfix/*`    | `🚑 hotfix`        |
+| `chore/*`     | `🔧 maintenance`   |
+| `ci/*`        | `⚙️ pipeline`      |
+| `docs/*`      | `📝 documentation` |
+| `refactor/*`  | `♻️ refactor`      |
+| `test/*`      | `🧪 testing`       |
 
 Add `💥 breaking change` as a second label when the PR contains a `BREAKING CHANGE` footer.
 
 #### Status labels
 
-| Moment | Label |
-|--------|-------|
-| Still being worked on | `🚧 wip` |
+| Moment                                       | Label               |
+| -------------------------------------------- | ------------------- |
+| Still being worked on                        | `🚧 wip`            |
 | All review comments resolved, ready to merge | `🟢 ready to merge` |
-| Waiting on a dependency or decision | `🔴 blocked` |
+| Waiting on a dependency or decision          | `🔴 blocked`        |
 
 Open with the type label only. Switch to `🟢 ready to merge` once all Copilot comments are addressed.
 
@@ -295,15 +309,18 @@ Open with the type label only. Switch to `🟢 ready to merge` once all Copilot 
 Versioning, changelogs, and Git tags are fully automated — no manual tagging or version bumps ever.
 
 **Beta release** — every squash merge to `develop`:
+
 1. semantic-release reads conventional commits since the last tag
 2. Determines the next version bump (`fix` → patch, `feat` → minor, `BREAKING CHANGE` → major)
 3. Creates tag `vX.Y.Z-beta.N` + GitHub pre-release + updates `CHANGELOG.md`
 
 **Stable release** — every merge commit from `develop` → `main`:
+
 1. semantic-release reads conventional commits since the last stable tag
 2. Creates tag `vX.Y.Z` + GitHub Release with full changelog
 
 **Config:** `.releaserc.json` at the repo root.
+
 - Do not create a `version` field in `package.json` — semantic-release owns versioning.
 - `package-lock.json` is committed; always run `npm install` after changing `package.json`.
 
@@ -324,6 +341,7 @@ git commit -m "fix(auth): prevent crash on expired token decode"
 ### Copilot Review Workflow
 
 When Copilot leaves review comments on a PR:
+
 1. Fetch all comments: `gh api repos/m-bonanno/budojo/pulls/<N>/comments`
 2. For each comment: evaluate, fix if valid, skip with explanation if not applicable
 3. Commit all fixes in one commit: `fix(<scope>): address copilot review comments`
@@ -332,6 +350,7 @@ When Copilot leaves review comments on a PR:
 6. Push and switch label to `🟢 ready to merge`.
 
 **Reply rules (mandatory):**
+
 - **Always write in English** — never Italian, regardless of the comment language.
 - **Always reference the fix commit** — include the short SHA in every reply: `Fixed in abc1234.`
 - Keep replies concise: one sentence on what changed + the commit SHA.
@@ -403,13 +422,15 @@ Any change that alters the **observable contract** or **persisted domain shape**
 ## Docker
 
 ### Services
-| Container | Purpose | Port |
-|-----------|---------|------|
-| `budojo_api` | Laravel PHP-FPM + Nginx | 8000 |
-| `budojo_client` | Angular dev server | 4200 |
-| `budojo_db` | MySQL 8.4 | 3306 |
+
+| Container       | Purpose                 | Port |
+| --------------- | ----------------------- | ---- |
+| `budojo_api`    | Laravel PHP-FPM + Nginx | 8000 |
+| `budojo_client` | Angular dev server      | 4200 |
+| `budojo_db`     | MySQL 8.4               | 3306 |
 
 ### Useful commands
+
 ```bash
 # Start full stack
 docker compose up --build
@@ -440,21 +461,22 @@ All secrets via `.env` at the repo root (never committed). Copy `.env.example` t
 
 All 8 checks must pass before merge:
 
-| Job | Tool | What it checks |
-|-----|------|---------------|
-| `phpstan` | PHPStan level 9 | PHP static analysis |
-| `pest` | PEST 4 (parallel + coverage) | PHP unit + feature tests |
-| `php-cs-fixer` | PHP CS Fixer (dry-run) | PHP code style |
-| `angular-test` | Vitest 4 | Angular unit tests |
-| `angular-lint` | ESLint | Angular TypeScript/template lint |
-| `angular-format` | Prettier | Angular code formatting |
-| `cypress-e2e` | Cypress 13 (Chrome headless) | Angular E2E flows |
-| `openapi-lint` | Spectral 6 | OpenAPI spec wellness (malformed YAML, ghost `$ref`, missing `operationId`/summary) |
+| Job              | Tool                         | What it checks                                                                      |
+| ---------------- | ---------------------------- | ----------------------------------------------------------------------------------- |
+| `phpstan`        | PHPStan level 9              | PHP static analysis                                                                 |
+| `pest`           | PEST 4 (parallel + coverage) | PHP unit + feature tests                                                            |
+| `php-cs-fixer`   | PHP CS Fixer (dry-run)       | PHP code style                                                                      |
+| `angular-test`   | Vitest 4                     | Angular unit tests                                                                  |
+| `angular-lint`   | ESLint                       | Angular TypeScript/template lint                                                    |
+| `angular-format` | Prettier                     | Angular code formatting                                                             |
+| `cypress-e2e`    | Cypress 13 (Chrome headless) | Angular E2E flows                                                                   |
+| `openapi-lint`   | Spectral 6                   | OpenAPI spec wellness (malformed YAML, ghost `$ref`, missing `operationId`/summary) |
 
 The `cypress-e2e` job uses `cypress-io/github-action@v6` with `start: npm run start` and `wait-on: http://localhost:4200` — no backend needed, all API calls are intercepted.
 The `openapi-lint` job runs `npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml` against the ruleset at `.spectral.yaml`.
 
 ### On every push to `develop` or `main` — `.github/workflows/release.yml`
+
 - **semantic-release** creates a Git tag and GitHub Release automatically based on conventional commits.
 - Concurrency group per branch — no concurrent releases on the same branch.
 

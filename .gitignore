@@ -26,8 +26,14 @@ db_data/
 .vscode/
 *.iml
 
-# Claude Code — local scratch (pr bodies, local settings)
-.claude/
+# Claude Code
+# - Files inside `.claude/` are local scratch by default (pr bodies, machine-
+#   local overrides). The `/*` suffix (instead of `.claude/`) lets us re-include
+#   specific files — git can't re-include files inside an ignored directory.
+# - `gotchas.md` + `settings.json` are checked in so the team shares them.
+.claude/*
+!.claude/gotchas.md
+!.claude/settings.json
 
 # OS
 .DS_Store
