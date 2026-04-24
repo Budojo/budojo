@@ -46,6 +46,8 @@ Mandatory reads before any new component or screen:
 Wiring:
 
 - Tokens live in `client/src/styles/budojo-theme.scss` and are imported last from `client/src/styles.scss` so they win against the Material preset defaults.
+- **Variant matrix lives in `client/src/styles/budojo-variants.scss`** and is imported *after* the theme. This is where the button / tag / form field / card variants are locked — when you need to pick a button variant or a tag variant, the matrix is the authoritative source. Static HTML previews under [`docs/design/preview/`](../docs/design/preview/README.md).
+- PrimeNG is wrapped in a `@layer primeng` via `providePrimeNG({ theme: { options: { cssLayer: { name: 'primeng' } } } })`. This is the *only* reliable way to make our `:root` overrides win the cascade — see `.claude/gotchas.md` § Design system / PrimeNG precedence.
 - Inter is loaded via `@fontsource/inter` (weights 400/500/600/700).
 - Dark mode: `.dark` class on `<html>`, matches `providePrimeNG({ theme: { options: { darkModeSelector: '.dark' } } })`.
 

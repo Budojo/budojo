@@ -1,0 +1,28 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../colors_and_type.css"><style>
+body{margin:0;padding:24px;background:var(--bg-app);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.wrap{display:grid;grid-template-columns:110px 1fr;gap:12px 16px;align-items:center;width:100%;max-width:720px}
+.lbl{font:var(--type-caption-1);color:var(--fg-secondary)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:600 15px/20px var(--font-sans);letter-spacing:-0.003em;padding:0 18px;border-radius:12px;border:none;cursor:pointer;min-height:48px;display:inline-flex;align-items:center;gap:6px;transition:background 160ms,opacity 160ms;box-shadow:none}
+.btn:active{opacity:.88}
+.primary{background:var(--budojo-accent);color:#fff}
+.primary:hover{background:var(--budojo-accent-600)}
+.secondary{background:var(--budojo-surface-100);color:var(--fg-primary)}
+.secondary:hover{background:var(--budojo-surface-200)}
+.destructive{background:var(--budojo-danger);color:#fff}
+.destructive:hover{background:#e73227}
+.destructive-soft{background:#ffe5e3;color:#b42318}
+.destructive-soft:hover{background:#ffd1ce}
+.ghost{background:transparent;color:var(--budojo-accent);padding:0 12px}
+.ghost:hover{background:var(--budojo-surface-100)}
+.icon{width:44px;height:44px;min-height:44px;padding:0;border-radius:9999px;background:transparent;color:var(--budojo-accent);border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background 160ms}
+.icon:hover{background:var(--budojo-surface-100)}
+.icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.disabled{opacity:.36;cursor:not-allowed}
+</style></head><body><div class="wrap">
+<span class="lbl">Primary</span><div class="row"><button class="btn primary">Save changes</button><button class="btn primary">Add athlete</button></div>
+<span class="lbl">Secondary</span><div class="row"><button class="btn secondary">Cancel</button><button class="btn secondary">Invite coach</button></div>
+<span class="lbl">Destructive</span><div class="row"><button class="btn destructive">Delete athlete</button><button class="btn destructive-soft">Delete</button></div>
+<span class="lbl">Ghost</span><div class="row"><button class="btn ghost">Forgot password?</button><button class="icon" title="Edit"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 10-10-3-3L5 16z"/></svg></button><button class="icon" style="color:var(--budojo-danger)" title="Delete"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>
+<span class="lbl">Disabled</span><div class="row"><button class="btn primary disabled">Saving…</button><button class="btn secondary disabled">Cancel</button></div>
+</div></body></html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="colors_and_type.css"><style>
+body{margin:0;padding:24px;background:var(--bg-app);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.wrap{display:flex;flex-direction:column;gap:12px;width:100%;max-width:640px}
+.field{display:flex;flex-direction:column;gap:4px}
+label{font:600 13px/18px var(--font-sans);color:var(--fg-secondary);padding-left:2px}
+/* Filled, slightly-in-contrast, no border — ever. Focus = one step darker fill. */
+.i{background:var(--budojo-surface-200);border:none;border-radius:12px;padding:12px 14px;font:var(--type-body);color:var(--fg-primary);min-height:48px;box-sizing:border-box;display:flex;align-items:center;gap:8px;transition:background 160ms;outline:none;box-shadow:none}
+.i.focus{background:#e1e1e6}
+.i.invalid{background:#ffe5e3;color:#b42318}
+.i.invalid .ph{color:#b42318;opacity:.7}
+.i.disabled{opacity:.36;cursor:not-allowed}
+.i.textarea{border-radius:16px;min-height:96px;align-items:flex-start;line-height:1.4}
+.chev{margin-left:auto;color:var(--fg-tertiary);font:600 14px/1 var(--font-sans)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ph{color:var(--fg-tertiary)}
+.err{font:var(--type-footnote);color:var(--budojo-danger);padding-left:2px;margin-top:-2px}
+</style></head><body><div class="wrap">
+<div class="field"><label>Input (resting)</label><div class="i">coach@budojo.app</div></div>
+<div class="field"><label>Input (focused)</label><div class="i focus">coach@budojo.app</div></div>
+<div class="row">
+  <div class="field"><label>Select</label><div class="i">Medical certificate <span class="chev">▾</span></div></div>
+  <div class="field"><label>Datepicker</label><div class="i">2027-01-15 <span class="chev">📅</span></div></div>
+</div>
+<div class="field"><label>Invalid</label><div class="i invalid"><span class="ph">mario@</span></div><div class="err">Enter a valid email address.</div></div>
+<div class="field"><label>Textarea</label><div class="i textarea"><span class="ph">Add a note for the coach…</span></div></div>
+<div class="field"><label>Disabled</label><div class="i disabled">Locked field</div></div>
+</div></body></html>
