@@ -28,6 +28,12 @@ const LOGIN_OK = {
 describe('Login page', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
+    // Post-login lands on /dashboard/athletes, where the M3.4 expiring-documents
+    // widget fetches /api/v1/documents/expiring on mount. Stub it here so the
+    // request never reaches the Vite dev-server proxy (no `api` host in CI) —
+    // otherwise the CI log fills with `getaddrinfo EAI_AGAIN api` noise that
+    // can mask real failures.
+    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
     cy.visit('/auth/login');
   });
 
@@ -105,6 +111,9 @@ describe('Login page', () => {
 describe('Register page', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
+    // Post-register success → /dashboard/athletes → expiring widget fires.
+    // Same defensive stub as the Login page describe above.
+    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
     cy.visit('/auth/register');
   });
 

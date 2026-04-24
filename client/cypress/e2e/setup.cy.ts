@@ -18,6 +18,13 @@ describe('Academy setup page', () => {
       { method: 'GET', url: '/api/v1/academy', times: 1 },
       { statusCode: 404, body: {} },
     ).as('academy');
+    // Post-create-academy redirect lands on /dashboard/athletes where the
+    // M3.4 expiring-documents widget fires on mount, plus the athletes list
+    // itself is fetched. Stub both defensively so they never reach the Vite
+    // dev-server proxy (no `api` host in CI) — otherwise the CI log fills
+    // with `getaddrinfo EAI_AGAIN api` noise that can mask real failures.
+    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
     cy.visitAuthenticated('/setup');
     cy.wait('@academy');
   });
