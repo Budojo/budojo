@@ -18,6 +18,12 @@ client/node_modules/
 client/dist/
 client/.angular/
 
+# Cypress — test-failure screenshots + videos are transient, regenerated
+# per run. The DESIGN inventory has its own committed destination at
+# docs/design/screenshots/ and stays outside this exclusion.
+client/cypress/screenshots/
+client/cypress/videos/
+
 # Docker volumes
 db_data/
 

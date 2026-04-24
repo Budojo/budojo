@@ -71,7 +71,9 @@ Format: `→` separates the symptom from the action.
 
 ## Design inventory / Cypress in Docker
 
-- Ran `npm run design:inventory` inside the `budojo_client` Alpine container → `Your system is missing the dependency: Xvfb`. Cypress needs a display server to run headed Chrome, and the slim Alpine image doesn't ship one. Fix: run the inventory spec on the Windows host (Chrome is installed, Cypress works natively) OR use a dedicated `cypress/included` Docker image. In CI, `cypress-io/github-action@v6` provides Xvfb automatically — this only bites local-in-container runs.
+- Ran `npm run design:inventory` inside the `budojo_client` Alpine container → `Your system is missing the dependency: Xvfb`. Cypress needs a display server to run headed Chrome, and the slim Alpine image doesn't ship one. **Fix now codified in `client/scripts/design-inventory.cjs`**: the npm script spawns `cypress/included:13.17.0` (which bundles Xvfb + Chrome) as a sibling container via `docker run`. In CI, `cypress-io/github-action@v6` provides Xvfb automatically — so this only matters for local runs.
+- `excludeSpecPattern: 'cypress/e2e/design-inventory.cy.ts'` in `cypress.config.ts` SILENTLY canceled `cypress run --spec cypress/e2e/design-inventory.cy.ts` — Cypress applies the exclude pattern even when `--spec` names the same file explicitly. Fix: **don't use `excludeSpecPattern` to hide on-demand specs. Put them in a separate folder outside the default `specPattern` glob.** We moved the inventory to `cypress/inventory/` and the on-demand run overrides `specPattern` to enable that folder.
+- Angular dev server returned `403 Forbidden` when Cypress (running in a sibling docker container) hit `http://client:4200/dashboard/*` — Angular 21's `@angular/build:dev-server` has a default `allowedHosts: ['localhost']` for CSRF-style safety and rejects any other `Host` header. Fix: add explicit entries to `angular.json` → `projects.client.architect.serve.options.allowedHosts` (we use `["client", "localhost", "host.docker.internal"]`). Requires a dev server restart: `docker compose restart client`.
 
 ## Button variant picking
 

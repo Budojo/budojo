@@ -20,21 +20,29 @@ Run `npm run design:inventory` (from `client/`) after any of:
 
 ## How to regenerate
 
-Prerequisites: the dev server is up and serving on `localhost:4200`
-(usually via `docker-compose up budojo_client`).
+Prerequisites:
+
+- Docker is running (Docker Desktop on Windows/macOS, or a Linux daemon).
+- The dev client container is up: `docker compose up -d client`.
 
 ```bash
 cd client
 npm run design:inventory
 ```
 
-The script runs `cypress run` against a single spec —
-`cypress/e2e/design-inventory.cy.ts` — which visits every declared page
-at three viewports and writes `{slug}__{viewport}.png` here.
+That's it. Windows, macOS, Linux — same command.
 
-The inventory spec is excluded from the default Cypress test glob (see
-`cypress.config.ts` `excludeSpecPattern`), so running `npm run cy:run`
-or CI never touches these files. Regeneration is deliberate, on-demand.
+Under the hood the script launches a `cypress/included:13.17.0`
+container that shares the network namespace of `budojo_client`, runs
+[`cypress/inventory/design-inventory.cy.ts`](../../../client/cypress/inventory/design-inventory.cy.ts)
+once per declared page × three viewports, and writes
+`{slug}__{viewport}.png` into this folder via a bind-mount of the repo
+root.
+
+The spec lives under `cypress/inventory/`, not `cypress/e2e/` — that
+folder is deliberately outside the default Cypress test glob, so
+`npm run cy:run` and CI never touch these files. Regeneration is
+on-demand, never drive-by.
 
 ## Naming convention
 
