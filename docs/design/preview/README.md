@@ -1,9 +1,10 @@
-# Variant matrix previews (v2)
+# Design-system previews
 
-Static HTML renderings of the authoritative button / tag / form field /
-card variants locked in design-system v2. These files are the canon
-reference for **which variant to pick when** — not just visual
-exploration.
+Static HTML reference cards. Open directly in a browser — self-contained,
+no build step, no Angular app running. They exist so we can settle
+"which variant goes here" without booting the stack.
+
+## Variant matrices (v2 — authoritative variant rules)
 
 - **[`components-buttons-matrix.html`](./components-buttons-matrix.html)**
   — primary, secondary, destructive, destructive-soft, ghost, icon-only
@@ -17,9 +18,14 @@ exploration.
 - **[`components-cards-matrix.html`](./components-cards-matrix.html)** —
   surface card + four alert tints (warn / danger / info / success).
 
-Open these directly in a browser — they're self-contained and load
-`colors_and_type.css` from this folder for the CSS custom properties.
-No build step, no Angular app running.
+## Brand / logo lockups (v3)
+
+- **[`brand-logo.html`](./brand-logo.html)** — the four logo treatments
+  (app-icon · dark, on-accent, light-surface, wordmark). Use this to
+  confirm which treatment belongs on which surface.
+- **[`brand-icons.html`](./brand-icons.html)** — the filled-chip brand
+  icon language (used for empty states, marketing, the launcher tile).
+  NOT to be mixed with PrimeIcons inside in-app UI.
 
 ## When to open these
 

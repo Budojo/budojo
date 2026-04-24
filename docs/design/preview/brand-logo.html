@@ -1,0 +1,71 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+body{margin:0;padding:24px;background:var(--bg-app);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.wrap{display:flex;align-items:flex-start;gap:20px;width:100%;max-width:680px;justify-content:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;align-items:center}
+.tile{width:112px;height:112px;border-radius:24px;display:flex;align-items:center;justify-content:center}
+.dark{background:#0a0a0b}
+.accent{background:var(--budojo-accent)}
+.light{background:var(--budojo-surface-100)}
+.lbl{font:var(--type-caption-1);color:var(--fg-secondary);text-align:center;margin-top:8px;display:block}
+.mark svg{width:72px;height:72px;display:block}
+.small svg{width:24px;height:24px;display:block}
+.small-tile{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--budojo-accent);margin-top:8px}
+</style></head><body><div class="wrap">
+
+<!-- Dark tile, accent mark -->
+<div class="col"><div class="tile dark mark">
+  <svg viewBox="0 0 64 64" fill="none" stroke="#5b6cff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- left lapel -->
+    <path d="M14 10 L32 38 L32 54"/>
+    <!-- right lapel -->
+    <path d="M50 10 L32 38"/>
+    <!-- belt -->
+    <path d="M16 40 L48 40" stroke-width="6"/>
+    <!-- knot -->
+    <path d="M29 38 L29 44 L35 44 L35 38" stroke-width="4"/>
+  </svg>
+</div><span class="lbl">App icon · dark</span></div>
+
+<!-- Accent tile, white mark -->
+<div class="col"><div class="tile accent mark">
+  <svg viewBox="0 0 64 64" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 10 L32 38 L32 54"/>
+    <path d="M50 10 L32 38"/>
+    <path d="M16 40 L48 40" stroke-width="6"/>
+    <path d="M29 38 L29 44 L35 44 L35 38" stroke-width="4"/>
+  </svg>
+</div><span class="lbl">On accent</span></div>
+
+<!-- Light tile, dark mark -->
+<div class="col"><div class="tile light mark">
+  <svg viewBox="0 0 64 64" fill="none" stroke="#0a0a0b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 10 L32 38 L32 54"/>
+    <path d="M50 10 L32 38"/>
+    <path d="M16 40 L48 40" stroke-width="6"/>
+    <path d="M29 38 L29 44 L35 44 L35 38" stroke-width="4"/>
+  </svg>
+</div><span class="lbl">Light surface</span></div>
+
+<!-- Wordmark + favicon-scale preview -->
+<div class="col" style="align-items:flex-start">
+  <div style="display:flex;align-items:center;gap:10px">
+    <svg viewBox="0 0 64 64" width="32" height="32" fill="none" stroke="#0a0a0b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 10 L32 38 L32 54"/>
+      <path d="M50 10 L32 38"/>
+      <path d="M16 40 L48 40" stroke-width="7"/>
+      <path d="M29 38 L29 44 L35 44 L35 38" stroke-width="5"/>
+    </svg>
+    <span style="font:700 28px/1 var(--font-sans);letter-spacing:-0.028em;color:var(--fg-primary)">Budojo</span>
+  </div>
+  <div class="small-tile">
+    <svg viewBox="0 0 64 64" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 10 L32 38 L32 54"/>
+      <path d="M50 10 L32 38"/>
+      <path d="M16 40 L48 40" stroke-width="8"/>
+      <path d="M29 38 L29 44 L35 44 L35 38" stroke-width="6"/>
+    </svg>
+  </div>
+  <span class="lbl" style="align-self:center">Wordmark · favicon@40</span>
+</div>
+
+</div></body></html>

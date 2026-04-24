@@ -9,13 +9,19 @@
       name="description"
       content="Budojo — BJJ gym management. Track athletes, documents, and attendance."
     />
-    <meta name="theme-color" content="#6366f1" />
+    <meta name="theme-color" content="#0a0a0b" />
 
     <!-- PWA manifest (icons, name, theme, start_url). -->
     <link rel="manifest" href="manifest.webmanifest" />
 
-    <!-- Favicons + installable icons. -->
+    <!-- Favicons + installable icons.
+         Multiple sizes so every browser can pick the right tile:
+         - ICO for legacy Chrome / any fallback
+         - 32 / 192 PNG for modern Chromium tabs (larger = crisper high-DPI)
+         - apple-touch-icon for iOS Safari "Add to Home Screen" -->
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 
     <!-- iOS PWA meta: capable + status-bar style. Deprecated in name but still

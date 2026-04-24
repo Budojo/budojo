@@ -7,8 +7,8 @@
   "orientation": "portrait",
   "start_url": "/dashboard/athletes",
   "scope": "/",
-  "background_color": "#161623",
-  "theme_color": "#6366f1",
+  "background_color": "#0a0a0b",
+  "theme_color": "#0a0a0b",
   "icons": [
     {
       "src": "icons/icon-192.png",

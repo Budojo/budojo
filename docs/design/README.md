@@ -86,22 +86,60 @@ If you need any of those artifacts, re-unzip the original `Budojo Design System.
 
 ## Iconography
 
-**Primary set: PrimeIcons** — already ships with PrimeNG. The repo uses `pi pi-user`, `pi pi-calendar`, `pi pi-upload`, `pi pi-pencil`, `pi pi-trash`, `pi pi-plus`, `pi pi-search`, `pi pi-ellipsis-h`, `pi pi-chevron-right`, `pi pi-exclamation-circle`, `pi pi-check-circle`. Stroke-weight is light enough to match the Apple-minimal direction. **Do not substitute SF Symbols in production** — they are Apple-system fonts and won't render in Firefox or Android.
+Budojo runs **two icon systems** with a strict split — they look different because they solve different problems.
 
-**App icon.** Lives in `client/public/`:
-- `icons/icon-maskable-512.png` — maskable PWA icon
-- `icons/icon-512.png` — standard 512 px PWA icon
-- `icons/icon-192.png` — standard 192 px PWA icon
-- `icons/apple-touch-icon.png` — iOS home-screen icon
-- `favicon.ico`
+### 1. In-app UI icons — **PrimeIcons, stroke style**
 
-**SVGs.** None in the repo beyond the icon font. No custom illustrations.
+PrimeIcons ship with PrimeNG and are wired into every component's icon slot (`<p-button icon="pi pi-user">`, menu items, table headers, etc.). They inherit `currentColor`, so they adapt to whatever text color is in context. **Do not fight this.** Stroke-weight PrimeIcons balance correctly against the filled surfaces and filled inputs — filled-on-filled inside buttons would read as noise.
 
-**Emoji.** Not used in production UI. The preview cards occasionally use emoji as stand-ins for PrimeIcons glyphs (so the visual cards are font-stack-agnostic); the real Angular app uses `<i class="pi pi-*">`. This substitution is **flagged** — if you generate a new production template, use PrimeIcons, not emoji.
+Reference set used across the app: `pi pi-user`, `pi pi-calendar`, `pi pi-upload`, `pi pi-pencil`, `pi pi-trash`, `pi pi-plus`, `pi pi-search`, `pi pi-ellipsis-h`, `pi pi-chevron-right`, `pi pi-exclamation-circle`, `pi pi-check-circle`.
 
-**Unicode.** `›` (U+203A) for chevrons in ASCII mockups and preview cards; `›` also works as a visual stand-in. In production use `<i class="pi pi-chevron-right">`.
+**Rules.**
+- Never substitute SF Symbols — Apple-system fonts don't render in Firefox or Android.
+- Never mix multiple icon libraries. PrimeIcons is the only set.
+- Icons inherit `--p-text-color` in body content, `--p-primary-color` when interactive. Semantic colors (danger, warn, success) only inside status chips. Never multi-color.
 
-**Color.** Icons inherit `--fg-primary` in body content, `--budojo-accent` when interactive, and semantic colors only inside status chips. Never multi-color.
+### 2. Brand / marketing icons — **filled-chip style, matching the logo**
+
+For surfaces where the **brand speaks louder than the UI** — app icon, empty states, marketing pages, hero illustrations, the launcher — use filled glyphs on accent-colored rounded tiles, same visual language as the judogi logo mark. See [`preview/brand-icons.html`](./preview/brand-icons.html) and [`preview/brand-logo.html`](./preview/brand-logo.html) for the reference set.
+
+**Rules.**
+- 40 × 40 tile, 10 px radius, `--p-primary-color` fill, no border.
+- Glyph: 22 × 22, white fill, **no stroke**.
+- Only used for brand moments. **Never** inside buttons, menus, table headers, toasts.
+
+### Where each is used
+
+| Surface | System |
+| --- | --- |
+| `p-button icon`, menu items, table headers, form field glyphs | PrimeIcons |
+| Toast / message icons, tab bar, nav chevrons | PrimeIcons |
+| App icon (PWA, favicon, iOS home screen) | Brand filled-chip |
+| Empty-state hero glyph, marketing site, onboarding illustrations | Brand filled-chip |
+| Status chips (belt, active/inactive, expiring) | Neither — colored text/fill only |
+
+### App icon + logo assets
+
+All live under `client/public/` so Angular serves them at the site root:
+
+```
+client/public/
+├── favicon.ico              multi-size (16 / 32 / 48), dark tile + indigo glyph
+├── logo-glyph.svg           Glyph source — uses currentColor, recolor via parent
+├── wordmark.svg             260 × 64 "Budojo" + glyph lockup
+└── icons/
+    ├── icon-192.png         192 × 192, dark tile + indigo glyph (PWA standard)
+    ├── icon-512.png         512 × 512, same treatment
+    ├── icon-maskable-512.png  512 × 512 with 20 % safe padding (Android adaptive)
+    └── apple-touch-icon.png 180 × 180, iOS home-screen
+```
+
+The `<link rel="icon">` chain in `client/src/index.html` references `favicon.ico` + the 192 PNG at two sizes so every modern browser picks a crisp tile.
+
+### Emoji & Unicode
+
+- **Emoji.** Not used in production UI. Preview cards occasionally use emoji as stand-ins for PrimeIcons glyphs so the cards stay font-stack-agnostic — this substitution is flagged. If you generate a new production template, use PrimeIcons, not emoji.
+- **Unicode.** `›` (U+203A) for chevrons in ASCII mockups and preview cards. In production always use `<i class="pi pi-chevron-right">`.
 
 ## Font substitution
 

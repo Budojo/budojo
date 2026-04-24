@@ -77,6 +77,10 @@ Format: `→` separates the symptom from the action.
 
 - Used `severity="secondary" [outlined]="true"` for a button that was the **only** CTA on the page (academy-detail Edit). With v2 variants the outlined variant renders as filled `surface-100` no border — on a white page body that's visually near-invisible. Fix: a lone CTA is `primary` (filled accent, default — no severity or outlined). The secondary/ghost variants are only canonical when there's a primary adjacent (Save + Cancel pair) or as row-level subtle actions — they're deliberately subdued, so they need a loud sibling or a dense row context to read correctly.
 
+## Favicon / Chrome tab icon
+
+- Replaced `client/public/favicon.ico` but Chrome kept showing the old Angular default tile → browsers cache favicons aggressively and `<link rel="icon">` alone doesn't bust that cache. **Hard reload is not always enough.** Fix chain: (1) make sure `client/public/favicon.ico` is actually the new file (size should match the new one, not 15 KB Angular default); (2) add explicit `<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />` tags alongside the ICO so modern Chromium picks the high-DPI PNG; (3) Shift + reload, then `chrome://favicon2/?pageUrl=http://localhost:4200&size=32` to verify what Chrome thinks the favicon is. Last resort: clear site data (dev-tools → Application → Clear storage).
+
 ---
 
 ## How to use this file
