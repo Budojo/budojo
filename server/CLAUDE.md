@@ -75,6 +75,70 @@ Laravel's Eloquent Model is an **Active Record**. Clean Architecture would prefe
 
 If this assumption ever breaks (e.g. we grow a CLI tool that needs to write documents without booting the full Laravel HTTP stack) we revisit. Until then, Active Record stands.
 
+### Patterns we explicitly reject (and why)
+
+This section is the negative space of the canon above. Every pattern listed here is a thing experienced engineers (including Claude) will occasionally propose — usually imported from Java/Spring / .NET / pre-Laravel PHP — and every item below explains why adopting it in THIS codebase would be a regression, not a lift. The rejections are **opinionated, not dogmatic**: the escape-hatch subsection at the end lists the precise conditions under which each pattern earns its keep.
+
+**1. Repository pattern over Eloquent.**
+The proposal: a `DocumentRepository` class that wraps `Document::where(...)`, exposing a query API the Service layer calls instead of touching Eloquent directly. The intuition: "decouple business logic from the ORM so we can swap databases or mock queries in tests."
+Why we reject it:
+
+- Eloquent Model **is** the repository. `Document::query()->where(...)->get()` is already a testable query API — no wrapper adds reachability we don't have.
+- Testability is delivered by `RefreshDatabase` + `Model::factory()`. We don't need mocks; we hit an in-memory SQLite and assert real rows. That's both faster and more honest than asserting `->shouldReceive('find')`.
+- Swapping databases is YAGNI. If it ever stops being YAGNI, we'll feel the pain first in specific queries and extract surgically.
+
+What we do instead: **Active Record via Eloquent, business logic in Actions, Models stay skinny** (relations, casts, scopes only). See the Active Record caveat above — this rejection is its explicit corollary.
+
+**2. Multi-method "Service" classes.**
+The proposal: a single `DocumentService` that exposes `upload(...)`, `delete(...)`, `listExpiring(...)`, `download(...)`, etc. The intuition: "all document operations live under one class name, easy to find."
+Why we reject it:
+
+- A class with N methods changes for N reasons — the opposite of SRP. `DocumentService` becomes a God class as the domain grows.
+- "Easy to find" is solved by folder organisation, not by lumping. `app/Actions/Document/` already groups everything document-related.
+- One-method-per-class (the Action pattern) makes each public entry point trivially diffable, trivially testable, and trivially composed — an Action can inject another Action via constructor without circular-dependency headaches.
+
+What we do instead: **one Action per business use case**, named as a verb + noun, with a single `execute(...)` public method. `UploadDocumentAction`, `DeleteDocumentAction`, `GetExpiringDocumentsAction`. Vertical slicing by domain (`Actions/Document/`, `Actions/Academy/`), not horizontal by layer.
+
+**3. Interfaces for single-implementation services.**
+The proposal: declare `DocumentServiceInterface` and bind it to the concrete `DocumentService` in a `ServiceProvider`. The intuition: "Dependency Inversion Principle — depend on abstractions, not concretions."
+Why we reject it:
+
+- DIP is about dependency **direction**, not about always introducing an `interface` keyword. A `DocumentController` depending on a concrete `UploadDocumentAction` in its constructor already satisfies DIP — the *concept* being depended on is the Action's public contract, regardless of whether PHP's type system spells it as `interface` or `class`.
+- With one implementation, the interface is ceremony: every edit requires touching two files; IDEs and static analysers do MORE work, not less; no caller ever exploits the abstraction.
+- Laravel's service container **auto-resolves concrete type-hints** via reflection. No binding registration is required for 1-to-1 mappings, so `ServiceProvider` stays lean and grep-able.
+
+What we do instead: **concrete type-hints in Action and Controller constructors**, resolved by the container. Interfaces only land when there's a real second implementation or a real test-double need (see escape hatch below).
+
+**4. Dedicated DTO classes for simple CRUD.**
+The proposal: declare `UploadDocumentDto` / `CreateAthleteDto` with typed public properties, constructed in the Controller from request data, passed to the Action. The intuition: "compile-time type safety through the whole call chain."
+Why we reject it:
+
+- `FormRequest::validated()` returns an array whose shape is pinned by `rules()`. Combined with PHPStan level 9 + typed `execute(...)` parameters on the Action, we already get the type guarantees a DTO class would provide — at zero ceremony cost.
+- Hand-rolled DTO classes without schema-to-DTO generation drift from the request validation over time (rename a field in `rules()`, forget to rename in the DTO — bug).
+
+What we do instead: **FormRequest IN, Resource OUT**, plus typed primitive parameters on `Action::execute(...)`. If a payload grows complex enough that we want compile-time types end-to-end, `spatie/laravel-data` is the escape hatch — we adopt it the day the first payload justifies it, not pre-emptively.
+
+**5. Aggregating bindings into a custom `ServiceServiceProvider`.**
+The proposal: a dedicated provider class that imports all Service interfaces and calls `$this->app->bind(XInterface::class, X::class)` for each. The intuition: "one file tells me every binding in the app."
+Why we reject it:
+
+- When rejections 1–4 are in effect, there's nothing to aggregate. 1-to-1 concrete type-hints don't need registration.
+- Custom providers introduce a surface area that's easy to drift: bindings added and never used, circular `app()->make()` calls inside providers, boot-time perf regressions that are hard to pin down.
+- Laravel already has `AppServiceProvider` for the rare real case. A second "only services live here" provider is file-splitting-for-its-own-sake.
+
+What we do instead: **`AppServiceProvider::register()` holds the handful of bindings that genuinely need the container's attention** (e.g. swappable storage the day we add S3). Everything else rides auto-resolution.
+
+#### When abstraction DOES belong (escape hatches)
+
+The rejections above are conditional. Introduce the abstraction the moment these specific conditions are met, not before:
+
+- **Interface with multiple implementations.** Example: the day we add S3 alongside the `local` disk, a `FileStorageInterface` with `LocalFileStorage` + `S3FileStorage` is correct. Two concrete bindings, one call site per interface: the abstraction pays for itself.
+- **External-vendor boundary that tests must stub.** Example: M5's `NotificationService` for email/SMS — we never want real SendGrid calls in PEST runs. Interface + fake implementation + container binding is the right shape.
+- **Pure domain logic shared between ≥ 2 Actions.** Example: if 3 Actions all need "compute days-to-expiry considering the academy's timezone," extract a pure `ExpiryCalculator` class (no interface, just a dependency-free value object) and inject it into each Action. That's **not** a Service layer — it's a domain helper. Rule of three applies.
+- **The Active Record caveat breaks.** A CLI tool or a console worker that needs to manipulate documents without booting the HTTP kernel might justify a thin repository. Reopen the decision then.
+
+The pattern everywhere: **abstract the day the second caller or the second implementation is real**, not the day a book suggests it should exist.
+
 ### Clean Agile — the meta-rule
 
 Agile is the 90s practices XP put on the map, not the ceremony that corporations grafted on top in 2010. In this repo that means:
