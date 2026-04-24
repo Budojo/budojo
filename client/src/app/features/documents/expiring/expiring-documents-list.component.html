@@ -1,3 +1,5 @@
+<p-toast position="top-right" />
+
 <section class="expiring-page">
   <header class="expiring-page__header">
     <a routerLink="/dashboard/athletes" class="expiring-page__back" data-cy="back-to-athletes">
@@ -9,7 +11,7 @@
       @if (!loading() && !errored()) {
         <span class="expiring-page__count">
           {{ count() }}
-          {{ count() === 1 ? 'document' : 'documents' }} within 30 days
+          {{ count() === 1 ? 'document' : 'documents' }} expired or expiring within 30 days
         </span>
       }
     </div>
@@ -17,7 +19,7 @@
 
   @if (errored()) {
     <div class="expiring-page__empty-state" data-cy="expiring-list-error">
-      <i class="pi pi-exclamation-circle"></i>
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
       <p class="expiring-page__empty-title">Couldn't load expiring documents.</p>
       <p class="expiring-page__empty-hint">Refresh the page to try again.</p>
     </div>
@@ -82,7 +84,7 @@
               </div>
             } @else {
               <div class="expiring-page__empty-state" data-cy="expiring-list-empty">
-                <i class="pi pi-check-circle"></i>
+                <i class="pi pi-check-circle" aria-hidden="true"></i>
                 <p class="expiring-page__empty-title">All documents up to date.</p>
                 <p class="expiring-page__empty-hint">
                   No expirations in the next 30 days. Check back later.

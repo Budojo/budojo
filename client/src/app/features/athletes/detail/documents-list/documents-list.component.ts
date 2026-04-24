@@ -26,6 +26,7 @@ import {
   DocumentType,
 } from '../../../../core/services/document.service';
 import { ExpiryStatusBadgeComponent } from '../../../../shared/components/expiry-status-badge/expiry-status-badge.component';
+import { triggerBrowserDownload } from '../../../../shared/utils/download';
 import { UploadDocumentDialogComponent } from '../upload-document-dialog/upload-document-dialog.component';
 
 const TOGGLE_STORAGE_KEY = 'documents.showCancelled';
@@ -221,16 +222,4 @@ function writeTogglePersisted(value: boolean): void {
   } else {
     window.localStorage.removeItem(TOGGLE_STORAGE_KEY);
   }
-}
-
-function triggerBrowserDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }

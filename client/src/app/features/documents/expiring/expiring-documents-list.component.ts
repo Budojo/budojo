@@ -9,9 +9,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
+import { ToastModule } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
 import {
   DocumentService,
@@ -19,6 +21,7 @@ import {
   ExpiringDocument,
 } from '../../../core/services/document.service';
 import { ExpiryStatusBadgeComponent } from '../../../shared/components/expiry-status-badge/expiry-status-badge.component';
+import { triggerBrowserDownload } from '../../../shared/utils/download';
 
 /**
  * Cross-athlete list of documents that are expired OR expiring within
@@ -40,15 +43,18 @@ import { ExpiryStatusBadgeComponent } from '../../../shared/components/expiry-st
     ButtonModule,
     SkeletonModule,
     TableModule,
+    ToastModule,
     Tooltip,
     ExpiryStatusBadgeComponent,
   ],
+  providers: [MessageService],
   templateUrl: './expiring-documents-list.component.html',
   styleUrl: './expiring-documents-list.component.scss',
 })
 export class ExpiringDocumentsListComponent implements OnInit {
   private readonly documentService = inject(DocumentService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly messageService = inject(MessageService);
 
   readonly documents = signal<ExpiringDocument[]>([]);
   readonly loading = signal<boolean>(true);
@@ -90,21 +96,16 @@ export class ExpiringDocumentsListComponent implements OnInit {
   download(doc: ExpiringDocument): void {
     this.documentService.download(doc).subscribe({
       next: (blob) => triggerBrowserDownload(blob, doc.original_name),
-      // Silent on failure here — the standalone list is a secondary surface;
-      // we don't have a toast host injected and we don't want to retrofit one
-      // for a single error path. Browser download dialog communicates success.
+      error: () => {
+        // Norman feedback: silence on a failed download makes the button look
+        // broken. A toast surfaces the error without blocking the page.
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Download failed',
+          detail: `Could not download ${doc.original_name}. Please try again.`,
+          life: 4000,
+        });
+      },
     });
   }
-}
-
-function triggerBrowserDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }

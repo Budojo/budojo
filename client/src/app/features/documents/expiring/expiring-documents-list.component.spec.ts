@@ -108,7 +108,9 @@ describe('ExpiringDocumentsListComponent', () => {
     fixture.detectChanges();
 
     const countNode = fixture.nativeElement.querySelector('.expiring-page__count');
-    expect(countNode?.textContent).toContain('1 document within 30 days');
+    // Wording covers both expired + expiring within 30 days, since the
+    // endpoint includes already-past documents too.
+    expect(countNode?.textContent).toContain('1 document expired or expiring within 30 days');
   });
 
   it('count phrasing uses plural when multiple are returned', () => {
@@ -117,6 +119,6 @@ describe('ExpiringDocumentsListComponent', () => {
     fixture.detectChanges();
 
     const countNode = fixture.nativeElement.querySelector('.expiring-page__count');
-    expect(countNode?.textContent).toContain('3 documents within 30 days');
+    expect(countNode?.textContent).toContain('3 documents expired or expiring within 30 days');
   });
 });

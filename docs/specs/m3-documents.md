@@ -1,6 +1,6 @@
 # M3 — Documents & Deadlines (PRD)
 
-> Status: **Shipped** · Owner: m-bonanno · Released: M3 (4 PRs — #33 API, #36 list UI, #46 upload dialog, this PR's #N expiring widget)
+> Status: **Shipped** · Owner: m-bonanno · Released: M3 (4 PRs — #33 API, #36 list UI, #46 upload dialog, #47 expiring widget)
 > Supersedes the M3 one-liner on the README roadmap.
 
 ## Problem Statement
