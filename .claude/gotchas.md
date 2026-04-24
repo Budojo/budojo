@@ -73,6 +73,10 @@ Format: `→` separates the symptom from the action.
 
 - Ran `npm run design:inventory` inside the `budojo_client` Alpine container → `Your system is missing the dependency: Xvfb`. Cypress needs a display server to run headed Chrome, and the slim Alpine image doesn't ship one. Fix: run the inventory spec on the Windows host (Chrome is installed, Cypress works natively) OR use a dedicated `cypress/included` Docker image. In CI, `cypress-io/github-action@v6` provides Xvfb automatically — this only bites local-in-container runs.
 
+## Button variant picking
+
+- Used `severity="secondary" [outlined]="true"` for a button that was the **only** CTA on the page (academy-detail Edit). With v2 variants the outlined variant renders as filled `surface-100` no border — on a white page body that's visually near-invisible. Fix: a lone CTA is `primary` (filled accent, default — no severity or outlined). The secondary/ghost variants are only canonical when there's a primary adjacent (Save + Cancel pair) or as row-level subtle actions — they're deliberately subdued, so they need a loud sibling or a dense row context to read correctly.
+
 ---
 
 ## How to use this file
