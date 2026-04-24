@@ -64,6 +64,10 @@ Format: `→` separates the symptom from the action.
 
 - Asserted `cy.get(...).should('have.text', '—')` on an element whose template is `{{ a?.field ?? '—' }}` on its own line → Angular preserves the template's leading/trailing whitespace, so `textContent` is ` — ` (newline + indent + em-dash + newline). `have.text` does an exact match → fails. Fix: `.invoke('text').then((t) => expect(t.trim()).to.equal('—'))`. Vitest's `.textContent?.trim()` sidesteps the same trap.
 
+## Design system / PrimeNG precedence
+
+- Wrote `:root { --p-primary-500: #5b6cff; … }` in `styles/budojo-theme.scss`, imported LAST from `styles.scss` → buttons still rendered green (Material default), overrides silently ignored. PrimeNG injects its theme `<style>` tag at runtime AFTER the bundled CSS, so both declarations sit at `:root` with identical specificity → source-order tiebreak → PrimeNG wins. Fix: `providePrimeNG({ theme: { …, options: { cssLayer: { name: 'primeng' } } } })`. Unlayered rules (ours) always beat layered rules (PrimeNG's) regardless of injection order — this is the *only* reliable way to override PrimeNG tokens from global app SCSS.
+
 ---
 
 ## How to use this file
