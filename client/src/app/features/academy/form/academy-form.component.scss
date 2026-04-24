@@ -1,0 +1,140 @@
+// Academy form — same iOS grouped-list aesthetic as the detail page,
+// all through design-system tokens. No raw hex, no invented spacing.
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 40rem;
+  padding: 1rem;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+}
+
+.form__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.form__eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.form__title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.018em;
+  color: var(--p-text-color);
+}
+
+.form__alert {
+  display: block;
+}
+
+.form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label,
+  .field__label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--p-text-muted-color);
+  }
+}
+
+// Required / optional markers inline in the label. The asterisk is the
+// de-facto "this is required" signifier; the `(optional)` word is kinder
+// where 90% of fields are optional (auth form case) but the canon prefers
+// the asterisk for concision on a short form like this one.
+.field__required {
+  color: var(--budojo-danger);
+  font-weight: 600;
+}
+
+.field__optional {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--p-text-muted-color);
+  margin-left: 0.25rem;
+}
+
+// Read-only "Permalink" row. It's a grouped-list cell, not a disabled
+// input: disabled inputs read as "you could edit this if X" which is the
+// wrong signal for a value that is never editable (see canon § Norman).
+.field--readonly {
+  padding: 1rem;
+  background: var(--p-surface-100);
+  border-radius: var(--p-border-radius-md);
+}
+
+.field__readonly-value {
+  margin: 0;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9375rem;
+  color: var(--p-text-color);
+  word-break: break-word;
+}
+
+.field__hint {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  line-height: 1.5;
+}
+
+.field__error {
+  font-size: 0.75rem;
+  color: var(--budojo-danger);
+  line-height: 1.5;
+}
+
+// Make the textarea fill its column. PrimeNG's .p-textarea gets width and
+// box styling from the global override layer; we only need to enforce
+// stretching and a reasonable min-height here.
+textarea[pTextarea] {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+  font-family: var(--p-font-family);
+}
+
+// Actions row — mobile stacks full-width (every CTA hits the 48 px floor),
+// desktop aligns right. Cancel stays on the left in the stacked layout so
+// the primary Save is the one closest to the thumb on mobile (Fitts).
+.form__actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.5rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+}
+
+.form__cancel,
+.form__save {
+  width: 100%;
+
+  @media (min-width: 768px) {
+    width: auto;
+  }
+}

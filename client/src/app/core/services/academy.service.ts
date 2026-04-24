@@ -14,6 +14,16 @@ export interface CreateAcademyPayload {
   address?: string;
 }
 
+/**
+ * Partial update. Every key is optional; what you don't send, the server
+ * leaves untouched. `address: null` is the explicit "clear it" signal
+ * (distinct from omitting the key entirely — server contract).
+ */
+export interface UpdateAcademyPayload {
+  name?: string;
+  address?: string | null;
+}
+
 interface AcademyResponse {
   data: Academy;
 }
@@ -95,6 +105,23 @@ export class AcademyService {
 
   create(payload: CreateAcademyPayload): Observable<Academy> {
     return this.http.post<AcademyResponse>(this.base, payload).pipe(
+      tap((res) => this.academy.set(res.data)),
+      map((res) => res.data),
+    );
+  }
+
+  /**
+   * Partial update of the authenticated user's academy. The server returns
+   * the full fresh record, which we swap into the signal so every consumer
+   * (sidebar brand label, detail page, etc.) sees the new value in the same
+   * tick without a second network round-trip.
+   *
+   * Errors propagate to the caller — we intentionally do NOT clear the
+   * cached signal on failure, so the form can retry or the user can cancel
+   * without losing the pre-edit state.
+   */
+  update(payload: UpdateAcademyPayload): Observable<Academy> {
+    return this.http.patch<AcademyResponse>(this.base, payload).pipe(
       tap((res) => this.academy.set(res.data)),
       map((res) => res.data),
     );

@@ -172,4 +172,58 @@ describe('AcademyService', () => {
       expect(service.academy()).toEqual(created);
     });
   });
+
+  describe('update', () => {
+    it('PATCHes /api/v1/academy with a partial payload and swaps the signal', () => {
+      // Hydrate the cache so we can verify the signal actually swaps — not
+      // just gets populated.
+      service.get().subscribe();
+      httpMock.expectOne('/api/v1/academy').flush({ data: makeAcademy({ name: 'Old' }) });
+      expect(service.academy()?.name).toBe('Old');
+
+      const updated = makeAcademy({ name: 'Renamed', address: 'Via Nuova 1' });
+      let received: Academy | undefined;
+
+      service.update({ name: 'Renamed', address: 'Via Nuova 1' }).subscribe((a) => (received = a));
+      const req = httpMock.expectOne('/api/v1/academy');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ name: 'Renamed', address: 'Via Nuova 1' });
+      req.flush({ data: updated });
+
+      expect(received).toEqual(updated);
+      expect(service.academy()).toEqual(updated);
+    });
+
+    it('sends address: null on the wire when the caller explicitly clears it', () => {
+      // Distinct from "address omitted" — the server contract is that `null`
+      // clears, an omitted key leaves the previous value untouched. The
+      // service must forward the caller's intent verbatim.
+      service.update({ address: null }).subscribe();
+
+      const req = httpMock.expectOne('/api/v1/academy');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ address: null });
+      req.flush({ data: makeAcademy({ address: null }) });
+    });
+
+    it('propagates server errors (422 / 403) without clobbering the cached signal', () => {
+      const cached = makeAcademy({ name: 'Unchanged' });
+      service.get().subscribe();
+      httpMock.expectOne('/api/v1/academy').flush({ data: cached });
+
+      let capturedError: HttpErrorResponse | undefined;
+      service.update({ name: '' }).subscribe({ error: (e) => (capturedError = e) });
+      httpMock.expectOne('/api/v1/academy').flush(
+        { message: 'Invalid', errors: { name: ['required'] } },
+        {
+          status: 422,
+          statusText: 'Unprocessable',
+        },
+      );
+
+      expect(capturedError?.status).toBe(422);
+      // Signal survives the failure — the form can retry without a refetch.
+      expect(service.academy()).toEqual(cached);
+    });
+  });
 });

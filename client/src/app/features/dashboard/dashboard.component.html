@@ -54,6 +54,16 @@
 
     <nav class="sidebar__nav">
       <a
+        routerLink="academy"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item"
+        data-cy="nav-academy"
+        (click)="closeSidebar()"
+      >
+        <i class="pi pi-home"></i>
+        <span>Academy</span>
+      </a>
+      <a
         routerLink="athletes"
         routerLinkActive="sidebar__nav-item--active"
         class="sidebar__nav-item"
