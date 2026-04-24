@@ -590,7 +590,11 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/NoAcademy'
+          description: Authenticated user has no academy, so attendance access is forbidden.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
 
     post:
       tags: [attendance]
@@ -676,7 +680,11 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/NoAcademy'
+          description: Authenticated user has no academy, so attendance access is forbidden.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
         '422':
           $ref: '#/components/responses/ValidationError'
 

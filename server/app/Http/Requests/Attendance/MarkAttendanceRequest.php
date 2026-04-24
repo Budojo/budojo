@@ -35,13 +35,23 @@ class MarkAttendanceRequest extends FormRequest
         // The backfill window and "no future" cap come from PRD § P0.3.
         // Both bounds are inclusive dates; `today` counts as a valid mark,
         // and 7 days ago is the earliest allowed.
-        $earliest = now()->subDays(self::BACKFILL_DAYS)->toDateString();
-        $latest = now()->toDateString();
+        //
+        // Capture `now()` ONCE and derive both bounds off the same reference
+        // — calling now() twice a few microseconds apart can straddle a
+        // midnight rollover (or, more pragmatically, a Carbon::setTestNow
+        // mid-request-lifecycle), producing earliest/latest pairs that
+        // disagree with each other and flake boundary requests.
+        $today = now();
+        $earliest = $today->copy()->subDays(self::BACKFILL_DAYS)->toDateString();
+        $latest = $today->toDateString();
 
         return [
             'date' => ['required', 'date_format:Y-m-d', "after_or_equal:{$earliest}", "before_or_equal:{$latest}"],
+            // `distinct` drops duplicate ids at the request layer — the
+            // controller's cross-academy count check would otherwise treat
+            // `[1, 1]` as "only one owned out of two" and false-403.
             'athlete_ids' => ['required', 'array', 'min:1'],
-            'athlete_ids.*' => ['integer', 'exists:athletes,id'],
+            'athlete_ids.*' => ['integer', 'exists:athletes,id', 'distinct'],
         ];
     }
 

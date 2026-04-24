@@ -35,7 +35,13 @@ class GetMonthlyAttendanceSummaryAction
             ->join('athletes', 'athletes.id', '=', 'attendance_records.athlete_id')
             ->where('athletes.academy_id', $academy->id)
             ->whereNull('attendance_records.deleted_at')
-            ->whereBetween(DB::raw('DATE(attendance_records.attended_on)'), [$start, $end])
+            // Plain whereBetween keeps the query sargable — the column isn't
+            // wrapped in a function, so MySQL can use the (attended_on) index
+            // for the range scan. The `date:Y-m-d` cast + the DATE column
+            // type ensure the stored value is date-only on both MySQL (native
+            // DATE) and SQLite (normalized on write via the cast), so a
+            // direct string range works across engines.
+            ->whereBetween('attendance_records.attended_on', [$start, $end])
             ->groupBy('athletes.id', 'athletes.first_name', 'athletes.last_name')
             ->select([
                 'athletes.id as athlete_id',

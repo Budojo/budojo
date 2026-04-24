@@ -4,7 +4,25 @@ declare(strict_types=1);
 
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
+use Carbon\Carbon;
 use Laravel\Sanctum\Sanctum;
+
+// Freeze the clock to a fixed moment for the whole file. The API's backfill
+// window (`date` rule on POST /api/v1/attendance) is `[now() - 7 days,
+// now()]`, so tests written with absolute dates like 2026-04-20 would
+// eventually fall outside that rolling window as real time marched past
+// May 2026 and the suite would flake on a calendar flip. Carbon::setTestNow
+// pins every relative-time call in the code under test to 2026-04-24
+// noon, which keeps the canonical 2026-04-20 test date a valid backfill
+// (4 days before the frozen now) and the "7 days ago" / "8 days ago"
+// boundary tests deterministic.
+beforeEach(function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-04-24 12:00:00'));
+});
+
+afterEach(function (): void {
+    Carbon::setTestNow();
+});
 
 // ─── POST /api/v1/attendance (bulk mark) ─────────────────────────────────────
 

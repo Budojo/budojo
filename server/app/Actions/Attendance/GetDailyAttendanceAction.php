@@ -24,8 +24,14 @@ class GetDailyAttendanceAction
         CarbonImmutable $date,
         bool $includeTrashed = false,
     ): Collection {
+        // whereHas over pluck('id')->whereIn: the pluck path issues an extra
+        // `SELECT id FROM athletes` and materializes the full id list into
+        // PHP — fine for a 30-person dojo, wasteful once an academy has
+        // hundreds of athletes. whereHas emits a single `EXISTS (SELECT 1
+        // FROM athletes WHERE …)` subquery, letting the DB do the scoping
+        // with the (athlete_id, deleted_at) index.
         $query = AttendanceRecord::query()
-            ->whereIn('athlete_id', $academy->athletes()->pluck('id'))
+            ->whereHas('athlete', fn ($q) => $q->where('academy_id', $academy->id))
             ->whereDate('attended_on', $date->toDateString())
             ->orderBy('athlete_id');
 

@@ -43,9 +43,12 @@ class AttendanceController extends Controller
 
         $dateInput = (string) $request->query('date', now()->toDateString());
 
-        try {
-            $date = CarbonImmutable::createFromFormat('Y-m-d', $dateInput) ?: CarbonImmutable::now();
-        } catch (\Throwable) {
+        // Strict parse: malformed `?date=` must 422, not silently fall
+        // back to today. CarbonImmutable::createFromFormat returns
+        // CarbonImmutable|false; checking instanceof covers the null
+        // case too across Carbon versions (mirrors store() + summary()).
+        $date = CarbonImmutable::createFromFormat('Y-m-d', $dateInput);
+        if (! $date instanceof CarbonImmutable) {
             return response()->json(
                 ['message' => 'Invalid date format. Use YYYY-MM-DD.', 'errors' => ['date' => ['Invalid date format.']]],
                 422,
@@ -77,10 +80,15 @@ class AttendanceController extends Controller
         // Explicit (mixed) $v closure satisfies PHPStan's strict callable
         // signature check on array_map — intval / 'intval' as a string-name
         // callable has too-narrow a parameter type for the inferred input.
-        $athleteIds = array_values(array_map(
+        // array_unique strips any duplicate ids the client sent (the
+        // MarkAttendanceRequest `distinct` rule covers this at the request
+        // layer too, but belt + braces: the ownership-count check below
+        // relies on count(unique ids) === count(owned ids) — a stray
+        // duplicate would under-count owned and false-403.
+        $athleteIds = array_values(array_unique(array_map(
             static fn (mixed $v): int => is_numeric($v) ? (int) $v : 0,
             (array) $request->input('athlete_ids', []),
-        ));
+        )));
 
         // Cross-academy ownership guard: every submitted athlete MUST belong
         // to the caller's academy. The FormRequest validated shape (ids
