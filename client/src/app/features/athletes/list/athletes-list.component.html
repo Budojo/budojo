@@ -49,6 +49,7 @@
     <p-table
       [value]="athletes()"
       [loading]="loading()"
+      [showLoader]="false"
       [rows]="20"
       [first]="first()"
       [totalRecords]="totalRecords()"
@@ -128,7 +129,18 @@
         <tr>
           <td colspan="7" class="empty-message">
             @if (loading()) {
-              Loading athletes…
+              <!-- Skeleton rows replace the PrimeNG header-spinner that
+                   [showLoader]="false" suppressed. Canon § motion: skeletons
+                   communicate shape before content, a spinner just says
+                   "something is happening" — always use skeletons for list
+                   loading (Krug + Norman). -->
+              <div class="athletes-list__skeleton">
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" />
+              </div>
             } @else {
               <div class="empty-state">
                 <i class="pi pi-users empty-state__icon"></i>

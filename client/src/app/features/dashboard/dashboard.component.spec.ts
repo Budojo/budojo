@@ -113,6 +113,66 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('sidebar footer — explicit Sign out button (#69)', () => {
+    // The brand-dropdown menu still carries Sign out (tests above), but the
+    // discoverability failure flagged in #69 required an always-visible
+    // row. Verify it exists, clicks through to the same logout path, and
+    // closes the mobile drawer in the same tick (so the user doesn't land
+    // on /auth/login with a drawer still slid in).
+    it('renders a sign-out button at the bottom of the sidebar with pi-sign-out icon', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const btn = fixture.nativeElement.querySelector(
+        '[data-cy="nav-sign-out"]',
+      ) as HTMLButtonElement | null;
+      expect(btn).not.toBeNull();
+      expect(btn!.tagName).toBe('BUTTON');
+      expect(btn!.textContent).toContain('Sign out');
+      expect(btn!.querySelector('i.pi-sign-out')).not.toBeNull();
+    });
+
+    it('clicking the footer sign-out button logs out + navigates + closes the drawer', () => {
+      const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      const component = fixture.componentInstance as unknown as {
+        toggleSidebar: () => void;
+        sidebarOpen: () => boolean;
+      };
+      fixture.detectChanges();
+
+      // Open the drawer first so we can verify closeSidebar() fires.
+      component.toggleSidebar();
+      expect(component.sidebarOpen()).toBe(true);
+
+      const btn = fixture.nativeElement.querySelector(
+        '[data-cy="nav-sign-out"]',
+      ) as HTMLButtonElement;
+      btn.click();
+
+      expect(component.sidebarOpen()).toBe(false);
+      expect(authService.logout).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
+    });
+  });
+
+  describe('topbar home link (#68)', () => {
+    it('wraps the Budojo wordmark in a routerLink to /dashboard', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="topbar-home-link"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.tagName).toBe('A');
+      // Angular writes the resolved target into the href attribute when
+      // a routerLink directive resolves.
+      expect(link!.getAttribute('href')).toBe('/dashboard');
+      expect(link!.getAttribute('aria-label')).toContain('go to dashboard home');
+    });
+  });
+
   describe('mobile drawer state', () => {
     it('starts closed — the off-canvas sidebar is hidden by default', () => {
       const fixture = TestBed.createComponent(DashboardComponent);

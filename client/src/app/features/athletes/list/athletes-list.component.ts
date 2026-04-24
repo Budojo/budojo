@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
@@ -32,6 +33,7 @@ interface SelectOption<T extends string> {
     FormsModule,
     ButtonModule,
     SelectModule,
+    SkeletonModule,
     TableModule,
     TagModule,
     ToastModule,

@@ -71,4 +71,14 @@ export class DashboardComponent {
     this.authService.logout();
     void this.router.navigate(['/auth/login']);
   }
+
+  /**
+   * Public wrapper around `logout()` for the sidebar footer button.
+   * The brand menu's `MenuItem.command` still calls `logout()` directly;
+   * the template-bound footer row needs an accessible (protected) method.
+   */
+  protected signOut(): void {
+    this.closeSidebar();
+    this.logout();
+  }
 }

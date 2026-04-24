@@ -296,7 +296,6 @@
 .p-inputtext,
 .p-password input,
 .p-select,
-.p-select .p-select-label,
 .p-datepicker-input,
 .p-inputnumber-input {
   @extend %budojo-field;
@@ -311,13 +310,24 @@ textarea.p-inputtext {
   line-height: 1.4;
 }
 
-// p-select has a wrapper — the visible pill is on .p-select itself.
-// The inner label shouldn't double-style.
+// p-select label — the inner span that shows the selected option text.
+// Deliberately NOT @extend'd from %budojo-field: that was flipping the
+// label's background on :focus to surface-0 (white) and clashed with
+// PrimeNG's internal `.p-focus` color cascade, producing a barely-
+// visible white-on-white text when the select opened. Keeping the label
+// as a transparent inheritor of its parent .p-select pill means the
+// text color always tracks --p-text-color no matter what PrimeNG does
+// internally.
 .p-select .p-select-label {
   background: transparent;
   border: none;
   min-height: auto;
   padding: 0;
+  color: var(--p-text-color);
+}
+.p-select:focus-within .p-select-label,
+.p-select.p-focus .p-select-label {
+  color: var(--p-text-color);
 }
 
 // ============================================================
