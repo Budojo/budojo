@@ -141,6 +141,25 @@ describe('AcademyFormComponent', () => {
     expect(component.error()).toMatch(/something went wrong/i);
   });
 
+  it('on 403 clears the academy cache and redirects to /dashboard so guards can re-decide', () => {
+    // Backend contract: PATCH returns 403 when the user no longer has an
+    // academy. Sitting on the edit form with a stale cached academy
+    // would be a dead-end; the service clear()s and we bounce to
+    // /dashboard, where hasAcademyGuard re-fetches, gets 404, and
+    // redirects to /setup.
+    const { component, router, httpMock } = setup();
+    const service = TestBed.inject(AcademyService);
+    component.form.patchValue({ name: 'New Name' });
+    component.submit();
+
+    httpMock
+      .expectOne('/api/v1/academy')
+      .flush({ message: 'Forbidden.' }, { status: 403, statusText: 'Forbidden' });
+
+    expect(service.academy()).toBeNull(); // service cleared the cache
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+  });
+
   it('cancel() navigates back to the detail page without submitting', () => {
     const { component, router, httpMock } = setup();
     component.cancel();

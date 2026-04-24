@@ -116,14 +116,33 @@ export class AcademyService {
    * (sidebar brand label, detail page, etc.) sees the new value in the same
    * tick without a second network round-trip.
    *
-   * Errors propagate to the caller — we intentionally do NOT clear the
-   * cached signal on failure, so the form can retry or the user can cancel
-   * without losing the pre-edit state.
+   * Most errors propagate to the caller without touching the cache so the
+   * form can retry or cancel without losing state. The single exception is
+   * 403: the backend returns it on PATCH when the user no longer has an
+   * academy (while GET returns 404 for the same underlying state). In that
+   * case we clear() so downstream guard runs re-fetch, get 404, and
+   * redirect the user to /setup instead of sitting on a stale cached
+   * academy they can no longer touch.
+   *
+   * The epoch bump at entry mirrors the invariant `clear()` already relies
+   * on: any `get()` request still in flight when we started must not be
+   * able to overwrite the signal with its pre-update snapshot when it
+   * eventually lands. Without this, a slow in-flight `get()` that returns
+   * AFTER the PATCH response would silently clobber the fresh update.
    */
   update(payload: UpdateAcademyPayload): Observable<Academy> {
+    this.epoch++;
+    this.inflight$ = null;
+
     return this.http.patch<AcademyResponse>(this.base, payload).pipe(
       tap((res) => this.academy.set(res.data)),
       map((res) => res.data),
+      catchError((err: HttpErrorResponse) => {
+        if (err.status === 403) {
+          this.clear();
+        }
+        return throwError(() => err);
+      }),
     );
   }
 

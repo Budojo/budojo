@@ -164,10 +164,18 @@ export class AcademyFormComponent implements OnInit {
       return;
     }
     if (err.status === 403) {
-      // The only way to hit this is the cached academy going stale between
-      // render and submit (e.g. another tab deleted the academy). Same
-      // recovery as the ngOnInit guard: bounce back to detail.
-      this.error.set('You no longer have permission to edit this academy.');
+      // Backend contract: PATCH returns 403 when the user no longer has
+      // an academy (GET returns 404 for the same state — asymmetric but
+      // baked into the canon). Sitting on the edit form with an inline
+      // error would leave the UI in a dead-end: cached signal still
+      // points at a now-vanished academy, sidebar still shows its name.
+      //
+      // AcademyService.update() already cleared the cache in response to
+      // the 403. Bouncing to /dashboard triggers `hasAcademyGuard` which
+      // re-fetches, receives 404, and redirects to /setup where the user
+      // can recreate. Krug forgiveness — every recovery path one click,
+      // no hunting around.
+      void this.router.navigate(['/dashboard']);
       return;
     }
     this.error.set(err.error?.message ?? 'Something went wrong. Please try again.');
