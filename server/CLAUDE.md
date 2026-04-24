@@ -113,10 +113,10 @@ What we do instead: **concrete type-hints in Action and Controller constructors*
 The proposal: declare `UploadDocumentDto` / `CreateAthleteDto` with typed public properties, constructed in the Controller from request data, passed to the Action. The intuition: "compile-time type safety through the whole call chain."
 Why we reject it:
 
-- `FormRequest::validated()` returns an array whose shape is pinned by `rules()`. Combined with PHPStan level 9 + typed `execute(...)` parameters on the Action, we already get the type guarantees a DTO class would provide — at zero ceremony cost.
+- `FormRequest::validated()` gives us strong **runtime** guarantees: the payload has passed `rules()` before it reaches the Action. Combined with typed primitive parameters on `execute(...)`, that covers simple CRUD without another class. It does **not**, in this repo, give DTO-like end-to-end **compile-time** typing of the validated array by itself — our `rules()` methods are annotated as `@return array<string, mixed>`, so PHPStan sees the `validated()` return as a loose array, not a shape.
 - Hand-rolled DTO classes without schema-to-DTO generation drift from the request validation over time (rename a field in `rules()`, forget to rename in the DTO — bug).
 
-What we do instead: **FormRequest IN, Resource OUT**, plus typed primitive parameters on `Action::execute(...)`. If a payload grows complex enough that we want compile-time types end-to-end, `spatie/laravel-data` is the escape hatch — we adopt it the day the first payload justifies it, not pre-emptively.
+What we do instead: **FormRequest IN, Resource OUT**, plus typed primitive parameters on `Action::execute(...)`. If a payload grows complex enough that we genuinely want compile-time types end-to-end, we need either explicit `array-shape` PHPStan annotations on `rules()` or a data-object library — `spatie/laravel-data` is the escape hatch, adopted the day the first payload justifies it, not pre-emptively.
 
 **5. Aggregating bindings into a custom `ServiceServiceProvider`.**
 The proposal: a dedicated provider class that imports all Service interfaces and calls `$this->app->bind(XInterface::class, X::class)` for each. The intuition: "one file tells me every binding in the app."
@@ -126,7 +126,7 @@ Why we reject it:
 - Custom providers introduce a surface area that's easy to drift: bindings added and never used, circular `app()->make()` calls inside providers, boot-time perf regressions that are hard to pin down.
 - Laravel already has `AppServiceProvider` for the rare real case. A second "only services live here" provider is file-splitting-for-its-own-sake.
 
-What we do instead: **`AppServiceProvider::register()` holds the handful of bindings that genuinely need the container's attention** (e.g. swappable storage the day we add S3). Everything else rides auto-resolution.
+What we do instead: **`AppServiceProvider::register()` is where we put bindings when — and only when — they're genuinely needed** (e.g. swappable storage the day we add S3). As of today the file is empty; everything rides container auto-resolution via type-hint.
 
 #### When abstraction DOES belong (escape hatches)
 
@@ -134,7 +134,7 @@ The rejections above are conditional. Introduce the abstraction the moment these
 
 - **Interface with multiple implementations.** Example: the day we add S3 alongside the `local` disk, a `FileStorageInterface` with `LocalFileStorage` + `S3FileStorage` is correct. Two concrete bindings, one call site per interface: the abstraction pays for itself.
 - **External-vendor boundary that tests must stub.** Example: M5's `NotificationService` for email/SMS — we never want real SendGrid calls in PEST runs. Interface + fake implementation + container binding is the right shape.
-- **Pure domain logic shared between ≥ 2 Actions.** Example: if 3 Actions all need "compute days-to-expiry considering the academy's timezone," extract a pure `ExpiryCalculator` class (no interface, just a dependency-free value object) and inject it into each Action. That's **not** a Service layer — it's a domain helper. Rule of three applies.
+- **Pure domain logic shared between ≥ 2 Actions.** Example: if two Actions both need "compute days-to-expiry considering the academy's timezone," extract a pure `ExpiryCalculator` class (no interface, just a dependency-free value object) and inject it into each Action. That's **not** a Service layer — it's a domain helper. Pure value objects have near-zero extraction cost, so waiting for the third duplication is overkill here; the Rule of Three is for more speculative abstractions.
 - **The Active Record caveat breaks.** A CLI tool or a console worker that needs to manipulate documents without booting the HTTP kernel might justify a thin repository. Reopen the decision then.
 
 The pattern everywhere: **abstract the day the second caller or the second implementation is real**, not the day a book suggests it should exist.
