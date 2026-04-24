@@ -172,3 +172,26 @@ it('returns 422 when name exceeds 255 characters', function (): void {
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['name']);
 });
+
+it('ignores slug in the payload — slug is immutable by design', function (): void {
+    // Regression guard: if a future contributor adds `slug` to the rules
+    // array, this test flips red. The contract is that permalinks survive
+    // renames forever — encode it in a test, not just a comment.
+    $user = User::factory()->create();
+    $academy = Academy::factory()->create([
+        'user_id' => $user->id,
+        'name' => 'Original Name',
+        'slug' => 'original-slug-abcd1234',
+    ]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'name' => 'Renamed Academy',
+        'slug' => 'malicious-attacker-slug',
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Renamed Academy')
+        ->assertJsonPath('data.slug', 'original-slug-abcd1234');
+
+    expect($academy->fresh()->slug)->toBe('original-slug-abcd1234');
+});
