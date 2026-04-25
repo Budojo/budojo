@@ -71,6 +71,14 @@
 .athlete-name {
   font-weight: 500;
   color: var(--p-surface-900);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  &__text {
+    flex: 0 1 auto;
+  }
 }
 
 .athlete-email {
