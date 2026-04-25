@@ -91,6 +91,13 @@ export const routes: Routes = [
             (m) => m.ExpiringDocumentsListComponent,
           ),
       },
+      {
+        path: 'attendance',
+        loadComponent: () =>
+          import('./features/attendance/daily/daily-attendance.component').then(
+            (m) => m.DailyAttendanceComponent,
+          ),
+      },
     ],
   },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },

@@ -1,0 +1,218 @@
+// Daily check-in — mobile-first, the screen the instructor opens during
+// class on a phone held one-handed. Every spacing + color resolves to
+// design-system tokens. Touch targets stay >= 48 px.
+
+.attendance {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+  max-width: 40rem;
+  margin: 0 auto;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+}
+
+.attendance__header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+.attendance__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.attendance__eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.attendance__title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.018em;
+  color: var(--p-text-color);
+}
+
+// Empty + list
+
+.attendance__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--p-text-muted-color);
+
+  i {
+    font-size: 2.5rem;
+    color: var(--p-surface-300);
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.attendance__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.attendance__pagination-hint {
+  margin: 0;
+  padding-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  text-align: center;
+}
+
+// Row — full-width tap target. Tap = toggle. Two visual states:
+// "not recorded" (outline / surface-0) and "present" (soft accent fill).
+
+.attendance-row__wrapper {
+  list-style: none;
+}
+
+.attendance-row {
+  // `all: unset` strips the default <button> appearance so we can rebuild
+  // it as a row. The :focus-visible rule below restores keyboard a11y.
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-height: 3.5rem; // 56 px — comfortable for thumb on a 390 px screen
+  padding: 0.75rem 1rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  color: var(--p-text-color);
+  cursor: pointer;
+  font-size: 1rem; // canon body 17/22 ≈ 1rem
+  transition:
+    background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover:not(:disabled) {
+    background: var(--p-content-hover-background);
+  }
+
+  &:active:not(:disabled) {
+    opacity: 0.88; // canon press feedback
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: progress;
+  }
+
+  &--present {
+    background: var(--p-primary-50);
+    border-color: var(--p-primary-300);
+    color: var(--p-primary-700);
+
+    &:hover:not(:disabled) {
+      background: var(--p-primary-100);
+    }
+  }
+
+  // In-flight: faint pulse on the indicator + slight opacity. Keeps the
+  // user oriented without spinning the whole row.
+  &--inflight {
+    opacity: 0.72;
+  }
+
+  &--skeleton {
+    pointer-events: none;
+    cursor: default;
+  }
+
+  &__name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  &__indicator {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--p-border-radius-full);
+
+    i {
+      font-size: 1.125rem;
+    }
+  }
+}
+
+// Toast undo button — minimal, no PrimeNG default chrome.
+
+.attendance-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+.attendance-toast__summary {
+  flex: 1;
+  font-weight: 500;
+}
+
+.attendance-toast__undo {
+  all: unset;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--p-primary-color);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--p-border-radius-sm);
+
+  &:hover {
+    // Accent-tinted hover derived from the token, not a hardcoded rgba.
+    // color-mix keeps the tint in sync if the canon palette ever shifts
+    // (esp. dark mode, where --p-primary-color flips lighter).
+    background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}

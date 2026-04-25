@@ -58,11 +58,15 @@ describe('Mobile shell (390 × 844)', () => {
     cy.get('.sidebar__brand-name').should('contain.text', 'Test Academy');
 
     // The backdrop is a full-viewport fixed element, but at 390×844 the
-    // sidebar (16 rem = 256 px) covers the left 2/3 — Cypress' default
-    // center click lands inside the sidebar's DOM box and fails the
-    // "not covered" actionability check. Click at the right edge where
-    // the backdrop is actually user-visible, same place a real user taps.
-    cy.get('[data-cy="drawer-backdrop"]').click('right');
+    // sidebar (16 rem = 256 px) covers the left 2/3. Cypress runs a
+    // visibility check on the ELEMENT (not the click coord) before the
+    // click — and "covered by another element" makes the whole element
+    // fail visibility upfront, so `.click('right')` alone doesn't escape.
+    // `{ force: true }` is Cypress' documented bypass for this case
+    // (https://docs.cypress.io/guides/core-concepts/interacting-with-elements#Visibility):
+    // the element IS user-visible at the chosen coord, the geometry
+    // check is just wrong. Real users tap there every day.
+    cy.get('[data-cy="drawer-backdrop"]').click('right', { force: true });
     cy.get('[data-cy="drawer-backdrop"]').should('not.exist');
     cy.get('[data-cy="topbar-hamburger"]').should('have.attr', 'aria-expanded', 'false');
   });

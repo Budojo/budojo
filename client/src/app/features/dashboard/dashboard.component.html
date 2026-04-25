@@ -80,6 +80,16 @@
         <i class="pi pi-users"></i>
         <span>Athletes</span>
       </a>
+      <a
+        routerLink="attendance"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item"
+        data-cy="nav-attendance"
+        (click)="closeSidebar()"
+      >
+        <i class="pi pi-check-square"></i>
+        <span>Attendance</span>
+      </a>
     </nav>
 
     <!-- Sign out as a dedicated, visible row — the brand dropdown above
