@@ -28,7 +28,7 @@ function makeAthlete(Academy $academy, array $overrides = []): Athlete
     ], $overrides));
 }
 
-it('sorts by last_name asc when sort_by=last_name and order=asc', function (): void {
+it('sorts by last_name asc when sort_by=last_name and sort_order=asc', function (): void {
     makeAthlete($this->academy, ['last_name' => 'Verdi']);
     makeAthlete($this->academy, ['last_name' => 'Bianchi']);
     makeAthlete($this->academy, ['last_name' => 'Rossi']);
@@ -55,7 +55,10 @@ it('sorts by stripes desc by default when sort_by=stripes', function (): void {
 });
 
 it('sorts by belt rank desc with stripes desc + last_name asc as tiebreakers', function (): void {
+    // Mix three belts so we can verify both (a) primary rank ordering and
+    // (b) the stripes/last_name tiebreakers within the same belt.
     makeAthlete($this->academy, ['last_name' => 'White1', 'belt' => Belt::White, 'stripes' => 0]);
+    makeAthlete($this->academy, ['last_name' => 'BlueOne', 'belt' => Belt::Blue, 'stripes' => 0]);
     makeAthlete($this->academy, ['last_name' => 'BlackA', 'belt' => Belt::Black, 'stripes' => 0]);
     makeAthlete($this->academy, ['last_name' => 'BlackZ', 'belt' => Belt::Black, 'stripes' => 0]);
     makeAthlete($this->academy, ['last_name' => 'BlackTwoStripes', 'belt' => Belt::Black, 'stripes' => 2]);
@@ -65,15 +68,29 @@ it('sorts by belt rank desc with stripes desc + last_name asc as tiebreakers', f
         ->map(fn ($r) => "{$r['belt']}/{$r['stripes']}/{$r['last_name']}")
         ->all();
 
-    // Black belts first (sort by belt enum string desc — 'white' > 'purple' > 'blue' > 'brown' > 'black'
-    // alphabetically; we accept whatever the DB returns for the primary key
-    // and check the tiebreakers within each belt group).
-    $blackGroup = array_values(array_filter($rows, fn ($r) => str_starts_with($r, 'black')));
-    expect($blackGroup)->toBe([
-        'black/2/BlackTwoStripes', // stripes desc within belt
-        'black/0/BlackA',          // last_name asc as final tie-break
+    // Primary key: belt rank desc — black > blue > white. Ties broken by
+    // stripes desc, then last_name asc. CASE-based ranking, not the raw
+    // string column (which would give a useless lexicographic order).
+    expect($rows)->toBe([
+        'black/2/BlackTwoStripes',
+        'black/0/BlackA',
         'black/0/BlackZ',
+        'blue/0/BlueOne',
+        'white/0/White1',
     ]);
+});
+
+it('sorts by belt rank asc when sort_order=asc', function (): void {
+    makeAthlete($this->academy, ['last_name' => 'W', 'belt' => Belt::White, 'stripes' => 0]);
+    makeAthlete($this->academy, ['last_name' => 'B', 'belt' => Belt::Black, 'stripes' => 0]);
+    makeAthlete($this->academy, ['last_name' => 'P', 'belt' => Belt::Purple, 'stripes' => 0]);
+
+    $rows = collect($this->getJson('/api/v1/athletes?sort_by=belt&sort_order=asc')
+        ->json('data'))
+        ->pluck('belt')
+        ->all();
+
+    expect($rows)->toBe(['white', 'purple', 'black']);
 });
 
 it('falls back to latest() when sort_by is unknown', function (): void {

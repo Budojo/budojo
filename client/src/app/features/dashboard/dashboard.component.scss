@@ -300,9 +300,9 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     // browser's button defaults (background, border, font, cursor) but
     // keep the inherited `.sidebar__nav-item` flex/padding/color rules.
     // No `all: unset` — that resets `font-size` and `min-height` too, and
-    // we don't want to redeclare half the parent block.
+    // we don't want to redeclare half the parent block. Width comes from
+    // the flex-column parent (`__footer`), so no explicit `width: 100%`.
     &--signout {
-      width: 100%;
       appearance: none;
       background: transparent;
       border: 0;

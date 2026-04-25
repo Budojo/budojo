@@ -8,8 +8,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Athlete\StoreAthleteRequest;
 use App\Http\Requests\Athlete\UpdateAthleteRequest;
 use App\Http\Resources\AthleteResource;
+use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -17,21 +20,16 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class AthleteController extends Controller
 {
     /**
-     * Map of `?sort_by=` values to the eloquent ORDER BY clause(s) we apply.
-     * A string value is a single-column sort; a list of {column, direction}
-     * triples drives a stable multi-key sort (used for `belt` so two black
-     * belts stay grouped by stripes desc, then last_name asc).
+     * Single-column sort whitelist. The `belt` case is special and lives in
+     * applyBeltSort() because it needs a rank-aware CASE expression rather
+     * than the lexicographic `orderBy('belt', ...)` the string column would
+     * give us (alphabetic desc puts white first, not black).
      *
-     * @var array<string, string|list<array{column: string, direction: string}>>
+     * @var array<string, string>
      */
     private const SORTABLE_COLUMNS = [
         'first_name' => 'first_name',
         'last_name' => 'last_name',
-        'belt' => [
-            ['column' => 'belt', 'direction' => 'preserve'],
-            ['column' => 'stripes', 'direction' => 'desc'],
-            ['column' => 'last_name', 'direction' => 'asc'],
-        ],
         'stripes' => 'stripes',
         'joined_at' => 'joined_at',
         'created_at' => 'created_at',
@@ -53,16 +51,10 @@ class AthleteController extends Controller
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')));
 
-        if ($sortBy !== null && \array_key_exists($sortBy, self::SORTABLE_COLUMNS)) {
-            $clause = self::SORTABLE_COLUMNS[$sortBy];
-            if (\is_string($clause)) {
-                $query->orderBy($clause, $sortOrder);
-            } else {
-                foreach ($clause as $step) {
-                    $direction = $step['direction'] === 'preserve' ? $sortOrder : $step['direction'];
-                    $query->orderBy($step['column'], $direction);
-                }
-            }
+        if ($sortBy === 'belt') {
+            $this->applyBeltSort($query, $sortOrder);
+        } elseif ($sortBy !== null && \array_key_exists($sortBy, self::SORTABLE_COLUMNS)) {
+            $query->orderBy(self::SORTABLE_COLUMNS[$sortBy], $sortOrder);
         } else {
             $query->latest();
         }
@@ -124,6 +116,27 @@ class AthleteController extends Controller
         $athlete->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Belt sort = rank-aware CASE expression for the primary key, then
+     * stripes desc + last_name asc as stable tiebreakers so two athletes
+     * at the same belt level always render in the same row order.
+     *
+     * SQL is fully literal — both the belt values and the rank integers
+     * are values we control (the `BELT_RANK` constant). No user input
+     * touches the ORDER BY clause, so there's no injection surface.
+     *
+     * @param  Builder<Athlete>|HasMany<Athlete, Academy>  $query
+     */
+    private function applyBeltSort(Builder|HasMany $query, string $direction): void
+    {
+        $caseAsc = "CASE belt WHEN 'white' THEN 1 WHEN 'blue' THEN 2 WHEN 'purple' THEN 3 WHEN 'brown' THEN 4 WHEN 'black' THEN 5 END ASC";
+        $caseDesc = "CASE belt WHEN 'white' THEN 1 WHEN 'blue' THEN 2 WHEN 'purple' THEN 3 WHEN 'brown' THEN 4 WHEN 'black' THEN 5 END DESC";
+
+        $query->orderByRaw($direction === 'asc' ? $caseAsc : $caseDesc);
+        $query->orderBy('stripes', 'desc');
+        $query->orderBy('last_name', 'asc');
     }
 
     /**

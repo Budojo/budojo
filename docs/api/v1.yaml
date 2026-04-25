@@ -306,9 +306,12 @@ paths:
         - name: sort_by
           in: query
           description: |
-            Column to sort by. `belt` applies a multi-key sort (belt rank +
-            stripes desc + last_name asc) so two black belts stay grouped.
-            Unknown values fall back to the default `created_at desc`.
+            Column to sort by. `belt` is rank-aware (white < blue < purple <
+            brown < black) via a SQL CASE expression — NOT a lexicographic
+            sort on the column value — and chains `stripes desc` + `last_name
+            asc` as stable tiebreakers so two athletes at the same belt
+            level always render in the same row order. Unknown values fall
+            back to the default `created_at desc`.
           required: false
           schema:
             type: string
