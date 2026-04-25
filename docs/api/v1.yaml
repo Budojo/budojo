@@ -1068,9 +1068,13 @@ components:
           nullable: true
         logo_url:
           type: string
+          format: uri
           nullable: true
-          description: Public URL of the academy logo, or null when no logo has been uploaded
-          example: /storage/academy-logos/1/abcd1234.png
+          description: |
+            Absolute public URL of the academy logo (resolved server-side via
+            `Storage::disk('public')->url(...)` against `APP_URL`), or null
+            when no logo has been uploaded.
+          example: https://api.example.com/storage/academy-logos/1/abcd1234.png
 
     AcademyEnvelope:
       type: object

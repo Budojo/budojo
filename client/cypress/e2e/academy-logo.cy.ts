@@ -72,7 +72,9 @@ describe('academy logo management', () => {
 
     cy.get('[data-cy="academy-logo-image"]').should('exist');
     cy.get('[data-cy="academy-logo-remove"]').click();
-    cy.contains('Remove').click(); // confirm popup primary
+    // Scope to the confirm popup so we don't match the trigger button
+    // ("Remove" appears on both the card action AND the popup accept).
+    cy.get('.p-confirmpopup-accept-button').click();
     cy.wait('@removeLogo');
     cy.get('[data-cy="academy-logo-image"]').should('not.exist');
   });

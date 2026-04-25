@@ -119,3 +119,30 @@ it('exposes logo_url as null when academy has no logo', function (): void {
         ->assertOk()
         ->assertJsonPath('data.logo_url', null);
 });
+
+it('strips script tags and on* attributes from uploaded SVG logos', function (): void {
+    $user = User::factory()->create();
+    $academy = Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $malicious = <<<'SVG'
+        <?xml version="1.0"?>
+        <svg xmlns="http://www.w3.org/2000/svg" onload="alert('xss')" width="64" height="64">
+          <script>alert('xss')</script>
+          <rect width="64" height="64" fill="#5b6cff" onclick="alert('xss')"/>
+          <a xlink:href="javascript:alert('xss')"><text>click</text></a>
+        </svg>
+        SVG;
+
+    $file = UploadedFile::fake()->createWithContent('logo.svg', $malicious);
+
+    $this->postJson('/api/v1/academy/logo', ['logo' => $file])->assertOk();
+
+    $stored = Storage::disk('public')->get($academy->refresh()->logo_path);
+    expect($stored)
+        ->toBeString()
+        ->not->toContain('<script')
+        ->not->toContain('onload=')
+        ->not->toContain('onclick=')
+        ->not->toContain('javascript:');
+});
