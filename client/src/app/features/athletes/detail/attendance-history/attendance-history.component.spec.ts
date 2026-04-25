@@ -1,0 +1,326 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { of } from 'rxjs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AttendanceHistoryComponent } from './attendance-history.component';
+import { Athlete } from '../../../../core/services/athlete.service';
+import { AttendanceRecord } from '../../../../core/services/attendance.service';
+
+const ATHLETE_ID = 42;
+
+function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
+  return {
+    id: ATHLETE_ID,
+    first_name: 'Mario',
+    last_name: 'Rossi',
+    email: null,
+    phone: null,
+    date_of_birth: null,
+    belt: 'blue',
+    stripes: 0,
+    status: 'active',
+    joined_at: '2026-01-15',
+    created_at: '2026-01-15T10:00:00+00:00',
+    ...overrides,
+  };
+}
+
+function makeRecord(overrides: Partial<AttendanceRecord> = {}): AttendanceRecord {
+  return {
+    id: 1,
+    athlete_id: ATHLETE_ID,
+    attended_on: '2026-04-10',
+    notes: null,
+    created_at: '2026-04-10T10:00:00+00:00',
+    deleted_at: null,
+    ...overrides,
+  };
+}
+
+function setupTestBed(): HttpTestingController {
+  const parentParamMap = convertToParamMap({ id: String(ATHLETE_ID) });
+  TestBed.configureTestingModule({
+    imports: [AttendanceHistoryComponent],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      {
+        provide: ActivatedRoute,
+        useValue: {
+          parent: { paramMap: of(parentParamMap) },
+        },
+      },
+    ],
+  });
+  return TestBed.inject(HttpTestingController);
+}
+
+describe('AttendanceHistoryComponent', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 3, 25));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('fetches the athlete and the current month of attendance records on init', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [makeRecord({ attended_on: '2026-04-10' })] });
+
+    expect(fixture.componentInstance['attendedCount']()).toBe(1);
+    expect(fixture.componentInstance['attendedDates']().has('2026-04-10')).toBe(true);
+    httpMock.verify();
+  });
+
+  it('prev navigation refetches the previous month with correct params', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+
+    fixture.componentInstance.prevMonth();
+    fixture.detectChanges();
+
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-03-01&to=2026-03-31`)
+      .flush({ data: [makeRecord({ attended_on: '2026-03-12' })] });
+
+    expect(fixture.componentInstance['attendedDates']().has('2026-03-12')).toBe(true);
+    httpMock.verify();
+  });
+
+  it('prev navigation across January rolls year back', () => {
+    vi.setSystemTime(new Date(2027, 0, 5));
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2027-01-01&to=2027-01-31`)
+      .flush({ data: [] });
+
+    fixture.componentInstance.prevMonth();
+    fixture.detectChanges();
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-12-01&to=2026-12-31`)
+      .flush({ data: [] });
+
+    expect(fixture.componentInstance['visible']()).toEqual({ year: 2026, month: 12 });
+    httpMock.verify();
+  });
+
+  it('canGoPrev is false when visible month equals the athlete created_at month', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}`)
+      .flush({ data: makeAthlete({ created_at: '2026-04-01T10:00:00+00:00' }) });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+
+    expect(fixture.componentInstance['canGoPrev']()).toBe(false);
+    httpMock.verify();
+  });
+
+  it('canGoPrev is true when visible month is after the athlete created_at month', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}`)
+      .flush({ data: makeAthlete({ created_at: '2026-01-15T10:00:00+00:00' }) });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+
+    expect(fixture.componentInstance['canGoPrev']()).toBe(true);
+    httpMock.verify();
+  });
+
+  it('canGoNext is false when visible month equals the current month', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+
+    expect(fixture.componentInstance['canGoNext']()).toBe(false);
+    httpMock.verify();
+  });
+
+  it('canGoNext becomes true after stepping back from the current month', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+
+    fixture.componentInstance.prevMonth();
+    fixture.detectChanges();
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-03-01&to=2026-03-31`)
+      .flush({ data: [] });
+
+    expect(fixture.componentInstance['canGoNext']()).toBe(true);
+    httpMock.verify();
+  });
+
+  it('opens the popover with the notes when tapping a day that has notes', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({
+        data: [makeRecord({ attended_on: '2026-04-10', notes: 'Open mat — rolled with Lucia' })],
+      });
+
+    fixture.componentInstance.openNotesFor(new MouseEvent('click'), '2026-04-10');
+    expect(fixture.componentInstance['activeNotes']()).toBe('Open mat — rolled with Lucia');
+    httpMock.verify();
+  });
+
+  it('does not surface notes when the attended day has null notes', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [makeRecord({ attended_on: '2026-04-10', notes: null })] });
+
+    fixture.componentInstance.openNotesFor(new MouseEvent('click'), '2026-04-10');
+    expect(fixture.componentInstance['activeNotes']()).toBeNull();
+    httpMock.verify();
+  });
+
+  it('exposes a notedDates set for template gating of clickable cells', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({
+        data: [
+          makeRecord({ id: 1, attended_on: '2026-04-10', notes: 'rolled with Lucia' }),
+          makeRecord({ id: 2, attended_on: '2026-04-12', notes: null }),
+        ],
+      });
+
+    expect(fixture.componentInstance['notedDates']().has('2026-04-10')).toBe(true);
+    expect(fixture.componentInstance['notedDates']().has('2026-04-12')).toBe(false);
+    httpMock.verify();
+  });
+
+  it('parses the created-at boundary from the YYYY-MM prefix to avoid TZ drift', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    // 23:30 UTC on Jan 31 — naive `new Date()` would shift this to Feb 01 in
+    // any TZ ahead of UTC, breaking the prev-month boundary by a full month.
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}`)
+      .flush({ data: makeAthlete({ created_at: '2026-01-31T23:30:00+00:00' }) });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+
+    // Step from Apr → Mar → Feb → Jan; Jan must be reachable, prev disabled there.
+    fixture.componentInstance.prevMonth();
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-03-01&to=2026-03-31`)
+      .flush({ data: [] });
+    fixture.componentInstance.prevMonth();
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-02-01&to=2026-02-28`)
+      .flush({ data: [] });
+    fixture.componentInstance.prevMonth();
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-01-01&to=2026-01-31`)
+      .flush({ data: [] });
+
+    expect(fixture.componentInstance['visible']()).toEqual({ year: 2026, month: 1 });
+    expect(fixture.componentInstance['canGoPrev']()).toBe(false);
+    httpMock.verify();
+  });
+
+  it('keeps the athlete record when only the attendance call fails', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ message: 'oops' }, { status: 500, statusText: 'Server Error' });
+
+    expect(fixture.componentInstance['athlete']()?.id).toBe(ATHLETE_ID);
+    expect(fixture.componentInstance['records']()).toEqual([]);
+    httpMock.verify();
+  });
+
+  it('discards stale month responses that arrive after a newer navigation', () => {
+    const httpMock = setupTestBed();
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+
+    // Two rapid prev clicks: April→March (in-flight), then March→February (also in-flight).
+    fixture.componentInstance.prevMonth();
+    const marchReq = httpMock.expectOne(
+      `/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-03-01&to=2026-03-31`,
+    );
+    fixture.componentInstance.prevMonth();
+    const februaryReq = httpMock.expectOne(
+      `/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-02-01&to=2026-02-28`,
+    );
+
+    // February resolves first with its day; then the slow March response lands.
+    februaryReq.flush({
+      data: [makeRecord({ id: 99, attended_on: '2026-02-14' })],
+    });
+    marchReq.flush({
+      data: [makeRecord({ id: 88, attended_on: '2026-03-22' })],
+    });
+
+    // Stale March response must NOT overwrite the February state.
+    expect(fixture.componentInstance['records']().some((r) => r.id === 99)).toBe(true);
+    expect(fixture.componentInstance['records']().some((r) => r.id === 88)).toBe(false);
+    httpMock.verify();
+  });
+});

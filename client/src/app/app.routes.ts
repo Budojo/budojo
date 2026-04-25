@@ -82,6 +82,13 @@ export const routes: Routes = [
                 (m) => m.DocumentsListComponent,
               ),
           },
+          {
+            path: 'attendance',
+            loadComponent: () =>
+              import('./features/athletes/detail/attendance-history/attendance-history.component').then(
+                (m) => m.AttendanceHistoryComponent,
+              ),
+          },
         ],
       },
       {

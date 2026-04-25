@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { AthleteDetailComponent } from './athlete-detail.component';
 import { Athlete } from '../../../core/services/athlete.service';
 
@@ -23,14 +23,25 @@ function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
   };
 }
 
-function setupTestBed(idParam: string | null = '42'): HttpTestingController {
+function setupTestBed(
+  idParam: string | null = '42',
+  initialUrl = '/dashboard/athletes/42/documents',
+): { http: HttpTestingController; routerEvents: Subject<unknown> } {
   const paramMap = convertToParamMap(idParam ? { id: idParam } : {});
+  const routerEvents = new Subject<unknown>();
   TestBed.configureTestingModule({
     imports: [AthleteDetailComponent],
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: Router, useValue: { navigate: vi.fn().mockResolvedValue(true) } },
+      {
+        provide: Router,
+        useValue: {
+          navigate: vi.fn().mockResolvedValue(true),
+          events: routerEvents.asObservable(),
+          url: initialUrl,
+        },
+      },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -40,12 +51,12 @@ function setupTestBed(idParam: string | null = '42'): HttpTestingController {
       },
     ],
   });
-  return TestBed.inject(HttpTestingController);
+  return { http: TestBed.inject(HttpTestingController), routerEvents };
 }
 
 describe('AthleteDetailComponent', () => {
   it('loads the athlete and exposes the full name', () => {
-    const httpMock = setupTestBed('42');
+    const { http: httpMock } = setupTestBed('42');
     const fixture = TestBed.createComponent(AthleteDetailComponent);
     fixture.detectChanges();
 
@@ -57,7 +68,7 @@ describe('AthleteDetailComponent', () => {
   });
 
   it('redirects to the list when the id is non-numeric', () => {
-    const httpMock = setupTestBed('abc');
+    const { http: httpMock } = setupTestBed('abc');
     const fixture = TestBed.createComponent(AthleteDetailComponent);
     fixture.detectChanges();
 
@@ -70,7 +81,7 @@ describe('AthleteDetailComponent', () => {
   });
 
   it('maps status to the expected p-tag severity', () => {
-    const httpMock = setupTestBed('42');
+    const { http: httpMock } = setupTestBed('42');
     const fixture = TestBed.createComponent(AthleteDetailComponent);
     fixture.detectChanges();
     httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
@@ -82,7 +93,7 @@ describe('AthleteDetailComponent', () => {
   });
 
   it('exposes an error message when loading the athlete fails', () => {
-    const httpMock = setupTestBed('42');
+    const { http: httpMock } = setupTestBed('42');
     const fixture = TestBed.createComponent(AthleteDetailComponent);
     fixture.detectChanges();
 
@@ -91,6 +102,16 @@ describe('AthleteDetailComponent', () => {
       .flush({ message: 'oops' }, { status: 500, statusText: 'Server Error' });
 
     expect(fixture.componentInstance.error()).toBe('Could not load this athlete.');
+    httpMock.verify();
+  });
+
+  it('reads the active tab from the current URL', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/attendance');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+
+    expect(fixture.componentInstance.activeTab()).toBe('attendance');
     httpMock.verify();
   });
 });
