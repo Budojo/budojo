@@ -13,16 +13,6 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
-/**
- * Local-dev seed for the dojo the maintainer actually trains at —
- * "Eagles BJJ" in Castiglione del Lago. Runs after AdminSeeder so the
- * admin user (admin@example.it) becomes the academy owner and the
- * eight athletes show up immediately on /dashboard/athletes.
- *
- * Idempotent: re-running the seeder keeps the same academy slug and
- * upserts the athletes by full name, so it's safe to call repeatedly
- * during development without piling up duplicates.
- */
 class EaglesBjjSeeder extends Seeder
 {
     public function run(): void
@@ -38,9 +28,6 @@ class EaglesBjjSeeder extends Seeder
             throw new \RuntimeException('EaglesBjjSeeder requires the admin user — run AdminSeeder first.');
         }
 
-        // Replace whatever placeholder academy AdminSeeder created — Eagles BJJ
-        // is the canonical academy for local dev, the Budojo HQ default exists
-        // only as a bootstrapping fallback.
         $academy = $admin->academy;
         if ($academy === null) {
             $academy = Academy::create([
@@ -81,18 +68,21 @@ class EaglesBjjSeeder extends Seeder
             [
                 'first_name' => 'Iacopo',
                 'last_name' => 'Cherubini',
+                'date_of_birth' => '1990-12-02',
                 'belt' => Belt::Blue,
                 'stripes' => 0,
             ],
             [
                 'first_name' => 'Pedro',
                 'last_name' => 'Engel',
+                'date_of_birth' => '2007-09-10',
                 'belt' => Belt::Blue,
                 'stripes' => 0,
             ],
             [
                 'first_name' => 'Thomas',
                 'last_name' => 'Sanna',
+                'date_of_birth' => '2009-12-15',
                 'belt' => Belt::White,
                 'stripes' => 2,
             ],
@@ -105,14 +95,40 @@ class EaglesBjjSeeder extends Seeder
             [
                 'first_name' => 'Alessio',
                 'last_name' => 'Montesi',
+                'date_of_birth' => '1994-11-02',
                 'belt' => Belt::Blue,
+                'stripes' => 0,
+            ],
+            [
+                'first_name' => 'Chiara',
+                'last_name' => 'Ceccarelli',
+                'date_of_birth' => '1994-04-11',
+                'belt' => Belt::White,
+                'stripes' => 0,
+            ],
+            [
+                'first_name' => 'Francesco',
+                'last_name' => 'Prestipino',
+                'date_of_birth' => '2003-04-29',
+                'belt' => Belt::White,
+                'stripes' => 0,
+            ],
+            [
+                'first_name' => 'Samuele',
+                'last_name' => 'Bruni',
+                'date_of_birth' => '2004-10-31',
+                'belt' => Belt::White,
+                'stripes' => 0,
+            ],
+            [
+                'first_name' => 'Stefano',
+                'last_name' => 'Santiccioli',
+                'date_of_birth' => '1985-12-26',
+                'belt' => Belt::White,
                 'stripes' => 0,
             ],
         ];
 
-        // Authoritative seed: wipe any pre-existing athletes for this academy
-        // (including soft-deleted tombstones) so reruns produce exactly the
-        // canonical eight, never a mix of old and new variants.
         Athlete::withTrashed()->where('academy_id', $academy->id)->forceDelete();
 
         foreach ($athletes as $row) {
