@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -35,9 +35,10 @@ class EaglesBjjAttendanceSeeder extends Seeder
             return;
         }
 
-        $academy = Academy::where('name', 'Eagles BJJ')->first();
+        $admin = User::where('email', 'admin@example.it')->first();
+        $academy = $admin?->academy;
         if ($academy === null) {
-            throw new \RuntimeException('EaglesBjjAttendanceSeeder requires Eagles BJJ — run EaglesBjjSeeder first.');
+            throw new \RuntimeException('EaglesBjjAttendanceSeeder requires the admin academy — run AdminSeeder + EaglesBjjSeeder first.');
         }
 
         $athletes = Athlete::where('academy_id', $academy->id)->get();
