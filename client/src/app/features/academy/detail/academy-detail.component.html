@@ -1,5 +1,8 @@
 @let a = academy();
 
+<p-toast position="top-right" />
+<p-confirmpopup />
+
 <section class="detail" data-cy="academy-detail">
   <header class="detail__header">
     <div class="detail__heading">
@@ -17,6 +20,49 @@
       data-cy="academy-edit-link"
     />
   </header>
+
+  <div class="logo-card" data-cy="academy-logo-card">
+    <div class="logo-card__preview" data-cy="academy-logo-preview">
+      @if (logoUrl(); as url) {
+        <img [src]="url" alt="Academy logo" data-cy="academy-logo-image" />
+      } @else {
+        <span class="logo-card__placeholder" aria-hidden="true">
+          <i class="pi pi-image"></i>
+        </span>
+      }
+    </div>
+    <div class="logo-card__body">
+      <p class="logo-card__title">Logo</p>
+      <p class="logo-card__hint">PNG, JPG, SVG or WebP, max 2 MB.</p>
+      <div class="logo-card__actions">
+        <p-button
+          [label]="logoUrl() ? 'Replace' : 'Upload'"
+          icon="pi pi-upload"
+          [loading]="logoUploading()"
+          (onClick)="onLogoBrowse()"
+          data-cy="academy-logo-upload"
+        />
+        @if (logoUrl()) {
+          <p-button
+            label="Remove"
+            icon="pi pi-trash"
+            severity="secondary"
+            [text]="true"
+            (onClick)="confirmRemoveLogo($event)"
+            data-cy="academy-logo-remove"
+          />
+        }
+      </div>
+    </div>
+    <input
+      #logoInput
+      type="file"
+      class="logo-card__file"
+      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+      (change)="onLogoSelected($event)"
+      data-cy="academy-logo-input"
+    />
+  </div>
 
   <dl class="card" aria-label="Academy details">
     <div class="row">

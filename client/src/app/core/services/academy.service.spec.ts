@@ -9,6 +9,7 @@ function makeAcademy(overrides: Partial<Academy> = {}): Academy {
     name: 'Gracie Barra Torino',
     slug: 'gracie-barra-torino',
     address: null,
+    logo_url: null,
     ...overrides,
   };
 }

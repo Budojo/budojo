@@ -41,6 +41,7 @@ describe('DashboardComponent', () => {
         name: 'Gracie Barra Torino',
         slug: 'gbt',
         address: null,
+        logo_url: null,
       });
 
       const fixture = TestBed.createComponent(DashboardComponent);
@@ -68,6 +69,7 @@ describe('DashboardComponent', () => {
         name: 'Gracie Barra Torino',
         slug: 'gbt',
         address: null,
+        logo_url: null,
       });
 
       const fixture = TestBed.createComponent(DashboardComponent);
