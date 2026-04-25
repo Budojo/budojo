@@ -14,6 +14,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import {
   Athlete,
   AthleteFilters,
+  AthleteSortField,
+  AthleteSortOrder,
   AthleteStatus,
   Belt,
   AthleteService,
@@ -62,6 +64,8 @@ export class AthletesListComponent implements OnInit {
 
   selectedBelt = signal<Belt | ''>('');
   selectedStatus = signal<AthleteStatus | ''>('');
+  readonly sortField = signal<AthleteSortField | null>(null);
+  readonly sortOrder = signal<AthleteSortOrder>('desc');
 
   private page = 1;
 
@@ -102,6 +106,29 @@ export class AthletesListComponent implements OnInit {
   onPageChange(event: { first: number; rows: number }): void {
     this.page = Math.floor(event.first / event.rows) + 1;
     this.first.set(event.first);
+    this.load();
+  }
+
+  /**
+   * PrimeNG p-table emits `{ field, order }` on header click.
+   * `order` is 1 (asc) or -1 (desc). We map to our `'asc' | 'desc'` and
+   * fire a fresh load. Re-clicking the same column flips the order.
+   */
+  onSort(event: { field?: string; order?: number }): void {
+    const allowed: AthleteSortField[] = [
+      'first_name',
+      'last_name',
+      'belt',
+      'stripes',
+      'joined_at',
+      'created_at',
+    ];
+    const field = event.field;
+    if (!field || !(allowed as string[]).includes(field)) return;
+
+    this.sortField.set(field as AthleteSortField);
+    this.sortOrder.set(event.order === 1 ? 'asc' : 'desc');
+    this.resetPage();
     this.load();
   }
 
@@ -152,6 +179,11 @@ export class AthletesListComponent implements OnInit {
     const status = this.selectedStatus();
     if (belt) filters.belt = belt;
     if (status) filters.status = status;
+    const sort = this.sortField();
+    if (sort) {
+      filters.sortBy = sort;
+      filters.sortOrder = this.sortOrder();
+    }
 
     this.athleteService
       .list(filters)

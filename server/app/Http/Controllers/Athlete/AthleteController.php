@@ -16,6 +16,27 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class AthleteController extends Controller
 {
+    /**
+     * Map of `?sort_by=` values to the eloquent ORDER BY clause(s) we apply.
+     * A string value is a single-column sort; a list of {column, direction}
+     * triples drives a stable multi-key sort (used for `belt` so two black
+     * belts stay grouped by stripes desc, then last_name asc).
+     *
+     * @var array<string, string|list<array{column: string, direction: string}>>
+     */
+    private const SORTABLE_COLUMNS = [
+        'first_name' => 'first_name',
+        'last_name' => 'last_name',
+        'belt' => [
+            ['column' => 'belt', 'direction' => 'preserve'],
+            ['column' => 'stripes', 'direction' => 'desc'],
+            ['column' => 'last_name', 'direction' => 'asc'],
+        ],
+        'stripes' => 'stripes',
+        'joined_at' => 'joined_at',
+        'created_at' => 'created_at',
+    ];
+
     public function index(Request $request): AnonymousResourceCollection|JsonResponse
     {
         /** @var User $user */
@@ -25,10 +46,28 @@ class AthleteController extends Controller
             return response()->json(['message' => 'No academy found.'], 403);
         }
 
-        $athletes = $user->academy->athletes()
+        $sortBy = \is_string($request->input('sort_by')) ? $request->input('sort_by') : null;
+        $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
+
+        $query = $user->academy->athletes()
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
-            ->paginate(20);
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')));
+
+        if ($sortBy !== null && \array_key_exists($sortBy, self::SORTABLE_COLUMNS)) {
+            $clause = self::SORTABLE_COLUMNS[$sortBy];
+            if (\is_string($clause)) {
+                $query->orderBy($clause, $sortOrder);
+            } else {
+                foreach ($clause as $step) {
+                    $direction = $step['direction'] === 'preserve' ? $sortOrder : $step['direction'];
+                    $query->orderBy($step['column'], $direction);
+                }
+            }
+        } else {
+            $query->latest();
+        }
+
+        $athletes = $query->paginate(20);
 
         return AthleteResource::collection($athletes);
     }

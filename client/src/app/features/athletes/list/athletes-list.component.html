@@ -61,17 +61,33 @@
       [paginator]="totalRecords() > 20"
       (onPage)="onPageChange($event)"
       [lazy]="true"
+      [customSort]="true"
+      [sortField]="sortField() ?? ''"
+      [sortOrder]="sortOrder() === 'asc' ? 1 : -1"
+      (sortFunction)="onSort($event)"
       responsiveLayout="scroll"
       styleClass="p-datatable-sm"
     >
       <ng-template pTemplate="header">
         <tr>
-          <th>Name</th>
-          <th>Belt</th>
-          <th style="width: 3rem; text-align: center">Stripes</th>
+          <th pSortableColumn="last_name" data-cy="athletes-th-name">
+            Name <p-sortIcon field="last_name" />
+          </th>
+          <th pSortableColumn="belt" data-cy="athletes-th-belt">
+            Belt <p-sortIcon field="belt" />
+          </th>
+          <th
+            pSortableColumn="stripes"
+            data-cy="athletes-th-stripes"
+            style="width: 3rem; text-align: center"
+          >
+            Stripes <p-sortIcon field="stripes" />
+          </th>
           <th>Status</th>
           <th>Email</th>
-          <th>Joined</th>
+          <th pSortableColumn="joined_at" data-cy="athletes-th-joined">
+            Joined <p-sortIcon field="joined_at" />
+          </th>
           <th style="width: 8rem"></th>
         </tr>
       </ng-template>
