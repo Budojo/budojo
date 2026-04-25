@@ -7,7 +7,6 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
-        "enshrined/svg-sanitize": "^0.22.0",
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0"
