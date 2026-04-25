@@ -34,11 +34,11 @@ Format: `→` separates the symptom from the action.
 - `cy.contains('Remove').click()` after opening a `<p-confirmpopup>` whose accept label is also "Remove" → matches the trigger button (still in the DOM), not the popup primary. Scope the popup-specific accept via `.p-confirmpopup-accept-button`.
 - `<p-table [customSort]="true">` with `[value]="[]"` (empty data) — PrimeNG's `(sortFunction)` does NOT fire on header click because there's nothing to sort. Cypress wait-for-XHR-on-sort tests time out. Drop `customSort` and use `(onSort)` instead — fires on every header click regardless of data.
 - `<p-table>` with both `[sortField]`/`[sortOrder]` bindings AND `(onSort)` → the controlled bindings race PrimeNG's internal toggle, so two clicks on the same header both emit `order=1` (asc) instead of asc-then-desc. Drop the input bindings; let the table own its sort state and just listen.
-- PrimeNG p-table's sort cycle is **asc → desc → unsorted** (first click is ASC, not DESC). Cypress assertions must match. Same convention as Material/AG-Grid; Jakob's law applies.
+- Assuming PrimeNG p-table sorts desc-first or skips the unsorted state → it actually cycles asc, then desc, then unsorted (first click is ASC, not DESC). Write Cypress assertions to match. Same convention as Material/AG-Grid; Jakob's law applies.
 
 ## PHP / Laravel
 
-- `orderByRaw('CASE col WHEN ? THEN ? ... END {$direction}')` with positional bindings → PHPStan flags `expects literal-string`. Use a literal string for both directions (`...END ASC` / `...END DESC`) and pick at runtime, OR drop bindings entirely if values are constants you control.
+- `orderByRaw('CASE col WHEN ? THEN ? ... END ' . $direction)` (or the equivalent double-quoted `"... END {$direction}"`) with positional bindings → PHPStan flags `expects literal-string`. Use a literal string for both directions (`...END ASC` / `...END DESC`) and pick at runtime, OR drop bindings entirely if values are constants you control.
 - Typing a method as `Builder<Model>` while the call site passes a `HasMany<...>` → runtime `TypeError`. Use a union: `Builder|HasMany` with `@param Builder<X>|HasMany<X, Y>` doc, or `->toBase()` to drop down to the query builder.
 - `Athlete::withTrashed()->where(...)->forceDelete()` is a **bulk DELETE** that bypasses model events. Observers (`AthleteObserver::deleting()` cascading documents + files) never run, leaving orphans. Iterate via `lazyById()->each(fn ($a) => $a->forceDelete())` to fire the observer per row.
 - `Storage::disk('public')->url(...)` returns an **absolute URL** based on `APP_URL`, not a relative `/storage/...` path. OpenAPI examples must reflect this (`format: uri` + absolute example).
