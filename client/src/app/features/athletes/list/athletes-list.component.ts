@@ -20,6 +20,7 @@ import {
 } from '../../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/expiring-documents-widget/expiring-documents-widget.component';
+import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -41,6 +42,7 @@ interface SelectOption<T extends string> {
     Tooltip,
     BeltBadgeComponent,
     ExpiringDocumentsWidgetComponent,
+    MonthlySummaryWidgetComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',

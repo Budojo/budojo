@@ -1,0 +1,43 @@
+<a
+  class="summary-widget"
+  routerLink="/dashboard/attendance/summary"
+  data-cy="monthly-summary-widget"
+>
+  <header class="summary-widget__header">
+    <p class="summary-widget__eyebrow">Attendance · {{ monthLabel() }}</p>
+    @if (loading()) {
+      <p-skeleton width="9rem" height="1.75rem" />
+    } @else if (errored()) {
+      <h3 class="summary-widget__title summary-widget__title--muted">Couldn't check</h3>
+    } @else {
+      <h3 class="summary-widget__title" data-cy="monthly-summary-total">
+        {{ totalDays() }} training day{{ totalDays() === 1 ? '' : 's' }}
+      </h3>
+    }
+  </header>
+
+  @if (loading()) {
+    <ul class="summary-widget__list" aria-hidden="true">
+      @for (_ of [0, 0, 0]; track $index) {
+        <li class="summary-widget__row summary-widget__row--skeleton">
+          <p-skeleton width="60%" height="0.875rem" />
+          <p-skeleton width="2rem" height="0.875rem" />
+        </li>
+      }
+    </ul>
+  } @else if (!errored() && topRows().length > 0) {
+    <ul class="summary-widget__list" data-cy="monthly-summary-list">
+      @for (row of topRows(); track row.athlete_id) {
+        <li class="summary-widget__row" [attr.data-cy]="'monthly-summary-row-' + row.athlete_id">
+          <span class="summary-widget__name">{{ row.first_name }} {{ row.last_name }}</span>
+          <span class="summary-widget__count">{{ row.count }}</span>
+        </li>
+      }
+    </ul>
+    <span class="summary-widget__cta">View all →</span>
+  } @else if (!errored()) {
+    <p class="summary-widget__empty" data-cy="monthly-summary-empty">
+      No attendance recorded yet this month.
+    </p>
+  }
+</a>
