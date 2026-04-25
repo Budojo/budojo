@@ -31,6 +31,18 @@ Format: `→` separates the symptom from the action.
 - Inlined an envelope object in a test that duplicates an existing top-of-file constant → reuse the constant. Single source of truth; response-shape drift bugs avoided.
 - Asserting against `<p-dialog>` element disappearance to check a dialog closed → the Angular host element stays mounted; only the `.p-dialog-mask` overlay toggles. Assert on the mask instead.
 - Targeting menu items via `.p-menuitem-link` (PrimeNG 20 class name) → PrimeNG 21 renamed to `.p-menu-item-link` (hyphen). Prefer `[role="menuitem"]` for version stability.
+- `cy.contains('Remove').click()` after opening a `<p-confirmpopup>` whose accept label is also "Remove" → matches the trigger button (still in the DOM), not the popup primary. Scope the popup-specific accept via `.p-confirmpopup-accept-button`.
+- `<p-table [customSort]="true">` with `[value]="[]"` (empty data) — PrimeNG's `(sortFunction)` does NOT fire on header click because there's nothing to sort. Cypress wait-for-XHR-on-sort tests time out. Drop `customSort` and use `(onSort)` instead — fires on every header click regardless of data.
+- `<p-table>` with both `[sortField]`/`[sortOrder]` bindings AND `(onSort)` → the controlled bindings race PrimeNG's internal toggle, so two clicks on the same header both emit `order=1` (asc) instead of asc-then-desc. Drop the input bindings; let the table own its sort state and just listen.
+- PrimeNG p-table's sort cycle is **asc → desc → unsorted** (first click is ASC, not DESC). Cypress assertions must match. Same convention as Material/AG-Grid; Jakob's law applies.
+
+## PHP / Laravel
+
+- `orderByRaw('CASE col WHEN ? THEN ? ... END {$direction}')` with positional bindings → PHPStan flags `expects literal-string`. Use a literal string for both directions (`...END ASC` / `...END DESC`) and pick at runtime, OR drop bindings entirely if values are constants you control.
+- Typing a method as `Builder<Model>` while the call site passes a `HasMany<...>` → runtime `TypeError`. Use a union: `Builder|HasMany` with `@param Builder<X>|HasMany<X, Y>` doc, or `->toBase()` to drop down to the query builder.
+- `Athlete::withTrashed()->where(...)->forceDelete()` is a **bulk DELETE** that bypasses model events. Observers (`AthleteObserver::deleting()` cascading documents + files) never run, leaving orphans. Iterate via `lazyById()->each(fn ($a) => $a->forceDelete())` to fire the observer per row.
+- `Storage::disk('public')->url(...)` returns an **absolute URL** based on `APP_URL`, not a relative `/storage/...` path. OpenAPI examples must reflect this (`format: uri` + absolute example).
+- SVG accepted via `mimes:svg` validation can carry `<script>`, `on*` event handlers, and `javascript:` URIs that execute when the URL is opened directly (browsers sandbox `<img>`-loaded SVGs but not direct navigations). Sanitize on upload via DOMDocument: strip `<script>`, `<foreignObject>`, `<iframe>`, all `on*` attributes, and any attribute whose value contains `javascript:`. See `UploadAcademyLogoAction::sanitizeSvg()`.
 
 ## GitHub rulesets / CI
 
@@ -73,6 +85,7 @@ Format: `→` separates the symptom from the action.
 
 - Ran `npm run design:inventory` inside the `budojo_client` Alpine container → `Your system is missing the dependency: Xvfb`. Cypress needs a display server to run headed Chrome, and the slim Alpine image doesn't ship one. **Fix now codified in `client/scripts/design-inventory.cjs`**: the npm script spawns `cypress/included:13.17.0` (which bundles Xvfb + Chrome) as a sibling container via `docker run`. In CI, `cypress-io/github-action@v6` provides Xvfb automatically — so this only matters for local runs.
 - `excludeSpecPattern: 'cypress/e2e/design-inventory.cy.ts'` in `cypress.config.ts` SILENTLY canceled `cypress run --spec cypress/e2e/design-inventory.cy.ts` — Cypress applies the exclude pattern even when `--spec` names the same file explicitly. Fix: **don't use `excludeSpecPattern` to hide on-demand specs. Put them in a separate folder outside the default `specPattern` glob.** We moved the inventory to `cypress/inventory/` and the on-demand run overrides `specPattern` to enable that folder.
+- Adding a new field to a typed interface (e.g. `Academy.logo_url`) without scanning ALL Cypress mocks → vitest catches the missing field via TS strict checks; Cypress fixtures are plain JSON and silently produce `undefined` instead of `null`, breaking later runtime assertions. **Grep `client/cypress/e2e/*.cy.ts` for the entity name (`address: null`) and update every mock in the same PR.** See PR #92 (12 cypress files touched) — the `MOCK_ACADEMY` helper in `cypress/support/fixtures.ts` is a future centralisation.
 - Angular dev server returned `403 Forbidden` when Cypress (running in a sibling docker container) hit `http://client:4200/dashboard/*` — Angular 21's `@angular/build:dev-server` has a default `allowedHosts: ['localhost']` for CSRF-style safety and rejects any other `Host` header. Fix: add explicit entries to `angular.json` → `projects.client.architect.serve.options.allowedHosts` (we use `["client", "localhost", "host.docker.internal"]`). Requires a dev server restart: `docker compose restart client`.
 
 ## Button variant picking
