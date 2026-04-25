@@ -15,6 +15,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 | `name` | string(255) | not null | Display name ("Gracie Barra Lisboa") |
 | `slug` | string(255) | not null, **unique** | URL-friendly identifier; auto-generated at creation as `Str::slug(name) . '-' . random(8)` |
 | `address` | string(500) | nullable | Free-text postal address — optional at setup time |
+| `logo_path` | string(255) | nullable | Relative path on the `public` disk; absent until the owner uploads a logo. The API resource resolves it to a public `logo_url` via `Storage::disk('public')->url(...)` |
 | `created_at` | timestamp | nullable | |
 | `updated_at` | timestamp | nullable | |
 

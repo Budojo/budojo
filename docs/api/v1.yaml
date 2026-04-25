@@ -210,6 +210,69 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /academy/logo:
+    post:
+      tags: [academy]
+      summary: Upload or replace the academy logo
+      description: |
+        Multipart `logo` upload. Replaces the previous logo (the prior file is
+        removed from disk). Mime types: `png`, `jpg`, `jpeg`, `svg`, `webp`.
+        Max size 2 MB. The response is the full academy resource with the
+        fresh `logo_url`.
+      operationId: academyUploadLogo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Logo uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: The authenticated user has no academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [academy]
+      summary: Remove the academy logo
+      description: |
+        Deletes the stored file and clears `logo_path`. Returns the academy
+        resource with `logo_url: null`. No-op when no logo is currently set
+        (still 200, idempotent).
+      operationId: academyDeleteLogo
+      responses:
+        '200':
+          description: Logo removed (or no-op when none was set)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: The authenticated user has no academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+
   /athletes:
     get:
       tags: [athletes]
@@ -989,7 +1052,7 @@ components:
 
     Academy:
       type: object
-      required: [id, name, slug, address]
+      required: [id, name, slug, address, logo_url]
       properties:
         id:
           type: integer
@@ -1003,6 +1066,11 @@ components:
         address:
           type: string
           nullable: true
+        logo_url:
+          type: string
+          nullable: true
+          description: Public URL of the academy logo, or null when no logo has been uploaded
+          example: /storage/academy-logos/1/abcd1234.png
 
     AcademyEnvelope:
       type: object
