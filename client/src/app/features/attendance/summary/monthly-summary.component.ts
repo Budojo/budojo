@@ -96,27 +96,35 @@ export class MonthlySummaryComponent implements OnInit {
   protected readonly totalDays = computed(() => this.rows().reduce((acc, r) => acc + r.count, 0));
 
   ngOnInit(): void {
-    // Read `?month=YYYY-MM` so deep links land on the right month.
+    // The `?month=YYYY-MM` query param is the single source of truth for the
+    // visible month. Prev/next don't load directly — they navigate, the URL
+    // emits, and this subscription is the one that mutates state. Removes
+    // the duplicate load that would otherwise fire (one direct call + one
+    // from the URL change).
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const fromQuery = parseMonthString(params.get('month'));
-      if (fromQuery) {
-        this.visible.set(fromQuery);
+      const today = currentYearMonth();
+      // Reject future months coming in from a hand-crafted URL — server-side
+      // there is no data, and the PRD bans future-dated attendance entirely.
+      // Re-sync the URL back to the current month and let the next emission
+      // (from that navigate) drive the load.
+      if (fromQuery && compareYearMonth(fromQuery, today) > 0) {
+        this.syncQueryParam(today);
+        return;
       }
+      const target = fromQuery ?? today;
+      this.visible.set(target);
       this.load();
     });
   }
 
   prevMonth(): void {
-    this.visible.set(shiftMonth(this.visible(), -1));
-    this.syncQueryParam();
-    this.load();
+    this.syncQueryParam(shiftMonth(this.visible(), -1));
   }
 
   nextMonth(): void {
     if (!this.canGoNext()) return;
-    this.visible.set(shiftMonth(this.visible(), 1));
-    this.syncQueryParam();
-    this.load();
+    this.syncQueryParam(shiftMonth(this.visible(), 1));
   }
 
   protected onFilterChange(value: string): void {
@@ -125,10 +133,10 @@ export class MonthlySummaryComponent implements OnInit {
 
   protected trackByAthlete = (_: number, row: AttendanceSummaryRow): number => row.athlete_id;
 
-  private syncQueryParam(): void {
+  private syncQueryParam(target: YearMonth): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { month: toMonthString(this.visible()) },
+      queryParams: { month: toMonthString(target) },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
