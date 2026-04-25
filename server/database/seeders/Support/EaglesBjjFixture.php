@@ -87,7 +87,7 @@ final readonly class EaglesBjjFixture
         }
 
         $trainingDays = $attendance['training_days_of_week'] ?? null;
-        if (! \is_array($trainingDays)) {
+        if (! \is_array($trainingDays) || ! \array_is_list($trainingDays)) {
             throw new \InvalidArgumentException('Eagles BJJ attendance fixture missing list "training_days_of_week".');
         }
         /** @var list<int> $trainingDaysList */
@@ -96,6 +96,14 @@ final readonly class EaglesBjjFixture
             if (! \is_int($day)) {
                 throw new \InvalidArgumentException('Eagles BJJ training_days_of_week entries must be ints.');
             }
+            // Carbon dayOfWeek is 0..6 (Sunday..Saturday). Out-of-range
+            // values silently produce zero matches inside eachTrainingDay()
+            // — fail fast with a clear message instead of a quiet empty seed.
+            if ($day < 0 || $day > 6) {
+                throw new \InvalidArgumentException(
+                    "Eagles BJJ training_days_of_week entries must be in 0..6 (Carbon::SUNDAY..Carbon::SATURDAY), got {$day}.",
+                );
+            }
             $trainingDaysList[] = $day;
         }
 
@@ -103,10 +111,21 @@ final readonly class EaglesBjjFixture
         if (! \is_int($window)) {
             throw new \InvalidArgumentException('Eagles BJJ attendance fixture missing int "simulation_window_days".');
         }
+        if ($window < 0) {
+            throw new \InvalidArgumentException(
+                "Eagles BJJ attendance fixture 'simulation_window_days' must be >= 0, got {$window}.",
+            );
+        }
 
         $defaultProbability = $attendance['default_probability'] ?? null;
         if (! \is_int($defaultProbability) && ! \is_float($defaultProbability)) {
             throw new \InvalidArgumentException('Eagles BJJ attendance fixture missing numeric "default_probability".');
+        }
+        $defaultProbability = (float) $defaultProbability;
+        if ($defaultProbability < 0.0 || $defaultProbability > 1.0) {
+            throw new \InvalidArgumentException(
+                "Eagles BJJ attendance fixture 'default_probability' must be in [0, 1], got {$defaultProbability}.",
+            );
         }
 
         return new self(
@@ -115,7 +134,7 @@ final readonly class EaglesBjjFixture
             athletes: $athleteFixtures,
             trainingDaysOfWeek: $trainingDaysList,
             simulationWindowDays: $window,
-            defaultProbability: (float) $defaultProbability,
+            defaultProbability: $defaultProbability,
         );
     }
 }

@@ -30,15 +30,25 @@ final readonly class EaglesBjjAthleteFixture
      */
     public static function fromArray(array $row): self
     {
+        $beltValue = self::requiredString($row, 'belt');
+        try {
+            $belt = Belt::from($beltValue);
+        } catch (\ValueError $e) {
+            throw new \InvalidArgumentException(
+                "Eagles BJJ athlete fixture has invalid belt value '{$beltValue}'.",
+                previous: $e,
+            );
+        }
+
         return new self(
             firstName: self::requiredString($row, 'first_name'),
             lastName: self::requiredString($row, 'last_name'),
             email: self::optionalString($row, 'email'),
-            dateOfBirth: self::optionalString($row, 'date_of_birth'),
-            belt: Belt::from(self::requiredString($row, 'belt')),
+            dateOfBirth: self::optionalDate($row, 'date_of_birth'),
+            belt: $belt,
             stripes: self::requiredInt($row, 'stripes'),
-            joinedAt: self::optionalString($row, 'joined_at'),
-            attendanceProbability: self::optionalFloat($row, 'attendance_probability'),
+            joinedAt: self::optionalDate($row, 'joined_at'),
+            attendanceProbability: self::optionalProbability($row, 'attendance_probability'),
         );
     }
 
@@ -79,16 +89,44 @@ final readonly class EaglesBjjAthleteFixture
     }
 
     /** @param  array<string, mixed>  $row */
-    private static function optionalFloat(array $row, string $key): ?float
+    private static function optionalProbability(array $row, string $key): ?float
     {
         $value = $row[$key] ?? null;
         if ($value === null) {
             return null;
         }
         if (! \is_int($value) && ! \is_float($value)) {
-            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be float|null.");
+            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be numeric|null.");
+        }
+        $float = (float) $value;
+        if ($float < 0.0 || $float > 1.0) {
+            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be in [0, 1], got {$float}.");
         }
 
-        return (float) $value;
+        return $float;
+    }
+
+    /**
+     * Validates an optional `YYYY-MM-DD` date string. Carbon::parse later in
+     * the seeder is permissive enough that bad strings produce confusing
+     * deep stack traces; failing fast here with a fixture-aware message
+     * makes the cause obvious.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private static function optionalDate(array $row, string $key): ?string
+    {
+        $value = $row[$key] ?? null;
+        if ($value === null) {
+            return null;
+        }
+        if (! \is_string($value)) {
+            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be string|null.");
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) !== 1) {
+            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be YYYY-MM-DD, got '{$value}'.");
+        }
+
+        return $value;
     }
 }
