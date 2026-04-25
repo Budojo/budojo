@@ -18,9 +18,14 @@
     />
   </header>
 
-  <!-- Document health signal — fetches on init, links to the full cross-athlete
-       expiring list. Its own state: the page never waits on it. -->
-  <app-expiring-documents-widget />
+  <div class="athletes-page__widgets">
+    <!-- Document health signal — fetches on init, links to the full cross-athlete
+         expiring list. Its own state: the page never waits on it. -->
+    <app-expiring-documents-widget />
+
+    <!-- Monthly attendance pulse — same shape, different signal. -->
+    <app-monthly-summary-widget />
+  </div>
 
   <!-- Filters -->
   <div class="athletes-page__filters">

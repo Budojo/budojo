@@ -36,6 +36,17 @@
     color: var(--p-surface-500);
   }
 
+  &__widgets {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
   &__filters {
     display: flex;
     gap: 0.5rem;
