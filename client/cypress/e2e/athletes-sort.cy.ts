@@ -39,17 +39,20 @@ describe('athletes table — column sorting', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait('@athletes');
 
-    cy.get('[data-cy="athletes-th-belt"]').click();
-    cy.wait('@athletes')
-      .its('request.url')
-      .should('include', 'sort_by=belt')
-      .and('include', 'sort_order=desc');
-
+    // PrimeNG p-table sorts ascending on the first header click and toggles
+    // to descending on a second click — same as every other Material/AG-Grid
+    // table the user has muscle memory for (Jakob's law).
     cy.get('[data-cy="athletes-th-belt"]').click();
     cy.wait('@athletes')
       .its('request.url')
       .should('include', 'sort_by=belt')
       .and('include', 'sort_order=asc');
+
+    cy.get('[data-cy="athletes-th-belt"]').click();
+    cy.wait('@athletes')
+      .its('request.url')
+      .should('include', 'sort_by=belt')
+      .and('include', 'sort_order=desc');
   });
 
   it('sends sort_by=last_name when the Name header is clicked', () => {
