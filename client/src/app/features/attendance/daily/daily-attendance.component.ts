@@ -90,14 +90,13 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private loadEpoch = 0;
 
-  /**
-   * Tracks the most-recently-shown undo toast key so we can dismiss it
-   * when a new mark/unmark fires. PRD § P0.3: a tap past the toast must
-   * dismiss the previous one and (in the error path) replace it with the
-   * failure toast — no stacked Undo buttons each tied to a different
-   * record.
-   */
-  private lastToastKey: string | null = null;
+  // PRD § P0.3: a new mark/unmark dismisses any previous undo toast and
+  // (in the error path) replaces it with the failure toast — no stacked
+  // Undo buttons. We do this via `messageService.clear()` (no arg) before
+  // each add(); since MessageService is component-scoped (see providers:
+  // above), that only clears this component's toasts and leaves any
+  // global toasts alone. Per-message keys tripped a PrimeNG quirk where
+  // a keyless `<p-toast>` ignores keyed messages, so we don't use them.
 
   ngOnInit(): void {
     this.loadDay();
@@ -281,15 +280,8 @@ export class DailyAttendanceComponent implements OnInit {
   }
 
   private toastUndo(summary: string, undo: () => void): void {
-    // PRD § P0.3: a new mark/unmark dismisses the previous Undo toast
-    // and an error replaces a success toast — no stacked actionable
-    // Undos each tied to a different record. messageService.clear()
-    // wipes any previous toast (we only ever surface one at a time).
-    this.dismissPreviousToast();
-    const key = `attendance-undo-${Date.now()}`;
-    this.lastToastKey = key;
+    this.messageService.clear();
     this.messageService.add({
-      key, // referenced by clear() to dismiss when the next toast arrives
       severity: 'success',
       summary,
       // The custom toast template (see html) reads .data.undo and renders
@@ -301,18 +293,11 @@ export class DailyAttendanceComponent implements OnInit {
   }
 
   private toastError(summary: string): void {
-    this.dismissPreviousToast();
+    this.messageService.clear();
     this.messageService.add({
       severity: 'error',
       summary,
       life: 4000,
     });
-  }
-
-  private dismissPreviousToast(): void {
-    if (this.lastToastKey !== null) {
-      this.messageService.clear(this.lastToastKey);
-      this.lastToastKey = null;
-    }
   }
 }
