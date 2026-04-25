@@ -123,9 +123,10 @@ class AthleteController extends Controller
      * stripes desc + last_name asc as stable tiebreakers so two athletes
      * at the same belt level always render in the same row order.
      *
-     * SQL is fully literal — both the belt values and the rank integers
-     * are values we control (the `BELT_RANK` constant). No user input
-     * touches the ORDER BY clause, so there's no injection surface.
+     * The `WHEN ... THEN N` branches MUST stay in sync with `Belt::rank()`
+     * — see `BeltRankSqlSyncTest`, which fails if the two ever drift. SQL
+     * is hard-coded literal because PHPStan's `orderByRaw` signature
+     * requires `literal-string` and constant-built strings don't qualify.
      *
      * @param  Builder<Athlete>|HasMany<Athlete, Academy>  $query
      */

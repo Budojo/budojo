@@ -1,8 +1,8 @@
-export {};
+import { MOCK_ACADEMY } from '../support/fixtures';
 
 const ACADEMY_OK = {
   statusCode: 200,
-  body: { data: { id: 1, name: 'Test Academy', slug: 'test-academy', address: null, logo_url: null } },
+  body: { data: MOCK_ACADEMY },
 };
 const ATHLETES_EMPTY = {
   statusCode: 200,
