@@ -80,25 +80,25 @@
     border-radius: var(--p-border-radius-sm);
     color: var(--p-text-color);
     font-size: 0.875rem;
-    cursor: pointer;
+    cursor: default; // Norman/Krug: only cells that DO something get a pointer.
     transition:
       background 200ms cubic-bezier(0.2, 0, 0, 1),
       border-color 200ms cubic-bezier(0.2, 0, 0, 1);
 
-    &:hover:not(.attendance-history__cell--empty):not(:disabled) {
-      background: var(--p-content-hover-background);
-    }
-
     &--empty {
       background: transparent;
       border-color: transparent;
-      cursor: default;
     }
 
     &--attended {
       background: var(--p-primary-50);
       border-color: var(--p-primary-300);
       color: var(--p-primary-800);
+    }
+
+    // Hover affordance only for cells that actually open the notes popover.
+    &--has-notes {
+      cursor: pointer;
 
       &:hover {
         background: var(--p-primary-100);

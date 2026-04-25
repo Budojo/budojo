@@ -56,15 +56,19 @@
           @if (day === null) {
             <span class="attendance-history__cell attendance-history__cell--empty"></span>
           } @else {
-            @let attended = attendedDates().has(dayKey(day));
+            @let key = dayKey(day);
+            @let attended = attendedDates().has(key);
+            @let hasNotes = notedDates().has(key);
             <button
               type="button"
               class="attendance-history__cell"
               [class.attendance-history__cell--attended]="attended"
+              [class.attendance-history__cell--has-notes]="hasNotes"
+              [disabled]="!hasNotes"
               [attr.data-cy]="attended ? 'attendance-day-attended' : 'attendance-day'"
               [attr.data-day]="day"
               [attr.aria-label]="attended ? day + ' — present' : day + ' — not recorded'"
-              (click)="attended ? openNotesFor($event, dayKey(day)) : null"
+              (click)="hasNotes && openNotesFor($event, key)"
             >
               <span class="attendance-history__day-num">{{ day }}</span>
               @if (attended) {

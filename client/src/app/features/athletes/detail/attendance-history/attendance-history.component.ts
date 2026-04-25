@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { finalize, forkJoin } from 'rxjs';
+import { catchError, finalize, of } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -42,6 +42,24 @@ function compareYearMonth(a: YearMonth, b: YearMonth): number {
   return a.month - b.month;
 }
 
+/**
+ * Pull the YYYY-MM tuple straight off the ISO string instead of going through
+ * `new Date()`. Going through Date applies the user's local timezone, which
+ * can shift the calendar day for `created_at` values near midnight UTC and
+ * silently change the prev-month boundary by one. We treat `created_at` as
+ * "the calendar instant the server recorded" — the server's UTC view is the
+ * source of truth, not the client's wall clock.
+ */
+function parseCreatedYearMonth(createdAt: string): YearMonth {
+  const [y, m] = createdAt.slice(0, 7).split('-');
+  return { year: Number(y), month: Number(m) };
+}
+
+function currentYearMonth(): YearMonth {
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+}
+
 @Component({
   selector: 'app-attendance-history',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,20 +75,35 @@ export class AttendanceHistoryComponent implements OnInit {
 
   @ViewChild('notesPopover') private notesPopover?: Popover;
 
+  /**
+   * Epoch counter — every load increments it, every response checks it. A
+   * stale response (e.g. month flipped twice while the first GET was in
+   * flight) sees its captured epoch is no longer the current one and bails
+   * before mutating state. Mirrors `DailyAttendanceComponent.loadDay`.
+   */
+  private loadEpoch = 0;
+
   protected readonly athlete = signal<Athlete | null>(null);
   protected readonly records = signal<AttendanceRecord[]>([]);
   protected readonly loading = signal(true);
   protected readonly activeNotes = signal<string | null>(null);
 
-  protected readonly visible = signal<YearMonth>({
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1,
-  });
+  protected readonly visible = signal<YearMonth>(currentYearMonth());
 
   protected readonly attendedDates = computed(
     () => new Set(this.records().map((r) => r.attended_on)),
   );
   protected readonly attendedCount = computed(() => this.records().length);
+
+  /** Days that have non-empty notes — drives interactivity and cursor in the template. */
+  protected readonly notedDates = computed(
+    () =>
+      new Set(
+        this.records()
+          .filter((r) => !!r.notes)
+          .map((r) => r.attended_on),
+      ),
+  );
 
   protected readonly weeks = computed(() => {
     const ym = this.visible();
@@ -86,19 +119,12 @@ export class AttendanceHistoryComponent implements OnInit {
   protected readonly canGoPrev = computed(() => {
     const a = this.athlete();
     if (!a) return false;
-    const createdAt = new Date(a.created_at);
-    const createdYM: YearMonth = {
-      year: createdAt.getFullYear(),
-      month: createdAt.getMonth() + 1,
-    };
-    return compareYearMonth(this.visible(), createdYM) > 0;
+    return compareYearMonth(this.visible(), parseCreatedYearMonth(a.created_at)) > 0;
   });
 
-  protected readonly canGoNext = computed(() => {
-    const now = new Date();
-    const todayYM: YearMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
-    return compareYearMonth(this.visible(), todayYM) < 0;
-  });
+  protected readonly canGoNext = computed(
+    () => compareYearMonth(this.visible(), currentYearMonth()) < 0,
+  );
 
   ngOnInit(): void {
     const parentParams = this.route.parent?.paramMap;
@@ -131,47 +157,80 @@ export class AttendanceHistoryComponent implements OnInit {
     const record = this.records().find((r) => r.attended_on === key);
     if (!record || !record.notes) {
       this.activeNotes.set(null);
+      this.notesPopover?.hide();
       return;
     }
     this.activeNotes.set(record.notes);
     this.notesPopover?.show(event);
   }
 
+  /**
+   * Initial load — also called when the parent's :id changes (e.g. instructor
+   * navigates from athlete A's history to athlete B's). Resets `visible` to
+   * the current month so the contract "default = current month" holds for the
+   * newly selected athlete.
+   */
   private loadAll(athleteId: number): void {
+    this.visible.set(currentYearMonth());
+    this.activeNotes.set(null);
+    this.notesPopover?.hide();
     this.loading.set(true);
-    forkJoin({
-      athlete: this.athleteService.get(athleteId),
-      records: this.attendanceService.getAthleteHistory(athleteId, {
+
+    const epoch = ++this.loadEpoch;
+    let pending = 2;
+    const settle = () => {
+      if (--pending === 0) this.loading.set(false);
+    };
+
+    this.athleteService
+      .get(athleteId)
+      .pipe(
+        catchError(() => of<Athlete | null>(null)),
+        finalize(settle),
+      )
+      .subscribe((athlete) => {
+        if (epoch !== this.loadEpoch || athlete === null) return;
+        this.athlete.set(athlete);
+      });
+
+    this.attendanceService
+      .getAthleteHistory(athleteId, {
         from: firstOfMonth(this.visible()),
         to: lastOfMonth(this.visible()),
-      }),
-    })
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: ({ athlete, records }) => {
-          this.athlete.set(athlete);
-          this.records.set(records);
-        },
-        error: () => {
-          this.records.set([]);
-        },
+      })
+      .pipe(
+        catchError(() => of<AttendanceRecord[]>([])),
+        finalize(settle),
+      )
+      .subscribe((records) => {
+        if (epoch !== this.loadEpoch) return;
+        this.records.set(records);
       });
   }
 
   private shiftAndReload(delta: number): void {
     this.visible.set(shiftMonth(this.visible(), delta));
+    this.activeNotes.set(null);
+    this.notesPopover?.hide();
     const a = this.athlete();
     if (!a) return;
+
+    const epoch = ++this.loadEpoch;
     this.loading.set(true);
     this.attendanceService
       .getAthleteHistory(a.id, {
         from: firstOfMonth(this.visible()),
         to: lastOfMonth(this.visible()),
       })
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: (records) => this.records.set(records),
-        error: () => this.records.set([]),
+      .pipe(
+        catchError(() => of<AttendanceRecord[]>([])),
+        finalize(() => {
+          if (epoch === this.loadEpoch) this.loading.set(false);
+        }),
+      )
+      .subscribe((records) => {
+        if (epoch !== this.loadEpoch) return;
+        this.records.set(records);
       });
   }
 }
