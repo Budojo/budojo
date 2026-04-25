@@ -30,14 +30,8 @@
   .logo-mark {
     width: 48px;
     height: 48px;
-    background: #e8d5ff;
-    color: #7c3aed;
-    font-size: 1.5rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     margin-bottom: 0.5rem;
+    color: var(--p-primary-color);
   }
 
   h1 {
