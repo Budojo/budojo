@@ -6,17 +6,41 @@ use App\Enums\Belt;
 use App\Http\Controllers\Athlete\AthleteController;
 
 it('keeps the AthleteController belt-rank SQL in sync with Belt::rank()', function (): void {
-    $reflection = new ReflectionClass(AthleteController::class);
-    $sourcePath = $reflection->getFileName();
+    // Scope the assertion to the applyBeltSort() body so other strings
+    // elsewhere in the controller (or in comments) can't satisfy the match
+    // by accident.
+    $method = new ReflectionMethod(AthleteController::class, 'applyBeltSort');
+    $sourcePath = $method->getFileName();
     expect($sourcePath)->toBeString();
 
-    $source = file_get_contents($sourcePath);
-    expect($source)->toBeString();
+    $sourceLines = file($sourcePath);
+    expect($sourceLines)->not->toBeFalse();
+
+    $methodSource = implode('', array_slice(
+        $sourceLines,
+        $method->getStartLine() - 1,
+        $method->getEndLine() - $method->getStartLine() + 1,
+    ));
 
     foreach (Belt::cases() as $belt) {
-        $clause = sprintf("WHEN '%s' THEN %d", $belt->value, $belt->rank());
-        expect(str_contains($source, $clause))->toBeTrue(
-            "AthleteController::applyBeltSort() must encode {$belt->value} as rank {$belt->rank()} ('{$clause}')",
-        );
+        // Each belt must appear EXACTLY TWICE — once in the ASC CASE, once
+        // in the DESC CASE — and both occurrences must encode the same
+        // rank as Belt::rank(). Without this, a drift in just one of the
+        // two CASE strings would slip through unnoticed.
+        $pattern = sprintf("/WHEN '%s' THEN (\\d+)/", preg_quote($belt->value, '/'));
+        $matchCount = preg_match_all($pattern, $methodSource, $matches);
+
+        expect($matchCount)->toBe(2, sprintf(
+            "AthleteController::applyBeltSort() must encode '%s' exactly twice (ASC + DESC), got %d",
+            $belt->value,
+            $matchCount,
+        ));
+
+        foreach ($matches[1] as $matchedRank) {
+            expect((int) $matchedRank)->toBe(
+                $belt->rank(),
+                "AthleteController::applyBeltSort() has a mismatched rank for {$belt->value}; expected {$belt->rank()} in every CASE branch",
+            );
+        }
     }
 });

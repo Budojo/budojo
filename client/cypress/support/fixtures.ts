@@ -1,6 +1,6 @@
 // Shared fixtures used across Cypress specs. Centralised so adding a new
 // field to an entity (e.g. Academy.logo_url in PR #92) is a single-file
-// change instead of a 12-file hunt.
+// change instead of one across many specs.
 
 export const MOCK_ACADEMY = {
   id: 1,
