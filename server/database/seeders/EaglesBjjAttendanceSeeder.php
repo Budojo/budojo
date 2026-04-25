@@ -12,21 +12,6 @@ use Illuminate\Support\Carbon;
 
 class EaglesBjjAttendanceSeeder extends Seeder
 {
-    /** @var array<string, float> */
-    private const ATTENDANCE_PROBABILITY = [
-        'Matteo Bonanno' => 1.0,
-        'Iacopo Cherubini' => 0.9,
-        'Pedro Engel' => 0.95,
-    ];
-
-    private const DEFAULT_PROBABILITY = 0.6;
-
-    private const TRAINING_DAYS_OF_WEEK = [
-        Carbon::TUESDAY,
-        Carbon::THURSDAY,
-        Carbon::SATURDAY,
-    ];
-
     public function run(): void
     {
         if (! app()->environment(['local', 'testing'])) {
@@ -41,6 +26,16 @@ class EaglesBjjAttendanceSeeder extends Seeder
             throw new \RuntimeException('EaglesBjjAttendanceSeeder requires the admin academy — run AdminSeeder + EaglesBjjSeeder first.');
         }
 
+        $data = EaglesBjjSeeder::fixture();
+        $defaultProbability = $data['attendance']['default_probability'];
+        $trainingDays = $data['attendance']['training_days_of_week'];
+
+        $probabilities = [];
+        foreach ($data['athletes'] as $row) {
+            $key = "{$row['first_name']} {$row['last_name']}";
+            $probabilities[$key] = $row['attendance_probability'] ?? $defaultProbability;
+        }
+
         $athletes = Athlete::where('academy_id', $academy->id)->get();
 
         AttendanceRecord::whereIn('athlete_id', $athletes->pluck('id'))
@@ -48,19 +43,18 @@ class EaglesBjjAttendanceSeeder extends Seeder
             ->forceDelete();
 
         $today = Carbon::today();
-        $start = $today->copy()->subYear();
-
-        $rows = [];
+        $start = $today->copy()->subDays($data['attendance']['simulation_window_days']);
         $now = Carbon::now();
+        $rows = [];
 
-        foreach (self::eachTrainingDay($start, $today) as $date) {
+        foreach (self::eachTrainingDay($start, $today, $trainingDays) as $date) {
             foreach ($athletes as $athlete) {
                 if ($athlete->joined_at->gt($date)) {
                     continue;
                 }
 
                 $key = "{$athlete->first_name} {$athlete->last_name}";
-                $probability = self::ATTENDANCE_PROBABILITY[$key] ?? self::DEFAULT_PROBABILITY;
+                $probability = $probabilities[$key] ?? $defaultProbability;
 
                 if (! self::draw($probability)) {
                     continue;
@@ -82,12 +76,13 @@ class EaglesBjjAttendanceSeeder extends Seeder
     }
 
     /**
+     * @param  list<int>  $trainingDays
      * @return iterable<Carbon>
      */
-    private static function eachTrainingDay(Carbon $start, Carbon $end): iterable
+    private static function eachTrainingDay(Carbon $start, Carbon $end, array $trainingDays): iterable
     {
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
-            if (\in_array($date->dayOfWeek, self::TRAINING_DAYS_OF_WEEK, true)) {
+            if (\in_array($date->dayOfWeek, $trainingDays, true)) {
                 yield $date->copy();
             }
         }

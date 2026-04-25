@@ -15,6 +15,56 @@ use Illuminate\Support\Str;
 
 class EaglesBjjSeeder extends Seeder
 {
+    /**
+     * @return array{
+     *   academy: array{name: string, address: string},
+     *   athletes: list<array{
+     *     first_name: string,
+     *     last_name: string,
+     *     email: string|null,
+     *     date_of_birth: string|null,
+     *     belt: string,
+     *     stripes: int,
+     *     joined_at: string|null,
+     *     attendance_probability: float|null
+     *   }>,
+     *   attendance: array{
+     *     training_days_of_week: list<int>,
+     *     simulation_window_days: int,
+     *     default_probability: float
+     *   }
+     * }
+     */
+    public static function fixture(): array
+    {
+        $base = database_path('seed-data/eagles-bjj');
+        $path = is_file("{$base}.local.php") ? "{$base}.local.php" : "{$base}.example.php";
+
+        /**
+         * @var array{
+         *   academy: array{name: string, address: string},
+         *   athletes: list<array{
+         *     first_name: string,
+         *     last_name: string,
+         *     email: string|null,
+         *     date_of_birth: string|null,
+         *     belt: string,
+         *     stripes: int,
+         *     joined_at: string|null,
+         *     attendance_probability: float|null
+         *   }>,
+         *   attendance: array{
+         *     training_days_of_week: list<int>,
+         *     simulation_window_days: int,
+         *     default_probability: float
+         *   }
+         * } $data
+         */
+        $data = require $path;
+
+        return $data;
+    }
+
     public function run(): void
     {
         if (! app()->environment(['local', 'testing'])) {
@@ -28,131 +78,42 @@ class EaglesBjjSeeder extends Seeder
             throw new \RuntimeException('EaglesBjjSeeder requires the admin user — run AdminSeeder first.');
         }
 
+        $data = self::fixture();
+
         $academy = $admin->academy;
         if ($academy === null) {
             $academy = Academy::create([
                 'user_id' => $admin->id,
-                'name' => 'Eagles BJJ',
-                'slug' => 'eagles-bjj-' . Str::lower(Str::random(8)),
-                'address' => 'Via Piana, 1, 06061 Castiglione del Lago PG',
+                'name' => $data['academy']['name'],
+                'slug' => Str::slug($data['academy']['name']) . '-' . Str::lower(Str::random(8)),
+                'address' => $data['academy']['address'],
             ]);
         } else {
             $academy->forceFill([
-                'name' => 'Eagles BJJ',
-                'address' => 'Via Piana, 1, 06061 Castiglione del Lago PG',
+                'name' => $data['academy']['name'],
+                'address' => $data['academy']['address'],
             ])->save();
         }
-
-        $foundingDay = Carbon::parse('2023-03-01');
-
-        $athletes = [
-            [
-                'first_name' => 'Matteo',
-                'last_name' => 'Bonanno',
-                'email' => 'matteobonanno1990@gmail.com',
-                'date_of_birth' => '1990-09-09',
-                'belt' => Belt::Black,
-                'stripes' => 0,
-                'joined_at' => $foundingDay,
-            ],
-            [
-                'first_name' => 'Elyzabeth',
-                'last_name' => 'Ayca',
-                'date_of_birth' => '1982-08-19',
-                'belt' => Belt::White,
-                'stripes' => 4,
-            ],
-            [
-                'first_name' => 'Isabella',
-                'last_name' => 'Conciarelli',
-                'belt' => Belt::Blue,
-                'stripes' => 1,
-                'joined_at' => $foundingDay,
-            ],
-            [
-                'first_name' => 'Iacopo',
-                'last_name' => 'Cherubini',
-                'date_of_birth' => '1990-12-02',
-                'belt' => Belt::Blue,
-                'stripes' => 0,
-                'joined_at' => $foundingDay,
-            ],
-            [
-                'first_name' => 'Pedro',
-                'last_name' => 'Engel',
-                'date_of_birth' => '2007-09-10',
-                'belt' => Belt::Blue,
-                'stripes' => 0,
-            ],
-            [
-                'first_name' => 'Thomas',
-                'last_name' => 'Sanna',
-                'date_of_birth' => '2009-12-15',
-                'belt' => Belt::White,
-                'stripes' => 2,
-            ],
-            [
-                'first_name' => 'Dario',
-                'last_name' => 'Ascanio',
-                'belt' => Belt::Brown,
-                'stripes' => 0,
-            ],
-            [
-                'first_name' => 'Alessio',
-                'last_name' => 'Montesi',
-                'date_of_birth' => '1994-11-02',
-                'belt' => Belt::Blue,
-                'stripes' => 0,
-                'joined_at' => $foundingDay,
-            ],
-            [
-                'first_name' => 'Chiara',
-                'last_name' => 'Ceccarelli',
-                'date_of_birth' => '1994-04-11',
-                'belt' => Belt::White,
-                'stripes' => 0,
-            ],
-            [
-                'first_name' => 'Francesco',
-                'last_name' => 'Prestipino',
-                'date_of_birth' => '2003-04-29',
-                'belt' => Belt::White,
-                'stripes' => 0,
-            ],
-            [
-                'first_name' => 'Samuele',
-                'last_name' => 'Bruni',
-                'date_of_birth' => '2004-10-31',
-                'belt' => Belt::White,
-                'stripes' => 0,
-                'joined_at' => $foundingDay,
-            ],
-            [
-                'first_name' => 'Stefano',
-                'last_name' => 'Santiccioli',
-                'date_of_birth' => '1985-12-26',
-                'belt' => Belt::White,
-                'stripes' => 0,
-            ],
-        ];
 
         Athlete::withTrashed()
             ->where('academy_id', $academy->id)
             ->lazyById()
             ->each(fn (Athlete $athlete) => $athlete->forceDelete());
 
-        foreach ($athletes as $row) {
+        foreach ($data['athletes'] as $row) {
             Athlete::create([
                 'academy_id' => $academy->id,
                 'first_name' => $row['first_name'],
                 'last_name' => $row['last_name'],
-                'email' => $row['email'] ?? null,
+                'email' => $row['email'],
                 'phone' => null,
-                'date_of_birth' => isset($row['date_of_birth']) ? Carbon::parse($row['date_of_birth']) : null,
-                'belt' => $row['belt'],
+                'date_of_birth' => $row['date_of_birth'] !== null ? Carbon::parse($row['date_of_birth']) : null,
+                'belt' => Belt::from($row['belt']),
                 'stripes' => $row['stripes'],
                 'status' => AthleteStatus::Active,
-                'joined_at' => $row['joined_at'] ?? Carbon::today()->subDays(random_int(180, 720)),
+                'joined_at' => $row['joined_at'] !== null
+                    ? Carbon::parse($row['joined_at'])
+                    : Carbon::today()->subDays(random_int(180, 720)),
             ]);
         }
     }

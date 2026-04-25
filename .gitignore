@@ -10,6 +10,10 @@ server/storage/logs/*.log
 server/bootstrap/cache/*.php
 server/.php-cs-fixer.cache
 
+# Local seed fixtures — real PII (names, DOBs, emails) lives in *.local.php,
+# committed only as *.example.php with anonymised placeholders.
+server/database/seed-data/*.local.php
+
 # Node (root tooling)
 node_modules/
 
