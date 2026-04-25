@@ -1,0 +1,19 @@
+// Neutral outlined chip per the v2 tag matrix — no fill, hairline border, muted
+// text. Sits inline with athlete names so the rhythm tracks the surrounding
+// typography (no override of font-size; the host's `--p-tag-font-size` wins).
+
+:host {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+::ng-deep .age-badge.p-tag {
+  background: transparent;
+  border: 1px solid var(--p-content-border-color);
+  color: var(--p-text-muted-color);
+  font-weight: 500;
+  letter-spacing: 0;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+}

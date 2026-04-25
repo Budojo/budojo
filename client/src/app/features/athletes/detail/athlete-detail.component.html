@@ -28,6 +28,7 @@
     <header class="athlete-detail-page__header">
       <div class="athlete-detail-page__title-row">
         <h1 class="athlete-detail-page__name">{{ fullName() }}</h1>
+        <app-age-badge [dateOfBirth]="a.date_of_birth" />
         <app-belt-badge [belt]="a.belt" />
         <p-tag
           [value]="statusLabel(a.status)"

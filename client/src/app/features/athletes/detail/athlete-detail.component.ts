@@ -14,12 +14,21 @@ import { ButtonModule } from 'primeng/button';
 import { TabsModule } from 'primeng/tabs';
 import { TagModule } from 'primeng/tag';
 import { Athlete, AthleteService, AthleteStatus } from '../../../core/services/athlete.service';
+import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 
 @Component({
   selector: 'app-athlete-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, ButtonModule, TabsModule, TagModule, BeltBadgeComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    ButtonModule,
+    TabsModule,
+    TagModule,
+    AgeBadgeComponent,
+    BeltBadgeComponent,
+  ],
   templateUrl: './athlete-detail.component.html',
   styleUrl: './athlete-detail.component.scss',
 })

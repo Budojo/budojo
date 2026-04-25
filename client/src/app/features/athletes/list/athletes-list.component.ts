@@ -19,6 +19,7 @@ import {
   AthleteService,
 } from '../../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
+import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/expiring-documents-widget/expiring-documents-widget.component';
 import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
 
@@ -40,6 +41,7 @@ interface SelectOption<T extends string> {
     ToastModule,
     ConfirmPopup,
     Tooltip,
+    AgeBadgeComponent,
     BeltBadgeComponent,
     ExpiringDocumentsWidgetComponent,
     MonthlySummaryWidgetComponent,

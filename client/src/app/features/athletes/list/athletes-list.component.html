@@ -78,7 +78,12 @@
 
       <ng-template pTemplate="body" let-athlete>
         <tr>
-          <td class="athlete-name">{{ athlete.first_name }} {{ athlete.last_name }}</td>
+          <td class="athlete-name">
+            <span class="athlete-name__text">
+              {{ athlete.first_name }} {{ athlete.last_name }}
+            </span>
+            <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
+          </td>
           <td>
             <app-belt-badge [belt]="athlete.belt" />
           </td>
