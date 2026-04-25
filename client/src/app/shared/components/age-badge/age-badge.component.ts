@@ -11,9 +11,10 @@ import { Tooltip } from 'primeng/tooltip';
  * navigating to the detail page (Norman feedback: every signifier
  * carries its own provenance on hover).
  *
- * Returns `null` from the host template guard when DOB is empty so the
- * caller doesn't have to wrap the element in `@if` — pass the optional
- * value through and let the badge decide whether to render.
+ * When DOB is empty or invalid, the computed `years` value returns `null`
+ * and the component's internal `@if` block renders nothing — so the caller
+ * doesn't have to wrap the element in `@if`. Pass the optional value
+ * through and let the badge decide whether to render.
  */
 @Component({
   selector: 'app-age-badge',

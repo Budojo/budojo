@@ -1,6 +1,7 @@
 // Neutral outlined chip per the v2 tag matrix — no fill, hairline border, muted
-// text. Sits inline with athlete names so the rhythm tracks the surrounding
-// typography (no override of font-size; the host's `--p-tag-font-size` wins).
+// text. Slightly smaller than the default `<p-tag>` (0.75rem) because the chip
+// sits *next to* athlete names; matching the name's font-size would compete
+// with the row's primary signal instead of supporting it.
 
 :host {
   display: inline-flex;
@@ -8,7 +9,10 @@
   line-height: 1;
 }
 
-::ng-deep .age-badge.p-tag {
+// Scoped via `:host ::ng-deep` so the override stays bound to this component
+// and doesn't leak to any other `.age-badge` className that might appear
+// elsewhere in the app.
+:host ::ng-deep .age-badge.p-tag {
   background: transparent;
   border: 1px solid var(--p-content-border-color);
   color: var(--p-text-muted-color);
