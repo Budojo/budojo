@@ -31,10 +31,22 @@ export interface AthleteListResponse {
   meta: AthleteMeta;
 }
 
+export type AthleteSortField =
+  | 'first_name'
+  | 'last_name'
+  | 'belt'
+  | 'stripes'
+  | 'joined_at'
+  | 'created_at';
+
+export type AthleteSortOrder = 'asc' | 'desc';
+
 export interface AthleteFilters {
   belt?: Belt;
   status?: AthleteStatus;
   page?: number;
+  sortBy?: AthleteSortField;
+  sortOrder?: AthleteSortOrder;
 }
 
 /**
@@ -70,6 +82,8 @@ export class AthleteService {
     if (filters.belt) params = params.set('belt', filters.belt);
     if (filters.status) params = params.set('status', filters.status);
     if (filters.page) params = params.set('page', filters.page.toString());
+    if (filters.sortBy) params = params.set('sort_by', filters.sortBy);
+    if (filters.sortOrder) params = params.set('sort_order', filters.sortOrder);
     return this.http.get<AthleteListResponse>(this.base, { params });
   }
 
