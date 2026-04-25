@@ -303,6 +303,24 @@ paths:
             type: integer
             minimum: 1
             default: 1
+        - name: sort_by
+          in: query
+          description: |
+            Column to sort by. `belt` applies a multi-key sort (belt rank +
+            stripes desc + last_name asc) so two black belts stay grouped.
+            Unknown values fall back to the default `created_at desc`.
+          required: false
+          schema:
+            type: string
+            enum: [first_name, last_name, belt, stripes, joined_at, created_at]
+        - name: sort_order
+          in: query
+          description: Sort direction. Defaults to `desc` when `sort_by` is set.
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
       responses:
         '200':
           description: Paginated list
