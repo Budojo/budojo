@@ -54,7 +54,9 @@ describe('Academy setup page', () => {
     // We assert the user-visible outcome: create, redirect, land on the list.
     cy.intercept('POST', '/api/v1/academy', {
       statusCode: 201,
-      body: { data: { id: 1, name: 'My Academy', slug: 'my-academy', address: null, logo_url: null } },
+      body: {
+        data: { id: 1, name: 'My Academy', slug: 'my-academy', address: null, logo_url: null },
+      },
     }).as('createAcademy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletesList');
 
@@ -72,7 +74,13 @@ describe('Academy setup page', () => {
     cy.intercept('POST', '/api/v1/academy', {
       statusCode: 201,
       body: {
-        data: { id: 1, name: 'My Academy', slug: 'my-academy', address: 'Via Roma 1, Milano', logo_url: null },
+        data: {
+          id: 1,
+          name: 'My Academy',
+          slug: 'my-academy',
+          address: 'Via Roma 1, Milano',
+          logo_url: null,
+        },
       },
     }).as('createAcademy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletesList');

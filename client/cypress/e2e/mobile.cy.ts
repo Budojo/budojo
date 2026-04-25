@@ -1,4 +1,4 @@
-export {};
+import { MOCK_ACADEMY } from '../support/fixtures';
 
 // M3.5 — mobile viewport smoke tests. Runs every spec at 390 × 844
 // (iPhone 13 portrait). The goal is to assert the shell behaves
@@ -8,7 +8,7 @@ export {};
 
 const ACADEMY_OK = {
   statusCode: 200,
-  body: { data: { id: 1, name: 'Test Academy', slug: 'test-academy', address: null, logo_url: null } },
+  body: { data: MOCK_ACADEMY },
 };
 
 const ATHLETES_EMPTY = {
