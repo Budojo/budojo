@@ -43,6 +43,8 @@ class EaglesBjjSeeder extends Seeder
             ])->save();
         }
 
+        $foundingDay = Carbon::parse('2023-03-01');
+
         $athletes = [
             [
                 'first_name' => 'Matteo',
@@ -51,6 +53,7 @@ class EaglesBjjSeeder extends Seeder
                 'date_of_birth' => '1990-09-09',
                 'belt' => Belt::Black,
                 'stripes' => 0,
+                'joined_at' => $foundingDay,
             ],
             [
                 'first_name' => 'Elyzabeth',
@@ -64,6 +67,7 @@ class EaglesBjjSeeder extends Seeder
                 'last_name' => 'Conciarelli',
                 'belt' => Belt::Blue,
                 'stripes' => 1,
+                'joined_at' => $foundingDay,
             ],
             [
                 'first_name' => 'Iacopo',
@@ -71,6 +75,7 @@ class EaglesBjjSeeder extends Seeder
                 'date_of_birth' => '1990-12-02',
                 'belt' => Belt::Blue,
                 'stripes' => 0,
+                'joined_at' => $foundingDay,
             ],
             [
                 'first_name' => 'Pedro',
@@ -98,6 +103,7 @@ class EaglesBjjSeeder extends Seeder
                 'date_of_birth' => '1994-11-02',
                 'belt' => Belt::Blue,
                 'stripes' => 0,
+                'joined_at' => $foundingDay,
             ],
             [
                 'first_name' => 'Chiara',
@@ -119,6 +125,7 @@ class EaglesBjjSeeder extends Seeder
                 'date_of_birth' => '2004-10-31',
                 'belt' => Belt::White,
                 'stripes' => 0,
+                'joined_at' => $foundingDay,
             ],
             [
                 'first_name' => 'Stefano',
@@ -145,7 +152,7 @@ class EaglesBjjSeeder extends Seeder
                 'belt' => $row['belt'],
                 'stripes' => $row['stripes'],
                 'status' => AthleteStatus::Active,
-                'joined_at' => Carbon::today(),
+                'joined_at' => $row['joined_at'] ?? Carbon::today()->subDays(random_int(180, 720)),
             ]);
         }
     }
