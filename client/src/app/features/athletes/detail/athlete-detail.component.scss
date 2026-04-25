@@ -85,4 +85,18 @@
     color: var(--p-text-muted-color);
     font-size: 0.875rem;
   }
+
+  &__tabs {
+    margin-top: 0.5rem;
+
+    ::ng-deep p-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      i {
+        font-size: 1rem;
+      }
+    }
+  }
 }

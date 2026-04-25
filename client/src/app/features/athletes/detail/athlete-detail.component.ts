@@ -8,9 +8,10 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { finalize } from 'rxjs';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { filter, finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { TabsModule } from 'primeng/tabs';
 import { TagModule } from 'primeng/tag';
 import { Athlete, AthleteService, AthleteStatus } from '../../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
@@ -18,7 +19,7 @@ import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-b
 @Component({
   selector: 'app-athlete-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, ButtonModule, TagModule, BeltBadgeComponent],
+  imports: [RouterOutlet, RouterLink, ButtonModule, TabsModule, TagModule, BeltBadgeComponent],
   templateUrl: './athlete-detail.component.html',
   styleUrl: './athlete-detail.component.scss',
 })
@@ -31,6 +32,7 @@ export class AthleteDetailComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly athlete = signal<Athlete | null>(null);
+  readonly activeTab = signal<string>('documents');
 
   readonly fullName = computed(() => {
     const a = this.athlete();
@@ -48,6 +50,18 @@ export class AthleteDetailComponent implements OnInit {
       }
       this.loadAthlete(id);
     });
+
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((e) => this.activeTab.set(this.tabFromUrl(e.urlAfterRedirects)));
+    this.activeTab.set(this.tabFromUrl(this.router.url));
+  }
+
+  private tabFromUrl(url: string): string {
+    return url.includes('/attendance') ? 'attendance' : 'documents';
   }
 
   statusSeverity(status: AthleteStatus): 'success' | 'warn' | 'secondary' {

@@ -38,8 +38,19 @@
       <p class="athlete-detail-page__meta">Joined {{ a.joined_at }}</p>
     </header>
 
-    <!-- Future tabs (Attendance, Promotions) will live here once M4/M6 ship.
-         For M3.2 the outlet renders the Documents tab directly. -->
+    <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">
+      <p-tablist>
+        <p-tab value="documents" routerLink="documents" data-cy="athlete-tab-documents">
+          <i class="pi pi-file"></i>
+          <span>Documents</span>
+        </p-tab>
+        <p-tab value="attendance" routerLink="attendance" data-cy="athlete-tab-attendance">
+          <i class="pi pi-calendar"></i>
+          <span>Attendance</span>
+        </p-tab>
+      </p-tablist>
+    </p-tabs>
+
     <router-outlet />
   }
 </div>
