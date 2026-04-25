@@ -5,7 +5,16 @@ const ACADEMY_OK = {
   body: { data: { id: 1, name: 'Test Academy', slug: 'test-academy', address: null } },
 };
 
-const TODAY = new Date().toISOString().slice(0, 10);
+// Match the component's `toLocalDateString()` — `toISOString()` shifts
+// to UTC and can land on the wrong calendar day in non-UTC timezones,
+// which makes assertions on the request body flaky around midnight.
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+const TODAY = toLocalDateString(new Date());
 
 const ATHLETES_TWO = {
   statusCode: 200,

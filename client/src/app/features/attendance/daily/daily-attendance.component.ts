@@ -82,6 +82,23 @@ export class DailyAttendanceComponent implements OnInit {
    */
   protected readonly inflight = signal<Set<number>>(new Set());
 
+  /**
+   * Monotonic counter for `loadDay()` calls. A request whose captured
+   * epoch no longer matches the current value is stale (the user clicked
+   * the date picker again before the previous response landed) and its
+   * tap() into our signals is a no-op. Mirrors AcademyService.epoch.
+   */
+  private loadEpoch = 0;
+
+  /**
+   * Tracks the most-recently-shown undo toast key so we can dismiss it
+   * when a new mark/unmark fires. PRD § P0.3: a tap past the toast must
+   * dismiss the previous one and (in the error path) replace it with the
+   * failure toast — no stacked Undo buttons each tied to a different
+   * record.
+   */
+  private lastToastKey: string | null = null;
+
   ngOnInit(): void {
     this.loadDay();
   }
@@ -89,44 +106,57 @@ export class DailyAttendanceComponent implements OnInit {
   /**
    * Fetches the academy roster + the day's existing attendance, builds
    * the present-map. Re-runs on date-picker change.
+   *
+   * Epoch-gated against double-trigger: the user clicking the date
+   * picker rapidly fires multiple loadDay() calls; each captures its
+   * own epoch and only writes to the signals if its epoch is still
+   * current. A late response from a previous date can no longer
+   * clobber the freshly-selected date's state.
    */
   protected loadDay(): void {
     this.loading.set(true);
     const date = toLocalDateString(this.selectedDate());
+    const epoch = ++this.loadEpoch;
 
-    // Fire both requests in parallel — we don't need one to start the
-    // other. Use a counter to flip loading when both have settled.
     let pending = 2;
     const settle = (): void => {
       pending -= 1;
-      if (pending === 0) {
+      if (pending === 0 && epoch === this.loadEpoch) {
         this.loading.set(false);
       }
     };
 
     this.athleteService.list({ status: 'active' }).subscribe({
       next: (page) => {
-        this.athletes.set(page.data);
-        this.totalActiveAthletes.set(page.meta.total);
+        if (epoch === this.loadEpoch) {
+          this.athletes.set(page.data);
+          this.totalActiveAthletes.set(page.meta.total);
+        }
         settle();
       },
       error: () => {
-        this.toastError('Could not load the athletes list.');
+        if (epoch === this.loadEpoch) {
+          this.toastError('Could not load the athletes list.');
+        }
         settle();
       },
     });
 
     this.attendanceService.getDaily(date).subscribe({
       next: (records) => {
-        const map = new Map<number, number>();
-        for (const r of records) {
-          map.set(r.athlete_id, r.id);
+        if (epoch === this.loadEpoch) {
+          const map = new Map<number, number>();
+          for (const r of records) {
+            map.set(r.athlete_id, r.id);
+          }
+          this.presentMap.set(map);
         }
-        this.presentMap.set(map);
         settle();
       },
       error: () => {
-        this.toastError("Could not load today's attendance.");
+        if (epoch === this.loadEpoch) {
+          this.toastError("Could not load today's attendance.");
+        }
         settle();
       },
     });
@@ -251,7 +281,15 @@ export class DailyAttendanceComponent implements OnInit {
   }
 
   private toastUndo(summary: string, undo: () => void): void {
+    // PRD § P0.3: a new mark/unmark dismisses the previous Undo toast
+    // and an error replaces a success toast — no stacked actionable
+    // Undos each tied to a different record. messageService.clear()
+    // wipes any previous toast (we only ever surface one at a time).
+    this.dismissPreviousToast();
+    const key = `attendance-undo-${Date.now()}`;
+    this.lastToastKey = key;
     this.messageService.add({
+      key, // referenced by clear() to dismiss when the next toast arrives
       severity: 'success',
       summary,
       // The custom toast template (see html) reads .data.undo and renders
@@ -263,10 +301,18 @@ export class DailyAttendanceComponent implements OnInit {
   }
 
   private toastError(summary: string): void {
+    this.dismissPreviousToast();
     this.messageService.add({
       severity: 'error',
       summary,
       life: 4000,
     });
+  }
+
+  private dismissPreviousToast(): void {
+    if (this.lastToastKey !== null) {
+      this.messageService.clear(this.lastToastKey);
+      this.lastToastKey = null;
+    }
   }
 }

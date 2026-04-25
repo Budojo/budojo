@@ -205,7 +205,10 @@
   border-radius: var(--p-border-radius-sm);
 
   &:hover {
-    background: rgba(91, 108, 255, 0.08); // accent-tinted hover
+    // Accent-tinted hover derived from the token, not a hardcoded rgba.
+    // color-mix keeps the tint in sync if the canon palette ever shifts
+    // (esp. dark mode, where --p-primary-color flips lighter).
+    background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
   }
 
   &:focus-visible {

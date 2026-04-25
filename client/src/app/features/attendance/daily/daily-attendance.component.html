@@ -29,13 +29,13 @@
     </div>
 
     <p-datepicker
-      [(ngModel)]="selectedDate"
+      [ngModel]="selectedDate()"
+      (ngModelChange)="selectedDate.set($event); onDateChanged()"
       [minDate]="minDate"
       [maxDate]="maxDate"
       dateFormat="yy-mm-dd"
-      showIcon="true"
+      [showIcon]="true"
       iconDisplay="input"
-      (onSelect)="onDateChanged()"
       styleClass="attendance__date-picker"
       data-cy="attendance-date"
     />
