@@ -61,8 +61,6 @@
       [paginator]="totalRecords() > 20"
       (onPage)="onPageChange($event)"
       [lazy]="true"
-      [sortField]="sortField() ?? ''"
-      [sortOrder]="sortOrder() === 'asc' ? 1 : -1"
       (onSort)="onSort($event)"
       responsiveLayout="scroll"
       styleClass="p-datatable-sm"
