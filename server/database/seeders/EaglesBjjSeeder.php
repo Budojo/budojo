@@ -129,7 +129,10 @@ class EaglesBjjSeeder extends Seeder
             ],
         ];
 
-        Athlete::withTrashed()->where('academy_id', $academy->id)->forceDelete();
+        Athlete::withTrashed()
+            ->where('academy_id', $academy->id)
+            ->lazyById()
+            ->each(fn (Athlete $athlete) => $athlete->forceDelete());
 
         foreach ($athletes as $row) {
             Athlete::create([
