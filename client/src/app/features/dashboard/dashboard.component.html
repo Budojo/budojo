@@ -25,7 +25,7 @@
       aria-label="Budojo — go to dashboard home"
       data-cy="topbar-home-link"
     >
-      <img src="/icons/icon-192.png" alt="" class="topbar__logo" aria-hidden="true" />
+      <img [src]="brandLogoUrl()" alt="" class="topbar__logo" aria-hidden="true" />
       Budojo
     </a>
   </header>
@@ -43,7 +43,7 @@
       [attr.aria-expanded]="menuVisible()"
       (click)="menu.toggle($event)"
     >
-      <img src="/icons/icon-192.png" alt="" class="sidebar__logo" aria-hidden="true" />
+      <img [src]="brandLogoUrl()" alt="" class="sidebar__logo" aria-hidden="true" />
       <span class="sidebar__brand-text">
         <span class="sidebar__brand-eyebrow">Budojo</span>
         <span class="sidebar__brand-name">{{ brandLabel() }}</span>

@@ -2,7 +2,7 @@ export {};
 
 const ACADEMY_OK = {
   statusCode: 200,
-  body: { data: { id: 1, name: 'Test Academy', slug: 'test-academy', address: null } },
+  body: { data: { id: 1, name: 'Test Academy', slug: 'test-academy', address: null, logo_url: null } },
 };
 
 const ATHLETE = {

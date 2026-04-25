@@ -11,7 +11,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'name', 'slug', 'address'])]
+/**
+ * @property int         $id
+ * @property int         $user_id
+ * @property string      $name
+ * @property string      $slug
+ * @property string|null $address
+ * @property string|null $logo_path
+ */
+#[Fillable(['user_id', 'name', 'slug', 'address', 'logo_path'])]
 class Academy extends Model
 {
     /** @use HasFactory<AcademyFactory> */

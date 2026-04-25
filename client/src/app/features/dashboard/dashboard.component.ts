@@ -27,6 +27,15 @@ export class DashboardComponent {
   protected readonly brandLabel = computed(() => this.academyService.academy()?.name ?? 'Budojo');
 
   /**
+   * Academy logo URL when uploaded, falls back to the v3 glyph so the brand
+   * mark always renders. Anonymous-fallback ensures the topbar/sidebar never
+   * show a broken image while the academy signal is still resolving.
+   */
+  protected readonly brandLogoUrl = computed(
+    () => this.academyService.academy()?.logo_url ?? '/logo-glyph.svg',
+  );
+
+  /**
    * Open/closed state for the brand dropdown. Bound to `aria-expanded` on the
    * trigger button for screen-reader parity. Toggled by PrimeNG's `onShow` /
    * `onHide` — we don't read the internal menu state, we mirror it.

@@ -14,6 +14,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'store']);
     Route::get('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'show']);
     Route::patch('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'update']);
+    Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo']);
+    Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo']);
 
     Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
         ->only(['index', 'store', 'show', 'update', 'destroy']);

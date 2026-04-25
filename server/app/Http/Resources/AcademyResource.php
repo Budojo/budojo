@@ -7,6 +7,7 @@ namespace App\Http\Resources;
 use App\Models\Academy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class AcademyResource extends JsonResource
 {
@@ -23,6 +24,9 @@ class AcademyResource extends JsonResource
             'name' => $academy->name,
             'slug' => $academy->slug,
             'address' => $academy->address,
+            'logo_url' => $academy->logo_path !== null
+                ? Storage::disk('public')->url($academy->logo_path)
+                : null,
         ];
     }
 }

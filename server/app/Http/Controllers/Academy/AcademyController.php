@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Academy;
 
 use App\Actions\Academy\CreateAcademyAction;
+use App\Actions\Academy\DeleteAcademyLogoAction;
 use App\Actions\Academy\UpdateAcademyAction;
+use App\Actions\Academy\UploadAcademyLogoAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Academy\StoreAcademyRequest;
 use App\Http\Requests\Academy\UpdateAcademyRequest;
+use App\Http\Requests\Academy\UploadAcademyLogoRequest;
 use App\Http\Resources\AcademyResource;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -20,6 +23,8 @@ class AcademyController extends Controller
     public function __construct(
         private readonly CreateAcademyAction $createAction,
         private readonly UpdateAcademyAction $updateAction,
+        private readonly UploadAcademyLogoAction $uploadLogoAction,
+        private readonly DeleteAcademyLogoAction $deleteLogoAction,
     ) {
     }
 
@@ -62,6 +67,35 @@ class AcademyController extends Controller
         $academy = $user->academy; // authorize() guarantees non-null
 
         $academy = $this->updateAction->execute($academy, $request->validated());
+
+        return response()->json(['data' => new AcademyResource($academy)]);
+    }
+
+    public function uploadLogo(UploadAcademyLogoRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        /** @var \App\Models\Academy $academy */
+        $academy = $user->academy;
+
+        /** @var \Illuminate\Http\UploadedFile $file */
+        $file = $request->file('logo');
+        $academy = $this->uploadLogoAction->execute($academy, $file);
+
+        return response()->json(['data' => new AcademyResource($academy)]);
+    }
+
+    public function deleteLogo(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->academy;
+
+        if ($academy === null) {
+            return response()->json(['message' => 'No academy found.'], 404);
+        }
+
+        $academy = $this->deleteLogoAction->execute($academy);
 
         return response()->json(['data' => new AcademyResource($academy)]);
     }

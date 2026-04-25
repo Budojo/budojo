@@ -7,6 +7,7 @@ export interface Academy {
   name: string;
   slug: string;
   address: string | null;
+  logo_url: string | null;
 }
 
 export interface CreateAcademyPayload {
@@ -143,6 +144,28 @@ export class AcademyService {
         }
         return throwError(() => err);
       }),
+    );
+  }
+
+  uploadLogo(file: File): Observable<Academy> {
+    this.epoch++;
+    this.inflight$ = null;
+
+    const form = new FormData();
+    form.append('logo', file);
+    return this.http.post<AcademyResponse>(`${this.base}/logo`, form).pipe(
+      tap((res) => this.academy.set(res.data)),
+      map((res) => res.data),
+    );
+  }
+
+  removeLogo(): Observable<Academy> {
+    this.epoch++;
+    this.inflight$ = null;
+
+    return this.http.delete<AcademyResponse>(`${this.base}/logo`).pipe(
+      tap((res) => this.academy.set(res.data)),
+      map((res) => res.data),
     );
   }
 

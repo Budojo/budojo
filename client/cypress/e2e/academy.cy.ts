@@ -5,6 +5,7 @@ const ACADEMY_TORINO = {
   name: 'Gracie Barra Torino',
   slug: 'gracie-barra-torino-a1b2c3d4',
   address: 'Via Roma 1, Torino',
+  logo_url: null,
 };
 
 const ATHLETES_EMPTY = {
