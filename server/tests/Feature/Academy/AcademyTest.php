@@ -128,6 +128,52 @@ it('clears the academy address when explicitly set to null', function (): void {
     expect($academy->fresh()->address)->toBeNull();
 });
 
+it('updates monthly_fee_cents — the academy-wide membership fee in cents (#104)', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id, 'monthly_fee_cents' => null]);
+    Sanctum::actingAs($user);
+
+    // Cents (not euros) avoids float pitfalls. €95.00 = 9500 cents.
+    $this->patchJson('/api/v1/academy', ['monthly_fee_cents' => 9500])
+        ->assertOk()
+        ->assertJsonPath('data.monthly_fee_cents', 9500);
+
+    $this->assertDatabaseHas('academies', [
+        'user_id' => $user->id,
+        'monthly_fee_cents' => 9500,
+    ]);
+});
+
+it('clears monthly_fee_cents when explicitly set to null', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id, 'monthly_fee_cents' => 9500]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['monthly_fee_cents' => null])
+        ->assertOk()
+        ->assertJsonPath('data.monthly_fee_cents', null);
+});
+
+it('rejects negative monthly_fee_cents with 422', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['monthly_fee_cents' => -1])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['monthly_fee_cents']);
+});
+
+it('rejects non-integer monthly_fee_cents (e.g. floats) with 422', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['monthly_fee_cents' => 95.5])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['monthly_fee_cents']);
+});
+
 it('returns 403 with "Forbidden." body when the user has no academy', function (): void {
     // The canon ownership contract: no academy = not authorized to update anything.
     // Matches the DocumentController / UpdateDocumentRequest wire-level contract.

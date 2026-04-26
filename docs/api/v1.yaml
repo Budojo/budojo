@@ -663,6 +663,121 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /athletes/{athlete}/payments:
+    get:
+      tags: [athletes]
+      summary: List an athlete's payments for a given year
+      description: |
+        Returns all `AthletePayment` rows for the given (athlete, year),
+        ordered by month ascending. Defaults to the current calendar year
+        when `?year` is omitted. Cross-academy access returns 403.
+      operationId: athletePaymentList
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: year
+          in: query
+          required: false
+          schema: { type: integer, minimum: 2020, maximum: 2100 }
+      responses:
+        '200':
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AthletePayment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [athletes]
+      summary: Record an athlete's payment for a (year, month)
+      description: |
+        Marks the athlete as paid for the given month. **Idempotent** —
+        POSTing the same `(year, month)` twice returns the existing row
+        instead of creating a duplicate. `amount_cents` on the resulting
+        row is snapshotted from the academy's current `monthly_fee_cents`;
+        future fee changes do NOT rewrite past records.
+
+        Returns 422 if the academy has not configured a monthly fee
+        (`academy.monthly_fee_cents === null`). Cross-academy returns 403.
+      operationId: athletePaymentRecord
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AthletePaymentCreateRequest'
+      responses:
+        '201':
+          description: Payment recorded (or returned existing row on idempotent retry)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AthletePayment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /athletes/{athlete}/payments/{year}/{month}:
+    delete:
+      tags: [athletes]
+      summary: Undo a paid month
+      description: |
+        Hard-deletes the payment row for `(athlete, year, month)`. The table
+        has no soft-delete tombstone — the absence of a row IS the canonical
+        "not paid" state. Returns 404 if no payment exists for the given
+        coordinates; cross-academy access returns 403.
+      operationId: athletePaymentDelete
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: year
+          in: path
+          required: true
+          schema: { type: integer, minimum: 2020, maximum: 2100 }
+        - name: month
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '204':
+          description: Payment deleted
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /attendance:
     get:
       tags: [attendance]
@@ -1088,10 +1203,19 @@ components:
           maxLength: 500
           nullable: true
           example: Rua Example 456, Lisboa
+        monthly_fee_cents:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: |
+            Academy-wide membership fee, stored in cents (€95.00 = 9500).
+            Set to `null` to clear. Required to be non-null before any
+            `POST /athletes/{id}/payments` request will succeed.
+          example: 9500
 
     Academy:
       type: object
-      required: [id, name, slug, address, logo_url]
+      required: [id, name, slug, address, logo_url, monthly_fee_cents]
       properties:
         id:
           type: integer
@@ -1114,6 +1238,15 @@ components:
             `Storage::disk('public')->url(...)` against `APP_URL`), or null
             when no logo has been uploaded.
           example: https://api.example.com/storage/academy-logos/1/abcd1234.png
+        monthly_fee_cents:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: |
+            Academy-wide membership fee in cents. `null` means "fee not
+            configured" — the payments endpoints reject `POST` with 422
+            until the owner sets this via `PATCH /api/v1/academy`.
+          example: 9500
 
     AcademyEnvelope:
       type: object
@@ -1213,6 +1346,7 @@ components:
         - status
         - joined_at
         - created_at
+        - paid_current_month
       properties:
         id:
           type: integer
@@ -1247,6 +1381,52 @@ components:
           type: string
           format: date-time
           nullable: true
+        paid_current_month:
+          type: boolean
+          description: |
+            Derived: `true` iff a row exists in `athlete_payments` for this
+            athlete with `(year, month) = (NOW()->year, NOW()->month)`. The
+            `/athletes` index endpoint eager-loads only the current-month
+            payments slice to keep this derivation O(1) per row (no N+1).
+
+    AthletePayment:
+      type: object
+      required: [id, athlete_id, year, month, amount_cents, paid_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        athlete_id:
+          type: integer
+          format: int64
+        year:
+          type: integer
+          minimum: 2020
+          maximum: 2100
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        amount_cents:
+          type: integer
+          minimum: 0
+          description: Snapshot of `academy.monthly_fee_cents` at recording time
+        paid_at:
+          type: string
+          format: date-time
+
+    AthletePaymentCreateRequest:
+      type: object
+      required: [year, month]
+      properties:
+        year:
+          type: integer
+          minimum: 2020
+          maximum: 2100
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
 
     AthleteEnvelope:
       type: object

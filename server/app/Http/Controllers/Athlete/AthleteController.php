@@ -51,7 +51,17 @@ class AthleteController extends Controller
         $sortBy = \is_string($request->input('sort_by')) ? $request->input('sort_by') : null;
         $sortOrder = $request->input('sort_order') === 'asc' ? 'asc' : 'desc';
 
+        $currentYear = (int) now()->year;
+        $currentMonth = (int) now()->month;
+
         $query = $user->academy->athletes()
+            // Eager-load only the current-month payments slice so the
+            // `paid_current_month` derivation in AthleteResource doesn't fan
+            // out into N+1 queries on a 20-row page (#104). One extra query
+            // total — payments for all visible athletes in this month.
+            ->with(['payments' => fn ($q) => $q
+                ->where('year', $currentYear)
+                ->where('month', $currentMonth)])
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             ->when($request->filled('q'), function (Builder|HasMany $q) use ($request) {

@@ -17,6 +17,13 @@ export interface Athlete {
   status: AthleteStatus;
   joined_at: string;
   created_at: string;
+  /**
+   * Derived server-side: true iff a row exists in `athlete_payments` for
+   * the current calendar month. Marked optional to keep existing test
+   * fixtures and Cypress mocks compiling — the wire shape ALWAYS includes
+   * it from #104 onward; #105 (paid badge + filter) tightens to required.
+   */
+  paid_current_month?: boolean;
 }
 
 export interface AthleteMeta {
