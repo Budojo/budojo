@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,9 +22,11 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { Tooltip } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { AcademyService } from '../../../core/services/academy.service';
 import {
   Athlete,
   AthleteFilters,
+  AthletePaidFilter,
   AthleteSortField,
   AthleteSortOrder,
   AthleteStatus,
@@ -28,6 +37,7 @@ import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-b
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/expiring-documents-widget/expiring-documents-widget.component';
 import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
+import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -54,6 +64,7 @@ interface SelectOption<T extends string> {
     BeltBadgeComponent,
     ExpiringDocumentsWidgetComponent,
     MonthlySummaryWidgetComponent,
+    PaidBadgeComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',
@@ -61,6 +72,7 @@ interface SelectOption<T extends string> {
 })
 export class AthletesListComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
+  private readonly academyService = inject(AcademyService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
@@ -71,8 +83,19 @@ export class AthletesListComponent implements OnInit {
 
   selectedBelt = signal<Belt | ''>('');
   selectedStatus = signal<AthleteStatus | ''>('');
+  selectedPaid = signal<AthletePaidFilter | ''>('');
   readonly sortField = signal<AthleteSortField | null>(null);
   readonly sortOrder = signal<AthleteSortOrder>('desc');
+
+  /**
+   * The paid badge + filter only make sense when the academy has configured
+   * a monthly fee — otherwise there's no expectation of payment to assert
+   * against. Reads from the cached `AcademyService.academy()` signal so we
+   * never block rendering on an additional fetch (#105).
+   */
+  readonly hasMonthlyFee = computed(
+    () => (this.academyService.academy()?.monthly_fee_cents ?? null) !== null,
+  );
 
   /**
    * Free-text name search. The signal mirrors the input control; the trimmed
@@ -122,6 +145,12 @@ export class AthletesListComponent implements OnInit {
     { label: 'Inactive', value: 'inactive' },
   ];
 
+  readonly paidOptions: SelectOption<AthletePaidFilter>[] = [
+    { label: 'All', value: '' },
+    { label: 'Paid', value: 'yes' },
+    { label: 'Unpaid', value: 'no' },
+  ];
+
   ngOnInit(): void {
     this.load();
   }
@@ -134,6 +163,12 @@ export class AthletesListComponent implements OnInit {
 
   onStatusChange(status: AthleteStatus | ''): void {
     this.selectedStatus.set(status);
+    this.resetPage();
+    this.load();
+  }
+
+  onPaidChange(paid: AthletePaidFilter | ''): void {
+    this.selectedPaid.set(paid);
     this.resetPage();
     this.load();
   }
@@ -244,6 +279,13 @@ export class AthletesListComponent implements OnInit {
     }
     const q = this.searchTerm().trim();
     if (q) filters.q = q;
+    // Gate `paid` on `hasMonthlyFee()` so a stale `selectedPaid` signal
+    // doesn't keep filtering after the owner clears `monthly_fee_cents`
+    // (the select itself disappears in that state, leaving the user with
+    // no UI to reset it). Belt-and-braces: clearer to the backend, and
+    // the empty-state hint stops blaming a filter the user can't see.
+    const paid = this.hasMonthlyFee() ? this.selectedPaid() : '';
+    if (paid) filters.paid = paid;
 
     this.athleteService
       .list(filters)

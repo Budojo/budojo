@@ -42,6 +42,8 @@ export type AthleteSortField = 'first_name' | 'last_name' | 'belt' | 'joined_at'
 
 export type AthleteSortOrder = 'asc' | 'desc';
 
+export type AthletePaidFilter = 'yes' | 'no';
+
 export interface AthleteFilters {
   belt?: Belt;
   status?: AthleteStatus;
@@ -55,6 +57,13 @@ export interface AthleteFilters {
    * field is set.
    */
   q?: string;
+  /**
+   * `yes` filters down to athletes who have paid for the current calendar
+   * month; `no` to those who haven't. Server-side filter (#105) because the
+   * list is paginated — a client-side sweep would only see the current 20
+   * rows. Hidden in the UI when the academy hasn't configured a fee.
+   */
+  paid?: AthletePaidFilter;
 }
 
 /**
@@ -93,6 +102,7 @@ export class AthleteService {
     if (filters.sortBy) params = params.set('sort_by', filters.sortBy);
     if (filters.sortOrder) params = params.set('sort_order', filters.sortOrder);
     if (filters.q) params = params.set('q', filters.q);
+    if (filters.paid) params = params.set('paid', filters.paid);
     return this.http.get<AthleteListResponse>(this.base, { params });
   }
 
