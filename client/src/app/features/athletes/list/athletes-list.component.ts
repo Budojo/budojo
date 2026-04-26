@@ -113,13 +113,17 @@ export class AthletesListComponent implements OnInit {
    * PrimeNG p-table emits `{ field, order }` on header click.
    * `order` is 1 (asc) or -1 (desc). We map to our `'asc' | 'desc'` and
    * fire a fresh load. Re-clicking the same column flips the order.
+   *
+   * `stripes` is NOT in the allowlist (#101): it's a within-belt tiebreaker
+   * only, applied automatically by the backend when sort_by=belt. Allowing
+   * it as a primary sort would let a 4-stripe blue belt appear above a
+   * 0-stripe black belt — never the right ordering.
    */
   onSort(event: { field?: string; order?: number }): void {
     const allowed: AthleteSortField[] = [
       'first_name',
       'last_name',
       'belt',
-      'stripes',
       'joined_at',
       'created_at',
     ];

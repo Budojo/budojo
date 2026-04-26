@@ -41,17 +41,22 @@ it('sorts by last_name asc when sort_by=last_name and sort_order=asc', function 
     expect($names)->toBe(['Bianchi', 'Rossi', 'Verdi']);
 });
 
-it('sorts by stripes desc by default when sort_by=stripes', function (): void {
-    makeAthlete($this->academy, ['last_name' => 'A', 'stripes' => 1]);
-    makeAthlete($this->academy, ['last_name' => 'B', 'stripes' => 4]);
-    makeAthlete($this->academy, ['last_name' => 'C', 'stripes' => 2]);
+it('rejects sort_by=stripes (no longer a primary sort) and falls back to default order', function (): void {
+    // Stripes is meaningful only as a tiebreaker INSIDE a belt rank — never as
+    // a primary sort (a 4-stripe blue would be ranked above a 0-stripe black).
+    // The whitelist therefore excludes it; clients that ask for it get the
+    // default `latest()` ordering instead. The within-belt tiebreaker is
+    // covered by the next test (see `applyBeltSort()` in the controller).
+    makeAthlete($this->academy, ['last_name' => 'OldFourStripes', 'stripes' => 4, 'created_at' => now()->subDays(2)]);
+    makeAthlete($this->academy, ['last_name' => 'MidTwoStripes', 'stripes' => 2, 'created_at' => now()->subDays(1)]);
+    makeAthlete($this->academy, ['last_name' => 'NewOneStripe', 'stripes' => 1, 'created_at' => now()]);
 
-    $stripes = collect($this->getJson('/api/v1/athletes?sort_by=stripes')
+    $names = collect($this->getJson('/api/v1/athletes?sort_by=stripes')
         ->json('data'))
-        ->pluck('stripes')
+        ->pluck('last_name')
         ->all();
 
-    expect($stripes)->toBe([4, 2, 1]);
+    expect($names)->toBe(['NewOneStripe', 'MidTwoStripes', 'OldFourStripes']);
 });
 
 it('sorts by belt rank desc with stripes desc + last_name asc as tiebreakers', function (): void {

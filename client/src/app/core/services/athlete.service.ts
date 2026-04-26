@@ -31,13 +31,7 @@ export interface AthleteListResponse {
   meta: AthleteMeta;
 }
 
-export type AthleteSortField =
-  | 'first_name'
-  | 'last_name'
-  | 'belt'
-  | 'stripes'
-  | 'joined_at'
-  | 'created_at';
+export type AthleteSortField = 'first_name' | 'last_name' | 'belt' | 'joined_at' | 'created_at';
 
 export type AthleteSortOrder = 'asc' | 'desc';
 
