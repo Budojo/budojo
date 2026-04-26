@@ -15,6 +15,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { AcademyService, UpdateAcademyPayload } from '../../../core/services/academy.service';
+import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 
 /**
  * Rejects a value that is only whitespace. Without this validator the
@@ -48,6 +49,7 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
     MessageModule,
     TextareaModule,
     ToastModule,
+    TrainingDaysPickerComponent,
   ],
   providers: [MessageService],
   templateUrl: './academy-form.component.html',
@@ -70,6 +72,7 @@ export class AcademyFormComponent implements OnInit {
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(255), noWhitespace]],
     address: ['', Validators.maxLength(500)],
+    training_days: this.fb.nonNullable.control<number[]>([]),
   });
 
   ngOnInit(): void {
@@ -86,6 +89,7 @@ export class AcademyFormComponent implements OnInit {
     this.form.patchValue({
       name: academy.name,
       address: academy.address ?? '',
+      training_days: academy.training_days ?? [],
     });
   }
 
@@ -151,7 +155,15 @@ export class AcademyFormComponent implements OnInit {
     return {
       name: v.name.trim(),
       address: trimmedAddress === '' ? null : trimmedAddress,
+      // Empty selection → null ("not configured") so a user can DEselect
+      // every day and have the server clear the schedule (mirror of the
+      // address field's "" → null contract).
+      training_days: v.training_days.length === 0 ? null : v.training_days,
     };
+  }
+
+  setTrainingDays(days: number[]): void {
+    this.form.controls.training_days.setValue(days);
   }
 
   private handleServerError(err: {

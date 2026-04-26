@@ -1,0 +1,47 @@
+// Toggleable weekday pills. Direct manipulation > hidden multi-select
+// dropdown (Norman: visible affordances). Each pill is a 48 px touch
+// target on mobile (Fitts) and shrinks proportionally on desktop.
+
+.training-days-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  &__day {
+    appearance: none;
+    border: 1px solid var(--p-content-border-color);
+    background: var(--p-content-background);
+    color: var(--p-text-color);
+    border-radius: var(--p-border-radius-md);
+    padding: 0.5rem 0.875rem;
+    min-width: 3rem;
+    min-height: 2.75rem; // 44px — comfortable on mobile, not over-bearing on desktop
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+      border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+      color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+
+    &--selected {
+      background: var(--p-primary-color);
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-contrast-color);
+
+      &:hover {
+        background: var(--p-primary-hover-color, var(--p-primary-color));
+        border-color: var(--p-primary-hover-color, var(--p-primary-color));
+      }
+    }
+  }
+}

@@ -10,13 +10,17 @@ use Illuminate\Support\Str;
 
 class CreateAcademyAction
 {
-    public function execute(User $user, string $name, ?string $address): Academy
+    /**
+     * @param  list<int>|null  $trainingDays  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
+     */
+    public function execute(User $user, string $name, ?string $address, ?array $trainingDays = null): Academy
     {
         return Academy::create([
             'user_id' => $user->id,
             'name' => $name,
             'slug' => $this->uniqueSlug($name),
             'address' => $address,
+            'training_days' => $trainingDays,
         ]);
     }
 

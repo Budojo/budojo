@@ -54,6 +54,14 @@
         }
       </div>
 
+      <div class="field">
+        <span class="field-label">Training days <span class="optional">(optional)</span></span>
+        <app-training-days-picker
+          [value]="form.value.training_days ?? []"
+          (valueChange)="setTrainingDays($event)"
+        />
+      </div>
+
       <p-button
         type="submit"
         label="Create academy"

@@ -16,22 +16,31 @@ export interface Academy {
    * the wire shape ALWAYS includes the field from #104 onward.
    */
   monthly_fee_cents?: number | null;
+  /**
+   * Weekdays the academy trains on, as Carbon `dayOfWeek` ints (0=Sun..6=Sat).
+   * `null` = "schedule not configured" — daily check-in falls back to
+   * all-weekdays. Optional for the same fixture-compat reason as the fee.
+   */
+  training_days?: number[] | null;
 }
 
 export interface CreateAcademyPayload {
   name: string;
   address?: string;
+  training_days?: number[] | null;
 }
 
 /**
  * Partial update. Every key is optional; what you don't send, the server
- * leaves untouched. `address: null` and `monthly_fee_cents: null` are the
- * explicit "clear it" signals (distinct from omitting the key entirely).
+ * leaves untouched. `address: null`, `monthly_fee_cents: null`, and
+ * `training_days: null` are the explicit "clear it" signals (distinct
+ * from omitting the key entirely).
  */
 export interface UpdateAcademyPayload {
   name?: string;
   address?: string | null;
   monthly_fee_cents?: number | null;
+  training_days?: number[] | null;
 }
 
 interface AcademyResponse {

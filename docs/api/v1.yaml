@@ -1199,6 +1199,8 @@ components:
           maxLength: 500
           nullable: true
           example: Rua Example 123, Lisboa
+        training_days:
+          $ref: '#/components/schemas/TrainingDays'
 
     AcademyUpdateRequest:
       type: object
@@ -1225,10 +1227,12 @@ components:
             Set to `null` to clear. Required to be non-null before any
             `POST /athletes/{id}/payments` request will succeed.
           example: 9500
+        training_days:
+          $ref: '#/components/schemas/TrainingDays'
 
     Academy:
       type: object
-      required: [id, name, slug, address, logo_url, monthly_fee_cents]
+      required: [id, name, slug, address, logo_url, monthly_fee_cents, training_days]
       properties:
         id:
           type: integer
@@ -1260,6 +1264,25 @@ components:
             configured" — the payments endpoints reject `POST` with 422
             until the owner sets this via `PATCH /api/v1/academy`.
           example: 9500
+        training_days:
+          $ref: '#/components/schemas/TrainingDays'
+
+    TrainingDays:
+      type: array
+      nullable: true
+      maxItems: 7
+      uniqueItems: true
+      description: |
+        The weekdays the academy trains on, expressed as Carbon `dayOfWeek`
+        integers (0 = Sunday … 6 = Saturday). Order is canonical (ascending)
+        but not enforced — clients SHOULD treat the list as a set. `null`
+        means "schedule not configured" — the daily check-in UI uses that
+        as the signal to fall back to all-weekdays.
+      items:
+        type: integer
+        minimum: 0
+        maximum: 6
+      example: [2, 4, 6]
 
     AcademyEnvelope:
       type: object

@@ -21,6 +21,11 @@ class StoreAcademyRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
+            // Carbon dayOfWeek convention (0=Sun..6=Sat). `null` / omitted =
+            // "schedule not configured", which the daily check-in UI uses
+            // as the signal to fall back to all-weekdays.
+            'training_days' => ['sometimes', 'nullable', 'array', 'max:7'],
+            'training_days.*' => ['integer', 'between:0,6', 'distinct'],
         ];
     }
 }

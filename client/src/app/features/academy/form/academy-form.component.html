@@ -84,6 +84,20 @@
       <small class="field__hint"> Leave empty to clear the address on file. </small>
     </div>
 
+    <div class="field">
+      <span class="field__label"
+        >Training days <span class="field__optional">(optional)</span></span
+      >
+      <app-training-days-picker
+        [value]="form.value.training_days ?? []"
+        (valueChange)="setTrainingDays($event)"
+        data-cy="academy-form-training-days"
+      />
+      <small class="field__hint">
+        Pick the weekdays your academy holds class. Deselect every day to clear the schedule.
+      </small>
+    </div>
+
     <div class="form__actions">
       <p-button
         type="button"
