@@ -29,14 +29,7 @@
         <img [src]="url" alt="" class="topbar__logo" aria-hidden="true" />
       } @else {
         <!-- Inline so stroke="currentColor" inherits the topbar text color (#99). -->
-        <svg class="topbar__logo" viewBox="0 0 64 64" aria-hidden="true">
-          <g stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 10 L32 38 L32 54" stroke-width="5" />
-            <path d="M50 10 L32 38" stroke-width="5" />
-            <path d="M16 40 L48 40" stroke-width="6" />
-            <path d="M29 38 L29 44 L35 44 L35 38" stroke-width="4" />
-          </g>
-        </svg>
+        <app-brand-glyph class="topbar__logo" />
       }
       Budojo
     </a>
@@ -59,19 +52,7 @@
         <img [src]="url" alt="" class="sidebar__logo" aria-hidden="true" />
       } @else {
         <!-- Inline so stroke="currentColor" inherits the sidebar text color (#99). -->
-        <svg
-          class="sidebar__logo"
-          viewBox="0 0 64 64"
-          aria-hidden="true"
-          data-cy="brand-glyph-fallback"
-        >
-          <g stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 10 L32 38 L32 54" stroke-width="5" />
-            <path d="M50 10 L32 38" stroke-width="5" />
-            <path d="M16 40 L48 40" stroke-width="6" />
-            <path d="M29 38 L29 44 L35 44 L35 38" stroke-width="4" />
-          </g>
-        </svg>
+        <app-brand-glyph class="sidebar__logo" data-cy="brand-glyph-fallback" />
       }
       <span class="sidebar__brand-text">
         <span class="sidebar__brand-eyebrow">Budojo</span>

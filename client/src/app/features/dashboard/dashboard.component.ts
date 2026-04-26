@@ -4,11 +4,12 @@ import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
+import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MenuModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MenuModule, BrandGlyphComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
