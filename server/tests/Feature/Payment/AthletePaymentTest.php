@@ -188,3 +188,15 @@ it('does not flip paid_current_month when only a previous month is paid', functi
         ->assertOk()
         ->assertJsonPath('data.0.paid_current_month', false);
 });
+
+it('exposes paid_current_month on the show endpoint via the constrained exists() fallback', function (): void {
+    // The show endpoint does NOT eager-load `payments`; the resource takes
+    // the `relationLoaded === false` branch and runs a constrained
+    // `exists()` query instead of pulling all payment rows into memory.
+    AthletePayment::factory()->for($this->athlete)->forCurrentMonth()->create();
+
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/athletes/{$this->athlete->id}")
+        ->assertOk()
+        ->assertJsonPath('data.paid_current_month', true);
+});

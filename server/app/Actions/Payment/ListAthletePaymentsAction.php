@@ -12,8 +12,8 @@ class ListAthletePaymentsAction
 {
     /**
      * Returns the athlete's payments for the given year, ordered by month
-     * ascending. The ascending order matches the calendar reading direction
-     * (Jan → Dec) — Krug, self-evident UI.
+     * ascending (January → December — calendar order, easiest to scan and
+     * to render as a 12-cell grid client-side without a sort step).
      *
      * @return Collection<int, AthletePayment>
      */

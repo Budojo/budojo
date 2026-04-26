@@ -18,6 +18,27 @@ class AthleteResource extends JsonResource
         /** @var Athlete $athlete */
         $athlete = $this->resource;
 
+        $year = (int) now()->year;
+        $month = (int) now()->month;
+
+        // Two paths so we don't pull every payment row into memory just to
+        // compute a boolean:
+        //   * INDEX endpoint: AthleteController::index pre-loads only the
+        //     current-month slice (no N+1) — we filter the in-memory
+        //     collection.
+        //   * SHOW / STORE / UPDATE: relationship is NOT pre-loaded — we
+        //     issue a constrained `exists()` query that returns a single
+        //     bool without hydrating models.
+        $paidCurrentMonth = $athlete->relationLoaded('payments')
+            ? $athlete->payments
+                ->where('year', $year)
+                ->where('month', $month)
+                ->isNotEmpty()
+            : $athlete->payments()
+                ->where('year', $year)
+                ->where('month', $month)
+                ->exists();
+
         return [
             'id' => $athlete->id,
             'first_name' => $athlete->first_name,
@@ -30,15 +51,7 @@ class AthleteResource extends JsonResource
             'status' => $athlete->status->value,
             'joined_at' => $athlete->joined_at->toDateString(),
             'created_at' => $athlete->created_at?->toIso8601String(),
-            // The list endpoint eager-loads the current-month payments slice
-            // to avoid N+1 (see AthleteController::index). Single-row
-            // endpoints (show / store / update) lazy-load the relationship
-            // for one extra query — acceptable for a single row, and keeps
-            // the resource shape uniform across surfaces (#104 / #105).
-            'paid_current_month' => $athlete->payments
-                ->where('year', (int) now()->year)
-                ->where('month', (int) now()->month)
-                ->isNotEmpty(),
+            'paid_current_month' => $paidCurrentMonth,
         ];
     }
 }
