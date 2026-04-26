@@ -207,8 +207,11 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     }
   }
 
-  // Brand logo — 32 px tile. The PNG already carries the indigo-on-dark
-  // monogram and rounded-square shape, so we only size + clip it here.
+  // Brand logo — 32 px tile. Renders either an academy-uploaded <img> OR
+  // the inline Budojo <svg> fallback (#99). Both share these dimensions;
+  // the border-radius applies to the <img> branch (raster/photo logo) and
+  // is harmless on the transparent inline SVG. `flex-shrink: 0` keeps the
+  // tile size locked while the brand text ellipses.
   &__logo {
     width: 2rem;
     height: 2rem;

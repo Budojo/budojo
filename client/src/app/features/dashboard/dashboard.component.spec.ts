@@ -175,6 +175,84 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('brand glyph fallback (#99)', () => {
+    // Background: when `<img src=".../logo-glyph.svg">` is used, the SVG is
+    // sandboxed from host CSS — `stroke="currentColor"` resolves to the SVG's
+    // own root, which defaults to black. On the dark sidebar (--p-surface-900)
+    // the glyph blends into the background. Fix: render the fallback Budojo
+    // glyph inline so currentColor inherits the host text color.
+    it('renders the inline brand-glyph fallback in sidebar + topbar when academy has no logo_url', () => {
+      academyService.academy.set({
+        id: 1,
+        name: 'Gracie Barra Torino',
+        slug: 'gbt',
+        address: null,
+        logo_url: null,
+      });
+
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+
+      const sidebarLogo = el.querySelector('.sidebar__logo');
+      expect(sidebarLogo).not.toBeNull();
+      expect(sidebarLogo!.tagName.toLowerCase()).toBe('app-brand-glyph');
+      expect(sidebarLogo!.getAttribute('data-cy')).toBe('brand-glyph-fallback');
+      // The <app-brand-glyph> host renders an <svg> with currentColor strokes —
+      // assert the SVG is actually present so a broken component doesn't pass.
+      expect(sidebarLogo!.querySelector('svg')).not.toBeNull();
+
+      const topbarLogo = el.querySelector('.topbar__logo');
+      expect(topbarLogo).not.toBeNull();
+      expect(topbarLogo!.tagName.toLowerCase()).toBe('app-brand-glyph');
+      expect(topbarLogo!.querySelector('svg')).not.toBeNull();
+    });
+
+    it('renders an <img> with the academy logo on BOTH surfaces when logo_url is set, no fallback', () => {
+      academyService.academy.set({
+        id: 1,
+        name: 'Gracie Barra Torino',
+        slug: 'gbt',
+        address: null,
+        logo_url: '/storage/academy-logos/1/logo.png',
+      });
+
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+
+      const sidebarLogo = el.querySelector('.sidebar__logo');
+      expect(sidebarLogo).not.toBeNull();
+      expect(sidebarLogo!.tagName.toLowerCase()).toBe('img');
+      expect(sidebarLogo!.getAttribute('src')).toBe('/storage/academy-logos/1/logo.png');
+
+      const topbarLogo = el.querySelector('.topbar__logo');
+      expect(topbarLogo).not.toBeNull();
+      expect(topbarLogo!.tagName.toLowerCase()).toBe('img');
+      expect(topbarLogo!.getAttribute('src')).toBe('/storage/academy-logos/1/logo.png');
+
+      // Neither surface renders the inline fallback when a custom logo is present.
+      expect(el.querySelector('[data-cy="brand-glyph-fallback"]')).toBeNull();
+      expect(el.querySelector('app-brand-glyph')).toBeNull();
+    });
+
+    it('renders the inline brand-glyph fallback when the academy signal is null (defensive)', () => {
+      academyService.academy.set(null);
+
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+
+      const sidebarLogo = el.querySelector('.sidebar__logo');
+      expect(sidebarLogo).not.toBeNull();
+      expect(sidebarLogo!.tagName.toLowerCase()).toBe('app-brand-glyph');
+      expect(sidebarLogo!.querySelector('svg')).not.toBeNull();
+    });
+  });
+
   describe('mobile drawer state', () => {
     it('starts closed — the off-canvas sidebar is hidden by default', () => {
       const fixture = TestBed.createComponent(DashboardComponent);

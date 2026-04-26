@@ -25,7 +25,12 @@
       aria-label="Budojo — go to dashboard home"
       data-cy="topbar-home-link"
     >
-      <img [src]="brandLogoUrl()" alt="" class="topbar__logo" aria-hidden="true" />
+      @if (academyLogoUrl(); as url) {
+        <img [src]="url" alt="" class="topbar__logo" aria-hidden="true" />
+      } @else {
+        <!-- Inline so stroke="currentColor" inherits the topbar text color (#99). -->
+        <app-brand-glyph class="topbar__logo" />
+      }
       Budojo
     </a>
   </header>
@@ -43,7 +48,12 @@
       [attr.aria-expanded]="menuVisible()"
       (click)="menu.toggle($event)"
     >
-      <img [src]="brandLogoUrl()" alt="" class="sidebar__logo" aria-hidden="true" />
+      @if (academyLogoUrl(); as url) {
+        <img [src]="url" alt="" class="sidebar__logo" aria-hidden="true" />
+      } @else {
+        <!-- Inline so stroke="currentColor" inherits the sidebar text color (#99). -->
+        <app-brand-glyph class="sidebar__logo" data-cy="brand-glyph-fallback" />
+      }
       <span class="sidebar__brand-text">
         <span class="sidebar__brand-eyebrow">Budojo</span>
         <span class="sidebar__brand-name">{{ brandLabel() }}</span>
