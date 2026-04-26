@@ -310,12 +310,15 @@ paths:
             brown < black) via a SQL CASE expression — NOT a lexicographic
             sort on the column value — and chains `stripes desc` + `last_name
             asc` as stable tiebreakers so two athletes at the same belt
-            level always render in the same row order. Unknown values fall
-            back to the default `created_at desc`.
+            level always render in the same row order. `stripes` is not
+            accepted as a primary sort (it's meaningful only as a within-belt
+            tiebreaker — a 4-stripe blue above a 0-stripe black is never
+            correct); requesting it falls back to the default ordering.
+            Unknown values also fall back to the default `created_at desc`.
           required: false
           schema:
             type: string
-            enum: [first_name, last_name, belt, stripes, joined_at, created_at]
+            enum: [first_name, last_name, belt, joined_at, created_at]
         - name: sort_order
           in: query
           description: Sort direction. Defaults to `desc` when `sort_by` is set.

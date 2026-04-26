@@ -25,12 +25,16 @@ class AthleteController extends Controller
      * than the lexicographic `orderBy('belt', ...)` the string column would
      * give us (alphabetic desc puts white first, not black).
      *
+     * `stripes` is intentionally NOT in this whitelist (#101): it's only
+     * meaningful as a within-belt tiebreaker — a 4-stripe blue belt above
+     * a 0-stripe black belt is never the right answer. The tiebreaker is
+     * applied automatically inside applyBeltSort().
+     *
      * @var array<string, string>
      */
     private const SORTABLE_COLUMNS = [
         'first_name' => 'first_name',
         'last_name' => 'last_name',
-        'stripes' => 'stripes',
         'joined_at' => 'joined_at',
         'created_at' => 'created_at',
     ];
