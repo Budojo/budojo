@@ -279,8 +279,9 @@ paths:
       summary: Paginated list of athletes in the authenticated academy
       description: |
         Returns 20 athletes per page, newest first. Soft-deleted athletes are
-        never returned. Optional filters `belt` and `status` narrow the set;
-        both filters match exactly one enum value.
+        never returned. Optional filters `belt`, `status`, and `q` narrow the
+        set; the first two match exactly one enum value, `q` is a free-text
+        name search.
       operationId: athleteList
       parameters:
         - name: belt
@@ -295,6 +296,20 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/AthleteStatus'
+        - name: q
+          in: query
+          description: |
+            Free-text search across `first_name` and `last_name`. The query is
+            tokenised on whitespace and applied as AND — every token must
+            match (case-insensitive `LIKE %token%`) either column. So `mario`
+            finds Mario Rossi and Anna Mariotti; `mario ros` finds Mario
+            Rossi (token `mario` matches first_name, token `ros` matches
+            last_name) but not Marco Rossini. Empty/whitespace-only values
+            are ignored and return the unfiltered list.
+          required: false
+          schema:
+            type: string
+            example: mario
         - name: page
           in: query
           description: Page number, starting at 1. Page size is fixed at 20.

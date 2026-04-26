@@ -41,6 +41,13 @@ export interface AthleteFilters {
   page?: number;
   sortBy?: AthleteSortField;
   sortOrder?: AthleteSortOrder;
+  /**
+   * Free-text name search forwarded to the backend as `?q=...`. Tokens are
+   * AND-matched across first_name and last_name — see OpenAPI spec for the
+   * exact semantics. Whitespace-only values should be stripped before this
+   * field is set.
+   */
+  q?: string;
 }
 
 /**
@@ -78,6 +85,7 @@ export class AthleteService {
     if (filters.page) params = params.set('page', filters.page.toString());
     if (filters.sortBy) params = params.set('sort_by', filters.sortBy);
     if (filters.sortOrder) params = params.set('sort_order', filters.sortOrder);
+    if (filters.q) params = params.set('q', filters.q);
     return this.http.get<AthleteListResponse>(this.base, { params });
   }
 

@@ -1,8 +1,12 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
@@ -36,6 +40,9 @@ interface SelectOption<T extends string> {
   imports: [
     FormsModule,
     ButtonModule,
+    IconFieldModule,
+    InputIconModule,
+    InputTextModule,
     SelectModule,
     SkeletonModule,
     TableModule,
@@ -67,9 +74,28 @@ export class AthletesListComponent implements OnInit {
   readonly sortField = signal<AthleteSortField | null>(null);
   readonly sortOrder = signal<AthleteSortOrder>('desc');
 
+  /**
+   * Free-text name search. The signal mirrors the input control; the trimmed
+   * value gets forwarded to the backend as `?q=...` when non-empty (#102).
+   */
+  readonly searchTerm = signal<string>('');
+
+  /**
+   * Each keystroke pushes here. The pipeline below debounces +
+   * de-duplicates so a five-character "mario" sends one request, not five.
+   * 200 ms is canon-small (Doherty < 400 ms) — feedback feels live.
+   */
+  private readonly searchInputSubject = new Subject<string>();
+
   private page = 1;
 
   readonly first = signal(0);
+
+  constructor() {
+    this.searchInputSubject
+      .pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed())
+      .subscribe((q) => this.applySearch(q));
+  }
 
   readonly beltOptions: SelectOption<Belt>[] = [
     { label: 'All belts', value: '' },
@@ -99,6 +125,22 @@ export class AthletesListComponent implements OnInit {
 
   onStatusChange(status: AthleteStatus | ''): void {
     this.selectedStatus.set(status);
+    this.resetPage();
+    this.load();
+  }
+
+  /**
+   * Template binding: every keystroke pushes into the debounce pipeline.
+   * `applySearch` is the side of the pipeline that actually mutates state
+   * and fires a load — it's also exposed publicly so tests (and any future
+   * non-debounced trigger like a "Clear" affordance) can call it directly.
+   */
+  onSearchInput(value: string): void {
+    this.searchInputSubject.next(value);
+  }
+
+  applySearch(q: string): void {
+    this.searchTerm.set(q);
     this.resetPage();
     this.load();
   }
@@ -188,6 +230,8 @@ export class AthletesListComponent implements OnInit {
       filters.sortBy = sort;
       filters.sortOrder = this.sortOrder();
     }
+    const q = this.searchTerm().trim();
+    if (q) filters.q = q;
 
     this.athleteService
       .list(filters)
