@@ -132,12 +132,7 @@ export class AcademyService {
    * AFTER the PATCH response would silently clobber the fresh update.
    */
   update(payload: UpdateAcademyPayload): Observable<Academy> {
-    this.epoch++;
-    this.inflight$ = null;
-
-    return this.http.patch<AcademyResponse>(this.base, payload).pipe(
-      tap((res) => this.academy.set(res.data)),
-      map((res) => res.data),
+    return this.mutate(this.http.patch<AcademyResponse>(this.base, payload)).pipe(
       catchError((err: HttpErrorResponse) => {
         if (err.status === 403) {
           this.clear();
@@ -148,25 +143,13 @@ export class AcademyService {
   }
 
   uploadLogo(file: File): Observable<Academy> {
-    this.epoch++;
-    this.inflight$ = null;
-
     const form = new FormData();
     form.append('logo', file);
-    return this.http.post<AcademyResponse>(`${this.base}/logo`, form).pipe(
-      tap((res) => this.academy.set(res.data)),
-      map((res) => res.data),
-    );
+    return this.mutate(this.http.post<AcademyResponse>(`${this.base}/logo`, form));
   }
 
   removeLogo(): Observable<Academy> {
-    this.epoch++;
-    this.inflight$ = null;
-
-    return this.http.delete<AcademyResponse>(`${this.base}/logo`).pipe(
-      tap((res) => this.academy.set(res.data)),
-      map((res) => res.data),
-    );
+    return this.mutate(this.http.delete<AcademyResponse>(`${this.base}/logo`));
   }
 
   /**
@@ -179,5 +162,22 @@ export class AcademyService {
     this.academy.set(null);
     this.inflight$ = null;
     this.epoch++;
+  }
+
+  /**
+   * Shared write-path: bumps the epoch (so any in-flight `get()` started
+   * before the mutation is dropped on arrival), abandons the cached
+   * inflight pointer, swaps the signal to the server's fresh record, and
+   * unwraps the envelope for the caller. Used by `update`, `uploadLogo`
+   * and `removeLogo` — same guarantees, one place.
+   */
+  private mutate(req$: Observable<AcademyResponse>): Observable<Academy> {
+    this.epoch++;
+    this.inflight$ = null;
+
+    return req$.pipe(
+      tap((res) => this.academy.set(res.data)),
+      map((res) => res.data),
+    );
   }
 }
