@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, finalize, map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -92,8 +92,17 @@ export class AthletesListComponent implements OnInit {
   readonly first = signal(0);
 
   constructor() {
+    // Trim BEFORE distinctUntilChanged so "ma", "ma ", "ma" don't fire three
+    // identical loads. The applySearch normalisation below is defense in depth
+    // for direct callers (tests, future "Clear" affordance) — both layers
+    // converge on the same canonical value in `searchTerm`.
     this.searchInputSubject
-      .pipe(debounceTime(200), distinctUntilChanged(), takeUntilDestroyed())
+      .pipe(
+        debounceTime(200),
+        map((value) => value.trim()),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
       .subscribe((q) => this.applySearch(q));
   }
 
@@ -140,7 +149,10 @@ export class AthletesListComponent implements OnInit {
   }
 
   applySearch(q: string): void {
-    this.searchTerm.set(q);
+    // Store the canonical (trimmed) value so the template's `searchTerm()`
+    // truthiness check matches the actual filter sent on the wire — a
+    // whitespace-only input is "no search", not a search-with-spaces.
+    this.searchTerm.set(q.trim());
     this.resetPage();
     this.load();
   }

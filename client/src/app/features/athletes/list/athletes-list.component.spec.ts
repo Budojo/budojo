@@ -102,6 +102,22 @@ describe('AthletesListComponent', () => {
       expect(listSpy.mock.calls[0][0].q).toBeUndefined();
     });
 
+    it('normalises the searchTerm via applySearch — whitespace is trimmed before storage', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      // Whitespace-only input is "no search", not a search-with-spaces.
+      // Storing the canonical value keeps the empty-state hint in the
+      // template honest — `searchTerm()` truthiness now matches what the
+      // backend actually sees.
+      component.applySearch('   ');
+      expect(component.searchTerm()).toBe('');
+
+      component.applySearch('  mario  ');
+      expect(component.searchTerm()).toBe('mario');
+    });
+
     it('resets the page to 1 when the search term changes', () => {
       const fixture = TestBed.createComponent(AthletesListComponent);
       const component = fixture.componentInstance;

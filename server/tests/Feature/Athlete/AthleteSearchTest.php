@@ -57,12 +57,17 @@ it('filters athletes by partial last_name match', function (): void {
     expect($rows)->not->toContain('Verdi');
 });
 
-it('matches across the concatenated full name (first last)', function (): void {
+it('matches when each whitespace-separated token hits either first_name or last_name', function (): void {
     seedNamedAthlete($this->academy, 'Mario', 'Rossi');
     seedNamedAthlete($this->academy, 'Marco', 'Rossini');
 
-    // The CONCAT match lets the user type "Mario Ros" and find Mario Rossi
-    // even though the substring spans the boundary between first and last.
+    // Token-AND semantics: q=`Mario Ros` splits into ['Mario', 'Ros']; each
+    // token must match SOME column (first_name OR last_name) for the row to
+    // qualify. Mario Rossi: 'Mario' hits first_name, 'Ros' hits last_name → ok.
+    // Marco Rossini: 'Mario' matches neither column → out. The user
+    // experience is "type the words you remember in any order", which reads
+    // like a CONCAT search but the implementation is portable across
+    // MySQL/SQLite via plain `where + orWhere` clauses.
     $rows = collect($this->getJson('/api/v1/athletes?q=Mario+Ros')
         ->json('data'))
         ->pluck('last_name')
