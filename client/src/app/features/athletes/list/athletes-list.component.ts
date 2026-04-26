@@ -279,7 +279,12 @@ export class AthletesListComponent implements OnInit {
     }
     const q = this.searchTerm().trim();
     if (q) filters.q = q;
-    const paid = this.selectedPaid();
+    // Gate `paid` on `hasMonthlyFee()` so a stale `selectedPaid` signal
+    // doesn't keep filtering after the owner clears `monthly_fee_cents`
+    // (the select itself disappears in that state, leaving the user with
+    // no UI to reset it). Belt-and-braces: clearer to the backend, and
+    // the empty-state hint stops blaming a filter the user can't see.
+    const paid = this.hasMonthlyFee() ? this.selectedPaid() : '';
     if (paid) filters.paid = paid;
 
     this.athleteService

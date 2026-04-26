@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TagModule } from 'primeng/tag';
 
 /**
@@ -35,7 +35,4 @@ export class PaidBadgeComponent {
    * `undefined` = unknown (field absent / not loaded) — render nothing.
    */
   readonly paid = input<boolean | undefined>(undefined);
-
-  /** Memoised so the template can branch without function-call churn. */
-  readonly value = computed(() => this.paid());
 }

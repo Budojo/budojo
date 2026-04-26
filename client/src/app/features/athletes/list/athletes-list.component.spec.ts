@@ -152,6 +152,10 @@ describe('AthletesListComponent', () => {
     // currently loaded 20), and the whole filter UI / badge column is
     // hidden when the academy hasn't configured a fee.
     it('passes paid=yes to the service when the filter is set', () => {
+      // The `paid` filter is gated on `hasMonthlyFee()` — has to seed the
+      // academy with a configured fee or load() drops the value.
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+
       const fixture = TestBed.createComponent(AthletesListComponent);
       const component = fixture.componentInstance;
       fixture.detectChanges();
@@ -165,6 +169,8 @@ describe('AthletesListComponent', () => {
     });
 
     it('omits paid from the filters when set back to the empty (All) option', () => {
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+
       const fixture = TestBed.createComponent(AthletesListComponent);
       const component = fixture.componentInstance;
       fixture.detectChanges();
@@ -202,6 +208,33 @@ describe('AthletesListComponent', () => {
         fixture.nativeElement.querySelector('[data-cy="athletes-paid-filter"]'),
       ).not.toBeNull();
       expect(fixture.nativeElement.querySelector('[data-cy="athletes-th-paid"]')).not.toBeNull();
+    });
+
+    it('drops a stale paid filter when monthly_fee_cents is cleared after the filter was set', () => {
+      // Defensive: if the owner clears the academy fee in another tab while
+      // this component is alive, the Paid select disappears but the signal
+      // value is sticky. `load()` must NOT keep forwarding `paid` past that
+      // point — otherwise the user sees filtered results with no UI to
+      // reset them.
+      const academyService = TestBed.inject(AcademyService);
+      academyService.academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+
+      component.onPaidChange('yes');
+      expect(listSpy.mock.calls.at(-1)?.[0].paid).toBe('yes');
+
+      // Fee gets cleared.
+      academyService.academy.set({ ...ACADEMY_BASE, monthly_fee_cents: null });
+
+      // Any subsequent reload (page change, belt change, sort, …) must
+      // omit `paid` from the wire.
+      listSpy.mockClear();
+      component.onBeltChange('');
+      expect(listSpy.mock.calls[0][0].paid).toBeUndefined();
     });
   });
 });
