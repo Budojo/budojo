@@ -35,6 +35,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
     Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
 
+    // Payments — M5 (#104). Nested under athlete; the academy's monthly fee
+    // is set via PATCH /academy. `paid_current_month` lives on the athlete
+    // resource so the list page can render the badge without an extra hop.
+    Route::get('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'index']);
+    Route::post('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'store']);
+    Route::delete('/athletes/{athlete}/payments/{year}/{month}', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'destroy'])
+        ->whereNumber(['year', 'month']);
+
     // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
     // or Laravel binds "summary" as an attendance-record id and returns 404.
     Route::get('/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'summary']);

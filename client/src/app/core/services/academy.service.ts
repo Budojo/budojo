@@ -8,6 +8,14 @@ export interface Academy {
   slug: string;
   address: string | null;
   logo_url: string | null;
+  /**
+   * Academy-wide membership fee in cents. `null` means "not configured" —
+   * the payments endpoints reject `POST` until set. Marked optional on
+   * this interface (rather than `number | null` required) to keep older
+   * test fixtures and Cypress mocks compiling without per-file updates;
+   * the wire shape ALWAYS includes the field from #104 onward.
+   */
+  monthly_fee_cents?: number | null;
 }
 
 export interface CreateAcademyPayload {
@@ -17,12 +25,13 @@ export interface CreateAcademyPayload {
 
 /**
  * Partial update. Every key is optional; what you don't send, the server
- * leaves untouched. `address: null` is the explicit "clear it" signal
- * (distinct from omitting the key entirely — server contract).
+ * leaves untouched. `address: null` and `monthly_fee_cents: null` are the
+ * explicit "clear it" signals (distinct from omitting the key entirely).
  */
 export interface UpdateAcademyPayload {
   name?: string;
   address?: string | null;
+  monthly_fee_cents?: number | null;
 }
 
 interface AcademyResponse {

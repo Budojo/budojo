@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\Athlete;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,8 +15,29 @@ class AthleteResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        /** @var \App\Models\Athlete $athlete */
+        /** @var Athlete $athlete */
         $athlete = $this->resource;
+
+        $year = (int) now()->year;
+        $month = (int) now()->month;
+
+        // Two paths so we don't pull every payment row into memory just to
+        // compute a boolean:
+        //   * INDEX endpoint: AthleteController::index pre-loads only the
+        //     current-month slice (no N+1) — we filter the in-memory
+        //     collection.
+        //   * SHOW / STORE / UPDATE: relationship is NOT pre-loaded — we
+        //     issue a constrained `exists()` query that returns a single
+        //     bool without hydrating models.
+        $paidCurrentMonth = $athlete->relationLoaded('payments')
+            ? $athlete->payments
+                ->where('year', $year)
+                ->where('month', $month)
+                ->isNotEmpty()
+            : $athlete->payments()
+                ->where('year', $year)
+                ->where('month', $month)
+                ->exists();
 
         return [
             'id' => $athlete->id,
@@ -29,6 +51,7 @@ class AthleteResource extends JsonResource
             'status' => $athlete->status->value,
             'joined_at' => $athlete->joined_at->toDateString(),
             'created_at' => $athlete->created_at?->toIso8601String(),
+            'paid_current_month' => $paidCurrentMonth,
         ];
     }
 }

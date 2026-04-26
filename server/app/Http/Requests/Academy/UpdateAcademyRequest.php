@@ -37,6 +37,10 @@ class UpdateAcademyRequest extends FormRequest
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'address' => ['sometimes', 'nullable', 'string', 'max:500'],
+            // Cents — `integer` rejects "9.5" / floats; `min:0` blocks
+            // negatives (refunds/discounts would be a different concept).
+            // No upper bound — let the academy own the absurdity check.
+            'monthly_fee_cents' => ['sometimes', 'nullable', 'integer', 'min:0'],
         ];
     }
 

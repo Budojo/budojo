@@ -18,8 +18,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string      $slug
  * @property string|null $address
  * @property string|null $logo_path
+ * @property int|null    $monthly_fee_cents
  */
-#[Fillable(['user_id', 'name', 'slug', 'address', 'logo_path'])]
+#[Fillable(['user_id', 'name', 'slug', 'address', 'logo_path', 'monthly_fee_cents'])]
 class Academy extends Model
 {
     /** @use HasFactory<AcademyFactory> */
