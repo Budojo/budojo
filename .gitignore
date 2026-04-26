@@ -52,6 +52,10 @@ db_data/
 !.claude/gotchas.md
 !.claude/settings.json
 
+# Superpowers — local agent plan/notes scratch dir. Same shape as .claude/:
+# personal worker artifacts, not codebase truth.
+docs/superpowers/
+
 # OS
 .DS_Store
 Thumbs.db
