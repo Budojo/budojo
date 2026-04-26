@@ -5,64 +5,19 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Enums\AthleteStatus;
-use App\Enums\Belt;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
+use Database\Seeders\Support\EaglesBjjFixture;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class EaglesBjjSeeder extends Seeder
 {
-    /**
-     * @return array{
-     *   academy: array{name: string, address: string},
-     *   athletes: list<array{
-     *     first_name: string,
-     *     last_name: string,
-     *     email: string|null,
-     *     date_of_birth: string|null,
-     *     belt: string,
-     *     stripes: int,
-     *     joined_at: string|null,
-     *     attendance_probability: float|null
-     *   }>,
-     *   attendance: array{
-     *     training_days_of_week: list<int>,
-     *     simulation_window_days: int,
-     *     default_probability: float
-     *   }
-     * }
-     */
-    public static function fixture(): array
+    public static function fixture(): EaglesBjjFixture
     {
-        $base = database_path('seed-data/eagles-bjj');
-        $path = is_file("{$base}.local.php") ? "{$base}.local.php" : "{$base}.example.php";
-
-        /**
-         * @var array{
-         *   academy: array{name: string, address: string},
-         *   athletes: list<array{
-         *     first_name: string,
-         *     last_name: string,
-         *     email: string|null,
-         *     date_of_birth: string|null,
-         *     belt: string,
-         *     stripes: int,
-         *     joined_at: string|null,
-         *     attendance_probability: float|null
-         *   }>,
-         *   attendance: array{
-         *     training_days_of_week: list<int>,
-         *     simulation_window_days: int,
-         *     default_probability: float
-         *   }
-         * } $data
-         */
-        $data = require $path;
-
-        return $data;
+        return EaglesBjjFixture::fromDefaultFile();
     }
 
     public function run(): void
@@ -78,20 +33,20 @@ class EaglesBjjSeeder extends Seeder
             throw new \RuntimeException('EaglesBjjSeeder requires the admin user — run AdminSeeder first.');
         }
 
-        $data = self::fixture();
+        $fixture = self::fixture();
 
         $academy = $admin->academy;
         if ($academy === null) {
             $academy = Academy::create([
                 'user_id' => $admin->id,
-                'name' => $data['academy']['name'],
-                'slug' => Str::slug($data['academy']['name']) . '-' . Str::lower(Str::random(8)),
-                'address' => $data['academy']['address'],
+                'name' => $fixture->academyName,
+                'slug' => Str::slug($fixture->academyName) . '-' . Str::lower(Str::random(8)),
+                'address' => $fixture->academyAddress,
             ]);
         } else {
             $academy->forceFill([
-                'name' => $data['academy']['name'],
-                'address' => $data['academy']['address'],
+                'name' => $fixture->academyName,
+                'address' => $fixture->academyAddress,
             ])->save();
         }
 
@@ -100,19 +55,19 @@ class EaglesBjjSeeder extends Seeder
             ->lazyById()
             ->each(fn (Athlete $athlete) => $athlete->forceDelete());
 
-        foreach ($data['athletes'] as $row) {
+        foreach ($fixture->athletes as $athlete) {
             Athlete::create([
                 'academy_id' => $academy->id,
-                'first_name' => $row['first_name'],
-                'last_name' => $row['last_name'],
-                'email' => $row['email'],
+                'first_name' => $athlete->firstName,
+                'last_name' => $athlete->lastName,
+                'email' => $athlete->email,
                 'phone' => null,
-                'date_of_birth' => $row['date_of_birth'] !== null ? Carbon::parse($row['date_of_birth']) : null,
-                'belt' => Belt::from($row['belt']),
-                'stripes' => $row['stripes'],
+                'date_of_birth' => $athlete->dateOfBirth !== null ? Carbon::parse($athlete->dateOfBirth) : null,
+                'belt' => $athlete->belt,
+                'stripes' => $athlete->stripes,
                 'status' => AthleteStatus::Active,
-                'joined_at' => $row['joined_at'] !== null
-                    ? Carbon::parse($row['joined_at'])
+                'joined_at' => $athlete->joinedAt !== null
+                    ? Carbon::parse($athlete->joinedAt)
                     : Carbon::today()->subDays(random_int(180, 720)),
             ]);
         }

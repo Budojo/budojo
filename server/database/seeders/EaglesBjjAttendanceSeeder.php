@@ -26,14 +26,12 @@ class EaglesBjjAttendanceSeeder extends Seeder
             throw new \RuntimeException('EaglesBjjAttendanceSeeder requires the admin academy — run AdminSeeder + EaglesBjjSeeder first.');
         }
 
-        $data = EaglesBjjSeeder::fixture();
-        $defaultProbability = $data['attendance']['default_probability'];
-        $trainingDays = $data['attendance']['training_days_of_week'];
+        $fixture = EaglesBjjSeeder::fixture();
 
         $probabilities = [];
-        foreach ($data['athletes'] as $row) {
-            $key = "{$row['first_name']} {$row['last_name']}";
-            $probabilities[$key] = $row['attendance_probability'] ?? $defaultProbability;
+        foreach ($fixture->athletes as $athlete) {
+            $key = "{$athlete->firstName} {$athlete->lastName}";
+            $probabilities[$key] = $athlete->attendanceProbability ?? $fixture->defaultProbability;
         }
 
         $athletes = Athlete::where('academy_id', $academy->id)->get();
@@ -43,18 +41,18 @@ class EaglesBjjAttendanceSeeder extends Seeder
             ->forceDelete();
 
         $today = Carbon::today();
-        $start = $today->copy()->subDays($data['attendance']['simulation_window_days']);
+        $start = $today->copy()->subDays($fixture->simulationWindowDays);
         $now = Carbon::now();
         $rows = [];
 
-        foreach (self::eachTrainingDay($start, $today, $trainingDays) as $date) {
+        foreach (self::eachTrainingDay($start, $today, $fixture->trainingDaysOfWeek) as $date) {
             foreach ($athletes as $athlete) {
                 if ($athlete->joined_at->gt($date)) {
                     continue;
                 }
 
                 $key = "{$athlete->first_name} {$athlete->last_name}";
-                $probability = $probabilities[$key] ?? $defaultProbability;
+                $probability = $probabilities[$key] ?? $fixture->defaultProbability;
 
                 if (! self::draw($probability)) {
                     continue;
