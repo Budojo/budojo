@@ -27,12 +27,15 @@ export class DashboardComponent {
   protected readonly brandLabel = computed(() => this.academyService.academy()?.name ?? 'Budojo');
 
   /**
-   * Academy logo URL when uploaded, falls back to the v3 glyph so the brand
-   * mark always renders. Anonymous-fallback ensures the topbar/sidebar never
-   * show a broken image while the academy signal is still resolving.
+   * Academy logo URL when the academy has uploaded one, otherwise `null`.
+   * A null result is the signal for the template to render the inline
+   * Budojo glyph fallback. Why inline + null instead of falling back to a
+   * static `/logo-glyph.svg`: an `<img>`-loaded SVG is sandboxed from host
+   * CSS, so `stroke="currentColor"` resolves to the SVG's own root (black)
+   * — invisible against the dark sidebar surface (#99).
    */
-  protected readonly brandLogoUrl = computed(
-    () => this.academyService.academy()?.logo_url ?? '/logo-glyph.svg',
+  protected readonly academyLogoUrl = computed(
+    () => this.academyService.academy()?.logo_url ?? null,
   );
 
   /**
