@@ -46,12 +46,16 @@ describe('AthletesListComponent', () => {
       expect(component.sortOrder()).toBe('desc');
     });
 
-    it('accepts belt / first_name / last_name / joined_at as primary sorts', () => {
+    it('accepts every field in the allowlist as a primary sort', () => {
       const fixture = TestBed.createComponent(AthletesListComponent);
       const component = fixture.componentInstance;
       fixture.detectChanges();
 
-      for (const field of ['belt', 'first_name', 'last_name', 'joined_at'] as const) {
+      // Mirrors the runtime allowlist in `onSort()`. `created_at` is the
+      // default-fallback column on the backend; keeping it explicitly
+      // allowed lets the table fire `sort_by=created_at` in the (rare)
+      // case a future header binds to it.
+      for (const field of ['belt', 'first_name', 'last_name', 'joined_at', 'created_at'] as const) {
         component.onSort({ field, order: 1 });
         expect(component.sortField()).toBe(field);
       }
