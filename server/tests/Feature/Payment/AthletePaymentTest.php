@@ -189,6 +189,66 @@ it('does not flip paid_current_month when only a previous month is paid', functi
         ->assertJsonPath('data.0.paid_current_month', false);
 });
 
+// ─── GET /athletes?paid=yes|no — list filter on current-month payment status ─
+
+it('filters athletes by ?paid=yes — returns only those paid for the current month (#105)', function (): void {
+    $paid = Athlete::factory()->for($this->user->academy)->create();
+    $unpaid = Athlete::factory()->for($this->user->academy)->create();
+    AthletePayment::factory()->for($paid)->forCurrentMonth()->create();
+
+    $ids = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/athletes?paid=yes')
+        ->assertOk()
+        ->json('data'))
+        ->pluck('id')
+        ->all();
+
+    expect($ids)->toContain($paid->id);
+    expect($ids)->not->toContain($unpaid->id);
+});
+
+it('filters athletes by ?paid=no — returns only those NOT paid for the current month (#105)', function (): void {
+    $paid = Athlete::factory()->for($this->user->academy)->create();
+    $unpaid = Athlete::factory()->for($this->user->academy)->create();
+    AthletePayment::factory()->for($paid)->forCurrentMonth()->create();
+
+    $ids = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/athletes?paid=no')
+        ->assertOk()
+        ->json('data'))
+        ->pluck('id')
+        ->all();
+
+    expect($ids)->toContain($unpaid->id);
+    expect($ids)->not->toContain($paid->id);
+});
+
+it('treats a previous-month payment as unpaid for the current-month filter', function (): void {
+    $athlete = Athlete::factory()->for($this->user->academy)->create();
+    AthletePayment::factory()->for($athlete)->forYearMonth(2020, 1)->create();
+
+    $ids = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/athletes?paid=yes')
+        ->json('data'))
+        ->pluck('id')
+        ->all();
+
+    expect($ids)->not->toContain($athlete->id);
+});
+
+it('ignores an unrecognised paid value and returns the full list', function (): void {
+    Athlete::factory()->for($this->user->academy)->create();
+    Athlete::factory()->for($this->user->academy)->create();
+
+    $rows = $this->actingAs($this->user)
+        ->getJson('/api/v1/athletes?paid=banana')
+        ->assertOk()
+        ->json('data');
+
+    // The seed athlete from beforeEach + 2 fresh ones = 3 total.
+    expect(count($rows))->toBe(3);
+});
+
 it('exposes paid_current_month on the show endpoint via the constrained exists() fallback', function (): void {
     // The show endpoint does NOT eager-load `payments`; the resource takes
     // the `relationLoaded === false` branch and runs a constrained

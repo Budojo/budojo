@@ -310,6 +310,19 @@ paths:
           schema:
             type: string
             example: mario
+        - name: paid
+          in: query
+          description: |
+            Filter on the athlete's current-month payment status. `yes`
+            returns only athletes with a row in `athlete_payments` for the
+            current calendar (year, month); `no` returns only those without.
+            Unrecognised values are silently ignored (no filter applied).
+            Server-side because the table is paginated — a client-side
+            filter would only sweep the current page of 20.
+          required: false
+          schema:
+            type: string
+            enum: [yes, no]
         - name: page
           in: query
           description: Page number, starting at 1. Page size is fixed at 20.

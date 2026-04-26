@@ -59,6 +59,18 @@
       placeholder="Status"
       styleClass="filter-select"
     />
+    @if (hasMonthlyFee()) {
+      <p-select
+        [options]="paidOptions"
+        [ngModel]="selectedPaid()"
+        (ngModelChange)="onPaidChange($event)"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Paid"
+        styleClass="filter-select"
+        data-cy="athletes-paid-filter"
+      />
+    }
   </div>
 
   <!-- Table -->
@@ -87,6 +99,9 @@
           </th>
           <th data-cy="athletes-th-stripes" style="width: 3rem; text-align: center">Stripes</th>
           <th>Status</th>
+          @if (hasMonthlyFee()) {
+            <th data-cy="athletes-th-paid">Paid</th>
+          }
           <th pSortableColumn="joined_at" data-cy="athletes-th-joined">
             Joined <p-sortIcon field="joined_at" />
           </th>
@@ -115,6 +130,11 @@
               [rounded]="true"
             />
           </td>
+          @if (hasMonthlyFee()) {
+            <td>
+              <app-paid-badge [paid]="athlete.paid_current_month" />
+            </td>
+          }
           <td class="athlete-date">{{ athlete.joined_at }}</td>
           <td class="athlete-actions">
             <p-button
@@ -154,7 +174,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="6" class="empty-message">
+          <td [attr.colspan]="hasMonthlyFee() ? 7 : 6" class="empty-message">
             @if (loading()) {
               <!-- Skeleton rows replace the PrimeNG header-spinner that
                    [showLoader]="false" suppressed. Canon § motion: skeletons
@@ -172,7 +192,7 @@
               <div class="empty-state">
                 <i class="pi pi-users empty-state__icon"></i>
                 <p class="empty-state__text">No athletes found.</p>
-                @if (selectedBelt() || selectedStatus() || searchTerm()) {
+                @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
                   <p class="empty-state__hint">Try clearing your filters or search.</p>
                 }
               </div>

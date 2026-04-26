@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import type { Mock } from 'vitest';
 import { AthletesListComponent } from './athletes-list.component';
+import { AcademyService } from '../../../core/services/academy.service';
 import { AthleteService } from '../../../core/services/athlete.service';
 
 class FakeAthleteService {
@@ -13,6 +14,14 @@ class FakeAthleteService {
   );
   readonly delete = vi.fn(() => of(void 0));
 }
+
+const ACADEMY_BASE = {
+  id: 1,
+  name: 'Test',
+  slug: 'test',
+  address: null,
+  logo_url: null,
+} as const;
 
 describe('AthletesListComponent', () => {
   beforeEach(() => {
@@ -134,6 +143,65 @@ describe('AthletesListComponent', () => {
       component.applySearch('mario');
       expect(listSpy.mock.calls[0][0].page).toBe(1);
       expect(listSpy.mock.calls[0][0].q).toBe('mario');
+    });
+  });
+
+  describe('paid filter (#105)', () => {
+    // Two coupled behaviours: the `paid` filter param is forwarded to the
+    // backend (server-side filter so it spans all pages, not just the
+    // currently loaded 20), and the whole filter UI / badge column is
+    // hidden when the academy hasn't configured a fee.
+    it('passes paid=yes to the service when the filter is set', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+      listSpy.mockClear();
+
+      component.onPaidChange('yes');
+
+      expect(listSpy).toHaveBeenCalledTimes(1);
+      expect(listSpy.mock.calls[0][0].paid).toBe('yes');
+    });
+
+    it('omits paid from the filters when set back to the empty (All) option', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+
+      component.onPaidChange('no');
+      expect(listSpy.mock.calls.at(-1)?.[0].paid).toBe('no');
+
+      listSpy.mockClear();
+      component.onPaidChange('');
+      expect(listSpy.mock.calls[0][0].paid).toBeUndefined();
+    });
+
+    it('hasMonthlyFee=false when academy.monthly_fee_cents is null or absent', () => {
+      const academyService = TestBed.inject(AcademyService);
+      academyService.academy.set({ ...ACADEMY_BASE, monthly_fee_cents: null });
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.hasMonthlyFee()).toBe(false);
+      expect(fixture.nativeElement.querySelector('[data-cy="athletes-paid-filter"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="athletes-th-paid"]')).toBeNull();
+    });
+
+    it('hasMonthlyFee=true when academy.monthly_fee_cents is set — filter + column visible', () => {
+      const academyService = TestBed.inject(AcademyService);
+      academyService.academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.hasMonthlyFee()).toBe(true);
+      expect(
+        fixture.nativeElement.querySelector('[data-cy="athletes-paid-filter"]'),
+      ).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="athletes-th-paid"]')).not.toBeNull();
     });
   });
 });

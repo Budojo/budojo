@@ -54,16 +54,31 @@ class AthleteController extends Controller
         $currentYear = (int) now()->year;
         $currentMonth = (int) now()->month;
 
+        // Re-used twice: once as the eager-load scope (so the resource sees
+        // only this month's slice), once as the filter scope below for
+        // ?paid=yes|no. Pulling it into a closure means a future month
+        // boundary tweak only happens in one place.
+        $currentMonthScope = fn ($q) => $q
+            ->where('year', $currentYear)
+            ->where('month', $currentMonth);
+
+        $paid = $request->input('paid');
+
         $query = $user->academy->athletes()
             // Eager-load only the current-month payments slice so the
             // `paid_current_month` derivation in AthleteResource doesn't fan
             // out into N+1 queries on a 20-row page (#104). One extra query
             // total — payments for all visible athletes in this month.
-            ->with(['payments' => fn ($q) => $q
-                ->where('year', $currentYear)
-                ->where('month', $currentMonth)])
+            ->with(['payments' => $currentMonthScope])
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
+            // ?paid=yes|no — filter on whether the athlete has a payment
+            // record for the current calendar month (#105). Unrecognised
+            // values are silently ignored (no filter applied) — same shape
+            // as `sort_by`: defensive defaults beat 422-noise on a list
+            // endpoint that's read by humans more than tools.
+            ->when($paid === 'yes', fn ($q) => $q->whereHas('payments', $currentMonthScope))
+            ->when($paid === 'no', fn ($q) => $q->whereDoesntHave('payments', $currentMonthScope))
             ->when($request->filled('q'), function (Builder|HasMany $q) use ($request) {
                 // `$request->string('q')` returns a `Stringable` — keeps PHPStan
                 // happy without the `mixed` → `string` cast that `input()` needs.
