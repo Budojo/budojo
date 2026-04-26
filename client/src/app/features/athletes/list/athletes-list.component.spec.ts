@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import type { Mock } from 'vitest';
 import { AthletesListComponent } from './athletes-list.component';
 import { AthleteService } from '../../../core/services/athlete.service';
 
@@ -10,6 +11,7 @@ class FakeAthleteService {
   readonly list = vi.fn(() =>
     of({ data: [], meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 } }),
   );
+  readonly delete = vi.fn(() => of(void 0));
 }
 
 describe('AthletesListComponent', () => {
@@ -59,6 +61,79 @@ describe('AthletesListComponent', () => {
         component.onSort({ field, order: 1 });
         expect(component.sortField()).toBe(field);
       }
+    });
+  });
+
+  describe('search filter (#102)', () => {
+    // The search box drives a `searchTerm` signal. When non-empty, the term is
+    // forwarded to the backend as `q=...` so the filter spans all pages —
+    // not just the current 20 rows. Empty / whitespace-only terms are stripped
+    // so we don't poke the backend with a useless WHERE 1=1 LIKE '%%' clause.
+    it('passes q to the service when load() runs with a non-empty searchTerm', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+      listSpy.mockClear();
+
+      component.searchTerm.set('mario');
+      // Any public method that re-triggers load() will surface the filter
+      // shape — using a no-op belt change keeps the call minimal.
+      component.onBeltChange('');
+
+      expect(listSpy).toHaveBeenCalledTimes(1);
+      expect(listSpy.mock.calls[0][0].q).toBe('mario');
+    });
+
+    it('omits q from the filters when searchTerm is empty or whitespace-only', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+
+      listSpy.mockClear();
+      component.searchTerm.set('');
+      component.onBeltChange('');
+      expect(listSpy.mock.calls[0][0].q).toBeUndefined();
+
+      listSpy.mockClear();
+      component.searchTerm.set('   ');
+      component.onBeltChange('');
+      expect(listSpy.mock.calls[0][0].q).toBeUndefined();
+    });
+
+    it('normalises the searchTerm via applySearch — whitespace is trimmed before storage', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      // Whitespace-only input is "no search", not a search-with-spaces.
+      // Storing the canonical value keeps the empty-state hint in the
+      // template honest — `searchTerm()` truthiness now matches what the
+      // backend actually sees.
+      component.applySearch('   ');
+      expect(component.searchTerm()).toBe('');
+
+      component.applySearch('  mario  ');
+      expect(component.searchTerm()).toBe('mario');
+    });
+
+    it('resets the page to 1 when the search term changes', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+
+      // Land on page 3 first.
+      component.onPageChange({ first: 40, rows: 20 });
+      expect(listSpy.mock.calls.at(-1)?.[0].page).toBe(3);
+
+      // Now applying a search term should bounce back to page 1 — otherwise
+      // a filter that matches fewer than 41 rows leaves us on an empty page.
+      listSpy.mockClear();
+      component.applySearch('mario');
+      expect(listSpy.mock.calls[0][0].page).toBe(1);
+      expect(listSpy.mock.calls[0][0].q).toBe('mario');
     });
   });
 });

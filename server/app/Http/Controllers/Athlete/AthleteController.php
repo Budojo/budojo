@@ -53,7 +53,12 @@ class AthleteController extends Controller
 
         $query = $user->academy->athletes()
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')));
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
+            ->when($request->filled('q'), function (Builder|HasMany $q) use ($request) {
+                // `$request->string('q')` returns a `Stringable` — keeps PHPStan
+                // happy without the `mixed` → `string` cast that `input()` needs.
+                $this->applyNameSearch($q, $request->string('q')->toString());
+            });
 
         if ($sortBy === 'belt') {
             $this->applyBeltSort($query, $sortOrder);
@@ -142,6 +147,45 @@ class AthleteController extends Controller
         $query->orderByRaw($direction === 'asc' ? $caseAsc : $caseDesc);
         $query->orderBy('stripes', 'desc');
         $query->orderBy('last_name', 'asc');
+    }
+
+    /**
+     * Token-AND search across first_name + last_name. The user's query is
+     * split on whitespace; each token must match either column independently
+     * (case-insensitive via the column collation — MySQL `utf8mb4_unicode_ci`
+     * and SQLite ASCII LIKE both behave this way out of the box).
+     *
+     * Why token-AND instead of CONCAT-LIKE: the latter needs DB-specific SQL
+     * (MySQL `CONCAT(...)` vs SQLite `||`), and PHPStan rejects the dynamic
+     * `whereRaw` literal-string requirement. Token-AND uses only the standard
+     * builder, stays portable, and naturally handles "Mario Ros" → matches
+     * "Mario Rossi" (token 'Mario' hits first_name, token 'Ros' hits
+     * last_name) without any concat trick.
+     *
+     * @param  Builder<Athlete>|HasMany<Athlete, Academy>  $query
+     */
+    private function applyNameSearch(Builder|HasMany $query, string $needle): void
+    {
+        $needle = trim($needle);
+        if ($needle === '') {
+            return;
+        }
+
+        $tokens = preg_split('/\s+/', $needle);
+        if ($tokens === false) {
+            return;
+        }
+
+        foreach ($tokens as $token) {
+            if ($token === '') {
+                continue;
+            }
+            $like = '%' . $token . '%';
+            $query->where(function ($qb) use ($like): void {
+                $qb->where('first_name', 'LIKE', $like)
+                    ->orWhere('last_name', 'LIKE', $like);
+            });
+        }
     }
 
     /**

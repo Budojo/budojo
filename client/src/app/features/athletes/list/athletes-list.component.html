@@ -29,6 +29,18 @@
 
   <!-- Filters -->
   <div class="athletes-page__filters">
+    <p-iconfield iconPosition="left" styleClass="athletes-page__search">
+      <p-inputicon class="pi pi-search" />
+      <input
+        pInputText
+        type="text"
+        placeholder="Search by name"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="onSearchInput($event)"
+        autocomplete="off"
+        data-cy="athletes-search-input"
+      />
+    </p-iconfield>
     <p-select
       [options]="beltOptions"
       [ngModel]="selectedBelt()"
@@ -75,7 +87,6 @@
           </th>
           <th data-cy="athletes-th-stripes" style="width: 3rem; text-align: center">Stripes</th>
           <th>Status</th>
-          <th>Email</th>
           <th pSortableColumn="joined_at" data-cy="athletes-th-joined">
             Joined <p-sortIcon field="joined_at" />
           </th>
@@ -104,7 +115,6 @@
               [rounded]="true"
             />
           </td>
-          <td class="athlete-email">{{ athlete.email ?? '—' }}</td>
           <td class="athlete-date">{{ athlete.joined_at }}</td>
           <td class="athlete-actions">
             <p-button
@@ -144,7 +154,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="7" class="empty-message">
+          <td colspan="6" class="empty-message">
             @if (loading()) {
               <!-- Skeleton rows replace the PrimeNG header-spinner that
                    [showLoader]="false" suppressed. Canon § motion: skeletons
@@ -162,8 +172,8 @@
               <div class="empty-state">
                 <i class="pi pi-users empty-state__icon"></i>
                 <p class="empty-state__text">No athletes found.</p>
-                @if (selectedBelt() || selectedStatus()) {
-                  <p class="empty-state__hint">Try clearing your filters.</p>
+                @if (selectedBelt() || selectedStatus() || searchTerm()) {
+                  <p class="empty-state__hint">Try clearing your filters or search.</p>
                 }
               </div>
             }
