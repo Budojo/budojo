@@ -40,10 +40,10 @@ class AthleteResource extends JsonResource
                 ->exists();
 
         // Address (#72b) — same lazy-access pattern as AcademyResource.
-        // Single-row endpoints (show / store / update) accept the extra
-        // query; the list endpoint at AthleteController::index does NOT
-        // eager-load `address` (no current consumer needs it on the list,
-        // and a 20-row page would otherwise fan out into 21 queries).
+        // The list endpoint at AthleteController::index eager-loads
+        // `address` via `->with('address')` so the 20-row page resolves
+        // in one extra query instead of N+1; single-row endpoints
+        // (show / store / update) hydrate the relation on demand.
         $address = $athlete->address;
 
         return [

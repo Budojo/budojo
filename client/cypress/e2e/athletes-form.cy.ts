@@ -65,8 +65,12 @@ describe('Athlete create form', () => {
     cy.wait('@academy');
 
     cy.contains('button', 'Create athlete').click();
-    cy.contains('First name is required').should('be.visible');
-    cy.contains('Last name is required').should('be.visible');
+    // The address fieldset (#72b) made the form taller than the default
+    // 720-px Cypress viewport. After clicking the bottom submit, the
+    // top-of-form errors are clipped by `.main { overflow-y: auto }`,
+    // so we scroll each into view before the visibility assertion.
+    cy.contains('First name is required').scrollIntoView().should('be.visible');
+    cy.contains('Last name is required').scrollIntoView().should('be.visible');
   });
 
   it('successfully creates an athlete and redirects to /dashboard/athletes', () => {
@@ -110,7 +114,12 @@ describe('Athlete create form', () => {
     cy.contains('button', 'Create athlete').click();
 
     cy.wait('@createFail');
-    cy.get('.p-message').should('be.visible').and('contain.text', 'Email already taken');
+    // Same scroll dance as above — the top-of-page error banner sits
+    // outside the post-click scroll position on the default viewport.
+    cy.get('.p-message')
+      .scrollIntoView()
+      .should('be.visible')
+      .and('contain.text', 'Email already taken');
   });
 
   it('cancel returns to the athletes list without submitting', () => {
@@ -144,7 +153,7 @@ describe('Athlete edit form', () => {
     cy.get('input[id="first_name"]').should('have.value', 'Mario');
     cy.get('input[id="last_name"]').should('have.value', 'Rossi');
     cy.get('input[id="email"]').should('have.value', 'mario@example.com');
-    cy.contains('button', 'Save changes').should('be.visible');
+    cy.contains('button', 'Save changes').scrollIntoView().should('be.visible');
   });
 
   it('PUTs the updated payload and redirects to the list', () => {

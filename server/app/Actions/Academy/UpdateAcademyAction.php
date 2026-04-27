@@ -28,7 +28,7 @@ class UpdateAcademyAction
      *
      * `update()` hydrates the academy's scalar attributes in-memory before
      * persisting, so those are in sync with the DB on return. The address
-     * relation is kept in sync by `SyncAcademyAddressAction`, which calls
+     * relation is kept in sync by `SyncAddressAction`, which calls
      * `setRelation('address', ...)` (or `unsetRelation` on null-clear) on
      * the same instance. No `fresh()` round-trip is needed — both layers
      * mutate the in-memory model deliberately.

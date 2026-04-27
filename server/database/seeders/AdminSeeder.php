@@ -42,7 +42,7 @@ class AdminSeeder extends Seeder
                 'name' => 'Budojo HQ',
                 'slug' => 'budojo-hq-' . Str::lower(Str::random(8)),
             ]);
-            // Structured address (#72). Goes through `SyncAcademyAddressAction`
+            // Structured address (#72). Goes through `SyncAddressAction`
             // for the same reason every other write does — single source of
             // truth for the morph upsert. If the action ever grows side
             // effects (audit logging, search-index reindex, etc.) seed

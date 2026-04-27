@@ -471,7 +471,7 @@ it('creates an athlete without an address (#72b — address is optional)', funct
         ->assertJsonPath('data.address', null);
 });
 
-it('upserts an athlete address via PATCH when the athlete has none (#72b)', function (): void {
+it('upserts an athlete address via PUT when the athlete has none (#72b)', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
 
@@ -484,7 +484,7 @@ it('upserts an athlete address via PATCH when the athlete has none (#72b)', func
     expect($athlete->fresh()?->address?->city)->toBe('Torino');
 });
 
-it('replaces an existing athlete address via PATCH (idempotent upsert) (#72b)', function (): void {
+it('replaces an existing athlete address via PUT (idempotent upsert) (#72b)', function (): void {
     $user = userWithAcademy();
     $athlete = Athlete::factory()->for($user->academy)->create();
     Address::factory()->create([
