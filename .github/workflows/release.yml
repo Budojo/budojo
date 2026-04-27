@@ -54,13 +54,14 @@ jobs:
 
       - name: Release
         env:
-          # Disable husky entirely on the release step. semantic-release's
-          # @semantic-release/git plugin auto-commits CHANGELOG.md back
-          # with a multi-line body containing markdown URLs that blow past
-          # commitlint's `footer-max-line-length: 100`. Without this var,
-          # the husky `commit-msg` hook runs commitlint on the bot commit
-          # and the release fails after the changelog is computed but
-          # before the tag is pushed.
+          # Defensive kill switch for husky hooks. Today semantic-release
+          # only creates a tag + GitHub Release (no `git commit` in CI),
+          # so this is a no-op. Kept on the step so any future automation
+          # that does run a commit (a metrics push, an auto-CHANGELOG
+          # plugin, etc.) doesn't get bitten by commitlint's
+          # `footer-max-line-length` on bot-generated bodies. Husky 9
+          # hooks honour this var only because `.husky/*` scripts check
+          # it explicitly — see `.claude/gotchas.md` § GitHub Actions.
           HUSKY: "0"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GIT_AUTHOR_NAME: github-actions[bot]
