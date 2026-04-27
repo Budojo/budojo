@@ -15,7 +15,7 @@ docs/
 │   └── document.md
 ├── api/
 │   ├── README.md          # how to view the spec locally (Swagger UI, Redocly)
-│   └── v1.yaml            # OpenAPI 3.0 — complete contract for /api/v1
+│   └── v1.yaml            # OpenAPI 3.0.3 — complete contract for /api/v1
 └── specs/
     └── m3-documents.md    # M3 PRD (Documents & Deadlines)
 ```

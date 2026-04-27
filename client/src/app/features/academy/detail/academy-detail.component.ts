@@ -102,7 +102,7 @@ export class AcademyDetailComponent {
 
   protected confirmRemoveLogo(event: Event): void {
     this.confirmationService.confirm({
-      target: event.target as EventTarget,
+      target: event.currentTarget as HTMLElement,
       message: 'Remove the academy logo?',
       acceptLabel: 'Remove',
       rejectLabel: 'Cancel',

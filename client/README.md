@@ -38,21 +38,21 @@ This will compile your project and store the build artifacts in the `dist/` dire
 
 ## Running unit tests
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Unit tests run on [Vitest](https://vitest.dev/) via the Angular builder. From this directory:
 
 ```bash
-ng test
+npm test                  # watch mode
+npm test -- --watch=false # single run (CI mode)
 ```
 
 ## Running end-to-end tests
 
-For end-to-end (e2e) testing, run:
+E2E tests run on [Cypress 13](https://www.cypress.io/) — `cypress.config.ts` at the root of `client/`. The dev server must be up (`npm run start`) before opening Cypress.
 
 ```bash
-ng e2e
+npm run cy:open           # interactive runner
+npm run cy:run            # headless run (used by CI)
 ```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
 ## Additional Resources
 
