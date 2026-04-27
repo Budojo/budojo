@@ -14,8 +14,10 @@ import { catchError, finalize, of } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
+import { AcademyService } from '../../../../core/services/academy.service';
 import { Athlete, AthleteService } from '../../../../core/services/athlete.service';
 import { AttendanceRecord, AttendanceService } from '../../../../core/services/attendance.service';
+import { attendanceRate, countScheduledTrainingDays } from './attendance-rate';
 import { YearMonth, buildCalendarGrid, shiftMonth } from './calendar-grid';
 
 /**
@@ -71,6 +73,7 @@ export class AttendanceHistoryComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly athleteService = inject(AthleteService);
   private readonly attendanceService = inject(AttendanceService);
+  private readonly academyService = inject(AcademyService);
   private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('notesPopover') private notesPopover?: Popover;
@@ -94,6 +97,52 @@ export class AttendanceHistoryComponent implements OnInit {
     () => new Set(this.records().map((r) => r.attended_on)),
   );
   protected readonly attendedCount = computed(() => this.records().length);
+
+  /**
+   * Sessions actually held by the academy in the visible month (capped at
+   * today). The denominator for the attendance percentage. `null` when the
+   * academy hasn't configured `training_days` — the template falls back to
+   * the raw "X days this month" display in that case (#106).
+   */
+  protected readonly scheduledCount = computed(() => {
+    const ym = this.visible();
+    return countScheduledTrainingDays(
+      this.academyService.academy()?.training_days ?? null,
+      ym.year,
+      ym.month,
+    );
+  });
+
+  /** Ratio of attended-to-scheduled, 0..1 (or > 1 for off-schedule sessions). */
+  protected readonly rate = computed(() =>
+    attendanceRate(this.attendedCount(), this.scheduledCount()),
+  );
+
+  /** Whole-percent integer for the eyebrow display (e.g. 67). `null` when no rate. */
+  protected readonly ratePercent = computed(() => {
+    const r = this.rate();
+    return r === null ? null : Math.round(r * 100);
+  });
+
+  /** 0..100 progress-bar width as a CSS percentage string. Clamped at 100. */
+  protected readonly progressBarWidth = computed(() => {
+    const p = this.ratePercent();
+    if (p === null) return null;
+    return `${Math.min(100, p)}%`;
+  });
+
+  /**
+   * `aria-valuenow` clamped to the [0, 100] range so the ARIA contract stays
+   * consistent with `aria-valuemax="100"` (assistive tech rejects an out-of-
+   * range value). The literal percentage — including off-schedule values
+   * over 100 — is conveyed via `aria-valuetext` so the SR narration matches
+   * what's on screen.
+   */
+  protected readonly ariaValueNow = computed(() => {
+    const p = this.ratePercent();
+    if (p === null) return null;
+    return Math.min(100, Math.max(0, p));
+  });
 
   /** Days that have non-empty notes — drives interactivity and cursor in the template. */
   protected readonly notedDates = computed(
