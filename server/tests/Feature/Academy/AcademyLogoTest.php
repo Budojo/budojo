@@ -146,3 +146,117 @@ it('strips script tags and on* attributes from uploaded SVG logos', function ():
         ->not->toContain('onclick=')
         ->not->toContain('javascript:');
 });
+
+// ─── #97 hardening — additional SVG attack vectors ────────────────────────────
+
+/**
+ * Helper: upload a malicious SVG and return the on-disk content after
+ * sanitisation.
+ */
+function uploadMaliciousSvg(string $svg): string
+{
+    $user = User::factory()->create();
+    $academy = Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $file = UploadedFile::fake()->createWithContent('logo.svg', $svg);
+    test()->postJson('/api/v1/academy/logo', ['logo' => $file])->assertOk();
+
+    $stored = Storage::disk('public')->get($academy->refresh()->logo_path);
+    expect($stored)->toBeString();
+
+    return (string) $stored;
+}
+
+it('strips <embed>, <object>, <link>, and <meta> elements (#97)', function (): void {
+    $stored = uploadMaliciousSvg(<<<'SVG'
+        <?xml version="1.0"?>
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+          <embed src="javascript:alert('xss')"/>
+          <object data="evil.html"></object>
+          <link rel="stylesheet" href="evil.css"/>
+          <meta http-equiv="refresh" content="0;url=javascript:alert('xss')"/>
+          <rect width="64" height="64" fill="#5b6cff"/>
+        </svg>
+        SVG);
+
+    expect($stored)
+        ->not->toContain('<embed')
+        ->not->toContain('<object')
+        ->not->toContain('<link')
+        ->not->toContain('<meta')
+        ->toContain('<rect'); // benign content survives
+});
+
+it('strips animation elements that target href/xlink:href (#97)', function (): void {
+    $stored = uploadMaliciousSvg(<<<'SVG'
+        <?xml version="1.0"?>
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+          <a href="#safe">
+            <animate attributeName="href" to="javascript:alert(1)" begin="0s" dur="0.1s"/>
+            <set attributeName="xlink:href" to="javascript:alert(2)"/>
+            <text>click</text>
+          </a>
+          <rect>
+            <animate attributeName="fill" to="#ff0000"/>
+          </rect>
+        </svg>
+        SVG);
+
+    expect($stored)
+        // The two animation elements that mutate href ARE removed.
+        ->not->toContain('attributeName="href"')
+        ->not->toContain('attributeName="xlink:href"')
+        // A benign animation that mutates fill is left alone.
+        ->toContain('attributeName="fill"');
+});
+
+it('strips <use> elements with cross-document hrefs but keeps same-document refs (#97)', function (): void {
+    $stored = uploadMaliciousSvg(<<<'SVG'
+        <?xml version="1.0"?>
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64" height="64">
+          <defs><circle id="dot" r="4"/></defs>
+          <use href="https://evil.example/payload.svg" x="10" y="10"/>
+          <use xlink:href="https://evil.example/payload.svg" x="20" y="10"/>
+          <use href="#dot" x="30" y="10"/>
+        </svg>
+        SVG);
+
+    expect($stored)
+        ->not->toContain('evil.example')
+        // Same-document anchor refs survive — that's how SVG <defs> works.
+        ->toContain('href="#dot"');
+});
+
+it('blocks percent-encoded and entity-encoded javascript: URIs (#97)', function (): void {
+    $stored = uploadMaliciousSvg(<<<'SVG'
+        <?xml version="1.0"?>
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64" height="64">
+          <a href="%6Aavascript:alert('pct')"><text>pct</text></a>
+          <a xlink:href="&#106;avascript:alert('ent')"><text>ent</text></a>
+          <a href="  &#x09;javascript:alert('ws')"><text>ws</text></a>
+        </svg>
+        SVG);
+
+    // After percent-decoding, entity-decoding, and whitespace stripping,
+    // each value resolves to "javascript:..." and the attribute is gone.
+    // The anchor element itself stays (it's harmless without a hyperlink),
+    // but the dangerous `href` is removed.
+    expect($stored)
+        ->not->toContain('javascript:')
+        ->not->toMatch('/href="[^"]*[Jj]avascript/');
+});
+
+it('blocks vbscript: and data:text/html URIs alongside javascript: (#97)', function (): void {
+    $stored = uploadMaliciousSvg(<<<'SVG'
+        <?xml version="1.0"?>
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+          <a href="vbscript:msgbox('xss')"><text>vb</text></a>
+          <a href="data:text/html;base64,PHNjcmlwdD5hbGVydCgpPC9zY3JpcHQ+"><text>data</text></a>
+        </svg>
+        SVG);
+
+    expect($stored)
+        ->not->toContain('vbscript:')
+        ->not->toContain('data:text/html');
+});
