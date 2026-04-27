@@ -48,9 +48,9 @@ class SyncAddressAction
         // is what makes this race-safe: the relation builder pre-applies
         // `where addressable_type = ... AND addressable_id = ...` to the
         // lookup AND seeds those columns when inserting. Combined with the
-        // DB-level unique index on the same columns, two concurrent PATCHes
-        // can't produce duplicate rows — the second insert hits the
-        // constraint instead.
+        // DB-level unique index on the same columns, two concurrent writes
+        // (PUT, PATCH, seeder, anything that lands here) can't produce
+        // duplicate rows — the second insert hits the constraint instead.
         $address = $owner->address()->updateOrCreate(
             [],
             [
