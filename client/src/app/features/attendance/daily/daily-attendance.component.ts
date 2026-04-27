@@ -1,12 +1,22 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
+import { AcademyService } from '../../../core/services/academy.service';
 import { Athlete, AthleteService } from '../../../core/services/athlete.service';
 import { AttendanceService } from '../../../core/services/attendance.service';
+
+const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 /**
  * YYYY-MM-DD from the LOCAL date components — NOT `toISOString()`, which
@@ -32,7 +42,24 @@ function toLocalDateString(d: Date): string {
 export class DailyAttendanceComponent implements OnInit {
   private readonly attendanceService = inject(AttendanceService);
   private readonly athleteService = inject(AthleteService);
+  private readonly academyService = inject(AcademyService);
   private readonly messageService = inject(MessageService);
+
+  /**
+   * Weekdays the academy does NOT train on, expressed as Carbon-compatible
+   * `dayOfWeek` ints (0=Sun..6=Sat). Bound to `<p-datepicker [disabledDays]>`
+   * so the picker greys out Sat/Sun for an academy that runs Mon/Wed/Fri —
+   * the instructor can't accidentally log attendance on a non-class day
+   * (#88c). Empty array when `training_days` is unconfigured (null) so
+   * every weekday stays selectable: the legacy 7-day-window behaviour
+   * survives until the owner opts in via the academy form.
+   */
+  protected readonly disabledWeekdays = computed<number[]>(() => {
+    const days = this.academyService.academy()?.training_days ?? null;
+    if (days === null || days.length === 0) return [];
+    const trainingSet = new Set(days);
+    return ALL_WEEKDAYS.filter((d) => !trainingSet.has(d));
+  });
 
   /**
    * 7-day backfill window per PRD § P0.3. `minDate` / `maxDate` feed the

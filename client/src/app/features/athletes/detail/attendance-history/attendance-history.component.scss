@@ -122,6 +122,15 @@
       border-color: transparent;
     }
 
+    // #88c: training-day cells get a soft surface fill so non-training days
+    // read as "not relevant" by contrast (instead of "not present"). Quiet
+    // — the strong primary-coloured `--attended` styling below still wins
+    // the visual battle when both classes are present (source order beats
+    // identical specificity, so order matters).
+    &--training {
+      background: var(--p-surface-100);
+    }
+
     &--attended {
       background: var(--p-primary-50);
       border-color: var(--p-primary-300);

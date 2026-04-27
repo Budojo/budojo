@@ -116,6 +116,30 @@ export class AttendanceHistoryComponent implements OnInit {
     );
   });
 
+  /**
+   * Quick-lookup set of training-day weekdays — drives the `--training`
+   * cell modifier in the calendar so non-training days read as "not
+   * relevant" instead of "not present" (#88c). `null` when the academy
+   * hasn't configured a schedule, in which case ALL cells stay neutral
+   * (legacy rendering preserved).
+   */
+  protected readonly trainingDaysSet = computed<Set<number> | null>(() => {
+    const days = this.academyService.academy()?.training_days ?? null;
+    if (days === null || days.length === 0) return null;
+    return new Set(days);
+  });
+
+  /**
+   * True iff the given day-of-month falls on a configured training day in
+   * the visible month. Used by the template `[class.--training]` binding.
+   */
+  protected isTrainingDay(day: number): boolean {
+    const set = this.trainingDaysSet();
+    if (set === null) return false;
+    const ym = this.visible();
+    return set.has(new Date(ym.year, ym.month - 1, day).getDay());
+  }
+
   /** Ratio of attended-to-scheduled, 0..1 (or > 1 for off-schedule sessions). */
   protected readonly rate = computed(() =>
     attendanceRate(this.attendedCount(), this.scheduledCount()),
