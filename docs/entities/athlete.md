@@ -13,7 +13,8 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 | `first_name` | string(255) | not null | |
 | `last_name` | string(255) | not null | |
 | `email` | string(255) | nullable | Optional contact email — uniqueness is scoped per academy (two academies can have a Mario Rossi with the same email, one academy cannot) |
-| `phone` | string(30) | nullable | Free-text phone, no format enforcement |
+| `phone_country_code` | string(5) | nullable | E.164 prefix including the leading `+`, e.g. `+39`. Always paired with `phone_national_number` (both null OR both filled). See `Phone` business rule below. |
+| `phone_national_number` | string(20) | nullable | Unformatted national digits (no spaces, no dashes), e.g. `3331234567`. Always paired with `phone_country_code`. |
 | `date_of_birth` | date | nullable | Cast to `Carbon\Carbon` in the model |
 | `belt` | string | not null | Cast to `App\Enums\Belt` backed enum (`white` / `blue` / `purple` / `brown` / `black`) |
 | `stripes` | tinyint unsigned | not null, default `0` | Range 0–4, enforced at validation layer |
@@ -63,6 +64,7 @@ Represents IBJJF adult belt ranks. Kids/youth belts are not modeled — they are
 - **Soft-delete cascades to documents.** An `AthleteObserver` (wired via `#[ObservedBy]` on the model) catches the `deleting` event and, for every `Document` belonging to the athlete, soft-deletes the row AND wipes the file from the `local` disk via `Storage::delete`. This is the GDPR-friendly policy locked in the M3 PRD — there is no "restore athlete → restore documents" flow.
 - **Email uniqueness ignores soft-deleted rows.** You can re-add a previously-deleted Mario Rossi with the same email, and the Form Request's `whereNull('deleted_at')` clause allows it.
 - **Stripes range `0..4`.** Enforced at the FormRequest level via `min:0|max:4`. The DB column is an unsigned tinyint with no CHECK constraint.
+- **Phone is a structured pair (#75).** The two phone columns are jointly nullable: either both are `null` (no phone on file) or both carry a value. The FormRequest enforces this via `required_with` between the two fields, validates the country code with `regex:/^\+[1-9][0-9]{0,3}$/`, validates the national number with `regex:/^[0-9]+$/`, and runs a cross-field `withValidator` check that concatenates the pair and feeds it to `libphonenumber-for-php`'s `isValidNumber()` — combinations that are well-formed individually but unreachable in any numbering plan (e.g. `+39` + `1`) are rejected. The DB stores the raw national digits; formatting for display is the client's job.
 - **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (single enum value) and `status` (single enum value). Page via `?page=N`.
 
 ## Related endpoints

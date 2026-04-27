@@ -6,11 +6,15 @@ namespace App\Http\Requests\Athlete;
 
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Http\Requests\Athlete\Concerns\ValidatesPhonePair;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreAthleteRequest extends FormRequest
 {
+    use ValidatesPhonePair;
+
     public function authorize(): bool
     {
         $user = $this->user();
@@ -36,12 +40,33 @@ class StoreAthleteRequest extends FormRequest
                     ->where('academy_id', $academyId)
                     ->whereNull('deleted_at'),
             ],
-            'phone' => ['nullable', 'string', 'max:30'],
+            // Phone is a *pair* (#75): either both null OR both filled, with
+            // a libphonenumber-validated combination. The shape rules here
+            // catch the "only one set" case; the cross-field reachability
+            // check lives in `withValidator()` below.
+            'phone_country_code' => [
+                'nullable',
+                'string',
+                'regex:/^\+[1-9][0-9]{0,3}$/',
+                'required_with:phone_national_number',
+            ],
+            'phone_national_number' => [
+                'nullable',
+                'string',
+                'regex:/^[0-9]+$/',
+                'max:20',
+                'required_with:phone_country_code',
+            ],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'belt' => ['required', Rule::enum(Belt::class)],
             'stripes' => ['integer', 'min:0', 'max:4'],
             'status' => ['required', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['required', 'date'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $this->validatePhonePairWithLibphonenumber($validator);
     }
 }

@@ -10,7 +10,17 @@ export interface Athlete {
   first_name: string;
   last_name: string;
   email: string | null;
-  phone: string | null;
+  /**
+   * E.164 prefix including the leading `+`, e.g. `+39`. Always paired with
+   * `phone_national_number` — both are null OR both carry a value (#75).
+   */
+  phone_country_code: string | null;
+  /**
+   * Unformatted national digits, e.g. `3331234567`. Always paired with
+   * `phone_country_code`. Display formatting (spacing, parentheses) is the
+   * caller's concern.
+   */
+  phone_national_number: string | null;
   date_of_birth: string | null;
   belt: Belt;
   stripes: number;
@@ -75,7 +85,13 @@ export interface AthletePayload {
   first_name: string;
   last_name: string;
   email?: string | null;
-  phone?: string | null;
+  /**
+   * Structured phone (#75) — both country code and national number must be
+   * sent together (or both omitted/null). The backend cross-validates the
+   * pair against libphonenumber.
+   */
+  phone_country_code?: string | null;
+  phone_national_number?: string | null;
   date_of_birth?: string | null;
   belt: Belt;
   stripes: number;

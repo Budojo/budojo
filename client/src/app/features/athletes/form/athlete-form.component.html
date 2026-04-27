@@ -101,18 +101,49 @@
         </div>
 
         <div class="field">
-          <label for="phone">Phone <span class="optional">(optional)</span></label>
-          <input
-            pInputText
-            id="phone"
-            type="tel"
-            formControlName="phone"
-            autocomplete="tel"
-            [class.ng-invalid]="phone.invalid && phone.touched"
-            [class.ng-dirty]="phone.touched"
-          />
-          @if (phone.invalid && phone.touched) {
-            <small class="field-error">Maximum 30 characters.</small>
+          <label for="phone_national_number">Phone <span class="optional">(optional)</span></label>
+          <p-inputgroup>
+            <p-select
+              inputId="phone_country_code"
+              [options]="countryCodeOptions"
+              formControlName="phone_country_code"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Code"
+              ariaLabel="Phone country code"
+              appendTo="body"
+              styleClass="phone-country-code"
+              [class.ng-invalid]="phoneCountryCode.invalid && phoneCountryCode.touched"
+            />
+            <input
+              pInputText
+              id="phone_national_number"
+              type="tel"
+              formControlName="phone_national_number"
+              autocomplete="tel-national"
+              placeholder="National number"
+              aria-label="Phone national number"
+              [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
+              [class.ng-dirty]="phoneNationalNumber.touched"
+            />
+          </p-inputgroup>
+          @if (phoneCountryCode.invalid && phoneCountryCode.touched) {
+            <small class="field-error">
+              @if (phoneCountryCode.errors?.['phonePairRequired']) {
+                Country code is required when a national number is entered.
+              }
+            </small>
+          }
+          @if (phoneNationalNumber.invalid && phoneNationalNumber.touched) {
+            <small class="field-error">
+              @if (phoneNationalNumber.errors?.['phonePairRequired']) {
+                National number is required when a country code is selected.
+              } @else if (phoneNationalNumber.errors?.['pattern']) {
+                Digits only — no spaces, dashes, or parentheses.
+              } @else if (phoneNationalNumber.errors?.['maxlength']) {
+                Maximum 20 digits.
+              }
+            </small>
           }
         </div>
       </div>

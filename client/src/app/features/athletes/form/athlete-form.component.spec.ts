@@ -16,7 +16,8 @@ function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
     first_name: 'Mario',
     last_name: 'Rossi',
     email: 'mario@example.com',
-    phone: '+39 333 123456',
+    phone_country_code: '+39',
+    phone_national_number: '3331234567',
     date_of_birth: '1990-05-15',
     belt: 'blue',
     stripes: 2,
@@ -84,7 +85,8 @@ describe('AthleteFormComponent', () => {
         first_name: 'Mario',
         last_name: 'Rossi',
         email: '',
-        phone: '',
+        phone_country_code: '',
+        phone_national_number: '',
         date_of_birth: null,
         belt: 'white',
         stripes: '0',
@@ -100,7 +102,8 @@ describe('AthleteFormComponent', () => {
         first_name: 'Mario',
         last_name: 'Rossi',
         email: null,
-        phone: null,
+        phone_country_code: null,
+        phone_national_number: null,
         date_of_birth: null,
         belt: 'white',
         stripes: 0,
@@ -110,6 +113,82 @@ describe('AthleteFormComponent', () => {
       req.flush({ data: makeAthlete({ first_name: 'Mario', last_name: 'Rossi' }) });
 
       expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes']);
+      httpMock.verify();
+    });
+
+    // ── #75 — structured phone pair ────────────────────────────────────────
+    it('flags national number as required when only country code is filled (#75)', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      cmp.phoneCountryCode.setValue('+39');
+      cmp.phoneNationalNumber.markAsTouched();
+
+      expect(cmp.phoneNationalNumber.errors?.['phonePairRequired']).toBe(true);
+      expect(cmp.phoneCountryCode.errors).toBeNull();
+    });
+
+    it('flags country code as required when only national number is filled (#75)', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      cmp.phoneNationalNumber.setValue('3331234567');
+      cmp.phoneCountryCode.markAsTouched();
+
+      expect(cmp.phoneCountryCode.errors?.['phonePairRequired']).toBe(true);
+      expect(cmp.phoneNationalNumber.errors).toBeNull();
+    });
+
+    it('clears the pair error once both fields are filled (#75)', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      cmp.phoneNationalNumber.setValue('3331234567');
+      expect(cmp.phoneCountryCode.errors?.['phonePairRequired']).toBe(true);
+
+      cmp.phoneCountryCode.setValue('+39');
+      expect(cmp.phoneCountryCode.errors).toBeNull();
+      expect(cmp.phoneNationalNumber.errors).toBeNull();
+    });
+
+    it('rejects non-digit characters in the national number (#75)', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      cmp.phoneNationalNumber.setValue('333 123 4567');
+      expect(cmp.phoneNationalNumber.errors?.['pattern']).toBeTruthy();
+    });
+
+    it('sends the structured phone pair on submit (#75)', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      cmp.form.setValue({
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        email: '',
+        phone_country_code: '+39',
+        phone_national_number: '3331234567',
+        date_of_birth: null,
+        belt: 'white',
+        stripes: '0',
+        status: 'active',
+        joined_at: new Date(2026, 3, 23),
+      });
+      cmp.submit();
+
+      const req = httpMock.expectOne('/api/v1/athletes');
+      expect(req.request.body.phone_country_code).toBe('+39');
+      expect(req.request.body.phone_national_number).toBe('3331234567');
+      req.flush({
+        data: makeAthlete({ phone_country_code: '+39', phone_national_number: '3331234567' }),
+      });
       httpMock.verify();
     });
 
