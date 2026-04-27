@@ -105,14 +105,32 @@
   line-height: 1.5;
 }
 
-// Make the textarea fill its column. PrimeNG's .p-textarea gets width and
-// box styling from the global override layer; we only need to enforce
-// stretching and a reasonable min-height here.
-textarea[pTextarea] {
-  width: 100%;
-  min-height: 6rem;
-  resize: vertical;
-  font-family: var(--p-font-family);
+// Address fieldset (#72) — grouped block with its own internal stack
+// and a 3-column row for postal code / city / province on desktop. The
+// `<fieldset>` element strips the browser default border via reset; we
+// reuse the same gap rhythm as the outer `.form__fields`.
+.address-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  legend {
+    padding: 0;
+    margin-bottom: 0.25rem;
+  }
+}
+
+.address-group__row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 768px) {
+    grid-template-columns: 7rem 1fr 7rem;
+  }
 }
 
 // Actions row — mobile stacks full-width (every CTA hits the 48 px floor),

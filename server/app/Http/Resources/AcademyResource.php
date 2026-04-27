@@ -19,11 +19,18 @@ class AcademyResource extends JsonResource
         /** @var Academy $academy */
         $academy = $this->resource;
 
+        // Lazy access — `$academy->address` triggers the morph relation
+        // load on first read. For show / update endpoints that's a single
+        // extra query; for list endpoints we'd want explicit eager loading,
+        // but academy is always a single-row resource (per-tenant), so the
+        // N+1 surface is zero.
+        $address = $academy->address;
+
         return [
             'id' => $academy->id,
             'name' => $academy->name,
             'slug' => $academy->slug,
-            'address' => $academy->address,
+            'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'logo_url' => $academy->logo_path !== null
                 ? Storage::disk('public')->url($academy->logo_path)
                 : null,

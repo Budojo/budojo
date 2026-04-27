@@ -3,14 +3,26 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AcademyFormComponent } from './academy-form.component';
-import { Academy, AcademyService } from '../../../core/services/academy.service';
+import { Academy, AcademyService, Address } from '../../../core/services/academy.service';
+
+function makeAddress(overrides: Partial<Address> = {}): Address {
+  return {
+    line1: 'Via Roma 1',
+    line2: null,
+    city: 'Torino',
+    postal_code: '10100',
+    province: 'TO',
+    country: 'IT',
+    ...overrides,
+  };
+}
 
 function makeAcademy(overrides: Partial<Academy> = {}): Academy {
   return {
     id: 1,
     name: 'Gracie Barra Torino',
     slug: 'gracie-barra-torino-a1b2c3d4',
-    address: 'Via Roma 1, Torino',
+    address: makeAddress(),
     logo_url: null,
     ...overrides,
   };
@@ -31,8 +43,6 @@ function setup(cached: Academy | null = makeAcademy()): Harness {
   TestBed.inject(AcademyService).academy.set(cached);
 
   const router = TestBed.inject(Router);
-  // Spy on navigate so we can assert on it without actually routing — a
-  // real navigation in tests needs registered routes and adds flakiness.
   vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
   const fixture = TestBed.createComponent(AcademyFormComponent);
@@ -47,22 +57,33 @@ function setup(cached: Academy | null = makeAcademy()): Harness {
 
 describe('AcademyFormComponent', () => {
   it('pre-populates the form from the cached academy signal', () => {
-    const { component } = setup(makeAcademy({ name: 'Checkmat Milano', address: 'Via Milano 5' }));
-    expect(component.form.value).toEqual({
-      name: 'Checkmat Milano',
-      address: 'Via Milano 5',
-      training_days: [],
-    });
+    const { component } = setup(
+      makeAcademy({
+        name: 'Checkmat Milano',
+        address: makeAddress({
+          line1: 'Via Milano 5',
+          city: 'Milano',
+          postal_code: '20100',
+          province: 'MI',
+        }),
+      }),
+    );
+    expect(component.form.value.name).toBe('Checkmat Milano');
+    expect(component.form.value.address?.line1).toBe('Via Milano 5');
+    expect(component.form.value.address?.city).toBe('Milano');
+    expect(component.form.value.address?.province).toBe('MI');
     expect(component.slug()).toBe('gracie-barra-torino-a1b2c3d4');
   });
 
-  it('renders empty-string address when the cached academy has a null address', () => {
+  it('renders empty address fields when the cached academy has a null address', () => {
     const { component } = setup(makeAcademy({ address: null }));
-    // The form control needs a defined value — null would break the
-    // nonNullable group contract. The convention is "empty string means
-    // cleared" in the UI, with the payload translator writing `null` to
-    // the wire on submit.
-    expect(component.form.value.address).toBe('');
+    expect(component.form.value.address?.line1).toBe('');
+    expect(component.form.value.address?.city).toBe('');
+    expect(component.form.value.address?.postal_code).toBe('');
+    expect(component.form.value.address?.province).toBe('');
+    // Country defaults to IT — non-empty so the all-or-nothing validator
+    // doesn't see it as a "filled" signal on its own.
+    expect(component.form.value.address?.country).toBe('IT');
   });
 
   it('redirects to the detail page when the signal is unset on init (defensive)', () => {
@@ -86,29 +107,66 @@ describe('AcademyFormComponent', () => {
     expect(component.name.errors?.['maxlength']).toBeTruthy();
   });
 
-  it('PATCHes with trimmed name + address and redirects to detail on 200', () => {
+  it('PATCHes with the structured address payload and redirects to detail on 200', () => {
     const { component, httpMock, router } = setup();
-    component.form.patchValue({ name: '  New Name  ', address: '  Via Nuova 10  ' });
+    component.form.patchValue({
+      name: '  New Name  ',
+      address: {
+        line1: '  Via Nuova 10  ',
+        line2: null,
+        city: '  Roma  ',
+        postal_code: '00100',
+        province: 'RM',
+        country: 'IT',
+      },
+    });
 
     component.submit();
     const req = httpMock.expectOne('/api/v1/academy');
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({
       name: 'New Name',
-      address: 'Via Nuova 10',
+      address: {
+        line1: 'Via Nuova 10',
+        line2: null,
+        city: 'Roma',
+        postal_code: '00100',
+        province: 'RM',
+        country: 'IT',
+      },
       training_days: null,
     });
-    req.flush({ data: makeAcademy({ name: 'New Name', address: 'Via Nuova 10' }) });
+    req.flush({
+      data: makeAcademy({
+        name: 'New Name',
+        address: makeAddress({
+          line1: 'Via Nuova 10',
+          city: 'Roma',
+          postal_code: '00100',
+          province: 'RM',
+        }),
+      }),
+    });
 
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard/academy']);
   });
 
-  it('sends address: null on the wire when the user clears the textarea', () => {
+  it('sends address: null on the wire when the user clears every required field', () => {
     // Server contract: a missing key leaves the value untouched; only an
-    // explicit `null` clears. This is the only way the UI can remove an
-    // address once set, so exercising it in a test is high-value.
+    // explicit `null` clears the morph row. Exercising the path that lets
+    // a user remove an existing address from the academy.
     const { component, httpMock } = setup();
-    component.form.patchValue({ name: 'Kept Name', address: '   ' });
+    component.form.patchValue({
+      name: 'Kept Name',
+      address: {
+        line1: '   ',
+        line2: null,
+        city: '   ',
+        postal_code: '',
+        province: '',
+        country: 'IT',
+      },
+    });
 
     component.submit();
     const req = httpMock.expectOne('/api/v1/academy');
@@ -118,6 +176,33 @@ describe('AcademyFormComponent', () => {
       training_days: null,
     });
     req.flush({ data: makeAcademy({ address: null }) });
+  });
+
+  it('blocks submission when only some address fields are filled (all-or-nothing)', () => {
+    const { component, httpMock } = setup(makeAcademy({ address: null }));
+    // Fills only line1 — the cross-field validator should mark the group
+    // as invalid and prevent the PATCH from going out.
+    component.form.patchValue({
+      name: 'Some Name',
+      address: {
+        line1: 'Via Nuova 10',
+        line2: null,
+        city: '',
+        postal_code: '',
+        province: '',
+        country: 'IT',
+      },
+    });
+
+    component.submit();
+    httpMock.expectNone('/api/v1/academy');
+    expect(component.addressGroup.errors?.['addressIncomplete']).toBe(true);
+  });
+
+  it('rejects an Italian CAP that is not exactly 5 digits at the field level', () => {
+    const { component } = setup(makeAcademy({ address: null }));
+    component.form.patchValue({ address: { postal_code: '123' } });
+    expect(component.addressPostalCode.errors?.['pattern']).toBeTruthy();
   });
 
   it('surfaces a 422 validation error inline, without navigating away', () => {
@@ -152,11 +237,6 @@ describe('AcademyFormComponent', () => {
   });
 
   it('on 403 clears the academy cache and redirects to /dashboard so guards can re-decide', () => {
-    // Backend contract: PATCH returns 403 when the user no longer has an
-    // academy. Sitting on the edit form with a stale cached academy
-    // would be a dead-end; the service clear()s and we bounce to
-    // /dashboard, where hasAcademyGuard re-fetches, gets 404, and
-    // redirects to /setup.
     const { component, router, httpMock } = setup();
     const service = TestBed.inject(AcademyService);
     component.form.patchValue({ name: 'New Name' });
@@ -166,7 +246,7 @@ describe('AcademyFormComponent', () => {
       .expectOne('/api/v1/academy')
       .flush({ message: 'Forbidden.' }, { status: 403, statusText: 'Forbidden' });
 
-    expect(service.academy()).toBeNull(); // service cleared the cache
+    expect(service.academy()).toBeNull();
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 

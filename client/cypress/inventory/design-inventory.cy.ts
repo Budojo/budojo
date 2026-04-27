@@ -30,7 +30,14 @@ const ACADEMY = {
   id: 1,
   name: 'Gracie Barra Torino',
   slug: 'gracie-barra-torino-a1b2c3d4',
-  address: 'Via Roma 1, 10121 Torino',
+  address: {
+    line1: 'Via Roma 1',
+    line2: null,
+    city: 'Torino',
+    postal_code: '10121',
+    province: 'TO',
+    country: 'IT',
+  },
 };
 
 const ATHLETES_TWO = {

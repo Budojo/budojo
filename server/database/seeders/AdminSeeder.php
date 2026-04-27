@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Actions\Academy\SyncAcademyAddressAction;
 use App\Models\Academy;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -36,11 +37,23 @@ class AdminSeeder extends Seeder
         }
 
         if ($admin->academy === null) {
-            Academy::create([
+            $academy = Academy::create([
                 'user_id' => $admin->id,
                 'name' => 'Budojo HQ',
                 'slug' => 'budojo-hq-' . Str::lower(Str::random(8)),
-                'address' => 'Via Roma 1, Milano',
+            ]);
+            // Structured address (#72). Goes through `SyncAcademyAddressAction`
+            // for the same reason every other write does — single source of
+            // truth for the morph upsert. If the action ever grows side
+            // effects (audit logging, search-index reindex, etc.) seed
+            // data picks them up automatically.
+            app(SyncAcademyAddressAction::class)->execute($academy, [
+                'line1' => 'Via Roma 1',
+                'line2' => null,
+                'city' => 'Milano',
+                'postal_code' => '20100',
+                'province' => 'MI',
+                'country' => 'IT',
             ]);
         }
     }

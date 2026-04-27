@@ -11,7 +11,14 @@ function makeAcademy(overrides: Partial<Academy> = {}): Academy {
     id: 1,
     name: 'Gracie Barra Torino',
     slug: 'gracie-barra-torino-a1b2c3d4',
-    address: 'Via Roma 1, Torino',
+    address: {
+      line1: 'Via Roma 1',
+      line2: null,
+      city: 'Torino',
+      postal_code: '10100',
+      province: 'TO',
+      country: 'IT',
+    },
     logo_url: null,
     ...overrides,
   };
@@ -40,9 +47,41 @@ describe('AcademyDetailComponent', () => {
     expect(html.querySelector('[data-cy="academy-row-slug"]')?.textContent).toContain(
       'gracie-barra-torino-a1b2c3d4',
     );
-    expect(html.querySelector('[data-cy="academy-row-address"]')?.textContent).toContain(
-      'Via Roma 1, Torino',
+    const addressText = (
+      html.querySelector('[data-cy="academy-row-address"]')?.textContent ?? ''
+    ).replace(/\s+/g, ' ');
+    expect(addressText).toContain('Via Roma 1');
+    expect(addressText).toContain('10100 Torino (TO)');
+  });
+
+  it('renders only the populated parts of a legacy/incomplete address (#72)', () => {
+    // Legacy backfill from the pre-#72 freeform column populates only `line1`,
+    // leaving city/postal_code/province as null. The detail page must skip
+    // the null parts instead of rendering "null null (null)" gibberish.
+    setupTestBed();
+    TestBed.inject(AcademyService).academy.set(
+      makeAcademy({
+        address: {
+          line1: 'Via Piana, 1, 06061 Castiglione del Lago PG',
+          line2: null,
+          city: null,
+          postal_code: null,
+          province: null,
+          country: 'IT',
+        },
+      }),
     );
+
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const addressText = (
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="academy-row-address"]')
+        ?.textContent ?? ''
+    ).replace(/\s+/g, ' ');
+    expect(addressText).toContain('Via Piana, 1, 06061 Castiglione del Lago PG');
+    expect(addressText).not.toContain('null');
+    expect(addressText).not.toContain('()');
   });
 
   it('renders an em-dash placeholder for a null address so the row still anchors visually', () => {

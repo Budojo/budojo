@@ -23,11 +23,13 @@ class AcademyFactory extends Factory
     {
         $name = $this->faker->company();
 
+        // Note: the structured address (#72) lives on a polymorphic
+        // relation, not a column on this row. Tests/seeders that need an
+        // address create it via `Address::factory()->for($academy, 'addressable')`.
         return [
             'user_id' => User::factory(),
             'name'    => $name,
             'slug'    => Str::slug($name).'-'.Str::lower(Str::random(8)),
-            'address' => $this->faker->optional()->address(),
         ];
     }
 }

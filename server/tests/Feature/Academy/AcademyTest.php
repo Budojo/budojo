@@ -3,8 +3,28 @@
 declare(strict_types=1);
 
 use App\Models\Academy;
+use App\Models\Address;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
+
+/**
+ * Default-valid structured address payload (#72) for tests that need an
+ * address but don't care about the specific values. Override individual
+ * keys via `array_merge` for the negative cases.
+ *
+ * @return array<string, mixed>
+ */
+function validAddressPayload(array $overrides = []): array
+{
+    return array_merge([
+        'line1' => 'Via Roma 1',
+        'line2' => null,
+        'city' => 'Roma',
+        'postal_code' => '00100',
+        'province' => 'RM',
+        'country' => 'IT',
+    ], $overrides);
+}
 
 it('creates an academy for an authenticated user', function (): void {
     $user = User::factory()->create();
@@ -12,17 +32,34 @@ it('creates an academy for an authenticated user', function (): void {
 
     $this->postJson('/api/v1/academy', [
         'name' => 'Gracie Barra Roma',
-        'address' => 'Via Roma 1, Roma',
+        'address' => validAddressPayload(),
     ])
         ->assertCreated()
         ->assertJsonStructure([
-            'data' => ['id', 'name', 'slug', 'address'],
-        ]);
+            'data' => [
+                'id',
+                'name',
+                'slug',
+                'address' => ['line1', 'line2', 'city', 'postal_code', 'province', 'country'],
+            ],
+        ])
+        ->assertJsonPath('data.address.line1', 'Via Roma 1')
+        ->assertJsonPath('data.address.province', 'RM')
+        ->assertJsonPath('data.address.country', 'IT');
 
     $this->assertDatabaseHas('academies', [
         'user_id' => $user->id,
         'name' => 'Gracie Barra Roma',
     ]);
+});
+
+it('creates an academy without an address (address is optional)', function (): void {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $this->postJson('/api/v1/academy', ['name' => 'Address-less Academy'])
+        ->assertCreated()
+        ->assertJsonPath('data.address', null);
 });
 
 it('returns 409 when user already has an academy', function (): void {
@@ -52,14 +89,24 @@ it('returns the academy for an authenticated user', function (): void {
     $academy = Academy::factory()->create([
         'user_id' => $user->id,
         'name' => 'Checkmat Milano',
-        'address' => 'Via Milano 5',
+    ]);
+    Address::factory()->create([
+        'addressable_type' => Academy::class,
+        'addressable_id' => $academy->id,
+        'line1' => 'Via Milano 5',
+        'city' => 'Milano',
+        'postal_code' => '20100',
+        'province' => 'MI',
+        'country' => 'IT',
     ]);
     Sanctum::actingAs($user);
 
     $this->getJson('/api/v1/academy')
         ->assertOk()
         ->assertJsonPath('data.id', $academy->id)
-        ->assertJsonPath('data.name', 'Checkmat Milano');
+        ->assertJsonPath('data.name', 'Checkmat Milano')
+        ->assertJsonPath('data.address.line1', 'Via Milano 5')
+        ->assertJsonPath('data.address.province', 'MI');
 });
 
 it('returns 404 when user has no academy yet', function (): void {
@@ -82,42 +129,80 @@ it('updates the academy name for the authenticated owner', function (): void {
         'user_id' => $user->id,
         'name' => 'Old Name',
         'slug' => 'old-name-abc12345',
-        'address' => 'Via Vecchia 1',
+    ]);
+    Address::factory()->create([
+        'addressable_type' => Academy::class,
+        'addressable_id' => $academy->id,
+        'line1' => 'Via Vecchia 1',
     ]);
     Sanctum::actingAs($user);
 
     $this->patchJson('/api/v1/academy', ['name' => 'New Name'])
         ->assertOk()
         ->assertJsonPath('data.name', 'New Name')
-        ->assertJsonPath('data.address', 'Via Vecchia 1')
+        // Address survives an unrelated PATCH that omits the `address` key.
+        ->assertJsonPath('data.address.line1', 'Via Vecchia 1')
         // Slug is immutable by design — keeps permalink stable across renames.
         ->assertJsonPath('data.slug', 'old-name-abc12345');
 
     expect($academy->fresh()->name)->toBe('New Name');
 });
 
-it('updates the academy address while preserving the name', function (): void {
+it('upserts an academy address via PATCH when the academy has none', function (): void {
     $user = User::factory()->create();
     $academy = Academy::factory()->create([
         'user_id' => $user->id,
         'name' => 'Gracie Barra Torino',
-        'address' => null,
     ]);
     Sanctum::actingAs($user);
 
-    $this->patchJson('/api/v1/academy', ['address' => 'Via Roma 10, Torino'])
+    $payload = validAddressPayload(['line1' => 'Via Roma 10', 'city' => 'Torino', 'province' => 'TO', 'postal_code' => '10100']);
+    $this->patchJson('/api/v1/academy', ['address' => $payload])
         ->assertOk()
         ->assertJsonPath('data.name', 'Gracie Barra Torino')
-        ->assertJsonPath('data.address', 'Via Roma 10, Torino');
+        ->assertJsonPath('data.address.line1', 'Via Roma 10')
+        ->assertJsonPath('data.address.city', 'Torino')
+        ->assertJsonPath('data.address.province', 'TO');
 
-    expect($academy->fresh()->address)->toBe('Via Roma 10, Torino');
+    expect($academy->fresh()->address)->not->toBeNull();
+    expect($academy->fresh()->address?->city)->toBe('Torino');
+});
+
+it('replaces an existing address via PATCH (idempotent upsert)', function (): void {
+    $user = User::factory()->create();
+    $academy = Academy::factory()->create(['user_id' => $user->id]);
+    Address::factory()->create([
+        'addressable_type' => Academy::class,
+        'addressable_id' => $academy->id,
+        'line1' => 'Via Vecchia 1',
+        'city' => 'Roma',
+        'province' => 'RM',
+        'postal_code' => '00100',
+        'country' => 'IT',
+    ]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'address' => validAddressPayload(['line1' => 'Via Nuova 99', 'city' => 'Milano', 'province' => 'MI', 'postal_code' => '20100']),
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.address.line1', 'Via Nuova 99')
+        ->assertJsonPath('data.address.city', 'Milano');
+
+    // morphOne keeps the row count at 1 — the existing row was replaced
+    // in place, not duplicated.
+    expect(Address::where('addressable_type', Academy::class)
+        ->where('addressable_id', $academy->id)
+        ->count())->toBe(1);
 });
 
 it('clears the academy address when explicitly set to null', function (): void {
     $user = User::factory()->create();
-    $academy = Academy::factory()->create([
-        'user_id' => $user->id,
-        'address' => 'Via da cancellare 5',
+    $academy = Academy::factory()->create(['user_id' => $user->id]);
+    Address::factory()->create([
+        'addressable_type' => Academy::class,
+        'addressable_id' => $academy->id,
+        'line1' => 'Via da cancellare 5',
     ]);
     Sanctum::actingAs($user);
 
@@ -273,14 +358,83 @@ it('returns 422 when name is provided but empty', function (): void {
         ->assertJsonValidationErrors(['name']);
 });
 
-it('returns 422 when address exceeds 500 characters', function (): void {
+// ─── #72 — structured address validation ─────────────────────────────────────
+
+it('rejects an empty address object — `{}` is not a valid "I want to set an address" payload', function (): void {
+    // Without the `min:1` rule on the address array, Laravel's `required_with`
+    // wouldn't fire for an empty `{}` and the nested rules would all skip,
+    // letting an address row through with every required field null.
     $user = User::factory()->create();
     Academy::factory()->create(['user_id' => $user->id]);
     Sanctum::actingAs($user);
 
-    $this->patchJson('/api/v1/academy', ['address' => str_repeat('a', 501)])
+    $this->patchJson('/api/v1/academy', ['address' => (object) []])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['address']);
+});
+
+it('rejects an address payload missing required fields', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    // Only line1 — every other required-with-address field is missing.
+    $this->patchJson('/api/v1/academy', ['address' => ['line1' => 'Via Roma 1']])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'address.city',
+            'address.postal_code',
+            'address.province',
+            'address.country',
+        ]);
+});
+
+it('rejects an Italian postal code that is not exactly 5 digits', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'address' => validAddressPayload(['postal_code' => '123']),
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['address.postal_code']);
+});
+
+it('rejects a province that is not an ISO 3166-2:IT code', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'address' => validAddressPayload(['province' => 'XX']),
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['address.province']);
+});
+
+it('rejects a country that is not currently supported (MVP is IT-only)', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'address' => validAddressPayload(['country' => 'FR']),
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['address.country']);
+});
+
+it('rejects address.line1 longer than 255 characters', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'address' => validAddressPayload(['line1' => str_repeat('a', 256)]),
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['address.line1']);
 });
 
 it('returns 422 when name exceeds 255 characters', function (): void {

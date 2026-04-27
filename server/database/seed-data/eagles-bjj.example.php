@@ -5,7 +5,17 @@ declare(strict_types=1);
 return [
     'academy' => [
         'name' => 'Sample Academy',
-        'address' => '123 Sample Street, 00000 Sample City SC',
+        // Structured address (#72) — optional, can be `null` to skip seeding
+        // an address. The shape mirrors the API contract one-for-one so the
+        // seeder passes the array straight to `SyncAcademyAddressAction`.
+        'address' => [
+            'line1' => '123 Sample Street',
+            'line2' => null,
+            'city' => 'Sample City',
+            'postal_code' => '00100',
+            'province' => 'RM',
+            'country' => 'IT',
+        ],
     ],
     'athletes' => [
         [

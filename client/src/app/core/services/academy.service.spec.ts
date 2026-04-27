@@ -182,13 +182,21 @@ describe('AcademyService', () => {
       httpMock.expectOne('/api/v1/academy').flush({ data: makeAcademy({ name: 'Old' }) });
       expect(service.academy()?.name).toBe('Old');
 
-      const updated = makeAcademy({ name: 'Renamed', address: 'Via Nuova 1' });
+      const newAddress = {
+        line1: 'Via Nuova 1',
+        line2: null,
+        city: 'Torino',
+        postal_code: '10100',
+        province: 'TO' as const,
+        country: 'IT' as const,
+      };
+      const updated = makeAcademy({ name: 'Renamed', address: newAddress });
       let received: Academy | undefined;
 
-      service.update({ name: 'Renamed', address: 'Via Nuova 1' }).subscribe((a) => (received = a));
+      service.update({ name: 'Renamed', address: newAddress }).subscribe((a) => (received = a));
       const req = httpMock.expectOne('/api/v1/academy');
       expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({ name: 'Renamed', address: 'Via Nuova 1' });
+      expect(req.request.body).toEqual({ name: 'Renamed', address: newAddress });
       req.flush({ data: updated });
 
       expect(received).toEqual(updated);

@@ -4,7 +4,14 @@ const ACADEMY_TORINO = {
   id: 1,
   name: 'Gracie Barra Torino',
   slug: 'gracie-barra-torino-a1b2c3d4',
-  address: 'Via Roma 1, Torino',
+  address: {
+    line1: 'Via Roma 1',
+    line2: null,
+    city: 'Torino',
+    postal_code: '10100',
+    province: 'TO',
+    country: 'IT',
+  },
   logo_url: null,
 };
 
@@ -50,13 +57,24 @@ describe('Academy home page', () => {
     cy.get('[data-cy="academy-detail"]').should('exist');
   });
 
-  it('renders name, slug, and address from the cached signal', () => {
+  it('renders name, slug, and structured address from the cached signal (#72)', () => {
     cy.visitAuthenticated('/dashboard/academy');
     cy.wait('@academy');
 
     cy.get('[data-cy="academy-name"]').should('contain', 'Gracie Barra Torino');
     cy.get('[data-cy="academy-row-slug"]').should('contain', 'gracie-barra-torino-a1b2c3d4');
-    cy.get('[data-cy="academy-row-address"]').should('contain', 'Via Roma 1, Torino');
+    // Angular's conditional rendering inserts indentation between the
+    // `{{ postal_code }}` / `{{ city }}` / `({{ province }})` interpolations,
+    // so the raw textContent has multiple spaces between them. Normalise
+    // before substring-matching — the Vitest sibling spec uses the same
+    // shape.
+    cy.get('[data-cy="academy-row-address"]')
+      .invoke('text')
+      .then((t) => {
+        const normalized = t.replace(/\s+/g, ' ');
+        expect(normalized).to.contain('Via Roma 1');
+        expect(normalized).to.contain('10100 Torino (TO)');
+      });
   });
 
   it('shows an em-dash when the academy has no address', () => {
@@ -100,12 +118,14 @@ describe('Academy edit form', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
-  it('pre-populates the form with the current academy values', () => {
+  it('pre-populates the form with the current academy values (#72)', () => {
     cy.visitAuthenticated('/dashboard/academy/edit');
     cy.wait('@academy');
 
     cy.get('[data-cy="academy-form-name"]').should('have.value', 'Gracie Barra Torino');
-    cy.get('[data-cy="academy-form-address"]').should('have.value', 'Via Roma 1, Torino');
+    cy.get('[data-cy="academy-form-address-line1"]').should('have.value', 'Via Roma 1');
+    cy.get('[data-cy="academy-form-address-city"]').should('have.value', 'Torino');
+    cy.get('[data-cy="academy-form-address-postal-code"]').should('have.value', '10100');
     cy.get('[data-cy="academy-form-slug"]').should('contain', 'gracie-barra-torino-a1b2c3d4');
   });
 
@@ -134,24 +154,25 @@ describe('Academy edit form', () => {
     cy.contains('.sidebar__brand-name', 'Gracie Barra Torino Centro').should('exist');
   });
 
-  it('sends address: null on the wire when the user clears the address textarea', () => {
-    cy.intercept('PATCH', '/api/v1/academy', {
-      statusCode: 200,
-      body: { data: { ...ACADEMY_TORINO, address: null } },
-    }).as('updateAcademy');
+  it('blocks submit and shows the all-or-nothing error when address fields are partially cleared (#72)', () => {
+    // The Vitest sibling spec exercises the buildPayload path that sends
+    // `address: null` on the wire when every required field is empty —
+    // covering it here too would require driving the province <p-select>
+    // through its dropdown UI, which is brittle. The valuable E2E signal
+    // is that the cross-field validator surfaces the right inline error.
+    cy.intercept('PATCH', '/api/v1/academy', cy.spy().as('patchSpy'));
 
     cy.visitAuthenticated('/dashboard/academy/edit');
     cy.wait('@academy');
 
-    cy.get('[data-cy="academy-form-address"]').clear();
+    // Wipe two of four required fields — pair is now half-filled.
+    cy.get('[data-cy="academy-form-address-line1"]').clear();
+    cy.get('[data-cy="academy-form-address-city"]').clear();
     cy.get('[data-cy="academy-form-save"]').click();
 
-    cy.wait('@updateAcademy').its('request.body').should('deep.equal', {
-      name: 'Gracie Barra Torino',
-      address: null,
-      training_days: null,
-    });
-    cy.url().should('match', /\/dashboard\/academy$/);
+    cy.get('[data-cy="academy-form-address-error"]').should('be.visible');
+    cy.get('@patchSpy').should('not.have.been.called');
+    cy.url().should('include', '/dashboard/academy/edit');
   });
 
   it('blocks submission and surfaces a required error when the name is empty', () => {

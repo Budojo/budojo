@@ -32,7 +32,10 @@ describe('Academy setup page', () => {
   it('renders the setup form', () => {
     cy.get('h1').should('contain', 'Set up your academy');
     cy.get('input[id="name"]').should('exist');
-    cy.get('textarea[id="address"]').should('exist');
+    // #72: setup intentionally does not collect a structured address —
+    // six required fields on first contact would be a wall of friction.
+    // Address belongs to the edit flow.
+    cy.get('textarea[id="address"]').should('not.exist');
     cy.get('button[type="submit"]').should('contain.text', 'Create academy');
   });
 
@@ -68,34 +71,8 @@ describe('Academy setup page', () => {
     cy.url().should('include', '/dashboard/athletes');
   });
 
-  it('can optionally fill in address', () => {
-    // Post-#40: `hasAcademyGuard` reads the cached signal populated by `create()`,
-    // so no follow-up GET /api/v1/academy fires after the redirect.
-    cy.intercept('POST', '/api/v1/academy', {
-      statusCode: 201,
-      body: {
-        data: {
-          id: 1,
-          name: 'My Academy',
-          slug: 'my-academy',
-          address: 'Via Roma 1, Milano',
-          logo_url: null,
-        },
-      },
-    }).as('createAcademy');
-    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletesList');
-
-    cy.get('input[id="name"]').type('My Academy');
-    cy.get('textarea[id="address"]').type('Via Roma 1, Milano');
-    cy.get('button[type="submit"]').click();
-
-    cy.wait('@createAcademy').its('request.body').should('deep.include', {
-      name: 'My Academy',
-      address: 'Via Roma 1, Milano',
-    });
-    cy.wait('@athletesList');
-    cy.url().should('include', '/dashboard/athletes');
-  });
+  // #72: setup is now name-only (plus optional training days). The address
+  // path is exercised by the edit form's spec.
 
   it('shows error message when creation fails', () => {
     cy.intercept('POST', '/api/v1/academy', {
