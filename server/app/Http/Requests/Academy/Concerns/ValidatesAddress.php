@@ -46,7 +46,15 @@ trait ValidatesAddress
     protected function addressRules(): array
     {
         return [
-            'address' => ['nullable', 'array'],
+            // `min:1` is what makes the nested `required_with:address` rules
+            // bite. Without it, a payload like `{"address": {}}` would pass
+            // the parent rule (it's a valid array) AND the nested rules
+            // (Laravel's `required_with` doesn't fire for an empty array
+            // because the parent has no value to anchor to), letting an
+            // address row through with every required field null. The `min:1`
+            // forces the array to carry at least one key, which makes the
+            // parent "non-empty" and triggers the inner `required_with`s.
+            'address' => ['nullable', 'array', 'min:1'],
             'address.line1' => ['required_with:address', 'string', 'max:255'],
             'address.line2' => ['nullable', 'string', 'max:255'],
             'address.city' => ['required_with:address', 'string', 'max:100'],

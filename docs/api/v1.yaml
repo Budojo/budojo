@@ -1256,7 +1256,7 @@ components:
         `postal_code` / `province` as `string | null`.
 
         `country` is always non-null (defaults to `IT` at the column level).
-      required: [line1, line2, city, postal_code, province, country]
+      required: [line1, city, postal_code, province, country]
       properties:
         line1:
           type: string

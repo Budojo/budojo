@@ -360,6 +360,19 @@ it('returns 422 when name is provided but empty', function (): void {
 
 // ─── #72 — structured address validation ─────────────────────────────────────
 
+it('rejects an empty address object — `{}` is not a valid "I want to set an address" payload', function (): void {
+    // Without the `min:1` rule on the address array, Laravel's `required_with`
+    // wouldn't fire for an empty `{}` and the nested rules would all skip,
+    // letting an address row through with every required field null.
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['address' => (object) []])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['address']);
+});
+
 it('rejects an address payload missing required fields', function (): void {
     $user = User::factory()->create();
     Academy::factory()->create(['user_id' => $user->id]);
