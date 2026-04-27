@@ -1,35 +1,33 @@
 @use '../../auth/auth-page';
 
+// Setup-page-specific bits. The shared `_auth-page` partial covers all
+// the canonical styling (cards, inputs, buttons, links); this file only
+// adds what's setup-specific: required/optional label markers and the
+// textarea (which `_auth-page.scss` doesn't touch — only inputs).
+
 .required {
-  color: #e05577;
+  color: var(--budojo-danger);
 }
 
 .optional {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 400;
-  color: #8b8fa8;
+  color: var(--p-text-muted-color);
 }
 
+.field-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-text-color);
+}
+
+// `<textarea pTextarea>` inherits the canon's form-field tokens for
+// padding, font size, background, and focus state — same as the auth
+// inputs. We only set what's textarea-specific (vertical resize handle,
+// font-family inheritance from the surrounding form) plus the width
+// pin so it fills the card.
 textarea.p-textarea {
   width: 100%;
-  background: #faf8ff;
-  font-size: 0.95rem;
-  color: #1a1a2e;
-  padding: 0.65rem 0.85rem;
-  outline: none;
   resize: vertical;
-  transition: background 0.15s;
   font-family: inherit;
-
-  &::placeholder {
-    color: #c0bcd6;
-  }
-
-  &:focus {
-    background: #f0ebff;
-  }
-
-  &.ng-invalid.ng-dirty {
-    background: #fff0f3;
-  }
 }
