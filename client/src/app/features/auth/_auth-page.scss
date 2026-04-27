@@ -1,9 +1,9 @@
 // Shared styles for all auth pages (login, register) and the academy
 // setup page (which @use's this partial). Pre-#90 this file ran a custom
 // purple palette with raw hex everywhere; #90 brings it back onto the
-// canon — theme tokens, 8dp grid, MD3 motion. The submit button is now
-// a plain `<p-button>` with no `::ng-deep` overrides; PrimeNG's primary
-// styling matches the rest of the dashboard out of the box.
+// canon — theme tokens, 8dp grid, MD3 motion. The submit button now
+// renders with PrimeNG's stock primary styling; only a small `::ng-deep`
+// width hook remains to make the wrapper fill the card consistently.
 
 .auth-page {
   min-height: 100vh;
@@ -67,23 +67,22 @@
     color: var(--p-text-color);
   }
 
-  // Inputs ride PrimeNG's form-field tokens — same shape as the athlete
-  // form. Setting only what's necessary so the canon's Apple-minimal
-  // override layer in budojo-theme.scss does the heavy lifting.
-  input.p-inputtext,
-  :host ::ng-deep .p-password input {
+  // Direct `<input pInputText>` — PrimeNG sizes via form-field tokens
+  // (--p-form-field-padding-x/y, font, etc.). We only need to stretch
+  // it to the card width, no other overrides.
+  input.p-inputtext {
     width: 100%;
-    font-size: 1rem;
-    padding: 0.625rem 0.875rem;
   }
+}
 
-  :host ::ng-deep .p-password {
-    width: 100%;
-
-    .p-password-input {
-      width: 100%;
-    }
-  }
+// `<p-password>` lives outside the component's view-encapsulation, so
+// the host-piercing `::ng-deep` is the canonical width-stretch hook.
+// Width-only — padding/font ride the same form-field tokens as plain
+// inputs, no need to override here.
+:host ::ng-deep .p-password,
+:host ::ng-deep .p-password .p-password-input,
+:host ::ng-deep .p-password input {
+  width: 100%;
 }
 
 .field-error {

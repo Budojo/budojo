@@ -21,14 +21,13 @@
   color: var(--p-text-color);
 }
 
-// Mirrors the input styling from `_auth-page.scss` — same form-field
-// canon, same padding, same focus behaviour. PrimeNG's `<p-textarea>`
-// (pTextarea directive) inherits the form-field tokens; we just pin
-// width + a sensible default for vertical resizing.
+// `<textarea pTextarea>` inherits the canon's form-field tokens for
+// padding, font size, background, and focus state — same as the auth
+// inputs. We only set what's textarea-specific (vertical resize handle,
+// font-family inheritance from the surrounding form) plus the width
+// pin so it fills the card.
 textarea.p-textarea {
   width: 100%;
-  font-size: 1rem;
-  padding: 0.625rem 0.875rem;
   resize: vertical;
   font-family: inherit;
 }
