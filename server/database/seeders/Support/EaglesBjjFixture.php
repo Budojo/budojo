@@ -21,10 +21,18 @@ final readonly class EaglesBjjFixture
     /**
      * @param  list<EaglesBjjAthleteFixture>  $athletes
      * @param  list<int>                      $trainingDaysOfWeek  Carbon dayOfWeek constants (0=Sun … 6=Sat)
+     * @param  array{
+     *     line1: string,
+     *     line2: string|null,
+     *     city: string,
+     *     postal_code: string,
+     *     province: string,
+     *     country: string
+     * }|null $academyAddress  Structured address (#72), or null when the fixture omits it.
      */
     public function __construct(
         public string $academyName,
-        public string $academyAddress,
+        public ?array $academyAddress,
         public array $athletes,
         public array $trainingDaysOfWeek,
         public int $simulationWindowDays,
@@ -61,10 +69,12 @@ final readonly class EaglesBjjFixture
             throw new \InvalidArgumentException('Eagles BJJ fixture missing array "academy".');
         }
         $name = $academy['name'] ?? null;
-        $address = $academy['address'] ?? null;
-        if (! \is_string($name) || ! \is_string($address)) {
-            throw new \InvalidArgumentException('Eagles BJJ academy fixture must have string name + address.');
+        if (! \is_string($name)) {
+            throw new \InvalidArgumentException('Eagles BJJ academy fixture must have string "name".');
         }
+
+        $rawAddress = $academy['address'] ?? null;
+        $address = self::parseAddress($rawAddress);
 
         $athletes = $data['athletes'] ?? null;
         if (! \is_array($athletes)) {
@@ -136,5 +146,58 @@ final readonly class EaglesBjjFixture
             simulationWindowDays: $window,
             defaultProbability: $defaultProbability,
         );
+    }
+
+    /**
+     * Parse the structured address fixture (#72) into a typed array shape
+     * the seeder can hand to `SyncAcademyAddressAction` verbatim. `null`
+     * means "no address on file" — both legal at fixture level and rendered
+     * as a missing morph row at seed time.
+     *
+     * @return array{
+     *     line1: string,
+     *     line2: string|null,
+     *     city: string,
+     *     postal_code: string,
+     *     province: string,
+     *     country: string
+     * }|null
+     */
+    private static function parseAddress(mixed $raw): ?array
+    {
+        if ($raw === null) {
+            return null;
+        }
+        if (! \is_array($raw)) {
+            throw new \InvalidArgumentException(
+                'Eagles BJJ academy "address" must be an array of structured fields or null (#72 dropped the freeform string shape).',
+            );
+        }
+
+        $line1 = $raw['line1'] ?? null;
+        $city = $raw['city'] ?? null;
+        $postalCode = $raw['postal_code'] ?? null;
+        $province = $raw['province'] ?? null;
+        $country = $raw['country'] ?? null;
+        $line2 = $raw['line2'] ?? null;
+
+        if (! \is_string($line1) || ! \is_string($city) || ! \is_string($postalCode)
+            || ! \is_string($province) || ! \is_string($country)) {
+            throw new \InvalidArgumentException(
+                'Eagles BJJ academy address must include strings line1, city, postal_code, province, country.',
+            );
+        }
+        if ($line2 !== null && ! \is_string($line2)) {
+            throw new \InvalidArgumentException('Eagles BJJ academy address line2 must be string|null.');
+        }
+
+        return [
+            'line1' => $line1,
+            'line2' => $line2,
+            'city' => $city,
+            'postal_code' => $postalCode,
+            'province' => $province,
+            'country' => $country,
+        ];
     }
 }

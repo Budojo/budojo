@@ -35,26 +35,6 @@
       </div>
 
       <div class="field">
-        <label for="address">Address <span class="optional">(optional)</span></label>
-        <textarea
-          pTextarea
-          id="address"
-          formControlName="address"
-          placeholder="Rua Example 123, Lisboa"
-          rows="3"
-          [class.ng-invalid]="address.invalid && address.touched"
-          [class.ng-dirty]="address.touched"
-        ></textarea>
-        @if (address.invalid && address.touched) {
-          <small class="field-error">
-            @if (address.errors?.['maxlength']) {
-              Maximum 500 characters.
-            }
-          </small>
-        }
-      </div>
-
-      <div class="field">
         <span class="field-label">Training days <span class="optional">(optional)</span></span>
         <app-training-days-picker
           [value]="form.value.training_days ?? []"

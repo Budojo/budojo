@@ -33,12 +33,18 @@ class AcademyController extends Controller
         /** @var User $user */
         $user = $request->user();
 
+        $validated = $request->validated();
+        /** @var array<string, mixed>|null $addressPayload */
+        $addressPayload = isset($validated['address']) && \is_array($validated['address'])
+            ? $validated['address']
+            : null;
+
         try {
             $academy = $this->createAction->execute(
                 user: $user,
                 name: $request->string('name')->toString(),
-                address: $request->filled('address') ? $request->string('address')->toString() : null,
-                trainingDays: $this->trainingDaysFromValidated($request->validated()),
+                address: $addressPayload,
+                trainingDays: $this->trainingDaysFromValidated($validated),
             );
         } catch (UniqueConstraintViolationException) {
             return response()->json(['message' => 'Academy already exists.'], 409);

@@ -77,10 +77,22 @@
       </dd>
     </div>
 
+    @let addr = a?.address;
     <div class="row">
       <dt class="row__label">Address</dt>
       <dd class="row__value" data-cy="academy-row-address">
-        {{ a?.address ?? '—' }}
+        @if (addr) {
+          <span class="address-block">
+            <span>{{ addr.line1 }}</span>
+            @if (addr.line2) {
+              <span>{{ addr.line2 }}</span>
+            }
+            <span>{{ addr.postal_code }} {{ addr.city }} ({{ addr.province }})</span>
+            <span class="address-block__country">{{ addr.country }}</span>
+          </span>
+        } @else {
+          —
+        }
       </dd>
     </div>
   </dl>

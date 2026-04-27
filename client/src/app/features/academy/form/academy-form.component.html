@@ -61,28 +61,119 @@
       </small>
     </div>
 
-    <div class="field">
-      <label for="academy-address"> Address <span class="field__optional">(optional)</span> </label>
-      <textarea
-        pTextarea
-        id="academy-address"
-        formControlName="address"
-        placeholder="Via Roma 123, Torino"
-        rows="3"
-        maxlength="500"
-        data-cy="academy-form-address"
-        [class.ng-invalid]="address.invalid && address.touched"
-        [class.ng-dirty]="address.touched"
-      ></textarea>
-      @if (address.invalid && address.touched) {
-        <small class="field__error">
-          @if (address.errors?.['maxlength']) {
-            Maximum 500 characters.
+    <fieldset class="field address-group" formGroupName="address">
+      <legend class="field__label">Address <span class="field__optional">(optional)</span></legend>
+
+      <div class="field">
+        <label for="academy-address-line1">Street + civic number</label>
+        <input
+          pInputText
+          id="academy-address-line1"
+          type="text"
+          formControlName="line1"
+          autocomplete="address-line1"
+          placeholder="Via Roma 1"
+          maxlength="255"
+          data-cy="academy-form-address-line1"
+          [class.ng-invalid]="addressLine1.invalid && addressLine1.touched"
+          [class.ng-dirty]="addressLine1.touched"
+        />
+      </div>
+
+      <div class="field">
+        <label for="academy-address-line2">
+          Apt / floor / unit <span class="field__optional">(optional)</span>
+        </label>
+        <input
+          pInputText
+          id="academy-address-line2"
+          type="text"
+          formControlName="line2"
+          autocomplete="address-line2"
+          placeholder="Scala B, interno 4"
+          maxlength="255"
+          data-cy="academy-form-address-line2"
+        />
+      </div>
+
+      <div class="address-group__row">
+        <div class="field">
+          <label for="academy-address-postal-code">Postal code (CAP)</label>
+          <input
+            pInputText
+            id="academy-address-postal-code"
+            type="text"
+            formControlName="postal_code"
+            autocomplete="postal-code"
+            placeholder="00100"
+            inputmode="numeric"
+            maxlength="5"
+            data-cy="academy-form-address-postal-code"
+            [class.ng-invalid]="addressPostalCode.invalid && addressPostalCode.touched"
+            [class.ng-dirty]="addressPostalCode.touched"
+          />
+          @if (addressPostalCode.invalid && addressPostalCode.touched) {
+            <small class="field__error">
+              @if (addressPostalCode.errors?.['pattern']) {
+                Italian CAP must be exactly 5 digits.
+              }
+            </small>
           }
+        </div>
+
+        <div class="field">
+          <label for="academy-address-city">City</label>
+          <input
+            pInputText
+            id="academy-address-city"
+            type="text"
+            formControlName="city"
+            autocomplete="address-level2"
+            placeholder="Roma"
+            maxlength="100"
+            data-cy="academy-form-address-city"
+          />
+        </div>
+
+        <div class="field">
+          <label for="academy-address-province">Province</label>
+          <p-select
+            inputId="academy-address-province"
+            [options]="provinceOptions"
+            formControlName="province"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="—"
+            ariaLabel="Province"
+            appendTo="body"
+            styleClass="w-full"
+            data-cy="academy-form-address-province"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="academy-address-country">Country</label>
+        <p-select
+          inputId="academy-address-country"
+          [options]="countryOptions"
+          formControlName="country"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          styleClass="w-full"
+          data-cy="academy-form-address-country"
+        />
+      </div>
+
+      @if (addressGroup.errors?.['addressIncomplete'] && addressGroup.touched) {
+        <small class="field__error" data-cy="academy-form-address-error">
+          Fill every required address field, or clear them all to leave the academy without an
+          address.
         </small>
       }
-      <small class="field__hint"> Leave empty to clear the address on file. </small>
-    </div>
+      <small class="field__hint"> Leave every field empty to clear the address on file. </small>
+    </fieldset>
 
     <div class="field">
       <span class="field__label"

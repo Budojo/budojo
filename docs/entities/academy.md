@@ -14,7 +14,6 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 | `user_id` | bigint unsigned | FK `users.id`, cascade on delete, **unique** | Owner of the academy. Unique ensures 1-to-1 with User |
 | `name` | string(255) | not null | Display name ("Gracie Barra Lisboa") |
 | `slug` | string(255) | not null, **unique** | URL-friendly identifier; auto-generated at creation as `Str::slug(name) . '-' . random(8)` |
-| `address` | string(500) | nullable | Free-text postal address — optional at setup time |
 | `logo_path` | string(255) | nullable | Relative path on the `public` disk; absent until the owner uploads a logo. The API resource resolves it to a public `logo_url` via `Storage::disk('public')->url(...)` |
 | `monthly_fee_cents` | unsigned int | nullable | Academy-wide membership fee, **stored in cents** to avoid float pitfalls (€95.00 = `9500`). `null` means "fee not configured" — the payments endpoints reject `POST` with 422 until the owner sets it. Settable via `PATCH /api/v1/academy` |
 | `training_days` | json (list&lt;int&gt;) | nullable | Weekdays the academy trains on, Carbon `dayOfWeek` ints (0=Sun…6=Sat). Cast to `array` on the model. `null` means "schedule not configured" — the daily check-in UI falls back to all-weekdays in that state. Settable on create + update |
@@ -25,6 +24,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 
 - `belongsTo(User::class, 'user_id')` — exposed as the `owner()` method
 - `hasMany(Athlete::class)` — all athletes in this academy
+- `morphOne(Address::class, 'addressable')` — structured address (#72), see [`address.md`](./address.md)
 
 ## Indexes
 
@@ -36,6 +36,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 
 - **Creation is one-shot.** `POST /api/v1/academy` fails with 409 if the owner already has one — only one academy per user, ever.
 - **`name`, `address`, `logo_path`, `monthly_fee_cents`, and `training_days` are mutable** via `PATCH /api/v1/academy` (and the dedicated `/academy/logo` endpoints for the logo file). `slug` is intentionally immutable — renames keep the original permalink stable.
+- **Address (#72) is a separate polymorphic entity.** `addresses` lives in its own table (`addressable_type` + `addressable_id`); the academy attaches one via `morphOne`. PATCH semantics: send `address: { line1, line2, city, postal_code, province, country }` to upsert in place, `address: null` to clear (delete the row), or omit the key to leave untouched. See [`address.md`](./address.md).
 - **Slug is server-generated, not user-supplied.** The shape is `slugified(name) + '-' + 8 lowercase random chars`, e.g. `gracie-barra-lisboa-a3f9kx2b`. This guarantees uniqueness without exposing collision logic to the user.
 - **`monthly_fee_cents` snapshots into payment rows.** When `RecordAthletePaymentAction` records a payment, it copies the academy's *current* `monthly_fee_cents` into `athlete_payments.amount_cents`. Future fee changes therefore do NOT rewrite past payment history.
 - **The SPA's `/dashboard` routes are guarded by `hasAcademyGuard`.** A logged-in user without an academy is redirected to `/setup`. A user with an academy trying to visit `/setup` is redirected to `/dashboard`.

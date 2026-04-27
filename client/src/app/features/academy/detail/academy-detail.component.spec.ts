@@ -11,7 +11,14 @@ function makeAcademy(overrides: Partial<Academy> = {}): Academy {
     id: 1,
     name: 'Gracie Barra Torino',
     slug: 'gracie-barra-torino-a1b2c3d4',
-    address: 'Via Roma 1, Torino',
+    address: {
+      line1: 'Via Roma 1',
+      line2: null,
+      city: 'Torino',
+      postal_code: '10100',
+      province: 'TO',
+      country: 'IT',
+    },
     logo_url: null,
     ...overrides,
   };
@@ -40,9 +47,9 @@ describe('AcademyDetailComponent', () => {
     expect(html.querySelector('[data-cy="academy-row-slug"]')?.textContent).toContain(
       'gracie-barra-torino-a1b2c3d4',
     );
-    expect(html.querySelector('[data-cy="academy-row-address"]')?.textContent).toContain(
-      'Via Roma 1, Torino',
-    );
+    const addressText = html.querySelector('[data-cy="academy-row-address"]')?.textContent ?? '';
+    expect(addressText).toContain('Via Roma 1');
+    expect(addressText).toContain('10100 Torino (TO)');
   });
 
   it('renders an em-dash placeholder for a null address so the row still anchors visually', () => {

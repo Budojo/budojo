@@ -36,11 +36,21 @@ class AdminSeeder extends Seeder
         }
 
         if ($admin->academy === null) {
-            Academy::create([
+            $academy = Academy::create([
                 'user_id' => $admin->id,
                 'name' => 'Budojo HQ',
                 'slug' => 'budojo-hq-' . Str::lower(Str::random(8)),
-                'address' => 'Via Roma 1, Milano',
+            ]);
+            // Structured address (#72). Seeded through the same morph
+            // relation the API writes to so the dev DB matches production
+            // shape exactly.
+            $academy->address()->create([
+                'line1' => 'Via Roma 1',
+                'line2' => null,
+                'city' => 'Milano',
+                'postal_code' => '20100',
+                'province' => 'MI',
+                'country' => 'IT',
             ]);
         }
     }

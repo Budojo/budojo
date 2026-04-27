@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import {
   AbstractControl,
   FormBuilder,
+  FormGroup,
   ReactiveFormsModule,
+  ValidationErrors,
   ValidatorFn,
   Validators,
 } from '@angular/forms';
@@ -11,11 +13,132 @@ import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
-import { TextareaModule } from 'primeng/textarea';
+import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { AcademyService, UpdateAcademyPayload } from '../../../core/services/academy.service';
+import {
+  AcademyService,
+  Address,
+  CountryCode,
+  ItalianProvinceCode,
+  UpdateAcademyPayload,
+} from '../../../core/services/academy.service';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
+
+interface SelectOption<T extends string> {
+  label: string;
+  value: T;
+}
+
+const PROVINCE_CODES: ItalianProvinceCode[] = [
+  'AG',
+  'AL',
+  'AN',
+  'AO',
+  'AP',
+  'AQ',
+  'AR',
+  'AT',
+  'AV',
+  'BA',
+  'BG',
+  'BI',
+  'BL',
+  'BN',
+  'BO',
+  'BR',
+  'BS',
+  'BT',
+  'BZ',
+  'CA',
+  'CB',
+  'CE',
+  'CH',
+  'CL',
+  'CN',
+  'CO',
+  'CR',
+  'CS',
+  'CT',
+  'CZ',
+  'EN',
+  'FC',
+  'FE',
+  'FG',
+  'FI',
+  'FM',
+  'FR',
+  'GE',
+  'GO',
+  'GR',
+  'IM',
+  'IS',
+  'KR',
+  'LC',
+  'LE',
+  'LI',
+  'LO',
+  'LT',
+  'LU',
+  'MB',
+  'MC',
+  'ME',
+  'MI',
+  'MN',
+  'MO',
+  'MS',
+  'MT',
+  'NA',
+  'NO',
+  'NU',
+  'OR',
+  'PA',
+  'PC',
+  'PD',
+  'PE',
+  'PG',
+  'PI',
+  'PN',
+  'PO',
+  'PR',
+  'PT',
+  'PU',
+  'PV',
+  'PZ',
+  'RA',
+  'RC',
+  'RE',
+  'RG',
+  'RI',
+  'RM',
+  'RN',
+  'RO',
+  'SA',
+  'SI',
+  'SO',
+  'SP',
+  'SR',
+  'SS',
+  'SU',
+  'SV',
+  'TA',
+  'TE',
+  'TN',
+  'TO',
+  'TP',
+  'TR',
+  'TS',
+  'TV',
+  'UD',
+  'VA',
+  'VB',
+  'VC',
+  'VE',
+  'VI',
+  'VR',
+  'VT',
+  'VV',
+];
 
 /**
  * Rejects a value that is only whitespace. Without this validator the
@@ -27,18 +150,31 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
   control.value?.trim() ? null : { whitespace: true };
 
 /**
- * Academy edit form.
- *
- * Pre-populated from the `AcademyService.academy` signal — no round-trip,
- * no loading state before the form is visible, because `hasAcademyGuard`
- * has already hydrated the cache before we got here. On save we PATCH,
- * the service swaps the signal in-place, and every other consumer (sidebar
- * brand label, detail page) sees the new value in the same tick.
- *
- * The slug is visible but never editable: it's shown as a read-only info
- * line below the name field so the user can SEE what "immutable permalink"
- * means. Norman's signifier rule — explain the constraint at the affordance.
+ * Address group validator (#72) — "all-or-nothing": if any of the four
+ * required fields (line1, city, postal_code, province) is filled, all of
+ * them must be filled. The user can leave the entire address empty (the
+ * academy then has no address on file) but can't submit a half-baked one
+ * that the backend's `required_with` rules would reject anyway.
  */
+function addressAllOrNothing(group: AbstractControl): ValidationErrors | null {
+  if (!(group instanceof FormGroup)) return null;
+  const requiredKeys = ['line1', 'city', 'postal_code', 'province'] as const;
+  const values = requiredKeys.map((k) => (group.get(k)?.value ?? '').toString().trim());
+  const filled = values.filter((v) => v !== '').length;
+  if (filled === 0 || filled === requiredKeys.length) return null;
+  return { addressIncomplete: true };
+}
+
+/**
+ * Five-digit Italian CAP. Same regex the backend enforces; client-side
+ * mirrors it so we can show the error inline before round-tripping.
+ */
+const italianPostalCode: ValidatorFn = (control: AbstractControl) => {
+  const value = (control.value ?? '').toString();
+  if (value === '') return null; // optional at the field level — group validator owns required-when-filled
+  return /^\d{5}$/.test(value) ? null : { pattern: true };
+};
+
 @Component({
   selector: 'app-academy-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,7 +183,7 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
     ButtonModule,
     InputTextModule,
     MessageModule,
-    TextareaModule,
+    SelectModule,
     ToastModule,
     TrainingDaysPickerComponent,
   ],
@@ -64,31 +200,48 @@ export class AcademyFormComponent implements OnInit {
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
 
-  // Snapshot of the slug at component init, kept for the read-only
-  // "Permalink" display. Captured as a signal so the template re-renders
-  // cleanly if the service signal lands a fraction of a tick late.
   readonly slug = signal<string>('');
+
+  readonly provinceOptions: SelectOption<ItalianProvinceCode>[] = PROVINCE_CODES.map((code) => ({
+    label: code,
+    value: code,
+  }));
+
+  readonly countryOptions: SelectOption<CountryCode>[] = [{ label: 'Italy', value: 'IT' }];
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(255), noWhitespace]],
-    address: ['', Validators.maxLength(500)],
+    address: this.fb.nonNullable.group(
+      {
+        line1: ['', Validators.maxLength(255)],
+        line2: this.fb.control<string>('', Validators.maxLength(255)),
+        city: ['', Validators.maxLength(100)],
+        postal_code: ['', italianPostalCode],
+        province: this.fb.control<ItalianProvinceCode | ''>(''),
+        country: this.fb.nonNullable.control<CountryCode>('IT', Validators.required),
+      },
+      { validators: addressAllOrNothing },
+    ),
     training_days: this.fb.nonNullable.control<number[]>([]),
   });
 
   ngOnInit(): void {
     const academy = this.academyService.academy();
     if (!academy) {
-      // Defensive: in practice `hasAcademyGuard` prevents this, but a
-      // manual `clear()` from devtools or a logout race could race us
-      // here. Bail to the detail page — the user will see the empty
-      // state there and the guard will redirect on refresh.
       void this.router.navigate(['/dashboard/academy']);
       return;
     }
     this.slug.set(academy.slug);
     this.form.patchValue({
       name: academy.name,
-      address: academy.address ?? '',
+      address: {
+        line1: academy.address?.line1 ?? '',
+        line2: academy.address?.line2 ?? '',
+        city: academy.address?.city ?? '',
+        postal_code: academy.address?.postal_code ?? '',
+        province: academy.address?.province ?? '',
+        country: academy.address?.country ?? 'IT',
+      },
       training_days: academy.training_days ?? [],
     });
   }
@@ -131,33 +284,69 @@ export class AcademyFormComponent implements OnInit {
     return this.form.controls.name;
   }
 
-  get address() {
+  get addressGroup() {
     return this.form.controls.address;
   }
 
+  get addressLine1() {
+    return this.addressGroup.controls.line1;
+  }
+  get addressLine2() {
+    return this.addressGroup.controls.line2;
+  }
+  get addressCity() {
+    return this.addressGroup.controls.city;
+  }
+  get addressPostalCode() {
+    return this.addressGroup.controls.postal_code;
+  }
+  get addressProvince() {
+    return this.addressGroup.controls.province;
+  }
+  get addressCountry() {
+    return this.addressGroup.controls.country;
+  }
+
   /**
-   * Translate the form state into the wire contract.
+   * Map the form state to the wire shape (#72). Three cases:
+   *   - All four required address fields empty → `address: null` (clear).
+   *   - All four filled → send the structured object.
+   *   - Half-filled → form is invalid, never reaches here.
    *
-   * `address` contract:
-   *   - Non-empty string (trimmed) → sent as a string.
-   *   - Empty / whitespace-only    → sent as `null` to EXPLICITLY clear
-   *     the server-side value (otherwise the user could never remove an
-   *     address once set). Distinct from omitting the key, which the
-   *     server treats as "leave untouched".
-   *
-   * We always send both keys on update because the UI is a single edit
-   * surface — partial-only would require dirty-tracking per field which
-   * is complexity we don't need at this scale.
+   * The `address: null` path is what lets a user remove an existing
+   * address from the academy: clear every field, submit, server deletes
+   * the morph row.
    */
   private buildPayload(): UpdateAcademyPayload {
     const v = this.form.getRawValue();
-    const trimmedAddress = v.address.trim();
+    const a = v.address;
+
+    const line1 = a.line1.trim();
+    const city = a.city.trim();
+    const postalCode = a.postal_code.trim();
+    const province = a.province;
+
+    const allEmpty =
+      line1 === '' && city === '' && postalCode === '' && (province === '' || province == null);
+
+    let address: Address | null;
+    if (allEmpty) {
+      address = null;
+    } else {
+      const line2 = (a.line2 ?? '').trim();
+      address = {
+        line1,
+        line2: line2 === '' ? null : line2,
+        city,
+        postal_code: postalCode,
+        province: province as ItalianProvinceCode,
+        country: a.country,
+      };
+    }
+
     return {
       name: v.name.trim(),
-      address: trimmedAddress === '' ? null : trimmedAddress,
-      // Empty selection → null ("not configured") so a user can DEselect
-      // every day and have the server clear the schedule (mirror of the
-      // address field's "" → null contract).
+      address,
       training_days: v.training_days.length === 0 ? null : v.training_days,
     };
   }
@@ -176,17 +365,6 @@ export class AcademyFormComponent implements OnInit {
       return;
     }
     if (err.status === 403) {
-      // Backend contract: PATCH returns 403 when the user no longer has
-      // an academy (GET returns 404 for the same state — asymmetric but
-      // baked into the canon). Sitting on the edit form with an inline
-      // error would leave the UI in a dead-end: cached signal still
-      // points at a now-vanished academy, sidebar still shows its name.
-      //
-      // AcademyService.update() already cleared the cache in response to
-      // the 403. Bouncing to /dashboard triggers `hasAcademyGuard` which
-      // re-fetches, receives 404, and redirects to /setup where the user
-      // can recreate. Krug forgiveness — every recovery path one click,
-      // no hunting around.
       void this.router.navigate(['/dashboard']);
       return;
     }

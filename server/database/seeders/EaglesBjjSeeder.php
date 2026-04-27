@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Actions\Academy\SyncAcademyAddressAction;
 use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Models\Athlete;
@@ -41,14 +42,16 @@ class EaglesBjjSeeder extends Seeder
                 'user_id' => $admin->id,
                 'name' => $fixture->academyName,
                 'slug' => Str::slug($fixture->academyName) . '-' . Str::lower(Str::random(8)),
-                'address' => $fixture->academyAddress,
             ]);
         } else {
             $academy->forceFill([
                 'name' => $fixture->academyName,
-                'address' => $fixture->academyAddress,
             ])->save();
         }
+
+        // Address (#72) lives on a polymorphic relation now, so it's seeded
+        // through the dedicated upsert action — same code path the API uses.
+        app(SyncAcademyAddressAction::class)->execute($academy, $fixture->academyAddress);
 
         Athlete::withTrashed()
             ->where('academy_id', $academy->id)

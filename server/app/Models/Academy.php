@@ -10,18 +10,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 /**
  * @property int                 $id
  * @property int                 $user_id
  * @property string              $name
  * @property string              $slug
- * @property string|null         $address
  * @property string|null         $logo_path
  * @property int|null            $monthly_fee_cents
  * @property list<int>|null      $training_days  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
  */
-#[Fillable(['user_id', 'name', 'slug', 'address', 'logo_path', 'monthly_fee_cents', 'training_days'])]
+#[Fillable(['user_id', 'name', 'slug', 'logo_path', 'monthly_fee_cents', 'training_days'])]
 class Academy extends Model
 {
     /** @use HasFactory<AcademyFactory> */
@@ -37,6 +37,18 @@ class Academy extends Model
     public function athletes(): HasMany
     {
         return $this->hasMany(Athlete::class);
+    }
+
+    /**
+     * Polymorphic address (#72) — `morphOne` enforces the 1:1 invariant at
+     * the relation layer (deletes any prior row when a new one is associated)
+     * so callers don't have to think about orphaned addresses on every save.
+     *
+     * @return MorphOne<Address, $this>
+     */
+    public function address(): MorphOne
+    {
+        return $this->morphOne(Address::class, 'addressable');
     }
 
     /**

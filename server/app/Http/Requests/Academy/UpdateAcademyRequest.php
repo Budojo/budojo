@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Academy;
 
+use App\Http\Requests\Academy\Concerns\ValidatesAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class UpdateAcademyRequest extends FormRequest
 {
+    use ValidatesAddress;
+
     /**
      * Ownership gate: the authenticated user must own an academy.
      * Mirrors UpdateDocumentRequest::authorize() so the FormRequest owns
@@ -26,9 +29,10 @@ class UpdateAcademyRequest extends FormRequest
     }
 
     /**
-     * Only `name` and `address` are updateable. `slug` is immutable; `user_id`
-     * is set at creation. Laravel's `validated()` excludes any key without
-     * a rule, so those fields cannot reach `$academy->update($validated)`.
+     * Only `name`, `address`, `monthly_fee_cents`, and `training_days` are
+     * updateable. `slug` is immutable; `user_id` is set at creation. Laravel's
+     * `validated()` excludes any key without a rule, so those fields cannot
+     * reach `$academy->update($validated)`.
      *
      * @return array<string, mixed>
      */
@@ -36,7 +40,6 @@ class UpdateAcademyRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'address' => ['sometimes', 'nullable', 'string', 'max:500'],
             // Cents — `integer` rejects "9.5" / floats; `min:0` blocks
             // negatives (refunds/discounts would be a different concept).
             // No upper bound — let the academy own the absurdity check.
@@ -48,6 +51,7 @@ class UpdateAcademyRequest extends FormRequest
             // ambiguous state.
             'training_days' => ['sometimes', 'nullable', 'array', 'min:1', 'max:7'],
             'training_days.*' => ['integer', 'between:0,6', 'distinct'],
+            ...$this->addressRules(),
         ];
     }
 

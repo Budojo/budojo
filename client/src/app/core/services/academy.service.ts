@@ -2,11 +2,149 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, map, tap, catchError, throwError, of, shareReplay, finalize } from 'rxjs';
 
+/**
+ * ISO 3166-1 alpha-2 country code (#72). MVP supports only Italy; adding a
+ * country here is a code change without a schema change.
+ */
+export type CountryCode = 'IT';
+
+/**
+ * ISO 3166-2:IT province codes (#72) — the standard two-letter Italian
+ * car-plate / postal codes. Required when `country === 'IT'`.
+ */
+export type ItalianProvinceCode =
+  | 'AG'
+  | 'AL'
+  | 'AN'
+  | 'AO'
+  | 'AP'
+  | 'AQ'
+  | 'AR'
+  | 'AT'
+  | 'AV'
+  | 'BA'
+  | 'BG'
+  | 'BI'
+  | 'BL'
+  | 'BN'
+  | 'BO'
+  | 'BR'
+  | 'BS'
+  | 'BT'
+  | 'BZ'
+  | 'CA'
+  | 'CB'
+  | 'CE'
+  | 'CH'
+  | 'CL'
+  | 'CN'
+  | 'CO'
+  | 'CR'
+  | 'CS'
+  | 'CT'
+  | 'CZ'
+  | 'EN'
+  | 'FC'
+  | 'FE'
+  | 'FG'
+  | 'FI'
+  | 'FM'
+  | 'FR'
+  | 'GE'
+  | 'GO'
+  | 'GR'
+  | 'IM'
+  | 'IS'
+  | 'KR'
+  | 'LC'
+  | 'LE'
+  | 'LI'
+  | 'LO'
+  | 'LT'
+  | 'LU'
+  | 'MB'
+  | 'MC'
+  | 'ME'
+  | 'MI'
+  | 'MN'
+  | 'MO'
+  | 'MS'
+  | 'MT'
+  | 'NA'
+  | 'NO'
+  | 'NU'
+  | 'OR'
+  | 'PA'
+  | 'PC'
+  | 'PD'
+  | 'PE'
+  | 'PG'
+  | 'PI'
+  | 'PN'
+  | 'PO'
+  | 'PR'
+  | 'PT'
+  | 'PU'
+  | 'PV'
+  | 'PZ'
+  | 'RA'
+  | 'RC'
+  | 'RE'
+  | 'RG'
+  | 'RI'
+  | 'RM'
+  | 'RN'
+  | 'RO'
+  | 'SA'
+  | 'SI'
+  | 'SO'
+  | 'SP'
+  | 'SR'
+  | 'SS'
+  | 'SU'
+  | 'SV'
+  | 'TA'
+  | 'TE'
+  | 'TN'
+  | 'TO'
+  | 'TP'
+  | 'TR'
+  | 'TS'
+  | 'TV'
+  | 'UD'
+  | 'VA'
+  | 'VB'
+  | 'VC'
+  | 'VE'
+  | 'VI'
+  | 'VR'
+  | 'VT'
+  | 'VV';
+
+/**
+ * Wire shape of an academy address (#72). Mirrors `AddressResource` on the
+ * backend one-for-one: the SPA can read this from `GET /academy`, edit
+ * fields, and POST/PATCH the same object back without remapping.
+ */
+export interface Address {
+  line1: string;
+  line2: string | null;
+  city: string;
+  postal_code: string;
+  province: ItalianProvinceCode;
+  country: CountryCode;
+}
+
 export interface Academy {
   id: number;
   name: string;
   slug: string;
-  address: string | null;
+  /**
+   * Structured address (#72). `null` means the academy has no address on
+   * file (legitimate state — every owner can clear it). Keep this as a
+   * required key (not optional) so a tooling miss surfaces at compile time.
+   */
+  address: Address | null;
   logo_url: string | null;
   /**
    * Academy-wide membership fee in cents. `null` means "not configured" —
@@ -26,7 +164,7 @@ export interface Academy {
 
 export interface CreateAcademyPayload {
   name: string;
-  address?: string;
+  address?: Address | null;
   training_days?: number[] | null;
 }
 
@@ -34,11 +172,12 @@ export interface CreateAcademyPayload {
  * Partial update. Every key is optional; what you don't send, the server
  * leaves untouched. `address: null`, `monthly_fee_cents: null`, and
  * `training_days: null` are the explicit "clear it" signals (distinct
- * from omitting the key entirely).
+ * from omitting the key entirely). For `address`, sending an `Address`
+ * object replaces the existing record in place (#72).
  */
 export interface UpdateAcademyPayload {
   name?: string;
-  address?: string | null;
+  address?: Address | null;
   monthly_fee_cents?: number | null;
   training_days?: number[] | null;
 }
