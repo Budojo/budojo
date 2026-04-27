@@ -49,6 +49,7 @@ Concretely, on top of what shipped in #92, the implementation now also strips:
 
 | Vector | Defence |
 |---|---|
+| **XXE — `<!DOCTYPE … [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>` + `&xxe;`** | DOCTYPE declarations are stripped from the raw bytes BEFORE parsing. PHP's libxml expands inline entities at serialise time even without `LIBXML_NOENT`, so the only fully-safe shape is to not let the DTD reach the parser. A null external-entity loader is also set as a second layer in case a future change re-introduces a DTD path. `LIBXML_NONET` alone was insufficient — it blocks network fetches but lets `file://` through, which is the canonical local-file-disclosure vector |
 | `<embed>`, `<object>`, `<link>`, `<meta>` elements | Added to the dangerous-element list |
 | `<animate>`, `<animateTransform>`, `<animateMotion>`, `<set>` targeting `href` / `xlink:href` | Removed when `attributeName` is a hyperlink attribute (these can swap an inert href to `javascript:` at runtime, defeating the static attribute scrub) |
 | `<use>` with cross-document `href` / `xlink:href` | Removed when not a same-document `#anchor` reference |

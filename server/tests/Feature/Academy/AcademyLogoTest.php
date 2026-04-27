@@ -241,10 +241,39 @@ it('blocks percent-encoded and entity-encoded javascript: URIs (#97)', function 
     // After percent-decoding, entity-decoding, and whitespace stripping,
     // each value resolves to "javascript:..." and the attribute is gone.
     // The anchor element itself stays (it's harmless without a hyperlink),
-    // but the dangerous `href` is removed.
+    // but the dangerous `href` is removed. Assert against EACH encoded
+    // form explicitly so a regression that bypasses one decoder branch
+    // (e.g. dropping the `rawurldecode()` step) actually fails the test —
+    // the literal `javascript:` check alone would pass even if
+    // `%6Aavascript:` survived in the output.
     expect($stored)
         ->not->toContain('javascript:')
+        ->not->toContain('%6Aavascript:')
+        ->not->toContain('&#106;avascript:')
         ->not->toMatch('/href="[^"]*[Jj]avascript/');
+});
+
+it('does not expand DOCTYPE entities at parse time (XXE defence — #97)', function (): void {
+    // Without `LIBXML_NOENT`, libxml leaves the entity reference literal
+    // (`&pwned;` survives as text); with that flag set, the parser would
+    // SUBSTITUTE the value at parse time and a `<!ENTITY xxe SYSTEM
+    // "file:///etc/passwd">` would expand into the DOM, which we'd then
+    // serialise back into the public-disk file. `LIBXML_NONET` only
+    // blocks network entities, not local `file://` — the only safe shape
+    // is to not expand entities at all.
+    //
+    // Test uses an inline entity (no network/file dependency) so it works
+    // in any environment: if expansion happens, the literal payload would
+    // appear in the saved output; if not, only `&pwned;` survives.
+    $stored = uploadMaliciousSvg(<<<'SVG'
+        <?xml version="1.0"?>
+        <!DOCTYPE svg [<!ENTITY pwned "PWNED-XXE-SECRET-PAYLOAD">]>
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+          <text>&pwned;</text>
+        </svg>
+        SVG);
+
+    expect($stored)->not->toContain('PWNED-XXE-SECRET-PAYLOAD');
 });
 
 it('blocks vbscript: and data:text/html URIs alongside javascript: (#97)', function (): void {

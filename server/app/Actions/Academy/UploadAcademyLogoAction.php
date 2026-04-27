@@ -87,14 +87,40 @@ class UploadAcademyLogoAction
             return;
         }
 
+        // XXE defence — two layers:
+        //
+        //   1. Strip any `<!DOCTYPE …>` declaration from the raw bytes BEFORE
+        //      handing the content to libxml. This kills the inline-entity
+        //      vector (`<!DOCTYPE svg [<!ENTITY pwned "…">]>` referenced by
+        //      `&pwned;`), which PHP's DOMDocument silently expands at
+        //      serialise time even without `LIBXML_NOENT`. Real-world SVGs
+        //      almost never carry a DOCTYPE — SVG 1.1 deprecated it.
+        //
+        //   2. Block the external entity loader at the libxml level so any
+        //      `<!ENTITY xxe SYSTEM "file:///etc/passwd">` that somehow
+        //      slipped past step 1 still can't resolve. `LIBXML_NONET`
+        //      alone is NOT enough — it blocks network fetches but lets
+        //      `file://` through.
+        $content = $this->stripDoctype($content);
+
+        // `libxml_set_external_entity_loader(null)` resets to the libxml
+        // default — which on modern PHP refuses external entity resolution
+        // unless the caller opts in. Setting our own null-returning loader
+        // makes the refusal explicit and survives any future change to that
+        // default. The function returns bool (not the previous loader), so
+        // we just reset to null after parse instead of trying to restore.
+        libxml_set_external_entity_loader(
+            static fn (?string $publicId, ?string $systemId, array $context): ?string => null,
+        );
+
         libxml_use_internal_errors(true);
         $doc = new \DOMDocument();
-        // `LIBXML_NONET` blocks external entity loading; `LIBXML_NOENT`
-        // expands inline entities (the `&amp;` round-trip the SVG spec
-        // requires). PHP 8+ ships safe libxml defaults — billion-laughs
-        // is rejected before it reaches us.
-        $loaded = $doc->loadXML($content, LIBXML_NONET | LIBXML_NOENT);
+        $loaded = $doc->loadXML($content, LIBXML_NONET);
         libxml_clear_errors();
+
+        // Reset the loader to libxml's default so we don't leak our
+        // null-loader into other parts of the app that might rely on it.
+        libxml_set_external_entity_loader(null);
 
         if (! $loaded || $doc->documentElement === null) {
             $disk->put($path, '<svg xmlns="http://www.w3.org/2000/svg"/>');
@@ -176,10 +202,32 @@ class UploadAcademyLogoAction
             // — `%6Aavascript:`, `&#106;avascript:`, mixed-case, leading
             // whitespace are all known historical bypasses for naive
             // `str_contains($value, 'javascript:')` checks.
-            if ($this->valueIsJavascriptUri($attr->value)) {
+            if ($this->valueHasDangerousUriScheme($attr->value)) {
                 $element->removeAttributeNode($attr);
             }
         }
+    }
+
+    /**
+     * Strip any `<!DOCTYPE …>` declaration from the raw SVG content. PHP's
+     * libxml expands inline entities (declared inside a DOCTYPE) at save
+     * time even without `LIBXML_NOENT`; the only fully-safe shape is to
+     * not let the DTD reach the parser in the first place. The regex
+     * matches across newlines and is non-greedy so it stops at the FIRST
+     * closing `>` after `<!DOCTYPE` — the canonical SVG DOCTYPE syntax.
+     * Multi-line DOCTYPEs with internal subsets (`[<!ENTITY …>]`) are also
+     * matched because the `]` closing bracket is part of the captured
+     * region before `>`.
+     */
+    private function stripDoctype(string $content): string
+    {
+        // Two-step: handle internal-subset DOCTYPEs first (`<!DOCTYPE svg [..]>`)
+        // since the `>` inside the bracket would prematurely terminate a naive
+        // single-pass match.
+        $content = preg_replace('/<!DOCTYPE[^>\[]*\[[^\]]*\]\s*>/is', '', $content) ?? $content;
+        $content = preg_replace('/<!DOCTYPE[^>]*>/is', '', $content) ?? $content;
+
+        return $content;
     }
 
     private function hasExternalUseHref(\DOMElement $useElement): bool
@@ -199,19 +247,27 @@ class UploadAcademyLogoAction
     }
 
     /**
-     * True iff the attribute value resolves to a `javascript:` URI. Decodes
-     * percent-escapes, named/numeric HTML entities, leading whitespace, and
-     * tabs/newlines (browsers strip those before scheme parsing too) before
-     * checking the prefix. Mirrors the canonical OWASP guidance on
-     * unrestricted SVG-attribute scrubbing.
+     * True iff the attribute value resolves — after fully canonicalising —
+     * to a URI scheme that can execute code in a browser. The current
+     * blocklist covers `javascript:`, `vbscript:`, and `data:text/html`
+     * (the last one is the canonical way to smuggle HTML+JS through a
+     * data URI; image data: types stay safe).
+     *
+     * Decodes percent-escapes, named/numeric HTML entities, leading
+     * whitespace, tabs and newlines (browsers strip those before scheme
+     * parsing too) before checking the prefix — `%6Aavascript:` and
+     * `&#106;avascript:` are known historical bypasses for naive
+     * `str_contains($value, 'javascript:')` checks.
      */
-    private function valueIsJavascriptUri(string $value): bool
+    private function valueHasDangerousUriScheme(string $value): bool
     {
         $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $decoded = rawurldecode($decoded);
         $decoded = preg_replace('/[\s\x00-\x1F]+/', '', $decoded) ?? '';
         $decoded = strtolower($decoded);
 
-        return str_starts_with($decoded, 'javascript:') || str_starts_with($decoded, 'vbscript:') || str_starts_with($decoded, 'data:text/html');
+        return str_starts_with($decoded, 'javascript:')
+            || str_starts_with($decoded, 'vbscript:')
+            || str_starts_with($decoded, 'data:text/html');
     }
 }
