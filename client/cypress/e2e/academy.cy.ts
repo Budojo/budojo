@@ -63,8 +63,18 @@ describe('Academy home page', () => {
 
     cy.get('[data-cy="academy-name"]').should('contain', 'Gracie Barra Torino');
     cy.get('[data-cy="academy-row-slug"]').should('contain', 'gracie-barra-torino-a1b2c3d4');
-    cy.get('[data-cy="academy-row-address"]').should('contain', 'Via Roma 1');
-    cy.get('[data-cy="academy-row-address"]').should('contain', '10100 Torino (TO)');
+    // Angular's conditional rendering inserts indentation between the
+    // `{{ postal_code }}` / `{{ city }}` / `({{ province }})` interpolations,
+    // so the raw textContent has multiple spaces between them. Normalise
+    // before substring-matching — the Vitest sibling spec uses the same
+    // shape.
+    cy.get('[data-cy="academy-row-address"]')
+      .invoke('text')
+      .then((t) => {
+        const normalized = t.replace(/\s+/g, ' ');
+        expect(normalized).to.contain('Via Roma 1');
+        expect(normalized).to.contain('10100 Torino (TO)');
+      });
   });
 
   it('shows an em-dash when the academy has no address', () => {
