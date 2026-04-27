@@ -96,6 +96,7 @@
     text-align: right;
     font-variant-numeric: tabular-nums;
     width: 8rem; // widened to fit "X / Y · Z%" without wrapping
+    white-space: nowrap; // keeps the trio together on narrow viewports
   }
 
   &__count-pct {

@@ -78,12 +78,14 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row>
+        @let scheduled = scheduledCount();
+        @let percent = ratePercent(row.count);
         <tr [attr.data-cy]="'monthly-summary-table-row-' + row.athlete_id">
           <td>{{ row.first_name }} {{ row.last_name }}</td>
           <td class="summary-page__count-col">
-            @if (scheduledCount() !== null && ratePercent(row.count) !== null) {
-              {{ row.count }} / {{ scheduledCount() }}
-              <span class="summary-page__count-pct">· {{ ratePercent(row.count) }}%</span>
+            @if (scheduled !== null && percent !== null) {
+              {{ row.count }} / {{ scheduled }}
+              <span class="summary-page__count-pct">· {{ percent }}%</span>
             } @else {
               {{ row.count }}
             }
