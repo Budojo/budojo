@@ -150,7 +150,7 @@ final readonly class EaglesBjjFixture
 
     /**
      * Parse the structured address fixture (#72) into a typed array shape
-     * the seeder can hand to `SyncAcademyAddressAction` verbatim. `null`
+     * the seeder can hand to `SyncAddressAction` verbatim. `null`
      * means "no address on file" — both legal at fixture level and rendered
      * as a missing morph row at seed time.
      *

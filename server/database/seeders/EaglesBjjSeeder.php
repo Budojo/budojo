@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Actions\Academy\SyncAcademyAddressAction;
+use App\Actions\Address\SyncAddressAction;
 use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use App\Models\Athlete;
@@ -51,7 +51,7 @@ class EaglesBjjSeeder extends Seeder
 
         // Address (#72) lives on a polymorphic relation now, so it's seeded
         // through the dedicated upsert action — same code path the API uses.
-        app(SyncAcademyAddressAction::class)->execute($academy, $fixture->academyAddress);
+        app(SyncAddressAction::class)->execute($academy, $fixture->academyAddress);
 
         Athlete::withTrashed()
             ->where('academy_id', $academy->id)

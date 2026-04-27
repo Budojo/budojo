@@ -7,6 +7,7 @@ namespace App\Http\Requests\Athlete;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Http\Requests\Athlete\Concerns\ValidatesPhonePair;
+use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Models\Athlete;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,6 +15,7 @@ use Illuminate\Validation\Rule;
 
 class UpdateAthleteRequest extends FormRequest
 {
+    use ValidatesAddress;
     use ValidatesPhonePair;
 
     public function authorize(): bool
@@ -72,6 +74,7 @@ class UpdateAthleteRequest extends FormRequest
             'stripes' => ['sometimes', 'integer', 'min:0', 'max:4'],
             'status' => ['sometimes', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['sometimes', 'date'],
+            ...$this->addressRules(),
         ];
     }
 

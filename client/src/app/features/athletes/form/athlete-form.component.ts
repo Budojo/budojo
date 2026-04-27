@@ -32,6 +32,13 @@ import {
   AthleteStatus,
   Belt,
 } from '../../../core/services/athlete.service';
+import { Address, CountryCode, ItalianProvinceCode } from '../../../core/services/academy.service';
+import {
+  COUNTRY_OPTIONS,
+  PROVINCE_OPTIONS,
+  addressAllOrNothing,
+  italianPostalCode,
+} from '../../../shared/utils/address-form';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -167,6 +174,9 @@ export class AthleteFormComponent implements OnInit {
     { label: '+31 Netherlands', value: '+31' },
   ];
 
+  readonly provinceOptions = PROVINCE_OPTIONS;
+  readonly countryOptions = COUNTRY_OPTIONS;
+
   readonly form = this.fb.nonNullable.group({
     first_name: ['', [Validators.required, Validators.maxLength(100)]],
     last_name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -186,6 +196,21 @@ export class AthleteFormComponent implements OnInit {
     stripes: this.fb.nonNullable.control<string>('0', Validators.required),
     status: this.fb.nonNullable.control<AthleteStatus>('active', Validators.required),
     joined_at: this.fb.nonNullable.control<Date>(new Date(), Validators.required),
+    // Structured address (#72b) — same shape as the academy form.
+    // The HTML fieldset is duplicated between the two forms; the validators,
+    // option lists, and types are shared via `shared/utils/address-form`
+    // so the rules can never drift.
+    address: this.fb.nonNullable.group(
+      {
+        line1: ['', Validators.maxLength(255)],
+        line2: this.fb.control<string>('', Validators.maxLength(255)),
+        city: ['', Validators.maxLength(100)],
+        postal_code: ['', italianPostalCode],
+        province: this.fb.control<ItalianProvinceCode | ''>(''),
+        country: this.fb.nonNullable.control<CountryCode>('IT', Validators.required),
+      },
+      { validators: addressAllOrNothing },
+    ),
   });
 
   ngOnInit(): void {
@@ -297,6 +322,28 @@ export class AthleteFormComponent implements OnInit {
     return this.form.controls.joined_at;
   }
 
+  get addressGroup() {
+    return this.form.controls.address;
+  }
+  get addressLine1() {
+    return this.addressGroup.controls.line1;
+  }
+  get addressLine2() {
+    return this.addressGroup.controls.line2;
+  }
+  get addressCity() {
+    return this.addressGroup.controls.city;
+  }
+  get addressPostalCode() {
+    return this.addressGroup.controls.postal_code;
+  }
+  get addressProvince() {
+    return this.addressGroup.controls.province;
+  }
+  get addressCountry() {
+    return this.addressGroup.controls.country;
+  }
+
   private loadAthlete(id: number): void {
     this.loading.set(true);
     this.error.set(null);
@@ -318,6 +365,14 @@ export class AthleteFormComponent implements OnInit {
             stripes: String(athlete.stripes),
             status: athlete.status,
             ...(joinedAt ? { joined_at: joinedAt } : {}),
+            address: {
+              line1: athlete.address?.line1 ?? '',
+              line2: athlete.address?.line2 ?? '',
+              city: athlete.address?.city ?? '',
+              postal_code: athlete.address?.postal_code ?? '',
+              province: athlete.address?.province ?? '',
+              country: athlete.address?.country ?? 'IT',
+            },
           });
         },
         error: () => {
@@ -345,6 +400,42 @@ export class AthleteFormComponent implements OnInit {
       stripes: Number(v.stripes),
       status: v.status,
       joined_at: joinedAt,
+      address: this.buildAddressPayload(v.address),
+    };
+  }
+
+  /**
+   * Translate the address sub-group into the wire shape (#72b). Mirrors the
+   * academy form one-for-one: all-empty → null (clear the morph row),
+   * all-filled → structured object. The all-or-nothing form validator
+   * blocks half-filled groups before submit, so the cast on `province` is
+   * safe at this point.
+   */
+  private buildAddressPayload(a: {
+    line1: string;
+    line2: string | null;
+    city: string;
+    postal_code: string;
+    province: ItalianProvinceCode | '' | null;
+    country: CountryCode;
+  }): Address | null {
+    const line1 = a.line1.trim();
+    const city = a.city.trim();
+    const postalCode = a.postal_code.trim();
+    const province = a.province;
+
+    const allEmpty =
+      line1 === '' && city === '' && postalCode === '' && (province === '' || province == null);
+    if (allEmpty) return null;
+
+    const line2 = (a.line2 ?? '').trim();
+    return {
+      line1,
+      line2: line2 === '' ? null : line2,
+      city,
+      postal_code: postalCode,
+      province: province as ItalianProvinceCode,
+      country: a.country,
     };
   }
 

@@ -7,7 +7,7 @@ return [
         'name' => 'Sample Academy',
         // Structured address (#72) — optional, can be `null` to skip seeding
         // an address. The shape mirrors the API contract one-for-one so the
-        // seeder passes the array straight to `SyncAcademyAddressAction`.
+        // seeder passes the array straight to `SyncAddressAction`.
         'address' => [
             'line1' => '123 Sample Street',
             'line2' => null,

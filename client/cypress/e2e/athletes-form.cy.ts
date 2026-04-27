@@ -27,6 +27,7 @@ const ATHLETE_MARIO = {
   email: 'mario@example.com',
   phone_country_code: '+39',
   phone_national_number: '3331234567',
+  address: null,
   date_of_birth: '1990-05-15',
   belt: 'blue' as const,
   stripes: 2,

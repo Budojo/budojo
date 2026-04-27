@@ -2,17 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Requests\Academy\Concerns;
+namespace App\Http\Requests\Concerns;
 
 use App\Enums\Country;
 use App\Enums\ItalianProvince;
 use Illuminate\Validation\Rule;
 
 /**
- * Shared address-payload validation rules (#72), reused across Store and
- * Update academy requests. Lives in `Academy\Concerns` for now because that's
- * the only owner today; promote to a top-level `Address\Concerns` namespace
- * the day athletes (or any other entity) start carrying addresses too.
+ * Shared address-payload validation rules (#72), reused across every
+ * FormRequest that accepts a structured address — academy (#72a) and
+ * athlete (#72b) today, instructor / event-venue tomorrow.
  *
  * Wire shape — nested object on the request body:
  *

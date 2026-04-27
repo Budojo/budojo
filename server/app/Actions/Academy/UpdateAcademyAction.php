@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Actions\Academy;
 
+use App\Actions\Address\SyncAddressAction;
 use App\Models\Academy;
 use Illuminate\Support\Facades\DB;
 
 class UpdateAcademyAction
 {
     public function __construct(
-        private readonly SyncAcademyAddressAction $syncAddress,
+        private readonly SyncAddressAction $syncAddress,
     ) {
     }
 

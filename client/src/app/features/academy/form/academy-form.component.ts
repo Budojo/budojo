@@ -2,9 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import {
   AbstractControl,
   FormBuilder,
-  FormGroup,
   ReactiveFormsModule,
-  ValidationErrors,
   ValidatorFn,
   Validators,
 } from '@angular/forms';
@@ -24,121 +22,12 @@ import {
   UpdateAcademyPayload,
 } from '../../../core/services/academy.service';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
-
-interface SelectOption<T extends string> {
-  label: string;
-  value: T;
-}
-
-const PROVINCE_CODES: ItalianProvinceCode[] = [
-  'AG',
-  'AL',
-  'AN',
-  'AO',
-  'AP',
-  'AQ',
-  'AR',
-  'AT',
-  'AV',
-  'BA',
-  'BG',
-  'BI',
-  'BL',
-  'BN',
-  'BO',
-  'BR',
-  'BS',
-  'BT',
-  'BZ',
-  'CA',
-  'CB',
-  'CE',
-  'CH',
-  'CL',
-  'CN',
-  'CO',
-  'CR',
-  'CS',
-  'CT',
-  'CZ',
-  'EN',
-  'FC',
-  'FE',
-  'FG',
-  'FI',
-  'FM',
-  'FR',
-  'GE',
-  'GO',
-  'GR',
-  'IM',
-  'IS',
-  'KR',
-  'LC',
-  'LE',
-  'LI',
-  'LO',
-  'LT',
-  'LU',
-  'MB',
-  'MC',
-  'ME',
-  'MI',
-  'MN',
-  'MO',
-  'MS',
-  'MT',
-  'NA',
-  'NO',
-  'NU',
-  'OR',
-  'PA',
-  'PC',
-  'PD',
-  'PE',
-  'PG',
-  'PI',
-  'PN',
-  'PO',
-  'PR',
-  'PT',
-  'PU',
-  'PV',
-  'PZ',
-  'RA',
-  'RC',
-  'RE',
-  'RG',
-  'RI',
-  'RM',
-  'RN',
-  'RO',
-  'SA',
-  'SI',
-  'SO',
-  'SP',
-  'SR',
-  'SS',
-  'SU',
-  'SV',
-  'TA',
-  'TE',
-  'TN',
-  'TO',
-  'TP',
-  'TR',
-  'TS',
-  'TV',
-  'UD',
-  'VA',
-  'VB',
-  'VC',
-  'VE',
-  'VI',
-  'VR',
-  'VT',
-  'VV',
-];
+import {
+  COUNTRY_OPTIONS,
+  PROVINCE_OPTIONS,
+  addressAllOrNothing,
+  italianPostalCode,
+} from '../../../shared/utils/address-form';
 
 /**
  * Rejects a value that is only whitespace. Without this validator the
@@ -148,32 +37,6 @@ const PROVINCE_CODES: ItalianProvinceCode[] = [
  */
 const noWhitespace: ValidatorFn = (control: AbstractControl) =>
   control.value?.trim() ? null : { whitespace: true };
-
-/**
- * Address group validator (#72) — "all-or-nothing": if any of the four
- * required fields (line1, city, postal_code, province) is filled, all of
- * them must be filled. The user can leave the entire address empty (the
- * academy then has no address on file) but can't submit a half-baked one
- * that the backend's `required_with` rules would reject anyway.
- */
-function addressAllOrNothing(group: AbstractControl): ValidationErrors | null {
-  if (!(group instanceof FormGroup)) return null;
-  const requiredKeys = ['line1', 'city', 'postal_code', 'province'] as const;
-  const values = requiredKeys.map((k) => (group.get(k)?.value ?? '').toString().trim());
-  const filled = values.filter((v) => v !== '').length;
-  if (filled === 0 || filled === requiredKeys.length) return null;
-  return { addressIncomplete: true };
-}
-
-/**
- * Five-digit Italian CAP. Same regex the backend enforces; client-side
- * mirrors it so we can show the error inline before round-tripping.
- */
-const italianPostalCode: ValidatorFn = (control: AbstractControl) => {
-  const value = (control.value ?? '').toString();
-  if (value === '') return null; // optional at the field level — group validator owns required-when-filled
-  return /^\d{5}$/.test(value) ? null : { pattern: true };
-};
 
 @Component({
   selector: 'app-academy-form',
@@ -202,12 +65,8 @@ export class AcademyFormComponent implements OnInit {
 
   readonly slug = signal<string>('');
 
-  readonly provinceOptions: SelectOption<ItalianProvinceCode>[] = PROVINCE_CODES.map((code) => ({
-    label: code,
-    value: code,
-  }));
-
-  readonly countryOptions: SelectOption<CountryCode>[] = [{ label: 'Italy', value: 'IT' }];
+  readonly provinceOptions = PROVINCE_OPTIONS;
+  readonly countryOptions = COUNTRY_OPTIONS;
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(255), noWhitespace]],
