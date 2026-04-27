@@ -5,7 +5,7 @@
       <h2 class="attendance-history__title" data-cy="attendance-month-label">
         {{ monthLabel() }}
       </h2>
-      @if (scheduledCount() !== null) {
+      @if (ratePercent() !== null) {
         <p class="attendance-history__counter" data-cy="attendance-counter">
           <span class="attendance-history__counter-numbers">
             {{ attendedCount() }} / {{ scheduledCount() }} days
@@ -18,7 +18,8 @@
           <div
             class="attendance-history__progress"
             role="progressbar"
-            [attr.aria-valuenow]="ratePercent()"
+            [attr.aria-valuenow]="ariaValueNow()"
+            [attr.aria-valuetext]="ratePercent() + '%'"
             aria-valuemin="0"
             aria-valuemax="100"
             data-cy="attendance-progress"
@@ -27,9 +28,11 @@
           </div>
         }
       } @else {
-        <!-- Academy hasn't configured a schedule yet — fall back to the raw
-             count. The instructor sees a useful number; the percentage UI
-             reappears the moment they set training_days on the academy. -->
+        <!-- Either training_days is unconfigured (null) OR the visible month
+             has zero scheduled sessions yet (future month, or current month
+             before the first training day). Either way, the raw count is the
+             only honest display — "0 days · 0%" reads as a judgement when
+             the class hasn't even happened. -->
         <p class="attendance-history__counter" data-cy="attendance-counter">
           {{ attendedCount() }} day{{ attendedCount() === 1 ? '' : 's' }} this month
         </p>

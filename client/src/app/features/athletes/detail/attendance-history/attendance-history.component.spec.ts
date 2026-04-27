@@ -149,6 +149,84 @@ describe('AttendanceHistoryComponent', () => {
     httpMock.verify();
   });
 
+  it('falls back to the raw count when scheduledCount is 0 (future month / pre-first-session)', () => {
+    // Use a future month where the academy schedule has 0 sessions held yet.
+    // System time is Apr 25 2026; visible defaults to current month — but
+    // we'll stub the computed by setting a non-current visible state.
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [3], // Wednesdays only
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+    httpMock.verify();
+
+    // Step the visible month FORWARD past today — now scheduledCount = 0.
+    // Strictly: canGoNext is false for "current month", but for tests we
+    // can directly poke the signal for behavior coverage.
+    const component = fixture.componentInstance as unknown as {
+      visible: { set: (v: { year: number; month: number }) => void };
+      scheduledCount: () => number | null;
+      ratePercent: () => number | null;
+    };
+    component.visible.set({ year: 2026, month: 6 });
+    expect(component.scheduledCount()).toBe(0);
+    // ratePercent is null when scheduled=0 → template renders fallback
+    // "X days this month" instead of an ambiguous "X / 0 days · null%".
+    expect(component.ratePercent()).toBeNull();
+  });
+
+  it('clamps aria-valuenow into [0, 100] while keeping the literal label via aria-valuetext', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [3], // Wednesdays only
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    // 6 attended / 4 scheduled (Wednesdays through Apr 25) = 150%.
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({
+        data: [
+          makeRecord({ id: 1, attended_on: '2026-04-01' }),
+          makeRecord({ id: 2, attended_on: '2026-04-04' }),
+          makeRecord({ id: 3, attended_on: '2026-04-08' }),
+          makeRecord({ id: 4, attended_on: '2026-04-11' }),
+          makeRecord({ id: 5, attended_on: '2026-04-15' }),
+          makeRecord({ id: 6, attended_on: '2026-04-22' }),
+        ],
+      });
+
+    const component = fixture.componentInstance as unknown as {
+      ratePercent: () => number | null;
+      ariaValueNow: () => number | null;
+    };
+
+    expect(component.ratePercent()).toBe(150);
+    // aria-valuenow stays within [0, 100] so it matches aria-valuemax.
+    expect(component.ariaValueNow()).toBe(100);
+    httpMock.verify();
+  });
+
   it('clamps the progress-bar width at 100% even when the rate exceeds it (off-schedule sessions)', () => {
     const httpMock = setupTestBed();
     TestBed.inject(AcademyService).academy.set({

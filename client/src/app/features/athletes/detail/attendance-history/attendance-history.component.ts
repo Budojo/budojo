@@ -131,6 +131,19 @@ export class AttendanceHistoryComponent implements OnInit {
     return `${Math.min(100, p)}%`;
   });
 
+  /**
+   * `aria-valuenow` clamped to the [0, 100] range so the ARIA contract stays
+   * consistent with `aria-valuemax="100"` (assistive tech rejects an out-of-
+   * range value). The literal percentage — including off-schedule values
+   * over 100 — is conveyed via `aria-valuetext` so the SR narration matches
+   * what's on screen.
+   */
+  protected readonly ariaValueNow = computed(() => {
+    const p = this.ratePercent();
+    if (p === null) return null;
+    return Math.min(100, Math.max(0, p));
+  });
+
   /** Days that have non-empty notes — drives interactivity and cursor in the template. */
   protected readonly notedDates = computed(
     () =>
