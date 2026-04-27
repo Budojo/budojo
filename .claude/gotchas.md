@@ -75,6 +75,7 @@ Format: `→` separates the symptom from the action.
 ## Cypress — whitespace in interpolated text
 
 - Asserted `cy.get(...).should('have.text', '—')` on an element whose template is `{{ a?.field ?? '—' }}` on its own line → Angular preserves the template's leading/trailing whitespace, so `textContent` is ` — ` (newline + indent + em-dash + newline). `have.text` does an exact match → fails. Fix: `.invoke('text').then((t) => expect(t.trim()).to.equal('—'))`. Vitest's `.textContent?.trim()` sidesteps the same trap.
+- Same trap with INNER conditional rendering: `should('contain', '10100 Torino (TO)')` (substring match!) failed on the address row because each `@if` between `{{ postal_code }}` / `{{ city }}` / `({{ province }})` injects its own indentation → rendered text is `10100  Torino  (TO)` with double spaces. `contain` doesn't normalise. Fix: `.invoke('text').then((t) => expect(t.replace(/\s+/g, ' ')).to.contain('…'))`. Apply the fix to the Vitest sibling AND the Cypress one in the same commit — they trip on the same gotcha and CI catches it second.
 
 ## Design system / PrimeNG precedence
 
