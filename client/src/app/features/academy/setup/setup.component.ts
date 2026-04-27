@@ -13,6 +13,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { TextareaModule } from 'primeng/textarea';
 import { AcademyService } from '../../../core/services/academy.service';
+import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 
 const noWhitespace: ValidatorFn = (control: AbstractControl) =>
   control.value?.trim() ? null : { whitespace: true };
@@ -20,7 +21,14 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
 @Component({
   selector: 'app-setup',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, ButtonModule, InputTextModule, MessageModule, TextareaModule],
+  imports: [
+    ReactiveFormsModule,
+    ButtonModule,
+    InputTextModule,
+    MessageModule,
+    TextareaModule,
+    TrainingDaysPickerComponent,
+  ],
   templateUrl: './setup.component.html',
   styleUrl: './setup.component.scss',
 })
@@ -35,6 +43,8 @@ export class SetupComponent {
   readonly form = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(255), noWhitespace]],
     address: ['', Validators.maxLength(500)],
+    // Optional. Empty array on submit → sent as null ("not configured").
+    training_days: this.fb.nonNullable.control<number[]>([]),
   });
 
   submit(): void {
@@ -48,9 +58,15 @@ export class SetupComponent {
 
     const name = this.form.value.name!.trim();
     const address = this.form.value.address?.trim() || undefined;
+    const days = this.form.value.training_days ?? [];
 
     this.academyService
-      .create({ name, address })
+      .create({
+        name,
+        address,
+        // null = "not configured" — what an empty selection means.
+        training_days: days.length === 0 ? null : days,
+      })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => this.router.navigate(['/dashboard']),
@@ -58,6 +74,10 @@ export class SetupComponent {
           this.error.set(err?.error?.message ?? 'Something went wrong. Please try again.');
         },
       });
+  }
+
+  setTrainingDays(days: number[]): void {
+    this.form.controls.training_days.setValue(days);
   }
 
   get name() {

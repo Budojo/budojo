@@ -128,6 +128,80 @@ it('clears the academy address when explicitly set to null', function (): void {
     expect($academy->fresh()->address)->toBeNull();
 });
 
+// ─── training_days (#88a) ────────────────────────────────────────────────────
+
+it('persists training_days on POST /academy as an ordered list of weekday ints (#88a)', function (): void {
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->postJson('/api/v1/academy', [
+        'name' => 'Eagles BJJ',
+        // Carbon convention: 0=Sun … 6=Sat. Tue/Thu/Sat = [2,4,6].
+        'training_days' => [2, 4, 6],
+    ])
+        ->assertCreated()
+        ->assertJsonPath('data.training_days', [2, 4, 6]);
+});
+
+it('updates training_days via PATCH /academy', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['training_days' => [1, 3, 5]])
+        ->assertOk()
+        ->assertJsonPath('data.training_days', [1, 3, 5]);
+});
+
+it('clears training_days when explicitly set to null', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id, 'training_days' => [2, 4, 6]]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['training_days' => null])
+        ->assertOk()
+        ->assertJsonPath('data.training_days', null);
+});
+
+it('rejects training_days with values outside 0..6', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['training_days' => [2, 7]])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['training_days.1']);
+});
+
+it('rejects training_days with duplicate weekdays', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['training_days' => [2, 2, 4]])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['training_days.0', 'training_days.1']);
+});
+
+it('rejects training_days with non-integer entries', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['training_days' => ['mon', 'wed']])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['training_days.0', 'training_days.1']);
+});
+
+it('rejects an empty training_days array — "not configured" must be expressed as null', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['training_days' => []])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['training_days']);
+});
+
 it('updates monthly_fee_cents — the academy-wide membership fee in cents (#104)', function (): void {
     $user = User::factory()->create();
     Academy::factory()->create(['user_id' => $user->id, 'monthly_fee_cents' => null]);

@@ -41,6 +41,13 @@ class UpdateAcademyRequest extends FormRequest
             // negatives (refunds/discounts would be a different concept).
             // No upper bound — let the academy own the absurdity check.
             'monthly_fee_cents' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            // Carbon dayOfWeek convention (0=Sun..6=Sat). See StoreAcademyRequest
+            // for the same shape — kept in sync because both endpoints feed
+            // the same column on the model. `min:1` keeps "not configured"
+            // canonically as `null` rather than admitting `[]` as a distinct
+            // ambiguous state.
+            'training_days' => ['sometimes', 'nullable', 'array', 'min:1', 'max:7'],
+            'training_days.*' => ['integer', 'between:0,6', 'distinct'],
         ];
     }
 

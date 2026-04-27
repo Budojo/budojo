@@ -51,6 +51,7 @@ describe('AcademyFormComponent', () => {
     expect(component.form.value).toEqual({
       name: 'Checkmat Milano',
       address: 'Via Milano 5',
+      training_days: [],
     });
     expect(component.slug()).toBe('gracie-barra-torino-a1b2c3d4');
   });
@@ -92,7 +93,11 @@ describe('AcademyFormComponent', () => {
     component.submit();
     const req = httpMock.expectOne('/api/v1/academy');
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ name: 'New Name', address: 'Via Nuova 10' });
+    expect(req.request.body).toEqual({
+      name: 'New Name',
+      address: 'Via Nuova 10',
+      training_days: null,
+    });
     req.flush({ data: makeAcademy({ name: 'New Name', address: 'Via Nuova 10' }) });
 
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard/academy']);
@@ -107,7 +112,11 @@ describe('AcademyFormComponent', () => {
 
     component.submit();
     const req = httpMock.expectOne('/api/v1/academy');
-    expect(req.request.body).toEqual({ name: 'Kept Name', address: null });
+    expect(req.request.body).toEqual({
+      name: 'Kept Name',
+      address: null,
+      training_days: null,
+    });
     req.flush({ data: makeAcademy({ address: null }) });
   });
 

@@ -38,6 +38,7 @@ class AcademyController extends Controller
                 user: $user,
                 name: $request->string('name')->toString(),
                 address: $request->filled('address') ? $request->string('address')->toString() : null,
+                trainingDays: $this->trainingDaysFromValidated($request->validated()),
             );
         } catch (UniqueConstraintViolationException) {
             return response()->json(['message' => 'Academy already exists.'], 409);
@@ -98,5 +99,36 @@ class AcademyController extends Controller
         $academy = $this->deleteLogoAction->execute($academy);
 
         return response()->json(['data' => new AcademyResource($academy)]);
+    }
+
+    /**
+     * Pulls `training_days` out of the validated payload as a `list<int>|null`.
+     * The FormRequest enforces the value shape (array of ints in 0..6, no
+     * duplicates) so this just narrows the static type for the action.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return list<int>|null
+     */
+    private function trainingDaysFromValidated(array $validated): ?array
+    {
+        if (! \array_key_exists('training_days', $validated)) {
+            return null;
+        }
+
+        $value = $validated['training_days'];
+        if ($value === null) {
+            return null;
+        }
+
+        // FormRequest already validated each entry as int between 0..6.
+        // Re-cast defensively so PHPStan sees a guaranteed `list<int>`.
+        $list = [];
+        foreach ((array) $value as $day) {
+            if (\is_int($day)) {
+                $list[] = $day;
+            }
+        }
+
+        return $list;
     }
 }

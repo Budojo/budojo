@@ -28,6 +28,7 @@ class AcademyResource extends JsonResource
                 ? Storage::disk('public')->url($academy->logo_path)
                 : null,
             'monthly_fee_cents' => $academy->monthly_fee_cents,
+            'training_days' => $academy->training_days,
         ];
     }
 }

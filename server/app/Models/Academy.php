@@ -12,15 +12,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @property int         $id
- * @property int         $user_id
- * @property string      $name
- * @property string      $slug
- * @property string|null $address
- * @property string|null $logo_path
- * @property int|null    $monthly_fee_cents
+ * @property int                 $id
+ * @property int                 $user_id
+ * @property string              $name
+ * @property string              $slug
+ * @property string|null         $address
+ * @property string|null         $logo_path
+ * @property int|null            $monthly_fee_cents
+ * @property list<int>|null      $training_days  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
  */
-#[Fillable(['user_id', 'name', 'slug', 'address', 'logo_path', 'monthly_fee_cents'])]
+#[Fillable(['user_id', 'name', 'slug', 'address', 'logo_path', 'monthly_fee_cents', 'training_days'])]
 class Academy extends Model
 {
     /** @use HasFactory<AcademyFactory> */
@@ -36,5 +37,15 @@ class Academy extends Model
     public function athletes(): HasMany
     {
         return $this->hasMany(Athlete::class);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'training_days' => 'array',
+        ];
     }
 }
