@@ -17,7 +17,10 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { Athlete, AthleteService } from '../../../../core/services/athlete.service';
 import { AttendanceRecord, AttendanceService } from '../../../../core/services/attendance.service';
-import { attendanceRate, countScheduledTrainingDays } from './attendance-rate';
+import {
+  attendanceRate,
+  countScheduledTrainingDays,
+} from '../../../../shared/utils/attendance-rate';
 import { YearMonth, buildCalendarGrid, shiftMonth } from './calendar-grid';
 
 /**

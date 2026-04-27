@@ -14,7 +14,9 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
+import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
+import { attendanceRate, countScheduledTrainingDays } from '../../../shared/utils/attendance-rate';
 
 interface YearMonth {
   year: number;
@@ -61,6 +63,7 @@ export class MonthlySummaryComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly attendanceService = inject(AttendanceService);
+  private readonly academyService = inject(AcademyService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Stale-response gate — same canon as DailyAttendanceComponent / AttendanceHistoryComponent. */
@@ -94,6 +97,25 @@ export class MonthlySummaryComponent implements OnInit {
   });
 
   protected readonly totalDays = computed(() => this.rows().reduce((acc, r) => acc + r.count, 0));
+
+  /**
+   * Scheduled training-day count for the visible month, capped at today.
+   * `null` when the academy hasn't configured `training_days` — rows fall
+   * back to the bare-count display in that state (#88b).
+   */
+  protected readonly scheduledCount = computed<number | null>(() => {
+    const ym = this.visible();
+    return countScheduledTrainingDays(
+      this.academyService.academy()?.training_days ?? null,
+      ym.year,
+      ym.month,
+    );
+  });
+
+  ratePercent(count: number): number | null {
+    const r = attendanceRate(count, this.scheduledCount());
+    return r === null ? null : Math.round(r * 100);
+  }
 
   ngOnInit(): void {
     // The `?month=YYYY-MM` query param is the single source of truth for the

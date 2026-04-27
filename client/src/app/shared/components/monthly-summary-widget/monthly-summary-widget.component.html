@@ -30,7 +30,14 @@
       @for (row of topRows(); track row.athlete_id) {
         <li class="summary-widget__row" [attr.data-cy]="'monthly-summary-row-' + row.athlete_id">
           <span class="summary-widget__name">{{ row.first_name }} {{ row.last_name }}</span>
-          <span class="summary-widget__count">{{ row.count }}</span>
+          @if (scheduledCount() !== null && ratePercent(row.count) !== null) {
+            <span class="summary-widget__count">
+              {{ row.count }} / {{ scheduledCount() }}
+              <span class="summary-widget__count-pct">· {{ ratePercent(row.count) }}%</span>
+            </span>
+          } @else {
+            <span class="summary-widget__count">{{ row.count }}</span>
+          }
         </li>
       }
     </ul>
