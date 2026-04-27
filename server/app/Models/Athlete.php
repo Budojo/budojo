@@ -22,7 +22,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string                  $first_name
  * @property string                  $last_name
  * @property string|null             $email
- * @property string|null             $phone
+ * @property string|null             $phone_country_code     E.164 prefix incl. `+`, e.g. `+39`. Pair with `phone_national_number` (#75).
+ * @property string|null             $phone_national_number  Unformatted national digits, e.g. `3331234567`. Both columns null OR both filled.
  * @property \Carbon\Carbon|null     $date_of_birth
  * @property Belt                    $belt
  * @property int                     $stripes
@@ -32,7 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Carbon\Carbon|null     $updated_at
  * @property \Carbon\Carbon|null     $deleted_at
  */
-#[Fillable(['academy_id', 'first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
+#[Fillable(['academy_id', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class])]
 class Athlete extends Model
 {

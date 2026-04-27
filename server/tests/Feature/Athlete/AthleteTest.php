@@ -261,3 +261,106 @@ it('returns 403 when deleting an athlete that belongs to another academy', funct
         ->deleteJson("/api/v1/athletes/{$athlete->id}")
         ->assertForbidden();
 });
+
+// ─── #75 — structured phone validation ────────────────────────────────────────
+
+it('persists a valid phone pair via libphonenumber (#75)', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'phone_country_code' => '+39',
+        'phone_national_number' => '3331234567',
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertCreated()
+        ->assertJsonPath('data.phone_country_code', '+39')
+        ->assertJsonPath('data.phone_national_number', '3331234567');
+});
+
+it('accepts both phone fields null — the pair is optional (#75)', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Luigi',
+        'last_name' => 'Verdi',
+        'phone_country_code' => null,
+        'phone_national_number' => null,
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertCreated()
+        ->assertJsonPath('data.phone_country_code', null)
+        ->assertJsonPath('data.phone_national_number', null);
+});
+
+it('rejects a phone with country code but no national number (#75)', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'phone_country_code' => '+39',
+        'phone_national_number' => null,
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_national_number']);
+});
+
+it('rejects a phone with national number but no country code (#75)', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'phone_country_code' => null,
+        'phone_national_number' => '3331234567',
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_country_code']);
+});
+
+it('rejects a country code that does not start with `+` (#75)', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'phone_country_code' => '39', // missing leading +
+        'phone_national_number' => '3331234567',
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_country_code']);
+});
+
+it('rejects a phone combination that libphonenumber considers unreachable (#75)', function (): void {
+    $user = userWithAcademy();
+
+    // Italian prefix with a digit count no Italian numbering plan covers.
+    // Both fields are individually well-formed (regex-valid), but the
+    // combination fails libphonenumber's `isValidNumber`.
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'phone_country_code' => '+39',
+        'phone_national_number' => '1', // way too short
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_national_number']);
+});

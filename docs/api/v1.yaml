@@ -1311,10 +1311,24 @@ components:
           maxLength: 255
           nullable: true
           description: Unique per academy (scoped, ignoring soft-deleted rows)
-        phone:
+        phone_country_code:
           type: string
-          maxLength: 30
+          maxLength: 5
           nullable: true
+          pattern: '^\+[1-9][0-9]{0,3}$'
+          description: |
+            E.164 prefix including the leading `+` (e.g. `+39`).
+            Must be sent together with `phone_national_number`: either both fields are
+            `null` or both carry a value. The combined pair is validated against
+            `libphonenumber` — combinations unreachable in any numbering plan are rejected.
+          example: '+39'
+        phone_national_number:
+          type: string
+          maxLength: 20
+          nullable: true
+          pattern: '^[0-9]+$'
+          description: Unformatted national digits — no spaces, no dashes. Must be sent together with `phone_country_code`.
+          example: '3331234567'
         date_of_birth:
           type: string
           format: date
@@ -1348,10 +1362,23 @@ components:
           format: email
           maxLength: 255
           nullable: true
-        phone:
+        phone_country_code:
           type: string
-          maxLength: 30
+          maxLength: 5
           nullable: true
+          pattern: '^\+[1-9][0-9]{0,3}$'
+          description: |
+            E.164 prefix including the leading `+`. Must be sent together with
+            `phone_national_number`: either both fields are `null` or both carry a
+            value. The combined pair is validated against `libphonenumber`.
+          example: '+39'
+        phone_national_number:
+          type: string
+          maxLength: 20
+          nullable: true
+          pattern: '^[0-9]+$'
+          description: Unformatted national digits — must be sent together with `phone_country_code`.
+          example: '3331234567'
         date_of_birth:
           type: string
           format: date
@@ -1375,7 +1402,8 @@ components:
         - first_name
         - last_name
         - email
-        - phone
+        - phone_country_code
+        - phone_national_number
         - date_of_birth
         - belt
         - stripes
@@ -1395,9 +1423,16 @@ components:
           type: string
           format: email
           nullable: true
-        phone:
+        phone_country_code:
           type: string
           nullable: true
+          example: '+39'
+          description: E.164 prefix including the leading `+`. Always paired with `phone_national_number`.
+        phone_national_number:
+          type: string
+          nullable: true
+          example: '3331234567'
+          description: Unformatted national digits. Always paired with `phone_country_code`.
         date_of_birth:
           type: string
           format: date
