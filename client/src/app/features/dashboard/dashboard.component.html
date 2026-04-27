@@ -1,0 +1,139 @@
+<div class="layout">
+  <!-- Mobile topbar: visible only below the sidebar breakpoint (see SCSS).
+       Hamburger opens the off-canvas sidebar; the app name stays as a static
+       anchor because the full brand menu (incl. sign-out) lives in the drawer
+       where the academy name already is.
+       Topbar sits ABOVE the backdrop (z-index ordering) so the hamburger
+       stays tappable while the drawer is open — it's what closes the drawer
+       when the user taps it a second time, matching the "Close navigation"
+       aria-label. -->
+  <header class="topbar" role="banner">
+    <button
+      type="button"
+      class="topbar__hamburger"
+      [attr.aria-label]="sidebarOpen() ? 'Close navigation' : 'Open navigation'"
+      [attr.aria-expanded]="sidebarOpen()"
+      aria-controls="app-sidebar"
+      (click)="toggleSidebar()"
+      data-cy="topbar-hamburger"
+    >
+      <i class="pi pi-bars" aria-hidden="true"></i>
+    </button>
+    <a
+      routerLink="/dashboard"
+      class="topbar__title"
+      aria-label="Budojo — go to dashboard home"
+      data-cy="topbar-home-link"
+    >
+      @if (academyLogoUrl(); as url) {
+        <img [src]="url" alt="" class="topbar__logo" aria-hidden="true" />
+      } @else {
+        <!-- Inline so stroke="currentColor" inherits the topbar text color (#99). -->
+        <app-brand-glyph class="topbar__logo" />
+      }
+      Budojo
+    </a>
+  </header>
+
+  <!-- The sidebar is hidden from assistive tech via CSS (`visibility: hidden`)
+       when off-canvas on mobile, and always visible on desktop. No JS viewport
+       detection needed — the media query inside the SCSS handles both states.
+       See dashboard.component.scss § .sidebar for the visibility transitions. -->
+  <aside id="app-sidebar" class="sidebar" [class.sidebar--open]="sidebarOpen()">
+    <button
+      type="button"
+      class="sidebar__brand"
+      [attr.aria-label]="brandLabel() + ' menu'"
+      aria-haspopup="menu"
+      [attr.aria-expanded]="menuVisible()"
+      (click)="menu.toggle($event)"
+    >
+      @if (academyLogoUrl(); as url) {
+        <img [src]="url" alt="" class="sidebar__logo" aria-hidden="true" />
+      } @else {
+        <!-- Inline so stroke="currentColor" inherits the sidebar text color (#99). -->
+        <app-brand-glyph class="sidebar__logo" data-cy="brand-glyph-fallback" />
+      }
+      <span class="sidebar__brand-text">
+        <span class="sidebar__brand-eyebrow">Budojo</span>
+        <span class="sidebar__brand-name">{{ brandLabel() }}</span>
+      </span>
+      <i class="sidebar__brand-caret pi pi-angle-down" aria-hidden="true"></i>
+    </button>
+
+    <p-menu
+      #menu
+      [model]="menuItems()"
+      [popup]="true"
+      appendTo="body"
+      (onShow)="menuVisible.set(true)"
+      (onHide)="menuVisible.set(false)"
+    />
+
+    <nav class="sidebar__nav">
+      <a
+        routerLink="academy"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item"
+        data-cy="nav-academy"
+        (click)="closeSidebar()"
+      >
+        <i class="pi pi-home"></i>
+        <span>Academy</span>
+      </a>
+      <a
+        routerLink="athletes"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item"
+        (click)="closeSidebar()"
+      >
+        <i class="pi pi-users"></i>
+        <span>Athletes</span>
+      </a>
+      <a
+        routerLink="attendance"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item"
+        data-cy="nav-attendance"
+        (click)="closeSidebar()"
+      >
+        <i class="pi pi-check-square"></i>
+        <span>Attendance</span>
+      </a>
+    </nav>
+
+    <!-- Sign out as a dedicated, visible row — the brand dropdown above
+         (aria-haspopup menu) still carries the same action, but a coach
+         mid-class shouldn't have to discover a hidden caret. Separate
+         bottom section keeps it away from navigation and signals finality
+         via the `--signout` modifier color. -->
+    <div class="sidebar__footer">
+      <button
+        type="button"
+        class="sidebar__nav-item sidebar__nav-item--signout"
+        (click)="signOut()"
+        data-cy="nav-sign-out"
+      >
+        <i class="pi pi-sign-out" aria-hidden="true"></i>
+        <span>Sign out</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Backdrop: only mounted when the mobile drawer is open. Click dismisses.
+       Sits above the main content (so a tap closes the drawer instead of
+       interacting with the page beneath) but below the sidebar AND the topbar
+       (so both remain interactive — tap backdrop OR tap hamburger to close). -->
+  @if (sidebarOpen()) {
+    <div
+      class="layout__backdrop"
+      aria-hidden="true"
+      (click)="closeSidebar()"
+      data-cy="drawer-backdrop"
+    ></div>
+  }
+
+  <main class="main">
+    <router-outlet />
+  </main>
+</div>

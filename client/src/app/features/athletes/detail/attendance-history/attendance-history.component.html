@@ -1,0 +1,120 @@
+<section class="attendance-history" data-cy="attendance-history">
+  <header class="attendance-history__header">
+    <div class="attendance-history__heading">
+      <p class="attendance-history__eyebrow">Attendance</p>
+      <h2 class="attendance-history__title" data-cy="attendance-month-label">
+        {{ monthLabel() }}
+      </h2>
+      @if (ratePercent() !== null) {
+        <p class="attendance-history__counter" data-cy="attendance-counter">
+          <span class="attendance-history__counter-numbers">
+            {{ attendedCount() }} / {{ scheduledCount() }} days
+          </span>
+          <span class="attendance-history__counter-pct" data-cy="attendance-rate-pct">
+            · {{ ratePercent() }}%
+          </span>
+        </p>
+        @if (progressBarWidth(); as w) {
+          <div
+            class="attendance-history__progress"
+            role="progressbar"
+            [attr.aria-valuenow]="ariaValueNow()"
+            [attr.aria-valuetext]="ratePercent() + '%'"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            data-cy="attendance-progress"
+          >
+            <div class="attendance-history__progress-fill" [style.width]="w"></div>
+          </div>
+        }
+      } @else {
+        <!-- Either training_days is unconfigured (null) OR the visible month
+             has zero scheduled sessions yet (future month, or current month
+             before the first training day). Either way, the raw count is the
+             only honest display — "0 days · 0%" reads as a judgement when
+             the class hasn't even happened. -->
+        <p class="attendance-history__counter" data-cy="attendance-counter">
+          {{ attendedCount() }} day{{ attendedCount() === 1 ? '' : 's' }} this month
+        </p>
+      }
+    </div>
+
+    <div class="attendance-history__nav">
+      <p-button
+        icon="pi pi-chevron-left"
+        [text]="true"
+        [rounded]="true"
+        [disabled]="!canGoPrev()"
+        (onClick)="prevMonth()"
+        ariaLabel="Previous month"
+        data-cy="attendance-prev"
+      />
+      <p-button
+        icon="pi pi-chevron-right"
+        [text]="true"
+        [rounded]="true"
+        [disabled]="!canGoNext()"
+        (onClick)="nextMonth()"
+        ariaLabel="Next month"
+        data-cy="attendance-next"
+      />
+    </div>
+  </header>
+
+  <div class="attendance-history__weekdays" aria-hidden="true">
+    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span
+    ><span>Sun</span>
+  </div>
+
+  @if (loading()) {
+    <div class="attendance-history__grid" data-cy="attendance-skeleton">
+      @for (
+        _ of [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0,
+        ];
+        track $index
+      ) {
+        <p-skeleton width="100%" height="3rem" />
+      }
+    </div>
+  } @else {
+    <div class="attendance-history__grid" data-cy="attendance-grid">
+      @for (week of weeks(); track $index) {
+        @for (day of week; track $index) {
+          @if (day === null) {
+            <span class="attendance-history__cell attendance-history__cell--empty"></span>
+          } @else {
+            @let key = dayKey(day);
+            @let attended = attendedDates().has(key);
+            @let hasNotes = notedDates().has(key);
+            @let training = isTrainingDay(day);
+            <button
+              type="button"
+              class="attendance-history__cell"
+              [class.attendance-history__cell--attended]="attended"
+              [class.attendance-history__cell--training]="training"
+              [class.attendance-history__cell--has-notes]="hasNotes"
+              [disabled]="!hasNotes"
+              [attr.data-cy]="attended ? 'attendance-day-attended' : 'attendance-day'"
+              [attr.data-day]="day"
+              [attr.aria-label]="attended ? day + ' — present' : day + ' — not recorded'"
+              (click)="hasNotes && openNotesFor($event, key)"
+            >
+              <span class="attendance-history__day-num">{{ day }}</span>
+              @if (attended) {
+                <i class="pi pi-check attendance-history__check" aria-hidden="true"></i>
+              }
+            </button>
+          }
+        }
+      }
+    </div>
+  }
+
+  <p-popover #notesPopover>
+    @if (activeNotes(); as notes) {
+      <p class="attendance-history__notes" data-cy="attendance-notes">{{ notes }}</p>
+    }
+  </p-popover>
+</section>

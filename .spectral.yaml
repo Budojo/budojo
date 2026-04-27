@@ -1,0 +1,33 @@
+# Spectral ruleset for Budojo OpenAPI specs.
+# https://meta.stoplight.io/docs/spectral/
+#
+# Extends Spectral's built-in OpenAPI ruleset (oas) with a couple of targeted
+# overrides — we want strict, opinionated linting so the spec stays usable.
+
+extends:
+  - "spectral:oas"
+
+rules:
+  # Downgrade from error to warn — our domain tags already carry the semantic
+  # grouping; exhaustive examples for every response code are overkill for a
+  # small internal API.
+  oas3-valid-media-example: warn
+
+  # Require summary on every operation — without this a generated TOC is useless.
+  operation-summary:
+    description: Every operation must have a summary
+    given: "$.paths[*][get,post,put,patch,delete]"
+    severity: error
+    then:
+      field: summary
+      function: truthy
+
+  # Require operationId — needed for client code generators.
+  operation-operationId:
+    description: Every operation must have an operationId
+    given: "$.paths[*][get,post,put,patch,delete]"
+    severity: error
+    then:
+      field: operationId
+      function: truthy
+

@@ -1,0 +1,151 @@
+.athlete-form-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__subtitle {
+    margin: 0;
+    color: var(--p-text-muted-color);
+  }
+
+  &__loading {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    justify-content: center;
+    color: var(--p-text-muted-color);
+
+    i {
+      font-size: 1.5rem;
+    }
+  }
+}
+
+.athlete-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+
+    &--three {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    // No border-top — the form's own 1.5rem gap already separates this
+    // action row from the fields above. A divider there read as a
+    // section break (canon § card anatomy uses hairlines INSIDE a card,
+    // not between fields and their terminal buttons).
+    margin-top: 0.5rem;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-color);
+  }
+
+  input,
+  textarea {
+    width: 100%;
+  }
+
+  .required {
+    color: var(--p-red-500);
+  }
+
+  .optional {
+    color: var(--p-text-muted-color);
+    font-weight: 400;
+    font-size: 0.8125rem;
+  }
+
+  .field-error {
+    color: var(--p-red-500);
+    font-size: 0.8125rem;
+  }
+
+  // Field hints — same shape as the academy form's `.field__hint`,
+  // copied here because this form's class system uses `kebab-case`
+  // utilities rather than the BEM-doubled academy form names.
+  .field-hint {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+    line-height: 1.5;
+  }
+}
+
+// Address fieldset (#72b) — mirrors `.address-group` in the academy
+// form. The rules are TOP-LEVEL (not nested under `.field`) because the
+// element carries `class="field address-group"` — a descendant selector
+// `.field .address-group` would NOT match same-element classes. Without
+// these rules `<fieldset>` falls back to browser defaults (including the
+// 2px groove border and `min-width: min-content`) which throws the
+// surrounding flex layout off and pushes form actions out of the
+// visible area in 1000-px viewports.
+.address-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  // Critical against the browser default `min-width: min-content` on
+  // <fieldset>: without this, an internal grid track can force the
+  // fieldset wider than its parent and clip neighbouring content.
+  min-width: 0;
+
+  legend {
+    padding: 0;
+    margin-bottom: 0.25rem;
+  }
+}
+
+.address-group__row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 768px) {
+    grid-template-columns: 7rem 1fr 7rem;
+  }
+}

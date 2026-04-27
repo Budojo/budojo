@@ -1,0 +1,353 @@
+// Dashboard shell — mobile-first, scales up to desktop at the sidebar
+// breakpoint. Canon: MD3 8dp grid, theme tokens only, transitions on the
+// MD3 easing standard.
+//
+// Breakpoint: 768px. Below, we get a mobile topbar + off-canvas drawer.
+// At/above, the traditional two-column layout (fixed sidebar + main).
+
+$sidebar-breakpoint: 768px;
+$sidebar-width: 16rem;
+$topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh; // iOS Safari dynamic viewport
+  background: var(--p-surface-50);
+  position: relative;
+
+  @media (min-width: $sidebar-breakpoint) {
+    flex-direction: row;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    // `--p-mask-background` is the PrimeNG semantic token for modal/overlay
+    // backdrops (`rgba(0,0,0,0.4)` in light, `0.6` in dark). Same token
+    // PrimeNG's own p-dialog uses — we stay consistent with the overlay
+    // darkness rhythm.
+    background: var(--p-mask-background);
+    z-index: 40;
+    animation: fade-in 200ms cubic-bezier(0.2, 0, 0, 1);
+
+    @media (min-width: $sidebar-breakpoint) {
+      display: none;
+    }
+  }
+}
+
+// ── Mobile topbar ──────────────────────────────────────────────────────────────
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  min-height: $topbar-height;
+  background: var(--p-surface-900);
+  color: var(--p-surface-0);
+  border-bottom: 1px solid var(--p-surface-700);
+  position: sticky;
+  top: 0;
+  // Sits above both the backdrop (40) and the drawer sidebar (50) so the
+  // hamburger stays interactive while the drawer is open — tap it a second
+  // time to close, matching the "Close navigation" aria-label.
+  z-index: 60;
+
+  @media (min-width: $sidebar-breakpoint) {
+    display: none;
+  }
+
+  &__hamburger {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem; // 48 × 48 — Fitts
+    border-radius: var(--p-border-radius-md);
+    cursor: pointer;
+    transition: background 200ms cubic-bezier(0.2, 0, 0, 1);
+
+    i {
+      font-size: 1.25rem;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: var(--p-surface-800);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-400);
+      outline-offset: -2px;
+    }
+  }
+
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    // The title is now an <a> (routes to /dashboard) — strip the default
+    // underline + inherited blue. The logo tile + wordmark already signal
+    // affordance without needing the link chrome.
+    color: inherit;
+    text-decoration: none;
+    transition: opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover {
+      opacity: 0.88;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-400);
+      outline-offset: 2px;
+      border-radius: var(--p-border-radius-sm);
+    }
+  }
+
+  // The logo tile has its own dark background + rounded corners baked in.
+  // Size: 28 px — visually weighted against the ~16 px word mark next to it
+  // without dominating the 48 px topbar.
+  &__logo {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--p-border-radius-sm);
+    flex-shrink: 0;
+  }
+}
+
+// ── Sidebar ────────────────────────────────────────────────────────────────────
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--p-surface-900);
+  color: var(--p-surface-0);
+  overflow-y: auto;
+
+  // Mobile: off-canvas drawer. Fixed position, slides in from left when
+  // `.sidebar--open` is applied. Sits above the backdrop, below the topbar.
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  height: 100dvh;
+  width: $sidebar-width;
+  max-width: calc(100vw - 3rem); // never full-cover — keep a close hint
+  transform: translateX(-100%);
+  // `visibility: hidden` hides the off-canvas drawer from assistive tech AND
+  // keyboard tab order — screen readers respect it, `transform` alone doesn't.
+  // Delayed by the transition duration so the slide-out animation still plays
+  // before the element becomes inert; on slide-in, visibility flips to `visible`
+  // immediately so the content is reachable as soon as it starts animating in.
+  visibility: hidden;
+  transition:
+    transform 200ms cubic-bezier(0.2, 0, 0, 1),
+    visibility 0s linear 200ms;
+  z-index: 50;
+  will-change: transform;
+
+  &--open {
+    transform: translateX(0);
+    visibility: visible;
+    transition:
+      transform 200ms cubic-bezier(0.2, 0, 0, 1),
+      visibility 0s linear 0s;
+  }
+
+  // Desktop: static, always visible — drops the off-canvas visibility logic.
+  @media (min-width: $sidebar-breakpoint) {
+    position: static;
+    transform: none;
+    visibility: visible;
+    height: auto;
+    width: $sidebar-width;
+    min-width: $sidebar-width;
+    max-width: none;
+  }
+
+  // ── Brand trigger (academy identity + menu affordance) ────────────────────
+
+  &__brand {
+    all: unset;
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 1rem;
+    min-height: 3rem; // 48px — Fitts touch target
+    cursor: pointer;
+    border-bottom: 1px solid var(--p-surface-700);
+    transition: background 200ms cubic-bezier(0.2, 0, 0, 1);
+
+    &:hover,
+    &:focus-visible {
+      background: var(--p-surface-800);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-400);
+      outline-offset: -2px;
+    }
+
+    &[aria-expanded='true'] .sidebar__brand-caret {
+      transform: rotate(180deg);
+    }
+  }
+
+  // Brand logo — 32 px tile. Renders either an academy-uploaded <img> OR
+  // the inline Budojo <svg> fallback (#99). Both share these dimensions;
+  // the border-radius applies to the <img> branch (raster/photo logo) and
+  // is harmless on the transparent inline SVG. `flex-shrink: 0` keeps the
+  // tile size locked while the brand text ellipses.
+  &__logo {
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--p-border-radius-sm);
+    flex-shrink: 0;
+  }
+
+  &__brand-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+  }
+
+  &__brand-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--p-surface-400);
+    line-height: 1.1;
+  }
+
+  &__brand-name {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--p-surface-0);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__brand-caret {
+    font-size: 0.75rem;
+    color: var(--p-surface-400);
+    flex-shrink: 0;
+    transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  // ── Nav ───────────────────────────────────────────────────────────────────
+
+  &__nav {
+    flex: 1;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    min-height: 3rem; // 48px — Fitts touch (bumped from 40px for mobile)
+    border-radius: var(--p-border-radius-md);
+    color: var(--p-surface-300);
+    text-decoration: none;
+    font-size: 0.9375rem; // MD3 label-large
+    transition:
+      background 200ms cubic-bezier(0.2, 0, 0, 1),
+      color 200ms cubic-bezier(0.2, 0, 0, 1);
+
+    i {
+      font-size: 1rem;
+      width: 1rem;
+      text-align: center;
+    }
+
+    &:hover {
+      background: var(--p-surface-700);
+      color: var(--p-surface-0);
+    }
+
+    &--active {
+      background: var(--p-primary-600);
+      color: var(--p-surface-0);
+
+      &:hover {
+        background: var(--p-primary-700);
+      }
+    }
+
+    // Sign-out modifier — the row is a <button>, so we neutralise the
+    // browser's button defaults (background, border, font, cursor) but
+    // keep the inherited `.sidebar__nav-item` flex/padding/color rules.
+    // No `all: unset` — that resets `font-size` and `min-height` too, and
+    // we don't want to redeclare half the parent block. Width comes from
+    // the flex-column parent (`__footer`), so no explicit `width: 100%`.
+    &--signout {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      font: inherit;
+      cursor: pointer;
+      text-align: left;
+
+      &:focus-visible {
+        outline: 2px solid var(--p-primary-400);
+        outline-offset: -2px;
+      }
+    }
+  }
+
+  // Footer section — separated from the nav so the sign-out doesn't read
+  // as another destination. Pushed to the bottom via margin-top auto.
+  // Flex column mirrors `__nav` so the sign-out button stretches to the
+  // full sidebar width like every other nav row, no `width: 100%` magic.
+  &__footer {
+    padding: 0.5rem;
+    margin-top: auto;
+    border-top: 1px solid var(--p-surface-800);
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+// ── Main content ───────────────────────────────────────────────────────────────
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--p-surface-50);
+}
+
+// ── Motion ─────────────────────────────────────────────────────────────────────
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

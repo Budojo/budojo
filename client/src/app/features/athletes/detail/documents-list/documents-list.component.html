@@ -1,0 +1,150 @@
+<p-toast position="top-right" />
+<p-confirmpopup />
+
+<section class="documents-list">
+  <!-- Controls row: one primary CTA max (Krug) + secondary toggle. Add button
+       is disabled until M3.3 ships; tooltip makes the disabled state self-evident
+       (Norman signifier). -->
+  <header class="documents-list__controls">
+    <div class="documents-list__heading">
+      <h2>Documents</h2>
+      @if (!loading()) {
+        <span class="documents-list__count">
+          {{ activeCount() }} active
+          @if (showCancelled() && cancelledCount() > 0) {
+            , {{ cancelledCount() }} cancelled
+          }
+        </span>
+      }
+    </div>
+
+    <div class="documents-list__actions">
+      <label for="show-cancelled" class="documents-list__toggle" data-cy="show-cancelled-toggle">
+        <p-toggleswitch
+          [ngModel]="showCancelled()"
+          (ngModelChange)="onToggleCancelled($event)"
+          [ariaLabel]="'Show cancelled documents'"
+          inputId="show-cancelled"
+        />
+        <span class="documents-list__toggle-label">Show cancelled</span>
+      </label>
+
+      <p-button
+        label="Add document"
+        icon="pi pi-plus"
+        size="small"
+        [disabled]="athleteId() === null"
+        (onClick)="openUploadDialog()"
+        data-cy="add-document-btn"
+      />
+    </div>
+  </header>
+
+  @if (athleteId(); as id) {
+    <app-upload-document-dialog
+      [(visible)]="uploadDialogOpen"
+      [athleteId]="id"
+      (uploaded)="onUploaded($event)"
+    />
+  }
+
+  <p-table
+    [value]="documents()"
+    [loading]="loading()"
+    [rows]="50"
+    responsiveLayout="scroll"
+    styleClass="p-datatable-sm documents-list__table"
+    data-cy="documents-table"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Type</th>
+        <th>File</th>
+        <th>Issued</th>
+        <th>Expires</th>
+        <th>Status</th>
+        <th style="width: 8rem"></th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-doc>
+      <tr [class.documents-list__row--cancelled]="!!doc.deleted_at">
+        <td>{{ labelFor(doc) }}</td>
+        <td class="documents-list__filename">
+          <span>{{ doc.original_name }}</span>
+        </td>
+        <td>{{ doc.issued_at ?? '—' }}</td>
+        <td>{{ doc.expires_at ?? '—' }}</td>
+        <td>
+          @if (doc.deleted_at) {
+            <p-tag
+              severity="danger"
+              [rounded]="true"
+              [value]="'Cancelled on ' + cancelledOn(doc)"
+            />
+          } @else {
+            <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
+          }
+        </td>
+        <td class="documents-list__row-actions">
+          <!-- Norman constraint: on a tombstone (file wiped), download and delete
+               are disabled by absence, not by error. Hide entirely. -->
+          @if (!doc.deleted_at) {
+            <p-button
+              icon="pi pi-download"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              (onClick)="download(doc)"
+              [ariaLabel]="'Download ' + doc.original_name"
+              pTooltip="Download"
+              tooltipPosition="left"
+              data-cy="download-btn"
+            />
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              size="small"
+              (onClick)="confirmDelete($event, doc)"
+              [ariaLabel]="'Delete ' + doc.original_name"
+              pTooltip="Delete"
+              tooltipPosition="left"
+              data-cy="delete-btn"
+            />
+          }
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="6" class="documents-list__empty">
+          @if (loading()) {
+            <!-- Skeleton rows: Norman feedback rule, immediate visual even if data
+                 is < 300ms away — prevents layout jumping. -->
+            <div class="documents-list__skeleton">
+              <p-skeleton height="1.5rem" styleClass="mb-2"></p-skeleton>
+              <p-skeleton height="1.5rem" styleClass="mb-2"></p-skeleton>
+              <p-skeleton height="1.5rem"></p-skeleton>
+            </div>
+          } @else {
+            <div class="documents-list__empty-state">
+              <i class="pi pi-folder-open"></i>
+              <p class="documents-list__empty-title">
+                @if (showCancelled()) {
+                  No documents yet — active or cancelled.
+                } @else {
+                  No documents yet.
+                }
+              </p>
+              <p class="documents-list__empty-hint">
+                Use <strong>Add document</strong> above to upload the first one.
+              </p>
+            </div>
+          }
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>

@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Honour `HUSKY=0` as a kill switch — husky 9 does NOT auto-wrap user
+# hooks, so the env var only does anything if we check it ourselves.
+# This lets `release.yml` set `HUSKY: "0"` so semantic-release's
+# auto-commit of CHANGELOG.md doesn't trip commitlint's
+# footer-max-line-length on the long markdown URLs.
+[ "${HUSKY:-1}" = "0" ] && exit 0
+set -e
+
+npx --no-install commitlint --edit "$1"

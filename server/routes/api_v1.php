@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+
+// Public routes
+Route::get('/health', fn () => response()->json(['status' => 'ok']));
+Route::post('/auth/register', \App\Http\Controllers\Auth\RegisterController::class);
+Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class);
+
+// Authenticated routes
+Route::middleware('auth:sanctum')->group(function (): void {
+    Route::post('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'store']);
+    Route::get('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'show']);
+    Route::patch('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'update']);
+    Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo']);
+    Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo']);
+
+    Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
+        ->only(['index', 'store', 'show', 'update', 'destroy']);
+
+    // Documents — nested under athlete for creation and per-athlete listing
+    Route::get('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'index']);
+    Route::post('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'store']);
+
+    // Documents — flat routes for operations that target a single document.
+    // `/expiring` must come before `/{document}` routes or Laravel tries to
+    // bind the literal "expiring" as a document id.
+    Route::get('/documents/expiring', [\App\Http\Controllers\Document\DocumentController::class, 'expiring']);
+    // Download allows binding soft-deleted rows so the controller can return
+    // 410 Gone (tombstone) instead of the generic 404. See PRD P0.7b.
+    Route::get('/documents/{document}/download', [\App\Http\Controllers\Document\DocumentController::class, 'download'])
+        ->withTrashed();
+    Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
+    Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
+
+    // Payments — M5 (#104). Nested under athlete; the academy's monthly fee
+    // is set via PATCH /academy. `paid_current_month` lives on the athlete
+    // resource so the list page can render the badge without an extra hop.
+    Route::get('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'index']);
+    Route::post('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'store']);
+    Route::delete('/athletes/{athlete}/payments/{year}/{month}', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'destroy'])
+        ->whereNumber(['year', 'month']);
+
+    // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
+    // or Laravel binds "summary" as an attendance-record id and returns 404.
+    Route::get('/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'summary']);
+    Route::get('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'index']);
+    Route::post('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'store']);
+    Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy']);
+    Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
+});

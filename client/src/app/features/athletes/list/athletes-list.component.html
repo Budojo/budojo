@@ -1,0 +1,205 @@
+<p-toast position="top-right" />
+<p-confirmpopup />
+
+<div class="athletes-page">
+  <header class="athletes-page__header">
+    <div class="athletes-page__title-area">
+      <h1 class="athletes-page__title">Athletes</h1>
+      @if (!loading() && totalRecords() > 0) {
+        <span class="athletes-page__count">{{ totalRecords() }} total</span>
+      }
+    </div>
+    <p-button
+      label="Add athlete"
+      icon="pi pi-plus"
+      size="small"
+      (onClick)="goToNew()"
+      data-cy="add-athlete-btn"
+    />
+  </header>
+
+  <div class="athletes-page__widgets">
+    <!-- Document health signal — fetches on init, links to the full cross-athlete
+         expiring list. Its own state: the page never waits on it. -->
+    <app-expiring-documents-widget />
+
+    <!-- Monthly attendance pulse — same shape, different signal. -->
+    <app-monthly-summary-widget />
+  </div>
+
+  <!-- Filters -->
+  <div class="athletes-page__filters">
+    <p-iconfield iconPosition="left" styleClass="athletes-page__search">
+      <p-inputicon class="pi pi-search" />
+      <input
+        pInputText
+        type="text"
+        placeholder="Search by name"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="onSearchInput($event)"
+        autocomplete="off"
+        data-cy="athletes-search-input"
+      />
+    </p-iconfield>
+    <p-select
+      [options]="beltOptions"
+      [ngModel]="selectedBelt()"
+      (ngModelChange)="onBeltChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Belt"
+      styleClass="filter-select"
+    />
+    <p-select
+      [options]="statusOptions"
+      [ngModel]="selectedStatus()"
+      (ngModelChange)="onStatusChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Status"
+      styleClass="filter-select"
+    />
+    @if (hasMonthlyFee()) {
+      <p-select
+        [options]="paidOptions"
+        [ngModel]="selectedPaid()"
+        (ngModelChange)="onPaidChange($event)"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Paid"
+        styleClass="filter-select"
+        data-cy="athletes-paid-filter"
+      />
+    }
+  </div>
+
+  <!-- Table -->
+  <div class="athletes-page__table-wrapper">
+    <p-table
+      [value]="athletes()"
+      [loading]="loading()"
+      [showLoader]="false"
+      [rows]="20"
+      [first]="first()"
+      [totalRecords]="totalRecords()"
+      [paginator]="totalRecords() > 20"
+      (onPage)="onPageChange($event)"
+      [lazy]="true"
+      (onSort)="onSort($event)"
+      responsiveLayout="scroll"
+      styleClass="p-datatable-sm"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="last_name" data-cy="athletes-th-name">
+            Name <p-sortIcon field="last_name" />
+          </th>
+          <th pSortableColumn="belt" data-cy="athletes-th-belt">
+            Belt <p-sortIcon field="belt" />
+          </th>
+          <th data-cy="athletes-th-stripes" style="width: 3rem; text-align: center">Stripes</th>
+          <th>Status</th>
+          @if (hasMonthlyFee()) {
+            <th data-cy="athletes-th-paid">Paid</th>
+          }
+          <th pSortableColumn="joined_at" data-cy="athletes-th-joined">
+            Joined <p-sortIcon field="joined_at" />
+          </th>
+          <th style="width: 8rem"></th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-athlete>
+        <tr>
+          <td class="athlete-name">
+            <span class="athlete-name__text">
+              {{ athlete.first_name }} {{ athlete.last_name }}
+            </span>
+            <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
+          </td>
+          <td>
+            <app-belt-badge [belt]="athlete.belt" />
+          </td>
+          <td class="text-center">
+            <span class="stripes">{{ athlete.stripes }}</span>
+          </td>
+          <td>
+            <p-tag
+              [value]="statusLabel(athlete.status)"
+              [severity]="statusSeverity(athlete.status)"
+              [rounded]="true"
+            />
+          </td>
+          @if (hasMonthlyFee()) {
+            <td>
+              <app-paid-badge [paid]="athlete.paid_current_month" />
+            </td>
+          }
+          <td class="athlete-date">{{ athlete.joined_at }}</td>
+          <td class="athlete-actions">
+            <p-button
+              icon="pi pi-folder"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              (onClick)="goToDocuments(athlete)"
+              [ariaLabel]="'Documents of ' + athlete.first_name + ' ' + athlete.last_name"
+              pTooltip="Documents"
+              tooltipPosition="left"
+              data-cy="documents-btn"
+            />
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              (onClick)="goToEdit(athlete)"
+              [ariaLabel]="'Edit ' + athlete.first_name + ' ' + athlete.last_name"
+              pTooltip="Edit"
+              tooltipPosition="left"
+            />
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              size="small"
+              (onClick)="confirmDelete($event, athlete)"
+              [ariaLabel]="'Delete ' + athlete.first_name + ' ' + athlete.last_name"
+              pTooltip="Delete"
+              tooltipPosition="left"
+            />
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td [attr.colspan]="hasMonthlyFee() ? 7 : 6" class="empty-message">
+            @if (loading()) {
+              <!-- Skeleton rows replace the PrimeNG header-spinner that
+                   [showLoader]="false" suppressed. Canon § motion: skeletons
+                   communicate shape before content, a spinner just says
+                   "something is happening" — always use skeletons for list
+                   loading (Krug + Norman). -->
+              <div class="athletes-list__skeleton">
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" />
+              </div>
+            } @else {
+              <div class="empty-state">
+                <i class="pi pi-users empty-state__icon"></i>
+                <p class="empty-state__text">No athletes found.</p>
+                @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
+                  <p class="empty-state__hint">Try clearing your filters or search.</p>
+                }
+              </div>
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>

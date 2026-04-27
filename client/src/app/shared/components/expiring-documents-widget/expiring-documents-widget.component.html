@@ -1,0 +1,45 @@
+@if (loading()) {
+  <div class="widget widget--loading" aria-busy="true" data-cy="expiring-widget-loading">
+    <p-skeleton width="2.5rem" height="2.5rem" shape="circle" />
+    <div class="widget__text">
+      <p-skeleton width="10rem" height="1rem" />
+      <p-skeleton width="6rem" height="0.75rem" styleClass="widget__skeleton-sub" />
+    </div>
+  </div>
+} @else if (errored()) {
+  <div class="widget widget--muted" data-cy="expiring-widget-error">
+    <i class="widget__icon pi pi-exclamation-circle" aria-hidden="true"></i>
+    <div class="widget__text">
+      <span class="widget__title">Couldn't check expiring documents</span>
+      <span class="widget__hint">Refresh the page to try again</span>
+    </div>
+  </div>
+} @else {
+  <a
+    class="widget"
+    [class.widget--muted]="count() === 0"
+    [class.widget--alert]="count() > 0"
+    routerLink="/dashboard/documents/expiring"
+    [attr.aria-live]="'polite'"
+    data-cy="expiring-widget"
+  >
+    <i
+      class="widget__icon pi"
+      [class.pi-check-circle]="count() === 0"
+      [class.pi-exclamation-triangle]="count() > 0"
+      aria-hidden="true"
+    ></i>
+    <div class="widget__text">
+      @if (count() === 0) {
+        <span class="widget__title">All documents up to date</span>
+        <span class="widget__hint">No expirations in the next 30 days</span>
+      } @else {
+        <span class="widget__title" data-cy="expiring-widget-count">
+          {{ count() }} {{ count() === 1 ? 'document needs' : 'documents need' }} attention
+        </span>
+        <span class="widget__hint">Expired or expiring within 30 days</span>
+      }
+    </div>
+    <i class="widget__chevron pi pi-chevron-right" aria-hidden="true"></i>
+  </a>
+}

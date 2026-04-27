@@ -1,0 +1,34 @@
+// Inter — SF-substitute, 4 weights used across the design system
+// (Body 400, Headline 500, titles & CTAs 600, rarely 700).
+// Loaded before the theme so --p-font-family resolves to a loaded face.
+// Explicit `as` namespaces: Sass derives a default namespace from the
+// filename and "400"/"500"/… aren't valid Sass identifiers.
+@use '@fontsource/inter/400.css' as w400;
+@use '@fontsource/inter/500.css' as w500;
+@use '@fontsource/inter/600.css' as w600;
+@use '@fontsource/inter/700.css' as w700;
+
+@use 'primeicons/primeicons.css';
+
+// Budojo theme override — iOS-minimal token layer on top of the PrimeNG
+// Material preset. Imported last so its CSS-var overrides win against
+// any preset defaults. See docs/design/DESIGN_SYSTEM.md for the canon.
+@use 'styles/budojo-theme';
+
+// Budojo v2 variants — authoritative button / tag / field / card matrix
+// on top of the v1 tokens. Must be imported AFTER budojo-theme so its
+// class-hook overrides (.p-button, .p-tag, etc.) win. No new tokens,
+// only variant rules using the existing palette + semantics.
+@use 'styles/budojo-variants';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--p-font-family, system-ui, sans-serif);
+}

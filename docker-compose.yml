@@ -12,6 +12,8 @@ services:
       - ./server:/var/www/api
     env_file:
       - .env
+    environment:
+      RUN_MIGRATIONS: "1"
     networks:
       - budojo_network
     depends_on:

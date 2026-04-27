@@ -1,0 +1,358 @@
+<p-toast position="top-right" />
+
+<div class="athlete-form-page">
+  <header class="athlete-form-page__header">
+    <h1 class="athlete-form-page__title">
+      {{ mode() === 'create' ? 'Add athlete' : 'Edit athlete' }}
+    </h1>
+    <p class="athlete-form-page__subtitle">
+      {{
+        mode() === 'create'
+          ? 'Create a new athlete in your academy'
+          : 'Update this athlete’s details'
+      }}
+    </p>
+  </header>
+
+  @if (error()) {
+    <p-message severity="error" [text]="error()!" styleClass="w-full" />
+  }
+
+  @if (loading()) {
+    <div class="athlete-form-page__loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Loading athlete…</span>
+    </div>
+  } @else {
+    <form
+      [formGroup]="form"
+      (ngSubmit)="submit()"
+      novalidate
+      class="athlete-form"
+      data-cy="athlete-form"
+    >
+      <div class="athlete-form__row">
+        <div class="field">
+          <label for="first_name">First name <span class="required">*</span></label>
+          <input
+            pInputText
+            id="first_name"
+            type="text"
+            formControlName="first_name"
+            autocomplete="given-name"
+            [class.ng-invalid]="firstName.invalid && firstName.touched"
+            [class.ng-dirty]="firstName.touched"
+          />
+          @if (firstName.invalid && firstName.touched) {
+            <small class="field-error">
+              @if (firstName.errors?.['required']) {
+                First name is required.
+              } @else if (firstName.errors?.['maxlength']) {
+                Maximum 100 characters.
+              }
+            </small>
+          }
+        </div>
+
+        <div class="field">
+          <label for="last_name">Last name <span class="required">*</span></label>
+          <input
+            pInputText
+            id="last_name"
+            type="text"
+            formControlName="last_name"
+            autocomplete="family-name"
+            [class.ng-invalid]="lastName.invalid && lastName.touched"
+            [class.ng-dirty]="lastName.touched"
+          />
+          @if (lastName.invalid && lastName.touched) {
+            <small class="field-error">
+              @if (lastName.errors?.['required']) {
+                Last name is required.
+              } @else if (lastName.errors?.['maxlength']) {
+                Maximum 100 characters.
+              }
+            </small>
+          }
+        </div>
+      </div>
+
+      <div class="athlete-form__row">
+        <div class="field">
+          <label for="email">Email <span class="optional">(optional)</span></label>
+          <input
+            pInputText
+            id="email"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            [class.ng-invalid]="email.invalid && email.touched"
+            [class.ng-dirty]="email.touched"
+          />
+          @if (email.invalid && email.touched) {
+            <small class="field-error">
+              @if (email.errors?.['email']) {
+                Enter a valid email address.
+              } @else if (email.errors?.['maxlength']) {
+                Maximum 255 characters.
+              }
+            </small>
+          }
+        </div>
+
+        <div class="field">
+          <label for="phone_national_number">Phone <span class="optional">(optional)</span></label>
+          <p-inputgroup>
+            <p-select
+              inputId="phone_country_code"
+              [options]="countryCodeOptions"
+              formControlName="phone_country_code"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Code"
+              ariaLabel="Phone country code"
+              appendTo="body"
+              styleClass="phone-country-code"
+              [class.ng-invalid]="phoneCountryCode.invalid && phoneCountryCode.touched"
+            />
+            <input
+              pInputText
+              id="phone_national_number"
+              type="tel"
+              formControlName="phone_national_number"
+              autocomplete="tel-national"
+              placeholder="National number"
+              aria-label="Phone national number"
+              [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
+              [class.ng-dirty]="phoneNationalNumber.touched"
+            />
+          </p-inputgroup>
+          @if (phoneCountryCode.invalid && phoneCountryCode.touched) {
+            <small class="field-error">
+              @if (phoneCountryCode.errors?.['phonePairRequired']) {
+                Country code is required when a national number is entered.
+              }
+            </small>
+          }
+          @if (phoneNationalNumber.invalid && phoneNationalNumber.touched) {
+            <small class="field-error">
+              @if (phoneNationalNumber.errors?.['phonePairRequired']) {
+                National number is required when a country code is selected.
+              } @else if (phoneNationalNumber.errors?.['pattern']) {
+                Digits only — no spaces, dashes, or parentheses.
+              } @else if (phoneNationalNumber.errors?.['maxlength']) {
+                Maximum 20 digits.
+              }
+            </small>
+          }
+        </div>
+      </div>
+
+      <div class="athlete-form__row">
+        <div class="field">
+          <label for="date_of_birth">Date of birth <span class="optional">(optional)</span></label>
+          <p-datepicker
+            inputId="date_of_birth"
+            formControlName="date_of_birth"
+            dateFormat="yy-mm-dd"
+            [showIcon]="true"
+            [maxDate]="today"
+            appendTo="body"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="field">
+          <label for="joined_at">Joined <span class="required">*</span></label>
+          <p-datepicker
+            inputId="joined_at"
+            formControlName="joined_at"
+            dateFormat="yy-mm-dd"
+            [showIcon]="true"
+            appendTo="body"
+            styleClass="w-full"
+            [class.ng-invalid]="joinedAt.invalid && joinedAt.touched"
+          />
+          @if (joinedAt.invalid && joinedAt.touched) {
+            <small class="field-error">Joined date is required.</small>
+          }
+        </div>
+      </div>
+
+      <div class="athlete-form__row athlete-form__row--three">
+        <div class="field">
+          <label for="belt">Belt <span class="required">*</span></label>
+          <p-select
+            inputId="belt"
+            [options]="beltOptions"
+            formControlName="belt"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="field">
+          <label for="stripes">Stripes <span class="required">*</span></label>
+          <p-select
+            inputId="stripes"
+            [options]="stripesOptions"
+            formControlName="stripes"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="field">
+          <label for="status">Status <span class="required">*</span></label>
+          <p-select
+            inputId="status"
+            [options]="statusOptions"
+            formControlName="status"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            styleClass="w-full"
+          />
+        </div>
+      </div>
+
+      <fieldset class="field address-group" formGroupName="address">
+        <legend class="field__label">Address <span class="optional">(optional)</span></legend>
+
+        <div class="field">
+          <label for="athlete-address-line1">Street + civic number</label>
+          <input
+            pInputText
+            id="athlete-address-line1"
+            type="text"
+            formControlName="line1"
+            autocomplete="address-line1"
+            placeholder="Via Roma 1"
+            maxlength="255"
+            data-cy="athlete-form-address-line1"
+            [class.ng-invalid]="addressLine1.invalid && addressLine1.touched"
+            [class.ng-dirty]="addressLine1.touched"
+          />
+        </div>
+
+        <div class="field">
+          <label for="athlete-address-line2">
+            Apt / floor / unit <span class="optional">(optional)</span>
+          </label>
+          <input
+            pInputText
+            id="athlete-address-line2"
+            type="text"
+            formControlName="line2"
+            autocomplete="address-line2"
+            placeholder="Scala B, interno 4"
+            maxlength="255"
+            data-cy="athlete-form-address-line2"
+          />
+        </div>
+
+        <div class="address-group__row">
+          <div class="field">
+            <label for="athlete-address-postal-code">Postal code (CAP)</label>
+            <input
+              pInputText
+              id="athlete-address-postal-code"
+              type="text"
+              formControlName="postal_code"
+              autocomplete="postal-code"
+              placeholder="00100"
+              inputmode="numeric"
+              maxlength="5"
+              data-cy="athlete-form-address-postal-code"
+              [class.ng-invalid]="addressPostalCode.invalid && addressPostalCode.touched"
+              [class.ng-dirty]="addressPostalCode.touched"
+            />
+            @if (addressPostalCode.invalid && addressPostalCode.touched) {
+              <small class="field-error">
+                @if (addressPostalCode.errors?.['pattern']) {
+                  Italian CAP must be exactly 5 digits.
+                }
+              </small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="athlete-address-city">City</label>
+            <input
+              pInputText
+              id="athlete-address-city"
+              type="text"
+              formControlName="city"
+              autocomplete="address-level2"
+              placeholder="Roma"
+              maxlength="100"
+              data-cy="athlete-form-address-city"
+            />
+          </div>
+
+          <div class="field">
+            <label for="athlete-address-province">Province</label>
+            <p-select
+              inputId="athlete-address-province"
+              [options]="provinceOptions"
+              formControlName="province"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="—"
+              ariaLabel="Province"
+              appendTo="body"
+              styleClass="w-full"
+              [showClear]="true"
+              data-cy="athlete-form-address-province"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="athlete-address-country">Country</label>
+          <p-select
+            inputId="athlete-address-country"
+            [options]="countryOptions"
+            formControlName="country"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            styleClass="w-full"
+            data-cy="athlete-form-address-country"
+          />
+        </div>
+
+        @if (addressGroup.errors?.['addressIncomplete'] && addressGroup.touched) {
+          <small class="field-error" data-cy="athlete-form-address-error">
+            Fill every required address field, or clear them all to leave the athlete without an
+            address.
+          </small>
+        }
+        <small class="field-hint">
+          Leave every field empty to keep the athlete without an address on file.
+        </small>
+      </fieldset>
+
+      <div class="athlete-form__actions">
+        <p-button
+          type="button"
+          label="Cancel"
+          severity="secondary"
+          [text]="true"
+          (onClick)="cancel()"
+          [disabled]="submitting()"
+        />
+        <p-button
+          type="submit"
+          [label]="mode() === 'create' ? 'Create athlete' : 'Save changes'"
+          [loading]="submitting()"
+          [disabled]="submitting()"
+        />
+      </div>
+    </form>
+  }
+</div>

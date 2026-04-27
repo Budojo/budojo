@@ -1,0 +1,97 @@
+<section class="summary-page" data-cy="monthly-summary-page">
+  <header class="summary-page__header">
+    <div class="summary-page__heading">
+      <p class="summary-page__eyebrow">Attendance summary</p>
+      <h1 class="summary-page__title" data-cy="monthly-summary-month">{{ monthLabel() }}</h1>
+      <p class="summary-page__counter">
+        {{ totalDays() }} training day{{ totalDays() === 1 ? '' : 's' }} ·
+        {{ rows().length }} athlete{{ rows().length === 1 ? '' : 's' }}
+      </p>
+    </div>
+
+    <div class="summary-page__nav">
+      <p-button
+        icon="pi pi-chevron-left"
+        [text]="true"
+        [rounded]="true"
+        (onClick)="prevMonth()"
+        ariaLabel="Previous month"
+        data-cy="monthly-summary-prev"
+      />
+      <p-button
+        icon="pi pi-chevron-right"
+        [text]="true"
+        [rounded]="true"
+        [disabled]="!canGoNext()"
+        (onClick)="nextMonth()"
+        ariaLabel="Next month"
+        data-cy="monthly-summary-next"
+      />
+    </div>
+  </header>
+
+  <div class="summary-page__filter">
+    <input
+      pInputText
+      type="search"
+      placeholder="Filter by name"
+      [ngModel]="nameFilter()"
+      (ngModelChange)="onFilterChange($event)"
+      data-cy="monthly-summary-filter"
+      aria-label="Filter athletes by name"
+    />
+  </div>
+
+  @if (loading()) {
+    <div class="summary-page__skeleton" data-cy="monthly-summary-skeleton">
+      @for (_ of [0, 0, 0, 0, 0]; track $index) {
+        <p-skeleton width="100%" height="2.5rem" />
+      }
+    </div>
+  } @else if (errored()) {
+    <div class="summary-page__error" role="alert" data-cy="monthly-summary-error">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>Couldn't load this month. Please try again.</span>
+    </div>
+  } @else if (displayRows().length === 0) {
+    <div class="summary-page__empty" data-cy="monthly-summary-empty-page">
+      <i class="pi pi-users" aria-hidden="true"></i>
+      <p>
+        @if (nameFilter().trim()) {
+          No athletes match your filter.
+        } @else {
+          No attendance recorded this month yet.
+        }
+      </p>
+    </div>
+  } @else {
+    <p-table
+      [value]="displayRows()"
+      [rowTrackBy]="trackByAthlete"
+      styleClass="summary-page__table"
+      data-cy="monthly-summary-table"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th scope="col">Athlete</th>
+          <th scope="col" class="summary-page__count-col">Days</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        @let scheduled = scheduledCount();
+        @let percent = ratePercent(row.count);
+        <tr [attr.data-cy]="'monthly-summary-table-row-' + row.athlete_id">
+          <td>{{ row.first_name }} {{ row.last_name }}</td>
+          <td class="summary-page__count-col">
+            @if (scheduled !== null && percent !== null) {
+              {{ row.count }} / {{ scheduled }}
+              <span class="summary-page__count-pct">· {{ percent }}%</span>
+            } @else {
+              {{ row.count }}
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+</section>

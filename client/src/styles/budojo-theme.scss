@@ -1,0 +1,360 @@
+// ============================================================================
+// Budojo theme — override layer for the PrimeNG 21 Material preset.
+// Import from client/src/styles.scss:  @use 'styles/budojo-theme';
+//
+// Direction: Apple HIG / iOS 17+ minimal.
+//   · Near-monochrome neutrals + one accent (indigo-adjacent).
+//   · Hairline dividers. Max 2 elevation levels (surface + floating).
+//   · 12px radius on cards/buttons, 16–24px on dialogs/sheets.
+//   · Decelerate motion, no bounce.
+//
+// STRUCTURE — this file has two layers, in order:
+//   1. CSS custom property overrides on PrimeNG's --p-* tokens
+//      (:root for light, .dark for dark). This is the bulk of the file.
+//   2. A small set of surgical selector-based overrides (e.g. .p-button,
+//      .p-dialog, .p-inputtext) for the handful of cases where the
+//      Material preset has no token exposed for the behavior we need —
+//      killing the Material box-shadow, suppressing button uppercase,
+//      turning .p-dialog into a mobile bottom sheet, etc.
+//
+// This selector layer is intentional and documented: per `client/CLAUDE.md`
+// the rule "do not restyle PrimeNG internals" applies to component-local
+// SCSS. This GLOBAL override layer is the sanctioned exception. Any new
+// selector added here must have a one-line comment explaining why a token
+// alone can't express it.
+// ============================================================================
+
+// Inter — loaded via @fontsource/inter (already an approved dep).
+// Keep the @use statement in styles.scss alongside this one:
+//   @use '@fontsource/inter/400.css';  @use '@fontsource/inter/500.css';
+//   @use '@fontsource/inter/600.css';  @use '@fontsource/inter/700.css';
+
+:root {
+  // ───── Accent (PrimeNG's --p-primary-*) ──────────────────────────
+  --p-primary-50: #eef1ff;
+  --p-primary-100: #dde2ff;
+  --p-primary-200: #bcc4ff;
+  --p-primary-300: #9aa3ff;
+  --p-primary-400: #7b8bff;
+  --p-primary-500: #5b6cff;
+  --p-primary-600: #4554ed;
+  --p-primary-700: #3644c7;
+  --p-primary-800: #2a369e;
+  --p-primary-900: #1f2a7a;
+  --p-primary-950: #131a4d;
+  --p-primary-color: var(--p-primary-500);
+  --p-primary-contrast-color: #ffffff;
+  --p-primary-hover-color: var(--p-primary-600);
+  --p-primary-active-color: var(--p-primary-700);
+
+  // ───── Surface (neutrals) ────────────────────────────────────────
+  --p-surface-0: #ffffff;
+  --p-surface-50: #fafafa;
+  --p-surface-100: #f5f5f7;
+  --p-surface-200: #ebebef;
+  --p-surface-300: #dcdce0;
+  --p-surface-400: #c4c4c9;
+  --p-surface-500: #8e8e93;
+  --p-surface-600: #636366;
+  --p-surface-700: #3a3a3c;
+  --p-surface-800: #1c1c1e;
+  --p-surface-900: #0a0a0b;
+  --p-surface-950: #000000;
+
+  // ───── Content + text ────────────────────────────────────────────
+  --p-content-background: var(--p-surface-0);
+  --p-content-hover-background: var(--p-surface-100);
+  // Hairline borders reuse surface-300 so palette tweaks stay in one place.
+  --p-content-border-color: var(--p-surface-300);
+  --p-content-color: var(--p-surface-900);
+  --p-content-hover-color: var(--p-surface-900);
+
+  --p-text-color: var(--p-surface-900);
+  --p-text-hover-color: var(--p-surface-900);
+  --p-text-muted-color: var(--p-surface-500);
+  --p-text-hover-muted-color: var(--p-surface-700);
+
+  // ───── Overlay / mask (dialog, drawer backdrop) ─────────────────
+  --p-mask-background: rgba(10, 10, 11, 0.32);
+
+  // ───── Border radius ─────────────────────────────────────────────
+  --p-border-radius-xs: 4px;
+  --p-border-radius-sm: 8px;
+  --p-border-radius-md: 12px;
+  --p-border-radius-lg: 16px;
+  --p-border-radius-xl: 24px;
+  // "full" is the pill-capsule radius used for tags, avatars, toggles —
+  // anything canon calls "fully rounded". 9999px is the idiomatic way to
+  // guarantee max-possible rounding regardless of element size. Without
+  // this, .p-tag { border-radius: var(--p-border-radius-full) } falls
+  // back to PrimeNG Material's default and tags look half-rounded.
+  --p-border-radius-full: 9999px;
+
+  // ───── Focus ring — iOS-style 2px outer, never inset ────────────
+  --p-focus-ring-width: 2px;
+  --p-focus-ring-style: solid;
+  --p-focus-ring-color: var(--p-primary-500);
+  --p-focus-ring-offset: 2px;
+  --p-focus-ring-shadow: 0 0 0 2px var(--p-surface-0), 0 0 0 4px var(--p-primary-500);
+
+  // ───── Form field ────────────────────────────────────────────────
+  // "filled-*" variants are what v2 budojo-variants.scss addresses;
+  // the non-prefixed names stay for components that read them directly.
+  // Focus flips fill to surface-0 so the accent border reads cleanly —
+  // canon § Form field matrix.
+  --p-form-field-background: var(--p-surface-100); // iOS grouped list cell
+  --p-form-field-disabled-background: var(--p-surface-100);
+  --p-form-field-filled-background: var(--p-surface-100);
+  --p-form-field-filled-hover-background: var(--p-surface-200);
+  --p-form-field-filled-focus-background: var(--p-surface-0);
+  --p-form-field-hover-background: var(--p-surface-200);
+  --p-form-field-border-color: transparent;
+  --p-form-field-hover-border-color: transparent;
+  --p-form-field-focus-border-color: var(--p-primary-500);
+  --p-form-field-color: var(--p-surface-900);
+  --p-form-field-placeholder-color: var(--p-surface-400);
+  --p-form-field-border-radius: var(--p-border-radius-md);
+  --p-form-field-padding-x: 12px;
+  --p-form-field-padding-y: 12px;
+  --p-form-field-shadow: none; // flat, no MD3 underline
+  // Focus is communicated via the border color transition on the input,
+  // not a ring — avoids double indicators when PrimeNG applies the ring
+  // on top of the border (canon § Visual foundations: "input border
+  // invisible until focus, then --budojo-accent").
+  --p-form-field-focus-ring-width: 0;
+
+  // ───── Font ──────────────────────────────────────────────────────
+  --p-font-family:
+    'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+
+  // ───── Budojo custom (semantics PrimeNG lacks) ───────────────────
+  --budojo-elevation-surface: 0 0 0 1px var(--p-content-border-color);
+  --budojo-elevation-floating: 0 1px 2px rgba(10, 10, 11, 0.06), 0 8px 24px rgba(10, 10, 11, 0.12);
+  --budojo-elevation-sheet: 0 -24px 48px rgba(10, 10, 11, 0.18);
+
+  --budojo-motion-fast: 160ms;
+  --budojo-motion-base: 240ms;
+  --budojo-motion-slow: 360ms;
+  --budojo-motion-decelerate: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --budojo-safe-top: env(safe-area-inset-top, 0px);
+  --budojo-safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  // Semantic (iOS system)
+  --budojo-success: #34c759;
+  --budojo-warning: #ff9f0a;
+  --budojo-danger: #ff3b30;
+  --budojo-info: #0a84ff;
+
+  // Soft-danger surface — used by the row-level "delete" button variant
+  // (canon § Button matrix → destructive (soft)). Defined alongside the
+  // hard danger so both render through tokens, not string literals.
+  --budojo-danger-soft: #ffe5e3;
+}
+
+// ============================================================================
+// Dark mode — activated by `.dark` on <html>.
+// Matches `providePrimeNG({ theme: { options: { darkModeSelector: '.dark' } } })`.
+// iOS-style true-black app background, elevated surfaces step up from it.
+// ============================================================================
+
+.dark {
+  --p-primary-50: #131a4d;
+  --p-primary-100: #1f2a7a;
+  --p-primary-200: #2a369e;
+  --p-primary-300: #3644c7;
+  --p-primary-400: #5b6cff;
+  --p-primary-500: #7b8bff;
+  --p-primary-600: #9aa3ff;
+  --p-primary-700: #bcc4ff;
+  --p-primary-color: var(--p-primary-500);
+  --p-primary-contrast-color: #0a0a0b;
+
+  --p-surface-0: #1c1c1e; // grouped-list cell on dark
+  --p-surface-50: #151517;
+  --p-surface-100: #1c1c1e;
+  --p-surface-200: #2c2c2e;
+  --p-surface-300: #3a3a3c;
+  --p-surface-400: #48484a;
+  --p-surface-500: #8e8e93;
+  --p-surface-600: #aeaeb2;
+  --p-surface-700: #c7c7cc;
+  --p-surface-800: #e5e5ea;
+  --p-surface-900: #f2f2f7;
+  --p-surface-950: #ffffff;
+
+  --p-content-background: var(--p-surface-100);
+  --p-content-hover-background: var(--p-surface-200);
+  --p-content-border-color: rgba(255, 255, 255, 0.12);
+  --p-content-color: var(--p-surface-900);
+
+  --p-text-color: var(--p-surface-900);
+  --p-text-muted-color: var(--p-surface-500);
+
+  --p-mask-background: rgba(0, 0, 0, 0.52);
+
+  --p-form-field-background: rgba(255, 255, 255, 0.06);
+  --p-form-field-hover-background: rgba(255, 255, 255, 0.1);
+  --p-form-field-disabled-background: rgba(255, 255, 255, 0.04);
+  --p-form-field-filled-background: rgba(255, 255, 255, 0.06);
+  --p-form-field-color: var(--p-surface-900);
+  --p-form-field-placeholder-color: var(--p-surface-500);
+
+  --budojo-elevation-surface: 0 0 0 1px var(--p-content-border-color);
+  --budojo-elevation-floating: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+// ============================================================================
+// Opinionated surgical tweaks — the minimum CSS needed to translate
+// PrimeNG's Material defaults into an iOS feel. Token overrides alone
+// cannot reach into component-internal layout.
+// ============================================================================
+
+// Buttons — flat pills, no text-transform uppercase (Material's default)
+.p-button {
+  text-transform: none;
+  letter-spacing: -0.003em;
+  box-shadow: none !important; // kill Material elevation
+  border-radius: var(--p-border-radius-md);
+  transition:
+    background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:active {
+    opacity: 0.88;
+  } // iOS press — opacity, not scale
+}
+
+// Dialog — centered on desktop, bottom sheet on mobile
+.p-dialog {
+  border-radius: var(--p-border-radius-lg);
+  box-shadow: var(--budojo-elevation-floating);
+  border: none;
+
+  .p-dialog-header {
+    padding: 20px 20px 8px;
+  }
+  .p-dialog-content {
+    padding: 8px 20px 20px;
+  }
+}
+@media (max-width: 767px) {
+  .p-dialog.upload-dialog,
+  .p-dialog.bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    margin: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: var(--p-border-radius-xl) var(--p-border-radius-xl) 0 0;
+    box-shadow: var(--budojo-elevation-sheet);
+    padding-bottom: var(--budojo-safe-bottom);
+    animation: budojo-sheet-in var(--budojo-motion-base) var(--budojo-motion-decelerate);
+  }
+}
+
+// Inputs — remove Material's underline, use filled iOS pill
+.p-inputtext,
+.p-password-input,
+.p-select,
+.p-textarea,
+.p-datepicker-input {
+  background: var(--p-form-field-background);
+  border: 1px solid transparent;
+  border-radius: var(--p-form-field-border-radius);
+  box-shadow: none !important; // kill Material filled underline
+  transition:
+    background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-form-field-hover-background);
+  }
+  &:focus,
+  &.p-focus {
+    border-color: var(--p-primary-500);
+    background: var(--p-form-field-background);
+  }
+}
+
+// Tables — grouped-list look
+.p-datatable .p-datatable-thead > tr > th {
+  background: transparent;
+  border-bottom: 1px solid var(--p-content-border-color);
+  font: 600 12px/16px var(--p-font-family);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+  padding: 12px 16px;
+}
+.p-datatable .p-datatable-tbody > tr > td {
+  border-bottom: 1px solid var(--p-content-border-color);
+  padding: 12px 16px;
+  font-size: 15px;
+}
+.p-datatable .p-datatable-tbody > tr:last-child > td {
+  border-bottom: none;
+}
+
+// Tag — rounded capsule, flat fill
+.p-tag {
+  font-weight: 600;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: var(--p-border-radius-full);
+  letter-spacing: -0.003em;
+}
+
+// Toggle switch — iOS-green when on
+.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider {
+  background: var(--budojo-success);
+}
+.p-toggleswitch .p-toggleswitch-slider {
+  border-radius: var(--p-border-radius-full);
+}
+
+// Toast — floating iOS banner.
+// No backdrop-filter: canon § Visual foundations calls out that backdrop
+// blur is expensive on older iPhones in standalone PWA mode, and frosted-
+// glass surfaces are discouraged globally. The translucent background +
+// shadow alone carry enough depth. See docs/design/README.md.
+.p-toast .p-toast-message {
+  border-radius: var(--p-border-radius-lg);
+  box-shadow: var(--budojo-elevation-floating);
+  background: color-mix(in srgb, var(--p-content-background) 92%, transparent);
+}
+
+// Skeleton — subtle iOS shimmer
+.p-skeleton {
+  border-radius: var(--p-border-radius-sm);
+  background: var(--p-surface-100);
+}
+
+@keyframes budojo-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+// Utility: pressable opacity feedback for non-button interactive rows.
+// Matches .p-button:active at 0.88 — canon § Press: "opacity → 0.88, no
+// transform. Applies to every pressable." Aligning prevents visual
+// divergence between pressable rows and actual buttons.
+.budojo-pressable {
+  transition: opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+}
+.budojo-pressable:active {
+  opacity: 0.88;
+}
+
+// Utility: hairline divider (1 CSS px, device pixel on retina is sharper)
+.budojo-hairline {
+  border-top: 1px solid var(--p-content-border-color);
+}

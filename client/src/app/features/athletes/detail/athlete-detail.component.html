@@ -1,0 +1,57 @@
+<div class="athlete-detail-page">
+  <!-- Jakob's Law: standard back-to-list position, top-left. Text+arrow so it's
+       self-evident (Krug) — not a bare icon. -->
+  <a
+    routerLink="/dashboard/athletes"
+    class="athlete-detail-page__back"
+    data-cy="athlete-detail-back"
+  >
+    <i class="pi pi-arrow-left"></i>
+    <span>Athletes</span>
+  </a>
+
+  @if (loading()) {
+    <div class="athlete-detail-page__loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Loading athlete…</span>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="athlete-detail-page__error" role="alert">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  @if (athlete(); as a) {
+    <header class="athlete-detail-page__header">
+      <div class="athlete-detail-page__title-row">
+        <h1 class="athlete-detail-page__name">{{ fullName() }}</h1>
+        <app-age-badge [dateOfBirth]="a.date_of_birth" />
+        <app-belt-badge [belt]="a.belt" />
+        <p-tag
+          [value]="statusLabel(a.status)"
+          [severity]="statusSeverity(a.status)"
+          [rounded]="true"
+        />
+      </div>
+      <p class="athlete-detail-page__meta">Joined {{ a.joined_at }}</p>
+    </header>
+
+    <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">
+      <p-tablist>
+        <p-tab value="documents" routerLink="documents" data-cy="athlete-tab-documents">
+          <i class="pi pi-file"></i>
+          <span>Documents</span>
+        </p-tab>
+        <p-tab value="attendance" routerLink="attendance" data-cy="athlete-tab-attendance">
+          <i class="pi pi-calendar"></i>
+          <span>Attendance</span>
+        </p-tab>
+      </p-tablist>
+    </p-tabs>
+
+    <router-outlet />
+  }
+</div>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Budojo</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Budojo — BJJ gym management. Track athletes, documents, and attendance."
+    />
+    <meta name="theme-color" content="#0a0a0b" />
+
+    <!-- PWA manifest (icons, name, theme, start_url). -->
+    <link rel="manifest" href="manifest.webmanifest" />
+
+    <!-- Favicons + installable icons.
+         - ICO for legacy Chrome / any fallback
+         - 192 PNG hint for modern Chromium — it downscales better than
+           the ICO's 48 px bitmap, and the `sizes` hint matches the real
+           asset so the browser can't pick a mismatched tile
+         - apple-touch-icon for iOS Safari "Add to Home Screen" -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+
+    <!-- iOS PWA meta: capable + status-bar style. Deprecated in name but still
+         honoured by Safari on iOS 16.4+, which is our PWA floor. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Budojo" />
+    <meta name="mobile-web-app-capable" content="yes" />
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

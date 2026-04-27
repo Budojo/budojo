@@ -1,0 +1,213 @@
+<p-toast position="top-right" />
+
+<section class="form" data-cy="academy-form">
+  <header class="form__header">
+    <p class="form__eyebrow">Academy</p>
+    <h1 class="form__title">Edit academy</h1>
+  </header>
+
+  @if (error()) {
+    <p-message
+      severity="error"
+      [text]="error()!"
+      styleClass="form__alert"
+      data-cy="academy-form-error"
+    />
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form__fields">
+    <div class="field">
+      <label for="academy-name"
+        >Name <span class="field__required" aria-hidden="true">*</span></label
+      >
+      <input
+        pInputText
+        id="academy-name"
+        type="text"
+        formControlName="name"
+        autocomplete="organization"
+        placeholder="Gracie Barra Lisboa"
+        maxlength="255"
+        data-cy="academy-form-name"
+        [class.ng-invalid]="name.invalid && name.touched"
+        [class.ng-dirty]="name.touched"
+        [attr.aria-invalid]="name.invalid && name.touched ? 'true' : null"
+        [attr.aria-describedby]="name.invalid && name.touched ? 'academy-name-error' : null"
+      />
+      @if (name.invalid && name.touched) {
+        <small id="academy-name-error" class="field__error" data-cy="academy-form-name-error">
+          @if (name.errors?.['required'] || name.errors?.['whitespace']) {
+            Academy name is required.
+          } @else if (name.errors?.['maxlength']) {
+            Maximum 255 characters.
+          }
+        </small>
+      }
+    </div>
+
+    <!--
+      Permalink: rendered as a static info line, not an input. Using an
+      <input readonly> would signal "you CAN edit this, just not right
+      now" — wrong signifier. A <p> inside a muted row communicates the
+      immutability correctly (Norman § affordance + signifier).
+    -->
+    <div class="field field--readonly">
+      <span class="field__label">Permalink</span>
+      <p class="field__readonly-value" data-cy="academy-form-slug">
+        {{ slug() || '—' }}
+      </p>
+      <small class="field__hint">
+        Stays stable across renames — bookmarks and shared links keep working.
+      </small>
+    </div>
+
+    <fieldset class="field address-group" formGroupName="address">
+      <legend class="field__label">Address <span class="field__optional">(optional)</span></legend>
+
+      <div class="field">
+        <label for="academy-address-line1">Street + civic number</label>
+        <input
+          pInputText
+          id="academy-address-line1"
+          type="text"
+          formControlName="line1"
+          autocomplete="address-line1"
+          placeholder="Via Roma 1"
+          maxlength="255"
+          data-cy="academy-form-address-line1"
+          [class.ng-invalid]="addressLine1.invalid && addressLine1.touched"
+          [class.ng-dirty]="addressLine1.touched"
+        />
+      </div>
+
+      <div class="field">
+        <label for="academy-address-line2">
+          Apt / floor / unit <span class="field__optional">(optional)</span>
+        </label>
+        <input
+          pInputText
+          id="academy-address-line2"
+          type="text"
+          formControlName="line2"
+          autocomplete="address-line2"
+          placeholder="Scala B, interno 4"
+          maxlength="255"
+          data-cy="academy-form-address-line2"
+        />
+      </div>
+
+      <div class="address-group__row">
+        <div class="field">
+          <label for="academy-address-postal-code">Postal code (CAP)</label>
+          <input
+            pInputText
+            id="academy-address-postal-code"
+            type="text"
+            formControlName="postal_code"
+            autocomplete="postal-code"
+            placeholder="00100"
+            inputmode="numeric"
+            maxlength="5"
+            data-cy="academy-form-address-postal-code"
+            [class.ng-invalid]="addressPostalCode.invalid && addressPostalCode.touched"
+            [class.ng-dirty]="addressPostalCode.touched"
+          />
+          @if (addressPostalCode.invalid && addressPostalCode.touched) {
+            <small class="field__error">
+              @if (addressPostalCode.errors?.['pattern']) {
+                Italian CAP must be exactly 5 digits.
+              }
+            </small>
+          }
+        </div>
+
+        <div class="field">
+          <label for="academy-address-city">City</label>
+          <input
+            pInputText
+            id="academy-address-city"
+            type="text"
+            formControlName="city"
+            autocomplete="address-level2"
+            placeholder="Roma"
+            maxlength="100"
+            data-cy="academy-form-address-city"
+          />
+        </div>
+
+        <div class="field">
+          <label for="academy-address-province">Province</label>
+          <p-select
+            inputId="academy-address-province"
+            [options]="provinceOptions"
+            formControlName="province"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="—"
+            ariaLabel="Province"
+            appendTo="body"
+            styleClass="w-full"
+            [showClear]="true"
+            data-cy="academy-form-address-province"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="academy-address-country">Country</label>
+        <p-select
+          inputId="academy-address-country"
+          [options]="countryOptions"
+          formControlName="country"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          styleClass="w-full"
+          data-cy="academy-form-address-country"
+        />
+      </div>
+
+      @if (addressGroup.errors?.['addressIncomplete'] && addressGroup.touched) {
+        <small class="field__error" data-cy="academy-form-address-error">
+          Fill every required address field, or clear them all to leave the academy without an
+          address.
+        </small>
+      }
+      <small class="field__hint"> Leave every field empty to clear the address on file. </small>
+    </fieldset>
+
+    <div class="field">
+      <span class="field__label"
+        >Training days <span class="field__optional">(optional)</span></span
+      >
+      <app-training-days-picker
+        [value]="form.value.training_days ?? []"
+        (valueChange)="setTrainingDays($event)"
+        data-cy="academy-form-training-days"
+      />
+      <small class="field__hint">
+        Pick the weekdays your academy holds class. Deselect every day to clear the schedule.
+      </small>
+    </div>
+
+    <div class="form__actions">
+      <p-button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        [text]="true"
+        (onClick)="cancel()"
+        styleClass="form__cancel"
+        data-cy="academy-form-cancel"
+      />
+      <p-button
+        type="submit"
+        label="Save"
+        [loading]="submitting()"
+        [disabled]="submitting()"
+        styleClass="form__save"
+        data-cy="academy-form-save"
+      />
+    </div>
+  </form>
+</section>

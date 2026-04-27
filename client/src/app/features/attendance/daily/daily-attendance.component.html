@@ -1,0 +1,96 @@
+<!--
+  Custom toast template surfaces the Undo button when the action emitter
+  attached `data.undo` to the message. PrimeNG renders the default-style
+  surround (severity color, dismiss icon); we just inject the action.
+-->
+<p-toast position="bottom-center">
+  <ng-template let-message pTemplate="message">
+    <div class="attendance-toast">
+      <span class="attendance-toast__summary">{{ message.summary }}</span>
+      @if (message.data?.undo) {
+        <button
+          type="button"
+          class="attendance-toast__undo"
+          (click)="message.data.undo()"
+          data-cy="attendance-undo"
+        >
+          Undo
+        </button>
+      }
+    </div>
+  </ng-template>
+</p-toast>
+
+<section class="attendance" data-cy="attendance-page">
+  <header class="attendance__header">
+    <div class="attendance__heading">
+      <p class="attendance__eyebrow">Attendance</p>
+      <h1 class="attendance__title">Today's check-in</h1>
+    </div>
+
+    <p-datepicker
+      [ngModel]="selectedDate()"
+      (ngModelChange)="selectedDate.set($event); onDateChanged()"
+      [minDate]="minDate"
+      [maxDate]="maxDate"
+      [disabledDays]="disabledWeekdays()"
+      dateFormat="yy-mm-dd"
+      [showIcon]="true"
+      iconDisplay="input"
+      styleClass="attendance__date-picker"
+      data-cy="attendance-date"
+    />
+  </header>
+
+  @if (loading()) {
+    <ul class="attendance__list" data-cy="attendance-skeleton">
+      @for (_ of [0, 0, 0, 0, 0]; track $index) {
+        <li class="attendance-row attendance-row--skeleton">
+          <p-skeleton width="60%" height="1.25rem" />
+          <p-skeleton shape="circle" size="2rem" />
+        </li>
+      }
+    </ul>
+  } @else if (athletes().length === 0) {
+    <div class="attendance__empty">
+      <i class="pi pi-users" aria-hidden="true"></i>
+      <p>No active athletes yet — add one from the Athletes page.</p>
+    </div>
+  } @else {
+    <ul class="attendance__list" role="list" data-cy="attendance-list">
+      @for (athlete of athletes(); track athlete.id) {
+        <li class="attendance-row__wrapper">
+          <button
+            type="button"
+            class="attendance-row"
+            [class.attendance-row--present]="isPresent(athlete.id)"
+            [class.attendance-row--inflight]="isInflight(athlete.id)"
+            [attr.aria-pressed]="isPresent(athlete.id)"
+            [attr.aria-busy]="isInflight(athlete.id)"
+            [disabled]="isInflight(athlete.id)"
+            (click)="togglePresent(athlete)"
+            [attr.data-cy]="'attendance-row-' + athlete.id"
+          >
+            <span class="attendance-row__name">
+              {{ athlete.first_name }} {{ athlete.last_name }}
+            </span>
+            <span class="attendance-row__indicator" aria-hidden="true">
+              @if (isPresent(athlete.id)) {
+                <i class="pi pi-check"></i>
+              } @else {
+                <i class="pi pi-circle"></i>
+              }
+            </span>
+          </button>
+        </li>
+      }
+    </ul>
+
+    @if (totalActiveAthletes() > athletes().length) {
+      <p class="attendance__pagination-hint">
+        Showing {{ athletes().length }} of {{ totalActiveAthletes() }} active athletes. Pagination
+        is on the M4.2.5 follow-up.
+      </p>
+    }
+  }
+</section>

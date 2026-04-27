@@ -1,0 +1,122 @@
+// Shared styles for all auth pages (login, register) and the academy
+// setup page (which @use's this partial). Pre-#90 this file ran a custom
+// purple palette with raw hex everywhere; #90 brings it back onto the
+// canon — theme tokens, 8dp grid, MD3 motion. The submit button now
+// renders with PrimeNG's stock primary styling; only a small `::ng-deep`
+// width hook remains to make the wrapper fill the card consistently.
+
+.auth-page {
+  min-height: 100vh;
+  min-height: 100dvh; // iOS Safari dynamic viewport — same as dashboard shell
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--p-surface-50);
+  padding: 2rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 24rem; // 384px — comfortable single-column form width
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.auth-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  .logo-mark {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 0.5rem;
+    color: var(--p-primary-color);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-color);
+  }
+
+  // Direct `<input pInputText>` — PrimeNG sizes via form-field tokens
+  // (--p-form-field-padding-x/y, font, etc.). We only need to stretch
+  // it to the card width, no other overrides.
+  input.p-inputtext {
+    width: 100%;
+  }
+}
+
+// `<p-password>` lives outside the component's view-encapsulation, so
+// the host-piercing `::ng-deep` is the canonical width-stretch hook.
+// Width-only — padding/font ride the same form-field tokens as plain
+// inputs, no need to override here.
+:host ::ng-deep .p-password,
+:host ::ng-deep .p-password .p-password-input,
+:host ::ng-deep .p-password input {
+  width: 100%;
+}
+
+.field-error {
+  font-size: 0.75rem;
+  color: var(--budojo-danger);
+}
+
+// `submit-btn` is the class passed via `<p-button styleClass="submit-btn">`;
+// PrimeNG renders it on the wrapper outside this component's view-
+// encapsulation boundary, so `::ng-deep` is the canonical (and necessary)
+// hook to reach it. Pre-#90 this block also rewrote background, hover,
+// and font-weight in custom purple — that's the part canon forbids
+// (`client/CLAUDE.md` § "Don't restyle PrimeNG internals from component
+// SCSS"). We keep just the width pin so the button fills the card.
+:host ::ng-deep .submit-btn {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.auth-nav-link {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+  margin: 0;
+
+  a {
+    color: var(--p-primary-color);
+    font-weight: 500;
+    text-decoration: none;
+    transition: color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover {
+      color: var(--p-primary-hover-color);
+      text-decoration: underline;
+    }
+  }
+}

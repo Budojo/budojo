@@ -1,0 +1,26 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="colors_and_type.css"><style>
+body{margin:0;padding:24px;background:var(--bg-app);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.wrap{display:flex;flex-direction:column;gap:12px;width:100%;max-width:640px}
+/* Canonical surface card — filled, no border, no shadow. */
+.card{background:var(--bg-surface);border:none;border-radius:12px;padding:14px 16px;box-shadow:none}
+.card h4{font:var(--type-title-3);letter-spacing:-0.018em;margin:0 0 2px}
+.card .sub{font:var(--type-footnote);color:var(--fg-secondary)}
+/* Alerts — filled tinted surface, no border. Icon = filled glyph, no border/ring. */
+.alert{border-radius:12px;padding:14px;border:none;display:flex;gap:12px;align-items:center}
+.alert .dot{width:28px;height:28px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:700 15px/1 var(--font-sans);flex-shrink:0;color:#fff;border:none}
+.warn{background:#fff3e0;color:#7a3b00}
+.warn .dot{background:#ff9f0a}
+.danger{background:#ffe5e3;color:#8a1e1e}
+.danger .dot{background:#ff3b30}
+.info{background:#e1efff;color:#0a4ea8}
+.info .dot{background:#0a84ff}
+.lbl{font:var(--type-caption-1);color:var(--fg-secondary)}
+.title{font:var(--type-headline)}
+</style></head><body><div class="wrap">
+<span class="lbl">Surface (only canonical container)</span>
+<div class="card"><h4>Marco Silva</h4><div class="sub">Blue · 3 stripes · Active member</div></div>
+<span class="lbl">Alert — warn / danger / info</span>
+<div class="alert warn"><div class="dot">!</div><div><div class="title">9 documents need attention</div><div class="sub">Expiring within 30 days</div></div></div>
+<div class="alert danger"><div class="dot">×</div><div><div class="title">Medical certificate expired</div><div class="sub">4 days overdue — upload a new one</div></div></div>
+<div class="alert info"><div class="dot">i</div><div><div class="title">Attendance is in preview</div><div class="sub">M4 feature — data isn't saved yet</div></div></div>
+</div></body></html>

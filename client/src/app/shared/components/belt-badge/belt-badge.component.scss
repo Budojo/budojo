@@ -1,0 +1,26 @@
+:host {
+  display: inline-flex;
+
+  /*
+   * IBJJF belt colors are *domain* constants, not Material Design 3 theme
+   * tokens. client/CLAUDE.md § Design canon permits hardcoded values "unless
+   * the token truly doesn't exist", and that's exactly the case here: these
+   * values are the product — a blue belt is #1D4ED8, not `var(--p-primary)`.
+   *
+   * Centralising them as CSS custom properties on :host means:
+   *   1. No hex literal lives in the TS file (shared component discipline).
+   *   2. A future per-academy branding (e.g. Gracie palette) can override
+   *      these variables from a parent scope without touching the component.
+   *   3. The mapping is trivially auditable — five pairs, nothing else.
+   */
+  --budojo-belt-white-bg: #f3f4f6;
+  --budojo-belt-white-fg: #374151;
+  --budojo-belt-blue-bg: #1d4ed8;
+  --budojo-belt-blue-fg: #ffffff;
+  --budojo-belt-purple-bg: #7c3aed;
+  --budojo-belt-purple-fg: #ffffff;
+  --budojo-belt-brown-bg: #92400e;
+  --budojo-belt-brown-fg: #ffffff;
+  --budojo-belt-black-bg: #111827;
+  --budojo-belt-black-fg: #ffffff;
+}

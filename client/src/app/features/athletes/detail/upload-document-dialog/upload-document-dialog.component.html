@@ -1,0 +1,135 @@
+<p-dialog
+  [(visible)]="visible"
+  header="Upload document"
+  [modal]="true"
+  [dismissableMask]="!submitting()"
+  [closeOnEscape]="!submitting()"
+  [closable]="!submitting()"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '32rem' }"
+  [breakpoints]="{ '768px': '92vw' }"
+  styleClass="upload-dialog"
+  (onHide)="cancel(fileUpload)"
+  data-cy="upload-document-dialog"
+>
+  <form [formGroup]="form" class="upload-form" (ngSubmit)="submit(fileUpload)">
+    @if (error(); as msg) {
+      <p-message severity="error" [text]="msg" styleClass="upload-form__banner" />
+    }
+
+    <div class="upload-form__row">
+      <label for="doc-type" class="upload-form__label">Type *</label>
+      <p-select
+        inputId="doc-type"
+        formControlName="type"
+        [options]="typeOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select a document type"
+        appendTo="body"
+        [showClear]="false"
+        data-cy="doc-type"
+      />
+      @if (typeCtrl.touched && typeCtrl.hasError('required')) {
+        <small class="upload-form__error">Select a document type.</small>
+      }
+    </div>
+
+    <div class="upload-form__row">
+      <!-- p-fileUpload basic does not expose an inputId we can bind a <label for>
+           to (the hidden native input lives inside its shadow). Using a <span>
+           with the same class preserves the visual rhythm without triggering
+           the @angular-eslint template/label-has-associated-control rule. -->
+      <span class="upload-form__label">File *</span>
+      <p-fileupload
+        #fileUpload
+        mode="basic"
+        name="file"
+        [accept]="acceptAttr"
+        [maxFileSize]="maxFileBytes"
+        [auto]="false"
+        [multiple]="false"
+        chooseLabel="Choose file"
+        chooseIcon="pi pi-upload"
+        (onSelect)="onFileSelect($event.files)"
+        (onClear)="onFileClear()"
+        data-cy="doc-file"
+      />
+      <small class="upload-form__hint">PDF, JPEG or PNG · max 10 MB</small>
+      @if (fileCtrl.touched && fileCtrl.hasError('required')) {
+        <small class="upload-form__error">Choose a file to upload.</small>
+      } @else if (fileCtrl.hasError('maxSize')) {
+        <small class="upload-form__error">File exceeds the 10 MB limit.</small>
+      } @else if (fileCtrl.hasError('mimeType')) {
+        <small class="upload-form__error">Only PDF, JPEG, or PNG files are accepted.</small>
+      }
+    </div>
+
+    <div class="upload-form__row upload-form__row--split">
+      <div>
+        <label for="doc-issued" class="upload-form__label">Issued on</label>
+        <p-datepicker
+          inputId="doc-issued"
+          formControlName="issued_at"
+          dateFormat="yy-mm-dd"
+          [showIcon]="true"
+          appendTo="body"
+          data-cy="doc-issued"
+        />
+      </div>
+      <div>
+        <label for="doc-expires" class="upload-form__label">Expires on</label>
+        <p-datepicker
+          inputId="doc-expires"
+          formControlName="expires_at"
+          dateFormat="yy-mm-dd"
+          [showIcon]="true"
+          appendTo="body"
+          data-cy="doc-expires"
+        />
+      </div>
+    </div>
+    @if (form.hasError('expiryBeforeIssue')) {
+      <small class="upload-form__error">
+        Expiration date must be on or after the issue date.
+      </small>
+    }
+
+    <div class="upload-form__row">
+      <label for="doc-notes" class="upload-form__label">Notes</label>
+      <textarea
+        pTextarea
+        id="doc-notes"
+        formControlName="notes"
+        rows="3"
+        placeholder="Optional — clinic, number, comment…"
+        maxlength="500"
+        data-cy="doc-notes"
+      ></textarea>
+      @if (notesCtrl.hasError('maxlength')) {
+        <small class="upload-form__error">Notes must be 500 characters or fewer.</small>
+      }
+    </div>
+
+    <div class="upload-form__footer">
+      <p-button
+        type="button"
+        label="Cancel"
+        severity="secondary"
+        [text]="true"
+        [disabled]="submitting()"
+        (onClick)="cancel(fileUpload)"
+        data-cy="upload-cancel"
+      />
+      <p-button
+        type="submit"
+        label="Upload"
+        icon="pi pi-upload"
+        [loading]="submitting()"
+        [disabled]="submitting() || form.invalid"
+        data-cy="upload-submit"
+      />
+    </div>
+  </form>
+</p-dialog>

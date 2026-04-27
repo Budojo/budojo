@@ -1,0 +1,220 @@
+/* ============================================================================
+   Budojo Design System — Colors & Type
+   Apple HIG / iOS 17+ minimal direction, built as an override layer over
+   PrimeNG 21's `@primeuix/themes/material` preset.
+
+   These tokens are the source of truth for the design system skill.
+   The production SCSS (`budojo-theme.scss`) mirrors them as a :root block
+   that overrides PrimeNG's CSS custom properties.
+   ============================================================================ */
+
+:root {
+  /* -------- Core neutrals (iOS system grays, roughly) ------------- */
+  --budojo-surface-0:   #ffffff;   /* app background, top layer */
+  --budojo-surface-50:  #fafafa;   /* grouped table background */
+  --budojo-surface-100: #f5f5f7;   /* subtle fills, chips */
+  --budojo-surface-200: #ebebef;   /* resting rows, rails */
+  --budojo-surface-300: #dcdce0;   /* hairline dividers */
+  --budojo-surface-400: #c4c4c9;   /* disabled text, glyphs */
+  --budojo-surface-500: #8e8e93;   /* secondary text (iOS secondary label) */
+  --budojo-surface-600: #636366;   /* tertiary text */
+  --budojo-surface-700: #3a3a3c;   /* high-emphasis text on light */
+  --budojo-surface-800: #1c1c1e;   /* display headings */
+  --budojo-surface-900: #0a0a0b;   /* absolute ink */
+  --budojo-surface-950: #000000;
+
+  /* -------- Accent: single, near-monochrome, iOS-indigo-adjacent ---- */
+  /* Used for: primary CTA, active nav, focus ring, active toggle. */
+  --budojo-accent-50:   #eef1ff;
+  --budojo-accent-100:  #dde2ff;
+  --budojo-accent-300:  #9aa3ff;
+  --budojo-accent-500:  #5b6cff;   /* base */
+  --budojo-accent-600:  #4554ed;   /* hover */
+  --budojo-accent-700:  #3644c7;   /* pressed */
+  --budojo-accent:      var(--budojo-accent-500);
+
+  /* -------- Semantic (iOS system palette restraint) ---------------- */
+  --budojo-success: #34c759;
+  --budojo-success-soft: #e7f7ea;
+  --budojo-warning: #ff9f0a;
+  --budojo-warning-soft: #fff3e0;
+  --budojo-danger:  #ff3b30;
+  --budojo-danger-soft:  #ffe5e3;
+  --budojo-info:    #0a84ff;
+  --budojo-info-soft:    #e1efff;
+
+  /* -------- Domain: IBJJF belt colors (kept from codebase) --------- */
+  --budojo-belt-white-bg:  #f3f4f6;
+  --budojo-belt-white-fg:  #374151;
+  --budojo-belt-blue-bg:   #1d4ed8;
+  --budojo-belt-blue-fg:   #ffffff;
+  --budojo-belt-purple-bg: #7c3aed;
+  --budojo-belt-purple-fg: #ffffff;
+  --budojo-belt-brown-bg:  #92400e;
+  --budojo-belt-brown-fg:  #ffffff;
+  --budojo-belt-black-bg:  #111827;
+  --budojo-belt-black-fg:  #ffffff;
+
+  /* -------- Semantic foreground aliases --------------------------- */
+  --fg-primary:    var(--budojo-surface-900);
+  --fg-secondary:  var(--budojo-surface-500);
+  --fg-tertiary:   var(--budojo-surface-400);
+  --fg-on-accent:  #ffffff;
+  --fg-danger:     var(--budojo-danger);
+  --fg-success:    #188038;
+
+  --bg-app:        var(--budojo-surface-50);
+  --bg-surface:    var(--budojo-surface-0);
+  --bg-subtle:     var(--budojo-surface-100);
+  --bg-mask:       rgba(10,10,11,0.32);
+
+  --border-hairline: var(--budojo-surface-300);
+  --border-default:  var(--budojo-surface-200);
+
+  /* ==============================================================
+     Typography
+     System font stack that resolves to SF on Apple platforms,
+     Inter elsewhere. Loaded via @fontsource/inter per brief.
+     ============================================================== */
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
+
+  /* iOS Human Interface Guidelines type scale, semantic names */
+  --type-display:       700 34px/40px var(--font-sans);   /* Large Title */
+  --type-title-1:       700 28px/34px var(--font-sans);   /* Title 1 */
+  --type-title-2:       600 22px/28px var(--font-sans);   /* Title 2 */
+  --type-title-3:       600 20px/25px var(--font-sans);   /* Title 3 */
+  --type-headline:      600 17px/22px var(--font-sans);   /* list header */
+  --type-body:          400 17px/22px var(--font-sans);   /* body */
+  --type-callout:       400 16px/21px var(--font-sans);
+  --type-subhead:       400 15px/20px var(--font-sans);
+  --type-footnote:      400 13px/18px var(--font-sans);
+  --type-caption-1:     400 12px/16px var(--font-sans);
+  --type-caption-2:     400 11px/13px var(--font-sans);
+
+  /* Tight letter-spacing echoes SF Pro's optical sizing */
+  --tracking-display:  -0.024em;
+  --tracking-title:    -0.018em;
+  --tracking-body:     -0.003em;
+  --tracking-caps:      0.06em;
+
+  /* ==============================================================
+     Spacing — 8dp grid (canon)
+     ============================================================== */
+  --space-0:  0;
+  --space-1:  4px;   /* half-step, hairline gaps only */
+  --space-2:  8px;
+  --space-3:  12px;  /* half-step, used sparingly for dense list rows */
+  --space-4:  16px;  /* base */
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  40px;
+  --space-8:  48px;  /* Fitts touch target */
+  --space-9:  64px;
+  --space-10: 96px;
+
+  /* ==============================================================
+     Radius — iOS rounded corners
+     ============================================================== */
+  --radius-xs:    4px;
+  --radius-sm:    8px;
+  --radius-md:   12px;   /* cards, buttons (brief spec) */
+  --radius-lg:   16px;   /* dialogs */
+  --radius-xl:   24px;   /* bottom sheets */
+  --radius-full: 9999px;
+
+  /* ==============================================================
+     Elevation — 2 levels max (surface + floating)
+     ============================================================== */
+  --shadow-none: none;
+  --shadow-surface:
+    0 0 0 1px var(--border-default);
+  --shadow-floating:
+    0 1px 2px rgba(10,10,11,0.06),
+    0 8px 24px rgba(10,10,11,0.12);
+  --shadow-sheet:
+    0 -1px 0 var(--border-default),
+    0 -24px 48px rgba(10,10,11,0.18);
+
+  /* ==============================================================
+     Motion — iOS decelerate, no bounce
+     ============================================================== */
+  --motion-fast:      160ms;
+  --motion-base:      240ms;
+  --motion-slow:      360ms;
+  --ease-decelerate:  cubic-bezier(0.22, 1, 0.36, 1);   /* iOS exit */
+  --ease-standard:    cubic-bezier(0.4, 0.0, 0.2, 1);   /* MD3 compat */
+  --ease-spring:      cubic-bezier(0.34, 1.2, 0.64, 1); /* gentle, no overshoot */
+}
+
+/* ================================================================
+   Dark mode — first-class; matches iOS Dark Mode elevated surfaces.
+   Applied via `.dark` on <html>, matching PrimeNG's darkModeSelector.
+   ================================================================ */
+.dark {
+  --budojo-surface-0:   #1c1c1e;
+  --budojo-surface-50:  #151517;
+  --budojo-surface-100: #1c1c1e;
+  --budojo-surface-200: #2c2c2e;
+  --budojo-surface-300: #3a3a3c;
+  --budojo-surface-400: #48484a;
+  --budojo-surface-500: #8e8e93;
+  --budojo-surface-600: #aeaeb2;
+  --budojo-surface-700: #c7c7cc;
+  --budojo-surface-800: #e5e5ea;
+  --budojo-surface-900: #f2f2f7;
+  --budojo-surface-950: #ffffff;
+
+  --budojo-accent-50:   #1e2040;
+  --budojo-accent-100:  #262a5a;
+  --budojo-accent-300:  #5b6cff;
+  --budojo-accent-500:  #7b8bff;  /* brightened for dark contrast */
+  --budojo-accent-600:  #9aa3ff;
+  --budojo-accent-700:  #b4bbff;
+
+  --bg-app:     #000000;   /* true black, iOS-style */
+  --bg-surface: var(--budojo-surface-100);
+  --bg-subtle:  var(--budojo-surface-200);
+  --bg-mask:    rgba(0,0,0,0.52);
+
+  --fg-primary:   #f2f2f7;
+  --fg-secondary: #aeaeb2;
+  --fg-tertiary:  #8e8e93;
+
+  --border-hairline: rgba(255,255,255,0.14);
+  --border-default:  rgba(255,255,255,0.08);
+
+  --shadow-surface: 0 0 0 1px var(--border-default);
+  --shadow-floating:
+    0 1px 2px rgba(0,0,0,0.4),
+    0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* ================================================================
+   Base element styles — semantic classes for static HTML mockups.
+   The production app lets PrimeNG style these; this file is here
+   so design artifacts (preview cards, slides, mockups) look right.
+   ================================================================ */
+html, body { background: var(--bg-app); color: var(--fg-primary); }
+body { font: var(--type-body); letter-spacing: var(--tracking-body); -webkit-font-smoothing: antialiased; }
+
+h1, .h1 { font: var(--type-display);  letter-spacing: var(--tracking-display); margin: 0; color: var(--fg-primary); }
+h2, .h2 { font: var(--type-title-1);  letter-spacing: var(--tracking-title);   margin: 0; color: var(--fg-primary); }
+h3, .h3 { font: var(--type-title-2);  letter-spacing: var(--tracking-title);   margin: 0; color: var(--fg-primary); }
+h4, .h4 { font: var(--type-title-3);  letter-spacing: var(--tracking-title);   margin: 0; color: var(--fg-primary); }
+h5, .h5 { font: var(--type-headline); margin: 0; color: var(--fg-primary); }
+p, .body { font: var(--type-body); margin: 0; color: var(--fg-primary); }
+.callout  { font: var(--type-callout);  color: var(--fg-primary); }
+.subhead  { font: var(--type-subhead);  color: var(--fg-secondary); }
+.footnote { font: var(--type-footnote); color: var(--fg-secondary); }
+.caption  { font: var(--type-caption-1); color: var(--fg-secondary); }
+.eyebrow  {
+  font: 600 11px/14px var(--font-sans);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+code, .mono { font-family: var(--font-mono); font-size: 13px; }

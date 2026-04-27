@@ -1,0 +1,7 @@
+{
+  "/api": {
+    "target": "http://api:80",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

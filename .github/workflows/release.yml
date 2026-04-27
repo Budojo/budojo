@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    branches: [main, develop]
+  # Manual fallback: a commit that lands on `main` / `develop` whose
+  # message contains a CI-skip keyword (square-bracketed `skip ci` and
+  # the four siblings GitHub honours) silently suppresses this
+  # workflow. `workflow_dispatch` lets a maintainer kick
+  # semantic-release by hand from the Actions tab — pick the branch
+  # in the UI's "Use workflow from" dropdown.
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: "🚀 Semantic Release"
+    runs-on: ubuntu-latest
+    # Belt-and-suspenders ref guard — `workflow_dispatch` accepts any
+    # ref from the Actions UI / CLI, but semantic-release is configured
+    # to release ONLY from `main` (stable) and `develop` (beta). Without
+    # this gate, a maintainer who picks a feature branch from the "Use
+    # workflow from" dropdown would either fail mid-run or, worse,
+    # produce an unintended tag. The `push:` trigger above is already
+    # branch-filtered, so this guard is the dispatch-side mirror.
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `fetch-depth: 0` alone is not enough — `actions/checkout@v4`
+          # defaults to `fetch-tags: false`, and annotated tags aren't
+          # reliably accessible to semantic-release without the explicit
+          # flag. Without this, semantic-release cannot see prior beta
+          # tags on develop and tries to publish v1.0.0-beta.1 from
+          # scratch (see #42).
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Release
+        env:
+          # Defensive kill switch for husky hooks. Today semantic-release
+          # only creates a tag + GitHub Release (no `git commit` in CI),
+          # so this is a no-op. Kept on the step so any future automation
+          # that does run a commit (a metrics push, an auto-CHANGELOG
+          # plugin, etc.) doesn't get bitten by commitlint's
+          # `footer-max-line-length` on bot-generated bodies. Husky 9
+          # hooks honour this var only because `.husky/*` scripts check
+          # it explicitly — see `.claude/gotchas.md` § GitHub Actions.
+          HUSKY: "0"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: npx semantic-release

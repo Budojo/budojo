@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Same `HUSKY=0` kill switch as `.husky/commit-msg`. Husky 9 doesn't
+# wrap user hooks, so the env var is a no-op unless the hook checks
+# it explicitly. Belt-and-suspenders: lint-staged is harmless on the
+# release-step auto-commit (just runs `echo` on .md), but keeping
+# both hooks symmetric prevents the next CI mystery.
+[ "${HUSKY:-1}" = "0" ] && exit 0
+set -e
+
+npx lint-staged

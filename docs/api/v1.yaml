@@ -1,0 +1,1855 @@
+openapi: 3.0.3
+info:
+  title: Budojo API
+  version: "1.0.0"
+  description: |
+    REST API powering the Budojo SPA. All authenticated endpoints accept a Laravel Sanctum
+    Bearer token obtained via `/auth/login` or `/auth/register`. Academy-scoping is enforced
+    in the controllers: every authenticated user has (at most) one academy, and all reads
+    and writes are implicitly filtered to that academy.
+
+    Kept in sync with code per the discipline in `CLAUDE.md` §"Documentation discipline" —
+    any PR that changes a route, payload, or response shape must update this file in the
+    same commit history.
+  contact:
+    name: Matteo Bonanno
+    url: https://github.com/m-bonanno/budojo
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local dev (Docker)
+  - url: https://budojo.example/api/v1
+    description: Production (placeholder)
+
+tags:
+  - name: health
+    description: Liveness probe
+  - name: auth
+    description: Registration, login, and Sanctum token issuance
+  - name: academy
+    description: The tenant entity — one per user
+  - name: athletes
+    description: Roster of students belonging to the authenticated user's academy
+  - name: documents
+    description: Files (ID, medical cert, insurance) attached to an athlete, with expiry tracking
+
+paths:
+
+  /health:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      description: Returns 200 if the API process is up. Does not check DB connectivity.
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: The API is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      description: |
+        Creates a new user and issues a Sanctum Bearer token. The user is created without
+        an academy; the SPA routes newly-registered users to `/setup` via `noAcademyGuard`.
+      operationId: authRegister
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created, token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Authenticate and obtain a Bearer token
+      description: |
+        Validates the supplied email and password against the `users` table and,
+        on success, issues a new Sanctum personal access token. The plain-text
+        token is returned in the response and must be stored by the client — it
+        cannot be retrieved again.
+      operationId: authLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Credentials accepted, token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Invalid credentials.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy:
+    post:
+      tags: [academy]
+      summary: Create the authenticated user's academy
+      description: |
+        One-shot creation. The slug is server-generated as
+        `slugify(name) + '-' + 8 random lowercase chars`.
+        Attempts to create a second academy for the same user return 409.
+      operationId: academyCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyCreateRequest'
+      responses:
+        '201':
+          description: Academy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '409':
+          description: User already has an academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Academy already exists.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    get:
+      tags: [academy]
+      summary: Fetch the authenticated user's academy
+      description: |
+        The SPA's `hasAcademyGuard` uses this endpoint to detect first-login state —
+        a 404 response routes the user to `/setup`.
+      operationId: academyShow
+      responses:
+        '200':
+          description: The user's academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: The user has not set up an academy yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: No academy found.
+
+    patch:
+      tags: [academy]
+      summary: Update the authenticated user's academy
+      description: |
+        Partial update of `name` and/or `address`. The `slug` is immutable by
+        design — renames keep the original permalink stable. A user without
+        an academy gets a 403 `{"message":"Forbidden."}` (same wire contract
+        the rest of the API uses for ownership failures), not a 404.
+      operationId: academyUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyUpdateRequest'
+      responses:
+        '200':
+          description: Academy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: The authenticated user has no academy to update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Forbidden.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy/logo:
+    post:
+      tags: [academy]
+      summary: Upload or replace the academy logo
+      description: |
+        Multipart `logo` upload. Replaces the previous logo (the prior file is
+        removed from disk). Mime types: `png`, `jpg`, `jpeg`, `svg`, `webp`.
+        Max size 2 MB. The response is the full academy resource with the
+        fresh `logo_url`.
+      operationId: academyUploadLogo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Logo uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: The authenticated user has no academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [academy]
+      summary: Remove the academy logo
+      description: |
+        Deletes the stored file and clears `logo_path`. Returns the academy
+        resource with `logo_url: null`. No-op when no logo is currently set
+        (still 200, idempotent).
+      operationId: academyDeleteLogo
+      responses:
+        '200':
+          description: Logo removed (or no-op when none was set)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: The authenticated user has no academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+
+  /athletes:
+    get:
+      tags: [athletes]
+      summary: Paginated list of athletes in the authenticated academy
+      description: |
+        Returns 20 athletes per page, newest first. Soft-deleted athletes are
+        never returned. Optional filters `belt`, `status`, and `q` narrow the
+        set; the first two match exactly one enum value, `q` is a free-text
+        name search.
+      operationId: athleteList
+      parameters:
+        - name: belt
+          in: query
+          description: Filter by belt rank
+          required: false
+          schema:
+            $ref: '#/components/schemas/Belt'
+        - name: status
+          in: query
+          description: Filter by enrollment status
+          required: false
+          schema:
+            $ref: '#/components/schemas/AthleteStatus'
+        - name: q
+          in: query
+          description: |
+            Free-text search across `first_name` and `last_name`. The query is
+            tokenised on whitespace and applied as AND — every token must
+            match (case-insensitive `LIKE %token%`) either column. So `mario`
+            finds Mario Rossi and Anna Mariotti; `mario ros` finds Mario
+            Rossi (token `mario` matches first_name, token `ros` matches
+            last_name) but not Marco Rossini. Empty/whitespace-only values
+            are ignored and return the unfiltered list.
+          required: false
+          schema:
+            type: string
+            example: mario
+        - name: paid
+          in: query
+          description: |
+            Filter on the athlete's current-month payment status. `yes`
+            returns only athletes with a row in `athlete_payments` for the
+            current calendar (year, month); `no` returns only those without.
+            Unrecognised values are silently ignored (no filter applied).
+            Server-side because the table is paginated — a client-side
+            filter would only sweep the current page of 20.
+          required: false
+          schema:
+            type: string
+            enum: [yes, no]
+        - name: page
+          in: query
+          description: Page number, starting at 1. Page size is fixed at 20.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: sort_by
+          in: query
+          description: |
+            Column to sort by. `belt` is rank-aware (white < blue < purple <
+            brown < black) via a SQL CASE expression — NOT a lexicographic
+            sort on the column value — and chains `stripes desc` + `last_name
+            asc` as stable tiebreakers so two athletes at the same belt
+            level always render in the same row order. `stripes` is not
+            accepted as a primary sort (it's meaningful only as a within-belt
+            tiebreaker — a 4-stripe blue above a 0-stripe black is never
+            correct); requesting it falls back to the default ordering.
+            Unknown values also fall back to the default `created_at desc`.
+          required: false
+          schema:
+            type: string
+            enum: [first_name, last_name, belt, joined_at, created_at]
+        - name: sort_order
+          in: query
+          description: Sort direction. Defaults to `desc` when `sort_by` is set.
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Paginated list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AthleteList'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NoAcademy'
+
+    post:
+      tags: [athletes]
+      summary: Create an athlete in the authenticated academy
+      description: |
+        The new athlete is automatically attached to the authenticated user's
+        academy — the client does not send `academy_id`. Email uniqueness is
+        scoped per academy; a previously soft-deleted row with the same email
+        does not block creation.
+      operationId: athleteCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AthleteCreateRequest'
+      responses:
+        '201':
+          description: Athlete created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AthleteEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NoAcademy'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /athletes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+
+    get:
+      tags: [athletes]
+      summary: Fetch a single athlete
+      description: |
+        Returns the athlete if it exists and belongs to the authenticated user's
+        academy. Soft-deleted athletes are not accessible via this endpoint.
+      operationId: athleteShow
+      responses:
+        '200':
+          description: The athlete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AthleteEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [athletes]
+      summary: Partially update an athlete
+      description: All body fields are optional — only the ones present are updated.
+      operationId: athleteUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AthleteUpdateRequest'
+      responses:
+        '200':
+          description: Athlete updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AthleteEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [athletes]
+      summary: Soft-delete an athlete
+      description: |
+        Sets `deleted_at`; the row is preserved and no longer appears in list
+        responses. Cascades soft-delete + file wipe to every document attached
+        to the athlete (via `AthleteObserver`) — see the `documents` tag for
+        the full policy.
+      operationId: athleteDelete
+      responses:
+        '204':
+          description: Soft-deleted successfully. Response body is empty.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /athletes/{id}/documents:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+
+    get:
+      tags: [documents]
+      summary: Paginated list of documents for the given athlete
+      description: |
+        Returns up to 50 documents for the athlete, newest `created_at` first.
+        By default only non-soft-deleted rows are returned. Pass `?trashed=1`
+        to include soft-deleted "tombstone" rows — their `deleted_at` field is
+        non-null and the file has been wiped from disk (see PRD P0.7b).
+      operationId: athleteDocumentList
+      parameters:
+        - name: trashed
+          in: query
+          description: |
+            Opt-in flag. The only supported/defined value is `1`, which
+            includes soft-deleted documents (tombstones) in the response.
+            Omit the parameter to receive only active rows. Tombstones are
+            identified by `deleted_at` being non-null.
+          required: false
+          schema:
+            type: string
+            enum: ['1']
+      responses:
+        '200':
+          description: Paginated list of documents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentList'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [documents]
+      summary: Upload a document for the given athlete
+      description: |
+        Multipart upload. The file is stored on the private `local` disk under
+        `storage/app/private/documents/` and is NEVER reachable from the web
+        root — only via `GET /documents/{id}/download`. Server-side validates
+        size (max 10 MB) and MIME type (`application/pdf`, `image/jpeg`,
+        `image/png`); client pre-validation is advisory only.
+      operationId: athleteDocumentUpload
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentUploadRequest'
+      responses:
+        '201':
+          description: Document created and file stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /documents/expiring:
+    get:
+      tags: [documents]
+      summary: Documents expiring in the next N days (or already expired)
+      description: |
+        Cross-athlete, scoped to the authenticated academy. Returns every
+        document with `expires_at` ≤ today + `days` (default 30), ordered
+        `expires_at` ascending so the most urgent item is first. Already
+        expired documents are included. Documents with `expires_at = null`
+        are excluded. Each item inlines an `athlete` summary (id, first_name,
+        last_name) for deep-linking from the dashboard widget.
+      operationId: documentExpiring
+      parameters:
+        - name: days
+          in: query
+          description: |
+            Look-ahead window in days. Clamped server-side to [1, 365];
+            values outside the range are silently corrected.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+      responses:
+        '200':
+          description: Expiring-or-expired documents, most urgent first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentList'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NoAcademy'
+
+  /documents/{id}/download:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    get:
+      tags: [documents]
+      summary: Stream the document file
+      description: |
+        Authenticated file stream. Response body is the raw file bytes;
+        `Content-Type` is the stored `mime_type`; `Content-Disposition`
+        includes the original filename. A missing file on disk (e.g. wiped
+        out-of-band) returns 404. A soft-deleted document — visible in the
+        list via `?trashed=1` as a tombstone — returns **410 Gone**: the
+        resource once existed but its file has been permanently wiped.
+      operationId: documentDownload
+      responses:
+        '200':
+          description: File stream
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenDocument'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: |
+            The document is soft-deleted (tombstone). The DB row still exists
+            (so the client can still render it as a cancelled entry) but the
+            file has been physically removed from disk and cannot be
+            re-downloaded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: This document has been cancelled and is no longer available.
+
+  /documents/{id}:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    put:
+      tags: [documents]
+      summary: Partially update document metadata
+      description: |
+        Only `type`, `issued_at`, `expires_at`, and `notes` are updateable.
+        The request cannot replace the file — to swap the file, upload a new
+        document row and delete the old one.
+      operationId: documentUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUpdateRequest'
+      responses:
+        '200':
+          description: Document updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenDocument'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [documents]
+      summary: Soft-delete the document and wipe its file
+      description: |
+        Soft-deletes the DB row (`deleted_at`) AND removes the physical file
+        from disk via `Storage::delete`. No restore path. Idempotent if the
+        file is already missing on disk.
+      operationId: documentDelete
+      responses:
+        '204':
+          description: Deleted. Response body is empty.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenDocument'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /athletes/{athlete}/payments:
+    get:
+      tags: [athletes]
+      summary: List an athlete's payments for a given year
+      description: |
+        Returns all `AthletePayment` rows for the given (athlete, year),
+        ordered by month ascending. Defaults to the current calendar year
+        when `?year` is omitted. Cross-academy access returns 403.
+      operationId: athletePaymentList
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: year
+          in: query
+          required: false
+          schema: { type: integer, minimum: 2020, maximum: 2100 }
+      responses:
+        '200':
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AthletePayment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [athletes]
+      summary: Record an athlete's payment for a (year, month)
+      description: |
+        Marks the athlete as paid for the given month. **Idempotent** —
+        POSTing the same `(year, month)` twice returns the existing row
+        instead of creating a duplicate. `amount_cents` on the resulting
+        row is snapshotted from the academy's current `monthly_fee_cents`;
+        future fee changes do NOT rewrite past records.
+
+        Returns 422 if the academy has not configured a monthly fee
+        (`academy.monthly_fee_cents === null`). Cross-academy returns 403.
+      operationId: athletePaymentRecord
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AthletePaymentCreateRequest'
+      responses:
+        '201':
+          description: Payment recorded (or returned existing row on idempotent retry)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AthletePayment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /athletes/{athlete}/payments/{year}/{month}:
+    delete:
+      tags: [athletes]
+      summary: Undo a paid month
+      description: |
+        Hard-deletes the payment row for `(athlete, year, month)`. The table
+        has no soft-delete tombstone — the absence of a row IS the canonical
+        "not paid" state. Returns 404 if no payment exists for the given
+        coordinates; cross-academy access returns 403.
+      operationId: athletePaymentDelete
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: year
+          in: path
+          required: true
+          schema: { type: integer, minimum: 2020, maximum: 2100 }
+        - name: month
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        '204':
+          description: Payment deleted
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /attendance:
+    get:
+      tags: [attendance]
+      summary: List attendance for a given date (defaults to today)
+      description: |
+        Cross-athlete list scoped to the authenticated academy. Use
+        `?trashed=1` to include soft-deleted (tombstone) records alongside
+        active ones — useful for auditing corrections.
+      operationId: attendanceDailyList
+      parameters:
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, format: date }
+          description: YYYY-MM-DD. Defaults to today if omitted.
+        - name: trashed
+          in: query
+          required: false
+          schema: { type: integer, enum: [0, 1] }
+          description: Pass `1` to include tombstones.
+      responses:
+        '200':
+          description: Attendance records for the given date.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceRecordList' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Authenticated user has no academy, so attendance access is forbidden.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+
+    post:
+      tags: [attendance]
+      summary: Bulk mark athletes present on a date
+      description: |
+        Bulk upsert — idempotent. Re-posting the same athlete + date is a
+        no-op, not a validation error. Date must be today or within the
+        last 7 days (backfill window). Future dates are rejected.
+      operationId: attendanceMark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MarkAttendancePayload' }
+      responses:
+        '201':
+          description: The records now active for this date × athletes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceRecordList' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Attempting to mark an athlete in another academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /attendance/{id}:
+    delete:
+      tags: [attendance]
+      summary: Soft-delete an attendance record
+      description: |
+        Used to un-mark a mistakenly-tapped athlete. The row is soft-deleted
+        (reversible via future admin tooling); a fresh record on the same
+        (athlete, date) can still be created — the app-level uniqueness
+        check filters tombstones.
+      operationId: attendanceDelete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204':
+          description: Record soft-deleted.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Record belongs to another academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /attendance/summary:
+    get:
+      tags: [attendance]
+      summary: Monthly attendance count per athlete
+      description: |
+        Aggregated count of active (non-deleted) attendance rows per
+        athlete for a single calendar month. Only athletes with at least
+        one record in the month appear. Sorted DESC by count, then by
+        last_name ASC for stable ordering at ties.
+      operationId: attendanceMonthlySummary
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
+          description: YYYY-MM.
+      responses:
+        '200':
+          description: Per-athlete counts for the month.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceSummaryEnvelope' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Authenticated user has no academy, so attendance access is forbidden.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /athletes/{athlete}/attendance:
+    get:
+      tags: [attendance]
+      summary: Per-athlete attendance history in a date window
+      description: |
+        Returns an athlete's attendance records ordered newest-first.
+        `from` and `to` are optional — an omitted bound means unbounded on
+        that side. Academy-scoped: other academies' athletes return 403.
+      operationId: attendanceAthleteHistory
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Attendance records for the athlete.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceRecordList' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Athlete is not in the authenticated academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+      description: |
+        Laravel Sanctum personal-access token obtained from `/auth/login` or `/auth/register`.
+        Send as `Authorization: Bearer <token>`.
+
+  parameters:
+    AthleteId:
+      name: id
+      in: path
+      required: true
+      description: Athlete primary key
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+    DocumentId:
+      name: id
+      in: path
+      required: true
+      description: Document primary key
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+  responses:
+    Unauthenticated:
+      description: Missing or invalid Bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: Unauthenticated.
+
+    NoAcademy:
+      description: The authenticated user has not set up an academy
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: No academy found.
+
+    ForbiddenAthlete:
+      description: The athlete does not belong to the authenticated user's academy
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: Forbidden.
+
+    ForbiddenDocument:
+      description: |
+        The document does not belong to the authenticated user's academy
+        (checked transitively via `document.athlete.academy_id`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: Forbidden.
+
+    NotFound:
+      description: |
+        Resource not found. The response body carries a `message` field but its exact text
+        is currently Laravel's default handling of `ModelNotFoundException` (e.g.
+        `"No query results for model [App\\Models\\Athlete] 42"` in debug mode, `"Not Found"`
+        in production). A normalized API-wide 404 payload is tracked as a future refinement;
+        consumers should treat the status code as the contract and the message as advisory.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+
+    ValidationError:
+      description: Request payload failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorBody'
+
+  schemas:
+
+    # ── Enums ─────────────────────────────────────────────────────────────
+
+    Belt:
+      type: string
+      description: IBJJF adult belt ranks
+      enum: [white, blue, purple, brown, black]
+
+    AthleteStatus:
+      type: string
+      description: Enrollment status for an athlete
+      enum: [active, suspended, inactive]
+
+    # ── Generic envelopes ─────────────────────────────────────────────────
+
+    ErrorMessage:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ValidationErrorBody:
+      type: object
+      required: [message, errors]
+      properties:
+        message:
+          type: string
+          example: The given data was invalid.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            email:
+              - The email has already been taken.
+
+    PaginationMeta:
+      type: object
+      description: Laravel pagination metadata for AnonymousResourceCollection responses
+      required: [current_page, from, last_page, path, per_page, to, total]
+      properties:
+        current_page:
+          type: integer
+        from:
+          type: integer
+          nullable: true
+        last_page:
+          type: integer
+        path:
+          type: string
+        per_page:
+          type: integer
+          example: 20
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+
+    PaginationLinks:
+      type: object
+      required: [first, last, prev, next]
+      properties:
+        first:
+          type: string
+          nullable: true
+        last:
+          type: string
+          nullable: true
+        prev:
+          type: string
+          nullable: true
+        next:
+          type: string
+          nullable: true
+
+    # ── Auth ──────────────────────────────────────────────────────────────
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: Mario Rossi
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: mario@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+        password_confirmation:
+          type: string
+          format: password
+          description: Must match `password`
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      required: [data, token]
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: Plain-text Sanctum Bearer token. Returned once, never again.
+          example: "1|aBc123XyZ..."
+
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+
+    # ── Academy ───────────────────────────────────────────────────────────
+
+    AcademyCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          example: Gracie Barra Lisboa
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: |
+            Optional structured address (#72). Send `null` (or omit the key)
+            to leave the academy without an address; send a full Address
+            object to attach one. Half-filled payloads are rejected with 422.
+        training_days:
+          $ref: '#/components/schemas/TrainingDays'
+
+    AcademyUpdateRequest:
+      type: object
+      description: |
+        Partial update. Every property is optional; only keys present in the
+        payload are applied. `slug` is absent by design — it is immutable.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Gracie Barra Lisboa Centro
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: |
+            Structured address (#72). Three semantics:
+              - omit the key → no change
+              - `null` → delete the existing address row
+              - `{ ... }` → upsert (create or replace in place)
+        monthly_fee_cents:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: |
+            Academy-wide membership fee, stored in cents (€95.00 = 9500).
+            Set to `null` to clear. Required to be non-null before any
+            `POST /athletes/{id}/payments` request will succeed.
+          example: 9500
+        training_days:
+          $ref: '#/components/schemas/TrainingDays'
+
+    Address:
+      type: object
+      description: |
+        Structured postal address (#72), shared by every entity that needs
+        one (today: academy; future: athletes, instructors). Wire shape
+        mirrors the `addresses` table one-for-one minus the polymorphic
+        owner columns.
+
+        **Asymmetric nullability.** On the WRITE path every field except
+        `line2` is required: the FormRequest's `required_with:address` rules
+        and the SPA's all-or-nothing form validator both reject half-filled
+        payloads. On the READ path, however, the same fields are nullable —
+        legacy rows backfilled from the pre-#72 freeform `academies.address`
+        column have only `line1` populated until the user re-edits, and the
+        DB columns themselves are nullable to allow that backfill to land.
+        Consumers reading `GET /academy` should treat `line1` / `city` /
+        `postal_code` / `province` as `string | null`.
+
+        `country` is always non-null (defaults to `IT` at the column level).
+      required: [line1, city, postal_code, province, country]
+      properties:
+        line1:
+          type: string
+          maxLength: 255
+          nullable: true
+          example: Via Roma 1
+          description: |
+            Street and civic number. Required by the API on writes; may be
+            null on reads for legacy rows backfilled from the pre-#72
+            freeform column.
+        line2:
+          type: string
+          maxLength: 255
+          nullable: true
+          example: Scala B, interno 4
+          description: Floor / apt / unit — optional even on writes.
+        city:
+          type: string
+          maxLength: 100
+          nullable: true
+          example: Roma
+          description: Required on writes; may be null on reads for legacy backfilled rows.
+        postal_code:
+          type: string
+          pattern: '^\d{5}$'
+          nullable: true
+          example: '00100'
+          description: |
+            Italian CAP — exactly 5 digits. Required on writes; may be null
+            on reads for legacy backfilled rows. Future countries dispatch
+            a per-country regex.
+        province:
+          type: string
+          minLength: 2
+          maxLength: 5
+          nullable: true
+          example: RM
+          description: |
+            ISO 3166-2:IT province code (e.g. `RM`, `MI`, `TO`). Required
+            on writes when `country = "IT"`; may be null on reads for legacy
+            backfilled rows. The full set is the 107 cases of the
+            `App\Enums\ItalianProvince` backed enum.
+        country:
+          type: string
+          enum: [IT]
+          example: IT
+          description: ISO 3166-1 alpha-2. MVP supports only Italy. Always non-null.
+
+    Academy:
+      type: object
+      required: [id, name, slug, address, logo_url, monthly_fee_cents, training_days]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        slug:
+          type: string
+          example: gracie-barra-lisboa-a3f9kx2b
+          description: Server-generated, immutable, unique across the system
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: Structured address (#72), or null when the academy has none on file.
+        logo_url:
+          type: string
+          format: uri
+          nullable: true
+          description: |
+            Absolute public URL of the academy logo (resolved server-side via
+            `Storage::disk('public')->url(...)` against `APP_URL`), or null
+            when no logo has been uploaded.
+          example: https://api.example.com/storage/academy-logos/1/abcd1234.png
+        monthly_fee_cents:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: |
+            Academy-wide membership fee in cents. `null` means "fee not
+            configured" — the payments endpoints reject `POST` with 422
+            until the owner sets this via `PATCH /api/v1/academy`.
+          example: 9500
+        training_days:
+          $ref: '#/components/schemas/TrainingDays'
+
+    TrainingDays:
+      type: array
+      nullable: true
+      maxItems: 7
+      uniqueItems: true
+      description: |
+        The weekdays the academy trains on, expressed as Carbon `dayOfWeek`
+        integers (0 = Sunday … 6 = Saturday). Order is canonical (ascending)
+        but not enforced — clients SHOULD treat the list as a set. `null`
+        means "schedule not configured" — the daily check-in UI uses that
+        as the signal to fall back to all-weekdays.
+      items:
+        type: integer
+        minimum: 0
+        maximum: 6
+      example: [2, 4, 6]
+
+    AcademyEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Academy'
+
+    # ── Athlete ───────────────────────────────────────────────────────────
+
+    AthleteCreateRequest:
+      type: object
+      required: [first_name, last_name, belt, status, joined_at]
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+          example: Mario
+        last_name:
+          type: string
+          maxLength: 100
+          example: Rossi
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          nullable: true
+          description: Unique per academy (scoped, ignoring soft-deleted rows)
+        phone_country_code:
+          type: string
+          maxLength: 5
+          nullable: true
+          pattern: '^\+[1-9][0-9]{0,3}$'
+          description: |
+            E.164 prefix including the leading `+` (e.g. `+39`).
+            Must be sent together with `phone_national_number`: either both fields are
+            `null` or both carry a value. The combined pair is validated against
+            `libphonenumber` — combinations unreachable in any numbering plan are rejected.
+          example: '+39'
+        phone_national_number:
+          type: string
+          maxLength: 20
+          nullable: true
+          pattern: '^[0-9]+$'
+          description: Unformatted national digits — no spaces, no dashes. Must be sent together with `phone_country_code`.
+          example: '3331234567'
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+          description: Must be strictly before today
+        belt:
+          $ref: '#/components/schemas/Belt'
+        stripes:
+          type: integer
+          minimum: 0
+          maximum: 4
+          default: 0
+        status:
+          $ref: '#/components/schemas/AthleteStatus'
+        joined_at:
+          type: string
+          format: date
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: |
+            Optional structured address (#72b). Send `null` (or omit the key)
+            to leave the athlete without an address; send a full Address
+            object to attach one. Half-filled payloads are rejected with 422.
+
+    AthleteUpdateRequest:
+      type: object
+      description: All properties are optional — send only the fields you want to change.
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          nullable: true
+        phone_country_code:
+          type: string
+          maxLength: 5
+          nullable: true
+          pattern: '^\+[1-9][0-9]{0,3}$'
+          description: |
+            E.164 prefix including the leading `+`. Must be sent together with
+            `phone_national_number`: either both fields are `null` or both carry a
+            value. The combined pair is validated against `libphonenumber`.
+          example: '+39'
+        phone_national_number:
+          type: string
+          maxLength: 20
+          nullable: true
+          pattern: '^[0-9]+$'
+          description: Unformatted national digits — must be sent together with `phone_country_code`.
+          example: '3331234567'
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        belt:
+          $ref: '#/components/schemas/Belt'
+        stripes:
+          type: integer
+          minimum: 0
+          maximum: 4
+        status:
+          $ref: '#/components/schemas/AthleteStatus'
+        joined_at:
+          type: string
+          format: date
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: |
+            Structured address (#72b). Three semantics:
+              - omit the key → no change
+              - `null` → delete the existing address row
+              - `{ ... }` → upsert (create or replace in place)
+
+    Athlete:
+      type: object
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - phone_country_code
+        - phone_national_number
+        - date_of_birth
+        - belt
+        - stripes
+        - status
+        - joined_at
+        - address
+        - created_at
+        - paid_current_month
+      properties:
+        id:
+          type: integer
+          format: int64
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone_country_code:
+          type: string
+          nullable: true
+          example: '+39'
+          description: E.164 prefix including the leading `+`. Always paired with `phone_national_number`.
+        phone_national_number:
+          type: string
+          nullable: true
+          example: '3331234567'
+          description: Unformatted national digits. Always paired with `phone_country_code`.
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        belt:
+          $ref: '#/components/schemas/Belt'
+        stripes:
+          type: integer
+          minimum: 0
+          maximum: 4
+        status:
+          $ref: '#/components/schemas/AthleteStatus'
+        joined_at:
+          type: string
+          format: date
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: Structured address (#72b), or null when the athlete has none on file.
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        paid_current_month:
+          type: boolean
+          description: |
+            Derived: `true` iff a row exists in `athlete_payments` for this
+            athlete with `(year, month) = (NOW()->year, NOW()->month)`. The
+            `/athletes` index endpoint eager-loads only the current-month
+            payments slice to keep this derivation O(1) per row (no N+1).
+
+    AthletePayment:
+      type: object
+      required: [id, athlete_id, year, month, amount_cents, paid_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        athlete_id:
+          type: integer
+          format: int64
+        year:
+          type: integer
+          minimum: 2020
+          maximum: 2100
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        amount_cents:
+          type: integer
+          minimum: 0
+          description: Snapshot of `academy.monthly_fee_cents` at recording time
+        paid_at:
+          type: string
+          format: date-time
+
+    AthletePaymentCreateRequest:
+      type: object
+      required: [year, month]
+      properties:
+        year:
+          type: integer
+          minimum: 2020
+          maximum: 2100
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+
+    AthleteEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Athlete'
+
+    AthleteList:
+      type: object
+      required: [data, links, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Athlete'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ── Document ──────────────────────────────────────────────────────────
+
+    DocumentType:
+      type: string
+      description: Kind of document attached to an athlete
+      enum: [id_card, medical_certificate, insurance, other]
+
+    DocumentUploadRequest:
+      type: object
+      required: [type, file]
+      description: |
+        Multipart payload. `file` must be a PDF, JPEG, or PNG, at most 10 MB.
+        If both `issued_at` and `expires_at` are present, `expires_at` must be
+        on or after `issued_at`.
+      properties:
+        type:
+          $ref: '#/components/schemas/DocumentType'
+        file:
+          type: string
+          format: binary
+          description: The document file (application/pdf, image/jpeg, image/png)
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        expires_at:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    DocumentUpdateRequest:
+      type: object
+      description: |
+        Partial metadata update. All fields are optional. The file cannot be
+        replaced via PUT — to swap the underlying file, upload a new document
+        row and delete the old one.
+      properties:
+        type:
+          $ref: '#/components/schemas/DocumentType'
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        expires_at:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+
+    AthleteSummary:
+      type: object
+      description: |
+        Minimal athlete identity inlined into a document response when the
+        endpoint returns documents across athletes (e.g. `/documents/expiring`).
+        For single-athlete endpoints this is omitted.
+      required: [id, first_name, last_name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        first_name:
+          type: string
+        last_name:
+          type: string
+
+    Document:
+      type: object
+      required:
+        - id
+        - athlete_id
+        - type
+        - original_name
+        - mime_type
+        - size_bytes
+        - issued_at
+        - expires_at
+        - notes
+        - created_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        athlete_id:
+          type: integer
+          format: int64
+        type:
+          $ref: '#/components/schemas/DocumentType'
+        original_name:
+          type: string
+          description: Original filename at upload time (used in `Content-Disposition` on download)
+        mime_type:
+          type: string
+          description: MIME type at upload time (used in `Content-Type` on download)
+        size_bytes:
+          type: integer
+          format: int64
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        expires_at:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Soft-delete marker. **Always present** in the response: `null`
+            for active documents, ISO-8601 timestamp for tombstones.
+            Tombstone rows are only returned by the list endpoint when it is
+            called with `?trashed=1` — active callers (toggle off) never see
+            a non-null `deleted_at` because those rows are filtered out.
+            When this field is set the physical file has been wiped, so
+            `GET /documents/{id}/download` returns 410 Gone.
+        athlete:
+          $ref: '#/components/schemas/AthleteSummary'
+
+    DocumentEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Document'
+
+    DocumentList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ── Attendance ──────────────────────────────────────────────────────
+
+    AttendanceRecord:
+      type: object
+      required: [id, athlete_id, attended_on]
+      properties:
+        id:
+          type: integer
+          format: int64
+        athlete_id:
+          type: integer
+          format: int64
+        attended_on:
+          type: string
+          format: date
+          description: YYYY-MM-DD
+        notes:
+          type: string
+          nullable: true
+          maxLength: 500
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Non-null when the record is a tombstone.
+
+    AttendanceRecordList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceRecord'
+
+    MarkAttendancePayload:
+      type: object
+      required: [date, athlete_ids]
+      properties:
+        date:
+          type: string
+          format: date
+          description: YYYY-MM-DD. Must be today or within the last 7 days.
+        athlete_ids:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+            format: int64
+
+    AttendanceSummaryRow:
+      type: object
+      required: [athlete_id, first_name, last_name, count]
+      properties:
+        athlete_id:
+          type: integer
+          format: int64
+        first_name:
+          type: string
+        last_name:
+          type: string
+        count:
+          type: integer
+          minimum: 1
+          description: Number of active attendance records in the month.
+
+    AttendanceSummaryEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceSummaryRow'
+
+security:
+  - bearerAuth: []
