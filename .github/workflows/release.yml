@@ -3,6 +3,13 @@ name: Release
 on:
   push:
     branches: [main, develop]
+  # Manual fallback: a commit that lands on `main` / `develop` whose
+  # message contains a CI-skip keyword (square-bracketed `skip ci` and
+  # the four siblings GitHub honours) silently suppresses this
+  # workflow. `workflow_dispatch` lets a maintainer kick
+  # semantic-release by hand from the Actions tab — pick the branch
+  # in the UI's "Use workflow from" dropdown.
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref_name }}
@@ -17,6 +24,14 @@ jobs:
   release:
     name: "🚀 Semantic Release"
     runs-on: ubuntu-latest
+    # Belt-and-suspenders ref guard — `workflow_dispatch` accepts any
+    # ref from the Actions UI / CLI, but semantic-release is configured
+    # to release ONLY from `main` (stable) and `develop` (beta). Without
+    # this gate, a maintainer who picks a feature branch from the "Use
+    # workflow from" dropdown would either fail mid-run or, worse,
+    # produce an unintended tag. The `push:` trigger above is already
+    # branch-filtered, so this guard is the dispatch-side mirror.
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v4
         with:
