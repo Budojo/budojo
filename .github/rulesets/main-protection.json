@@ -12,7 +12,6 @@
     { "type": "deletion" },
     { "type": "non_fast_forward" },
     { "type": "creation" },
-    { "type": "required_linear_history" },
     {
       "type": "pull_request",
       "parameters": {
@@ -21,7 +20,7 @@
         "require_last_push_approval": false,
         "required_approving_review_count": 0,
         "required_review_thread_resolution": true,
-        "allowed_merge_methods": ["merge", "squash"]
+        "allowed_merge_methods": ["merge"]
       }
     },
     {
