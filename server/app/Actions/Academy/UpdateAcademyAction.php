@@ -25,9 +25,12 @@ class UpdateAcademyAction
      *   - `address` is `null` → delete the existing address row
      *   - `address` is an array → upsert (create or replace)
      *
-     * `update()` hydrates the model's attributes in-memory before persisting,
-     * so the returned instance is already in sync with the DB. We refresh
-     * after the address sync so the relation reflects the post-write state.
+     * `update()` hydrates the academy's scalar attributes in-memory before
+     * persisting, so those are in sync with the DB on return. The address
+     * relation is kept in sync by `SyncAcademyAddressAction`, which calls
+     * `setRelation('address', ...)` (or `unsetRelation` on null-clear) on
+     * the same instance. No `fresh()` round-trip is needed — both layers
+     * mutate the in-memory model deliberately.
      *
      * @param  array<string, mixed>  $validated  Output of FormRequest::validated()
      */

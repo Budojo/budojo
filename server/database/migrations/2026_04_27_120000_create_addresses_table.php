@@ -27,11 +27,18 @@ return new class extends Migration
         Schema::create('addresses', function (Blueprint $table): void {
             $table->id();
 
-            // Composite morph key — Laravel's `morphs()` adds both columns
-            // and the index in one call. Index covers `(addressable_type,
-            // addressable_id)` queries which is the only direction we ever
-            // load addresses (always via the owner).
-            $table->morphs('addressable');
+            // Composite morph key (#72) — declared manually instead of
+            // through Laravel's `morphs()` because we need a UNIQUE
+            // composite index, not the regular one `morphs()` would emit.
+            // Uniqueness on `(addressable_type, addressable_id)` is what
+            // enforces the 1:1 invariant — without it, `morphOne` is just
+            // a "first row wins" hint and concurrent writes can leave
+            // duplicates. The unique index doubles as the lookup index
+            // (same column order, same selectivity), so there's no need
+            // for a second non-unique copy.
+            $table->string('addressable_type');
+            $table->unsignedBigInteger('addressable_id');
+            $table->unique(['addressable_type', 'addressable_id'], 'addresses_addressable_unique');
 
             // Free-text street + civic. 255 covers any realistic line; we
             // don't try to split into "street name" + "number" because that

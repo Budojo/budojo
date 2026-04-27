@@ -123,15 +123,28 @@ export type ItalianProvinceCode =
 
 /**
  * Wire shape of an academy address (#72). Mirrors `AddressResource` on the
- * backend one-for-one: the SPA can read this from `GET /academy`, edit
- * fields, and POST/PATCH the same object back without remapping.
+ * backend.
+ *
+ * **Asymmetric nullability.** The API CONTRACT on writes requires every
+ * field except `line2` to be filled — `UpdateAcademyRequest::rules()` and
+ * the SPA's all-or-nothing form validator both reject half-filled payloads.
+ * But on reads, legacy rows backfilled from the pre-#72 freeform column
+ * have only `line1` populated until the user re-edits, so we type the
+ * fields as `string | null`. Consumers should handle null on render and
+ * surface "fill in your address" copy when the row is incomplete.
+ *
+ * The same shape is used for the request body — empty/null on a write is
+ * still rejected by validation, so the type is unsafe at the boundary on
+ * purpose: making it `string` for writes would require a separate
+ * `AddressInput` type, which adds friction without catching the error any
+ * earlier than the form's validator does.
  */
 export interface Address {
-  line1: string;
+  line1: string | null;
   line2: string | null;
-  city: string;
-  postal_code: string;
-  province: ItalianProvinceCode;
+  city: string | null;
+  postal_code: string | null;
+  province: ItalianProvinceCode | null;
   country: CountryCode;
 }
 

@@ -31,7 +31,7 @@ The polymorphic shape was a deliberate trade-off: we gain "any entity can have a
 ## Indexes
 
 - `PRIMARY KEY(id)`
-- `INDEX(addressable_type, addressable_id)` — composite, added by Laravel's `Blueprint::morphs()`. Covers every read pattern (always loaded via the owner relation).
+- `UNIQUE(addressable_type, addressable_id)` — composite. Doubles as the lookup index (always loaded via the owner relation) and as the DB-level enforcement of the 1:1 invariant. The migration declares the morph columns manually rather than via `Blueprint::morphs()` precisely because we need the index to be unique, not regular.
 
 ## Enums
 
@@ -49,7 +49,9 @@ Adding a country is a code change (extra enum case + per-country regex / provinc
 
 ## Business rules
 
-- **One address per owner.** Enforced at the relation layer: `Academy::address()` is `morphOne`, which means saving a new instance replaces the previous row in place rather than duplicating.
+- **One address per owner.** Enforced by **two layers** working together — `morphOne` alone is not enough (Eloquent's morph relation is a "first match wins" hint, not an invariant):
+  1. **DB:** a UNIQUE index on `(addressable_type, addressable_id)` in the `addresses` table. Concurrent inserts that race past the application-level "is there already a row?" check fail at the constraint instead of silently producing a duplicate.
+  2. **Application:** `SyncAcademyAddressAction` (and the future `SyncAddressAction` for other owners) goes through the relation's `updateOrCreate(...)`, which is keyed on the morph columns and atomic from the caller's perspective.
 - **Address is optional.** An academy can have `address = null` (legitimate state — every owner can clear it). `PATCH /api/v1/academy` with `"address": null` deletes the morph row; `"address": { ... }` upserts; omitting the key leaves the existing row untouched.
 - **All-or-nothing on write.** When the API receives an `address` object, every required field (`line1`, `city`, `postal_code`, `province`, `country`) must be filled. Half-filled payloads are rejected with 422 — the FormRequest's `required_with:address` rule is what enforces this. The SPA mirrors the rule client-side via a `FormGroup`-level `addressAllOrNothing` validator.
 - **Postal code regex is country-specific.** For IT, `^\d{5}$` (the 5-digit CAP). Future countries get their own regex dispatched from the `country` field (a `match($country)` inside `withValidator()` rather than a static rule).

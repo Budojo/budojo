@@ -40,9 +40,18 @@ class Academy extends Model
     }
 
     /**
-     * Polymorphic address (#72) — `morphOne` enforces the 1:1 invariant at
-     * the relation layer (deletes any prior row when a new one is associated)
-     * so callers don't have to think about orphaned addresses on every save.
+     * Polymorphic address (#72). `morphOne` is a READ-side convenience —
+     * Eloquent returns the first matching row but does not enforce that
+     * only one exists. The 1:1 invariant is enforced by:
+     *
+     *   1. A UNIQUE index on `(addressable_type, addressable_id)` in the
+     *      `addresses` table (see `create_addresses_table` migration).
+     *   2. `SyncAcademyAddressAction` going through this relation's
+     *      `updateOrCreate(...)` so concurrent inserts hit the constraint
+     *      instead of silently producing duplicate rows.
+     *
+     * Always mutate the address through `SyncAcademyAddressAction`, never
+     * by `new Address()->save()` against this relation directly.
      *
      * @return MorphOne<Address, $this>
      */

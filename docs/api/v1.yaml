@@ -1243,44 +1243,67 @@ components:
         Structured postal address (#72), shared by every entity that needs
         one (today: academy; future: athletes, instructors). Wire shape
         mirrors the `addresses` table one-for-one minus the polymorphic
-        owner columns. All required fields must be present when the object
-        is sent — half-filled payloads are rejected.
-      required: [line1, city, postal_code, province, country]
+        owner columns.
+
+        **Asymmetric nullability.** On the WRITE path every field except
+        `line2` is required: the FormRequest's `required_with:address` rules
+        and the SPA's all-or-nothing form validator both reject half-filled
+        payloads. On the READ path, however, the same fields are nullable —
+        legacy rows backfilled from the pre-#72 freeform `academies.address`
+        column have only `line1` populated until the user re-edits, and the
+        DB columns themselves are nullable to allow that backfill to land.
+        Consumers reading `GET /academy` should treat `line1` / `city` /
+        `postal_code` / `province` as `string | null`.
+
+        `country` is always non-null (defaults to `IT` at the column level).
+      required: [line1, line2, city, postal_code, province, country]
       properties:
         line1:
           type: string
           maxLength: 255
+          nullable: true
           example: Via Roma 1
-          description: Street and civic number
+          description: |
+            Street and civic number. Required by the API on writes; may be
+            null on reads for legacy rows backfilled from the pre-#72
+            freeform column.
         line2:
           type: string
           maxLength: 255
           nullable: true
           example: Scala B, interno 4
-          description: Floor / apt / unit — optional
+          description: Floor / apt / unit — optional even on writes.
         city:
           type: string
           maxLength: 100
+          nullable: true
           example: Roma
+          description: Required on writes; may be null on reads for legacy backfilled rows.
         postal_code:
           type: string
           pattern: '^\d{5}$'
+          nullable: true
           example: '00100'
-          description: Italian CAP — exactly 5 digits. Future countries dispatch a per-country regex.
+          description: |
+            Italian CAP — exactly 5 digits. Required on writes; may be null
+            on reads for legacy backfilled rows. Future countries dispatch
+            a per-country regex.
         province:
           type: string
           minLength: 2
           maxLength: 5
+          nullable: true
           example: RM
           description: |
             ISO 3166-2:IT province code (e.g. `RM`, `MI`, `TO`). Required
-            when `country = "IT"`. The full set is the 107 cases of the
+            on writes when `country = "IT"`; may be null on reads for legacy
+            backfilled rows. The full set is the 107 cases of the
             `App\Enums\ItalianProvince` backed enum.
         country:
           type: string
           enum: [IT]
           example: IT
-          description: ISO 3166-1 alpha-2. MVP supports only Italy.
+          description: ISO 3166-1 alpha-2. MVP supports only Italy. Always non-null.
 
     Academy:
       type: object

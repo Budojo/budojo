@@ -82,12 +82,32 @@
       <dt class="row__label">Address</dt>
       <dd class="row__value" data-cy="academy-row-address">
         @if (addr) {
+          <!--
+            Defensive rendering — legacy rows backfilled from the pre-#72
+            freeform column may have only line1 populated. Skip nulls so
+            the user doesn't see "null null (null)" gibberish; once they
+            re-edit, the all-or-nothing validator forces every field full.
+          -->
           <span class="address-block">
-            <span>{{ addr.line1 }}</span>
+            @if (addr.line1) {
+              <span>{{ addr.line1 }}</span>
+            }
             @if (addr.line2) {
               <span>{{ addr.line2 }}</span>
             }
-            <span>{{ addr.postal_code }} {{ addr.city }} ({{ addr.province }})</span>
+            @if (addr.postal_code || addr.city || addr.province) {
+              <span>
+                @if (addr.postal_code) {
+                  {{ addr.postal_code }}
+                }
+                @if (addr.city) {
+                  {{ addr.city }}
+                }
+                @if (addr.province) {
+                  ({{ addr.province }})
+                }
+              </span>
+            }
             <span class="address-block__country">{{ addr.country }}</span>
           </span>
         } @else {
