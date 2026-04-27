@@ -72,8 +72,8 @@ return new class extends Migration
         });
 
         // Best-effort recompose for rollback — formats the structured pair
-        // back to E.164 (`+39 333 1234567`-ish). Anything missing the pair
-        // stays null.
+        // back to canonical E.164 (e.g. `+393331234567` — no spaces, no
+        // separators). Anything missing the pair stays null.
         $util = PhoneNumberUtil::getInstance();
         DB::table('athletes')
             ->whereNotNull('phone_country_code')

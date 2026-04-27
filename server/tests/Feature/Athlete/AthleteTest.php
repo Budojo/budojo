@@ -364,3 +364,53 @@ it('rejects a phone combination that libphonenumber considers unreachable (#75)'
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['phone_national_number']);
 });
+
+// ─── #75 — update flow stays in lockstep with create ──────────────────────────
+
+it('updates the phone pair on an existing athlete (#75)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create([
+        'phone_country_code' => null,
+        'phone_national_number' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->putJson("/api/v1/athletes/{$athlete->id}", [
+            'phone_country_code' => '+39',
+            'phone_national_number' => '3331234567',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.phone_country_code', '+39')
+        ->assertJsonPath('data.phone_national_number', '3331234567');
+});
+
+it('rejects an update that fills only one half of the phone pair (#75)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create([
+        'phone_country_code' => null,
+        'phone_national_number' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->putJson("/api/v1/athletes/{$athlete->id}", [
+            'phone_country_code' => '+39',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_national_number']);
+});
+
+it('rejects an update where the pair is unreachable per libphonenumber (#75)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create([
+        'phone_country_code' => '+39',
+        'phone_national_number' => '3331234567',
+    ]);
+
+    $this->actingAs($user)
+        ->putJson("/api/v1/athletes/{$athlete->id}", [
+            'phone_country_code' => '+39',
+            'phone_national_number' => '1',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_national_number']);
+});

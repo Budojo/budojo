@@ -22,7 +22,7 @@ class AthleteFactory extends Factory
      */
     public function definition(): array
     {
-        // 50% of athletes have a phone on file. We hand-pick a Italian
+        // 50% of athletes have a phone on file. We hand-pick an Italian
         // mobile-prefix combination that libphonenumber considers reachable
         // — `+39` + `333xxxxxxx` — so factory rows pass the same validation
         // as user-submitted data and downstream tests don't need to special-

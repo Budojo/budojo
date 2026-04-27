@@ -6,14 +6,15 @@ namespace App\Http\Requests\Athlete;
 
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Http\Requests\Athlete\Concerns\ValidatesPhonePair;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use libphonenumber\NumberParseException;
-use libphonenumber\PhoneNumberUtil;
 
 class StoreAthleteRequest extends FormRequest
 {
+    use ValidatesPhonePair;
+
     public function authorize(): bool
     {
         $user = $this->user();
@@ -66,37 +67,6 @@ class StoreAthleteRequest extends FormRequest
 
     public function withValidator(Validator $validator): void
     {
-        validatePhonePairWithLibphonenumber($this, $validator);
+        $this->validatePhonePairWithLibphonenumber($validator);
     }
-}
-
-/**
- * Cross-field libphonenumber check shared by Store + Update form requests.
- * When both `phone_country_code` and `phone_national_number` are present,
- * concatenates them, parses with libphonenumber, and rejects unreachable /
- * invalid combinations (e.g. an Italian number prefix with a UK-shaped
- * national digit count). Lives at the file-namespace level so both request
- * classes can call it without duplicating the closure body.
- */
-function validatePhonePairWithLibphonenumber(FormRequest $request, Validator $validator): void
-{
-    $validator->after(function (Validator $v) use ($request): void {
-        $cc = $request->input('phone_country_code');
-        $nn = $request->input('phone_national_number');
-        if (! \is_string($cc) || ! \is_string($nn) || $cc === '' || $nn === '') {
-            return;
-        }
-
-        try {
-            $parsed = PhoneNumberUtil::getInstance()->parse($cc . $nn, null);
-        } catch (NumberParseException) {
-            $v->errors()->add('phone_national_number', 'The phone number is not in a recognised format.');
-
-            return;
-        }
-
-        if (! PhoneNumberUtil::getInstance()->isValidNumber($parsed)) {
-            $v->errors()->add('phone_national_number', 'The phone number is not valid for the selected country code.');
-        }
-    });
 }

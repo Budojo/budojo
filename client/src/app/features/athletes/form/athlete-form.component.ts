@@ -193,15 +193,19 @@ export class AthleteFormComponent implements OnInit {
     // value flips between empty/non-empty, the OTHER control's validity needs
     // a re-check. Without this wiring, typing a country code wouldn't surface
     // the "national number required" error until the user touched that field.
-    // `emitEvent: false` prevents an infinite loop (sibling revalidation
-    // re-emits, which would re-trigger this handler).
+    //
+    // We let the recompute bubble UP to the parent FormGroup (the default —
+    // do NOT pass `onlySelf: true`) so `form.invalid` re-aggregates correctly
+    // and `submit()` blocks while the pair is half-filled. `emitEvent: false`
+    // is the only suppression: it prevents the sibling's `valueChanges` from
+    // firing and re-entering this handler, which would loop.
     const cc = this.form.controls.phone_country_code;
     const nn = this.form.controls.phone_national_number;
     cc.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      nn.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      nn.updateValueAndValidity({ emitEvent: false });
     });
     nn.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      cc.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      cc.updateValueAndValidity({ emitEvent: false });
     });
 
     // Subscribe to paramMap rather than reading snapshot so the form reloads if

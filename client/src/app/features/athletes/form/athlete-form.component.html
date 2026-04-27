@@ -104,11 +104,13 @@
           <label for="phone_national_number">Phone <span class="optional">(optional)</span></label>
           <p-inputgroup>
             <p-select
+              inputId="phone_country_code"
               [options]="countryCodeOptions"
               formControlName="phone_country_code"
               optionLabel="label"
               optionValue="value"
               placeholder="Code"
+              ariaLabel="Phone country code"
               appendTo="body"
               styleClass="phone-country-code"
               [class.ng-invalid]="phoneCountryCode.invalid && phoneCountryCode.touched"
@@ -120,6 +122,7 @@
               formControlName="phone_national_number"
               autocomplete="tel-national"
               placeholder="National number"
+              aria-label="Phone national number"
               [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
               [class.ng-dirty]="phoneNationalNumber.touched"
             />

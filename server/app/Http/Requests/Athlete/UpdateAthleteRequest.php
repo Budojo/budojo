@@ -6,6 +6,7 @@ namespace App\Http\Requests\Athlete;
 
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Http\Requests\Athlete\Concerns\ValidatesPhonePair;
 use App\Models\Athlete;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,6 +14,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateAthleteRequest extends FormRequest
 {
+    use ValidatesPhonePair;
+
     public function authorize(): bool
     {
         $user = $this->user();
@@ -43,19 +46,21 @@ class UpdateAthleteRequest extends FormRequest
                     ->ignore($athlete?->id)
                     ->whereNull('deleted_at'),
             ],
-            // Phone pair (#75) — same shape as StoreAthleteRequest. The
-            // `sometimes` tier means a PUT that omits both keys leaves the
-            // existing pair untouched; sending one half explicitly is still
-            // rejected by `required_with`.
+            // Phone pair (#75) — same shape as StoreAthleteRequest. We do
+            // NOT add `sometimes` here on purpose: with `sometimes` set, a
+            // PUT that includes only ONE half of the pair would skip the
+            // missing field's rules entirely, and `required_with` would never
+            // fire. Without it, both rules always run; an absent pair sails
+            // through (`nullable` + neither-side-present means no
+            // `required_with` triggers), but a half-filled pair is rejected
+            // exactly as it is on the create endpoint.
             'phone_country_code' => [
-                'sometimes',
                 'nullable',
                 'string',
                 'regex:/^\+[1-9][0-9]{0,3}$/',
                 'required_with:phone_national_number',
             ],
             'phone_national_number' => [
-                'sometimes',
                 'nullable',
                 'string',
                 'regex:/^[0-9]+$/',
@@ -72,6 +77,6 @@ class UpdateAthleteRequest extends FormRequest
 
     public function withValidator(Validator $validator): void
     {
-        validatePhonePairWithLibphonenumber($this, $validator);
+        $this->validatePhonePairWithLibphonenumber($validator);
     }
 }
