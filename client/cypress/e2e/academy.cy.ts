@@ -149,6 +149,7 @@ describe('Academy edit form', () => {
     cy.wait('@updateAcademy').its('request.body').should('deep.equal', {
       name: 'Gracie Barra Torino',
       address: null,
+      training_days: null,
     });
     cy.url().should('match', /\/dashboard\/academy$/);
   });

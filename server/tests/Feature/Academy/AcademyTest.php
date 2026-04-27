@@ -192,6 +192,16 @@ it('rejects training_days with non-integer entries', function (): void {
         ->assertJsonValidationErrors(['training_days.0', 'training_days.1']);
 });
 
+it('rejects an empty training_days array — "not configured" must be expressed as null', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['training_days' => []])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['training_days']);
+});
+
 it('updates monthly_fee_cents — the academy-wide membership fee in cents (#104)', function (): void {
     $user = User::factory()->create();
     Academy::factory()->create(['user_id' => $user->id, 'monthly_fee_cents' => null]);
