@@ -5,6 +5,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AttendanceHistoryComponent } from './attendance-history.component';
+import { AcademyService } from '../../../../core/services/academy.service';
 import { Athlete } from '../../../../core/services/athlete.service';
 import { AttendanceRecord } from '../../../../core/services/attendance.service';
 
@@ -79,6 +80,109 @@ describe('AttendanceHistoryComponent', () => {
 
     expect(fixture.componentInstance['attendedCount']()).toBe(1);
     expect(fixture.componentInstance['attendedDates']().has('2026-04-10')).toBe(true);
+    httpMock.verify();
+  });
+
+  // ─── Training-days percentage (#106) ────────────────────────────────────────
+
+  it('exposes scheduledCount + ratePercent when the academy has training_days configured', () => {
+    const httpMock = setupTestBed();
+    // System time is Apr 25 2026 (per beforeEach). Academy trains
+    // Mon/Wed/Fri = [1, 3, 5]. April 2026: 1 (Wed), 3 (Fri), 6 (Mon),
+    // 8 (Wed), 10 (Fri), 13 (Mon), 15 (Wed), 17 (Fri), 20 (Mon),
+    // 22 (Wed), 24 (Fri) — 11 sessions through Apr 25 (a Saturday).
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [1, 3, 5],
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({
+        data: [
+          makeRecord({ id: 1, attended_on: '2026-04-01' }),
+          makeRecord({ id: 2, attended_on: '2026-04-08' }),
+          makeRecord({ id: 3, attended_on: '2026-04-10' }),
+          makeRecord({ id: 4, attended_on: '2026-04-15' }),
+          makeRecord({ id: 5, attended_on: '2026-04-22' }),
+        ],
+      });
+
+    expect(fixture.componentInstance['attendedCount']()).toBe(5);
+    expect(fixture.componentInstance['scheduledCount']()).toBe(11);
+    expect(fixture.componentInstance['ratePercent']()).toBe(45); // 5/11 = 0.4545 -> 45
+    httpMock.verify();
+  });
+
+  it('returns scheduledCount=null when the academy has no training_days configured', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: null,
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+
+    // No academy schedule → no denominator → no percentage UI; the template
+    // falls back to the raw count.
+    expect(fixture.componentInstance['scheduledCount']()).toBeNull();
+    expect(fixture.componentInstance['ratePercent']()).toBeNull();
+    expect(fixture.componentInstance['progressBarWidth']()).toBeNull();
+    httpMock.verify();
+  });
+
+  it('clamps the progress-bar width at 100% even when the rate exceeds it (off-schedule sessions)', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [3], // Wednesdays only
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    // April Wednesdays through Apr 25: 1, 8, 15, 22 = 4 scheduled.
+    // Athlete attended on those PLUS Sat 4 + Sat 11 (open mat) = 6 total.
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({
+        data: [
+          makeRecord({ id: 1, attended_on: '2026-04-01' }),
+          makeRecord({ id: 2, attended_on: '2026-04-04' }),
+          makeRecord({ id: 3, attended_on: '2026-04-08' }),
+          makeRecord({ id: 4, attended_on: '2026-04-11' }),
+          makeRecord({ id: 5, attended_on: '2026-04-15' }),
+          makeRecord({ id: 6, attended_on: '2026-04-22' }),
+        ],
+      });
+
+    expect(fixture.componentInstance['ratePercent']()).toBe(150);
+    // The visible bar is clamped — but the percentage label still shows the
+    // literal 150% so the instructor can see the off-schedule signal.
+    expect(fixture.componentInstance['progressBarWidth']()).toBe('100%');
     httpMock.verify();
   });
 
