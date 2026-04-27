@@ -76,6 +76,14 @@
   &__count {
     font-weight: 600;
     color: var(--p-primary-700);
+    white-space: nowrap;
+  }
+
+  // Subdued percentage suffix — the X/Y is the headline, the % is glance-confirm.
+  &__count-pct {
+    margin-left: 0.25rem;
+    font-weight: 500;
+    color: var(--p-text-muted-color);
   }
 
   &__cta {

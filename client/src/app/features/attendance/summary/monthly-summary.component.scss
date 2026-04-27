@@ -95,6 +95,13 @@
   &__count-col {
     text-align: right;
     font-variant-numeric: tabular-nums;
-    width: 5rem;
+    width: 8rem; // widened to fit "X / Y · Z%" without wrapping
+    white-space: nowrap; // keeps the trio together on narrow viewports
+  }
+
+  &__count-pct {
+    margin-left: 0.25rem;
+    color: var(--p-text-muted-color);
+    font-weight: 400;
   }
 }

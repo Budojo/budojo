@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MonthlySummaryComponent } from './monthly-summary.component';
+import { AcademyService } from '../../../core/services/academy.service';
 
 function makeRow(id: number, count: number, first = `First${id}`, last = `Last${id}`) {
   return { athlete_id: id, first_name: first, last_name: last, count };
@@ -186,6 +187,56 @@ describe('MonthlySummaryComponent', () => {
 
     expect(fixture.componentInstance['errored']()).toBe(true);
     expect(fixture.componentInstance['rows']()).toEqual([]);
+    http.verify();
+  });
+
+  // ─── Scheduled denominator (#88b) ───────────────────────────────────────────
+
+  it('exposes scheduledCount + per-row ratePercent when academy.training_days is configured', () => {
+    const { http, setMonthParam } = setupTestBed();
+    // System time Apr 15 2026. Schedule [2, 4, 6] = Tue/Thu/Sat.
+    // April Tue/Thu/Sat through Apr 15: 6 sessions held.
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [2, 4, 6],
+    });
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ data: [makeRow(1, 4), makeRow(2, 6)] });
+
+    expect(fixture.componentInstance['scheduledCount']()).toBe(6);
+    // 4/6 → 67%, 6/6 → 100%.
+    expect(fixture.componentInstance.ratePercent(4)).toBe(67);
+    expect(fixture.componentInstance.ratePercent(6)).toBe(100);
+    http.verify();
+  });
+
+  it('returns null counters when training_days is unconfigured (rows fall back to bare count)', () => {
+    const { http, setMonthParam } = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: null,
+    });
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(1, 5)] });
+
+    expect(fixture.componentInstance['scheduledCount']()).toBeNull();
+    expect(fixture.componentInstance.ratePercent(5)).toBeNull();
     http.verify();
   });
 });

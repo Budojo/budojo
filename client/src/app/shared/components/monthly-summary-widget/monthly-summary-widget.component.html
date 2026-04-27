@@ -28,9 +28,18 @@
   } @else if (!errored() && topRows().length > 0) {
     <ul class="summary-widget__list" data-cy="monthly-summary-list">
       @for (row of topRows(); track row.athlete_id) {
+        @let scheduled = scheduledCount();
+        @let percent = ratePercent(row.count);
         <li class="summary-widget__row" [attr.data-cy]="'monthly-summary-row-' + row.athlete_id">
           <span class="summary-widget__name">{{ row.first_name }} {{ row.last_name }}</span>
-          <span class="summary-widget__count">{{ row.count }}</span>
+          @if (scheduled !== null && percent !== null) {
+            <span class="summary-widget__count">
+              {{ row.count }} / {{ scheduled }}
+              <span class="summary-widget__count-pct">· {{ percent }}%</span>
+            </span>
+          } @else {
+            <span class="summary-widget__count">{{ row.count }}</span>
+          }
         </li>
       }
     </ul>
