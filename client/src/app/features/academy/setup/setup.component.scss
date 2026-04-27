@@ -1,35 +1,34 @@
 @use '../../auth/auth-page';
 
+// Setup-page-specific bits. The shared `_auth-page` partial covers all
+// the canonical styling (cards, inputs, buttons, links); this file only
+// adds what's setup-specific: required/optional label markers and the
+// textarea (which `_auth-page.scss` doesn't touch — only inputs).
+
 .required {
-  color: #e05577;
+  color: var(--budojo-danger);
 }
 
 .optional {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 400;
-  color: #8b8fa8;
+  color: var(--p-text-muted-color);
 }
 
+.field-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-text-color);
+}
+
+// Mirrors the input styling from `_auth-page.scss` — same form-field
+// canon, same padding, same focus behaviour. PrimeNG's `<p-textarea>`
+// (pTextarea directive) inherits the form-field tokens; we just pin
+// width + a sensible default for vertical resizing.
 textarea.p-textarea {
   width: 100%;
-  background: #faf8ff;
-  font-size: 0.95rem;
-  color: #1a1a2e;
-  padding: 0.65rem 0.85rem;
-  outline: none;
+  font-size: 1rem;
+  padding: 0.625rem 0.875rem;
   resize: vertical;
-  transition: background 0.15s;
   font-family: inherit;
-
-  &::placeholder {
-    color: #c0bcd6;
-  }
-
-  &:focus {
-    background: #f0ebff;
-  }
-
-  &.ng-invalid.ng-dirty {
-    background: #fff0f3;
-  }
 }
