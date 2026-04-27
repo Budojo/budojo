@@ -2,8 +2,17 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AcademyService } from '../../../core/services/academy.service';
 import { Athlete } from '../../../core/services/athlete.service';
 import { DailyAttendanceComponent } from './daily-attendance.component';
+
+const ACADEMY_BASE = {
+  id: 1,
+  name: 'Test',
+  slug: 'test',
+  address: null,
+  logo_url: null,
+} as const;
 
 function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
   return {
@@ -194,5 +203,32 @@ describe('DailyAttendanceComponent', () => {
     // Still ONE pending request, no new POST/DELETE queued.
     httpMock.verify(); // would throw if a second request had been made
     httpMock.expectNone('/api/v1/attendance');
+  });
+
+  // ─── Training-days picker filter (#88c) ─────────────────────────────────────
+
+  it('disables non-training weekdays in the date picker when training_days is configured', () => {
+    const { fixture, component, httpMock } = setup();
+    // Mon/Wed/Fri academy. The picker should grey out Sun, Tue, Thu, Sat.
+    TestBed.inject(AcademyService).academy.set({
+      ...ACADEMY_BASE,
+      training_days: [1, 3, 5],
+    });
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    expect(component['disabledWeekdays']()).toEqual([0, 2, 4, 6]);
+  });
+
+  it('returns an empty disabled-weekdays list when training_days is unconfigured (legacy behaviour)', () => {
+    const { fixture, component, httpMock } = setup();
+    TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, training_days: null });
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    // Empty array means PrimeNG's date picker leaves every weekday selectable
+    // — same surface as before #88c, so nothing breaks for academies that
+    // haven't opted in yet.
+    expect(component['disabledWeekdays']()).toEqual([]);
   });
 });

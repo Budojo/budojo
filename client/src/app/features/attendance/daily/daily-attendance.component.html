@@ -33,6 +33,7 @@
       (ngModelChange)="selectedDate.set($event); onDateChanged()"
       [minDate]="minDate"
       [maxDate]="maxDate"
+      [disabledDays]="disabledWeekdays()"
       dateFormat="yy-mm-dd"
       [showIcon]="true"
       iconDisplay="input"

@@ -187,6 +187,68 @@ describe('AttendanceHistoryComponent', () => {
     expect(component.ratePercent()).toBeNull();
   });
 
+  it('marks training-day cells with the --training modifier so non-training days read as not relevant (#88c)', () => {
+    const httpMock = setupTestBed();
+    // April 2026, system time Apr 25. Mon/Wed/Fri = [1, 3, 5].
+    // Apr 1 is a Wednesday → training day; Apr 4 is a Saturday → not training.
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [1, 3, 5],
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+    fixture.detectChanges();
+
+    // Apr 1 (Wednesday → in training_days)
+    const aprilFirst = fixture.nativeElement.querySelector('[data-day="1"]') as HTMLElement | null;
+    expect(aprilFirst).not.toBeNull();
+    expect(aprilFirst!.classList.contains('attendance-history__cell--training')).toBe(true);
+
+    // Apr 4 (Saturday → NOT in training_days)
+    const aprilFourth = fixture.nativeElement.querySelector('[data-day="4"]') as HTMLElement | null;
+    expect(aprilFourth).not.toBeNull();
+    expect(aprilFourth!.classList.contains('attendance-history__cell--training')).toBe(false);
+
+    httpMock.verify();
+  });
+
+  it('renders no --training modifier on any cell when academy.training_days is unconfigured', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: null,
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({ data: [] });
+    fixture.detectChanges();
+
+    const trainingCells = fixture.nativeElement.querySelectorAll(
+      '.attendance-history__cell--training',
+    ) as NodeListOf<HTMLElement>;
+    expect(trainingCells.length).toBe(0);
+    httpMock.verify();
+  });
+
   it('clamps aria-valuenow into [0, 100] while keeping the literal label via aria-valuetext', () => {
     const httpMock = setupTestBed();
     TestBed.inject(AcademyService).academy.set({

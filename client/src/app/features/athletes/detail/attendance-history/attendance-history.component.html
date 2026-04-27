@@ -88,10 +88,12 @@
             @let key = dayKey(day);
             @let attended = attendedDates().has(key);
             @let hasNotes = notedDates().has(key);
+            @let training = isTrainingDay(day);
             <button
               type="button"
               class="attendance-history__cell"
               [class.attendance-history__cell--attended]="attended"
+              [class.attendance-history__cell--training]="training"
               [class.attendance-history__cell--has-notes]="hasNotes"
               [disabled]="!hasNotes"
               [attr.data-cy]="attended ? 'attendance-day-attended' : 'attendance-day'"
