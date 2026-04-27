@@ -15,6 +15,7 @@ const ATHLETE_OK = {
       email: null,
       phone_country_code: null,
       phone_national_number: null,
+      address: null,
       date_of_birth: null,
       belt: 'blue' as const,
       stripes: 0,

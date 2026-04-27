@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Contracts\HasAddress;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Observers\AthleteObserver;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -35,7 +37,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 #[Fillable(['academy_id', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class])]
-class Athlete extends Model
+class Athlete extends Model implements HasAddress
 {
     /** @use HasFactory<AthleteFactory> */
     use HasFactory;
@@ -64,6 +66,20 @@ class Athlete extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(AthletePayment::class);
+    }
+
+    /**
+     * Polymorphic address (#72b). Same shape and same enforcement as Academy:
+     * `morphOne` is read-side, the 1:1 invariant is carried by the UNIQUE
+     * index on `(addressable_type, addressable_id)` plus
+     * `SyncAddressAction`'s atomic `updateOrCreate`. Always mutate through
+     * the action — never `new Address()->save()` directly.
+     *
+     * @return MorphOne<Address, $this>
+     */
+    public function address(): MorphOne
+    {
+        return $this->morphOne(Address::class, 'addressable');
     }
 
     /**

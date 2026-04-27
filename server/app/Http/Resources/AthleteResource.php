@@ -39,6 +39,13 @@ class AthleteResource extends JsonResource
                 ->where('month', $month)
                 ->exists();
 
+        // Address (#72b) — same lazy-access pattern as AcademyResource.
+        // The list endpoint at AthleteController::index eager-loads
+        // `address` via `->with('address')` so the 20-row page resolves
+        // in one extra query instead of N+1; single-row endpoints
+        // (show / store / update) hydrate the relation on demand.
+        $address = $athlete->address;
+
         return [
             'id' => $athlete->id,
             'first_name' => $athlete->first_name,
@@ -51,6 +58,7 @@ class AthleteResource extends JsonResource
             'stripes' => $athlete->stripes,
             'status' => $athlete->status->value,
             'joined_at' => $athlete->joined_at->toDateString(),
+            'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'created_at' => $athlete->created_at?->toIso8601String(),
             'paid_current_month' => $paidCurrentMonth,
         ];

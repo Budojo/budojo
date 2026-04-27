@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Athlete;
 
+use App\Actions\Address\SyncAddressAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Athlete\StoreAthleteRequest;
 use App\Http\Requests\Athlete\UpdateAthleteRequest;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class AthleteController extends Controller
 {
@@ -38,6 +40,11 @@ class AthleteController extends Controller
         'joined_at' => 'joined_at',
         'created_at' => 'created_at',
     ];
+
+    public function __construct(
+        private readonly SyncAddressAction $syncAddress,
+    ) {
+    }
 
     public function index(Request $request): AnonymousResourceCollection|JsonResponse
     {
@@ -70,6 +77,10 @@ class AthleteController extends Controller
             // out into N+1 queries on a 20-row page (#104). One extra query
             // total — payments for all visible athletes in this month.
             ->with(['payments' => $currentMonthScope])
+            // Eager-load the morph address (#72b) so AthleteResource's
+            // `$athlete->address` access on each row is one batched query
+            // instead of 20.
+            ->with('address')
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             // ?paid=yes|no — filter on whether the athlete has a payment
@@ -107,7 +118,24 @@ class AthleteController extends Controller
             return response()->json(['message' => 'No academy found.'], 403);
         }
 
-        $athlete = $user->academy->athletes()->create($request->validated());
+        $validated = $request->validated();
+        // Address (#72b) lives on a polymorphic relation, not a column on
+        // the athletes row — strip it from the mass-assignable payload
+        // before `create()` and hand it to `SyncAddressAction` instead.
+        /** @var array<string, mixed>|null $addressPayload */
+        $addressPayload = isset($validated['address']) && \is_array($validated['address'])
+            ? $validated['address']
+            : null;
+        unset($validated['address']);
+
+        $athlete = DB::transaction(function () use ($user, $validated, $addressPayload): Athlete {
+            $athlete = $user->academy->athletes()->create($validated);
+            if ($addressPayload !== null) {
+                $this->syncAddress->execute($athlete, $addressPayload);
+            }
+
+            return $athlete;
+        });
 
         return response()->json(['data' => new AthleteResource($athlete)], 201);
     }
@@ -133,9 +161,29 @@ class AthleteController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        $athlete->update($request->validated());
+        $validated = $request->validated();
+        // Three-way semantics on `address` (#72b): absent → no change,
+        // null → clear (delete the morph row), array → upsert. Strip the
+        // key off the scalar update payload either way; the dedicated
+        // action carries it the rest of the way.
+        $addressKeyPresent = \array_key_exists('address', $validated);
+        $addressPayload = $validated['address'] ?? null;
+        unset($validated['address']);
 
-        return response()->json(['data' => new AthleteResource($athlete->fresh())]);
+        $fresh = DB::transaction(function () use ($athlete, $validated, $addressKeyPresent, $addressPayload): Athlete {
+            if ($validated !== []) {
+                $athlete->update($validated);
+            }
+            if ($addressKeyPresent) {
+                /** @var array<string, mixed>|null $payload */
+                $payload = \is_array($addressPayload) ? $addressPayload : null;
+                $this->syncAddress->execute($athlete, $payload);
+            }
+
+            return $athlete->fresh() ?? $athlete;
+        });
+
+        return response()->json(['data' => new AthleteResource($fresh)]);
     }
 
     public function destroy(Request $request, Athlete $athlete): JsonResponse

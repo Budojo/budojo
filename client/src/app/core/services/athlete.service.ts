@@ -1,6 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
+// Address types live in academy.service for now (#72a); re-imported here
+// instead of duplicated. If a third owner shows up the types should move
+// to a dedicated `address.types.ts` and both services should import from
+// there — Rule of Three for the extraction trigger.
+import { Address } from './academy.service';
 
 export type Belt = 'white' | 'blue' | 'purple' | 'brown' | 'black';
 export type AthleteStatus = 'active' | 'suspended' | 'inactive';
@@ -26,6 +31,14 @@ export interface Athlete {
   stripes: number;
   status: AthleteStatus;
   joined_at: string;
+  /**
+   * Structured address (#72b). `null` means no address on file. Same
+   * read/write asymmetry as Academy: writes require every field except
+   * `line2`; reads may carry nulls for legacy rows backfilled from a
+   * pre-#72 freeform column (athletes had no freeform column historically,
+   * but the type is shared with Academy so the asymmetry is uniform).
+   */
+  address: Address | null;
   created_at: string;
   /**
    * Derived server-side: true iff a row exists in `athlete_payments` for
@@ -97,6 +110,13 @@ export interface AthletePayload {
   stripes: number;
   status: AthleteStatus;
   joined_at: string;
+  /**
+   * Structured address (#72b). Three-way semantics:
+   *   - omit the key → no change (server leaves the existing row untouched)
+   *   - `null` → delete the existing morph row
+   *   - `Address` object → upsert (create or replace in place)
+   */
+  address?: Address | null;
 }
 
 export type AthleteUpdatePayload = Partial<AthletePayload>;

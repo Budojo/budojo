@@ -18,6 +18,7 @@ function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
     email: 'mario@example.com',
     phone_country_code: '+39',
     phone_national_number: '3331234567',
+    address: null,
     date_of_birth: '1990-05-15',
     belt: 'blue',
     stripes: 2,
@@ -92,6 +93,7 @@ describe('AthleteFormComponent', () => {
         stripes: '0',
         status: 'active',
         joined_at: new Date(2026, 3, 23), // April 23 2026 local
+        address: { line1: '', line2: '', city: '', postal_code: '', province: '', country: 'IT' },
       });
 
       cmp.submit();
@@ -109,6 +111,7 @@ describe('AthleteFormComponent', () => {
         stripes: 0,
         status: 'active',
         joined_at: '2026-04-23',
+        address: null,
       });
       req.flush({ data: makeAthlete({ first_name: 'Mario', last_name: 'Rossi' }) });
 
@@ -180,6 +183,7 @@ describe('AthleteFormComponent', () => {
         stripes: '0',
         status: 'active',
         joined_at: new Date(2026, 3, 23),
+        address: { line1: '', line2: '', city: '', postal_code: '', province: '', country: 'IT' },
       });
       cmp.submit();
 

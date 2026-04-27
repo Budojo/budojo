@@ -3,11 +3,30 @@
 declare(strict_types=1);
 
 use App\Models\Academy;
+use App\Models\Address;
 use App\Models\Athlete;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
+
+/**
+ * Default-valid structured address payload (#72b) for athlete tests that
+ * need an address but don't care about specific values.
+ *
+ * @return array<string, mixed>
+ */
+function validAthleteAddressPayload(array $overrides = []): array
+{
+    return array_merge([
+        'line1' => 'Via Roma 1',
+        'line2' => null,
+        'city' => 'Roma',
+        'postal_code' => '00100',
+        'province' => 'RM',
+        'country' => 'IT',
+    ], $overrides);
+}
 
 // helpers live in tests/Pest.php
 
@@ -413,4 +432,147 @@ it('rejects an update where the pair is unreachable per libphonenumber (#75)', f
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['phone_national_number']);
+});
+
+// ─── #72b — structured address ───────────────────────────────────────────────
+
+it('creates an athlete with a structured address (#72b)', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+        'address' => validAthleteAddressPayload(['line1' => 'Via Mario 5', 'city' => 'Milano', 'postal_code' => '20100', 'province' => 'MI']),
+    ])->assertCreated()
+        ->assertJsonPath('data.address.line1', 'Via Mario 5')
+        ->assertJsonPath('data.address.city', 'Milano')
+        ->assertJsonPath('data.address.province', 'MI')
+        ->assertJsonPath('data.address.country', 'IT');
+
+    $athlete = $user->academy->athletes()->latest('id')->first();
+    expect($athlete?->address)->not->toBeNull();
+    expect($athlete?->address?->city)->toBe('Milano');
+});
+
+it('creates an athlete without an address (#72b — address is optional)', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Luigi',
+        'last_name' => 'Verdi',
+        'belt' => 'white',
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertCreated()
+        ->assertJsonPath('data.address', null);
+});
+
+it('upserts an athlete address via PUT when the athlete has none (#72b)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+
+    $this->actingAs($user)->putJson("/api/v1/athletes/{$athlete->id}", [
+        'address' => validAthleteAddressPayload(['line1' => 'Via Nuova 10', 'city' => 'Torino', 'province' => 'TO', 'postal_code' => '10100']),
+    ])->assertOk()
+        ->assertJsonPath('data.address.line1', 'Via Nuova 10')
+        ->assertJsonPath('data.address.province', 'TO');
+
+    expect($athlete->fresh()?->address?->city)->toBe('Torino');
+});
+
+it('replaces an existing athlete address via PUT (idempotent upsert) (#72b)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    Address::factory()->create([
+        'addressable_type' => Athlete::class,
+        'addressable_id' => $athlete->id,
+        'line1' => 'Via Vecchia 1',
+        'city' => 'Roma',
+        'province' => 'RM',
+        'postal_code' => '00100',
+        'country' => 'IT',
+    ]);
+
+    $this->actingAs($user)->putJson("/api/v1/athletes/{$athlete->id}", [
+        'address' => validAthleteAddressPayload(['line1' => 'Via Nuova 99', 'city' => 'Milano', 'province' => 'MI', 'postal_code' => '20100']),
+    ])->assertOk()
+        ->assertJsonPath('data.address.line1', 'Via Nuova 99');
+
+    expect(Address::where('addressable_type', Athlete::class)
+        ->where('addressable_id', $athlete->id)
+        ->count())->toBe(1);
+});
+
+it('clears the athlete address when explicitly set to null (#72b)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    Address::factory()->create([
+        'addressable_type' => Athlete::class,
+        'addressable_id' => $athlete->id,
+        'line1' => 'Via da cancellare 5',
+    ]);
+
+    $this->actingAs($user)->putJson("/api/v1/athletes/{$athlete->id}", ['address' => null])
+        ->assertOk()
+        ->assertJsonPath('data.address', null);
+
+    expect($athlete->fresh()?->address)->toBeNull();
+});
+
+it('rejects an athlete address payload missing required fields (#72b)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+
+    $this->actingAs($user)->putJson("/api/v1/athletes/{$athlete->id}", [
+        'address' => ['line1' => 'Via Roma 1'],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['address.city', 'address.postal_code', 'address.province', 'address.country']);
+});
+
+it('rejects an athlete address with an invalid province code (#72b)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+
+    $this->actingAs($user)->putJson("/api/v1/athletes/{$athlete->id}", [
+        'address' => validAthleteAddressPayload(['province' => 'XX']),
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['address.province']);
+});
+
+it('hard-deletes the address when an athlete is force-deleted (#72b)', function (): void {
+    // The polymorphic table has no FK to athletes, so without an observer
+    // hook the address would orphan when the parent is permanently deleted.
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    Address::factory()->create([
+        'addressable_type' => Athlete::class,
+        'addressable_id' => $athlete->id,
+    ]);
+
+    $athlete->forceDelete();
+
+    expect(Address::where('addressable_type', Athlete::class)
+        ->where('addressable_id', $athlete->id)
+        ->count())->toBe(0);
+});
+
+it('keeps the address when an athlete is soft-deleted (#72b)', function (): void {
+    // Soft-delete is recoverable — the address rides along with the
+    // athlete row in the trashed state.
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    Address::factory()->create([
+        'addressable_type' => Athlete::class,
+        'addressable_id' => $athlete->id,
+    ]);
+
+    $athlete->delete();
+
+    expect(Address::where('addressable_type', Athlete::class)
+        ->where('addressable_id', $athlete->id)
+        ->count())->toBe(1);
 });

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Structured postal address attached to any owner via Laravel's polymorphic `morphTo` (#72). Today the only owner is `Academy`; future milestones can add `Athlete` and other entities with zero schema change. Replaces the freeform `academies.address` text column that lived through the M0–M3 milestones.
+Structured postal address attached to any owner via Laravel's polymorphic `morphTo` (#72). Owners today: `Academy` (#72a) and `Athlete` (#72b). Future milestones can add instructors / event venues with zero schema change. Replaces the freeform `academies.address` text column that lived through the M0–M3 milestones; athletes never had a freeform column, so #72b is purely additive on that side.
 
 The polymorphic shape was a deliberate trade-off: we gain "any entity can have an address" at the cost of a database-level FK constraint on the owner. Eloquent's `morphTo` carries that integrity at the application layer, and the composite `(addressable_type, addressable_id)` index covers every read pattern (we always load addresses through the owner, never standalone).
 
@@ -51,7 +51,8 @@ Adding a country is a code change (extra enum case + per-country regex / provinc
 
 - **One address per owner.** Enforced by **two layers** working together — `morphOne` alone is not enough (Eloquent's morph relation is a "first match wins" hint, not an invariant):
   1. **DB:** a UNIQUE index on `(addressable_type, addressable_id)` in the `addresses` table. Concurrent inserts that race past the application-level "is there already a row?" check fail at the constraint instead of silently producing a duplicate.
-  2. **Application:** `SyncAcademyAddressAction` (and the future `SyncAddressAction` for other owners) goes through the relation's `updateOrCreate(...)`, which is keyed on the morph columns and atomic from the caller's perspective.
+  2. **Application:** `App\Actions\Address\SyncAddressAction` goes through the relation's `updateOrCreate(...)`, which is keyed on the morph columns and atomic from the caller's perspective. Every owner uses the same action — `Academy` and `Athlete` today, future entities tomorrow.
+- **Orphan cleanup on hard delete.** The polymorphic table has no FK to its owner, so when an owner is permanently deleted the address row would otherwise survive. Each owner therefore carries an observer hook: `AcademyObserver::deleted` and `AthleteObserver::forceDeleted` both wipe their address row. Soft delete leaves the address in place — recoverable until the parent row itself is purged.
 - **Address is optional.** An academy can have `address = null` (legitimate state — every owner can clear it). `PATCH /api/v1/academy` with `"address": null` deletes the morph row; `"address": { ... }` upserts; omitting the key leaves the existing row untouched.
 - **All-or-nothing on write.** When the API receives an `address` object, every required field (`line1`, `city`, `postal_code`, `province`, `country`) must be filled. Half-filled payloads are rejected with 422 — the FormRequest's `required_with:address` rule is what enforces this. The SPA mirrors the rule client-side via a `FormGroup`-level `addressAllOrNothing` validator.
 - **Postal code regex is country-specific.** For IT, `^\d{5}$` (the 5-digit CAP). Future countries get their own regex dispatched from the `country` field (a `match($country)` inside `withValidator()` rather than a static rule).
@@ -63,9 +64,10 @@ Adding a country is a code change (extra enum case + per-country regex / provinc
 
 ## Related tables
 
-- `academies` — see [`academy.md`](./academy.md). Today the only owner.
+- `academies` — see [`academy.md`](./academy.md). First owner (#72a).
+- `athletes` — see [`athlete.md`](./athlete.md). Second owner (#72b).
 
 ## Future
 
-- **#72b** — extend the morph relation to athletes. Zero schema change.
 - Non-IT countries — adds a `Country` enum case, a country-specific postal-code regex branch, and a per-country province enum (or null when the country doesn't use province subdivisions).
+- Additional owners (instructors, event venues) — implement `App\Contracts\HasAddress` + add `morphOne(Address::class, 'addressable')` and an observer hook for orphan cleanup. Zero schema change.

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Academy;
 
-use App\Http\Requests\Academy\Concerns\ValidatesAddress;
+use App\Http\Requests\Concerns\ValidatesAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 

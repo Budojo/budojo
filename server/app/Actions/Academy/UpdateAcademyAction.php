@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Actions\Academy;
 
+use App\Actions\Address\SyncAddressAction;
 use App\Models\Academy;
 use Illuminate\Support\Facades\DB;
 
 class UpdateAcademyAction
 {
     public function __construct(
-        private readonly SyncAcademyAddressAction $syncAddress,
+        private readonly SyncAddressAction $syncAddress,
     ) {
     }
 
@@ -27,7 +28,7 @@ class UpdateAcademyAction
      *
      * `update()` hydrates the academy's scalar attributes in-memory before
      * persisting, so those are in sync with the DB on return. The address
-     * relation is kept in sync by `SyncAcademyAddressAction`, which calls
+     * relation is kept in sync by `SyncAddressAction`, which calls
      * `setRelation('address', ...)` (or `unsetRelation` on null-clear) on
      * the same instance. No `fresh()` round-trip is needed — both layers
      * mutate the in-memory model deliberately.

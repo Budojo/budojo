@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Contracts\HasAddress;
+use App\Observers\AcademyObserver;
 use Database\Factories\AcademyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +25,8 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property list<int>|null      $training_days  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
  */
 #[Fillable(['user_id', 'name', 'slug', 'logo_path', 'monthly_fee_cents', 'training_days'])]
-class Academy extends Model
+#[ObservedBy([AcademyObserver::class])]
+class Academy extends Model implements HasAddress
 {
     /** @use HasFactory<AcademyFactory> */
     use HasFactory;
@@ -46,11 +50,11 @@ class Academy extends Model
      *
      *   1. A UNIQUE index on `(addressable_type, addressable_id)` in the
      *      `addresses` table (see `create_addresses_table` migration).
-     *   2. `SyncAcademyAddressAction` going through this relation's
+     *   2. `SyncAddressAction` going through this relation's
      *      `updateOrCreate(...)` so concurrent inserts hit the constraint
      *      instead of silently producing duplicate rows.
      *
-     * Always mutate the address through `SyncAcademyAddressAction`, never
+     * Always mutate the address through `SyncAddressAction`, never
      * by `new Address()->save()` against this relation directly.
      *
      * @return MorphOne<Address, $this>

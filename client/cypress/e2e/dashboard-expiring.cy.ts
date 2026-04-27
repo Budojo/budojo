@@ -129,6 +129,7 @@ describe('Expiring documents widget + deep-link', () => {
           email: null,
           phone_country_code: null,
           phone_national_number: null,
+          address: null,
           date_of_birth: null,
           belt: 'blue',
           stripes: 2,

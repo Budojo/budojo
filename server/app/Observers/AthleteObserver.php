@@ -29,4 +29,19 @@ class AthleteObserver
             $this->deleteDocument->execute($document);
         }
     }
+
+    /**
+     * On HARD delete (force-delete after a soft-delete window, or a direct
+     * `forceDelete()` from the seeder reseed path), wipe the structured
+     * address row too. The polymorphic `addresses` table has no FK to
+     * the athlete, so without this hook the row would orphan and slowly
+     * leak across reseeds. Kept on `forceDeleted` (not `deleting`) so a
+     * soft-delete still leaves the address in place — the address is the
+     * user's data and follows the same "recoverable until purge" lifecycle
+     * as the athlete row itself.
+     */
+    public function forceDeleted(Athlete $athlete): void
+    {
+        $athlete->address()->delete();
+    }
 }

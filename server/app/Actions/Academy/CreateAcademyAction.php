@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Academy;
 
+use App\Actions\Address\SyncAddressAction;
 use App\Models\Academy;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,7 @@ use Illuminate\Support\Str;
 class CreateAcademyAction
 {
     public function __construct(
-        private readonly SyncAcademyAddressAction $syncAddress,
+        private readonly SyncAddressAction $syncAddress,
     ) {
     }
 

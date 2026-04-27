@@ -14,6 +14,7 @@ function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
     email: 'mario@example.com',
     phone_country_code: null,
     phone_national_number: null,
+    address: null,
     date_of_birth: '1990-05-15',
     belt: 'blue',
     stripes: 2,

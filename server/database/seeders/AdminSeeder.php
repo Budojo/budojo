@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Actions\Academy\SyncAcademyAddressAction;
+use App\Actions\Address\SyncAddressAction;
 use App\Models\Academy;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -42,12 +42,12 @@ class AdminSeeder extends Seeder
                 'name' => 'Budojo HQ',
                 'slug' => 'budojo-hq-' . Str::lower(Str::random(8)),
             ]);
-            // Structured address (#72). Goes through `SyncAcademyAddressAction`
+            // Structured address (#72). Goes through `SyncAddressAction`
             // for the same reason every other write does — single source of
             // truth for the morph upsert. If the action ever grows side
             // effects (audit logging, search-index reindex, etc.) seed
             // data picks them up automatically.
-            app(SyncAcademyAddressAction::class)->execute($academy, [
+            app(SyncAddressAction::class)->execute($academy, [
                 'line1' => 'Via Roma 1',
                 'line2' => null,
                 'city' => 'Milano',

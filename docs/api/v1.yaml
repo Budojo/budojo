@@ -1423,6 +1423,14 @@ components:
         joined_at:
           type: string
           format: date
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: |
+            Optional structured address (#72b). Send `null` (or omit the key)
+            to leave the athlete without an address; send a full Address
+            object to attach one. Half-filled payloads are rejected with 422.
 
     AthleteUpdateRequest:
       type: object
@@ -1471,6 +1479,15 @@ components:
         joined_at:
           type: string
           format: date
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: |
+            Structured address (#72b). Three semantics:
+              - omit the key → no change
+              - `null` → delete the existing address row
+              - `{ ... }` → upsert (create or replace in place)
 
     Athlete:
       type: object
@@ -1486,6 +1503,7 @@ components:
         - stripes
         - status
         - joined_at
+        - address
         - created_at
         - paid_current_month
       properties:
@@ -1525,6 +1543,11 @@ components:
         joined_at:
           type: string
           format: date
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: Structured address (#72b), or null when the athlete has none on file.
         created_at:
           type: string
           format: date-time
