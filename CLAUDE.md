@@ -312,12 +312,14 @@ Versioning, changelogs, and Git tags are fully automated — no manual tagging o
 
 1. semantic-release reads conventional commits since the last tag
 2. Determines the next version bump (`fix` → patch, `feat` → minor, `BREAKING CHANGE` → major)
-3. Creates tag `vX.Y.Z-beta.N` + GitHub pre-release + updates `CHANGELOG.md`
+3. Creates tag `vX.Y.Z-beta.N` + a GitHub pre-release whose body IS the rendered changelog
 
 **Stable release** — every merge commit from `develop` → `main`:
 
 1. semantic-release reads conventional commits since the last stable tag
-2. Creates tag `vX.Y.Z` + GitHub Release with full changelog
+2. Creates tag `vX.Y.Z` + GitHub Release whose body carries the full changelog
+
+The changelog is **not** checked back into the repo — there is no `CHANGELOG.md` to maintain. The GitHub Releases page is the source of truth. We dropped the `@semantic-release/changelog` + `@semantic-release/git` plugins after the develop branch ruleset rejected the bot's auto-commit (see `.claude/gotchas.md` § GitHub Actions).
 
 **Config:** `.releaserc.json` at the repo root.
 
