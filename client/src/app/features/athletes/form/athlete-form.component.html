@@ -114,7 +114,20 @@
               appendTo="body"
               styleClass="phone-country-code"
               [class.ng-invalid]="phoneCountryCode.invalid && phoneCountryCode.touched"
-            />
+            >
+              <!--
+                In the closed trigger we only show the prefix value (e.g. "+39"),
+                not the full "+39 Italy" label. The label is reserved for the
+                open panel so users can identify each country comfortably; the
+                trigger just needs to confirm the picked prefix in a compact way.
+                Without this template the trigger renders the full label and
+                truncates ("+3...") because the column width is the prefix +
+                input layout, not the full country name.
+              -->
+              <ng-template pTemplate="selectedItem" let-selected>
+                {{ selected?.value }}
+              </ng-template>
+            </p-select>
             <input
               pInputText
               id="phone_national_number"
