@@ -209,13 +209,7 @@ export class AthletesListComponent implements OnInit {
    * 0-stripe black belt — never the right ordering.
    */
   onSort(event: { field?: string; order?: number }): void {
-    const allowed: AthleteSortField[] = [
-      'first_name',
-      'last_name',
-      'belt',
-      'joined_at',
-      'created_at',
-    ];
+    const allowed: AthleteSortField[] = ['first_name', 'last_name', 'belt', 'created_at'];
     const field = event.field;
     if (!field || !(allowed as string[]).includes(field)) return;
 

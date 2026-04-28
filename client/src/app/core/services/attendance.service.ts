@@ -105,7 +105,10 @@ export class AttendanceService {
     if (range.from) params = params.set('from', range.from);
     if (range.to) params = params.set('to', range.to);
     return this.http
-      .get<AttendanceListResponse>(`/api/v1/athletes/${athleteId}/attendance`, { params })
+      .get<AttendanceListResponse>(
+        `${environment.apiBase}/api/v1/athletes/${athleteId}/attendance`,
+        { params },
+      )
       .pipe(map((res) => res.data));
   }
 

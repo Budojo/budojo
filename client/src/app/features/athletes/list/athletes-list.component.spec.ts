@@ -66,10 +66,20 @@ describe('AthletesListComponent', () => {
       // default-fallback column on the backend; keeping it explicitly
       // allowed lets the table fire `sort_by=created_at` in the (rare)
       // case a future header binds to it.
-      for (const field of ['belt', 'first_name', 'last_name', 'joined_at', 'created_at'] as const) {
+      for (const field of ['belt', 'first_name', 'last_name', 'created_at'] as const) {
         component.onSort({ field, order: 1 });
         expect(component.sortField()).toBe(field);
       }
+    });
+
+    it('rejects field="joined_at" — column was dropped (#164)', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      component.onSort({ field: 'last_name', order: 1 });
+      // Now try the dropped column — should be ignored.
+      component.onSort({ field: 'joined_at', order: -1 });
+      expect(component.sortField()).toBe('last_name');
     });
   });
 
