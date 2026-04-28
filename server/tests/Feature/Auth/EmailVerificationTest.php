@@ -121,10 +121,14 @@ it('rejects a tampered signed link (id matches but signature does not) with veri
     config(['app.client_url' => 'https://app.test']);
 
     $user = User::factory()->unverified()->create();
-    $tampered = URL::route('verification.verify', [
-        'id' => $user->getKey(),
-        'hash' => sha1($user->getEmailForVerification()),
-    ]) . '&signature=deadbeef';
+    // Build a real signed URL, then mangle the signature value so the signed
+    // middleware rejects it. We replace (not append) — appending a second
+    // `signature=` would leave the valid one in place and Laravel would use
+    // the first. preg_replace targets the existing query parameter directly.
+    $valid = signedVerifyUrl($user);
+    $tampered = (string) preg_replace('/signature=[^&]+/', 'signature=deadbeef', $valid, 1);
+
+    expect($tampered)->not->toBe($valid);
 
     $this->get($tampered)->assertRedirect('https://app.test/auth/verify-error');
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();

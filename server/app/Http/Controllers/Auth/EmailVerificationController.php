@@ -7,9 +7,9 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class EmailVerificationController extends Controller
 {
@@ -19,18 +19,18 @@ class EmailVerificationController extends Controller
      * Rate-limited via the `email-verification-resend` named limiter
      * (one request per minute per user; see AppServiceProvider).
      */
-    public function resend(Request $request): JsonResponse
+    public function resend(Request $request): Response
     {
         /** @var User $user */
         $user = $request->user();
 
         if ($user->hasVerifiedEmail()) {
-            return response()->json(status: 204);
+            return response()->noContent();
         }
 
         $user->sendEmailVerificationNotification();
 
-        return response()->json(status: 204);
+        return response()->noContent();
     }
 
     /**
