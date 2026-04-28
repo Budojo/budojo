@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { AcademyService } from './academy.service';
+import { environment } from '../../../environments/environment';
 
 export interface RegisterPayload {
   name: string;
@@ -26,7 +27,7 @@ const TOKEN_KEY = 'auth_token';
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly academyService = inject(AcademyService);
-  private readonly base = '/api/v1/auth';
+  private readonly base = `${environment.apiBase}/api/v1/auth`;
 
   readonly isLoggedIn = signal<boolean>(!!localStorage.getItem(TOKEN_KEY));
 
