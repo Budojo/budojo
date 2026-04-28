@@ -93,6 +93,16 @@
     color: var(--p-red-500);
   }
 
+  // Conditional-required asterisk (#159) — used on the address group fields
+  // that are required only when any sibling is filled. Same red `*` as
+  // .required so the visual signal "this field is mandatory" carries, but
+  // muted slightly + tooltip-bearing to telegraph the conditional nature.
+  .required-when-filled {
+    color: var(--p-red-500);
+    opacity: 0.7;
+    cursor: help;
+  }
+
   .optional {
     color: var(--p-text-muted-color);
     font-weight: 400;
