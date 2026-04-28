@@ -1,0 +1,35 @@
+@if (user(); as u) {
+  @if (verified()) {
+    <div
+      class="verification-status verification-status--verified"
+      data-cy="email-verification-status"
+    >
+      <i class="pi pi-check-circle" aria-hidden="true"></i>
+      <span class="verification-status__label">Email verified</span>
+    </div>
+  } @else {
+    <div
+      class="verification-status verification-status--unverified"
+      data-cy="email-verification-status"
+    >
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+      <span class="verification-status__label">Email not verified</span>
+      <p-button
+        type="button"
+        size="small"
+        severity="secondary"
+        [text]="true"
+        [disabled]="!canResend()"
+        [loading]="sending()"
+        (onClick)="resend()"
+        data-cy="email-verification-resend"
+      >
+        @if (cooldown() > 0) {
+          Resend in {{ cooldown() }}s
+        } @else {
+          Resend
+        }
+      </p-button>
+    </div>
+  }
+}

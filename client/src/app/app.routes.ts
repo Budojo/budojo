@@ -17,6 +17,20 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/auth/login/login.component').then((m) => m.LoginComponent),
       },
+      {
+        path: 'verify-success',
+        loadComponent: () =>
+          import('./features/auth/verify-success/verify-success.component').then(
+            (m) => m.VerifySuccessComponent,
+          ),
+      },
+      {
+        path: 'verify-error',
+        loadComponent: () =>
+          import('./features/auth/verify-error/verify-error.component').then(
+            (m) => m.VerifyErrorComponent,
+          ),
+      },
     ],
   },
   {
@@ -111,6 +125,11 @@ export const routes: Routes = [
           import('./features/attendance/summary/monthly-summary.component').then(
             (m) => m.MonthlySummaryComponent,
           ),
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/profile/profile.component').then((m) => m.ProfileComponent),
       },
     ],
   },
