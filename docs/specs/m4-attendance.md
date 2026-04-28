@@ -245,4 +245,4 @@ The widget at `/dashboard/athletes` and the full table at `/dashboard/attendance
 
 ### Anything not listed here
 
-shipped as spec'd. No silent scope cuts beyond the swipe deferral.
+Everything else shipped as spec'd. No silent scope cuts beyond the swipe deferral.
