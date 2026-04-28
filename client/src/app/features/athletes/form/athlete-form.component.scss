@@ -161,14 +161,14 @@
 // `min-width` declaration on tiebreaker. We brute-force the width with
 // the `flex` shorthand AND `width` AND `min-width` all marked
 // `!important`, on the styleClass that PrimeNG attaches to the host
-// `<p-select>`. 9rem comfortably fits "+999" plus the chevron with
+// `<p-select>`. 7rem comfortably fits "+999" plus the chevron with
 // breathing room.
 //
 // We deliberately don't try to nest `.phone-country-code .p-select` —
 // PrimeNG attaches both classes to the SAME element in this version
 // (verified in rendered DOM), so a descendant selector targets nothing.
 :host ::ng-deep .phone-country-code {
-  flex: 0 0 9rem !important;
-  width: 9rem !important;
-  min-width: 9rem !important;
+  flex: 0 0 7rem !important;
+  width: 7rem !important;
+  min-width: 7rem !important;
 }
