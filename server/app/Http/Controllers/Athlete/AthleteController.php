@@ -113,10 +113,12 @@ class AthleteController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-
-        if ($user->academy === null) {
-            return response()->json(['message' => 'No academy found.'], 403);
-        }
+        // No-academy and cross-academy 403s are owned by StoreAthleteRequest's
+        // authorize() + failedAuthorization() override (single source of truth
+        // for write 403s — see server/CLAUDE.md § Clean Architecture). The
+        // FormRequest short-circuits before this method is invoked when the
+        // user has no academy, so $user->academy is non-null below.
+        \assert($user->academy !== null);
 
         $validated = $request->validated();
         // Address (#72b) lives on a polymorphic relation, not a column on

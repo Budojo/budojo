@@ -464,7 +464,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/ForbiddenAthlete'
+          $ref: '#/components/responses/NoAcademy'
 
     post:
       tags: [athletes]
@@ -671,7 +671,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/ForbiddenAthlete'
+          $ref: '#/components/responses/NoAcademy'
 
   /documents/{id}/download:
     parameters:

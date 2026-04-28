@@ -418,6 +418,34 @@ it('rejects a half-filled phone pair (only national_number)', function (): void 
         ->assertJsonValidationErrors(['phone_country_code']);
 });
 
+// `sometimes` would skip the missing-key's rules entirely, letting a PATCH
+// that includes only ONE half of the pair sail through `required_with`
+// (the other side's rule never runs because Laravel sees no key to validate).
+// These two tests pin the no-`sometimes` shape on the phone pair.
+it('rejects a phone pair when only country_code key is present (sibling key omitted)', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'phone_country_code' => '+39',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_national_number']);
+});
+
+it('rejects a phone pair when only national_number key is present (sibling key omitted)', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'phone_national_number' => '3331234567',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_country_code']);
+});
+
 it('rejects a phone number that fails libphonenumber validation', function (): void {
     $user = User::factory()->create();
     Academy::factory()->create(['user_id' => $user->id]);
