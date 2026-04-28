@@ -119,7 +119,10 @@ export class DailyAttendanceComponent implements OnInit {
 
   // Clear any pending undo toast before the next add to avoid stacked Undo
   // buttons. The component-scoped MessageService isolates this from global
-  // toasts (see providers above).
+  // toasts (see providers above). We intentionally don't use per-message
+  // keys: PrimeNG ignores keyed messages when the rendered `<p-toast>` is
+  // keyless, so adding keys can silently make undo/error toasts stop
+  // appearing — a non-obvious gotcha worth recording at the call site.
 
   ngOnInit(): void {
     this.loadDay();
