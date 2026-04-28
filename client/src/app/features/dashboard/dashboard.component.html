@@ -40,14 +40,14 @@
        detection needed — the media query inside the SCSS handles both states.
        See dashboard.component.scss § .sidebar for the visibility transitions. -->
   <aside id="app-sidebar" class="sidebar" [class.sidebar--open]="sidebarOpen()">
-    <button
-      type="button"
-      class="sidebar__brand"
-      [attr.aria-label]="brandLabel() + ' menu'"
-      aria-haspopup="menu"
-      [attr.aria-expanded]="menuVisible()"
-      (click)="menu.toggle($event)"
-    >
+    <!--
+      Brand area is non-interactive (#166). Previously this was a button that
+      toggled a single-item dropdown ("Sign out"); the bottom-of-sidebar Sign
+      out row already carries that action, so the dropdown was redundant
+      noise (Krug § "one obvious destination per verb"). Plain header now —
+      the academy name still reads as the dominant brand identity.
+    -->
+    <div class="sidebar__brand" data-cy="sidebar-brand">
       @if (academyLogoUrl(); as url) {
         <img [src]="url" alt="" class="sidebar__logo" aria-hidden="true" />
       } @else {
@@ -58,17 +58,7 @@
         <span class="sidebar__brand-eyebrow">Budojo</span>
         <span class="sidebar__brand-name">{{ brandLabel() }}</span>
       </span>
-      <i class="sidebar__brand-caret pi pi-angle-down" aria-hidden="true"></i>
-    </button>
-
-    <p-menu
-      #menu
-      [model]="menuItems()"
-      [popup]="true"
-      appendTo="body"
-      (onShow)="menuVisible.set(true)"
-      (onHide)="menuVisible.set(false)"
-    />
+    </div>
 
     @if (user(); as u) {
       <div class="sidebar__verification">
@@ -118,11 +108,10 @@
       </a>
     </nav>
 
-    <!-- Sign out as a dedicated, visible row — the brand dropdown above
-         (aria-haspopup menu) still carries the same action, but a coach
-         mid-class shouldn't have to discover a hidden caret. Separate
-         bottom section keeps it away from navigation and signals finality
-         via the `--signout` modifier color. -->
+    <!-- Sign out: dedicated, always-visible row. Lives apart from the nav
+         to signal finality via the `--signout` modifier color. This is
+         the only signout entry point in the shell after #166 retired the
+         redundant brand-area dropdown (Krug + Don't Make Me Think). -->
     <div class="sidebar__footer">
       <button
         type="button"

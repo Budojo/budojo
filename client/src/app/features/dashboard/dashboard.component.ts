@@ -7,8 +7,6 @@ import {
   signal,
 } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { MenuItem } from 'primeng/api';
-import { MenuModule } from 'primeng/menu';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
@@ -21,7 +19,6 @@ import { EmailVerificationStatusComponent } from '../../shared/components/email-
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    MenuModule,
     BrandGlyphComponent,
     EmailVerificationStatusComponent,
   ],
@@ -72,13 +69,6 @@ export class DashboardComponent implements OnInit {
   );
 
   /**
-   * Open/closed state for the brand dropdown. Bound to `aria-expanded` on the
-   * trigger button for screen-reader parity. Toggled by PrimeNG's `onShow` /
-   * `onHide` — we don't read the internal menu state, we mirror it.
-   */
-  protected readonly menuVisible = signal(false);
-
-  /**
    * Mobile sidebar drawer state. On viewports below the sidebar breakpoint
    * (see dashboard.component.scss @media) the sidebar is hidden off-canvas
    * by default; tapping the hamburger in the mobile topbar flips this to
@@ -94,20 +84,6 @@ export class DashboardComponent implements OnInit {
   protected closeSidebar(): void {
     this.sidebarOpen.set(false);
   }
-
-  /**
-   * Menu items shown when the user activates the brand. Today there is only
-   * one entry (Sign out), but the structure is deliberately a list so future
-   * additions (Edit academy, Account settings, Theme toggle) slot in without
-   * restructuring the shell.
-   */
-  protected readonly menuItems = computed<MenuItem[]>(() => [
-    {
-      label: 'Sign out',
-      icon: 'pi pi-sign-out',
-      command: () => this.logout(),
-    },
-  ]);
 
   private logout(): void {
     // `AuthService.logout()` already invalidates the academy cache

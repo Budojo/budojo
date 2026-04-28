@@ -75,7 +75,7 @@ describe('Sidebar brand + sign out', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
-  it('renders the academy name as the dominant sidebar brand', () => {
+  it('renders the academy name as the dominant sidebar brand (non-interactive after #166)', () => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
     cy.visitAuthenticated('/dashboard/athletes');
@@ -83,31 +83,13 @@ describe('Sidebar brand + sign out', () => {
     cy.wait('@athletes');
 
     cy.get('.sidebar__brand-name').should('contain.text', 'Test Academy');
-    cy.get('.sidebar__brand').should('have.attr', 'aria-haspopup', 'menu');
-    cy.get('.sidebar__brand').should('have.attr', 'aria-expanded', 'false');
+    // After #166 the brand area is a static <div>, not a dropdown trigger.
+    cy.get('[data-cy="sidebar-brand"]').should('exist').and('not.have.attr', 'aria-haspopup');
   });
 
-  it('opens the brand menu on click and signs the user out back to /auth/login', () => {
-    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
-    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
-    cy.visitAuthenticated('/dashboard/athletes');
-    cy.wait('@academy');
-    cy.wait('@athletes');
-
-    cy.get('.sidebar__brand').click();
-    cy.get('.sidebar__brand').should('have.attr', 'aria-expanded', 'true');
-    // Target the menu item via its ARIA role — PrimeNG's internal class names
-    // (`p-menu-item-link` vs older `p-menuitem-link`) are versioned and brittle;
-    // `role="menuitem"` is part of the a11y contract and stable across versions.
-    cy.get('[role="menuitem"]').contains('Sign out').click();
-
-    cy.url().should('include', '/auth/login');
-  });
-
-  // The brand-menu path above still works (and a power user might keep
-  // using it), but #69 added a visible row at the bottom of the sidebar
-  // so a coach mid-class doesn't have to discover the hidden dropdown.
-  it('signs the user out via the dedicated sidebar footer button', () => {
+  // #166 retired the brand-dropdown signout. The bottom-of-sidebar row is
+  // the only signout entry point now — covered below.
+  it('signs the user out via the sidebar footer button (only signout entry after #166)', () => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
     cy.visitAuthenticated('/dashboard/athletes');
