@@ -1,0 +1,44 @@
+// Apple-minimal pillola — hairline border, no shadow, semantic color shift
+// between verified (success-50 bg) and unverified (warn-50 bg). Same shape
+// in both states so the layout doesn't reflow when the status flips.
+
+.verification-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  border: 1px solid var(--p-content-border-color);
+  transition: background-color var(--budojo-motion-quick) var(--budojo-motion-easing);
+
+  i {
+    font-size: 1rem;
+  }
+
+  &__label {
+    white-space: nowrap;
+  }
+
+  &--verified {
+    color: var(--p-green-700, #15803d);
+    background: var(--p-green-50, #f0fdf4);
+    border-color: var(--p-green-200, #bbf7d0);
+  }
+
+  &--unverified {
+    color: var(--p-amber-700, #b45309);
+    background: var(--p-amber-50, #fffbeb);
+    border-color: var(--p-amber-200, #fde68a);
+  }
+
+  // Tighten the embedded resend button so it visually reads as part of the
+  // pill rather than a separate floating CTA.
+  ::ng-deep .p-button {
+    --p-button-padding-y: 0;
+    --p-button-padding-x: 0.25rem;
+    font-size: 0.8125rem;
+    color: inherit;
+  }
+}

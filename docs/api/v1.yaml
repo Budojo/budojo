@@ -29,9 +29,23 @@ tags:
   - name: academy
     description: The tenant entity — one per user
   - name: athletes
-    description: Roster of students belonging to the authenticated user's academy
+    description: |
+      Roster of students belonging to the authenticated user's academy.
+
+      **Email-verification gate.** Write endpoints (`POST` / `PUT` / `DELETE` on
+      `/athletes` and `/athletes/{id}`) require the authenticated user to have
+      verified their email. Unverified users get a `403` with
+      `message: 'verification_required'` (see the `VerificationRequired`
+      response component); the SPA catches this in its auth interceptor and
+      redirects the user to `/dashboard/profile?reason=verify_required`.
+      Reads (`GET`) stay open so the user can browse while unverified.
   - name: documents
-    description: Files (ID, medical cert, insurance) attached to an athlete, with expiry tracking
+    description: |
+      Files (ID, medical cert, insurance) attached to an athlete, with expiry tracking.
+
+      **Email-verification gate.** Same shape as athletes: writes (`POST` /
+      `PUT` / `DELETE`) are gated on `verified.api`; reads stay open. See the
+      `VerificationRequired` response component.
 
 paths:
 
@@ -114,6 +128,91 @@ paths:
                 message: Invalid credentials.
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Fetch the currently authenticated user
+      description: |
+        Returns the authenticated user resource (including `email_verified_at`).
+        The SPA calls this on bootstrap so it can render verification state
+        after a page reload without waiting for the next register/login.
+      operationId: authMe
+      responses:
+        '200':
+          description: The authenticated user
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /email/verification-notification:
+    post:
+      tags: [auth]
+      summary: Resend the verification email to the authenticated user
+      description: |
+        Triggers a fresh signed-link verification email. Idempotent — already-verified
+        users get a 204 with no email dispatched. Rate-limited to one request per minute
+        per user; over-limit calls return 429.
+      operationId: authResendVerificationEmail
+      responses:
+        '204':
+          description: Email queued (or no-op if already verified)
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          description: Rate limit exceeded — retry after the `Retry-After` header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Too Many Attempts.
+
+  /email/verify/{id}/{hash}:
+    get:
+      tags: [auth]
+      summary: Verify email via signed link (callback from the verification email)
+      description: |
+        Public endpoint, but the URL is signed (HMAC). Browsers click this from the
+        verification email; the controller marks the user verified and bounces them
+        to the SPA via `302 Location: ${CLIENT_URL}/auth/verify-success`. Tampered or
+        expired signatures redirect to `${CLIENT_URL}/auth/verify-error` instead of
+        returning a bare 403 — the SPA renders the explainer page from there.
+      operationId: authVerifyEmail
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+        - in: path
+          name: hash
+          required: true
+          schema: { type: string, example: 'a4d3...' }
+        - in: query
+          name: signature
+          required: true
+          schema: { type: string }
+        - in: query
+          name: expires
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '302':
+          description: |
+            Redirect to the SPA. On success: `${CLIENT_URL}/auth/verify-success`.
+            On failure (expired signature, tampered signature, hash mismatch, unknown user):
+            `${CLIENT_URL}/auth/verify-error`.
+          headers:
+            Location:
+              schema: { type: string }
 
   /academy:
     post:
@@ -1006,6 +1105,19 @@ components:
           example:
             message: No academy found.
 
+    VerificationRequired:
+      description: |
+        The authenticated user has not verified their email. Returned by
+        `verified.api`-gated routes (athlete writes + document writes).
+        The SPA's auth interceptor keys on `message: 'verification_required'`
+        to bounce the user to `/dashboard/profile?reason=verify_required`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: verification_required
+
     ForbiddenAthlete:
       description: The athlete does not belong to the authenticated user's academy
       content:
@@ -1173,7 +1285,7 @@ components:
 
     User:
       type: object
-      required: [id, name, email]
+      required: [id, name, email, email_verified_at]
       properties:
         id:
           type: integer
@@ -1183,6 +1295,15 @@ components:
         email:
           type: string
           format: email
+        email_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            ISO-8601 timestamp of when the user clicked the verification link;
+            `null` until verified. Surfaced to the SPA so it can render the
+            verification pillola without an extra round-trip.
+          example: "2026-04-28T15:30:00+00:00"
 
     # ── Academy ───────────────────────────────────────────────────────────
 

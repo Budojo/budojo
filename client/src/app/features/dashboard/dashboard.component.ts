@@ -1,22 +1,54 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
+import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
 
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MenuModule, BrandGlyphComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    MenuModule,
+    BrandGlyphComponent,
+    EmailVerificationStatusComponent,
+  ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+
+  /**
+   * The cached user — drives the verification pillola in the sidebar header.
+   * Hydrated by `ngOnInit()` calling `loadCurrentUser()`. Re-hydration after
+   * register/login is handled by `AuthService` directly (the response data
+   * already populates `user`).
+   */
+  protected readonly user = this.authService.user;
+
+  ngOnInit(): void {
+    // Page-reload bootstrap: if a token is present (auth guard already ran)
+    // but `user` is still null, fetch /auth/me so the pillola has data to
+    // render. No-op if `user` is already populated by a fresh login.
+    if (this.authService.getToken() && this.authService.user() === null) {
+      this.authService.loadCurrentUser().subscribe({ error: () => undefined });
+    }
+  }
 
   /**
    * The sidebar brand label. The academy name is the operationally dominant
