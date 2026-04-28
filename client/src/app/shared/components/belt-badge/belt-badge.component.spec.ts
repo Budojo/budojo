@@ -5,10 +5,11 @@ import { Belt } from '../../../core/services/athlete.service';
 
 @Component({
   imports: [BeltBadgeComponent],
-  template: `<app-belt-badge [belt]="belt" />`,
+  template: `<app-belt-badge [belt]="belt" [stripes]="stripes" />`,
 })
 class HostComponent {
   belt: Belt = 'white';
+  stripes = 0;
 }
 
 describe('BeltBadgeComponent', () => {
@@ -36,4 +37,57 @@ describe('BeltBadgeComponent', () => {
       expect(style['color']).toBe(`var(--budojo-belt-${belt}-fg)`);
     },
   );
+
+  describe('stripes (#165)', () => {
+    it('renders no stripe tiles when stripes input is 0 (default)', () => {
+      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.detectChanges();
+      const tiles = fixture.nativeElement.querySelectorAll(
+        '[data-cy="belt-stripe-tile"]',
+      ) as NodeListOf<Element>;
+      expect(tiles.length).toBe(0);
+    });
+
+    it.each([1, 2, 3, 4])('renders %d stripe tiles inside the pill', (n) => {
+      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.stripes = n;
+      fixture.detectChanges();
+      const tiles = fixture.nativeElement.querySelectorAll(
+        '[data-cy="belt-stripe-tile"]',
+      ) as NodeListOf<Element>;
+      expect(tiles.length).toBe(n);
+    });
+
+    it('clamps stripes outside 0-4 to the IBJJF range (defensive against bad data)', () => {
+      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      const fixture = TestBed.createComponent(HostComponent);
+      // 99 is bogus — must not render 99 tiles.
+      fixture.componentInstance.stripes = 99;
+      fixture.detectChanges();
+      const tiles = fixture.nativeElement.querySelectorAll(
+        '[data-cy="belt-stripe-tile"]',
+      ) as NodeListOf<Element>;
+      expect(tiles.length).toBe(4);
+    });
+
+    it('exposes an aria-label on the stripe group for screen readers', () => {
+      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.stripes = 2;
+      fixture.detectChanges();
+      const group = fixture.nativeElement.querySelector('.belt-badge__stripes');
+      expect(group?.getAttribute('aria-label')).toBe('2 stripes');
+    });
+
+    it('uses singular "stripe" in aria-label when count is 1', () => {
+      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.stripes = 1;
+      fixture.detectChanges();
+      const group = fixture.nativeElement.querySelector('.belt-badge__stripes');
+      expect(group?.getAttribute('aria-label')).toBe('1 stripe');
+    });
+  });
 });

@@ -24,3 +24,33 @@
   --budojo-belt-black-bg: #111827;
   --budojo-belt-black-fg: #ffffff;
 }
+
+.belt-badge {
+  &__inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  &__label {
+    line-height: 1;
+  }
+
+  // Inline stripe markers (#165). Each tile is a small filled square in the
+  // belt's foreground color — high-contrast against the pill background by
+  // construction (white belt → dark tiles, coloured belts → white tiles).
+  &__stripes {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1875rem; // 3px — half of the 6px tile, tight cluster
+  }
+
+  &__stripe-tile {
+    display: inline-block;
+    width: 0.375rem;
+    height: 0.375rem;
+    background: currentColor;
+    border-radius: 0.0625rem; // 1px — square-ish but with a hint of softening
+    opacity: 0.85; // muted enough to not compete with the label
+  }
+}
