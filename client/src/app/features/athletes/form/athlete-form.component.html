@@ -123,9 +123,16 @@
                 Without this template the trigger renders the full label and
                 truncates ("+3...") because the column width is the prefix +
                 input layout, not the full country name.
+
+                Important — the `let-selected` binding receives the SELECTED
+                VALUE directly (a string like "+39"), not the option object,
+                because we set `optionValue="value"`. Per PrimeNG's
+                `SelectSelectedItemTemplateContext<T> { $implicit: T }`. So
+                `{{ selected }}` is the prefix; `{{ selected?.value }}` was
+                wrong and rendered empty.
               -->
               <ng-template pTemplate="selectedItem" let-selected>
-                {{ selected?.value }}
+                {{ selected }}
               </ng-template>
             </p-select>
             <input

@@ -152,11 +152,19 @@
 
 // Phone country-code dropdown lives inside a `<p-inputgroup>` next to the
 // national-number text input. The trigger uses a `selectedItem` template
-// that renders only the prefix value (`+39`), so the closed state is
-// compact — 5rem comfortably fits "+999" plus the chevron with breathing
-// room. The open panel continues to show the full "+39 Italy" labels via
-// the default item template; PrimeNG sizes the panel to the option
-// content, not to the trigger.
-:host ::ng-deep .phone-country-code {
-  min-width: 5rem;
+// that renders only the prefix value (`+39`); the open panel continues
+// to show the full "+39 Italy" labels via the default item template,
+// sized to its own option content.
+//
+// `<p-inputgroup>` is a flex container that aggressively shrinks its
+// children below their content width — `min-width` alone isn't enough,
+// the select would still collapse to ~3ch. `flex-shrink: 0` locks the
+// width at the configured floor (6rem comfortably fits "+999" plus the
+// chevron with breathing room around). Both the host and the inner
+// `.p-select` get the rule so the constraint propagates whichever way
+// PrimeNG is wiring its DOM in this version.
+:host ::ng-deep .phone-country-code,
+:host ::ng-deep .phone-country-code .p-select {
+  min-width: 6rem;
+  flex-shrink: 0;
 }
