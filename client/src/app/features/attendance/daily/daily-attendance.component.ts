@@ -117,13 +117,12 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private loadEpoch = 0;
 
-  // PRD § P0.3: a new mark/unmark dismisses any previous undo toast and
-  // (in the error path) replaces it with the failure toast — no stacked
-  // Undo buttons. We do this via `messageService.clear()` (no arg) before
-  // each add(); since MessageService is component-scoped (see providers:
-  // above), that only clears this component's toasts and leaves any
-  // global toasts alone. Per-message keys tripped a PrimeNG quirk where
-  // a keyless `<p-toast>` ignores keyed messages, so we don't use them.
+  // Clear any pending undo toast before the next add to avoid stacked Undo
+  // buttons. The component-scoped MessageService isolates this from global
+  // toasts (see providers above). We intentionally don't use per-message
+  // keys: PrimeNG ignores keyed messages when the rendered `<p-toast>` is
+  // keyless, so adding keys can silently make undo/error toasts stop
+  // appearing — a non-obvious gotcha worth recording at the call site.
 
   ngOnInit(): void {
     this.loadDay();
