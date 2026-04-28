@@ -9,9 +9,6 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 
 class MarkAttendanceRequest extends FormRequest
 {
-    /** @var int */
-    private const BACKFILL_DAYS = 7;
-
     /**
      * Ownership gate: the authenticated user must own an academy. Per-
      * athlete ownership (is every ID in athlete_ids actually in my
@@ -32,21 +29,19 @@ class MarkAttendanceRequest extends FormRequest
      */
     public function rules(): array
     {
-        // The backfill window and "no future" cap come from PRD § P0.3.
-        // Both bounds are inclusive dates; `today` counts as a valid mark,
-        // and 7 days ago is the earliest allowed.
+        // No floor on backfill (#181). User feedback: a one-week cap on
+        // backdating attendance was too tight — coaches frequently need
+        // to populate older sessions (post-hoc data entry, missed days,
+        // catching up after a holiday). Single-instructor academy, the
+        // trust model is "you control your own data".
         //
-        // Capture `now()` ONCE and derive both bounds off the same reference
-        // — calling now() twice a few microseconds apart can straddle a
-        // midnight rollover (or, more pragmatically, a Carbon::setTestNow
-        // mid-request-lifecycle), producing earliest/latest pairs that
-        // disagree with each other and flake boundary requests.
-        $today = now();
-        $earliest = $today->copy()->subDays(self::BACKFILL_DAYS)->toDateString();
-        $latest = $today->toDateString();
-
+        // Future cap is still enforced — attendance for tomorrow is
+        // semantically wrong and the FormRequest blocks it. `today` is
+        // Laravel's idiomatic literal for "start of the current day" —
+        // equivalent to `now()->toDateString()` at the same instant but
+        // self-documenting in the rules array.
         return [
-            'date' => ['required', 'date_format:Y-m-d', "after_or_equal:{$earliest}", "before_or_equal:{$latest}"],
+            'date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             // `distinct` drops duplicate ids at the request layer — the
             // controller's cross-academy count check would otherwise treat
             // `[1, 1]` as "only one owned out of two" and false-403.
@@ -56,15 +51,14 @@ class MarkAttendanceRequest extends FormRequest
     }
 
     /**
-     * Custom validation messages. The default Laravel `after_or_equal` /
-     * `before_or_equal` messages leak the literal computed date strings
-     * ("must be after or equal to 2026-04-17"), which reads weird to the
-     * end user. Replace with the semantic window.
+     * Custom validation messages. The default Laravel `before_or_equal`
+     * message leaks the literal computed date string ("must be before or
+     * equal to 2026-04-28"), which reads weird to the end user. Replace
+     * with the semantic constraint.
      */
     public function messages(): array
     {
         return [
-            'date.after_or_equal' => 'Attendance can only be backfilled within the last ' . self::BACKFILL_DAYS . ' days.',
             'date.before_or_equal' => 'Attendance cannot be marked for a future date.',
         ];
     }
