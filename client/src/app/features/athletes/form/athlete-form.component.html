@@ -119,20 +119,18 @@
                 In the closed trigger we only show the prefix value (e.g. "+39"),
                 not the full "+39 Italy" label. The label is reserved for the
                 open panel so users can identify each country comfortably; the
-                trigger just needs to confirm the picked prefix in a compact way.
-                Without this template the trigger renders the full label and
-                truncates ("+3...") because the column width is the prefix +
-                input layout, not the full country name.
+                trigger just needs to confirm the picked prefix in a compact
+                way.
 
-                Important — the `let-selected` binding receives the SELECTED
-                VALUE directly (a string like "+39"), not the option object,
-                because we set `optionValue="value"`. Per PrimeNG's
-                `SelectSelectedItemTemplateContext<T> { $implicit: T }`. So
-                `{{ selected }}` is the prefix; `{{ selected?.value }}` was
-                wrong and rendered empty.
+                The `let-selected` binding receives the SELECTED OPTION OBJECT
+                (despite the misleading `SelectSelectedItemTemplateContext<T>`
+                type — verified in primeng-select.mjs source:
+                `[ngTemplateOutletContext]="{ $implicit: selectedOption }"`).
+                So we read `selected?.value` (the prefix string) off the option
+                here, with the full "+39 Italy" label only on the open panel.
               -->
               <ng-template pTemplate="selectedItem" let-selected>
-                {{ selected }}
+                {{ selected?.value }}
               </ng-template>
             </p-select>
             <input
