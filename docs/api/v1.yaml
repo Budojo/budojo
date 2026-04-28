@@ -115,6 +115,29 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Fetch the currently authenticated user
+      description: |
+        Returns the authenticated user resource (including `email_verified_at`).
+        The SPA calls this on bootstrap so it can render verification state
+        after a page reload without waiting for the next register/login.
+      operationId: authMe
+      responses:
+        '200':
+          description: The authenticated user
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
   /email/verification-notification:
     post:
       tags: [auth]

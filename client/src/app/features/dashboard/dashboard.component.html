@@ -70,6 +70,12 @@
       (onHide)="menuVisible.set(false)"
     />
 
+    @if (user(); as u) {
+      <div class="sidebar__verification">
+        <app-email-verification-status />
+      </div>
+    }
+
     <nav class="sidebar__nav">
       <a
         routerLink="academy"
@@ -99,6 +105,16 @@
       >
         <i class="pi pi-check-square"></i>
         <span>Attendance</span>
+      </a>
+      <a
+        routerLink="profile"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item"
+        data-cy="nav-profile"
+        (click)="closeSidebar()"
+      >
+        <i class="pi pi-user"></i>
+        <span>Profile</span>
       </a>
     </nav>
 

@@ -24,6 +24,10 @@ Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Auth\EmailVerific
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {
+    // Currently authenticated user. Used by the SPA on bootstrap to hydrate
+    // the user state (incl. `email_verified_at`) after a page reload.
+    Route::get('/auth/me', \App\Http\Controllers\Auth\MeController::class);
+
     // Resend verification email — auth required, rate-limited via
     // `email-verification-resend` (one request per minute per user;
     // see AppServiceProvider::boot()).

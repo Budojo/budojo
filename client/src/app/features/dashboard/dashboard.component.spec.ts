@@ -2,6 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
+import { of } from 'rxjs';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardComponent } from './dashboard.component';
@@ -12,6 +14,13 @@ import { DashboardComponent } from './dashboard.component';
 // concern — we only assert that `logout()` is called, not how it persists.
 class FakeAuthService {
   readonly logout = vi.fn();
+  readonly user = signal<null>(null);
+  readonly isEmailVerified = signal(false);
+  readonly getToken = vi.fn(() => null as string | null);
+  readonly loadCurrentUser = vi.fn(() =>
+    of({ id: 1, name: 'X', email: 'x@y', email_verified_at: null }),
+  );
+  readonly resendVerificationEmail = vi.fn(() => of(undefined));
 }
 
 describe('DashboardComponent', () => {

@@ -1,0 +1,25 @@
+@if (user(); as u) {
+  <div class="profile-page">
+    <header class="profile-page__header">
+      <h1 class="profile-page__title">Profile</h1>
+      <p class="profile-page__subtitle">Account details and verification status.</p>
+    </header>
+
+    <p-card styleClass="profile-page__card">
+      <div class="profile-page__row">
+        <span class="profile-page__label">Name</span>
+        <span class="profile-page__value" data-cy="profile-name">{{ u.name }}</span>
+      </div>
+
+      <div class="profile-page__row">
+        <span class="profile-page__label">Email</span>
+        <span class="profile-page__value" data-cy="profile-email">{{ u.email }}</span>
+      </div>
+
+      <div class="profile-page__row profile-page__row--status">
+        <span class="profile-page__label">Verification</span>
+        <app-email-verification-status />
+      </div>
+    </p-card>
+  </div>
+}
