@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Requests\Academy;
 
 use App\Http\Requests\Concerns\ValidatesAddress;
+use App\Http\Requests\Concerns\ValidatesPhonePair;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class UpdateAcademyRequest extends FormRequest
 {
     use ValidatesAddress;
+    use ValidatesPhonePair;
 
     /**
      * Ownership gate: the authenticated user must own an academy.
@@ -40,6 +43,25 @@ class UpdateAcademyRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            // Phone is a *pair* (#161, mirrors the athlete shape from #75):
+            // either both null or both filled, with a libphonenumber-validated
+            // combination. The shape rules here catch the "only one set" case;
+            // the cross-field reachability check lives in `withValidator()`.
+            'phone_country_code' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'regex:/^\+[1-9][0-9]{0,3}$/',
+                'required_with:phone_national_number',
+            ],
+            'phone_national_number' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'regex:/^[0-9]+$/',
+                'max:20',
+                'required_with:phone_country_code',
+            ],
             // Cents — `integer` rejects "9.5" / floats; `min:0` blocks
             // negatives (refunds/discounts would be a different concept).
             // No upper bound — let the academy own the absurdity check.
@@ -53,6 +75,11 @@ class UpdateAcademyRequest extends FormRequest
             'training_days.*' => ['integer', 'between:0,6', 'distinct'],
             ...$this->addressRules(),
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $this->validatePhonePairWithLibphonenumber($validator);
     }
 
     /**

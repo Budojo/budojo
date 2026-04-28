@@ -126,6 +126,8 @@ describe('AcademyFormComponent', () => {
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({
       name: 'New Name',
+      phone_country_code: null,
+      phone_national_number: null,
       address: {
         line1: 'Via Nuova 10',
         line2: null,
@@ -172,6 +174,8 @@ describe('AcademyFormComponent', () => {
     const req = httpMock.expectOne('/api/v1/academy');
     expect(req.request.body).toEqual({
       name: 'Kept Name',
+      phone_country_code: null,
+      phone_national_number: null,
       address: null,
       training_days: null,
     });

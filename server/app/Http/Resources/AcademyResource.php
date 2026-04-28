@@ -30,6 +30,10 @@ class AcademyResource extends JsonResource
             'id' => $academy->id,
             'name' => $academy->name,
             'slug' => $academy->slug,
+            // Phone (#161) — same shape as AthleteResource. Both fields null
+            // OR both filled by the schema's `required_with` rule.
+            'phone_country_code' => $academy->phone_country_code,
+            'phone_national_number' => $academy->phone_national_number,
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'logo_url' => $academy->logo_path !== null
                 ? Storage::disk('public')->url($academy->logo_path)

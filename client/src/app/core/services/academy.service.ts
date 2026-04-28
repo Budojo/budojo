@@ -154,6 +154,14 @@ export interface Academy {
   name: string;
   slug: string;
   /**
+   * Phone (#161) — same shape as Athlete. `phone_country_code` carries the
+   * E.164 prefix (e.g. `+39`); `phone_national_number` carries the digits
+   * after. Either both null or both filled, enforced server-side.
+   * Optional on this interface for fixture-compat (#104 / #105 pattern).
+   */
+  phone_country_code?: string | null;
+  phone_national_number?: string | null;
+  /**
    * Structured address (#72). `null` means the academy has no address on
    * file (legitimate state — every owner can clear it). Keep this as a
    * required key (not optional) so a tooling miss surfaces at compile time.
@@ -191,6 +199,9 @@ export interface CreateAcademyPayload {
  */
 export interface UpdateAcademyPayload {
   name?: string;
+  /** Phone pair (#161). `null` on both clears the saved phone. */
+  phone_country_code?: string | null;
+  phone_national_number?: string | null;
   address?: Address | null;
   monthly_fee_cents?: number | null;
   training_days?: number[] | null;

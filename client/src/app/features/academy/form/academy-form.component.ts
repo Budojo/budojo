@@ -9,6 +9,7 @@ import {
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { InputGroupModule } from 'primeng/inputgroup';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
@@ -39,12 +40,58 @@ import {
 const noWhitespace: ValidatorFn = (control: AbstractControl) =>
   control.value?.trim() ? null : { whitespace: true };
 
+/**
+ * Cross-field rule for the (#161) phone pair. When the SIBLING control has a
+ * value, this control becomes required. Mirrors the same shape used by the
+ * athlete form (#75) — the rule isn't extracted to a shared util yet because
+ * we only have two consumers; revisit when the third one lands.
+ *
+ * The validator reads the sibling lazily through `control.parent` rather than
+ * capturing a control reference at construction time — at the moment the
+ * validator is created the parent FormGroup doesn't exist yet.
+ */
+function phonePairRequired(siblingName: string): ValidatorFn {
+  return (control: AbstractControl) => {
+    const parent = control.parent;
+    if (!parent) return null;
+    const sibling = parent.get(siblingName);
+    if (!sibling) return null;
+    const own = (control.value ?? '').toString().trim();
+    const other = (sibling.value ?? '').toString().trim();
+    return other !== '' && own === '' ? { phonePairRequired: true } : null;
+  };
+}
+
+interface SelectOption<T extends string> {
+  label: string;
+  value: T;
+}
+
+/**
+ * Curated country-code list. Italy-first because it's the primary market;
+ * the rest covers the typical European + transatlantic mix we see at BJJ
+ * academies. Mirrors the athlete form's list verbatim — drift would be a bug.
+ */
+const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
+  { label: '+39 Italy', value: '+39' },
+  { label: '+33 France', value: '+33' },
+  { label: '+34 Spain', value: '+34' },
+  { label: '+44 United Kingdom', value: '+44' },
+  { label: '+49 Germany', value: '+49' },
+  { label: '+1 US / Canada', value: '+1' },
+  { label: '+41 Switzerland', value: '+41' },
+  { label: '+43 Austria', value: '+43' },
+  { label: '+351 Portugal', value: '+351' },
+  { label: '+31 Netherlands', value: '+31' },
+];
+
 @Component({
   selector: 'app-academy-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
     ButtonModule,
+    InputGroupModule,
     InputTextModule,
     MessageModule,
     SelectModule,
@@ -69,9 +116,19 @@ export class AcademyFormComponent implements OnInit {
 
   readonly provinceOptions = PROVINCE_OPTIONS;
   readonly countryOptions = COUNTRY_OPTIONS;
+  readonly countryCodeOptions = COUNTRY_CODE_OPTIONS;
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(255), noWhitespace]],
+    phone_country_code: ['', [phonePairRequired('phone_national_number')]],
+    phone_national_number: [
+      '',
+      [
+        phonePairRequired('phone_country_code'),
+        Validators.maxLength(20),
+        Validators.pattern(/^[0-9]+$/),
+      ],
+    ],
     address: this.fb.nonNullable.group(
       {
         line1: ['', Validators.maxLength(255)],
@@ -95,6 +152,8 @@ export class AcademyFormComponent implements OnInit {
     this.slug.set(academy.slug);
     this.form.patchValue({
       name: academy.name,
+      phone_country_code: academy.phone_country_code ?? '',
+      phone_national_number: academy.phone_national_number ?? '',
       address: {
         line1: academy.address?.line1 ?? '',
         line2: academy.address?.line2 ?? '',
@@ -143,6 +202,13 @@ export class AcademyFormComponent implements OnInit {
 
   get name() {
     return this.form.controls.name;
+  }
+
+  get phoneCountryCode() {
+    return this.form.controls.phone_country_code;
+  }
+  get phoneNationalNumber() {
+    return this.form.controls.phone_national_number;
   }
 
   get addressGroup() {
@@ -205,8 +271,17 @@ export class AcademyFormComponent implements OnInit {
       };
     }
 
+    // Phone (#161). Send `null` for both when either is empty (the validator
+    // already rejects half-filled, so reaching here means both empty or both
+    // valid). Sending null on both clears any existing saved phone.
+    const phoneCc = v.phone_country_code.trim();
+    const phoneNn = v.phone_national_number.trim();
+    const phoneEmpty = phoneCc === '' || phoneNn === '';
+
     return {
       name: v.name.trim(),
+      phone_country_code: phoneEmpty ? null : phoneCc,
+      phone_national_number: phoneEmpty ? null : phoneNn,
       address,
       training_days: v.training_days.length === 0 ? null : v.training_days,
     };
