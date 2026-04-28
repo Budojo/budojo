@@ -20,6 +20,7 @@ This folder (`docs/design/`) contains:
 
 - **`DESIGN_SYSTEM.md`** — token inventory, per-component override specs for 13 PrimeNG atoms, ASCII mockups of the mobile screens, implementation notes + gotchas + PWA specifics. Source of truth for tokens is the live file at [`client/src/styles/budojo-theme.scss`](../../client/src/styles/budojo-theme.scss); the markdown keeps a collapsed historical snapshot for context only.
 - **`README.md`** — this file. Brand context, content fundamentals, visual foundations, iconography.
+- **[`brand-kit/`](./brand-kit/README.md)** — 13 standalone SVG assets (4 glyph + 3 wordmark + 4 app-icon + 2 favicon) covering dark / light / accent treatments plus format-specific variants (`currentColor` glyph for inline HTML, maskable PWA app-icon). For handoff to designers, pitch decks, partner integrations. Geometry locked from `client/public/logo-glyph.svg` and `client/public/wordmark.svg` — derivative kit, not the SPA's source-of-truth.
 - **[`preview/`](./preview/README.md)** — variant matrix previews (v2) as static HTML. Authoritative "which variant when" reference for buttons, tags, form fields, and cards. Open directly in a browser.
 - **[`screenshots/`](./screenshots/README.md)** — committed visual inventory of every canonical page at three viewports, regenerated on demand via `npm run design:inventory`. Start here when building a new feature: scan the folder, find the closest existing pattern, reuse it. See the folder's README for the full feature-building playbook.
 
