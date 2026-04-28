@@ -34,10 +34,12 @@ describe('EmailVerificationStatusComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        MessageService,
         { provide: AuthService, useClass: FakeAuthService },
       ],
     });
     auth = TestBed.inject(AuthService) as unknown as FakeAuthService;
+    addSpy = vi.spyOn(TestBed.inject(MessageService), 'add');
   });
 
   afterEach(() => {
@@ -46,9 +48,6 @@ describe('EmailVerificationStatusComponent', () => {
 
   function render() {
     const fixture = TestBed.createComponent(EmailVerificationStatusComponent);
-    // Spy on the component-scoped MessageService instance — provided locally
-    // by the component, so we have to grab it via the fixture's injector.
-    addSpy = vi.spyOn(fixture.debugElement.injector.get(MessageService), 'add');
     fixture.detectChanges();
     return fixture;
   }

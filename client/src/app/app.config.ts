@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
 import { providePrimeNG } from 'primeng/config';
+import { MessageService } from 'primeng/api';
 import Material from '@primeuix/themes/material';
 
 import { routes } from './app.routes';
@@ -15,6 +16,12 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
+    // App-level MessageService so shared components (the email verification
+    // pillola, the verify-error landing) fire toasts into the single
+    // `<p-toast>` host mounted by the dashboard shell. Per-component
+    // MessageService instances would each spawn their own toast host —
+    // two pillolas on the same screen (sidebar + profile) overlap.
+    MessageService,
     providePrimeNG({
       // Material preset adopts the Material Design 3 palette + component styling.
       // See client/CLAUDE.md § Design canon for the full rationale.

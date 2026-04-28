@@ -8,16 +8,15 @@ import {
 } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
-import { ToastModule } from 'primeng/toast';
 import { AuthService } from '../../../core/services/auth.service';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 /**
- * Compact verification status pill — used in the dashboard topbar avatar
- * dropdown AND on the profile page. Two states:
+ * Compact verification status pill — used in the dashboard sidebar AND on
+ * the profile page. Two states:
  *
- *  - `verified` (default): muted-green tile, "Email verified", non-interactive.
+ *  - `verified`: muted-green tile, "Email verified", non-interactive.
  *  - `unverified`: muted-amber tile, "Verify email" button. Click triggers
  *    `AuthService.resendVerificationEmail()`, shows a toast, and starts a
  *    60s cooldown to short-circuit the server's 1/min throttle (mirroring
@@ -26,14 +25,17 @@ const RESEND_COOLDOWN_SECONDS = 60;
  * Reads `user()` from `AuthService` directly. The hosting templates don't
  * need to wire anything — drop `<app-email-verification-status>` and go.
  *
- * `[size]` accepts `compact` (topbar) or `cozy` (profile page) — same
- * semantics, different padding.
+ * The component does NOT mount its own `<p-toast>` and does NOT provide
+ * its own `MessageService`. It injects the application-level service
+ * (provided in `app.config.ts`) and relies on the dashboard shell's
+ * single toast host. Mounting one toast per pillola would otherwise
+ * double-render the top-right slot when the sidebar pillola and the
+ * profile page pillola are both mounted (#171 review).
  */
 @Component({
   selector: 'app-email-verification-status',
   standalone: true,
-  imports: [ButtonModule, ToastModule],
-  providers: [MessageService],
+  imports: [ButtonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './email-verification-status.component.html',
   styleUrl: './email-verification-status.component.scss',

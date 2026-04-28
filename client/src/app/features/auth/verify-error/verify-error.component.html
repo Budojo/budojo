@@ -3,10 +3,17 @@
     <i class="pi pi-times-circle" aria-hidden="true"></i>
   </div>
   <h1 class="verify-page__title">Verification link invalid</h1>
-  <p class="verify-page__message">
-    The link may have expired or been tampered with. Request a fresh one from your profile and we'll
-    send a new email.
-  </p>
+  @if (canResend) {
+    <p class="verify-page__message">
+      The link may have expired or been tampered with. Request a fresh one and we'll send you a new
+      email.
+    </p>
+  } @else {
+    <p class="verify-page__message">
+      The link may have expired or been tampered with. Sign in to your account, then request a fresh
+      verification email from the profile page.
+    </p>
+  }
 
   @if (canResend) {
     <p-button
