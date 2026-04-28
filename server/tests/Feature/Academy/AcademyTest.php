@@ -352,6 +352,98 @@ it('rejects non-integer monthly_fee_cents (e.g. floats) with 422', function (): 
         ->assertJsonValidationErrors(['monthly_fee_cents']);
 });
 
+// ─── Phone (#161) — same shape as athletes (#75) ─────────────────────────────
+
+it('persists the academy phone pair via PATCH /academy', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id, 'phone_country_code' => null]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'phone_country_code' => '+39',
+        'phone_national_number' => '3331234567',
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.phone_country_code', '+39')
+        ->assertJsonPath('data.phone_national_number', '3331234567');
+
+    $this->assertDatabaseHas('academies', [
+        'user_id' => $user->id,
+        'phone_country_code' => '+39',
+        'phone_national_number' => '3331234567',
+    ]);
+});
+
+it('clears the academy phone when both fields are sent as null', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create([
+        'user_id' => $user->id,
+        'phone_country_code' => '+39',
+        'phone_national_number' => '3331234567',
+    ]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'phone_country_code' => null,
+        'phone_national_number' => null,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.phone_country_code', null)
+        ->assertJsonPath('data.phone_national_number', null);
+});
+
+it('rejects a half-filled phone pair (only country_code)', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'phone_country_code' => '+39',
+        'phone_national_number' => null,
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_national_number']);
+});
+
+it('rejects a half-filled phone pair (only national_number)', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'phone_country_code' => null,
+        'phone_national_number' => '3331234567',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_country_code']);
+});
+
+it('rejects a phone number that fails libphonenumber validation', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'phone_country_code' => '+39',
+        'phone_national_number' => '1', // too short — fails libphonenumber
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_national_number']);
+});
+
+it('rejects malformed country code (e.g. without leading +)', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'phone_country_code' => '39',
+        'phone_national_number' => '3331234567',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone_country_code']);
+});
+
 it('returns 403 with "Forbidden." body when the user has no academy', function (): void {
     // The canon ownership contract: no academy = not authorized to update anything.
     // Matches the DocumentController / UpdateDocumentRequest wire-level contract.

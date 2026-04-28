@@ -1337,6 +1337,23 @@ components:
           minLength: 1
           maxLength: 255
           example: Gracie Barra Lisboa Centro
+        phone_country_code:
+          type: string
+          nullable: true
+          pattern: '^\+[1-9][0-9]{0,3}$'
+          description: |
+            E.164 country prefix incl. the leading `+`. Pair with
+            `phone_national_number` — both null OR both filled (#161).
+          example: '+39'
+        phone_national_number:
+          type: string
+          nullable: true
+          maxLength: 20
+          pattern: '^[0-9]+$'
+          description: |
+            Unformatted national digits (no spaces / dashes / parentheses).
+            Validated together with `phone_country_code` via libphonenumber.
+          example: '3331234567'
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -1428,7 +1445,7 @@ components:
 
     Academy:
       type: object
-      required: [id, name, slug, address, logo_url, monthly_fee_cents, training_days]
+      required: [id, name, slug, address, logo_url, monthly_fee_cents, training_days, phone_country_code, phone_national_number]
       properties:
         id:
           type: integer
@@ -1439,6 +1456,22 @@ components:
           type: string
           example: gracie-barra-lisboa-a3f9kx2b
           description: Server-generated, immutable, unique across the system
+        phone_country_code:
+          type: string
+          nullable: true
+          pattern: '^\+[1-9][0-9]{0,3}$'
+          description: |
+            Phone country prefix in E.164 form (e.g. `+39`). Either both
+            `phone_*` keys are non-null or both are null — enforced server-
+            side by `required_with` (#161). Same shape as Athlete.
+          example: '+39'
+        phone_national_number:
+          type: string
+          nullable: true
+          maxLength: 20
+          pattern: '^[0-9]+$'
+          description: Unformatted national digits.
+          example: '3331234567'
         address:
           allOf:
             - $ref: '#/components/schemas/Address'

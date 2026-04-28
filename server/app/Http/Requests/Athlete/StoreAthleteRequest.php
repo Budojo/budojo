@@ -6,8 +6,8 @@ namespace App\Http\Requests\Athlete;
 
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
-use App\Http\Requests\Athlete\Concerns\ValidatesPhonePair;
 use App\Http\Requests\Concerns\ValidatesAddress;
+use App\Http\Requests\Concerns\ValidatesPhonePair;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
