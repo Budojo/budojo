@@ -67,7 +67,7 @@ Represents IBJJF adult belt ranks. Kids/youth belts are not modeled — they are
 - **Stripes range `0..4`.** Enforced at the FormRequest level via `min:0|max:4`. The DB column is an unsigned tinyint with no CHECK constraint.
 - **Address (#72b).** Athletes own at most one polymorphic `Address` row via `morphOne(Address::class, 'addressable')`. Update semantics on `PUT /api/v1/athletes/{id}` (Laravel's resource route also accepts `PATCH`): send `address: { line1, line2, city, postal_code, province, country }` to upsert in place, `address: null` to clear (delete the morph row), or omit the key to leave untouched. Same two-layer enforcement as `Academy`: DB UNIQUE index on `(addressable_type, addressable_id)` plus `SyncAddressAction`'s atomic `updateOrCreate`. On hard delete (`forceDelete`) the `AthleteObserver::forceDeleted` hook wipes the address; soft delete leaves it in place. See [`address.md`](./address.md).
 - **Phone is a structured pair (#75).** The two phone columns are jointly nullable: either both are `null` (no phone on file) or both carry a value. The FormRequest enforces this via `required_with` between the two fields, validates the country code with `regex:/^\+[1-9][0-9]{0,3}$/`, validates the national number with `regex:/^[0-9]+$/`, and runs a cross-field `withValidator` check that concatenates the pair and feeds it to `libphonenumber-for-php`'s `isValidNumber()` — combinations that are well-formed individually but unreachable in any numbering plan (e.g. `+39` + `1`) are rejected. The DB stores the raw national digits; formatting for display is the client's job.
-- **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (single enum value) and `status` (single enum value). Page via `?page=N`.
+- **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (enum), `status` (enum), `paid` (`yes`|`no` — has a payment record for the current calendar month or not), and `q` (free-text token-AND search across `first_name` + `last_name`, case-insensitive). Sort: `sort_by` ∈ {`first_name`, `last_name`, `belt`, `joined_at`, `created_at`} with `sort_order` (`asc`|`desc`, default `desc`). `belt` is rank-aware (white < blue < purple < brown < black) with `stripes` desc + `last_name` asc as stable tiebreakers. Page via `?page=N`. The OpenAPI contract at `docs/api/v1.yaml` is the canonical reference for parameter shape and defaults.
 
 ## Related endpoints
 
@@ -80,6 +80,7 @@ Represents IBJJF adult belt ranks. Kids/youth belts are not modeled — they are
 ## Related tables
 
 - `academies` — see [`academy.md`](./academy.md)
+- `athlete_payments` — see [`athlete-payment.md`](./athlete-payment.md). Drives the `paid_current_month` derivation on `AthleteResource` and the `?paid=yes|no` list filter. The full `/athletes/{athlete}/payments` family of endpoints lives there.
 
 ## Future
 

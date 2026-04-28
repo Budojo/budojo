@@ -1,7 +1,8 @@
 # M4 — Attendance (PRD)
 
-> Status: Draft · Owner: m-bonanno · Target release: M4 (4 phased PRs)
+> Status: Shipped (v1.0.0) · Owner: m-bonanno · Implemented across PRs #111–#114 (#88a / #88b / #88c)
 > Supersedes the M4 one-liner on the README roadmap.
+> See § Deltas from spec at the end of this document for what was deferred.
 
 ## Problem Statement
 
@@ -225,3 +226,23 @@ Then the athlete detail Attendance tab is open with Anna's calendar for the curr
 ### Hard deadlines
 
 None. M4 ships when it ships. Treat the 4-PR cadence as the target, adjust based on review feedback.
+
+## Deltas from spec (recorded post-ship)
+
+This section captures where the implementation that landed in v1.0.0 diverges from the original PRD above. The spec stays as written so future readers see the original intent; this section records the honest reality.
+
+### §P0.3 — Swipe gestures: deferred
+
+The PRD specifies swipe-right (mark) and swipe-left (un-mark) as the primary check-in gesture, with tap-to-toggle as parity for desktop and accessibility. **What shipped:** tap-to-toggle is the only check-in path. Swipe handlers were not implemented (no `swipe`, `pan`, `Hammer`, `pointerdown`, or `touchstart` bindings exist in `client/src/app/features/attendance/daily/`).
+
+The supporting behaviour around the gesture is preserved as spec'd: optimistic UI updates on every mark/unmark, and the 5-second undo toast that fires on every action and reverts both local state and the inverse API call when tapped. So the *result* of a check-in matches the spec; only the *input gesture* is reduced to tap.
+
+This was a scope reduction, not a bug. Tap satisfies the desktop / a11y requirement on its own and ships a usable feature; swipe is a candidate for a follow-up if real-world mobile usage shows tap-only is too slow.
+
+### §P0.5 — Monthly summary widget: shipped as spec'd, with the additional `paid` axis
+
+The widget at `/dashboard/athletes` and the full table at `/dashboard/attendance/summary` ship as the spec describes. Beyond the spec, M4.4 also gained a `?paid=yes|no` filter on the athlete list and a per-row `paid_current_month` flag on `AthleteResource` (#104, #105, #106) — these belong logically to the M5 payments thread but were folded into M4 because the same monthly-summary plumbing carried them at zero marginal cost.
+
+### Anything not listed here
+
+shipped as spec'd. No silent scope cuts beyond the swipe deferral.
