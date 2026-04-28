@@ -6,6 +6,7 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
+import { VERSION } from '../../../environments/version';
 import { DashboardComponent } from './dashboard.component';
 
 // AuthService reads `localStorage` at construction time. Some local test
@@ -290,10 +291,12 @@ describe('DashboardComponent', () => {
   });
 
   describe('app version footer (#160)', () => {
-    // The committed default is `dev` (overwritten at prod build by
-    // `scripts/write-version.cjs`). Asserting on the literal default keeps
-    // the test environment-deterministic — Vitest never goes through the
-    // prebuild hook.
+    // Asserts against the imported `VERSION.tag` rather than hard-coding
+    // `dev`. The committed default value is `dev` (overwritten at every
+    // `ng build` by `scripts/write-version.cjs`); a developer who ran the
+    // build locally would have a different `VERSION.tag` checked out, and
+    // we don't want this test to flake on that. Reading from the same
+    // import the component does keeps the assertion robust either way.
     it('renders the version tag in the sidebar footer', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
@@ -302,7 +305,7 @@ describe('DashboardComponent', () => {
         '[data-cy="sidebar-version"]',
       ) as HTMLElement | null;
       expect(el).not.toBeNull();
-      expect(el!.textContent?.trim()).toBe('dev');
+      expect(el!.textContent?.trim()).toBe(VERSION.tag);
     });
   });
 

@@ -16,7 +16,11 @@ const OUT_PATH = path.resolve(__dirname, '..', 'src', 'environments', 'version.t
 
 function resolveVersion() {
   try {
-    const tag = execSync('git describe --tags --always 2>/dev/null', {
+    // `stdio: [ignore, pipe, ignore]` silences stderr without a shell
+    // redirection, so the script works on Windows / cmd shells too where
+    // `2>/dev/null` is meaningless. A missing .git or git binary throws
+    // and we fall through to the catch with the `dev` default.
+    const tag = execSync('git describe --tags --always', {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     })
