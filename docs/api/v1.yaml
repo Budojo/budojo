@@ -29,9 +29,23 @@ tags:
   - name: academy
     description: The tenant entity — one per user
   - name: athletes
-    description: Roster of students belonging to the authenticated user's academy
+    description: |
+      Roster of students belonging to the authenticated user's academy.
+
+      **Email-verification gate.** Write endpoints (`POST` / `PUT` / `DELETE` on
+      `/athletes` and `/athletes/{id}`) require the authenticated user to have
+      verified their email. Unverified users get a `403` with
+      `message: 'verification_required'` (see the `VerificationRequired`
+      response component); the SPA catches this in its auth interceptor and
+      redirects the user to `/dashboard/profile?reason=verify_required`.
+      Reads (`GET`) stay open so the user can browse while unverified.
   - name: documents
-    description: Files (ID, medical cert, insurance) attached to an athlete, with expiry tracking
+    description: |
+      Files (ID, medical cert, insurance) attached to an athlete, with expiry tracking.
+
+      **Email-verification gate.** Same shape as athletes: writes (`POST` /
+      `PUT` / `DELETE`) are gated on `verified.api`; reads stay open. See the
+      `VerificationRequired` response component.
 
 paths:
 
@@ -1090,6 +1104,19 @@ components:
             $ref: '#/components/schemas/ErrorMessage'
           example:
             message: No academy found.
+
+    VerificationRequired:
+      description: |
+        The authenticated user has not verified their email. Returned by
+        `verified.api`-gated routes (athlete writes + document writes).
+        The SPA's auth interceptor keys on `message: 'verification_required'`
+        to bounce the user to `/dashboard/profile?reason=verify_required`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: verification_required
 
     ForbiddenAthlete:
       description: The athlete does not belong to the authenticated user's academy

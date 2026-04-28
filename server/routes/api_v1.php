@@ -41,13 +41,22 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo']);
     Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo']);
 
+    // Athlete reads — open to unverified users so they can browse.
     Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
-        ->only(['index', 'store', 'show', 'update', 'destroy']);
+        ->only(['index', 'show']);
 
-    // Documents — nested under athlete for creation and per-athlete listing
+    // Athlete writes — gated on `verified.api`. Unverified users get a JSON
+    // 403 with `message: 'verification_required'` (see
+    // EnsureEmailIsVerifiedForApi). The SPA's auth interceptor keys on that
+    // string to bounce the user to /dashboard/profile.
+    Route::middleware('verified.api')->group(function (): void {
+        Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
+            ->only(['store', 'update', 'destroy']);
+    });
+
+    // Documents — read access stays open (browsing + downloading); writes are
+    // gated. Listing per-athlete is a read; uploading is a write.
     Route::get('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'index']);
-    Route::post('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'store']);
-
     // Documents — flat routes for operations that target a single document.
     // `/expiring` must come before `/{document}` routes or Laravel tries to
     // bind the literal "expiring" as a document id.
@@ -56,8 +65,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // 410 Gone (tombstone) instead of the generic 404. See PRD P0.7b.
     Route::get('/documents/{document}/download', [\App\Http\Controllers\Document\DocumentController::class, 'download'])
         ->withTrashed();
-    Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
-    Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
+
+    // Document writes — gated on `verified.api`.
+    Route::middleware('verified.api')->group(function (): void {
+        Route::post('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'store']);
+        Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
+        Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
+    });
 
     // Payments — M5 (#104). Nested under athlete; the academy's monthly fee
     // is set via PATCH /academy. `paid_current_month` lives on the athlete
