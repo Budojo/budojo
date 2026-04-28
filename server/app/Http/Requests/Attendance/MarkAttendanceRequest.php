@@ -36,11 +36,12 @@ class MarkAttendanceRequest extends FormRequest
         // trust model is "you control your own data".
         //
         // Future cap is still enforced — attendance for tomorrow is
-        // semantically wrong and the FormRequest blocks it.
-        $latest = now()->toDateString();
-
+        // semantically wrong and the FormRequest blocks it. `today` is
+        // Laravel's idiomatic literal for "start of the current day" —
+        // equivalent to `now()->toDateString()` at the same instant but
+        // self-documenting in the rules array.
         return [
-            'date' => ['required', 'date_format:Y-m-d', "before_or_equal:{$latest}"],
+            'date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             // `distinct` drops duplicate ids at the request layer — the
             // controller's cross-academy count check would otherwise treat
             // `[1, 1]` as "only one owned out of two" and false-403.

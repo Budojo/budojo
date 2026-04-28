@@ -70,7 +70,6 @@ export class DailyAttendanceComponent implements OnInit {
    * still rejects them with 422), and drop the floor entirely so the
    * coach can backfill arbitrarily far back.
    */
-  protected readonly today = new Date();
   protected readonly maxDate = new Date();
 
   /**
