@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -108,6 +116,7 @@ export class AcademyFormComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
@@ -144,6 +153,22 @@ export class AcademyFormComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Phone pair cross-revalidation (#161 → Copilot review on PR #188).
+    // The validators are mutually dependent — when one control's value flips
+    // between empty / non-empty, the OTHER control's validity needs a
+    // re-check. Without this wiring, typing a country code wouldn't surface
+    // the "national number required" error until the user touched that field.
+    // `emitEvent: false` prevents the sibling's `valueChanges` from re-firing
+    // this handler and looping. Same shape as the athlete form.
+    const cc = this.form.controls.phone_country_code;
+    const nn = this.form.controls.phone_national_number;
+    cc.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      nn.updateValueAndValidity({ emitEvent: false });
+    });
+    nn.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      cc.updateValueAndValidity({ emitEvent: false });
+    });
+
     const academy = this.academyService.academy();
     if (!academy) {
       void this.router.navigate(['/dashboard/academy']);
