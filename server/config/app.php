@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Client (SPA) URL
+    |--------------------------------------------------------------------------
+    |
+    | The base URL of the Angular SPA. Used by server-issued redirects that
+    | bounce the user back into the SPA after a backend-side flow completes
+    | (e.g. the email-verification signed link callback).
+    |
+    */
+
+    'client_url' => env('CLIENT_URL', 'http://localhost:4200'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
