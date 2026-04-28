@@ -5,7 +5,7 @@ A consolidation of the brand's locked geometry into clean, standalone SVG varian
 ## Variant matrix
 
 ```
-budojo-logos/
+docs/design/brand-kit/
 ├── glyph/
 │   ├── glyph-dark.svg            stroke #0a0a0b — for light surfaces
 │   ├── glyph-light.svg           stroke #ffffff — NEGATIVE for dark surfaces

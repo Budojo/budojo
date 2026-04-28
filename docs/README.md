@@ -29,7 +29,7 @@ docs/
 └── design/                            # design system (MD3, palette, tokens, component matrix)
     ├── README.md
     ├── DESIGN_SYSTEM.md
-    ├── brand-kit/                     # 14 standalone SVG logo variants for handoff / pitch decks
+    ├── brand-kit/                     # 13 standalone SVG logo variants for handoff / pitch decks
     └── preview/                       # static HTML previews of the variant matrix
 ```
 
