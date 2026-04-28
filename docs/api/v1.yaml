@@ -464,7 +464,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/ForbiddenAthleteWrite'
+          $ref: '#/components/responses/ForbiddenAthlete'
 
     post:
       tags: [athletes]
@@ -671,7 +671,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/ForbiddenAthleteWrite'
+          $ref: '#/components/responses/ForbiddenAthlete'
 
   /documents/{id}/download:
     parameters:
@@ -1120,26 +1120,23 @@ components:
 
     ForbiddenAthleteWrite:
       description: |
-        Forbidden — gated athlete-write endpoint refused. OpenAPI 3.0 only
-        allows one response per status code, so this combined component
-        documents the three reasons that can produce the same 403 wire
-        shape on this route:
-          - `message: "No academy found."` — user has no academy yet
-          - `message: "Forbidden."` — athlete belongs to a different academy
+        Forbidden — gated athlete-write endpoint refused. Two reasons can
+        produce a 403 here, both with the same `ErrorMessage` shape:
+          - `message: "Forbidden."` — the FormRequest's `authorize()`
+            rejected the request. Covers BOTH "user has no academy" and
+            "athlete is in a different academy" — both surface the same
+            wire shape via `failedAuthorization()` in the FormRequest.
           - `message: "verification_required"` — email not verified (#167);
-            SPA's auth interceptor catches this and redirects to
+            emitted directly by the `verified.api` middleware. SPA's auth
+            interceptor catches this and redirects to
             `/dashboard/profile?reason=verify_required`.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorMessage'
           examples:
-            noAcademy:
-              summary: User has no academy
-              value:
-                message: No academy found.
-            crossAcademy:
-              summary: Athlete is in a different academy
+            forbidden:
+              summary: No academy OR cross-academy (failedAuthorization)
               value:
                 message: Forbidden.
             verificationRequired:
@@ -1150,20 +1147,16 @@ components:
     ForbiddenDocumentWrite:
       description: |
         Forbidden — gated document-write endpoint refused. Same combined
-        shape as `ForbiddenAthleteWrite`, with `Forbidden.` raised when the
-        document does not belong to the authenticated user's academy
-        (checked transitively via `document.athlete.academy_id`).
+        shape as `ForbiddenAthleteWrite`. The `Forbidden.` variant covers
+        no-academy AND cross-academy (document belongs to a different
+        academy, checked transitively via `document.athlete.academy_id`).
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorMessage'
           examples:
-            noAcademy:
-              summary: User has no academy
-              value:
-                message: No academy found.
-            crossAcademy:
-              summary: Document belongs to a different academy
+            forbidden:
+              summary: No academy OR cross-academy (failedAuthorization)
               value:
                 message: Forbidden.
             verificationRequired:
