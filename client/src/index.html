@@ -14,21 +14,24 @@
     <!-- PWA manifest (icons, name, theme, start_url). -->
     <link rel="manifest" href="manifest.webmanifest" />
 
-    <!-- Favicons + installable icons.
-         Modern Chromium / Firefox / Safari pick the SVG (crisp at any DPI),
-         legacy browsers fall through to the ICO. The light-stroke variant
-         carries a white stroke so dark UA tab strips don't render the
-         favicon invisible — browsers honour the `media` query on icon links
-         since ~2020 (Chromium 80+, Firefox 89+, partial on Safari).
-         The 192 PNG stays as a Chromium downscale hint (better than ICO's
-         48 px bitmap), and apple-touch-icon stays for iOS "Add to Home
-         Screen". -->
-    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- Favicons + installable icons (#183).
+         Default is the WHITE-stroke variant — modern browsers (Chrome, Brave,
+         Edge, Firefox) ship with a dark tab strip even when the OS is in
+         light mode, and a black logo disappears against it. The dark-stroke
+         variant is offered conditionally for OS-light pinned-tab contexts
+         where the tab background is white; UA support for `media` on
+         `<link rel="icon">` is partial (Safari is incomplete), so when the
+         media query is ignored we still fall back to the white variant —
+         which is the more visible state across our actual user base.
+         Legacy browsers fall through to the ICO. The 192 PNG stays as a
+         Chromium downscale hint, and apple-touch-icon stays for iOS
+         "Add to Home Screen". -->
+    <link rel="icon" type="image/svg+xml" href="favicon-light.svg" />
     <link
       rel="icon"
       type="image/svg+xml"
-      href="favicon-light.svg"
-      media="(prefers-color-scheme: dark)"
+      href="favicon.svg"
+      media="(prefers-color-scheme: light)"
     />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
