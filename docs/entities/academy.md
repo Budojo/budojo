@@ -47,7 +47,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 
 - `POST /api/v1/academy` — create (one-shot, 409 if the user already has one)
 - `GET /api/v1/academy` — fetch the authenticated user's academy; returns 404 if none (SPA uses this to detect first-login state)
-- `PATCH /api/v1/academy` — partial update of `name`, `address`, `monthly_fee_cents`
+- `PATCH /api/v1/academy` — partial update of `name`, `address`, `monthly_fee_cents`, `training_days`
 - `POST /api/v1/academy/logo` — upload/replace logo
 - `DELETE /api/v1/academy/logo` — remove logo
 
