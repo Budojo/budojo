@@ -32,7 +32,7 @@ deploy script.
         │  Cloudflare Pages   │         │  DigitalOcean droplet   │
         │  project: budojo    │         │  budojo-prod (Frankfurt)│
         │                     │         │  Ubuntu 24.04 + nginx + │
-        │  Angular 21 build   │         │  PHP-FPM 8.4 + MySQL 8  │
+        │  Angular 21 build   │         │  PHP-FPM 8.4 + MySQL 8.4│
         │  /api/* proxy →     │ ────►   │  Forge-managed          │
         │  api.budojo.it      │         │                         │
         └─────────────────────┘         └─────────────────────────┘

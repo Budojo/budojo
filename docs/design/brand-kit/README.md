@@ -32,7 +32,7 @@ docs/design/brand-kit/
 
 **Wordmark vs glyph alone.** Use the wordmark when "Budojo" needs to be readable as a brand — splash screens, marketing, signed-out auth pages, document headers. Use the glyph alone when the surrounding context already names the product — installed PWA tile, in-app top bar next to the page title, favicon, loading state inside the dashboard.
 
-**Maskable icon.** Used **only** as the PWA install icon — referenced from `manifest.webmanifest` with `"purpose": "maskable"`. Every other icon use (app store, marketing, README badge, in-app empty state) is `icon-square-{dark|accent|light}.svg`. The maskable variant has a hard solid background and oversize safe-zone padding because Android adaptive icons crop aggressively; using it elsewhere wastes pixels.
+**Maskable icon.** Used **only** as the PWA install icon. The kit ships `app-icon/icon-maskable.svg` as the source / handoff variant; the SPA's `client/public/manifest.webmanifest` currently references a rasterized PNG (`icons/icon-maskable-512.png`) with `"purpose": "maskable"` because the manifest spec's SVG support is still UA-inconsistent. Every other icon use (app store, marketing, README badge, in-app empty state) is `icon-square-{dark|accent|light}.svg`. The maskable variant has a hard solid background and oversize safe-zone padding because Android adaptive icons crop aggressively; using it elsewhere wastes pixels.
 
 ## Brand colors (locked)
 
