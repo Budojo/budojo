@@ -46,3 +46,16 @@ docs/design/brand-kit/
 ## Source-of-truth note
 
 The geometry is locked. Updates must originate upstream in `client/public/logo-glyph.svg` and `client/public/wordmark.svg`, never by editing this kit in place. If you need a new variant, regenerate the kit — don't hand-edit one file and let the rest drift.
+
+## Active SPA mirror
+
+These three files in `client/public/` are **bytewise mirrors** of the corresponding kit variants — the SPA loads its assets from there, so the kit and the active assets are kept identical to avoid drift:
+
+| Active asset                          | Kit source                                       |
+|---------------------------------------|--------------------------------------------------|
+| `client/public/logo-glyph.svg`        | `glyph/glyph-currentColor.svg`                   |
+| `client/public/wordmark.svg`          | `wordmark/wordmark-dark.svg`                     |
+| `client/public/favicon.svg`           | `favicon/favicon.svg`                            |
+| `client/public/favicon-light.svg`     | `favicon/favicon-light.svg` (dark UA themes)     |
+
+When updating the upstream geometry (the path coordinates), regenerate the entire kit and copy the four files above back into `client/public/` in the same PR. Keeping them divergent is what we got bitten by historically.

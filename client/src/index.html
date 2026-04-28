@@ -15,11 +15,21 @@
     <link rel="manifest" href="manifest.webmanifest" />
 
     <!-- Favicons + installable icons.
-         - ICO for legacy Chrome / any fallback
-         - 192 PNG hint for modern Chromium — it downscales better than
-           the ICO's 48 px bitmap, and the `sizes` hint matches the real
-           asset so the browser can't pick a mismatched tile
-         - apple-touch-icon for iOS Safari "Add to Home Screen" -->
+         Modern Chromium / Firefox / Safari pick the SVG (crisp at any DPI),
+         legacy browsers fall through to the ICO. The light-stroke variant
+         carries a white stroke so dark UA tab strips don't render the
+         favicon invisible — browsers honour the `media` query on icon links
+         since ~2020 (Chromium 80+, Firefox 89+, partial on Safari).
+         The 192 PNG stays as a Chromium downscale hint (better than ICO's
+         48 px bitmap), and apple-touch-icon stays for iOS "Add to Home
+         Screen". -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="favicon-light.svg"
+      media="(prefers-color-scheme: dark)"
+    />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
