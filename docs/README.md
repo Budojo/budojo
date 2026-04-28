@@ -6,18 +6,30 @@ This folder is the living reference for Budojo's domain model, API contract, and
 
 ```
 docs/
-├── README.md              # this file — the index
-├── entities/              # one file per persisted domain entity
+├── README.md                          # this file — the index
+├── entities/                          # one file per persisted domain entity
 │   ├── user.md
 │   ├── personal-access-token.md
 │   ├── academy.md
 │   ├── athlete.md
+│   ├── athlete-payment.md
+│   ├── address.md                     # polymorphic, owned by Academy + Athlete (#72)
 │   └── document.md
 ├── api/
-│   ├── README.md          # how to view the spec locally (Swagger UI, Redocly)
-│   └── v1.yaml            # OpenAPI 3.0.3 — complete contract for /api/v1
-└── specs/
-    └── m3-documents.md    # M3 PRD (Documents & Deadlines)
+│   ├── README.md                      # how to view the spec locally (Swagger UI, Redocly)
+│   └── v1.yaml                        # OpenAPI 3.0.3 — complete contract for /api/v1
+├── specs/                             # milestone PRDs
+│   ├── m3-documents.md                # M3 — Documents & Deadlines
+│   └── m4-attendance.md               # M4 — Attendance (with `Deltas from spec`)
+├── infra/                             # operations / deployment
+│   ├── branch-rulesets.md             # GitHub branch protection rulesets
+│   └── production-deployment.md       # the live stack: DNS, Forge, Cloudflare, runbook, gotchas
+├── adr/                               # architectural decision records
+│   └── 0001-svg-sanitizer.md
+└── design/                            # design system (MD3, palette, tokens, component matrix)
+    ├── README.md
+    ├── DESIGN_SYSTEM.md
+    └── preview/                       # static HTML previews of the variant matrix
 ```
 
 ## Who reads what
@@ -26,8 +38,10 @@ docs/
 |---|---|
 | New contributor onboarding | `entities/` then `api/v1.yaml` |
 | Front-end / API consumer | `api/v1.yaml` (import into Postman, Insomnia, or Swagger UI) |
+| On-call / deployer | `infra/production-deployment.md` for the live runbook + env / DNS / TLS topology |
 | Claude Code agent | Everything — the PR will fail review if docs are stale (see `CLAUDE.md` "Documentation discipline") |
 | Product planning | `specs/` |
+| UI / design contributor | `design/DESIGN_SYSTEM.md` and `design/preview/` |
 
 ## Update discipline
 
