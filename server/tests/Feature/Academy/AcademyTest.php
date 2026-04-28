@@ -213,6 +213,25 @@ it('clears the academy address when explicitly set to null', function (): void {
     expect($academy->fresh()->address)->toBeNull();
 });
 
+it('wipes the polymorphic address row when the academy is deleted via Eloquent (#72)', function (): void {
+    $user = User::factory()->create();
+    $academy = Academy::factory()->create(['user_id' => $user->id]);
+    Address::factory()->create([
+        'addressable_type' => Academy::class,
+        'addressable_id' => $academy->id,
+    ]);
+
+    expect(Address::where('addressable_type', Academy::class)
+        ->where('addressable_id', $academy->id)
+        ->count())->toBe(1);
+
+    $academy->delete();
+
+    expect(Address::where('addressable_type', Academy::class)
+        ->where('addressable_id', $academy->id)
+        ->count())->toBe(0);
+});
+
 // ─── training_days (#88a) ────────────────────────────────────────────────────
 
 it('persists training_days on POST /academy as an ordered list of weekday ints (#88a)', function (): void {
