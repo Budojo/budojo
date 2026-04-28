@@ -9,8 +9,28 @@ Route::get('/health', fn () => response()->json(['status' => 'ok']));
 Route::post('/auth/register', \App\Http\Controllers\Auth\RegisterController::class);
 Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class);
 
+// Email verification — signed-link callback. Public on purpose: the signed
+// URL is the auth (the user clicks from their inbox, often on a different
+// device than the one they registered on). The hash check inside the
+// controller catches email-changed-after-signature drift. The `id` is
+// constrained to digits so a non-numeric path (e.g. `/email/verify/foo/...`)
+// 404s before reaching the controller — avoids passing a bogus route param
+// down to `User::find()`.
+Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Auth\EmailVerificationController::class, 'verify'])
+    ->where('id', '[0-9]+')
+    ->where('hash', '[a-f0-9]{40}')
+    ->middleware('signed')
+    ->name('verification.verify');
+
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {
+    // Resend verification email — auth required, rate-limited via
+    // `email-verification-resend` (one request per minute per user;
+    // see AppServiceProvider::boot()).
+    Route::post('/email/verification-notification', [\App\Http\Controllers\Auth\EmailVerificationController::class, 'resend'])
+        ->middleware('throttle:email-verification-resend');
+
+
     Route::post('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'store']);
     Route::get('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'show']);
     Route::patch('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'update']);
