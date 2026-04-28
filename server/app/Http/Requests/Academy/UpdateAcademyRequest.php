@@ -45,17 +45,21 @@ class UpdateAcademyRequest extends FormRequest
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             // Phone is a *pair* (#161, mirrors the athlete shape from #75):
             // either both null or both filled, with a libphonenumber-validated
-            // combination. The shape rules here catch the "only one set" case;
-            // the cross-field reachability check lives in `withValidator()`.
+            // combination. We do NOT add `sometimes` on these two on purpose
+            // (same lesson as UpdateAthleteRequest): with `sometimes` set, a
+            // PATCH that includes only ONE half of the pair would skip the
+            // missing field's rules entirely, and `required_with` would never
+            // fire. Without it, both rules always run; an absent pair sails
+            // through (`nullable` + neither-side-present means no
+            // `required_with` triggers), but a half-filled PATCH is rejected
+            // exactly as on the create endpoint.
             'phone_country_code' => [
-                'sometimes',
                 'nullable',
                 'string',
                 'regex:/^\+[1-9][0-9]{0,3}$/',
                 'required_with:phone_national_number',
             ],
             'phone_national_number' => [
-                'sometimes',
                 'nullable',
                 'string',
                 'regex:/^[0-9]+$/',
