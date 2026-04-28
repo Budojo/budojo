@@ -60,12 +60,6 @@
       </span>
     </div>
 
-    @if (user(); as u) {
-      <div class="sidebar__verification">
-        <app-email-verification-status />
-      </div>
-    }
-
     <nav class="sidebar__nav">
       <a
         routerLink="academy"
@@ -122,6 +116,7 @@
         <i class="pi pi-sign-out" aria-hidden="true"></i>
         <span>Sign out</span>
       </button>
+      <p class="sidebar__version" data-cy="sidebar-version">{{ versionTag }}</p>
     </div>
   </aside>
 

@@ -231,17 +231,6 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     text-overflow: ellipsis;
   }
 
-  // ── Verification status ───────────────────────────────────────────────────
-  // Pill sits between the brand area and the nav. Visible whenever there is
-  // a hydrated user — verified state shows a quiet green pill so the surface
-  // doesn't reflow when the unverified state resolves.
-
-  &__verification {
-    display: flex;
-    justify-content: center;
-    padding: 0.5rem 1rem;
-  }
-
   // ── Nav ───────────────────────────────────────────────────────────────────
 
   &__nav {
@@ -317,6 +306,21 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     border-top: 1px solid var(--p-surface-800);
     display: flex;
     flex-direction: column;
+  }
+
+  // App version footer (#160). Apple-minimal — `surface-500` muted, 0.75rem,
+  // monospace digits, no background, no border, non-interactive. Sits below
+  // the Sign out row so it never competes with navigation but is glanceable
+  // for "what version am I running" debugging.
+  &__version {
+    margin: 0.5rem 0 0;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: var(--p-surface-500);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    user-select: text; // user can copy-paste the tag in a bug report
   }
 }
 

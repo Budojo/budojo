@@ -10,18 +10,12 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
-import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
+import { VERSION } from '../../../environments/version';
 
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    RouterOutlet,
-    RouterLink,
-    RouterLinkActive,
-    BrandGlyphComponent,
-    EmailVerificationStatusComponent,
-  ],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, BrandGlyphComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -76,6 +70,15 @@ export class DashboardComponent implements OnInit {
    * signal — the sidebar is always visible there.
    */
   protected readonly sidebarOpen = signal(false);
+
+  /**
+   * App version surfaced quietly in the sidebar footer (#160). Resolved from
+   * `git describe --tags --always` at build time by `scripts/write-version.cjs`
+   * — see `client/src/environments/version.ts`. Renders "dev" on hot-reload
+   * dev servers; the prod build replaces it with the tag the bundle was cut
+   * from (e.g. `v1.1.0`, or `v1.1.0-3-gabc1234` between tags).
+   */
+  protected readonly versionTag = VERSION.tag;
 
   protected toggleSidebar(): void {
     this.sidebarOpen.update((v) => !v);

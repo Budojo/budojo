@@ -6,6 +6,7 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
+import { VERSION } from '../../../environments/version';
 import { DashboardComponent } from './dashboard.component';
 
 // AuthService reads `localStorage` at construction time. Some local test
@@ -286,6 +287,40 @@ describe('DashboardComponent', () => {
       expect(hamburger!.getAttribute('aria-controls')).toBe('app-sidebar');
       // Accessible label flips based on open state.
       expect(hamburger!.getAttribute('aria-label')).toBe('Open navigation');
+    });
+  });
+
+  describe('app version footer (#160)', () => {
+    // Asserts against the imported `VERSION.tag` rather than hard-coding
+    // `dev`. The committed default value is `dev` (overwritten at every
+    // `ng build` by `scripts/write-version.cjs`); a developer who ran the
+    // build locally would have a different `VERSION.tag` checked out, and
+    // we don't want this test to flake on that. Reading from the same
+    // import the component does keeps the assertion robust either way.
+    it('renders the version tag in the sidebar footer', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement.querySelector(
+        '[data-cy="sidebar-version"]',
+      ) as HTMLElement | null;
+      expect(el).not.toBeNull();
+      expect(el!.textContent?.trim()).toBe(VERSION.tag);
+    });
+  });
+
+  describe('email-verification pillola — removed from sidebar (#179)', () => {
+    // The pillola lives only on /dashboard/profile now. The dashboard shell
+    // shouldn't render <app-email-verification-status> at all — the spot
+    // between brand and nav stays empty.
+    it('does not render the email-verification component anywhere in the shell', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const pillola = fixture.nativeElement.querySelector('app-email-verification-status');
+      const slot = fixture.nativeElement.querySelector('.sidebar__verification');
+      expect(pillola).toBeNull();
+      expect(slot).toBeNull();
     });
   });
 });
