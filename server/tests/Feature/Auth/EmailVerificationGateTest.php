@@ -79,7 +79,31 @@ it('rejects POST /api/v1/athletes/{id}/documents for unverified users with 403',
             'type' => 'medical_certificate',
             'expires_at' => now()->addYear()->toDateString(),
         ])
-        ->assertStatus(403);
+        ->assertStatus(403)
+        ->assertJsonPath('message', 'verification_required');
+});
+
+it('rejects PUT /api/v1/documents/{id} for unverified users with 403', function (): void {
+    $athlete = Athlete::factory()->for($this->unverifiedUser->academy, 'academy')->create();
+    $document = \App\Models\Document::factory()->for($athlete, 'athlete')->create();
+
+    $this->actingAs($this->unverifiedUser)
+        ->putJson("/api/v1/documents/{$document->id}", [
+            'type' => $document->type->value,
+            'expires_at' => now()->addYear()->toDateString(),
+        ])
+        ->assertStatus(403)
+        ->assertJsonPath('message', 'verification_required');
+});
+
+it('rejects DELETE /api/v1/documents/{id} for unverified users with 403', function (): void {
+    $athlete = Athlete::factory()->for($this->unverifiedUser->academy, 'academy')->create();
+    $document = \App\Models\Document::factory()->for($athlete, 'athlete')->create();
+
+    $this->actingAs($this->unverifiedUser)
+        ->deleteJson("/api/v1/documents/{$document->id}")
+        ->assertStatus(403)
+        ->assertJsonPath('message', 'verification_required');
 });
 
 // ── Verified users still pass through ────────────────────────────────────────
