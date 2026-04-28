@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, map, tap, catchError, throwError, of, shareReplay, finalize } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 /**
  * ISO 3166-1 alpha-2 country code (#72). MVP supports only Italy; adding a
@@ -202,7 +203,7 @@ interface AcademyResponse {
 @Injectable({ providedIn: 'root' })
 export class AcademyService {
   private readonly http = inject(HttpClient);
-  private readonly base = '/api/v1/academy';
+  private readonly base = `${environment.apiBase}/api/v1/academy`;
 
   readonly academy = signal<Academy | null>(null);
 
