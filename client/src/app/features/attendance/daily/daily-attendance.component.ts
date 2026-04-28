@@ -62,17 +62,15 @@ export class DailyAttendanceComponent implements OnInit {
   });
 
   /**
-   * 7-day backfill window per PRD § P0.3. `minDate` / `maxDate` feed the
-   * `<p-datepicker>` directly so the user can't pick a future date or an
-   * out-of-window past date — eliminates the need for a redundant 422
-   * round-trip.
+   * Backfill window (#181). The PRD originally capped backfilling at 7
+   * days; user feedback after the M4 release was that the cap was too
+   * tight (post-hoc data entry, holiday catch-up). Single-instructor
+   * academy → trust the user. We keep `maxDate` so future dates stay
+   * blocked at the picker layer (semantically wrong + the FormRequest
+   * still rejects them with 422), and drop the floor entirely so the
+   * coach can backfill arbitrarily far back.
    */
   protected readonly today = new Date();
-  protected readonly minDate = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d;
-  })();
   protected readonly maxDate = new Date();
 
   /**
