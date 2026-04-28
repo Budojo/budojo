@@ -372,8 +372,8 @@ worth carrying forward:
    repo (observed across #125, #129, #127, #128, #133). After merging,
    manually close the linked issue with a `Closed by #<PR> (merged in
    <sha>).` comment. The project board "Done" transition also needs a
-   manual nudge — see `reference_dev_environment.md` in the agent's
-   memory.
+   manual nudge — see the GitHub Project Board section in
+   [`CLAUDE.md`](../../CLAUDE.md) for the project + status-field IDs.
 
 10. **`gh` token scope must include `project`** to add items to the project
     board and update field values via GraphQL. Default `gh auth login` only
