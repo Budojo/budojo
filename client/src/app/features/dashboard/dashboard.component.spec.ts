@@ -98,8 +98,9 @@ describe('DashboardComponent', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
 
-      // <p-menu> was the dropdown trigger; both the host element and the
-      // caret icon are gone now. Sign out lives only in the bottom row.
+      // <p-menu> was the popup menu component (the brand button was the
+      // trigger); both the menu host element and the caret icon are gone
+      // now. Sign out lives only in the bottom row.
       expect(fixture.nativeElement.querySelector('p-menu')).toBeNull();
       expect(fixture.nativeElement.querySelector('.sidebar__brand-caret')).toBeNull();
     });
