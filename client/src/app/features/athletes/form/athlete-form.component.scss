@@ -149,3 +149,13 @@
     grid-template-columns: 7rem 1fr 7rem;
   }
 }
+
+// Phone country-code dropdown lives inside a `<p-inputgroup>` next to the
+// national-number text input. Without this min-width, the trigger collapses
+// to a sliver because PrimeNG sizes the select to its currently selected
+// option (often a short "+39") and the dropdown panel inherits that width,
+// clipping the country names. 7rem comfortably fits "+999 Country" plus
+// the chevron and the inputgroup separator.
+:host ::ng-deep .phone-country-code {
+  min-width: 7rem;
+}

@@ -30,7 +30,7 @@
   <!-- Filters -->
   <div class="athletes-page__filters">
     <p-iconfield iconPosition="left" styleClass="athletes-page__search">
-      <p-inputicon class="pi pi-search" />
+      <p-inputicon><i class="pi pi-search"></i></p-inputicon>
       <input
         pInputText
         type="text"
@@ -111,11 +111,13 @@
 
       <ng-template pTemplate="body" let-athlete>
         <tr>
-          <td class="athlete-name">
-            <span class="athlete-name__text">
-              {{ athlete.first_name }} {{ athlete.last_name }}
-            </span>
-            <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
+          <td>
+            <div class="athlete-name">
+              <span class="athlete-name__text">
+                {{ athlete.first_name }} {{ athlete.last_name }}
+              </span>
+              <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
+            </div>
           </td>
           <td>
             <app-belt-badge [belt]="athlete.belt" />

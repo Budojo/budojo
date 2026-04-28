@@ -257,7 +257,7 @@
 
         <div class="address-group__row">
           <div class="field">
-            <label for="athlete-address-postal-code">Postal code (CAP)</label>
+            <label for="athlete-address-postal-code">ZIP</label>
             <input
               pInputText
               id="athlete-address-postal-code"
@@ -302,7 +302,6 @@
               formControlName="province"
               optionLabel="label"
               optionValue="value"
-              placeholder="—"
               ariaLabel="Province"
               appendTo="body"
               styleClass="w-full"
@@ -312,8 +311,15 @@
           </div>
         </div>
 
-        <div class="field">
-          <label for="athlete-address-country">Country</label>
+        <!--
+          Country is locked to Italy in MVP. The form control still binds
+          via `formControlName="country"` (initialized to 'IT' in the
+          component) so the API contract is unchanged; the visible select
+          is hidden to keep the address fieldset focused on what the user
+          actually fills in. Re-surface when a second Country enum case
+          lands.
+        -->
+        <div hidden>
           <p-select
             inputId="athlete-address-country"
             [options]="countryOptions"
@@ -321,7 +327,6 @@
             optionLabel="label"
             optionValue="value"
             appendTo="body"
-            styleClass="w-full"
             data-cy="athlete-form-address-country"
           />
         </div>
