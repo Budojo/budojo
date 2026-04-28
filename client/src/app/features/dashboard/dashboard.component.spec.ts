@@ -6,6 +6,7 @@ import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
+import { VERSION } from '../../../environments/version';
 import { DashboardComponent } from './dashboard.component';
 
 // AuthService reads `localStorage` at construction time. Some local test
@@ -72,7 +73,7 @@ describe('DashboardComponent', () => {
       expect(el.querySelector('.sidebar__brand-name')?.textContent?.trim()).toBe('Budojo');
     });
 
-    it('exposes the brand trigger as a button with accessibility metadata', () => {
+    it('renders the brand area as a non-interactive header (#166 retired the dropdown)', () => {
       academyService.academy.set({
         id: 1,
         name: 'Gracie Barra Torino',
@@ -84,52 +85,32 @@ describe('DashboardComponent', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
 
-      const trigger = fixture.nativeElement.querySelector(
-        '.sidebar__brand',
-      ) as HTMLButtonElement | null;
-      expect(trigger).not.toBeNull();
-      expect(trigger!.tagName).toBe('BUTTON');
-      expect(trigger!.getAttribute('aria-haspopup')).toBe('menu');
-      expect(trigger!.getAttribute('aria-label')).toBe('Gracie Barra Torino menu');
-      expect(trigger!.getAttribute('aria-expanded')).toBe('false');
+      const brand = fixture.nativeElement.querySelector(
+        '[data-cy="sidebar-brand"]',
+      ) as HTMLElement | null;
+      expect(brand).not.toBeNull();
+      // Was a <button> with aria-haspopup="menu" before #166; now a plain div.
+      expect(brand!.tagName).toBe('DIV');
+      expect(brand!.getAttribute('aria-haspopup')).toBeNull();
+      expect(brand!.getAttribute('aria-expanded')).toBeNull();
+    });
+
+    it('does not render a brand dropdown menu after #166', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      // <p-menu> was the popup menu component (the brand button was the
+      // trigger); both the menu host element and the caret icon are gone
+      // now. Sign out lives only in the bottom row.
+      expect(fixture.nativeElement.querySelector('p-menu')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.sidebar__brand-caret')).toBeNull();
     });
   });
 
-  describe('menu', () => {
-    it('contains exactly one item — Sign out — with a pi-sign-out icon', () => {
-      const fixture = TestBed.createComponent(DashboardComponent);
-      const component = fixture.componentInstance as unknown as {
-        menuItems: () => { label?: string; icon?: string; command?: () => void }[];
-      };
-
-      const items = component.menuItems();
-      expect(items).toHaveLength(1);
-      expect(items[0].label).toBe('Sign out');
-      expect(items[0].icon).toBe('pi pi-sign-out');
-      expect(typeof items[0].command).toBe('function');
-    });
-
-    it('running the Sign out command calls AuthService.logout() and navigates to /auth/login', () => {
-      const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-
-      const fixture = TestBed.createComponent(DashboardComponent);
-      const component = fixture.componentInstance as unknown as {
-        menuItems: () => { command: () => void }[];
-      };
-
-      component.menuItems()[0].command();
-
-      expect(authService.logout).toHaveBeenCalledTimes(1);
-      expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
-    });
-  });
-
-  describe('sidebar footer — explicit Sign out button (#69)', () => {
-    // The brand-dropdown menu still carries Sign out (tests above), but the
-    // discoverability failure flagged in #69 required an always-visible
-    // row. Verify it exists, clicks through to the same logout path, and
-    // closes the mobile drawer in the same tick (so the user doesn't land
-    // on /auth/login with a drawer still slid in).
+  describe('sidebar footer — sign-out is the only signout entry (#166)', () => {
+    // After retiring the brand-dropdown signout, this row is the singular,
+    // always-visible affordance. Verify it exists, clicks through to the
+    // logout path, and closes the mobile drawer in the same tick.
     it('renders a sign-out button at the bottom of the sidebar with pi-sign-out icon', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
@@ -306,6 +287,40 @@ describe('DashboardComponent', () => {
       expect(hamburger!.getAttribute('aria-controls')).toBe('app-sidebar');
       // Accessible label flips based on open state.
       expect(hamburger!.getAttribute('aria-label')).toBe('Open navigation');
+    });
+  });
+
+  describe('app version footer (#160)', () => {
+    // Asserts against the imported `VERSION.tag` rather than hard-coding
+    // `dev`. The committed default value is `dev` (overwritten at every
+    // `ng build` by `scripts/write-version.cjs`); a developer who ran the
+    // build locally would have a different `VERSION.tag` checked out, and
+    // we don't want this test to flake on that. Reading from the same
+    // import the component does keeps the assertion robust either way.
+    it('renders the version tag in the sidebar footer', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement.querySelector(
+        '[data-cy="sidebar-version"]',
+      ) as HTMLElement | null;
+      expect(el).not.toBeNull();
+      expect(el!.textContent?.trim()).toBe(VERSION.tag);
+    });
+  });
+
+  describe('email-verification pillola — removed from sidebar (#179)', () => {
+    // The pillola lives only on /dashboard/profile now. The dashboard shell
+    // shouldn't render <app-email-verification-status> at all — the spot
+    // between brand and nav stays empty.
+    it('does not render the email-verification component anywhere in the shell', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const pillola = fixture.nativeElement.querySelector('app-email-verification-status');
+      const slot = fixture.nativeElement.querySelector('.sidebar__verification');
+      expect(pillola).toBeNull();
+      expect(slot).toBeNull();
     });
   });
 });

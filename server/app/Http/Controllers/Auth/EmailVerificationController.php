@@ -69,7 +69,12 @@ class EmailVerificationController extends Controller
     private function clientUrl(): string
     {
         $url = config('app.client_url');
+        $resolved = \is_string($url) ? $url : 'http://localhost:4200';
 
-        return \is_string($url) ? $url : 'http://localhost:4200';
+        // Strip a trailing slash so concatenation with `/auth/verify-success`
+        // never produces `https://app.test//auth/...`. Browsers normalize
+        // double-slashes silently but that's a fragile contract — defensive
+        // here is cheap (#174 follow-up to #173 review).
+        return rtrim($resolved, '/');
     }
 }

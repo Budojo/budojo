@@ -80,12 +80,13 @@ it('returns 401 on list without auth', function (): void {
     $this->getJson('/api/v1/athletes')->assertUnauthorized();
 });
 
-it('returns 403 on list when user has no academy', function (): void {
+it('returns 403 with "No academy found." on list when user has no academy', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->getJson('/api/v1/athletes')
-        ->assertForbidden();
+        ->assertForbidden()
+        ->assertExactJson(['message' => 'No academy found.']);
 });
 
 // ─── STORE ────────────────────────────────────────────────────────────────────
@@ -171,7 +172,7 @@ it('returns 401 on store without auth', function (): void {
     $this->postJson('/api/v1/athletes', [])->assertUnauthorized();
 });
 
-it('returns 403 on store when user has no academy', function (): void {
+it('returns 403 with "Forbidden." on store when user has no academy', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
@@ -182,7 +183,8 @@ it('returns 403 on store when user has no academy', function (): void {
             'status' => 'active',
             'joined_at' => '2024-01-15',
         ])
-        ->assertForbidden();
+        ->assertForbidden()
+        ->assertExactJson(['message' => 'Forbidden.']);
 });
 
 // ─── SHOW ─────────────────────────────────────────────────────────────────────
@@ -255,6 +257,17 @@ it('returns 403 when updating an athlete that belongs to another academy', funct
     $this->actingAs($user)
         ->putJson("/api/v1/athletes/{$athlete->id}", ['belt' => 'blue'])
         ->assertForbidden();
+});
+
+it('returns 403 with "Forbidden." on update when user has no academy', function (): void {
+    $user = User::factory()->create();
+    $otherAcademy = Academy::factory()->create();
+    $athlete = Athlete::factory()->for($otherAcademy)->create();
+
+    $this->actingAs($user)
+        ->putJson("/api/v1/athletes/{$athlete->id}", ['belt' => 'blue'])
+        ->assertForbidden()
+        ->assertExactJson(['message' => 'Forbidden.']);
 });
 
 // ─── DESTROY ──────────────────────────────────────────────────────────────────

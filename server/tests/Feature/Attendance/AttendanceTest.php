@@ -7,15 +7,11 @@ use App\Models\AttendanceRecord;
 use Carbon\Carbon;
 use Laravel\Sanctum\Sanctum;
 
-// Freeze the clock to a fixed moment for the whole file. The API's backfill
-// window (`date` rule on POST /api/v1/attendance) is `[now() - 7 days,
-// now()]`, so tests written with absolute dates like 2026-04-20 would
-// eventually fall outside that rolling window as real time marched past
-// May 2026 and the suite would flake on a calendar flip. Carbon::setTestNow
-// pins every relative-time call in the code under test to 2026-04-24
-// noon, which keeps the canonical 2026-04-20 test date a valid backfill
-// (4 days before the frozen now) and the "7 days ago" / "8 days ago"
-// boundary tests deterministic.
+// Freeze the clock to a fixed moment for the whole file. After #181 the
+// past floor on the `date` rule is gone — backfill is unbounded backwards;
+// only the future cap (`before_or_equal:today`) remains. The frozen clock
+// keeps every `now()` resolution deterministic so that boundary tests
+// (today's mark, tomorrow's reject) stay stable across calendar flips.
 beforeEach(function (): void {
     Carbon::setTestNow(Carbon::parse('2026-04-24 12:00:00'));
 });
@@ -125,26 +121,29 @@ it('returns 422 when the date is in the future', function (): void {
         ->assertJsonValidationErrors(['date']);
 });
 
-it('accepts backfill up to 7 days in the past', function (): void {
+it('accepts backfill arbitrarily far into the past (#181 — 7-day cap removed)', function (): void {
     $user = userWithAcademy();
     $mario = Athlete::factory()->for($user->academy)->create();
     Sanctum::actingAs($user);
 
-    $sevenDaysAgo = now()->subDays(7)->toDateString();
+    // Six months back — well past the old 7-day cap. Single-instructor
+    // academy, the trust model is "you control your own data". Future
+    // dates remain blocked by the `before_or_equal:today` rule.
+    $sixMonthsAgo = now()->subMonths(6)->toDateString();
 
     $this->postJson('/api/v1/attendance', [
-        'date' => $sevenDaysAgo,
+        'date' => $sixMonthsAgo,
         'athlete_ids' => [$mario->id],
     ])->assertCreated();
 });
 
-it('returns 422 when the date is beyond the 7-day backfill window', function (): void {
+it('still rejects future dates after #181 — only the past floor was removed', function (): void {
     $user = userWithAcademy();
     $mario = Athlete::factory()->for($user->academy)->create();
     Sanctum::actingAs($user);
 
     $this->postJson('/api/v1/attendance', [
-        'date' => now()->subDays(8)->toDateString(),
+        'date' => now()->addDay()->toDateString(),
         'athlete_ids' => [$mario->id],
     ])
         ->assertUnprocessable()

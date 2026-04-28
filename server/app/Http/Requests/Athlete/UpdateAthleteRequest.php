@@ -6,11 +6,12 @@ namespace App\Http\Requests\Athlete;
 
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
-use App\Http\Requests\Athlete\Concerns\ValidatesPhonePair;
 use App\Http\Requests\Concerns\ValidatesAddress;
+use App\Http\Requests\Concerns\ValidatesPhonePair;
 use App\Models\Athlete;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
 class UpdateAthleteRequest extends FormRequest
@@ -81,5 +82,17 @@ class UpdateAthleteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
+    }
+
+    /**
+     * Match the canonical wire-level 403 contract used by every other write
+     * FormRequest: `{"message":"Forbidden."}`. See StoreAthleteRequest for the
+     * full reasoning.
+     */
+    protected function failedAuthorization(): void
+    {
+        throw new HttpResponseException(
+            response()->json(['message' => 'Forbidden.'], 403),
+        );
     }
 }

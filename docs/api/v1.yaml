@@ -491,7 +491,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/NoAcademy'
+          $ref: '#/components/responses/ForbiddenAthleteWrite'
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -541,7 +541,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/ForbiddenAthlete'
+          $ref: '#/components/responses/ForbiddenAthleteWrite'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -562,7 +562,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/ForbiddenAthlete'
+          $ref: '#/components/responses/ForbiddenAthleteWrite'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -631,7 +631,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/ForbiddenAthlete'
+          $ref: '#/components/responses/ForbiddenAthleteWrite'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -751,7 +751,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/ForbiddenDocument'
+          $ref: '#/components/responses/ForbiddenDocumentWrite'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -771,7 +771,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/ForbiddenDocument'
+          $ref: '#/components/responses/ForbiddenDocumentWrite'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -1118,6 +1118,52 @@ components:
           example:
             message: verification_required
 
+    ForbiddenAthleteWrite:
+      description: |
+        Forbidden — gated athlete-write endpoint refused. Two reasons can
+        produce a 403 here, both with the same `ErrorMessage` shape:
+          - `message: "Forbidden."` — the FormRequest's `authorize()`
+            rejected the request. Covers BOTH "user has no academy" and
+            "athlete is in a different academy" — both surface the same
+            wire shape via `failedAuthorization()` in the FormRequest.
+          - `message: "verification_required"` — email not verified (#167);
+            emitted directly by the `verified.api` middleware. SPA's auth
+            interceptor catches this and redirects to
+            `/dashboard/profile?reason=verify_required`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          examples:
+            forbidden:
+              summary: No academy OR cross-academy (failedAuthorization)
+              value:
+                message: Forbidden.
+            verificationRequired:
+              summary: Email not verified (gated by `verified.api`)
+              value:
+                message: verification_required
+
+    ForbiddenDocumentWrite:
+      description: |
+        Forbidden — gated document-write endpoint refused. Same combined
+        shape as `ForbiddenAthleteWrite`. The `Forbidden.` variant covers
+        no-academy AND cross-academy (document belongs to a different
+        academy, checked transitively via `document.athlete.academy_id`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          examples:
+            forbidden:
+              summary: No academy OR cross-academy (failedAuthorization)
+              value:
+                message: Forbidden.
+            verificationRequired:
+              summary: Email not verified (gated by `verified.api`)
+              value:
+                message: verification_required
+
     ForbiddenAthlete:
       description: The athlete does not belong to the authenticated user's academy
       content:
@@ -1337,6 +1383,23 @@ components:
           minLength: 1
           maxLength: 255
           example: Gracie Barra Lisboa Centro
+        phone_country_code:
+          type: string
+          nullable: true
+          pattern: '^\+[1-9][0-9]{0,3}$'
+          description: |
+            E.164 country prefix incl. the leading `+`. Pair with
+            `phone_national_number` — both null OR both filled (#161).
+          example: '+39'
+        phone_national_number:
+          type: string
+          nullable: true
+          maxLength: 20
+          pattern: '^[0-9]+$'
+          description: |
+            Unformatted national digits (no spaces / dashes / parentheses).
+            Validated together with `phone_country_code` via libphonenumber.
+          example: '3331234567'
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -1428,7 +1491,7 @@ components:
 
     Academy:
       type: object
-      required: [id, name, slug, address, logo_url, monthly_fee_cents, training_days]
+      required: [id, name, slug, address, logo_url, monthly_fee_cents, training_days, phone_country_code, phone_national_number]
       properties:
         id:
           type: integer
@@ -1439,6 +1502,22 @@ components:
           type: string
           example: gracie-barra-lisboa-a3f9kx2b
           description: Server-generated, immutable, unique across the system
+        phone_country_code:
+          type: string
+          nullable: true
+          pattern: '^\+[1-9][0-9]{0,3}$'
+          description: |
+            Phone country prefix in E.164 form (e.g. `+39`). Either both
+            `phone_*` keys are non-null or both are null — enforced server-
+            side by `required_with` (#161). Same shape as Athlete.
+          example: '+39'
+        phone_national_number:
+          type: string
+          nullable: true
+          maxLength: 20
+          pattern: '^[0-9]+$'
+          description: Unformatted national digits.
+          example: '3331234567'
         address:
           allOf:
             - $ref: '#/components/schemas/Address'

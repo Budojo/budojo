@@ -69,6 +69,17 @@
   font-weight: 600;
 }
 
+// Conditional-required asterisk (#159) — used on address-group fields that
+// are required only when any sibling field is filled. Same red `*` so the
+// "this is mandatory" signal carries, muted opacity + help cursor +
+// pTooltip telegraph the conditional nature.
+.required-when-filled {
+  color: var(--budojo-danger);
+  font-weight: 600;
+  opacity: 0.7;
+  cursor: help;
+}
+
 .field__optional {
   font-size: 0.75rem;
   font-weight: 500;
@@ -155,4 +166,16 @@
   @media (min-width: 768px) {
     width: auto;
   }
+}
+
+// Phone country-code dropdown (#161) — same width pin as the athlete form.
+// `<p-inputgroup>` applies its own `flex: 1 1 auto` rules within a CSS layer
+// that wins against unlayered single-class declarations on tiebreaker. We
+// match the athlete-form pattern: `flex` + `width` + `min-width`, all with
+// `!important` against the styleClass that PrimeNG attaches to the host.
+// 7rem comfortably fits "+999" + the chevron with breathing room.
+:host ::ng-deep .academy-phone-country-code {
+  flex: 0 0 7rem !important;
+  width: 7rem !important;
+  min-width: 7rem !important;
 }

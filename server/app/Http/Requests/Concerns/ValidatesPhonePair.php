@@ -2,18 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Requests\Athlete\Concerns;
+namespace App\Http\Requests\Concerns;
 
 use Illuminate\Contracts\Validation\Validator;
 use libphonenumber\NumberParseException;
 use libphonenumber\PhoneNumberUtil;
 
 /**
- * Cross-field libphonenumber check shared by `StoreAthleteRequest` and
- * `UpdateAthleteRequest`. Lives in its own autoloadable namespace so that
- * loading either request class is enough to make the validator available —
- * the previous file-scope-function shape only worked when `StoreAthleteRequest`
- * happened to be loaded first, which broke the update endpoint in isolation.
+ * Cross-field libphonenumber check shared by phone-pair-bearing FormRequests:
+ * Athlete (#75) and Academy (#161). Originally lived under
+ * `App\Http\Requests\Athlete\Concerns` — promoted to the shared namespace
+ * once the second consumer landed (Rule of Three says wait for the third,
+ * but a domain-language trait is cheap to relocate and keeps the mental
+ * model honest: phone validation isn't athlete-specific).
  *
  * The shape rules in `rules()` already enforce the "both filled or both null"
  * pair; this trait adds the reachability check (e.g. a `+39` prefix with a

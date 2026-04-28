@@ -28,7 +28,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // looks like the app is broken from the user's POV.
         $exceptions->render(function (InvalidSignatureException $e, $request) {
             if ($request->is('api/v1/email/verify/*')) {
-                return redirect(config('app.client_url').'/auth/verify-error');
+                $url = config('app.client_url');
+                $resolved = \is_string($url) ? $url : 'http://localhost:4200';
+
+                // rtrim guards against a trailing-slash CLIENT_URL producing
+                // `https://app.test//auth/verify-error` — same defensive
+                // pattern used in EmailVerificationController::clientUrl()
+                // (#174 follow-up to #173 review).
+                return redirect(rtrim($resolved, '/').'/auth/verify-error');
             }
 
             return null;

@@ -25,6 +25,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
+import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import {
   AthletePayload,
@@ -109,6 +110,7 @@ function phonePairRequired(siblingName: string): ValidatorFn {
     MessageModule,
     SelectModule,
     ToastModule,
+    Tooltip,
   ],
   providers: [MessageService],
   templateUrl: './athlete-form.component.html',

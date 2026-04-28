@@ -6,10 +6,11 @@ namespace App\Http\Requests\Athlete;
 
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
-use App\Http\Requests\Athlete\Concerns\ValidatesPhonePair;
 use App\Http\Requests\Concerns\ValidatesAddress;
+use App\Http\Requests\Concerns\ValidatesPhonePair;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
 class StoreAthleteRequest extends FormRequest
@@ -71,5 +72,20 @@ class StoreAthleteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
+    }
+
+    /**
+     * Match the canonical wire-level 403 contract used by every other write
+     * FormRequest (UpdateAcademyRequest, UpdateDocumentRequest,
+     * MarkAttendanceRequest): `{"message":"Forbidden."}`. Without this
+     * override, Laravel falls back to "This action is unauthorized.", which
+     * mismatches both the OpenAPI spec (`ForbiddenAthleteWrite`) and the SPA's
+     * 403 handling.
+     */
+    protected function failedAuthorization(): void
+    {
+        throw new HttpResponseException(
+            response()->json(['message' => 'Forbidden.'], 403),
+        );
     }
 }

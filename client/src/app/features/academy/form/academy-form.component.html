@@ -45,6 +45,61 @@
       }
     </div>
 
+    <div class="field">
+      <label for="academy-phone-national-number"
+        >Phone <span class="field__optional">(optional)</span></label
+      >
+      <p-inputgroup>
+        <p-select
+          inputId="academy-phone-country-code"
+          [options]="countryCodeOptions"
+          formControlName="phone_country_code"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Code"
+          ariaLabel="Phone country code"
+          appendTo="body"
+          styleClass="academy-phone-country-code"
+          [class.ng-invalid]="phoneCountryCode.invalid && phoneCountryCode.touched"
+          data-cy="academy-form-phone-country-code"
+        >
+          <ng-template pTemplate="selectedItem" let-selected>
+            {{ selected?.value }}
+          </ng-template>
+        </p-select>
+        <input
+          pInputText
+          id="academy-phone-national-number"
+          type="tel"
+          formControlName="phone_national_number"
+          autocomplete="tel-national"
+          placeholder="National number"
+          aria-label="Phone national number"
+          data-cy="academy-form-phone-national-number"
+          [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
+          [class.ng-dirty]="phoneNationalNumber.touched"
+        />
+      </p-inputgroup>
+      @if (phoneCountryCode.invalid && phoneCountryCode.touched) {
+        <small class="field__error" data-cy="academy-form-phone-country-error">
+          @if (phoneCountryCode.errors?.['phonePairRequired']) {
+            Country code is required when a national number is entered.
+          }
+        </small>
+      }
+      @if (phoneNationalNumber.invalid && phoneNationalNumber.touched) {
+        <small class="field__error" data-cy="academy-form-phone-national-error">
+          @if (phoneNationalNumber.errors?.['phonePairRequired']) {
+            National number is required when a country code is selected.
+          } @else if (phoneNationalNumber.errors?.['pattern']) {
+            Digits only — no spaces, dashes, or parentheses.
+          } @else if (phoneNationalNumber.errors?.['maxlength']) {
+            Maximum 20 digits.
+          }
+        </small>
+      }
+    </div>
+
     <!--
       Permalink: rendered as a static info line, not an input. Using an
       <input readonly> would signal "you CAN edit this, just not right
@@ -62,10 +117,23 @@
     </div>
 
     <fieldset class="field address-group" formGroupName="address">
-      <legend class="field__label">Address <span class="field__optional">(optional)</span></legend>
+      <legend class="field__label">
+        Address
+        <span class="field__optional">(optional — fill all marked fields below or none)</span>
+      </legend>
 
       <div class="field">
-        <label for="academy-address-line1">Street + civic number</label>
+        <label for="academy-address-line1">
+          Street + civic number
+          <span
+            class="required-when-filled"
+            pTooltip="Required when any address field is filled"
+            tooltipPosition="top"
+            aria-label="required when any address field is filled"
+          >
+            *
+          </span>
+        </label>
         <input
           pInputText
           id="academy-address-line1"
@@ -98,7 +166,17 @@
 
       <div class="address-group__row">
         <div class="field">
-          <label for="academy-address-postal-code">ZIP</label>
+          <label for="academy-address-postal-code">
+            ZIP
+            <span
+              class="required-when-filled"
+              pTooltip="Required when any address field is filled"
+              tooltipPosition="top"
+              aria-label="required when any address field is filled"
+            >
+              *
+            </span>
+          </label>
           <input
             pInputText
             id="academy-address-postal-code"
@@ -122,7 +200,17 @@
         </div>
 
         <div class="field">
-          <label for="academy-address-city">City</label>
+          <label for="academy-address-city">
+            City
+            <span
+              class="required-when-filled"
+              pTooltip="Required when any address field is filled"
+              tooltipPosition="top"
+              aria-label="required when any address field is filled"
+            >
+              *
+            </span>
+          </label>
           <input
             pInputText
             id="academy-address-city"
@@ -136,7 +224,17 @@
         </div>
 
         <div class="field">
-          <label for="academy-address-province">Province</label>
+          <label for="academy-address-province">
+            Province
+            <span
+              class="required-when-filled"
+              pTooltip="Required when any address field is filled"
+              tooltipPosition="top"
+              aria-label="required when any address field is filled"
+            >
+              *
+            </span>
+          </label>
           <p-select
             inputId="academy-address-province"
             [options]="provinceOptions"
