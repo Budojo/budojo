@@ -49,7 +49,7 @@ The geometry is locked. Updates must originate upstream in `client/public/logo-g
 
 ## Active SPA mirror
 
-These three files in `client/public/` are **bytewise mirrors** of the corresponding kit variants — the SPA loads its assets from there, so the kit and the active assets are kept identical to avoid drift:
+These four files in `client/public/` are **bytewise mirrors** of the corresponding kit variants — the SPA loads its assets from there, so the kit and the active assets are kept identical to avoid drift:
 
 | Active asset                          | Kit source                                       |
 |---------------------------------------|--------------------------------------------------|
