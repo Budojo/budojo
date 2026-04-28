@@ -6,6 +6,7 @@ import { Observable, map } from 'rxjs';
 // to a dedicated `address.types.ts` and both services should import from
 // there — Rule of Three for the extraction trigger.
 import { Address } from './academy.service';
+import { environment } from '../../../environments/environment';
 
 export type Belt = 'white' | 'blue' | 'purple' | 'brown' | 'black';
 export type AthleteStatus = 'active' | 'suspended' | 'inactive';
@@ -128,7 +129,7 @@ interface AthleteResponse {
 @Injectable({ providedIn: 'root' })
 export class AthleteService {
   private readonly http = inject(HttpClient);
-  private readonly base = '/api/v1/athletes';
+  private readonly base = `${environment.apiBase}/api/v1/athletes`;
 
   list(filters: AthleteFilters = {}): Observable<AthleteListResponse> {
     let params = new HttpParams();

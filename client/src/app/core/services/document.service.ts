@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export type DocumentType = 'id_card' | 'medical_certificate' | 'insurance' | 'other';
 
@@ -60,7 +61,7 @@ export interface ExpiringDocument extends Document {
 @Injectable({ providedIn: 'root' })
 export class DocumentService {
   private readonly http = inject(HttpClient);
-  private readonly base = '/api/v1';
+  private readonly base = `${environment.apiBase}/api/v1`;
 
   /**
    * Upload a new document for the given athlete. `body` is a pre-built

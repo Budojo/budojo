@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 /**
  * Attendance record on the wire — one row in `attendance_records`.
@@ -56,7 +57,7 @@ interface AttendanceSummaryResponse {
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
   private readonly http = inject(HttpClient);
-  private readonly base = '/api/v1/attendance';
+  private readonly base = `${environment.apiBase}/api/v1/attendance`;
 
   /**
    * Cross-athlete list for a single date. `date` defaults to today on the
