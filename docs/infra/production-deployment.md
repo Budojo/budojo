@@ -144,8 +144,7 @@ Critical ones — full list mirrors `server/.env.example` with prod values:
 
 - **Name**: `budojo` (Cloudflare Pages project)
 - **Production branch**: `main` (matches Forge — same source-of-truth branch)
-- **Preview branches**: every other branch + every PR head gets an
-  auto-generated `<branch|hash>.budojo.pages.dev` preview URL
+- **Preview branches**: **disabled** (2026-04-28). See [Preview deployments — disabled (2026-04-28)](#preview-deployments--disabled-2026-04-28).
 
 ### Build configuration
 
@@ -199,6 +198,41 @@ right place for Pages to pick up automatically.
 > emit absolute URLs to the API origin (Angular `environment.prod.ts`),
 > the `_redirects` rule degrades to a status-`308` safety net for stale
 > clients only.
+
+### Preview deployments — disabled (2026-04-28)
+
+Cloudflare Pages can auto-build every non-production branch and PR head into a `<branch|hash>.budojo.pages.dev` preview URL. **We've disabled that toggle.**
+
+**Why disabled.** After hotfix #147, every Pages build (preview included) bakes `apiBase = https://api.budojo.it` into the SPA bundle via `environment.prod.ts`. So a preview SPA pointed at the production API. Any data-mutating action on a preview URL (register, create academy, attendance check-in) would hit prod data. The bot also posts the preview URL in PR comments on a public repo, so the preview is technically discoverable.
+
+For an MVP single-developer setup the actual blast radius is small (the dev is the only person who'd hit a preview), but the failure mode is sharp once a second contributor or a real user joins. Disabling is the cheap insurance.
+
+**Options weighed:**
+
+| Option | Cost / month | Complexity | Real benefit at MVP |
+|---|---|---|---|
+| **A — disable previews entirely** ← chosen | $0 | 1 toggle | none lost; review locally with `npm start` is faster anyway |
+| B — Cloudflare Access (email-OTP gate) on `*.budojo.pages.dev` | $0 | ~5 min | gates the SPA but backend still hits prod |
+| C — separate staging droplet + DNS + Forge site + env-driven `apiBase` | +$18-19/mo (Forge Hobby→Growth + extra DO droplet) | 1-2h infra + 2-3 PRs (CORS pattern support, build-time env config, docs) | full prod / staging isolation; correct long-term |
+
+**How to disable** (already applied, recorded for reproducibility):
+
+Cloudflare Dashboard → Workers & Pages → `budojo` project → Settings → Builds & deployments → **Preview branch deployments: None** → Save.
+
+**Effect:**
+
+- New PRs no longer trigger a `*.budojo.pages.dev` build
+- The bot stops posting the "Deploying budojo with Cloudflare Pages…" comment on PRs
+- Existing previews stay in the dashboard for ~30 days then auto-purge
+- Production deploys (every merge to `main`) are unaffected — `https://budojo.it` keeps building as before
+
+**When to revisit (i.e., switch to option C):**
+
+- A second collaborator joins and needs live preview URLs for review
+- The first real (paying / customer) user account exists and prod data becomes load-bearing
+- Or any equivalent moment where "I accidentally broke prod via a preview URL" stops being a tolerable mistake
+
+The work to switch is non-trivial — full plan + workstream breakdown lives in #149's history (the issue this section closes). Reopen as a fresh issue when revisiting and copy the plan.
 
 ## Release flow
 
