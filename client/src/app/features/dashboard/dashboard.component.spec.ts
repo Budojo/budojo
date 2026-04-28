@@ -288,4 +288,36 @@ describe('DashboardComponent', () => {
       expect(hamburger!.getAttribute('aria-label')).toBe('Open navigation');
     });
   });
+
+  describe('app version footer (#160)', () => {
+    // The committed default is `dev` (overwritten at prod build by
+    // `scripts/write-version.cjs`). Asserting on the literal default keeps
+    // the test environment-deterministic — Vitest never goes through the
+    // prebuild hook.
+    it('renders the version tag in the sidebar footer', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement.querySelector(
+        '[data-cy="sidebar-version"]',
+      ) as HTMLElement | null;
+      expect(el).not.toBeNull();
+      expect(el!.textContent?.trim()).toBe('dev');
+    });
+  });
+
+  describe('email-verification pillola — removed from sidebar (#179)', () => {
+    // The pillola lives only on /dashboard/profile now. The dashboard shell
+    // shouldn't render <app-email-verification-status> at all — the spot
+    // between brand and nav stays empty.
+    it('does not render the email-verification component anywhere in the shell', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const pillola = fixture.nativeElement.querySelector('app-email-verification-status');
+      const slot = fixture.nativeElement.querySelector('.sidebar__verification');
+      expect(pillola).toBeNull();
+      expect(slot).toBeNull();
+    });
+  });
 });
