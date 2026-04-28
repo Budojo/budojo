@@ -155,3 +155,18 @@
 :host ::ng-deep .filter-select {
   min-width: 160px;
 }
+
+// ── Search input + icon ────────────────────────────────────────────────────────
+//
+// `<p-iconfield>` positions the leading `<p-inputicon>` absolutely on the
+// left. PrimeNG's default rule that pads the inner `<input>` to clear the
+// icon doesn't reliably win here because `pInputText` ships its own
+// padding stack; the icon ends up overlapping the placeholder text.
+// Force the left padding so "Search by name" starts to the right of the
+// magnifier.
+
+:host ::ng-deep .athletes-page__search {
+  input.p-inputtext {
+    padding-left: 2.25rem;
+  }
+}

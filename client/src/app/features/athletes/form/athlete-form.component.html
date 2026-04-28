@@ -114,7 +114,25 @@
               appendTo="body"
               styleClass="phone-country-code"
               [class.ng-invalid]="phoneCountryCode.invalid && phoneCountryCode.touched"
-            />
+            >
+              <!--
+                In the closed trigger we only show the prefix value (e.g. "+39"),
+                not the full "+39 Italy" label. The label is reserved for the
+                open panel so users can identify each country comfortably; the
+                trigger just needs to confirm the picked prefix in a compact
+                way.
+
+                The `let-selected` binding receives the SELECTED OPTION OBJECT
+                (despite the misleading `SelectSelectedItemTemplateContext<T>`
+                type — verified in primeng-select.mjs source:
+                `[ngTemplateOutletContext]="{ $implicit: selectedOption }"`).
+                So we read `selected?.value` (the prefix string) off the option
+                here, with the full "+39 Italy" label only on the open panel.
+              -->
+              <ng-template pTemplate="selectedItem" let-selected>
+                {{ selected?.value }}
+              </ng-template>
+            </p-select>
             <input
               pInputText
               id="phone_national_number"
@@ -257,7 +275,7 @@
 
         <div class="address-group__row">
           <div class="field">
-            <label for="athlete-address-postal-code">Postal code (CAP)</label>
+            <label for="athlete-address-postal-code">ZIP</label>
             <input
               pInputText
               id="athlete-address-postal-code"
@@ -274,7 +292,7 @@
             @if (addressPostalCode.invalid && addressPostalCode.touched) {
               <small class="field-error">
                 @if (addressPostalCode.errors?.['pattern']) {
-                  Italian CAP must be exactly 5 digits.
+                  ZIP must be exactly 5 digits.
                 }
               </small>
             }
@@ -302,7 +320,6 @@
               formControlName="province"
               optionLabel="label"
               optionValue="value"
-              placeholder="—"
               ariaLabel="Province"
               appendTo="body"
               styleClass="w-full"
@@ -312,8 +329,15 @@
           </div>
         </div>
 
-        <div class="field">
-          <label for="athlete-address-country">Country</label>
+        <!--
+          Country is locked to Italy in MVP. The form control still binds
+          via `formControlName="country"` (initialized to 'IT' in the
+          component) so the API contract is unchanged; the visible select
+          is hidden to keep the address fieldset focused on what the user
+          actually fills in. Re-surface when a second Country enum case
+          lands.
+        -->
+        <div hidden>
           <p-select
             inputId="athlete-address-country"
             [options]="countryOptions"
@@ -321,7 +345,6 @@
             optionLabel="label"
             optionValue="value"
             appendTo="body"
-            styleClass="w-full"
             data-cy="athlete-form-address-country"
           />
         </div>
