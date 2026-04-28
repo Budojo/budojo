@@ -13,6 +13,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
+import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import {
   AcademyService,
@@ -48,6 +49,7 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
     MessageModule,
     SelectModule,
     ToastModule,
+    Tooltip,
     TrainingDaysPickerComponent,
   ],
   providers: [MessageService],

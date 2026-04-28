@@ -62,10 +62,23 @@
     </div>
 
     <fieldset class="field address-group" formGroupName="address">
-      <legend class="field__label">Address <span class="field__optional">(optional)</span></legend>
+      <legend class="field__label">
+        Address
+        <span class="field__optional">(optional — fill all marked fields below or none)</span>
+      </legend>
 
       <div class="field">
-        <label for="academy-address-line1">Street + civic number</label>
+        <label for="academy-address-line1">
+          Street + civic number
+          <span
+            class="required-when-filled"
+            pTooltip="Required when any address field is filled"
+            tooltipPosition="top"
+            aria-label="required when any address field is filled"
+          >
+            *
+          </span>
+        </label>
         <input
           pInputText
           id="academy-address-line1"
@@ -98,7 +111,17 @@
 
       <div class="address-group__row">
         <div class="field">
-          <label for="academy-address-postal-code">ZIP</label>
+          <label for="academy-address-postal-code">
+            ZIP
+            <span
+              class="required-when-filled"
+              pTooltip="Required when any address field is filled"
+              tooltipPosition="top"
+              aria-label="required when any address field is filled"
+            >
+              *
+            </span>
+          </label>
           <input
             pInputText
             id="academy-address-postal-code"
@@ -122,7 +145,17 @@
         </div>
 
         <div class="field">
-          <label for="academy-address-city">City</label>
+          <label for="academy-address-city">
+            City
+            <span
+              class="required-when-filled"
+              pTooltip="Required when any address field is filled"
+              tooltipPosition="top"
+              aria-label="required when any address field is filled"
+            >
+              *
+            </span>
+          </label>
           <input
             pInputText
             id="academy-address-city"
@@ -136,7 +169,17 @@
         </div>
 
         <div class="field">
-          <label for="academy-address-province">Province</label>
+          <label for="academy-address-province">
+            Province
+            <span
+              class="required-when-filled"
+              pTooltip="Required when any address field is filled"
+              tooltipPosition="top"
+              aria-label="required when any address field is filled"
+            >
+              *
+            </span>
+          </label>
           <p-select
             inputId="academy-address-province"
             [options]="provinceOptions"

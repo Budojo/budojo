@@ -69,6 +69,17 @@
   font-weight: 600;
 }
 
+// Conditional-required asterisk (#159) — used on address-group fields that
+// are required only when any sibling field is filled. Same red `*` so the
+// "this is mandatory" signal carries, muted opacity + help cursor +
+// pTooltip telegraph the conditional nature.
+.required-when-filled {
+  color: var(--budojo-danger);
+  font-weight: 600;
+  opacity: 0.7;
+  cursor: help;
+}
+
 .field__optional {
   font-size: 0.75rem;
   font-weight: 500;
