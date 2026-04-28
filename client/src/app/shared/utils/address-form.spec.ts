@@ -94,7 +94,7 @@ describe('addressAllOrNothing', () => {
     expect(addressAllOrNothing(makeAddressGroup({ city: '   ' }))).toBeNull();
   });
 
-  it('ignores line2 — it is optional and never required-with the others', () => {
+  it('ignores line2 — it is optional and never required with the others', () => {
     expect(
       addressAllOrNothing(
         makeAddressGroup({
