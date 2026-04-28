@@ -166,7 +166,8 @@ budojo/
 │   └── tests/{Unit,Feature}/ # PEST 4 — Feature for HTTP round-trips, Unit for pure helpers
 │
 ├── client/               # Angular 21 SPA
-│   ├── public/_redirects     # Cloudflare Pages: /api/* proxy + SPA fallback
+│   ├── public/_redirects     # Cloudflare Pages: SPA fallback + 308 stale-bundle safety net for /api/*
+│   ├── src/environments/     # apiBase per build configuration (dev = relative, prod = https://api.budojo.it)
 │   └── src/app/
 │       ├── core/
 │       │   ├── guards/       # authGuard, hasAcademyGuard, noAcademyGuard

@@ -33,8 +33,9 @@ deploy script.
         │  project: budojo    │         │  budojo-prod (Frankfurt)│
         │                     │         │  Ubuntu 24.04 + nginx + │
         │  Angular 21 build   │         │  PHP-FPM 8.4 + MySQL 8.4│
-        │  /api/* proxy →     │ ────►   │  Forge-managed          │
-        │  api.budojo.it      │         │                         │
+        │  ─────────────────► │ ────►   │  Forge-managed          │
+        │  Browser → api      │  CORS   │  CORS allowlist enforces│
+        │  cross-origin XHR   │         │  https://budojo.it       │
         └─────────────────────┘         └─────────────────────────┘
 ```
 
@@ -164,21 +165,40 @@ Critical ones — full list mirrors `server/.env.example` with prod values:
 ### `_redirects` rules (`client/public/_redirects`)
 
 ```
-/api/*    https://api.budojo.it/api/:splat    200
+/api/*    https://api.budojo.it/api/:splat    308
 /*        /index.html                          200
 ```
 
-- **First rule**: server-side proxy (`200` status = rewrite, not redirect).
-  Browser sees same-origin calls to `budojo.it/api/...`; Cloudflare's edge
-  fetches `api.budojo.it/api/...` and returns the response. Bypasses CORS
-  entirely from the SPA's perspective. Added in PR #136.
-- **Second rule**: SPA fallback. Any unknown path returns `index.html` so
-  the Angular Router can resolve client-side routes (`/auth/login`,
-  `/dashboard/athletes/{id}`, etc.) on direct navigation/refresh.
+- **First rule**: 308 Permanent Redirect — preserves method + body across
+  origins. Acts as a safety net for stale clients (already-open browser
+  tabs running a pre-#147 bundle, PWA shells cached before the bundle
+  refresh) that still try to POST to `budojo.it/api/...` instead of the
+  absolute API URL. The browser follows the 308 to `api.budojo.it/api/...`,
+  CORS preflight kicks in (allowed via `CORS_ALLOWED_ORIGINS` on Forge),
+  and the request completes with the original method + body intact. **The
+  fresh client bundle does not rely on this rule** — Angular services emit
+  absolute URLs at build time via `environment.prod.ts` (`apiBase =
+  'https://api.budojo.it'`), so the browser issues a direct cross-origin
+  request and never hits `budojo.it/api/`. The 308 is purely defense-in-
+  depth.
+- **Second rule**: SPA fallback. Any unknown non-`/api/*` path returns
+  `index.html` so the Angular Router can resolve client-side routes
+  (`/auth/login`, `/dashboard/athletes/{id}`, etc.) on direct navigation /
+  refresh.
 
 The Angular builder's `assets` glob in `client/angular.json` already copies
 `client/public/**/*` into the build output, so `_redirects` lands at the
 right place for Pages to pick up automatically.
+
+> **Historical note.** PRs #126 and #136 originally shipped this with status
+> `200` (rewrite / cross-origin proxy). Cloudflare Pages silently ignores
+> 200-status rewrites whose destination is on a different origin, so the
+> rule was effectively a no-op and `/api/*` POSTs fell through to the SPA
+> fallback (returning 405 because Pages can't serve HTML on non-GET
+> methods). Hotfix #147 split the responsibility cleanly: client builds
+> emit absolute URLs to the API origin (Angular `environment.prod.ts`),
+> the `_redirects` rule degrades to a status-`308` safety net for stale
+> clients only.
 
 ## Release flow
 
@@ -361,12 +381,20 @@ worth carrying forward:
    requires secure connection". The TLS layer is redundant inside the SSH
    tunnel but harmless.
 
-8. **Cloudflare Pages does not run a backend.** Relative `/api/*` calls
-   from the SPA fall through to the SPA fallback rule (`/* /index.html
-   200`) which only serves GET HTML — non-GET methods return 405. Either
-   point Angular services at the absolute API URL OR add a Pages rewrite
-   rule. We chose the rewrite (PR #136) because it leaves the services
-   unchanged and bypasses CORS for SPA traffic.
+8. **Cloudflare Pages `_redirects` 200-status rewrites do NOT proxy
+   cross-origin destinations.** `/api/* https://api.budojo.it/api/:splat 200`
+   looks like a valid rewrite but Pages silently drops the rule because
+   the destination is on a different origin — the request then falls
+   through to the SPA fallback (`/* /index.html 200`), returning HTML on
+   GET and 405 on POST/PUT/DELETE. We tried this path in #126 / #136 and
+   only caught it post-go-live when a real `POST /api/v1/auth/register`
+   from the SPA returned 405. The fix that actually works (#147): build
+   absolute API URLs into the SPA bundle via Angular `environment.prod.ts`
+   (`apiBase = 'https://api.budojo.it'`), let the browser issue real
+   cross-origin requests, and rely on the server-side CORS allowlist
+   (#134) to gate them. The `_redirects` `/api/*` rule is kept as a
+   `308` redirect (preserves method + body) for stale-bundle defense in
+   depth; the fresh client never hits it.
 
 9. **GitHub auto-close-issue from PR's `Closes #N` is unreliable** in this
    repo (observed across #125, #129, #127, #128, #133). After merging,
