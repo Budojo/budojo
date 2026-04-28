@@ -144,7 +144,7 @@ Critical ones — full list mirrors `server/.env.example` with prod values:
 
 - **Name**: `budojo` (Cloudflare Pages project)
 - **Production branch**: `main` (matches Forge — same source-of-truth branch)
-- **Preview branches**: **disabled** (2026-04-28). See § Preview deployments below.
+- **Preview branches**: **disabled** (2026-04-28). See [Preview deployments — disabled (2026-04-28)](#preview-deployments--disabled-2026-04-28).
 
 ### Build configuration
 
@@ -219,7 +219,8 @@ For an MVP single-developer setup the actual blast radius is small (the dev is t
 
 Cloudflare Dashboard → Workers & Pages → `budojo` project → Settings → Builds & deployments → **Preview branch deployments: None** → Save.
 
-Effect:
+**Effect:**
+
 - New PRs no longer trigger a `*.budojo.pages.dev` build
 - The bot stops posting the "Deploying budojo with Cloudflare Pages…" comment on PRs
 - Existing previews stay in the dashboard for ~30 days then auto-purge
