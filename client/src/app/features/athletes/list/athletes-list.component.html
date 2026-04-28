@@ -92,19 +92,15 @@
       <ng-template pTemplate="header">
         <tr>
           <th pSortableColumn="last_name" data-cy="athletes-th-name">
-            Name <p-sortIcon field="last_name" />
+            Full name <p-sortIcon field="last_name" />
           </th>
           <th pSortableColumn="belt" data-cy="athletes-th-belt">
             Belt <p-sortIcon field="belt" />
           </th>
-          <th data-cy="athletes-th-stripes" style="width: 3rem; text-align: center">Stripes</th>
           <th>Status</th>
           @if (hasMonthlyFee()) {
             <th data-cy="athletes-th-paid">Paid</th>
           }
-          <th pSortableColumn="joined_at" data-cy="athletes-th-joined">
-            Joined <p-sortIcon field="joined_at" />
-          </th>
           <th style="width: 8rem"></th>
         </tr>
       </ng-template>
@@ -120,10 +116,7 @@
             </div>
           </td>
           <td>
-            <app-belt-badge [belt]="athlete.belt" />
-          </td>
-          <td class="text-center">
-            <span class="stripes">{{ athlete.stripes }}</span>
+            <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
           </td>
           <td>
             <p-tag
@@ -137,7 +130,6 @@
               <app-paid-badge [paid]="athlete.paid_current_month" />
             </td>
           }
-          <td class="athlete-date">{{ athlete.joined_at }}</td>
           <td class="athlete-actions">
             <p-button
               icon="pi pi-folder"
