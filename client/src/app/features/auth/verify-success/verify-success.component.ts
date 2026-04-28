@@ -37,10 +37,22 @@ export class VerifySuccessComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.redirectTimeout !== null) clearTimeout(this.redirectTimeout);
+    this.clearRedirectTimeout();
   }
 
   goToDashboard(): void {
+    // Cancel the pending auto-redirect — without this, a manual click
+    // would still leave the 3s timer armed, and if the user navigated
+    // elsewhere in that window they'd be yanked back to the dashboard
+    // (#174 follow-up to #173 review).
+    this.clearRedirectTimeout();
     this.router.navigateByUrl('/dashboard/athletes');
+  }
+
+  private clearRedirectTimeout(): void {
+    if (this.redirectTimeout !== null) {
+      clearTimeout(this.redirectTimeout);
+      this.redirectTimeout = null;
+    }
   }
 }
