@@ -6,18 +6,30 @@ Budojo is a web application for Brazilian Jiu-Jitsu instructors. It replaces the
 
 ---
 
+## Production
+
+| Component | URL |
+|-----------|-----|
+| Angular SPA | <https://budojo.it> |
+| Laravel API | <https://api.budojo.it> |
+| API health | <https://api.budojo.it/api/v1/health> |
+
+Architecture, deploy flow, env vars, runbook and gotchas: **[`docs/infra/production-deployment.md`](docs/infra/production-deployment.md)**.
+
+---
+
 ## What's live right now
 
 | Area | Status | Details |
 |------|--------|---------|
-| **Authentication** | ✅ Live | Register, login, logout |
-| **Academy setup** | ✅ Live | Create your gym profile (name; address optional) |
-| **Athletes — API** | ✅ Live | Full CRUD: create, list, update, soft-delete |
-| **Athletes — UI** | ✅ Live | Paginated list with belt/status filters and per-row delete |
-| **Documents** | 📋 Planned | — |
-| **Attendance** | 📋 Planned | — |
-| **Notifications** | 📋 Planned | — |
-| **Promotions & reports** | 📋 Planned | — |
+| **Authentication** | ✅ Live | Register, login, logout via Sanctum Bearer tokens |
+| **Academy setup** | ✅ Live | Create your gym profile — name, structured polymorphic address, monthly fee, training-day schedule, logo upload |
+| **Athletes** | ✅ Live | Full CRUD with structured phone (libphonenumber-validated), structured polymorphic address, server-side name search, belt / status / paid filters, rank-aware sorting |
+| **Documents (M3)** | ✅ Live | Upload, list, download, soft-delete; cancelled toggle; reactive-form upload dialog; cross-athlete expiring-list dashboard widget with deep-linking |
+| **Attendance (M4)** | ✅ Live | Daily check-in (mobile-first, optimistic UI + 5s undo toast); per-athlete calendar history; monthly summary widget + full table; training-days % rate against scheduled denominator |
+| **Payments** | ✅ Live | Per-athlete monthly payment ledger; "paid" badge on athletes list; idempotent record/delete; `monthly_fee_cents` snapshotted into payment rows |
+| **Notifications (M5)** | 📋 Planned | Email reminders before document expiry, configurable lead time |
+| **Promotions & reports (M6)** | 📋 Planned | Belt promotion history, attendance reports, exports, analytics |
 
 ---
 
@@ -90,147 +102,13 @@ Guards enforce this automatically — no manual redirects needed.
 
 ## API
 
-All endpoints are prefixed with `/api/v1` and served at **http://localhost:8000**.
+The full HTTP contract for `/api/v1` is in **[`docs/api/v1.yaml`](docs/api/v1.yaml)** (OpenAPI 3.0.3). Browse it with Swagger UI / Redocly / Stoplight, or import into Postman / Insomnia.
 
-### Public
+In production: <https://api.budojo.it/api/v1>. Locally: <http://localhost:8000/api/v1>.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/auth/register` | Register a new user |
-| `POST` | `/auth/login` | Login — returns a Bearer token |
+A Postman collection lives at [`postman/budojo.postman_collection.json`](postman/budojo.postman_collection.json) — pre-request script auto-saves the Bearer token after login.
 
-**Register payload:**
-```json
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "secret",
-  "password_confirmation": "secret"
-}
-```
-
-**Login payload:**
-```json
-{ "email": "john@example.com", "password": "secret" }
-```
-
-**Login response:**
-```json
-{
-  "data": { "id": 1, "name": "John Doe", "email": "john@example.com" },
-  "token": "1|abc123..."
-}
-```
-
-### Authenticated
-
-Add the token to every request:
-```
-Authorization: Bearer <token>
-```
-
-#### Academy
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/academy` | Create your academy (one per user) |
-| `GET` | `/academy` | Get your academy |
-
-**Create payload:**
-```json
-{ "name": "Gracie Barra Lisboa", "address": "Rua Example 123, Lisboa" }
-```
-
-**Response:**
-```json
-{
-  "data": {
-    "id": 1,
-    "name": "Gracie Barra Lisboa",
-    "slug": "gracie-barra-lisboa-a3f9kx2b",
-    "address": "Rua Example 123, Lisboa"
-  }
-}
-```
-
-#### Athletes
-
-All athlete endpoints return 403 if the authenticated user has no academy.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/athletes` | Paginated list (20/page) |
-| `POST` | `/athletes` | Create an athlete |
-| `GET` | `/athletes/{id}` | Get one athlete |
-| `PUT` | `/athletes/{id}` | Update an athlete (partial — only send fields you want to change) |
-| `DELETE` | `/athletes/{id}` | Soft-delete an athlete |
-
-**List query params:**
-
-| Param | Values | Example |
-|-------|--------|---------|
-| `belt` | `white` `blue` `purple` `brown` `black` | `?belt=blue` |
-| `status` | `active` `suspended` `inactive` | `?status=active` |
-| `page` | integer | `?page=2` |
-
-**Create / update payload** (all fields optional on update):
-```json
-{
-  "first_name": "Mario",
-  "last_name": "Rossi",
-  "email": "mario@example.com",
-  "phone": "+39 333 123456",
-  "date_of_birth": "1990-05-15",
-  "belt": "blue",
-  "stripes": 2,
-  "status": "active",
-  "joined_at": "2023-01-10"
-}
-```
-
-**Athlete response shape:**
-```json
-{
-  "data": {
-    "id": 42,
-    "first_name": "Mario",
-    "last_name": "Rossi",
-    "email": "mario@example.com",
-    "phone": "+39 333 123456",
-    "date_of_birth": "1990-05-15",
-    "belt": "blue",
-    "stripes": 2,
-    "status": "active",
-    "joined_at": "2023-01-10",
-    "created_at": "2026-04-22T10:00:00+00:00"
-  }
-}
-```
-
-**List response shape:**
-```json
-{
-  "data": [ /* array of athlete objects */ ],
-  "links": {
-    "first": "http://localhost:8000/api/v1/athletes?page=1",
-    "last":  "http://localhost:8000/api/v1/athletes?page=3",
-    "prev":  null,
-    "next":  "http://localhost:8000/api/v1/athletes?page=2"
-  },
-  "meta": {
-    "current_page": 1,
-    "from": 1,
-    "last_page": 3,
-    "path": "http://localhost:8000/api/v1/athletes",
-    "per_page": 20,
-    "to": 20,
-    "total": 47
-  }
-}
-```
-
-A Postman collection is available at `postman/budojo.postman_collection.json`. It includes a pre-request script that auto-saves the Bearer token after login.
+Per-entity domain reference (schema, business rules, related endpoints) lives under [`docs/entities/`](docs/entities/) — one file per persisted entity.
 
 ---
 
@@ -240,16 +118,20 @@ A Postman collection is available at `postman/budojo.postman_collection.json`. I
 Register, login, logout via Sanctum Bearer tokens. Angular login/register pages.
 
 ### M2 — Academy & Athletes ✅ Done
-- Academy: create, retrieve (API + Angular setup page)
-- Athletes: full CRUD API, list UI with belt/status filters, pagination, soft-delete
+- Academy: create, retrieve, update (API + Angular setup page) with structured polymorphic address (#72), monthly fee, training-day schedule, logo upload + sanitization.
+- Athletes: full CRUD API, list UI with belt / status / paid filters, server-side name search, rank-aware sort, pagination, soft-delete. Structured phone (libphonenumber-validated) and structured polymorphic address (#72b).
 
 ### M3 — Documents & Deadlines ✅ Done
 - Documents: full CRUD API (upload, list, download, soft-delete), Angular list UI with cancelled toggle, reactive-form upload dialog, cross-athlete expiring list.
 - Dashboard widget surfaces documents expiring in the next 30 days with a deep-link to the filtered list.
 - See [`docs/specs/m3-documents.md`](docs/specs/m3-documents.md) for the PRD.
 
-### M4 — Attendance 📋 Planned
-Log class check-ins (single or bulk). Attendance history per athlete. Monthly summary.
+### M4 — Attendance ✅ Done
+- Daily check-in UI (mobile-first, optimistic UI, 5s undo toast). Per-athlete calendar history with training-days highlight. Monthly summary widget + full table. Training-days % attendance rate against the scheduled denominator.
+- See [`docs/specs/m4-attendance.md`](docs/specs/m4-attendance.md) for the PRD (status: Shipped, with the `Deltas from spec` section recording the swipe-gesture deferral).
+
+### Payments ✅ Done (folded into the M4 surface)
+- Per-athlete monthly payment ledger; "paid" badge + filter on the athletes list; idempotent record / hard-delete via `/api/v1/athletes/{id}/payments`. The academy's `monthly_fee_cents` is snapshotted into each payment row so future fee changes don't rewrite history.
 
 ### M5 — Notifications 📋 Planned
 Automated email reminders before documents expire. Configurable lead time per academy.
@@ -265,34 +147,43 @@ Belt promotion history, attendance reports, PDF/Excel export, analytics dashboar
 budojo/
 ├── server/               # Laravel 13 REST API
 │   ├── app/
-│   │   ├── Actions/          # Single-responsibility business operations
-│   │   ├── Enums/            # Belt, AthleteStatus
+│   │   ├── Actions/          # Single-responsibility business operations (one execute() per class)
+│   │   ├── Contracts/        # Marker interfaces (HasAddress, …)
+│   │   ├── Enums/            # Belt, AthleteStatus, Country, ItalianProvince, DocumentType, …
 │   │   ├── Http/
 │   │   │   ├── Controllers/  # Thin — delegate to Actions
-│   │   │   ├── Requests/     # All input validation
+│   │   │   ├── Requests/     # All input validation (FormRequest)
 │   │   │   └── Resources/    # All API response shaping
-│   │   └── Models/           # Eloquent models
+│   │   ├── Models/           # Eloquent models — relations + casts only, no business logic
+│   │   ├── Observers/        # Eloquent event handlers (cascade cleanup, etc.)
+│   │   └── Support/          # Pure helpers (e.g. CorsAllowlist)
+│   ├── config/cors.php       # Production CORS allowlist (env-driven)
 │   ├── database/
-│   │   ├── factories/        # Test data factories
-│   │   ├── migrations/       # DB schema
-│   │   └── seeders/          # Local dev seed data
+│   │   ├── factories/
+│   │   ├── migrations/
+│   │   └── seeders/
 │   ├── routes/api_v1.php     # All v1 routes
-│   └── tests/Feature/        # PEST 4 feature tests (TDD)
+│   └── tests/{Unit,Feature}/ # PEST 4 — Feature for HTTP round-trips, Unit for pure helpers
 │
 ├── client/               # Angular 21 SPA
+│   ├── public/_redirects     # Cloudflare Pages: /api/* proxy + SPA fallback
 │   └── src/app/
 │       ├── core/
-│       │   ├── guards/       # Auth + academy guards
-│       │   ├── interceptors/ # Attach Bearer token to every request
-│       │   └── services/     # AcademyService, AthleteService, AuthService
+│       │   ├── guards/       # authGuard, hasAcademyGuard, noAcademyGuard
+│       │   ├── interceptors/ # authInterceptor (Bearer token on every request)
+│       │   └── services/     # auth, academy, athlete, attendance, document
 │       ├── features/
-│       │   ├── auth/         # Login, Register pages
-│       │   ├── academy/      # Setup page
-│       │   ├── athletes/     # List page
-│       │   └── dashboard/    # Layout shell (sidebar + router-outlet)
+│       │   ├── auth/         # Login, Register
+│       │   ├── academy/      # Setup, Detail, Form
+│       │   ├── athletes/     # List, Form, Detail (+ attendance-history & documents-list tabs)
+│       │   ├── attendance/   # Daily check-in + Monthly summary
+│       │   ├── documents/    # Expiring list
+│       │   └── dashboard/    # Shell (sidebar + router-outlet)
 │       └── shared/
-│           └── components/   # BeltBadge and other reusable components
+│           ├── components/   # BeltBadge, ExpiryStatusBadge, PaidBadge, TrainingDaysPicker, MonthlySummaryWidget, …
+│           └── utils/        # attendance-rate, address-form
 │
+├── docs/                 # Domain documentation (entities, OpenAPI spec, infra, milestone PRDs)
 ├── docker/               # Dockerfiles + Nginx configs
 ├── postman/              # Postman collection
 └── docker-compose.yml
@@ -304,16 +195,22 @@ budojo/
 
 | Layer | Technology |
 |-------|-----------|
-| API framework | Laravel 13 |
+| API framework | Laravel 13 (PHP 8.4) |
 | Auth | Laravel Sanctum (Bearer tokens) |
 | Database | MySQL 8.4 |
 | SPA framework | Angular 21 |
-| UI components | PrimeNG 21 |
-| Containerization | Docker + Compose |
+| UI components | PrimeNG 21 (Material preset, MD3) |
+| API contract | OpenAPI 3.0.3 + Spectral lint |
+| Containerization | Docker + Compose (local dev) |
+| Production hosting — API | DigitalOcean droplet via Laravel Forge |
+| Production hosting — SPA | Cloudflare Pages |
+| Production CDN / DNS | Cloudflare |
 | PHP tests | PEST 4 |
 | PHP static analysis | PHPStan (level 9) |
 | PHP style | PHP CS Fixer (PSR-12) |
-| Releases | semantic-release (automated) |
+| Angular unit tests | Vitest 4 |
+| Angular E2E tests | Cypress 13 |
+| Releases | semantic-release (automated, beta on develop, stable on main) |
 
 ---
 
