@@ -5,6 +5,16 @@
       <p class="profile-page__subtitle">Account details and verification status.</p>
     </header>
 
+    @if (verifyRequired()) {
+      <div class="profile-page__banner" role="alert" data-cy="profile-verify-required-banner">
+        <i class="pi pi-info-circle" aria-hidden="true"></i>
+        <span>
+          You need to verify your email before adding athletes or documents. Check your inbox for
+          the verification link, or use the Resend button below.
+        </span>
+      </div>
+    }
+
     <p-card styleClass="profile-page__card">
       <div class="profile-page__row">
         <span class="profile-page__label">Name</span>

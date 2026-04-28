@@ -13,7 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // API-flavoured `verified` alias — returns a JSON 403 with the
+        // stable `verification_required` message that the SPA's auth
+        // interceptor keys on. See EnsureEmailIsVerifiedForApi for the
+        // reasoning vs Laravel's bundled `verified` (which is HTML-shaped).
+        $middleware->alias([
+            'verified.api' => \App\Http\Middleware\EnsureEmailIsVerifiedForApi::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Tampered or expired signed URLs on the email-verification callback
