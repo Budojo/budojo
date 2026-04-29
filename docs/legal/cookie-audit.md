@@ -21,7 +21,7 @@ grep -rn "document\.cookie" client/src      # → 0 risultati
 | Chiave | Valori | Finalità | Durata | Esente banner? |
 | --- | --- | --- | --- | --- |
 | `auth_token` | stringa Sanctum opaca | Persiste il token Bearer fra reload così l'utente non deve riautenticarsi a ogni F5 | Finché l'utente non fa logout o non revoca il token | **Sì** — strettamente necessario per fornire il servizio richiesto (l'utente ha esplicitamente chiesto di "essere autenticato") |
-| `documents.showCancelled` | `'1'` o assente | Ricorda se l'utente vuole vedere i documenti cancellati nella lista per atleta | Indefinita, fino a clear cache | **Sì** — preferenza UI, non identifica e non profila l'utente |
+| `documents.showCancelled` | `'1'` o assente | Ricorda se l'utente vuole vedere i documenti cancellati nella lista per atleta | Finché l'utente non ridisattiva il toggle (la chiave viene rimossa), oppure finché non svuota i dati del sito dal browser | **Sì** — preferenza UI, non identifica e non profila l'utente |
 
 Riferimenti codice:
 - [`client/src/app/core/services/auth.service.ts`](../../client/src/app/core/services/auth.service.ts) — `TOKEN_KEY = 'auth_token'`
@@ -50,7 +50,7 @@ Verifica via grep su `client/src` e `client/package.json`: nessuna corrispondenz
 
 ## 5. Service worker (PWA)
 
-Il `ngsw-worker.js` (Angular Service Worker, configurato in `client/ngsw-config.json`) effettua **caching tecnico** dell'app shell e una `freshness`-strategy sull'API `/api/v1/**` con timeout 3 s e max-age 1 h. È archiviazione **necessaria al funzionamento offline** dell'app — esente sotto la stessa logica del token di autenticazione.
+Il `ngsw-worker.js` (Angular Service Worker, configurato in `client/ngsw-config.json`) effettua **caching tecnico** dell'app shell (`/index.html`, JS/CSS bundle) e degli asset statici (favicon, icone, immagini, font). Allo stato corrente non sono configurati `dataGroups` per `/api/v1/**` — le chiamate API non sono cached né servite offline. È archiviazione **necessaria al funzionamento dell'app installata** (PWA), esente sotto la stessa logica del token di autenticazione. Se in futuro si introduce caching API, va rivisto qui (e basta — sono ancora dati tecnici dell'utente, non profilazione).
 
 ## 6. Conclusione operativa
 
@@ -66,7 +66,7 @@ Il `ngsw-worker.js` (Angular Service Worker, configurato in `client/ngsw-config.
 
 > **Cookie e archiviazione locale**
 >
-> Budojo non utilizza cookie HTTP, né cookie di profilazione propri o di terze parti. Per ricordare il tuo accesso e la tua preferenza sulla visualizzazione dei documenti cancellati, l'applicazione usa il `localStorage` del tuo browser con due chiavi: `auth_token` (token di sessione) e `documents.showCancelled` (preferenza interfaccia). Questi dati restano sul tuo dispositivo e non vengono trasmessi a terzi. Puoi rimuoverli in qualsiasi momento svuotando i dati del sito dalle impostazioni del browser. Non utilizziamo strumenti di analytics, tracking di terze parti o pixel di marketing.
+> Budojo non utilizza cookie HTTP, né cookie di profilazione propri o di terze parti. Per ricordare il tuo accesso e la tua preferenza sulla visualizzazione dei documenti cancellati, l'applicazione usa il `localStorage` del tuo browser con due chiavi: `auth_token` (token di sessione, rimosso al logout) e `documents.showCancelled` (preferenza interfaccia, rimossa quando ridisattivi il toggle). Questi dati restano sul tuo dispositivo e non vengono trasmessi a terzi. Puoi rimuoverli in qualsiasi momento dal logout, dalla disattivazione del toggle, oppure svuotando i dati del sito dalle impostazioni del browser. Non utilizziamo strumenti di analytics, tracking di terze parti o pixel di marketing.
 
 ## Riferimenti normativi
 
