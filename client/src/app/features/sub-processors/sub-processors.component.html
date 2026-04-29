@@ -1,0 +1,162 @@
+<article class="legal-page">
+  <header class="legal-page__header">
+    <a class="legal-page__brand" routerLink="/" aria-label="Budojo home">
+      <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
+      <span class="legal-page__brand-name">Budojo</span>
+    </a>
+    <p class="legal-page__eyebrow">Legal</p>
+    <h1 class="legal-page__title">Sub-processors</h1>
+    <p class="legal-page__subtitle">
+      The third parties that process customer data on Budojo's behalf, per GDPR Art. 28.
+    </p>
+    <p class="legal-page__updated">Last updated: {{ lastUpdated }}</p>
+  </header>
+
+  <section class="legal-page__section">
+    <h2>What "sub-processor" means here</h2>
+    <p>
+      A <strong>sub-processor</strong> is any third party that, on Budojo's instruction, stores,
+      transmits, or otherwise processes personal data of Budojo academy customers and their athletes
+      — hosting providers, CDNs, mail-delivery vendors, error-tracking services.
+    </p>
+    <p>
+      A vendor that touches only Budojo's own corporate data (our source code on GitHub, our
+      internal Slack, etc.) is <em>not</em> a sub-processor under this definition — academy customer
+      data never reaches them.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>Current sub-processors</h2>
+    <div class="legal-page__table-wrapper">
+      <table class="legal-page__table" data-cy="sub-processors-current">
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Role</th>
+            <th>Region</th>
+            <th>Personal data touched</th>
+            <th>DPA</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Cloudflare, Inc.</strong></td>
+            <td>
+              DNS, edge proxy / CDN, TLS termination, WAF for <code>budojo.it</code>,
+              <code>www.budojo.it</code>, <code>api.budojo.it</code>. Also hosts the SPA build via
+              Cloudflare Pages.
+            </td>
+            <td>Global edge (EU PoPs preferred + transit)</td>
+            <td>Request metadata (IPs, headers), TLS handshake, SPA bundle. No database access.</td>
+            <td>
+              <a
+                href="https://www.cloudflare.com/cloudflare-customer-dpa/"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Cloudflare DPA</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td><strong>DigitalOcean, LLC</strong></td>
+            <td>VM (droplet) hosting the Laravel API, MySQL, local document storage.</td>
+            <td>EU (<code>fra1</code>, Frankfurt)</td>
+            <td>
+              All academy and athlete records (DB), uploaded documents (disk), application logs.
+            </td>
+            <td>
+              <a
+                href="https://www.digitalocean.com/legal/data-processing-agreement"
+                target="_blank"
+                rel="noopener noreferrer"
+                >DigitalOcean DPA</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Laravel Forge (Tighten Co.)</strong></td>
+            <td>
+              Provisioning and deploy automation for the DigitalOcean droplet. Connects via SSH;
+              does not proxy customer traffic.
+            </td>
+            <td>US-managed control plane; the droplet stays in DigitalOcean EU.</td>
+            <td>
+              Server-level metadata (deploy logs, env-var contents the Forge agent needs). No direct
+              customer data.
+            </td>
+            <td>
+              <a href="https://tighten.com/legal/dpa" target="_blank" rel="noopener noreferrer"
+                >Forge / Tighten DPA</a
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>Planned sub-processors (not yet active)</h2>
+    <p>
+      Each addition is preceded by a 30-day customer notification per the change process below. They
+      are NOT active until that window has elapsed.
+    </p>
+    <ul class="legal-page__planned">
+      <li>
+        <strong>Email delivery vendor</strong> (TBD: Postmark / Resend / Mailgun EU) — transactional
+        emails. Activates with M5 notifications. EU vendors preferred to avoid SCC overhead.
+      </li>
+      <li>
+        <strong>Sentry</strong> or comparable — browser and server error tracking with source-mapped
+        stack traces. Activates if we adopt error tracking.
+      </li>
+      <li>
+        <strong>Stripe, Inc.</strong> — payment processing for the Budojo SaaS subscription itself
+        (NOT the academy ↔ athlete payment ledger, which lives in our DB). Activates at
+        monetisation.
+      </li>
+    </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>Change process</h2>
+    <ol>
+      <li>Sub-processor change is opened as a PR updating this page and the source markdown.</li>
+      <li>
+        Every active academy customer is emailed at least <strong>30 days</strong> before the new
+        vendor goes live, with a link to this page and the activation date.
+      </li>
+      <li>
+        Customers may object in writing within those 30 days. A blocking objection means we drop the
+        change, or we terminate the customer's contract pro-rata.
+      </li>
+      <li>After the 30-day window with no blocking objections, the new vendor goes live.</li>
+    </ol>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>Related documents</h2>
+    <ul>
+      <li>DPA template — see your customer dashboard for the signed copy.</li>
+      <!--
+        Privacy policy link intentionally omitted until #219 ships the
+        `/privacy` route. Adding the link before the page exists would
+        funnel visitors into the wildcard 404, which is a worse
+        experience than a missing line. Re-add once #219 lands.
+      -->
+    </ul>
+  </section>
+
+  <footer class="legal-page__footer">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      label="Back home"
+      icon="pi pi-arrow-left"
+      (onClick)="goHome()"
+      data-cy="sub-processors-home"
+    />
+  </footer>
+</article>

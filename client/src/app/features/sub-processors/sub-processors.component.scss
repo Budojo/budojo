@@ -1,0 +1,166 @@
+// Generic legal-page layout — reused for /sub-processors and (in
+// future) /privacy, /dpa. Mobile-first per canon.
+
+.legal-page {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  color: var(--p-text-color);
+
+  @media (min-width: 768px) {
+    padding: 3rem 2rem 6rem;
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--p-text-color);
+    text-decoration: none;
+    font-weight: 600;
+    width: fit-content;
+    padding: 0.25rem 0.5rem;
+    margin-left: -0.5rem;
+    border-radius: var(--p-border-radius-sm);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+  }
+
+  &__glyph {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  &__brand-name {
+    font-size: 0.9375rem;
+  }
+
+  &__eyebrow {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.018em;
+  }
+
+  &__subtitle {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 1rem;
+    line-height: 1.5;
+    max-width: 44rem;
+  }
+
+  &__updated {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    p,
+    li {
+      line-height: 1.55;
+      color: var(--p-text-color-secondary);
+    }
+
+    ol,
+    ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    a {
+      color: var(--p-primary-color);
+      text-decoration: none;
+
+      &:hover,
+      &:focus-visible {
+        text-decoration: underline;
+      }
+    }
+
+    code {
+      background: var(--p-content-hover-background);
+      padding: 0 0.25rem;
+      border-radius: 0.125rem;
+      font-size: 0.9em;
+    }
+  }
+
+  &__table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    min-width: 36rem;
+
+    th,
+    td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--p-content-border-color);
+    }
+
+    thead th {
+      background: var(--p-content-hover-background);
+      font-weight: 600;
+      color: var(--p-text-color);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+  }
+
+  &__planned {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 1rem;
+  }
+}
