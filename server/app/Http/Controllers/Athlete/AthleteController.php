@@ -233,8 +233,8 @@ class AthleteController extends Controller
         // when we'd want it surfaced. 99 is far above the real ranks
         // (1-9), so unknown values land at the end on ASC and at the
         // top on DESC; either way they're visible, not buried.
-        $caseAsc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 ELSE 99 END ASC";
-        $caseDesc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 ELSE 99 END DESC";
+        $caseAsc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 WHEN 'red-and-black' THEN 10 WHEN 'red-and-white' THEN 11 WHEN 'red' THEN 12 ELSE 99 END ASC";
+        $caseDesc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 WHEN 'red-and-black' THEN 10 WHEN 'red-and-white' THEN 11 WHEN 'red' THEN 12 ELSE 99 END DESC";
 
         $query->orderByRaw($direction === 'asc' ? $caseAsc : $caseDesc);
         $query->orderBy('stripes', 'desc');

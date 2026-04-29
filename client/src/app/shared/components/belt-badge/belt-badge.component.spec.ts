@@ -35,6 +35,10 @@ describe('BeltBadgeComponent', () => {
     'purple',
     'brown',
     'black',
+    // IBJJF senior ranks beyond black (#229).
+    'red-and-black',
+    'red-and-white',
+    'red',
   ])('resolves the style via --budojo-belt-%s-* custom properties', (belt) => {
     TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
     const fixture = TestBed.createComponent(HostComponent);
@@ -69,16 +73,29 @@ describe('BeltBadgeComponent', () => {
       expect(tiles.length).toBe(n);
     });
 
-    it('clamps stripes outside 0-4 to the IBJJF range (defensive against bad data)', () => {
+    it('clamps stripes outside 0-6 to the IBJJF black-belt range (defensive against bad data)', () => {
       TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
       const fixture = TestBed.createComponent(HostComponent);
-      // 99 is bogus — must not render 99 tiles.
+      // 99 is bogus — must not render 99 tiles. Cap is 6 so #229 graus
+      // 1°-6° on black render fully when set.
       fixture.componentInstance.stripes = 99;
       fixture.detectChanges();
       const tiles = fixture.nativeElement.querySelectorAll(
         '[data-cy="belt-stripe-tile"]',
       ) as NodeListOf<Element>;
-      expect(tiles.length).toBe(4);
+      expect(tiles.length).toBe(6);
+    });
+
+    it('renders 5-6 tiles on a black belt (graus 5° / 6°, #229)', () => {
+      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.belt = 'black';
+      fixture.componentInstance.stripes = 6;
+      fixture.detectChanges();
+      const tiles = fixture.nativeElement.querySelectorAll(
+        '[data-cy="belt-stripe-tile"]',
+      ) as NodeListOf<Element>;
+      expect(tiles.length).toBe(6);
     });
 
     it('exposes an aria-label on the stripe group for screen readers', () => {

@@ -7,7 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -31,6 +31,7 @@ import {
   AthleteService,
   AthleteStatus,
   Belt,
+  MAX_STRIPES_PER_BELT,
 } from '../../../core/services/athlete.service';
 import { Address, CountryCode, ItalianProvinceCode } from '../../../core/services/academy.service';
 import {
@@ -159,8 +160,8 @@ export class AthleteFormComponent implements OnInit {
     this.athleteId() === null ? 'create' : 'edit',
   );
 
-  // Order = IBJJF rank (kids first, adults after) so the picker reads
-  // bottom-up like a progression chart.
+  // Order = IBJJF rank (kids → adults → senior coral/red) so the picker
+  // reads bottom-up like a progression chart.
   readonly beltOptions: SelectOption<Belt>[] = [
     { label: 'Grey (kids)', value: 'grey' },
     { label: 'Yellow (kids)', value: 'yellow' },
@@ -171,12 +172,10 @@ export class AthleteFormComponent implements OnInit {
     { label: 'Purple', value: 'purple' },
     { label: 'Brown', value: 'brown' },
     { label: 'Black', value: 'black' },
+    { label: 'Red & black (7°)', value: 'red-and-black' },
+    { label: 'Red & white (8°)', value: 'red-and-white' },
+    { label: 'Red (9°/10°)', value: 'red' },
   ];
-
-  readonly stripesOptions: SelectOption<string>[] = ['0', '1', '2', '3', '4'].map((v) => ({
-    label: v,
-    value: v,
-  }));
 
   readonly statusOptions: SelectOption<AthleteStatus>[] = [
     { label: 'Active', value: 'active' },
@@ -252,6 +251,33 @@ export class AthleteFormComponent implements OnInit {
     ),
   });
 
+  /**
+   * Mirror of the form's `belt` control as a signal. MUST be declared
+   * AFTER the `form` field — class field initialisers run in order, and
+   * `toSignal(this.form.controls.belt.valueChanges, ...)` reads the form
+   * synchronously at construction time.
+   */
+  private readonly beltSignal = toSignal(this.form.controls.belt.valueChanges, {
+    initialValue: this.form.controls.belt.value,
+  });
+
+  /**
+   * Stripes options scoped to the SELECTED belt (#229). Black gets 0-6
+   * because graus 1°-6° are stored as stripes; every other belt caps at
+   * 0-4 (canonical IBJJF). Re-computes when `belt` changes — the
+   * stripes-clamp wiring in ngOnInit also resets stripes back to a
+   * valid value if the user downgrades from black with 5-6 stripes to
+   * a belt that only allows 0-4.
+   */
+  readonly stripesOptions = computed<SelectOption<string>[]>(() => {
+    const belt = this.beltSignal();
+    const max = MAX_STRIPES_PER_BELT[belt];
+    return Array.from({ length: max + 1 }, (_, i) => String(i)).map((v) => ({
+      label: v,
+      value: v,
+    }));
+  });
+
   ngOnInit(): void {
     // The phone pair validators are mutually dependent — when one control's
     // value flips between empty/non-empty, the OTHER control's validity needs
@@ -271,6 +297,20 @@ export class AthleteFormComponent implements OnInit {
     nn.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       cc.updateValueAndValidity({ emitEvent: false });
     });
+
+    // Clamp stripes to the new belt's max when the belt changes (#229).
+    // Without this, a black-belt athlete with stripes=5 downgraded to
+    // brown would land in an invalid state (server rejects > 4 for
+    // non-black) — silent until submit.
+    this.form.controls.belt.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((belt) => {
+        const max = MAX_STRIPES_PER_BELT[belt];
+        const current = Number(this.form.controls.stripes.value);
+        if (current > max) {
+          this.form.controls.stripes.setValue(String(max));
+        }
+      });
 
     // Subscribe to paramMap rather than reading snapshot so the form reloads if
     // Angular reuses the component instance when the `:id` changes.

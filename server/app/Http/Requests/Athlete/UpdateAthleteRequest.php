@@ -77,7 +77,11 @@ class UpdateAthleteRequest extends FormRequest
             'instagram' => ['sometimes', 'nullable', 'url', 'max:255'],
             'date_of_birth' => ['sometimes', 'nullable', 'date', 'before:today'],
             'belt' => ['sometimes', Rule::enum(Belt::class)],
-            'stripes' => ['sometimes', 'integer', 'min:0', 'max:4'],
+            // Global cap is 6 (the maximum among all belts — Black has 6
+            // graus, every other belt has 4). The per-belt cap is enforced
+            // cross-field in `withValidator` below — it considers the belt
+            // from the request OR, if absent, the existing athlete's belt.
+            'stripes' => ['sometimes', 'integer', 'min:0', 'max:6'],
             'status' => ['sometimes', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['sometimes', 'date'],
             ...$this->addressRules(),
@@ -87,6 +91,7 @@ class UpdateAthleteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
+        $this->validateStripesAgainstBelt($validator);
     }
 
     /**
@@ -99,5 +104,36 @@ class UpdateAthleteRequest extends FormRequest
         throw new HttpResponseException(
             response()->json(['message' => 'Forbidden.'], 403),
         );
+    }
+
+    /**
+     * Enforces the per-belt stripes cap (#229). On a partial update the
+     * belt may not be in the request — fall back to the existing athlete's
+     * belt so a PUT touching only `stripes` is still validated correctly.
+     * Skips silently when stripes is not in the payload (nothing to check).
+     */
+    private function validateStripesAgainstBelt(Validator $validator): void
+    {
+        if (! $this->has('stripes')) {
+            return;
+        }
+        $beltValue = $this->input('belt');
+        $belt = \is_string($beltValue) ? Belt::tryFrom($beltValue) : null;
+
+        if ($belt === null) {
+            /** @var Athlete|null $athlete */
+            $athlete = $this->route('athlete');
+            $belt = $athlete?->belt;
+        }
+        if ($belt === null) {
+            return;
+        }
+        $stripes = $this->integer('stripes');
+        if ($stripes > $belt->maxStripes()) {
+            $validator->errors()->add(
+                'stripes',
+                "The {$belt->value} belt allows at most {$belt->maxStripes()} stripes.",
+            );
+        }
     }
 }

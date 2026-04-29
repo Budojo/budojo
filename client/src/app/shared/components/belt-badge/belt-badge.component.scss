@@ -11,9 +11,10 @@
    *   1. No hex literal lives in the TS file (shared component discipline).
    *   2. A future per-academy branding (e.g. Gracie palette) can override
    *      these variables from a parent scope without touching the component.
-   *   3. The mapping stays trivially auditable — nine bg/fg pairs covering
-   *      the full IBJJF scale (kids: grey/yellow/orange/green; adults:
-   *      white/blue/purple/brown/black). New belts get appended here.
+   *   3. The mapping stays trivially auditable — twelve bg/fg pairs
+   *      covering the full IBJJF scale (kids: grey/yellow/orange/green;
+   *      adults: white/blue/purple/brown/black; senior coral and red:
+   *      red-and-black, red-and-white, red). New belts get appended here.
    */
   // Adult IBJJF belts.
   --budojo-belt-white-bg: #f3f4f6;
@@ -38,6 +39,29 @@
   --budojo-belt-orange-fg: #ffffff;
   --budojo-belt-green-bg: #16a34a;
   --budojo-belt-green-fg: #ffffff;
+
+  // Senior IBJJF ranks beyond black (#229) — 7° / 8° / 9°+ grau. The
+  // coral pair uses a dark red-on-black / red-on-white split that
+  // matches the IBJJF physical belt design. Solid red for the master
+  // (9°/10°). Foreground stays white for accessible contrast.
+  --budojo-belt-red-and-black-bg: linear-gradient(
+    90deg,
+    #b91c1c 0%,
+    #b91c1c 50%,
+    #111827 50%,
+    #111827 100%
+  );
+  --budojo-belt-red-and-black-fg: #ffffff;
+  --budojo-belt-red-and-white-bg: linear-gradient(
+    90deg,
+    #b91c1c 0%,
+    #b91c1c 50%,
+    #f3f4f6 50%,
+    #f3f4f6 100%
+  );
+  --budojo-belt-red-and-white-fg: #1f2937;
+  --budojo-belt-red-bg: #b91c1c;
+  --budojo-belt-red-fg: #ffffff;
 }
 
 .belt-badge {

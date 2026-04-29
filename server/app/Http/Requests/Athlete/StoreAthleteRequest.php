@@ -68,7 +68,10 @@ class StoreAthleteRequest extends FormRequest
             'instagram' => ['nullable', 'url', 'max:255'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'belt' => ['required', Rule::enum(Belt::class)],
-            'stripes' => ['integer', 'min:0', 'max:4'],
+            // Global cap is 6 (the maximum among all belts — Black has 6
+            // graus, every other belt has 4). The per-belt cap is enforced
+            // cross-field in `withValidator` below via `Belt::maxStripes()`.
+            'stripes' => ['integer', 'min:0', 'max:6'],
             'status' => ['required', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['required', 'date'],
             ...$this->addressRules(),
@@ -78,6 +81,7 @@ class StoreAthleteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
+        $this->validateStripesAgainstBelt($validator);
     }
 
     /**
@@ -93,5 +97,29 @@ class StoreAthleteRequest extends FormRequest
         throw new HttpResponseException(
             response()->json(['message' => 'Forbidden.'], 403),
         );
+    }
+
+    /**
+     * Enforces the per-belt stripes cap (#229). The static `max:6` rule
+     * lets a 6-stripes value through globally; this check rejects e.g.
+     * a 5-stripes blue belt — only black supports 5-6 graus.
+     */
+    private function validateStripesAgainstBelt(Validator $validator): void
+    {
+        $beltValue = $this->input('belt');
+        if (! \is_string($beltValue)) {
+            return;
+        }
+        $belt = Belt::tryFrom($beltValue);
+        if ($belt === null) {
+            return;
+        }
+        $stripes = $this->integer('stripes');
+        if ($stripes > $belt->maxStripes()) {
+            $validator->errors()->add(
+                'stripes',
+                "The {$belt->value} belt allows at most {$belt->maxStripes()} stripes.",
+            );
+        }
     }
 }

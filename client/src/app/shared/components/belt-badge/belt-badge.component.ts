@@ -24,20 +24,24 @@ import { Belt } from '../../../core/services/athlete.service';
 export class BeltBadgeComponent {
   readonly belt = input.required<Belt>();
   /**
-   * Stripe count, 0–4 (IBJJF max). When omitted or 0, no stripe tiles
-   * render — the belt pill stays as before. The stripe slot is always
-   * inside the pill so consumers don't need to layout-fix.
+   * Stripe count. IBJJF max is 4 for every belt EXCEPT black, which
+   * carries 1°-6° grau as 1-6 stripes (#229). Defensive clamp at 6
+   * prevents bogus DB values from blowing the layout — any real-world
+   * value over 6 indicates corruption upstream.
    */
   readonly stripes = input<number>(0);
 
   readonly label = computed(() => {
     const belt = this.belt();
+    // The two coral belts have multi-word values; spell them out.
+    if (belt === 'red-and-black') return 'Red & black';
+    if (belt === 'red-and-white') return 'Red & white';
     return belt.charAt(0).toUpperCase() + belt.slice(1);
   });
 
-  /** Stripe count clamped to the IBJJF range — defensive against bad data. */
+  /** Stripe count clamped to the global ceiling (6, the black-belt max). */
   readonly stripeTiles = computed(() => {
-    const n = Math.max(0, Math.min(4, Math.trunc(this.stripes())));
+    const n = Math.max(0, Math.min(6, Math.trunc(this.stripes())));
     return Array.from({ length: n });
   });
 
