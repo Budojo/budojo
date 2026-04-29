@@ -166,6 +166,27 @@ describe('AthleteFormComponent', () => {
       expect(cmp.phoneNationalNumber.errors).toBeNull();
     });
 
+    it('drops the pair error when the country code is cleared back to empty (#228)', () => {
+      // Beta tester (Luigi) reported: tapping the CC dropdown locked
+      // both fields. The underlying validator already handles
+      // CC='' correctly; this test pins the behavior that the new
+      // [showClear]="true" on the p-select relies on.
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      cmp.phoneCountryCode.setValue('+39');
+      expect(cmp.phoneNationalNumber.errors?.['phonePairRequired']).toBe(true);
+
+      // The form group is built via `fb.nonNullable.group(...)`, so the
+      // p-select [showClear] action — which emits `null` at runtime —
+      // is normalised to the default empty string by Angular itself.
+      // `reset()` is the type-safe equivalent.
+      cmp.phoneCountryCode.reset();
+      expect(cmp.phoneCountryCode.errors).toBeNull();
+      expect(cmp.phoneNationalNumber.errors).toBeNull();
+    });
+
     it('rejects non-digit characters in the national number (#75)', () => {
       const fixture = TestBed.createComponent(AthleteFormComponent);
       fixture.detectChanges();
