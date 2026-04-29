@@ -41,6 +41,65 @@ it('sorts by last_name asc when sort_by=last_name and sort_order=asc', function 
     expect($names)->toBe(['Bianchi', 'Rossi', 'Verdi']);
 });
 
+// Name-pair tiebreak (#196). The "Full name" column header on the SPA
+// cycles four states — first asc/desc and last asc/desc — and the
+// tiebreak direction must match the primary direction so two athletes
+// sharing the primary key fall into a stable, intuitive order.
+
+it('tiebreaks last_name asc on first_name asc when primary names collide', function (): void {
+    makeAthlete($this->academy, ['first_name' => 'Mario', 'last_name' => 'Rossi']);
+    makeAthlete($this->academy, ['first_name' => 'Mario', 'last_name' => 'Bianchi']);
+    makeAthlete($this->academy, ['first_name' => 'Luigi', 'last_name' => 'Verdi']);
+
+    $rows = collect($this->getJson('/api/v1/athletes?sort_by=first_name&sort_order=asc')
+        ->json('data'))
+        ->map(fn ($r) => "{$r['first_name']} {$r['last_name']}")
+        ->all();
+
+    // Luigi first (first_name asc), then the two Marios sorted by last_name asc.
+    expect($rows)->toBe(['Luigi Verdi', 'Mario Bianchi', 'Mario Rossi']);
+});
+
+it('tiebreaks last_name desc on first_name desc when primary names collide', function (): void {
+    makeAthlete($this->academy, ['first_name' => 'Mario', 'last_name' => 'Rossi']);
+    makeAthlete($this->academy, ['first_name' => 'Mario', 'last_name' => 'Bianchi']);
+    makeAthlete($this->academy, ['first_name' => 'Luigi', 'last_name' => 'Verdi']);
+
+    $rows = collect($this->getJson('/api/v1/athletes?sort_by=first_name&sort_order=desc')
+        ->json('data'))
+        ->map(fn ($r) => "{$r['first_name']} {$r['last_name']}")
+        ->all();
+
+    expect($rows)->toBe(['Mario Rossi', 'Mario Bianchi', 'Luigi Verdi']);
+});
+
+it('tiebreaks first_name asc on last_name asc when primary names collide', function (): void {
+    makeAthlete($this->academy, ['first_name' => 'Mario', 'last_name' => 'Rossi']);
+    makeAthlete($this->academy, ['first_name' => 'Anna', 'last_name' => 'Rossi']);
+    makeAthlete($this->academy, ['first_name' => 'Mario', 'last_name' => 'Bianchi']);
+
+    $rows = collect($this->getJson('/api/v1/athletes?sort_by=last_name&sort_order=asc')
+        ->json('data'))
+        ->map(fn ($r) => "{$r['first_name']} {$r['last_name']}")
+        ->all();
+
+    // Bianchi first (last_name asc), then both Rossis sorted by first_name asc.
+    expect($rows)->toBe(['Mario Bianchi', 'Anna Rossi', 'Mario Rossi']);
+});
+
+it('tiebreaks first_name desc on last_name desc when primary names collide', function (): void {
+    makeAthlete($this->academy, ['first_name' => 'Mario', 'last_name' => 'Rossi']);
+    makeAthlete($this->academy, ['first_name' => 'Anna', 'last_name' => 'Rossi']);
+    makeAthlete($this->academy, ['first_name' => 'Mario', 'last_name' => 'Bianchi']);
+
+    $rows = collect($this->getJson('/api/v1/athletes?sort_by=last_name&sort_order=desc')
+        ->json('data'))
+        ->map(fn ($r) => "{$r['first_name']} {$r['last_name']}")
+        ->all();
+
+    expect($rows)->toBe(['Mario Rossi', 'Anna Rossi', 'Mario Bianchi']);
+});
+
 it('rejects sort_by=stripes (no longer a primary sort) and falls back to default order', function (): void {
     // Stripes is meaningful only as a tiebreaker INSIDE a belt rank — never as
     // a primary sort (a 4-stripe blue would be ranked above a 0-stripe black).

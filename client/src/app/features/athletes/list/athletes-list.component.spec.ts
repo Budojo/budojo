@@ -83,6 +83,101 @@ describe('AthletesListComponent', () => {
     });
   });
 
+  describe('Full name 4-state sort cycle (#196)', () => {
+    // The synthetic Full name column cycles four states on click:
+    // first asc → first desc → last asc → last desc → (loops back to first asc).
+    // Coming in from any other state (null, belt, created_at, last desc)
+    // restarts at first asc — the most common starting expectation
+    // ("alphabetical by first name").
+
+    it('starts the cycle at first_name asc when the sort is initially neutral', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.cycleFullNameSort();
+      expect(component.sortField()).toBe('first_name');
+      expect(component.sortOrder()).toBe('asc');
+    });
+
+    it('cycles first asc → first desc → last asc → last desc → first asc', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.cycleFullNameSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['first_name', 'asc']);
+
+      component.cycleFullNameSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['first_name', 'desc']);
+
+      component.cycleFullNameSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['last_name', 'asc']);
+
+      component.cycleFullNameSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['last_name', 'desc']);
+
+      // Loops back to the first state.
+      component.cycleFullNameSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['first_name', 'asc']);
+    });
+
+    it('restarts the cycle at first asc when the active sort is on a non-name column', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.onSort({ field: 'belt', order: -1 });
+      expect(component.sortField()).toBe('belt');
+
+      component.cycleFullNameSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['first_name', 'asc']);
+    });
+
+    it('renders a compact F↑/F↓/L↑/L↓ signifier in the active sort state', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      // Neutral state — no name signifier.
+      expect(component.fullNameSortLabel()).toBeNull();
+
+      component.cycleFullNameSort();
+      expect(component.fullNameSortLabel()).toBe('F↑');
+
+      component.cycleFullNameSort();
+      expect(component.fullNameSortLabel()).toBe('F↓');
+
+      component.cycleFullNameSort();
+      expect(component.fullNameSortLabel()).toBe('L↑');
+
+      component.cycleFullNameSort();
+      expect(component.fullNameSortLabel()).toBe('L↓');
+    });
+
+    it('forwards the chosen primary name + direction to the backend filter', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+
+      listSpy.mockClear();
+      component.cycleFullNameSort(); // first asc
+      expect(listSpy.mock.calls[0][0].sortBy).toBe('first_name');
+      expect(listSpy.mock.calls[0][0].sortOrder).toBe('asc');
+
+      listSpy.mockClear();
+      component.cycleFullNameSort(); // first desc
+      expect(listSpy.mock.calls[0][0].sortBy).toBe('first_name');
+      expect(listSpy.mock.calls[0][0].sortOrder).toBe('desc');
+
+      listSpy.mockClear();
+      component.cycleFullNameSort(); // last asc
+      expect(listSpy.mock.calls[0][0].sortBy).toBe('last_name');
+      expect(listSpy.mock.calls[0][0].sortOrder).toBe('asc');
+    });
+  });
+
   describe('search filter (#102)', () => {
     // The search box drives a `searchTerm` signal. When non-empty, the term is
     // forwarded to the backend as `q=...` so the filter spans all pages —

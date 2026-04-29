@@ -219,6 +219,95 @@ export class AthletesListComponent implements OnInit {
     this.load();
   }
 
+  /**
+   * 4-state cycle on the synthetic "Full name" column header (#196). The
+   * column is `first_name + last_name` glued client-side, so a single
+   * scalar sort is degenerate (ties between same-first-name athletes
+   * sail through in arbitrary order). The cycle:
+   *
+   *   none/other → first asc → first desc → last asc → last desc → first asc
+   *
+   * The backend honours the matching `applyNameSort` tiebreak — primary
+   * column orders, then the OTHER name field tiebreaks in the same
+   * direction. See AthleteController.applyNameSort().
+   *
+   * The Belt column keeps the standard 2-state PrimeNG cycle via
+   * `onSort()`; this method is wired only to the Full name <th>.
+   */
+  cycleFullNameSort(): void {
+    const f = this.sortField();
+    const o = this.sortOrder();
+
+    let nextField: AthleteSortField;
+    let nextOrder: AthleteSortOrder;
+    if (f === 'first_name' && o === 'asc') {
+      nextField = 'first_name';
+      nextOrder = 'desc';
+    } else if (f === 'first_name' && o === 'desc') {
+      nextField = 'last_name';
+      nextOrder = 'asc';
+    } else if (f === 'last_name' && o === 'asc') {
+      nextField = 'last_name';
+      nextOrder = 'desc';
+    } else {
+      // Coming from any other state (null, belt, created_at, or last desc):
+      // restart the cycle at first asc — the most common starting point
+      // for "alphabetical by first name" expectations.
+      nextField = 'first_name';
+      nextOrder = 'asc';
+    }
+
+    this.sortField.set(nextField);
+    this.sortOrder.set(nextOrder);
+    this.resetPage();
+    this.load();
+  }
+
+  /**
+   * Compact two-character signifier for the Full name header — letter
+   * indicates which name leads the sort (`F` first / `L` last), arrow
+   * indicates direction. Returns null when the active sort isn't a name
+   * sort, so the template can render a default neutral state.
+   */
+  readonly fullNameSortLabel = computed<string | null>(() => {
+    const f = this.sortField();
+    const o = this.sortOrder();
+    if (f !== 'first_name' && f !== 'last_name') return null;
+    const lead = f === 'first_name' ? 'F' : 'L';
+    const arrow = o === 'asc' ? '↑' : '↓';
+    return `${lead}${arrow}`;
+  });
+
+  /**
+   * Plain-English tooltip for the Full name header — Norman § signifier:
+   * the compact F↑/L↓ indicator carries the meaning at a glance, the
+   * tooltip spells it out for the first-time user.
+   */
+  readonly fullNameSortTooltip = computed<string>(() => {
+    const f = this.sortField();
+    const o = this.sortOrder();
+    if (f !== 'first_name' && f !== 'last_name') {
+      return 'Click to sort by first name (A → Z)';
+    }
+    const lead = f === 'first_name' ? 'first name' : 'last name';
+    const direction = o === 'asc' ? 'A → Z' : 'Z → A';
+    return `Sorted by ${lead} (${direction}). Click to cycle.`;
+  });
+
+  /**
+   * `aria-sort` value for the Full name <th>. WAI-ARIA only knows
+   * `ascending` / `descending` / `none` — it doesn't differentiate which
+   * field is the lead, so the screen reader gets the direction here and
+   * the lead through the inner button's aria-label (which mirrors the
+   * tooltip). Together they convey the full state to AT users (#199
+   * follow-up to Copilot a11y review).
+   */
+  readonly fullNameAriaSort = computed<'ascending' | 'descending' | 'none'>(() => {
+    const f = this.sortField();
+    if (f !== 'first_name' && f !== 'last_name') return 'none';
+    return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
+  });
+
   goToNew(): void {
     void this.router.navigate(['/dashboard/athletes/new']);
   }
