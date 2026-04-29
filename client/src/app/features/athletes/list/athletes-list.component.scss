@@ -232,4 +232,14 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--p-text-muted-color);
+
+  // Active state (#205): the F↑/F↓/L↑/L↓ glyph switches to the primary
+  // color when this column actually drives the sort. Norman § signifier
+  // — "active" must be visually distinct from "neutral" (the `↕`
+  // placeholder below stays muted). Pairs with the `[sortField]` /
+  // `[sortOrder]` bindings on `<p-table>` so the Belt column's
+  // `<p-sortIcon>` deactivates symmetrically.
+  &--active {
+    color: var(--p-primary-color);
+  }
 }

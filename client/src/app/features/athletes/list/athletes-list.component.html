@@ -102,7 +102,11 @@
               [attr.aria-label]="fullNameSortTooltip()"
             >
               Full name
-              <span class="full-name-th__signifier" aria-hidden="true">
+              <span
+                class="full-name-th__signifier"
+                [class.full-name-th__signifier--active]="fullNameSortLabel() !== null"
+                aria-hidden="true"
+              >
                 {{ fullNameSortLabel() ?? '↕' }}
               </span>
             </button>
