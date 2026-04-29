@@ -6,6 +6,17 @@ import { Subject, of } from 'rxjs';
 import { AthleteDetailComponent } from './athlete-detail.component';
 import { Athlete } from '../../../core/services/athlete.service';
 
+// PrimeNG's <p-tabs> binds a ResizeObserver in ngAfterViewInit; jsdom
+// doesn't ship one. The component is exercised once data arrives, so
+// stub the constructor with a no-op to keep CD past the second pass.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(globalThis as unknown as { ResizeObserver: typeof ResizeObserverStub }).ResizeObserver ??=
+  ResizeObserverStub;
+
 function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
   return {
     id: 42,
@@ -114,6 +125,51 @@ describe('AthleteDetailComponent', () => {
     httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
 
     expect(fixture.componentInstance.activeTab()).toBe('attendance');
+    httpMock.verify();
+  });
+
+  // ─── Contact links (#162 frontend half) ──────────────────────────────────
+  // The header renders the populated subset as icon chips that open in a
+  // new tab. Empty channels collapse silently — when ALL three are empty
+  // the entire chip list is omitted (no row of grey placeholders).
+
+  it('renders only the populated contact-link chips with the right icon + href', () => {
+    const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({
+      data: makeAthlete({
+        website: 'https://example.com',
+        facebook: 'https://facebook.com/mario',
+        // instagram intentionally omitted — should NOT render a chip.
+      }),
+    });
+    fixture.detectChanges();
+
+    const chips = fixture.nativeElement.querySelectorAll('.contact-links a');
+    expect(chips.length).toBe(2);
+    expect(chips[0].getAttribute('href')).toBe('https://example.com');
+    expect(chips[0].getAttribute('target')).toBe('_blank');
+    expect(chips[0].getAttribute('rel')).toBe('noopener noreferrer');
+    expect(chips[0].querySelector('i')?.className).toContain('pi-globe');
+    expect(chips[1].getAttribute('href')).toBe('https://facebook.com/mario');
+    expect(chips[1].querySelector('i')?.className).toContain('pi-facebook');
+
+    // Sanity: no Instagram chip rendered.
+    expect(fixture.nativeElement.querySelector('[data-cy="athlete-link-instagram"]')).toBeNull();
+    httpMock.verify();
+  });
+
+  it('omits the contact-link list entirely when no channel is populated', () => {
+    const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({
+      data: makeAthlete({ website: null, facebook: null, instagram: null }),
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.contact-links')).toBeNull();
     httpMock.verify();
   });
 });

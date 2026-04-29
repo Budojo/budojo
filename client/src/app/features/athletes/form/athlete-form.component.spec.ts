@@ -88,6 +88,9 @@ describe('AthleteFormComponent', () => {
         email: '',
         phone_country_code: '',
         phone_national_number: '',
+        website: '',
+        facebook: '',
+        instagram: '',
         date_of_birth: null,
         belt: 'white',
         stripes: '0',
@@ -106,6 +109,12 @@ describe('AthleteFormComponent', () => {
         email: null,
         phone_country_code: null,
         phone_national_number: null,
+        // Contact links (#162) — empty form fields serialize to `null`
+        // on the wire, matching the server contract that treats `null`
+        // as "clear this column".
+        website: null,
+        facebook: null,
+        instagram: null,
         date_of_birth: null,
         belt: 'white',
         stripes: 0,
@@ -178,6 +187,9 @@ describe('AthleteFormComponent', () => {
         email: '',
         phone_country_code: '+39',
         phone_national_number: '3331234567',
+        website: '',
+        facebook: '',
+        instagram: '',
         date_of_birth: null,
         belt: 'white',
         stripes: '0',
@@ -263,6 +275,94 @@ describe('AthleteFormComponent', () => {
       const router = TestBed.inject(Router);
       expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes']);
       httpMock.verify();
+    });
+
+    // ── #162 — contact-link hydration on edit ────────────────────────────────
+    it('hydrates contact-link inputs from the loaded athlete', () => {
+      const athlete = makeAthlete({
+        id: 42,
+        website: 'https://example.com',
+        facebook: 'https://facebook.com/mario',
+        instagram: 'https://instagram.com/mario',
+      });
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      fixture.detectChanges();
+      httpMock.expectOne('/api/v1/athletes/42').flush({ data: athlete });
+
+      const cmp = fixture.componentInstance;
+      expect(cmp.website.value).toBe('https://example.com');
+      expect(cmp.facebook.value).toBe('https://facebook.com/mario');
+      expect(cmp.instagram.value).toBe('https://instagram.com/mario');
+      httpMock.verify();
+    });
+  });
+
+  // ─── Contact links (#162) ─────────────────────────────────────────────────
+  describe('contact links (#162)', () => {
+    beforeEach(() => setupTestBed(null));
+
+    it('persists contact links on POST when filled, sends null on the empty ones', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      cmp.form.patchValue({
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        joined_at: new Date(2026, 3, 23),
+        website: 'https://example.com',
+        facebook: '',
+        instagram: 'https://instagram.com/mario',
+      });
+      cmp.submit();
+
+      const req = httpMock.expectOne('/api/v1/athletes');
+      expect(req.request.body.website).toBe('https://example.com');
+      // Empty form input → `null` on the wire (clears the column).
+      expect(req.request.body.facebook).toBeNull();
+      expect(req.request.body.instagram).toBe('https://instagram.com/mario');
+      req.flush({ data: makeAthlete() });
+      httpMock.verify();
+    });
+
+    it('rejects a non-URL contact link at the form level (no network roundtrip)', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      // Bare @handle — backend would 422; the client validator catches it
+      // first so the user gets inline feedback without the bounce.
+      cmp.form.patchValue({
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        joined_at: new Date(2026, 3, 23),
+        instagram: '@mario',
+      });
+      expect(cmp.instagram.errors?.['url']).toBe(true);
+
+      cmp.submit();
+      httpMock.expectNone('/api/v1/athletes');
+    });
+
+    it('rejects non-http/https schemes (mailto / javascript) at the form level', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      // `URL` parses these as valid URIs but they're not what we want
+      // for a "social profile" field — the validator filters by scheme.
+      cmp.form.patchValue({ website: 'javascript:alert(1)' });
+      expect(cmp.website.errors?.['url']).toBe(true);
+
+      cmp.form.patchValue({ website: 'mailto:hi@example.com' });
+      expect(cmp.website.errors?.['url']).toBe(true);
+
+      cmp.form.patchValue({ website: 'https://example.com' });
+      expect(cmp.website.errors).toBeNull();
     });
   });
 

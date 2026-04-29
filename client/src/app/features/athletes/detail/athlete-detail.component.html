@@ -37,6 +37,35 @@
         />
       </div>
       <p class="athlete-detail-page__meta">Joined {{ a.joined_at }}</p>
+
+      @let links = contactLinks();
+      @if (links.length > 0) {
+        <!--
+          Contact links (#162) — icon-only chip list. Same shape as
+          the academy detail page; only populated channels render, and
+          each opens in a new tab so the SPA session isn't disrupted.
+          `noopener noreferrer` is canon-mandatory for external `_blank`
+          targets.
+        -->
+        <ul class="contact-links" aria-label="Athlete contact links">
+          @for (link of links; track link.label) {
+            <li>
+              <a
+                class="contact-links__chip"
+                [href]="link.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                [attr.aria-label]="link.label"
+                [attr.title]="link.label"
+                [attr.data-cy]="'athlete-link-' + link.label.toLowerCase()"
+              >
+                <i [class]="link.icon" aria-hidden="true"></i>
+                <span class="contact-links__sr">{{ link.label }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
     </header>
 
     <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">

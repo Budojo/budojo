@@ -48,6 +48,26 @@ export class AthleteDetailComponent implements OnInit {
     return a ? `${a.first_name} ${a.last_name}` : '';
   });
 
+  /**
+   * Contact links (#162) — same shape as the academy detail page. Emits
+   * only the populated channels so the header row can collapse when
+   * they're all empty (no grey-icon noise for a roster of athletes who
+   * haven't shared their socials). Returns an empty array when none
+   * are filled; the template guards on `links.length > 0`.
+   *
+   * URLs are passed through verbatim — the form-layer validator
+   * restricts input to http/https, so the SPA doesn't sanitize again.
+   */
+  readonly contactLinks = computed<{ icon: string; url: string; label: string }[]>(() => {
+    const a = this.athlete();
+    if (!a) return [];
+    const links: { icon: string; url: string; label: string }[] = [];
+    if (a.website) links.push({ icon: 'pi pi-globe', url: a.website, label: 'Website' });
+    if (a.facebook) links.push({ icon: 'pi pi-facebook', url: a.facebook, label: 'Facebook' });
+    if (a.instagram) links.push({ icon: 'pi pi-instagram', url: a.instagram, label: 'Instagram' });
+    return links;
+  });
+
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((paramMap) => {
       const idParam = paramMap.get('id');
