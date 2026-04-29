@@ -9,7 +9,19 @@ import { MOCK_ACADEMY } from '../support/fixtures';
 // THIS spec pins that decision so the next time someone touches the
 // p-select trigger CSS we catch the regression in CI, not in production.
 
-const ACADEMY_OK = { statusCode: 200, body: { data: MOCK_ACADEMY } };
+// Academy mock with the phone pair POPULATED — the bug is about the
+// SELECTED value being ellipsed; an academy without a phone would
+// render the "Code" placeholder, which is not what we're testing.
+const ACADEMY_WITH_PHONE_OK = {
+  statusCode: 200,
+  body: {
+    data: {
+      ...MOCK_ACADEMY,
+      phone_country_code: '+39',
+      phone_national_number: '3331234567',
+    },
+  },
+};
 
 const ATHLETE_WITH_PHONE = {
   id: 42,
@@ -48,7 +60,7 @@ VIEWPORTS.forEach(({ name, width, height }) => {
   describe(`Phone country-code prefix renders fully (${name}, ${width}×${height})`, () => {
     beforeEach(() => {
       cy.viewport(width, height);
-      cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
+      cy.intercept('GET', '/api/v1/academy', ACADEMY_WITH_PHONE_OK).as('academy');
       cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
       cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
     });
