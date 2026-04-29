@@ -44,9 +44,26 @@ const ATHLETES_EMPTY = {
   body: {
     data: [],
     links: { first: null, last: null, prev: null, next: null },
-    meta: { current_page: 1, from: null, last_page: 1, path: '', per_page: 20, to: null, total: 0 },
+    meta: {
+      current_page: 1,
+      from: null,
+      last_page: 1,
+      path: '',
+      per_page: 20,
+      to: null,
+      total: 0,
+    },
   },
 };
+
+// `<el>.scrollWidth <= clientWidth` is true exactly when the text fits.
+// CSS `text-overflow: ellipsis` does NOT change the DOM textContent —
+// asserting on `.invoke('text')` would silently pass while the user
+// sees "+...". The layout check is the only honest signal.
+function expectNoEllipsis(label$: JQuery<HTMLElement>): void {
+  const el = label$.get(0) as HTMLElement;
+  expect(el.scrollWidth, 'label.scrollWidth').to.be.lte(el.clientWidth);
+}
 
 // 412 × 915 is the Pixel 8 Pro CSS viewport — the device the bug was
 // reported on. iPhone SE (375 × 667) is the second-tightest mainstream
@@ -61,7 +78,9 @@ VIEWPORTS.forEach(({ name, width, height }) => {
     beforeEach(() => {
       cy.viewport(width, height);
       cy.intercept('GET', '/api/v1/academy', ACADEMY_WITH_PHONE_OK).as('academy');
-      cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
+      // List endpoint only — restrict to `?` so we don't shadow the
+      // per-id show endpoint stubbed inside individual tests.
+      cy.intercept('GET', /\/api\/v1\/athletes(\?|$)/, ATHLETES_EMPTY).as('athletes');
       cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
     });
 
@@ -69,15 +88,16 @@ VIEWPORTS.forEach(({ name, width, height }) => {
       cy.visitAuthenticated('/dashboard/academy/edit');
       cy.wait('@academy');
 
-      // The PrimeNG p-select renders the selected value via our
-      // `<ng-template pTemplate="selectedItem">` — the rendered text in
-      // the trigger MUST match `+\d+` start-to-end. An ellipsed value
-      // would read "+..." and fail this assertion.
-      cy.get('[data-cy="academy-form-phone-country-code"]')
-        .find('.p-select-label')
+      const label$ = () =>
+        cy.get('[data-cy="academy-form-phone-country-code"]').find('.p-select-label');
+      // Sanity: text content carries the prefix.
+      label$()
         .invoke('text')
         .then((t) => t.trim())
         .should('match', /^\+\d+$/);
+      // Layout: the trigger must be wide enough to render the prefix
+      // without CSS ellipsis. THIS is the actual regression check.
+      label$().then(expectNoEllipsis);
     });
 
     it('shows the full "+39" on the athlete edit form (no ellipsis)', () => {
@@ -89,12 +109,13 @@ VIEWPORTS.forEach(({ name, width, height }) => {
       cy.visitAuthenticated('/dashboard/athletes/42/edit');
       cy.wait(['@academy', '@athlete']);
 
-      cy.get('#phone_country_code')
-        .closest('.p-select')
-        .find('.p-select-label')
+      const label$ = () =>
+        cy.get('#phone_country_code').closest('.p-select').find('.p-select-label');
+      label$()
         .invoke('text')
         .then((t) => t.trim())
         .should('match', /^\+\d+$/);
+      label$().then(expectNoEllipsis);
     });
 
     it('keeps the chevron + clear icon BOTH visible on the trigger', () => {
