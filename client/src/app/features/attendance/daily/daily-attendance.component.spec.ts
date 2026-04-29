@@ -327,7 +327,10 @@ describe('DailyAttendanceComponent', () => {
           total: 0,
         },
       });
-    httpMock.expectOne((r) => r.url === '/api/v1/attendance').flush({ data: [] });
+    // Filter/sort changes route through `loadAthletes()` (not loadDay) so
+    // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
+    // mark from being clobbered by a parallel attendance refetch.
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
 
     expect(component['searchTerm']()).toBe('mario');
   });
@@ -354,7 +357,10 @@ describe('DailyAttendanceComponent', () => {
           total: 0,
         },
       });
-    httpMock.expectOne((r) => r.url === '/api/v1/attendance').flush({ data: [] });
+    // Filter/sort changes route through `loadAthletes()` (not loadDay) so
+    // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
+    // mark from being clobbered by a parallel attendance refetch.
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
 
     expect(component['searchTerm']()).toBe('');
   });
@@ -381,7 +387,10 @@ describe('DailyAttendanceComponent', () => {
           total: 0,
         },
       });
-    httpMock.expectOne((r) => r.url === '/api/v1/attendance').flush({ data: [] });
+    // Filter/sort changes route through `loadAthletes()` (not loadDay) so
+    // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
+    // mark from being clobbered by a parallel attendance refetch.
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
 
     expect(component['selectedBelt']()).toBe('blue');
   });
@@ -415,7 +424,10 @@ describe('DailyAttendanceComponent', () => {
           total: 0,
         },
       });
-    httpMock.expectOne((r) => r.url === '/api/v1/attendance').flush({ data: [] });
+    // Filter/sort changes route through `loadAthletes()` (not loadDay) so
+    // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
+    // mark from being clobbered by a parallel attendance refetch.
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
   });
 
   it('rejects fields outside the sort allowlist (e.g. created_at)', () => {
@@ -439,7 +451,7 @@ describe('DailyAttendanceComponent', () => {
           total: 0,
         },
       });
-    httpMock.match((r) => r.url === '/api/v1/attendance')[0].flush({ data: [] });
+    // No attendance refetch on sort change (loadAthletes path).
 
     component['onSort']({ field: 'created_at', order: -1 });
     // created_at is not in the daily-attendance allowlist (only the

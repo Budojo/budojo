@@ -241,8 +241,12 @@ export class DailyAttendanceComponent implements OnInit {
   }
 
   /**
-   * Fetches the academy roster + the day's existing attendance, builds
-   * the present-map. Re-runs on date-picker change.
+   * Date-driven full refresh: roster + the day's attendance records.
+   * Used on init, on date change, and as the public name the existing
+   * test suite exercises. Internally splits to `fetchAthletes()` +
+   * `fetchAttendance()` so filter/sort changes can re-fetch ONLY the
+   * roster side without clobbering an in-flight optimistic mark on
+   * the present-map (#184 follow-up to Copilot review).
    *
    * Epoch-gated against double-trigger: the user clicking the date
    * picker rapidly fires multiple loadDay() calls; each captures its
@@ -252,7 +256,6 @@ export class DailyAttendanceComponent implements OnInit {
    */
   protected loadDay(): void {
     this.loading.set(true);
-    const date = toLocalDateString(this.selectedDate());
     const epoch = ++this.loadEpoch;
 
     let pending = 2;
@@ -263,6 +266,32 @@ export class DailyAttendanceComponent implements OnInit {
       }
     };
 
+    this.fetchAthletes(epoch, settle);
+    this.fetchAttendance(epoch, settle);
+  }
+
+  /**
+   * Fetches ONLY the athletes list — used by filter/sort changes
+   * (q, belt, sort_by, sort_order). Crucially does NOT touch the
+   * present-map, so an in-flight optimistic mark can't be clobbered
+   * by a parallel attendance refetch racing the POST.
+   */
+  private loadAthletes(): void {
+    this.loading.set(true);
+    const epoch = ++this.loadEpoch;
+    this.fetchAthletes(epoch, () => {
+      if (epoch === this.loadEpoch) {
+        this.loading.set(false);
+      }
+    });
+  }
+
+  /**
+   * The actual athletes-list HTTP call. Epoch-gated so a stale
+   * response from a previous filter / sort / date change can no
+   * longer clobber the current state.
+   */
+  private fetchAthletes(epoch: number, settle: () => void): void {
     const belt = this.selectedBelt();
     const sortBy = this.sortField();
     const q = this.searchTerm().trim();
@@ -288,7 +317,17 @@ export class DailyAttendanceComponent implements OnInit {
           settle();
         },
       });
+  }
 
+  /**
+   * The attendance-records HTTP call. Same epoch-gated pattern.
+   * Rebuilds the present-map from the server's records on success
+   * — ONLY safe to call when no mark/unmark is in flight, hence the
+   * filter/sort handlers route through `loadAthletes()` instead of
+   * `loadDay()` to avoid clobbering an optimistic update.
+   */
+  private fetchAttendance(epoch: number, settle: () => void): void {
+    const date = toLocalDateString(this.selectedDate());
     this.attendanceService.getDaily(date).subscribe({
       next: (records) => {
         if (epoch === this.loadEpoch) {
@@ -412,12 +451,16 @@ export class DailyAttendanceComponent implements OnInit {
 
   protected applySearch(q: string): void {
     this.searchTerm.set(q.trim());
-    this.loadDay();
+    // Filter/sort changes reload the ROSTER only — the date hasn't
+    // moved, so the attendance records on the wire are unchanged
+    // and a parallel re-fetch would race any in-flight optimistic
+    // mark on the present-map.
+    this.loadAthletes();
   }
 
   protected onBeltChange(belt: Belt | ''): void {
     this.selectedBelt.set(belt);
-    this.loadDay();
+    this.loadAthletes();
   }
 
   /**
@@ -433,7 +476,7 @@ export class DailyAttendanceComponent implements OnInit {
 
     this.sortField.set(field as AthleteSortField);
     this.sortOrder.set(event.order === 1 ? 'asc' : 'desc');
-    this.loadDay();
+    this.loadAthletes();
   }
 
   // ── Helpers ────────────────────────────────────────────────────────
