@@ -61,6 +61,10 @@
       </div>
     </p-card>
 
-    <p-toast position="top-right" />
+    <!--
+      No `<p-toast>` here on purpose — the dashboard shell mounts a single
+      app-level toast host, and our `MessageService` is the app-level
+      instance from `app.config.ts`. Adding another would overlap.
+    -->
   </div>
 }

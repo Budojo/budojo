@@ -26,6 +26,9 @@ function setup(authOverrides: Partial<AuthService> = {}) {
     imports: [ProfileComponent],
     providers: [
       { provide: AuthService, useValue: authStub },
+      // ProfileComponent reads the app-level `MessageService` from the
+      // root injector (no component-level provider) — provide it here.
+      MessageService,
       {
         provide: ActivatedRoute,
         useValue: {
@@ -95,13 +98,12 @@ describe('ProfileComponent — data export (#222)', () => {
 
   it('shows a 429 toast when the throttle limit is hit', () => {
     const messageSpy = vi.fn();
-    const { fixture, cmp } = setup({
+    const { cmp } = setup({
       exportMyData: vi.fn(() => throwError(() => ({ status: 429 }))),
     } as never);
-    // MessageService is component-scoped (providers: [MessageService] on
-    // the component metadata), so the right injector to fetch it from
-    // is the component's, not the root TestBed.
-    const messageService = fixture.debugElement.injector.get(MessageService);
+    // ProfileComponent uses the app-level MessageService — TestBed.inject
+    // resolves the same instance the component pulls from its injector.
+    const messageService = TestBed.inject(MessageService);
     messageService.add = messageSpy;
 
     cmp.exportMyData();

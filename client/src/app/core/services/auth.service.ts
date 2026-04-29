@@ -130,7 +130,7 @@ export class AuthService {
     return this.http.get(url, { responseType: 'blob', observe: 'response' }).pipe(
       map((res) => ({
         blob: res.body as Blob,
-        filename: parseContentDispositionFilename(res.headers.get('Content-Disposition')),
+        filename: parseContentDispositionFilename(res.headers.get('Content-Disposition'), format),
       })),
     );
   }
@@ -138,11 +138,12 @@ export class AuthService {
 
 /**
  * Pulls `filename="..."` out of a Content-Disposition header. Falls back
- * to a sensible default when the header is missing or malformed — the
- * browser still produces a usable file in that case.
+ * to a format-aware sensible default when the header is missing or
+ * malformed — JSON exports stay `.json`, ZIP exports stay `.zip`.
  */
-function parseContentDispositionFilename(header: string | null): string {
-  if (header === null) return 'budojo-export.zip';
+function parseContentDispositionFilename(header: string | null, format: 'json' | 'zip'): string {
+  const fallback = format === 'zip' ? 'budojo-export.zip' : 'budojo-export.json';
+  if (header === null) return fallback;
   const match = /filename="?([^";]+)"?/i.exec(header);
-  return match?.[1] ?? 'budojo-export.zip';
+  return match?.[1] ?? fallback;
 }
