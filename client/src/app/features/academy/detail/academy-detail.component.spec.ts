@@ -130,4 +130,108 @@ describe('AcademyDetailComponent', () => {
     expect(html.querySelector('[data-cy="academy-name"]')?.textContent?.trim()).toBe('—');
     expect(html.querySelector('[data-cy="academy-row-slug"]')?.textContent?.trim()).toBe('—');
   });
+
+  // ─── Phone row (#161 follow-up) ────────────────────────────────────────────
+  // Phone is set on the edit form but was missing from the read-only detail
+  // page. The pair is all-or-nothing on the wire; render a tappable
+  // `tel:` link when both halves are present, an em-dash otherwise.
+
+  it('renders the phone pair as a tel: link when both fields are populated', () => {
+    setupTestBed();
+    TestBed.inject(AcademyService).academy.set(
+      makeAcademy({ phone_country_code: '+39', phone_national_number: '3331234567' }),
+    );
+
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const cell = fixture.nativeElement.querySelector(
+      '[data-cy="academy-row-phone"]',
+    ) as HTMLElement;
+    const link = cell.querySelector('a') as HTMLAnchorElement | null;
+    expect(link).not.toBeNull();
+    // Visible label uses a space between the prefix and the digits.
+    expect(link!.textContent?.trim()).toBe('+39 3331234567');
+    // `tel:` href cannot tolerate inner whitespace — must be the unspaced
+    // E.164 form so iOS / Android dialer parses it cleanly.
+    expect(link!.getAttribute('href')).toBe('tel:+393331234567');
+  });
+
+  // Partial-data defence: the all-or-nothing validator on the wire keeps
+  // half-filled pairs from being saved on new rows, but legacy rows or
+  // schema migrations can land with one half null and the other set.
+  // The em-dash fallback must trigger in every "incomplete" shape, not
+  // just both-null — covering all three keeps the contract honest.
+  it.each([
+    { phone_country_code: null, phone_national_number: null },
+    { phone_country_code: '+39', phone_national_number: null },
+    { phone_country_code: null, phone_national_number: '3331234567' },
+  ])(
+    'renders an em-dash when the phone pair is partial (cc=$phone_country_code, nn=$phone_national_number)',
+    (overrides) => {
+      setupTestBed();
+      TestBed.inject(AcademyService).academy.set(makeAcademy(overrides));
+
+      const fixture = TestBed.createComponent(AcademyDetailComponent);
+      fixture.detectChanges();
+
+      const cell = fixture.nativeElement.querySelector(
+        '[data-cy="academy-row-phone"]',
+      ) as HTMLElement;
+      expect(cell.querySelector('a')).toBeNull();
+      expect(cell.textContent?.trim()).toBe('—');
+    },
+  );
+
+  // ─── Contact links (#162 frontend half) ────────────────────────────────────
+  // The detail page renders the populated subset as icon chips that
+  // open in a new tab. Empty channels collapse silently — no row of
+  // grey placeholders, since the user already sees the empty inputs
+  // on the edit form.
+
+  it('renders only the populated contact-link chips with the right icon + href', () => {
+    setupTestBed();
+    TestBed.inject(AcademyService).academy.set(
+      makeAcademy({
+        website: 'https://gracie-barra.com',
+        facebook: 'https://facebook.com/graciebarra',
+        // instagram intentionally omitted — should NOT render a chip.
+      }),
+    );
+
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const cell = fixture.nativeElement.querySelector(
+      '[data-cy="academy-row-links"]',
+    ) as HTMLElement;
+    const chips = cell.querySelectorAll('a');
+
+    expect(chips.length).toBe(2);
+    expect(chips[0].getAttribute('href')).toBe('https://gracie-barra.com');
+    expect(chips[0].getAttribute('target')).toBe('_blank');
+    expect(chips[0].getAttribute('rel')).toBe('noopener noreferrer');
+    expect(chips[0].querySelector('i')?.className).toContain('pi-globe');
+    expect(chips[1].getAttribute('href')).toBe('https://facebook.com/graciebarra');
+    expect(chips[1].querySelector('i')?.className).toContain('pi-facebook');
+
+    // Sanity: no Instagram chip rendered.
+    expect(cell.querySelector('[data-cy="academy-link-instagram"]')).toBeNull();
+  });
+
+  it('renders an em-dash when no contact link is populated', () => {
+    setupTestBed();
+    TestBed.inject(AcademyService).academy.set(
+      makeAcademy({ website: null, facebook: null, instagram: null }),
+    );
+
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const cell = fixture.nativeElement.querySelector(
+      '[data-cy="academy-row-links"]',
+    ) as HTMLElement;
+    expect(cell.querySelector('a')).toBeNull();
+    expect(cell.textContent?.trim()).toBe('—');
+  });
 });

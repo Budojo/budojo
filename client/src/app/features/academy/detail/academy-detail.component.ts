@@ -45,6 +45,50 @@ export class AcademyDetailComponent {
   protected readonly logoUploading = signal(false);
   protected readonly logoUrl = computed(() => this.academy()?.logo_url ?? null);
 
+  /**
+   * Phone (#161) — emits a fully-formed `tel:` href + a human-spaced
+   * label for the visible text. The `tel:` URI scheme can't tolerate
+   * inner whitespace, so the href is built from the unspaced E.164
+   * form; the visible label keeps the prefix-vs-digits separation for
+   * legibility. Returns null when either half of the pair is missing —
+   * the all-or-nothing validator on the wire keeps "only country code,
+   * no number" from ever happening, but the defensive null-check
+   * covers legacy / partial data.
+   *
+   * Building the href in the computed (rather than concatenating in
+   * the template) keeps the template a pure projection of state.
+   */
+  protected readonly phoneE164 = computed<{ telHref: string; label: string } | null>(() => {
+    const cc = this.academy()?.phone_country_code;
+    const nn = this.academy()?.phone_national_number;
+    if (!cc || !nn) return null;
+    return {
+      telHref: `tel:${cc}${nn}`,
+      label: `${cc} ${nn}`,
+    };
+  });
+
+  /**
+   * Contact links (#162) — emits the populated subset as `{ icon, url,
+   * label }` records so the template renders only the channels that
+   * have a value. Returns an empty array when none are filled; the
+   * template checks `links.length > 0` and falls back to an em-dash.
+   *
+   * Icon class names map to PrimeIcons (canon § iconography — `pi pi-*`
+   * only, no custom SVG). The URLs are passed through verbatim; the
+   * form-layer validator restricts input to http/https, so the SPA
+   * doesn't sanitize again here.
+   */
+  protected readonly contactLinks = computed<{ icon: string; url: string; label: string }[]>(() => {
+    const a = this.academy();
+    if (!a) return [];
+    const links: { icon: string; url: string; label: string }[] = [];
+    if (a.website) links.push({ icon: 'pi pi-globe', url: a.website, label: 'Website' });
+    if (a.facebook) links.push({ icon: 'pi pi-facebook', url: a.facebook, label: 'Facebook' });
+    if (a.instagram) links.push({ icon: 'pi pi-instagram', url: a.instagram, label: 'Instagram' });
+    return links;
+  });
+
   protected onLogoBrowse(): void {
     this.logoInput?.nativeElement.click();
   }

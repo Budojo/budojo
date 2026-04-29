@@ -26,6 +26,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null             $email
  * @property string|null             $phone_country_code     E.164 prefix incl. `+`, e.g. `+39`. Pair with `phone_national_number` (#75).
  * @property string|null             $phone_national_number  Unformatted national digits, e.g. `3331234567`. Both columns null OR both filled.
+ * @property string|null             $website                Full URL incl. scheme (#162).
+ * @property string|null             $facebook               Full Facebook profile URL.
+ * @property string|null             $instagram              Full Instagram profile URL.
  * @property \Carbon\Carbon|null     $date_of_birth
  * @property Belt                    $belt
  * @property int                     $stripes
@@ -35,7 +38,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Carbon\Carbon|null     $updated_at
  * @property \Carbon\Carbon|null     $deleted_at
  */
-#[Fillable(['academy_id', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
+#[Fillable(['academy_id', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class])]
 class Athlete extends Model implements HasAddress
 {

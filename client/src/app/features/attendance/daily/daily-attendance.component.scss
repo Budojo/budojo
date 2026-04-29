@@ -1,17 +1,18 @@
-// Daily check-in — mobile-first, the screen the instructor opens during
-// class on a phone held one-handed. Every spacing + color resolves to
-// design-system tokens. Touch targets stay >= 48 px.
+// Daily check-in — same visual chrome as athletes-list (#184) so the
+// instructor's muscle memory carries between the two pages. Mobile-first,
+// every spacing + color resolves to design-system tokens, touch targets
+// stay ≥ 48 px on the row click target.
 
 .attendance {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   padding: 1rem;
-  max-width: 40rem;
+  max-width: 1200px;
   margin: 0 auto;
 
   @media (min-width: 768px) {
-    padding: 2rem;
+    padding: 1.5rem 2rem;
   }
 }
 
@@ -19,6 +20,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  margin-bottom: 0.5rem;
 
   @media (min-width: 768px) {
     flex-direction: row;
@@ -44,22 +46,137 @@
 
 .attendance__title {
   margin: 0;
-  font-size: 1.75rem;
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.018em;
-  color: var(--p-text-color);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--p-surface-900);
 }
 
-// Empty + list
+// ── Filter strip ──────────────────────────────────────────────────────────────
+//
+// Mirrors `.athletes-page__filters` exactly so the two pages read as a pair.
+// Search input flexes; belt select sits on a fixed min-width so the row
+// doesn't squish below readable size on narrow viewports.
+
+.attendance__filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .attendance__filter-select {
+  min-width: 160px;
+}
+
+:host ::ng-deep .attendance__search {
+  // Same cascade fix as athletes-list: pInputText ships its own padding
+  // stack which would overlap the leading magnifier icon. Force the
+  // left padding so "Search by name" starts to the right of the icon.
+  input.p-inputtext {
+    padding-left: 2.25rem;
+  }
+}
+
+// ── Table wrapper ─────────────────────────────────────────────────────────────
+//
+// Same hairline-border + flat surface-0 shell as athletes-list. Canon §
+// Card anatomy — no Material elevation here.
+
+.attendance__table-wrapper {
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  overflow: hidden;
+}
+
+// ── Row click target ──────────────────────────────────────────────────────────
+//
+// `<tr role="button">` — the entire row is the click target (Fitts).
+// PrimeNG's <p-table> renders <tr> inside a <p-datatable-sm>; the
+// `cursor: pointer` + hover treatment makes the affordance obvious
+// without breaking the table semantics for assistive tech.
+
+.attendance-row {
+  cursor: pointer;
+  transition:
+    background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  &:active {
+    opacity: 0.88;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: -2px;
+  }
+
+  &--present {
+    background: var(--p-primary-50);
+
+    > td {
+      color: var(--p-primary-700);
+      font-weight: 500;
+    }
+
+    &:hover {
+      background: var(--p-primary-100);
+    }
+  }
+
+  // While a mark/unmark is in flight, the row stays clickable for screen
+  // readers but visually fades out. The component-level inflight check
+  // already swallows extra clicks, so we don't need pointer-events: none.
+  &--inflight {
+    opacity: 0.72;
+    cursor: progress;
+  }
+}
+
+.attendance-cell-name {
+  font-weight: 500;
+  color: var(--p-surface-900);
+}
+
+// ── Present indicator ─────────────────────────────────────────────────────────
+//
+// Right-aligned cell with a circle / check icon. Width is fixed so the
+// indicator column doesn't reflow when athlete names of different
+// lengths land in the same row.
+
+.attendance-cell-indicator {
+  width: 3rem;
+  text-align: right;
+}
+
+.attendance-indicator {
+  font-size: 1.25rem;
+  color: var(--p-text-muted-color);
+
+  &--present {
+    color: var(--p-primary-color);
+  }
+}
+
+// ── Empty + skeleton inside the table ─────────────────────────────────────────
+//
+// PrimeNG's <p-table> renders an `emptymessage` template inside a real
+// <tr>/<td> so the colspan needs to match the header column count (3).
+
+.attendance__empty-cell {
+  text-align: center !important;
+  padding: 2rem 0 !important;
+}
 
 .attendance__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 3rem 1rem;
-  text-align: center;
   color: var(--p-text-muted-color);
 
   i {
@@ -72,13 +189,11 @@
   }
 }
 
-.attendance__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.attendance__skeleton {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  padding: 0 1rem;
 }
 
 .attendance__pagination-hint {
@@ -89,98 +204,7 @@
   text-align: center;
 }
 
-// Row — full-width tap target. Tap = toggle. Two visual states:
-// "not recorded" (outline / surface-0) and "present" (soft accent fill).
-
-.attendance-row__wrapper {
-  list-style: none;
-}
-
-.attendance-row {
-  // `all: unset` strips the default <button> appearance so we can rebuild
-  // it as a row. The :focus-visible rule below restores keyboard a11y.
-  all: unset;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
-  min-height: 3.5rem; // 56 px — comfortable for thumb on a 390 px screen
-  padding: 0.75rem 1rem;
-  background: var(--p-surface-0);
-  border: 1px solid var(--p-content-border-color);
-  border-radius: var(--p-border-radius-md);
-  color: var(--p-text-color);
-  cursor: pointer;
-  font-size: 1rem; // canon body 17/22 ≈ 1rem
-  transition:
-    background-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
-    border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
-    opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
-
-  &:hover:not(:disabled) {
-    background: var(--p-content-hover-background);
-  }
-
-  &:active:not(:disabled) {
-    opacity: 0.88; // canon press feedback
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--p-primary-color);
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    cursor: progress;
-  }
-
-  &--present {
-    background: var(--p-primary-50);
-    border-color: var(--p-primary-300);
-    color: var(--p-primary-700);
-
-    &:hover:not(:disabled) {
-      background: var(--p-primary-100);
-    }
-  }
-
-  // In-flight: faint pulse on the indicator + slight opacity. Keeps the
-  // user oriented without spinning the whole row.
-  &--inflight {
-    opacity: 0.72;
-  }
-
-  &--skeleton {
-    pointer-events: none;
-    cursor: default;
-  }
-
-  &__name {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-weight: 500;
-  }
-
-  &__indicator {
-    flex-shrink: 0;
-    width: 2rem;
-    height: 2rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--p-border-radius-full);
-
-    i {
-      font-size: 1.125rem;
-    }
-  }
-}
-
-// Toast undo button — minimal, no PrimeNG default chrome.
+// ── Toast undo button — minimal, no PrimeNG default chrome ────────────────────
 
 .attendance-toast {
   display: flex;

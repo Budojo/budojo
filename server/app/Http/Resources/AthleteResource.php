@@ -53,6 +53,11 @@ class AthleteResource extends JsonResource
             'email' => $athlete->email,
             'phone_country_code' => $athlete->phone_country_code,
             'phone_national_number' => $athlete->phone_national_number,
+            // Contact links (#162) — flat URL columns, each independently
+            // nullable. Same shape as the academy resource.
+            'website' => $athlete->website,
+            'facebook' => $athlete->facebook,
+            'instagram' => $athlete->instagram,
             'date_of_birth' => $athlete->date_of_birth?->toDateString(),
             'belt' => $athlete->belt->value,
             'stripes' => $athlete->stripes,

@@ -167,6 +167,90 @@
         </div>
       </div>
 
+      <!--
+        Contact links (#162) — three independently nullable URLs.
+        Same shape as the academy form's contact-link block.
+      -->
+      <div class="athlete-form__row">
+        <div class="field">
+          <label for="website">Website <span class="optional">(optional)</span></label>
+          <input
+            pInputText
+            id="website"
+            type="url"
+            formControlName="website"
+            autocomplete="url"
+            placeholder="https://example.com"
+            maxlength="255"
+            data-cy="athlete-form-website"
+            [class.ng-invalid]="website.invalid && website.touched"
+            [class.ng-dirty]="website.touched"
+          />
+          @if (website.invalid && website.touched) {
+            <small class="field-error">
+              @if (website.errors?.['url']) {
+                Enter a full URL — e.g. <code>https://example.com</code>.
+              } @else if (website.errors?.['maxlength']) {
+                Maximum 255 characters.
+              }
+            </small>
+          }
+        </div>
+
+        <div class="field">
+          <label for="facebook">Facebook <span class="optional">(optional)</span></label>
+          <input
+            pInputText
+            id="facebook"
+            type="url"
+            formControlName="facebook"
+            autocomplete="url"
+            placeholder="https://facebook.com/yourprofile"
+            maxlength="255"
+            data-cy="athlete-form-facebook"
+            [class.ng-invalid]="facebook.invalid && facebook.touched"
+            [class.ng-dirty]="facebook.touched"
+          />
+          @if (facebook.invalid && facebook.touched) {
+            <small class="field-error">
+              @if (facebook.errors?.['url']) {
+                Enter a full URL — e.g. <code>https://facebook.com/yourprofile</code>.
+              } @else if (facebook.errors?.['maxlength']) {
+                Maximum 255 characters.
+              }
+            </small>
+          }
+        </div>
+      </div>
+
+      <div class="athlete-form__row">
+        <div class="field">
+          <label for="instagram">Instagram <span class="optional">(optional)</span></label>
+          <input
+            pInputText
+            id="instagram"
+            type="url"
+            formControlName="instagram"
+            autocomplete="url"
+            placeholder="https://instagram.com/yourprofile"
+            maxlength="255"
+            data-cy="athlete-form-instagram"
+            [class.ng-invalid]="instagram.invalid && instagram.touched"
+            [class.ng-dirty]="instagram.touched"
+          />
+          @if (instagram.invalid && instagram.touched) {
+            <small class="field-error">
+              @if (instagram.errors?.['url']) {
+                Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>.
+              } @else if (instagram.errors?.['maxlength']) {
+                Maximum 255 characters.
+              }
+            </small>
+          }
+        </div>
+        <div class="field"><!-- empty cell to keep the 2-col grid balance --></div>
+      </div>
+
       <div class="athlete-form__row">
         <div class="field">
           <label for="date_of_birth">Date of birth <span class="optional">(optional)</span></label>

@@ -17,6 +17,9 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 | `logo_path` | string(255) | nullable | Relative path on the `public` disk; absent until the owner uploads a logo. The API resource resolves it to a public `logo_url` via `Storage::disk('public')->url(...)` |
 | `phone_country_code` | varchar(5) | nullable | E.164 country prefix incl. `+` (e.g. `+39`). Pair with `phone_national_number` — both null OR both filled, enforced by `required_with` in the FormRequest (#161). Same shape as the athletes pair. Settable via `PATCH /api/v1/academy` |
 | `phone_national_number` | varchar(20) | nullable | Unformatted national digits (no spaces / dashes / parentheses). Validated together with `phone_country_code` via libphonenumber. Settable via `PATCH /api/v1/academy` |
+| `website` | string(255) | nullable | Public website URL (#162). Validated as a parseable URL — bare `@handles` are rejected with 422. Independently nullable from the other contact links. |
+| `facebook` | string(255) | nullable | Facebook page URL (#162). Same shape as `website`. |
+| `instagram` | string(255) | nullable | Instagram profile URL (#162). Same shape as `website`. |
 | `monthly_fee_cents` | unsigned int | nullable | Academy-wide membership fee, **stored in cents** to avoid float pitfalls (€95.00 = `9500`). `null` means "fee not configured" — the payments endpoints reject `POST` with 422 until the owner sets it. Settable via `PATCH /api/v1/academy` |
 | `training_days` | json (list&lt;int&gt;) | nullable | Weekdays the academy trains on, Carbon `dayOfWeek` ints (0=Sun…6=Sat). Cast to `array` on the model. `null` means "schedule not configured" — the daily check-in UI falls back to all-weekdays in that state. Settable on create + update |
 | `created_at` | timestamp | nullable | |

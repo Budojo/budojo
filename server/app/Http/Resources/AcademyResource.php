@@ -34,6 +34,11 @@ class AcademyResource extends JsonResource
             // OR both filled by the schema's `required_with` rule.
             'phone_country_code' => $academy->phone_country_code,
             'phone_national_number' => $academy->phone_national_number,
+            // Contact links (#162) — flat URL columns, each independently
+            // nullable. The SPA renders icons that link out when present.
+            'website' => $academy->website,
+            'facebook' => $academy->facebook,
+            'instagram' => $academy->instagram,
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'logo_url' => $academy->logo_path !== null
                 ? Storage::disk('public')->url($academy->logo_path)

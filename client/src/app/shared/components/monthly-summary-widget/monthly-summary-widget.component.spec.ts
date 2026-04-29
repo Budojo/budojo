@@ -138,4 +138,102 @@ describe('MonthlySummaryWidgetComponent', () => {
     expect(fixture.componentInstance.ratePercent(5)).toBeNull();
     httpMock.verify();
   });
+
+  // ─── Headline metric (#170) ─────────────────────────────────────────────────
+  // The widget's big number is `avg athletes per session` — total
+  // attendance events divided by scheduled sessions elapsed. Replaces
+  // the misnamed "training days" sum. The denominator is the same
+  // `scheduledCount` the per-row rate uses (count of weekdays in
+  // training_days whose date is ≤ today), NOT a count of distinct
+  // attendance dates — wording matters because the two diverge if a
+  // scheduled session is missed entirely.
+
+  it('computes avgAthletesPerSession to 1 decimal when training_days + counts are present', () => {
+    const httpMock = setupTestBed();
+    // System time is Apr 15 2026 (Wed). Schedule [2, 4, 6] = Tue/Thu/Sat
+    // → 6 scheduled sessions have elapsed by Apr 15. Total counts = 8 + 4 = 12. Avg = 2.0.
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [2, 4, 6],
+    });
+
+    const fixture = TestBed.createComponent(MonthlySummaryWidgetComponent);
+    fixture.detectChanges();
+
+    httpMock
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ data: [makeRow(1, 8), makeRow(2, 4)] });
+
+    // 12 events / 6 sessions = 2 (rounded to 1 decimal stays 2).
+    expect(fixture.componentInstance['avgAthletesPerSession']()).toBe(2);
+    httpMock.verify();
+  });
+
+  it('rounds avgAthletesPerSession to 1 decimal place', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [2, 4, 6],
+    });
+
+    const fixture = TestBed.createComponent(MonthlySummaryWidgetComponent);
+    fixture.detectChanges();
+
+    // 5 events / 6 sessions = 0.8333... → 0.8 after 1-decimal rounding.
+    httpMock
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ data: [makeRow(1, 3), makeRow(2, 2)] });
+
+    expect(fixture.componentInstance['avgAthletesPerSession']()).toBe(0.8);
+    httpMock.verify();
+  });
+
+  it('returns null avgAthletesPerSession when training_days is unconfigured', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: null,
+    });
+
+    const fixture = TestBed.createComponent(MonthlySummaryWidgetComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [makeRow(1, 5)] });
+
+    expect(fixture.componentInstance['avgAthletesPerSession']()).toBeNull();
+    httpMock.verify();
+  });
+
+  it('returns null avgAthletesPerSession when no athlete has trained yet (totalDays=0)', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [2, 4, 6],
+    });
+
+    const fixture = TestBed.createComponent(MonthlySummaryWidgetComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/v1/attendance/summary?month=2026-04').flush({ data: [] });
+
+    // Sessions held = 6 but no attendance events → avg makes no sense yet.
+    expect(fixture.componentInstance['avgAthletesPerSession']()).toBeNull();
+    httpMock.verify();
+  });
 });

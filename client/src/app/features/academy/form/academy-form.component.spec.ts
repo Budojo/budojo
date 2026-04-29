@@ -128,6 +128,12 @@ describe('AcademyFormComponent', () => {
       name: 'New Name',
       phone_country_code: null,
       phone_national_number: null,
+      // Contact links (#162) — empty form fields serialize to `null`
+      // on the wire, matching the server contract that treats `null`
+      // as "clear this column" and an absent key as "leave untouched".
+      website: null,
+      facebook: null,
+      instagram: null,
       address: {
         line1: 'Via Nuova 10',
         line2: null,
@@ -176,6 +182,9 @@ describe('AcademyFormComponent', () => {
       name: 'Kept Name',
       phone_country_code: null,
       phone_national_number: null,
+      website: null,
+      facebook: null,
+      instagram: null,
       address: null,
       training_days: null,
     });
@@ -259,5 +268,63 @@ describe('AcademyFormComponent', () => {
     component.cancel();
     httpMock.expectNone('/api/v1/academy');
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard/academy']);
+  });
+
+  // ─── Contact links (#162) ───────────────────────────────────────────────────
+
+  it('persists contact links on PATCH when filled, sends null on the empty ones', () => {
+    const { component, httpMock } = setup();
+    component.form.patchValue({
+      name: 'Kept',
+      website: 'https://gracie-barra.com',
+      facebook: '',
+      instagram: 'https://instagram.com/graciebarra',
+    });
+
+    component.submit();
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.website).toBe('https://gracie-barra.com');
+    // Empty form input → `null` on the wire (clears the column).
+    expect(req.request.body.facebook).toBeNull();
+    expect(req.request.body.instagram).toBe('https://instagram.com/graciebarra');
+    req.flush({ data: makeAcademy() });
+  });
+
+  it('rejects a non-URL contact link at the form level (no network roundtrip)', () => {
+    const { component, httpMock } = setup();
+    // Bare @handle — backend would 422; the client validator catches it
+    // first so the user gets inline feedback without the bounce.
+    component.form.patchValue({ name: 'Some', instagram: '@graciebarra' });
+    expect(component.instagram.errors?.['url']).toBe(true);
+
+    component.submit();
+    httpMock.expectNone('/api/v1/academy');
+  });
+
+  it('rejects non-http/https schemes (mailto / javascript) at the form level', () => {
+    const { component } = setup();
+    // `URL` parses these as valid URIs but they're not what we want
+    // for a "social profile" field — the validator filters by scheme.
+    component.form.patchValue({ website: 'javascript:alert(1)' });
+    expect(component.website.errors?.['url']).toBe(true);
+
+    component.form.patchValue({ website: 'mailto:hi@example.com' });
+    expect(component.website.errors?.['url']).toBe(true);
+
+    component.form.patchValue({ website: 'https://example.com' });
+    expect(component.website.errors).toBeNull();
+  });
+
+  it('hydrates contact-link inputs from the cached academy on init', () => {
+    const { component } = setup(
+      makeAcademy({
+        website: 'https://gracie-barra.com',
+        facebook: 'https://facebook.com/graciebarra',
+        instagram: 'https://instagram.com/graciebarra',
+      }),
+    );
+    expect(component.website.value).toBe('https://gracie-barra.com');
+    expect(component.facebook.value).toBe('https://facebook.com/graciebarra');
+    expect(component.instagram.value).toBe('https://instagram.com/graciebarra');
   });
 });

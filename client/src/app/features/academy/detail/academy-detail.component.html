@@ -77,6 +77,60 @@
       </dd>
     </div>
 
+    <div class="row">
+      <dt class="row__label">Phone</dt>
+      <dd class="row__value" data-cy="academy-row-phone">
+        @if (phoneE164(); as phone) {
+          <!--
+            tel: link — both forms come pre-built from the `phoneE164`
+            computed (full `tel:+393331234567` href + the human-spaced
+            label "+39 3331234567"). Template stays a pure projection,
+            no inline string concatenation.
+          -->
+          <a [href]="phone.telHref" class="row__link">{{ phone.label }}</a>
+        } @else {
+          —
+        }
+      </dd>
+    </div>
+
+    <div class="row">
+      <dt class="row__label">Links</dt>
+      <dd class="row__value" data-cy="academy-row-links">
+        @let links = contactLinks();
+        @if (links.length > 0) {
+          <!--
+            Icon-only chip list. Each chip is a `<a target="_blank">` —
+            external destinations open in a new tab so the SPA session
+            isn't disrupted. `rel="noopener noreferrer"` prevents the
+            target page from accessing window.opener (security canon).
+            Tooltip + sr-only label provide the network name for
+            assistive tech and hover discovery.
+          -->
+          <ul class="contact-links" aria-label="Academy contact links">
+            @for (link of links; track link.label) {
+              <li>
+                <a
+                  class="contact-links__chip"
+                  [href]="link.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  [attr.aria-label]="link.label"
+                  [attr.title]="link.label"
+                  [attr.data-cy]="'academy-link-' + link.label.toLowerCase()"
+                >
+                  <i [class]="link.icon" aria-hidden="true"></i>
+                  <span class="contact-links__sr">{{ link.label }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        } @else {
+          —
+        }
+      </dd>
+    </div>
+
     @let addr = a?.address;
     <div class="row">
       <dt class="row__label">Address</dt>

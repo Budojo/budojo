@@ -589,3 +589,86 @@ it('keeps the address when an athlete is soft-deleted (#72b)', function (): void
         ->where('addressable_id', $athlete->id)
         ->count())->toBe(1);
 });
+
+// ─── #162 — contact links (website / facebook / instagram) ────────────────────
+
+it('persists the contact links on store', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'website' => 'https://mariorossi.com',
+        'facebook' => 'https://facebook.com/mariorossi',
+        'instagram' => 'https://instagram.com/mariorossi',
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertCreated()
+        ->assertJsonPath('data.website', 'https://mariorossi.com')
+        ->assertJsonPath('data.facebook', 'https://facebook.com/mariorossi')
+        ->assertJsonPath('data.instagram', 'https://instagram.com/mariorossi');
+});
+
+it('accepts all contact link fields null — they are independently optional', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Luigi',
+        'last_name' => 'Verdi',
+        'website' => null,
+        'facebook' => null,
+        'instagram' => null,
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertCreated()
+        ->assertJsonPath('data.website', null)
+        ->assertJsonPath('data.facebook', null)
+        ->assertJsonPath('data.instagram', null);
+});
+
+it('rejects a non-URL website with 422', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)->postJson('/api/v1/athletes', [
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        // Plain handle, not a URL — rejected by `url` rule. Users can paste
+        // a full URL or leave blank; @handles aren't supported because the
+        // SPA renders these as `<a href>` and a bare handle wouldn't link.
+        'website' => '@mariorossi',
+        'belt' => 'white',
+        'stripes' => 0,
+        'status' => 'active',
+        'joined_at' => '2026-01-01',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['website']);
+});
+
+it('updates contact links on PUT and persists null when explicitly cleared', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create([
+        'website' => 'https://old.example',
+        'facebook' => 'https://facebook.com/old',
+        'instagram' => 'https://instagram.com/old',
+    ]);
+
+    $this->actingAs($user)->putJson("/api/v1/athletes/{$athlete->id}", [
+        'website' => 'https://new.example',
+        'facebook' => null,
+        'instagram' => null,
+    ])->assertOk()
+        ->assertJsonPath('data.website', 'https://new.example')
+        ->assertJsonPath('data.facebook', null)
+        ->assertJsonPath('data.instagram', null);
+
+    // One re-fetch instead of three — `fresh()` issues a SELECT each
+    // time, and we want the assertions to all read the same row.
+    $fresh = $athlete->fresh();
+    expect($fresh->website)->toBe('https://new.example');
+    expect($fresh->facebook)->toBeNull();
+    expect($fresh->instagram)->toBeNull();
+});
