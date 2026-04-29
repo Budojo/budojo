@@ -160,25 +160,32 @@
   }
 }
 
-// Phone country-code dropdown lives inside a `<p-inputgroup>` next to the
-// national-number text input. The trigger uses a `selectedItem` template
-// that renders only the prefix value (`+39`); the open panel continues
-// to show the full "+39 Italy" labels via the default item template,
-// sized to its own option content.
-//
-// `<p-inputgroup>` applies `flex: 1 1 auto` to its children inside its
-// own CSS layer — that wins against an unlayered single-class
-// `min-width` declaration on tiebreaker. We brute-force the width with
-// the `flex` shorthand AND `width` AND `min-width` all marked
-// `!important`, on the styleClass that PrimeNG attaches to the host
-// `<p-select>`. 7rem comfortably fits "+999" plus the chevron with
-// breathing room.
+// Phone pair (#185): plain flex container with a small gap, NOT a
+// `<p-inputgroup>`. The inputgroup variant sits the two children flush
+// (its design language treats them as a single field), but the country
+// code + national number read as two distinct inputs and need breathing
+// room — Norman § signifier.
+.phone-pair {
+  display: flex;
+  align-items: stretch;
+  gap: 0.375rem;
+}
+
+// Country-code select pinned to a fixed width — 7rem comfortably fits
+// "+999" plus the chevron. Without the pin the select stretches to 50%
+// of the row, which dwarfs the prefix.
 //
 // We deliberately don't try to nest `.phone-country-code .p-select` —
 // PrimeNG attaches both classes to the SAME element in this version
 // (verified in rendered DOM), so a descendant selector targets nothing.
 :host ::ng-deep .phone-country-code {
-  flex: 0 0 7rem !important;
-  width: 7rem !important;
-  min-width: 7rem !important;
+  flex: 0 0 7rem;
+  width: 7rem;
+  min-width: 7rem;
+}
+
+// National number flexes into the remaining row width.
+.phone-national-number {
+  flex: 1 1 auto;
+  min-width: 0;
 }
