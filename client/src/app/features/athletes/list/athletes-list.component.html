@@ -85,7 +85,6 @@
       [paginator]="totalRecords() > 20"
       (onPage)="onPageChange($event)"
       [lazy]="true"
-      (onSort)="onSort($event)"
       responsiveLayout="scroll"
       styleClass="p-datatable-sm"
     >
@@ -111,8 +110,32 @@
               </span>
             </button>
           </th>
-          <th pSortableColumn="belt" data-cy="athletes-th-belt">
-            Belt <p-sortIcon field="belt" />
+          <th class="belt-th" [attr.aria-sort]="beltAriaSort()">
+            <button
+              type="button"
+              class="belt-th__btn"
+              data-cy="athletes-th-belt"
+              [pTooltip]="beltSortTooltip()"
+              tooltipPosition="top"
+              (click)="cycleBeltSort()"
+              [attr.aria-label]="beltSortTooltip()"
+            >
+              Belt
+              <!--
+                Custom signifier (#210, follow-up to #205): drops PrimeNG's
+                `<p-sortIcon>` so the active state reads from OUR signals
+                instead of PrimeNG's internal table state. When the sort
+                moves to first/last_name (Full-name cycle), this column's
+                arrow goes back to neutral instead of staying highlighted.
+              -->
+              <span
+                class="belt-th__signifier"
+                [class.belt-th__signifier--active]="sortField() === 'belt'"
+                aria-hidden="true"
+              >
+                {{ beltSortLabel() }}
+              </span>
+            </button>
           </th>
           <th>Status</th>
           @if (hasMonthlyFee()) {

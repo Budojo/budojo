@@ -199,27 +199,6 @@ export class AthletesListComponent implements OnInit {
   }
 
   /**
-   * PrimeNG p-table emits `{ field, order }` on header click.
-   * `order` is 1 (asc) or -1 (desc). We map to our `'asc' | 'desc'` and
-   * fire a fresh load. Re-clicking the same column flips the order.
-   *
-   * `stripes` is NOT in the allowlist (#101): it's a within-belt tiebreaker
-   * only, applied automatically by the backend when sort_by=belt. Allowing
-   * it as a primary sort would let a 4-stripe blue belt appear above a
-   * 0-stripe black belt — never the right ordering.
-   */
-  onSort(event: { field?: string; order?: number }): void {
-    const allowed: AthleteSortField[] = ['first_name', 'last_name', 'belt', 'created_at'];
-    const field = event.field;
-    if (!field || !(allowed as string[]).includes(field)) return;
-
-    this.sortField.set(field as AthleteSortField);
-    this.sortOrder.set(event.order === 1 ? 'asc' : 'desc');
-    this.resetPage();
-    this.load();
-  }
-
-  /**
    * 4-state cycle on the synthetic "Full name" column header (#196). The
    * column is `first_name + last_name` glued client-side, so a single
    * scalar sort is degenerate (ties between same-first-name athletes
@@ -305,6 +284,68 @@ export class AthletesListComponent implements OnInit {
   readonly fullNameAriaSort = computed<'ascending' | 'descending' | 'none'>(() => {
     const f = this.sortField();
     if (f !== 'first_name' && f !== 'last_name') return 'none';
+    return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
+  });
+
+  /**
+   * Belt sort cycle (#210, follow-up to #205). Same pattern as the
+   * Full-name column but with only 2 states (asc / desc), since Belt
+   * isn't a synthetic column — there's no first-vs-last lead to choose,
+   * just a direction. The cycle:
+   *
+   *   none/other → asc → desc → asc → ...
+   *
+   * Backend's `applyBeltSort` is rank-aware (white < blue < ... < black)
+   * with stripes desc + last_name asc as stable tiebreakers. Direction
+   * here is the rank direction.
+   *
+   * Replaces the old `pSortableColumn="belt"` + `<p-sortIcon>` pair so
+   * the active visual reads from OUR signals — when the sort moves to
+   * first/last_name, this column's arrow goes back to neutral instead
+   * of staying highlighted via PrimeNG's stale internal state.
+   */
+  cycleBeltSort(): void {
+    const f = this.sortField();
+    const o = this.sortOrder();
+
+    let nextOrder: AthleteSortOrder;
+    if (f === 'belt' && o === 'asc') {
+      nextOrder = 'desc';
+    } else {
+      // First click on the column or coming in from any other state
+      // (null, name sort, etc.) → start at asc, the conventional default.
+      nextOrder = 'asc';
+    }
+
+    this.sortField.set('belt');
+    this.sortOrder.set(nextOrder);
+    this.resetPage();
+    this.load();
+  }
+
+  /**
+   * Compact direction signifier for the Belt header. `↑` when asc,
+   * `↓` when desc, `↕` when the sort is on a different column. Matches
+   * the visual rhythm of the Full-name signifier.
+   */
+  readonly beltSortLabel = computed<string>(() => {
+    if (this.sortField() !== 'belt') return '↕';
+    return this.sortOrder() === 'asc' ? '↑' : '↓';
+  });
+
+  /** Plain-English tooltip — Norman § signifier. */
+  readonly beltSortTooltip = computed<string>(() => {
+    const f = this.sortField();
+    if (f !== 'belt') {
+      return 'Click to sort by belt rank (white → black)';
+    }
+    const direction = this.sortOrder() === 'asc' ? 'white → black' : 'black → white';
+    return `Sorted by belt (${direction}). Click to flip.`;
+  });
+
+  /** WAI-ARIA sort state for the Belt <th>. */
+  readonly beltAriaSort = computed<'ascending' | 'descending' | 'none'>(() => {
+    if (this.sortField() !== 'belt') return 'none';
     return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
   });
 

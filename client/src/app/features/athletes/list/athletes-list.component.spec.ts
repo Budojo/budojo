@@ -36,53 +36,6 @@ describe('AthletesListComponent', () => {
     });
   });
 
-  describe('onSort allowlist (#101)', () => {
-    // Stripes is meaningful only as a within-belt tiebreaker (handled in
-    // `applyBeltSort()` on the backend). It's never the right primary sort,
-    // so the table no longer offers it as a sortable column AND the runtime
-    // allowlist rejects it defensively in case PrimeNG ever fires the event
-    // anyway (e.g. via custom keyboard binding or external code).
-    it('ignores field="stripes" — sortField stays at the previously-set value', () => {
-      const fixture = TestBed.createComponent(AthletesListComponent);
-      const component = fixture.componentInstance;
-      fixture.detectChanges();
-
-      component.onSort({ field: 'belt', order: -1 });
-      expect(component.sortField()).toBe('belt');
-      expect(component.sortOrder()).toBe('desc');
-
-      component.onSort({ field: 'stripes', order: -1 });
-      // Unchanged — 'stripes' was filtered out of the allowlist.
-      expect(component.sortField()).toBe('belt');
-      expect(component.sortOrder()).toBe('desc');
-    });
-
-    it('accepts every field in the allowlist as a primary sort', () => {
-      const fixture = TestBed.createComponent(AthletesListComponent);
-      const component = fixture.componentInstance;
-      fixture.detectChanges();
-
-      // Mirrors the runtime allowlist in `onSort()`. `created_at` is the
-      // default-fallback column on the backend; keeping it explicitly
-      // allowed lets the table fire `sort_by=created_at` in the (rare)
-      // case a future header binds to it.
-      for (const field of ['belt', 'first_name', 'last_name', 'created_at'] as const) {
-        component.onSort({ field, order: 1 });
-        expect(component.sortField()).toBe(field);
-      }
-    });
-
-    it('rejects field="joined_at" — column was dropped (#164)', () => {
-      const fixture = TestBed.createComponent(AthletesListComponent);
-      const component = fixture.componentInstance;
-      fixture.detectChanges();
-      component.onSort({ field: 'last_name', order: 1 });
-      // Now try the dropped column — should be ignored.
-      component.onSort({ field: 'joined_at', order: -1 });
-      expect(component.sortField()).toBe('last_name');
-    });
-  });
-
   describe('Full name 4-state sort cycle (#196)', () => {
     // The synthetic Full name column cycles four states on click:
     // first asc → first desc → last asc → last desc → (loops back to first asc).
@@ -127,7 +80,7 @@ describe('AthletesListComponent', () => {
       const component = fixture.componentInstance;
       fixture.detectChanges();
 
-      component.onSort({ field: 'belt', order: -1 });
+      component.cycleBeltSort();
       expect(component.sortField()).toBe('belt');
 
       component.cycleFullNameSort();
@@ -175,6 +128,88 @@ describe('AthletesListComponent', () => {
       component.cycleFullNameSort(); // last asc
       expect(listSpy.mock.calls[0][0].sortBy).toBe('last_name');
       expect(listSpy.mock.calls[0][0].sortOrder).toBe('asc');
+    });
+  });
+
+  describe('Belt 2-state sort cycle (#210)', () => {
+    // The Belt header has its own custom click handler (replacing the
+    // dropped pSortableColumn + p-sortIcon pair, see #205 / #210). The
+    // cycle is simpler than Full-name's 4-state — just asc / desc on
+    // the belt rank, since there's no first-vs-last lead to choose.
+
+    it('starts at belt asc when the sort is initially neutral', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.cycleBeltSort();
+      expect(component.sortField()).toBe('belt');
+      expect(component.sortOrder()).toBe('asc');
+    });
+
+    it('flips asc → desc → asc on subsequent clicks of the same column', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.cycleBeltSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['belt', 'asc']);
+
+      component.cycleBeltSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['belt', 'desc']);
+
+      component.cycleBeltSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['belt', 'asc']);
+    });
+
+    it('restarts at asc when the active sort is on a different column', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.cycleFullNameSort(); // first_name asc
+      component.cycleFullNameSort(); // first_name desc
+      expect([component.sortField(), component.sortOrder()]).toEqual(['first_name', 'desc']);
+
+      component.cycleBeltSort();
+      // Coming in from a non-belt sort → back to asc, not flipped to desc.
+      expect([component.sortField(), component.sortOrder()]).toEqual(['belt', 'asc']);
+    });
+
+    it('renders the signifier as ↑/↓ when active and ↕ when inactive', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      // Neutral.
+      expect(component.beltSortLabel()).toBe('↕');
+
+      component.cycleBeltSort();
+      expect(component.beltSortLabel()).toBe('↑');
+
+      component.cycleBeltSort();
+      expect(component.beltSortLabel()).toBe('↓');
+
+      // Move to a different column — Belt signifier returns to neutral.
+      component.cycleFullNameSort();
+      expect(component.beltSortLabel()).toBe('↕');
+    });
+
+    it('forwards sort_by=belt + sort_order to the backend filter', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+
+      listSpy.mockClear();
+      component.cycleBeltSort();
+      expect(listSpy.mock.calls[0][0].sortBy).toBe('belt');
+      expect(listSpy.mock.calls[0][0].sortOrder).toBe('asc');
+
+      listSpy.mockClear();
+      component.cycleBeltSort();
+      expect(listSpy.mock.calls[0][0].sortBy).toBe('belt');
+      expect(listSpy.mock.calls[0][0].sortOrder).toBe('desc');
     });
   });
 
