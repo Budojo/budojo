@@ -200,10 +200,11 @@
   // label and respects PrimeNG's table styling.
   //
   // `display: flex` + `width: 100%` makes the click target span the
-  // full width of the <th>; the inherited cell padding gives the
-  // vertical strip its full height. Combined, the entire visible
-  // cell area dispatches the cycle on click — same affordance the
-  // other PrimeNG sortable headers carry.
+  // full width of the <th>; the explicit padding below mirrors what
+  // PrimeNG would have applied to the cell, so the vertical strip
+  // keeps its full height as part of the button. Combined, the entire
+  // visible cell area dispatches the cycle on click — same affordance
+  // the other PrimeNG sortable headers carry.
   display: flex;
   align-items: center;
   gap: 0.375rem;
