@@ -155,8 +155,10 @@ export class DailyAttendanceComponent implements OnInit {
       return;
     }
     // Walk back up to 7 days to find the most recent past training day.
-    // Bounded loop so we don't spin forever on a malformed `training_days`
-    // (the regex of zero-length is already handled above, but defensive).
+    // The 7-iteration cap guarantees termination even if `training_days`
+    // ever ends up containing only weekday values that aren't actually
+    // weekdays — the early-out `length === 0` check above is the common
+    // case, this loop's bound is the defensive backstop.
     const cursor = new Date(today);
     for (let i = 0; i < 7; i++) {
       cursor.setDate(cursor.getDate() - 1);
