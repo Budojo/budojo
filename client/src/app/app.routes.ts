@@ -134,4 +134,12 @@ export const routes: Routes = [
     ],
   },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
+  // Wildcard 404 (#226) — must stay last; everything above is matched
+  // first. Hit on any URL that no other route resolves, including
+  // dead deep-links that used to exist but were removed/renamed.
+  {
+    path: '**',
+    loadComponent: () =>
+      import('./features/not-found/not-found.component').then((m) => m.NotFoundComponent),
+  },
 ];
