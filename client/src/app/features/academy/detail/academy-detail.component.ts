@@ -45,6 +45,24 @@ export class AcademyDetailComponent {
   protected readonly logoUploading = signal(false);
   protected readonly logoUrl = computed(() => this.academy()?.logo_url ?? null);
 
+  /**
+   * Phone (#161) — emits both the unspaced E.164 form for the `tel:`
+   * href (`tel:` doesn't tolerate inner whitespace) and a human-spaced
+   * label for the visible text. Returns null when either half of the
+   * pair is missing — the all-or-nothing validator on the wire keeps
+   * "only country code, no number" from ever happening, but the
+   * defensive null-check covers legacy / partial data.
+   */
+  protected readonly phoneE164 = computed<{ unspaced: string; spaced: string } | null>(() => {
+    const cc = this.academy()?.phone_country_code;
+    const nn = this.academy()?.phone_national_number;
+    if (!cc || !nn) return null;
+    return {
+      unspaced: `${cc}${nn}`,
+      spaced: `${cc} ${nn}`,
+    };
+  });
+
   protected onLogoBrowse(): void {
     this.logoInput?.nativeElement.click();
   }

@@ -77,6 +77,23 @@
       </dd>
     </div>
 
+    <div class="row">
+      <dt class="row__label">Phone</dt>
+      <dd class="row__value" data-cy="academy-row-phone">
+        @if (phoneE164(); as phone) {
+          <!--
+            tel: link with the unspaced E.164 form for the href (`tel:`
+            schemes can't tolerate inner whitespace) but a human-spaced
+            label as the visible text. Tappable on mobile, copyable on
+            desktop, works for both audiences without a duplicate row.
+          -->
+          <a [href]="'tel:' + phone.unspaced" class="row__link">{{ phone.spaced }}</a>
+        } @else {
+          —
+        }
+      </dd>
+    </div>
+
     @let addr = a?.address;
     <div class="row">
       <dt class="row__label">Address</dt>
