@@ -130,4 +130,56 @@ describe('AcademyDetailComponent', () => {
     expect(html.querySelector('[data-cy="academy-name"]')?.textContent?.trim()).toBe('—');
     expect(html.querySelector('[data-cy="academy-row-slug"]')?.textContent?.trim()).toBe('—');
   });
+
+  // ─── Phone row (#161 follow-up) ────────────────────────────────────────────
+  // Phone is set on the edit form but was missing from the read-only detail
+  // page. The pair is all-or-nothing on the wire; render a tappable
+  // `tel:` link when both halves are present, an em-dash otherwise.
+
+  it('renders the phone pair as a tel: link when both fields are populated', () => {
+    setupTestBed();
+    TestBed.inject(AcademyService).academy.set(
+      makeAcademy({ phone_country_code: '+39', phone_national_number: '3331234567' }),
+    );
+
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const cell = fixture.nativeElement.querySelector(
+      '[data-cy="academy-row-phone"]',
+    ) as HTMLElement;
+    const link = cell.querySelector('a') as HTMLAnchorElement | null;
+    expect(link).not.toBeNull();
+    // Visible label uses a space between the prefix and the digits.
+    expect(link!.textContent?.trim()).toBe('+39 3331234567');
+    // `tel:` href cannot tolerate inner whitespace — must be the unspaced
+    // E.164 form so iOS / Android dialer parses it cleanly.
+    expect(link!.getAttribute('href')).toBe('tel:+393331234567');
+  });
+
+  // Partial-data defence: the all-or-nothing validator on the wire keeps
+  // half-filled pairs from being saved on new rows, but legacy rows or
+  // schema migrations can land with one half null and the other set.
+  // The em-dash fallback must trigger in every "incomplete" shape, not
+  // just both-null — covering all three keeps the contract honest.
+  it.each([
+    { phone_country_code: null, phone_national_number: null },
+    { phone_country_code: '+39', phone_national_number: null },
+    { phone_country_code: null, phone_national_number: '3331234567' },
+  ])(
+    'renders an em-dash when the phone pair is partial (cc=$phone_country_code, nn=$phone_national_number)',
+    (overrides) => {
+      setupTestBed();
+      TestBed.inject(AcademyService).academy.set(makeAcademy(overrides));
+
+      const fixture = TestBed.createComponent(AcademyDetailComponent);
+      fixture.detectChanges();
+
+      const cell = fixture.nativeElement.querySelector(
+        '[data-cy="academy-row-phone"]',
+      ) as HTMLElement;
+      expect(cell.querySelector('a')).toBeNull();
+      expect(cell.textContent?.trim()).toBe('—');
+    },
+  );
 });

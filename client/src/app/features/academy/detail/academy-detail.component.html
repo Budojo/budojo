@@ -77,6 +77,23 @@
       </dd>
     </div>
 
+    <div class="row">
+      <dt class="row__label">Phone</dt>
+      <dd class="row__value" data-cy="academy-row-phone">
+        @if (phoneE164(); as phone) {
+          <!--
+            tel: link — both forms come pre-built from the `phoneE164`
+            computed (full `tel:+393331234567` href + the human-spaced
+            label "+39 3331234567"). Template stays a pure projection,
+            no inline string concatenation.
+          -->
+          <a [href]="phone.telHref" class="row__link">{{ phone.label }}</a>
+        } @else {
+          —
+        }
+      </dd>
+    </div>
+
     @let addr = a?.address;
     <div class="row">
       <dt class="row__label">Address</dt>

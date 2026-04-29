@@ -111,6 +111,26 @@
   font-size: 0.9375rem;
 }
 
+// Phone link inside a row value. Inherits the row's body color and font
+// — the affordance comes from the `tel:` href (mobile picks up the
+// system tap-to-call prompt, desktop does nothing visual but still lets
+// the user copy). On hover we surface the primary color so it reads as
+// a link without standing out at rest (Norman § signifier — the
+// underline below carries the "this is interactive" cue).
+.row__link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--p-content-border-color);
+  text-underline-offset: 2px;
+  transition: color var(--budojo-motion-quick, 160ms) ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--p-primary-color);
+    text-decoration-color: currentColor;
+  }
+}
+
 .detail__hint {
   margin: 0;
   font-size: 0.8125rem; // Footnote
