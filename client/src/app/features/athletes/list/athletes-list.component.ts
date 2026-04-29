@@ -294,6 +294,20 @@ export class AthletesListComponent implements OnInit {
     return `Sorted by ${lead} (${direction}). Click to cycle.`;
   });
 
+  /**
+   * `aria-sort` value for the Full name <th>. WAI-ARIA only knows
+   * `ascending` / `descending` / `none` — it doesn't differentiate which
+   * field is the lead, so the screen reader gets the direction here and
+   * the lead through the inner button's aria-label (which mirrors the
+   * tooltip). Together they convey the full state to AT users (#199
+   * follow-up to Copilot a11y review).
+   */
+  readonly fullNameAriaSort = computed<'ascending' | 'descending' | 'none'>(() => {
+    const f = this.sortField();
+    if (f !== 'first_name' && f !== 'last_name') return 'none';
+    return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
+  });
+
   goToNew(): void {
     void this.router.navigate(['/dashboard/athletes/new']);
   }

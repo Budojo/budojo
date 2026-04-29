@@ -91,22 +91,21 @@
     >
       <ng-template pTemplate="header">
         <tr>
-          <th
-            class="full-name-th"
-            data-cy="athletes-th-name"
-            [pTooltip]="fullNameSortTooltip()"
-            tooltipPosition="top"
-            (click)="cycleFullNameSort()"
-            (keydown.enter)="cycleFullNameSort()"
-            (keydown.space)="cycleFullNameSort(); $event.preventDefault()"
-            tabindex="0"
-            role="button"
-            [attr.aria-label]="fullNameSortTooltip()"
-          >
-            Full name
-            <span class="full-name-th__signifier" aria-hidden="true">
-              {{ fullNameSortLabel() ?? '↕' }}
-            </span>
+          <th class="full-name-th" [attr.aria-sort]="fullNameAriaSort()">
+            <button
+              type="button"
+              class="full-name-th__btn"
+              data-cy="athletes-th-name"
+              [pTooltip]="fullNameSortTooltip()"
+              tooltipPosition="top"
+              (click)="cycleFullNameSort()"
+              [attr.aria-label]="fullNameSortTooltip()"
+            >
+              Full name
+              <span class="full-name-th__signifier" aria-hidden="true">
+                {{ fullNameSortLabel() ?? '↕' }}
+              </span>
+            </button>
           </th>
           <th pSortableColumn="belt" data-cy="athletes-th-belt">
             Belt <p-sortIcon field="belt" />
