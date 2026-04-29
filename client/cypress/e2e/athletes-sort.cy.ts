@@ -47,11 +47,47 @@ describe('athletes table — column sorting', () => {
       .and('include', 'sort_order=desc');
   });
 
-  it('sends sort_by=last_name when the Name header is clicked', () => {
+  it('cycles the Full name header through 4 states (#196)', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait('@athletes');
 
+    // The Full name column is a synthetic field — first_name + last_name —
+    // so a single 2-state sort would leave same-first-name athletes in
+    // arbitrary tiebreak order. The 4-state cycle picks both the leading
+    // name and the direction; the backend tiebreaks on the OTHER name in
+    // the same direction (see AthleteController::applyNameSort).
+    //
+    // Cycle: neutral → first asc → first desc → last asc → last desc → first asc
+
     cy.get('[data-cy="athletes-th-name"]').click();
-    cy.wait('@athletes').its('request.url').should('include', 'sort_by=last_name');
+    cy.wait('@athletes')
+      .its('request.url')
+      .should('include', 'sort_by=first_name')
+      .and('include', 'sort_order=asc');
+
+    cy.get('[data-cy="athletes-th-name"]').click();
+    cy.wait('@athletes')
+      .its('request.url')
+      .should('include', 'sort_by=first_name')
+      .and('include', 'sort_order=desc');
+
+    cy.get('[data-cy="athletes-th-name"]').click();
+    cy.wait('@athletes')
+      .its('request.url')
+      .should('include', 'sort_by=last_name')
+      .and('include', 'sort_order=asc');
+
+    cy.get('[data-cy="athletes-th-name"]').click();
+    cy.wait('@athletes')
+      .its('request.url')
+      .should('include', 'sort_by=last_name')
+      .and('include', 'sort_order=desc');
+
+    // Loops back to the first state.
+    cy.get('[data-cy="athletes-th-name"]').click();
+    cy.wait('@athletes')
+      .its('request.url')
+      .should('include', 'sort_by=first_name')
+      .and('include', 'sort_order=asc');
   });
 });
