@@ -176,6 +176,21 @@ describe('AthletesListComponent', () => {
       expect(listSpy.mock.calls[0][0].sortBy).toBe('last_name');
       expect(listSpy.mock.calls[0][0].sortOrder).toBe('asc');
     });
+
+    // `primengSortOrder` is the bridge between our string sort-order and
+    // PrimeNG's controlled `<p-table>` numeric input — when it drifts,
+    // the Belt sort icon stops syncing with the active state (#205).
+    it("maps the sortOrder signal to PrimeNG's 1/-1 numeric form", () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.sortOrder.set('asc');
+      expect(component.primengSortOrder()).toBe(1);
+
+      component.sortOrder.set('desc');
+      expect(component.primengSortOrder()).toBe(-1);
+    });
   });
 
   describe('search filter (#102)', () => {
