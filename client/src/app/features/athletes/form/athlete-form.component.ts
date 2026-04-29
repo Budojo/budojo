@@ -159,7 +159,13 @@ export class AthleteFormComponent implements OnInit {
     this.athleteId() === null ? 'create' : 'edit',
   );
 
+  // Order = IBJJF rank (kids first, adults after) so the picker reads
+  // bottom-up like a progression chart.
   readonly beltOptions: SelectOption<Belt>[] = [
+    { label: 'Grey (kids)', value: 'grey' },
+    { label: 'Yellow (kids)', value: 'yellow' },
+    { label: 'Orange (kids)', value: 'orange' },
+    { label: 'Green (kids)', value: 'green' },
     { label: 'White', value: 'white' },
     { label: 'Blue', value: 'blue' },
     { label: 'Purple', value: 'purple' },

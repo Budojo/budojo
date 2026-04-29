@@ -169,8 +169,13 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private readonly searchInputSubject = new Subject<string>();
 
+  // Order = IBJJF rank (kids first, adults after).
   protected readonly beltOptions: SelectOption<Belt>[] = [
     { label: 'All belts', value: '' },
+    { label: 'Grey (kids)', value: 'grey' },
+    { label: 'Yellow (kids)', value: 'yellow' },
+    { label: 'Orange (kids)', value: 'orange' },
+    { label: 'Green (kids)', value: 'green' },
     { label: 'White', value: 'white' },
     { label: 'Blue', value: 'blue' },
     { label: 'Purple', value: 'purple' },

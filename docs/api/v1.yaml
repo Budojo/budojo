@@ -433,8 +433,9 @@ paths:
         - name: sort_by
           in: query
           description: |
-            Column to sort by. `belt` is rank-aware (white < blue < purple <
-            brown < black) via a SQL CASE expression — NOT a lexicographic
+            Column to sort by. `belt` is rank-aware on the full IBJJF scale
+            (kids: grey < yellow < orange < green; adults: white < blue <
+            purple < brown < black) via a SQL CASE expression — NOT a lexicographic
             sort on the column value — and chains `stripes desc` + `last_name
             asc` as stable tiebreakers so two athletes at the same belt
             level always render in the same row order. `stripes` is not
@@ -1209,8 +1210,11 @@ components:
 
     Belt:
       type: string
-      description: IBJJF adult belt ranks
-      enum: [white, blue, purple, brown, black]
+      description: |-
+        IBJJF belt ranks on a single linear scale: youth belts (`grey`,
+        `yellow`, `orange`, `green`) precede adult belts (`white`, `blue`,
+        `purple`, `brown`, `black`). Youth belts added in #230.
+      enum: [grey, yellow, orange, green, white, blue, purple, brown, black]
 
     AthleteStatus:
       type: string

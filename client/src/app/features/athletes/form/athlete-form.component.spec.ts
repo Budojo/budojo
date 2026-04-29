@@ -166,6 +166,30 @@ describe('AthleteFormComponent', () => {
       expect(cmp.phoneNationalNumber.errors).toBeNull();
     });
 
+    it('drops the pair error when the country code is cleared back to empty (#228)', () => {
+      // Beta tester (Luigi) reported: tapping the CC dropdown locked
+      // both fields. The underlying validator already handles
+      // CC='' / null correctly; this test pins the behavior that the
+      // new [showClear]="true" on the p-select relies on.
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      cmp.phoneCountryCode.setValue('+39');
+      expect(cmp.phoneNationalNumber.errors?.['phonePairRequired']).toBe(true);
+
+      // PrimeNG's [showClear] emits `null` to the form control at
+      // runtime. The form is `fb.nonNullable.group(...)`, so the
+      // strict-typed `setValue` rejects `null` at compile time — but the
+      // runtime call is what we must exercise here, since that's the
+      // exact thing the validator sees in production. The cast pins
+      // the null path that `reset()` (which goes through the default
+      // value, not null) would silently bypass.
+      cmp.phoneCountryCode.setValue(null as unknown as string);
+      expect(cmp.phoneCountryCode.errors).toBeNull();
+      expect(cmp.phoneNationalNumber.errors).toBeNull();
+    });
+
     it('rejects non-digit characters in the national number (#75)', () => {
       const fixture = TestBed.createComponent(AthleteFormComponent);
       fixture.detectChanges();

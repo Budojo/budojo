@@ -8,7 +8,18 @@ import { Observable, map } from 'rxjs';
 import { Address } from './academy.service';
 import { environment } from '../../../environments/environment';
 
-export type Belt = 'white' | 'blue' | 'purple' | 'brown' | 'black';
+export type Belt =
+  // IBJJF Youth belts (#230).
+  | 'grey'
+  | 'yellow'
+  | 'orange'
+  | 'green'
+  // IBJJF Adult belts.
+  | 'white'
+  | 'blue'
+  | 'purple'
+  | 'brown'
+  | 'black';
 export type AthleteStatus = 'active' | 'suspended' | 'inactive';
 
 export interface Athlete {

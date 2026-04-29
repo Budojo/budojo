@@ -19,7 +19,7 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 | `facebook` | string(255) | nullable | Facebook profile URL (#162). Same shape as `website`. |
 | `instagram` | string(255) | nullable | Instagram profile URL (#162). Same shape as `website`. |
 | `date_of_birth` | date | nullable | Cast to `Carbon\Carbon` in the model |
-| `belt` | string | not null | Cast to `App\Enums\Belt` backed enum (`white` / `blue` / `purple` / `brown` / `black`) |
+| `belt` | string | not null | Cast to `App\Enums\Belt` backed enum — kids (`grey` / `yellow` / `orange` / `green`) + adults (`white` / `blue` / `purple` / `brown` / `black`) |
 | `stripes` | tinyint unsigned | not null, default `0` | Range 0–4, enforced at validation layer |
 | `status` | string | not null | Cast to `App\Enums\AthleteStatus` backed enum (`active` / `suspended` / `inactive`) |
 | `joined_at` | date | not null | When the athlete first enrolled |
@@ -43,15 +43,19 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 
 ### `App\Enums\Belt`
 
-| Case | Value |
-|---|---|
-| `White` | `white` |
-| `Blue` | `blue` |
-| `Purple` | `purple` |
-| `Brown` | `brown` |
-| `Black` | `black` |
+| Case | Value | Rank |
+|---|---|---|
+| `Grey` | `grey` | 1 |
+| `Yellow` | `yellow` | 2 |
+| `Orange` | `orange` | 3 |
+| `Green` | `green` | 4 |
+| `White` | `white` | 5 |
+| `Blue` | `blue` | 6 |
+| `Purple` | `purple` | 7 |
+| `Brown` | `brown` | 8 |
+| `Black` | `black` | 9 |
 
-Represents IBJJF adult belt ranks. Kids/youth belts are not modeled — they are out of scope until explicitly requested.
+Covers both **IBJJF Youth** (kids/teens up to ~16) and **IBJJF Adult** belt ranks on a single linear rank scale, with kids belts ranking below `white`. The youth set was added in #230 (request from beta tester Luigi). Sub-progressions inside each kids belt (e.g. grey-white, grey, grey-black) are not modelled — only the four base colours.
 
 ### `App\Enums\AthleteStatus`
 
@@ -70,7 +74,7 @@ Represents IBJJF adult belt ranks. Kids/youth belts are not modeled — they are
 - **Stripes range `0..4`.** Enforced at the FormRequest level via `min:0|max:4`. The DB column is an unsigned tinyint with no CHECK constraint.
 - **Address (#72b).** Athletes own at most one polymorphic `Address` row via `morphOne(Address::class, 'addressable')`. Update semantics on `PUT /api/v1/athletes/{id}` (Laravel's resource route also accepts `PATCH`): send `address: { line1, line2, city, postal_code, province, country }` to upsert in place, `address: null` to clear (delete the morph row), or omit the key to leave untouched. Same two-layer enforcement as `Academy`: DB UNIQUE index on `(addressable_type, addressable_id)` plus `SyncAddressAction`'s atomic `updateOrCreate`. On hard delete (`forceDelete`) the `AthleteObserver::forceDeleted` hook wipes the address; soft delete leaves it in place. See [`address.md`](./address.md).
 - **Phone is a structured pair (#75).** The two phone columns are jointly nullable: either both are `null` (no phone on file) or both carry a value. The FormRequest enforces this via `required_with` between the two fields, validates the country code with `regex:/^\+[1-9][0-9]{0,3}$/`, validates the national number with `regex:/^[0-9]+$/`, and runs a cross-field `withValidator` check that concatenates the pair and feeds it to `libphonenumber-for-php`'s `isValidNumber()` — combinations that are well-formed individually but unreachable in any numbering plan (e.g. `+39` + `1`) are rejected. The DB stores the raw national digits; formatting for display is the client's job.
-- **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (enum), `status` (enum), `paid` (`yes`|`no` — has a payment record for the current calendar month or not), and `q` (free-text token-AND search across `first_name` + `last_name`, case-insensitive). Sort: `sort_by` ∈ {`first_name`, `last_name`, `belt`, `joined_at`, `created_at`} with `sort_order` (`asc`|`desc`, default `desc`). `belt` is rank-aware (white < blue < purple < brown < black) with `stripes` desc + `last_name` asc as stable tiebreakers. Page via `?page=N`. The OpenAPI contract at `docs/api/v1.yaml` is the canonical reference for parameter shape and defaults.
+- **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (enum), `status` (enum), `paid` (`yes`|`no` — has a payment record for the current calendar month or not), and `q` (free-text token-AND search across `first_name` + `last_name`, case-insensitive). Sort: `sort_by` ∈ {`first_name`, `last_name`, `belt`, `joined_at`, `created_at`} with `sort_order` (`asc`|`desc`, default `desc`). `belt` is rank-aware (kids `grey < yellow < orange < green` < adults `white < blue < purple < brown < black`) with `stripes` desc + `last_name` asc as stable tiebreakers. Page via `?page=N`. The OpenAPI contract at `docs/api/v1.yaml` is the canonical reference for parameter shape and defaults.
 
 ## Related endpoints
 
