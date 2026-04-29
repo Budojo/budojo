@@ -31,5 +31,36 @@
         <app-email-verification-status />
       </div>
     </p-card>
+
+    <!--
+      GDPR data portability (#222). Single primary action — a ZIP that
+      bundles the JSON metadata + every uploaded document. The endpoint
+      enforces a 1-call/min throttle so accidental retries don't hammer
+      the backend; the loading state on the button mirrors that.
+    -->
+    <p-card styleClass="profile-page__card">
+      <div class="profile-page__row profile-page__row--export">
+        <div class="profile-page__export-text">
+          <span class="profile-page__label">I tuoi dati</span>
+          <p class="profile-page__export-hint">
+            Scarica una copia completa del tuo account: anagrafica academy, atleti, pagamenti,
+            presenze, e i documenti caricati. Il file è uno ZIP che puoi aprire con qualsiasi
+            programma di archiviazione.
+          </p>
+        </div>
+        <p-button
+          type="button"
+          icon="pi pi-download"
+          label="Scarica i miei dati"
+          severity="secondary"
+          [outlined]="true"
+          [loading]="exporting()"
+          (onClick)="exportMyData()"
+          data-cy="profile-export-data"
+        />
+      </div>
+    </p-card>
+
+    <p-toast position="top-right" />
   </div>
 }
