@@ -100,3 +100,61 @@
     }
   }
 }
+
+// Contact-links chip list (#162) — one icon-only `<a>` per populated
+// social channel. Mirrors the academy-detail rules; duplicated rather
+// than extracted (Rule of Three: extract on the third consumer).
+.contact-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--p-border-radius-md);
+    border: 1px solid var(--p-content-border-color);
+    color: var(--p-text-color);
+    text-decoration: none;
+    transition:
+      background var(--budojo-motion-quick, 160ms) ease,
+      border-color var(--budojo-motion-quick, 160ms) ease,
+      color var(--budojo-motion-quick, 160ms) ease;
+
+    i {
+      font-size: 1.125rem;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: var(--p-content-hover-background);
+      border-color: var(--p-primary-color);
+      color: var(--p-primary-color);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  // Visually hidden but reachable by screen readers — the icon alone
+  // wouldn't announce as anything meaningful.
+  &__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}

@@ -96,6 +96,33 @@ function phonePairRequired(siblingName: string): ValidatorFn {
   };
 }
 
+/**
+ * Validates that, when the field has a value, that value is a parseable
+ * URL (http/https). Empty / whitespace-only values pass — the field is
+ * optional. Mirrors the same validator on the academy form (#162) and
+ * the backend's `nullable|url|max:255` rule. Tighter than Laravel's
+ * default `url` (which accepts any scheme): we reject `mailto:`,
+ * `javascript:`, etc. because the SPA renders these as social-link
+ * chips that should only navigate to a real website.
+ *
+ * Duplicated rather than extracted to a shared util — second consumer
+ * (Rule of Three: extract on the third). If a fourth form ever needs
+ * URL fields, move this to `client/src/app/shared/utils/url-form.ts`.
+ */
+const urlIfPresent: ValidatorFn = (control: AbstractControl) => {
+  const raw = (control.value ?? '').toString().trim();
+  if (raw === '') return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { url: true };
+    }
+    return null;
+  } catch {
+    return { url: true };
+  }
+};
+
 @Component({
   selector: 'app-athlete-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -190,6 +217,12 @@ export class AthleteFormComponent implements OnInit {
         Validators.pattern(/^[0-9]+$/),
       ],
     ],
+    // Contact links (#162) — same shape as the academy form. Each is
+    // independently nullable; URL-or-empty validator rejects bare
+    // handles + non-http(s) schemes before the network round-trip.
+    website: ['', [Validators.maxLength(255), urlIfPresent]],
+    facebook: ['', [Validators.maxLength(255), urlIfPresent]],
+    instagram: ['', [Validators.maxLength(255), urlIfPresent]],
     // date_of_birth is the only field that can genuinely be null
     date_of_birth: this.fb.control<Date | null>(null),
     belt: this.fb.nonNullable.control<Belt>('white', Validators.required),
@@ -306,6 +339,16 @@ export class AthleteFormComponent implements OnInit {
   get phoneNationalNumber() {
     return this.form.controls.phone_national_number;
   }
+  // Contact links (#162) — each independently optional.
+  get website() {
+    return this.form.controls.website;
+  }
+  get facebook() {
+    return this.form.controls.facebook;
+  }
+  get instagram() {
+    return this.form.controls.instagram;
+  }
   get dateOfBirth() {
     return this.form.controls.date_of_birth;
   }
@@ -360,6 +403,9 @@ export class AthleteFormComponent implements OnInit {
             email: athlete.email ?? '',
             phone_country_code: athlete.phone_country_code ?? '',
             phone_national_number: athlete.phone_national_number ?? '',
+            website: athlete.website ?? '',
+            facebook: athlete.facebook ?? '',
+            instagram: athlete.instagram ?? '',
             date_of_birth: fromDateString(athlete.date_of_birth),
             belt: athlete.belt,
             stripes: String(athlete.stripes),
@@ -388,6 +434,12 @@ export class AthleteFormComponent implements OnInit {
 
     const cc = v.phone_country_code?.trim() || null;
     const nn = v.phone_national_number?.trim() || null;
+    // Contact links (#162) — empty input → `null` on the wire (clears
+    // the column). The validator already rejects malformed URLs, so
+    // any non-empty value reaching here is a parseable http/https URL.
+    const website = v.website?.trim() || null;
+    const facebook = v.facebook?.trim() || null;
+    const instagram = v.instagram?.trim() || null;
 
     return {
       first_name: v.first_name.trim(),
@@ -395,6 +447,9 @@ export class AthleteFormComponent implements OnInit {
       email: v.email?.trim() || null,
       phone_country_code: cc,
       phone_national_number: nn,
+      website,
+      facebook,
+      instagram,
       date_of_birth: toDateString(v.date_of_birth),
       belt: v.belt,
       stripes: Number(v.stripes),
