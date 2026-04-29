@@ -182,4 +182,56 @@ describe('AcademyDetailComponent', () => {
       expect(cell.textContent?.trim()).toBe('—');
     },
   );
+
+  // ─── Contact links (#162 frontend half) ────────────────────────────────────
+  // The detail page renders the populated subset as icon chips that
+  // open in a new tab. Empty channels collapse silently — no row of
+  // grey placeholders, since the user already sees the empty inputs
+  // on the edit form.
+
+  it('renders only the populated contact-link chips with the right icon + href', () => {
+    setupTestBed();
+    TestBed.inject(AcademyService).academy.set(
+      makeAcademy({
+        website: 'https://gracie-barra.com',
+        facebook: 'https://facebook.com/graciebarra',
+        // instagram intentionally omitted — should NOT render a chip.
+      }),
+    );
+
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const cell = fixture.nativeElement.querySelector(
+      '[data-cy="academy-row-links"]',
+    ) as HTMLElement;
+    const chips = cell.querySelectorAll('a');
+
+    expect(chips.length).toBe(2);
+    expect(chips[0].getAttribute('href')).toBe('https://gracie-barra.com');
+    expect(chips[0].getAttribute('target')).toBe('_blank');
+    expect(chips[0].getAttribute('rel')).toBe('noopener noreferrer');
+    expect(chips[0].querySelector('i')?.className).toContain('pi-globe');
+    expect(chips[1].getAttribute('href')).toBe('https://facebook.com/graciebarra');
+    expect(chips[1].querySelector('i')?.className).toContain('pi-facebook');
+
+    // Sanity: no Instagram chip rendered.
+    expect(cell.querySelector('[data-cy="academy-link-instagram"]')).toBeNull();
+  });
+
+  it('renders an em-dash when no contact link is populated', () => {
+    setupTestBed();
+    TestBed.inject(AcademyService).academy.set(
+      makeAcademy({ website: null, facebook: null, instagram: null }),
+    );
+
+    const fixture = TestBed.createComponent(AcademyDetailComponent);
+    fixture.detectChanges();
+
+    const cell = fixture.nativeElement.querySelector(
+      '[data-cy="academy-row-links"]',
+    ) as HTMLElement;
+    expect(cell.querySelector('a')).toBeNull();
+    expect(cell.textContent?.trim()).toBe('—');
+  });
 });

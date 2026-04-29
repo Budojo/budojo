@@ -68,6 +68,28 @@ export class AcademyDetailComponent {
     };
   });
 
+  /**
+   * Contact links (#162) — emits the populated subset as `[icon, url]`
+   * tuples so the template can render only the rows that have a value
+   * (no empty placeholders for the social channels the academy hasn't
+   * filled). Returns `null` when ALL three are empty so the parent
+   * row collapses to an em-dash, matching the phone fallback shape.
+   *
+   * Icon class names map to PrimeIcons (canon § iconography — `pi pi-*`
+   * only, no custom SVG). The URLs are passed through verbatim;
+   * validation at the form layer guarantees they're parseable
+   * http/https — the SPA doesn't sanitize again.
+   */
+  protected readonly contactLinks = computed<{ icon: string; url: string; label: string }[]>(() => {
+    const a = this.academy();
+    if (!a) return [];
+    const links: { icon: string; url: string; label: string }[] = [];
+    if (a.website) links.push({ icon: 'pi pi-globe', url: a.website, label: 'Website' });
+    if (a.facebook) links.push({ icon: 'pi pi-facebook', url: a.facebook, label: 'Facebook' });
+    if (a.instagram) links.push({ icon: 'pi pi-instagram', url: a.instagram, label: 'Instagram' });
+    return links;
+  });
+
   protected onLogoBrowse(): void {
     this.logoInput?.nativeElement.click();
   }
