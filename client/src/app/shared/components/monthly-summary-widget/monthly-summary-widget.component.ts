@@ -61,17 +61,28 @@ export class MonthlySummaryWidgetComponent implements OnInit {
   );
 
   /**
-   * Headline metric (#170): average athletes per session held this
-   * month. Computed as `total attendance events / sessions actually
-   * held`. Returns `null` when the denominator is missing — academies
-   * that haven't configured `training_days` (no scheduledCount) or
-   * before any session has happened yet (scheduledCount === 0). The
-   * template renders an em-dash in that case so the user gets a clear
-   * "not enough data yet" signal instead of a misleading zero.
+   * Headline metric (#170): average athletes per session this month.
+   * Computed as `total attendance events / scheduled sessions elapsed`,
+   * where the denominator is the same `scheduledCount` value the per-row
+   * rate already uses (a count of weekdays in `training_days` whose
+   * date is ≤ today — i.e. sessions that *should* have happened by now,
+   * not literally those with attendance records). Same denominator as
+   * the per-row `X / Y · Z%` display, so the headline and the rows
+   * stay numerically consistent.
+   *
+   * Returns `null` when the denominator is missing — academies that
+   * haven't configured `training_days` (no scheduledCount) or before
+   * the first scheduled session of the month has elapsed
+   * (scheduledCount === 0). The template renders an em-dash in those
+   * cases so the user gets a clear "not enough data yet" signal
+   * instead of a misleading zero.
    *
    * Decimal precision: rounded to 1 decimal so small dojos (10–20
    * athletes, 12–20 sessions/month) see the value move meaningfully
-   * across the month without integer banding hiding the signal.
+   * across the month without integer banding hiding the signal. Note
+   * that 0.0 IS a valid value here (e.g. 1 attendance event / 25
+   * scheduled sessions rounds to 0.0) — the template binds via an
+   * explicit null check, not truthiness, so the zero shows.
    */
   protected readonly avgAthletesPerSession = computed<number | null>(() => {
     const sessions = this.scheduledCount();

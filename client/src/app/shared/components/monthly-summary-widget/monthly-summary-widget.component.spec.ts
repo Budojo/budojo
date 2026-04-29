@@ -141,13 +141,17 @@ describe('MonthlySummaryWidgetComponent', () => {
 
   // ─── Headline metric (#170) ─────────────────────────────────────────────────
   // The widget's big number is `avg athletes per session` — total
-  // attendance events divided by sessions actually held. Replaces the
-  // misnamed "training days" sum.
+  // attendance events divided by scheduled sessions elapsed. Replaces
+  // the misnamed "training days" sum. The denominator is the same
+  // `scheduledCount` the per-row rate uses (count of weekdays in
+  // training_days whose date is ≤ today), NOT a count of distinct
+  // attendance dates — wording matters because the two diverge if a
+  // scheduled session is missed entirely.
 
   it('computes avgAthletesPerSession to 1 decimal when training_days + counts are present', () => {
     const httpMock = setupTestBed();
     // System time is Apr 15 2026 (Wed). Schedule [2, 4, 6] = Tue/Thu/Sat
-    // → 6 sessions held by Apr 15. Total counts = 8 + 4 = 12. Avg = 2.0.
+    // → 6 scheduled sessions have elapsed by Apr 15. Total counts = 8 + 4 = 12. Avg = 2.0.
     TestBed.inject(AcademyService).academy.set({
       id: 1,
       name: 'Test',

@@ -18,7 +18,15 @@
         denominator semantics.
       -->
       <h3 class="summary-widget__title" data-cy="monthly-summary-total">
-        @if (avgAthletesPerSession(); as avg) {
+        @let avg = avgAthletesPerSession();
+        @if (avg !== null) {
+          <!--
+            Explicit null check, NOT `@if (avg; as avg)` — 0.0 is a
+            legitimate value of avgAthletesPerSession() (e.g. 1
+            attendance event / 25 scheduled sessions rounds to 0.0)
+            and a truthiness check would silently render the em-dash
+            instead of the zero.
+          -->
           {{ avg }}
           <span class="summary-widget__title-unit">athletes / session</span>
         } @else {
