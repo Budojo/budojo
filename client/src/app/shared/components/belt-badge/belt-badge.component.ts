@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { TagModule } from 'primeng/tag';
-import { Belt } from '../../../core/services/athlete.service';
+import { Belt, MAX_STRIPES_PER_BELT } from '../../../core/services/athlete.service';
 
 /**
  * Renders the IBJJF belt as a coloured pill, optionally with stripe markers
@@ -39,9 +39,16 @@ export class BeltBadgeComponent {
     return belt.charAt(0).toUpperCase() + belt.slice(1);
   });
 
-  /** Stripe count clamped to the global ceiling (6, the black-belt max). */
+  /**
+   * Stripe count clamped to the SELECTED belt's cap (#229 review).
+   * Uses the same `MAX_STRIPES_PER_BELT` source the form picker reads,
+   * so display stays consistent with validation: a stale `stripes=6`
+   * on a non-black belt renders 4 tiles, not 6 — matching what the
+   * server-side cross-field validator would reject on next write.
+   */
   readonly stripeTiles = computed(() => {
-    const n = Math.max(0, Math.min(6, Math.trunc(this.stripes())));
+    const cap = MAX_STRIPES_PER_BELT[this.belt()];
+    const n = Math.max(0, Math.min(cap, Math.trunc(this.stripes())));
     return Array.from({ length: n });
   });
 

@@ -1287,7 +1287,7 @@ components:
           black,
           red-and-black,
           red-and-white,
-          red,
+          red
         ]
 
     AthleteStatus:

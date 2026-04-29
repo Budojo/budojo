@@ -8,6 +8,7 @@ use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
+use App\Http\Requests\Concerns\ValidatesStripesAgainstBelt;
 use App\Models\Athlete;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -18,6 +19,7 @@ class UpdateAthleteRequest extends FormRequest
 {
     use ValidatesAddress;
     use ValidatesPhonePair;
+    use ValidatesStripesAgainstBelt;
 
     public function authorize(): bool
     {
@@ -104,36 +106,5 @@ class UpdateAthleteRequest extends FormRequest
         throw new HttpResponseException(
             response()->json(['message' => 'Forbidden.'], 403),
         );
-    }
-
-    /**
-     * Enforces the per-belt stripes cap (#229). On a partial update the
-     * belt may not be in the request — fall back to the existing athlete's
-     * belt so a PUT touching only `stripes` is still validated correctly.
-     * Skips silently when stripes is not in the payload (nothing to check).
-     */
-    private function validateStripesAgainstBelt(Validator $validator): void
-    {
-        if (! $this->has('stripes')) {
-            return;
-        }
-        $beltValue = $this->input('belt');
-        $belt = \is_string($beltValue) ? Belt::tryFrom($beltValue) : null;
-
-        if ($belt === null) {
-            /** @var Athlete|null $athlete */
-            $athlete = $this->route('athlete');
-            $belt = $athlete?->belt;
-        }
-        if ($belt === null) {
-            return;
-        }
-        $stripes = $this->integer('stripes');
-        if ($stripes > $belt->maxStripes()) {
-            $validator->errors()->add(
-                'stripes',
-                "The {$belt->value} belt allows at most {$belt->maxStripes()} stripes.",
-            );
-        }
     }
 }

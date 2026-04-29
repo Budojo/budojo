@@ -73,17 +73,30 @@ describe('BeltBadgeComponent', () => {
       expect(tiles.length).toBe(n);
     });
 
-    it('clamps stripes outside 0-6 to the IBJJF black-belt range (defensive against bad data)', () => {
+    it('clamps stripes per belt — non-black caps at 4, black caps at 6 (#229 review)', () => {
       TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
-      const fixture = TestBed.createComponent(HostComponent);
-      // 99 is bogus — must not render 99 tiles. Cap is 6 so #229 graus
-      // 1°-6° on black render fully when set.
-      fixture.componentInstance.stripes = 99;
-      fixture.detectChanges();
-      const tiles = fixture.nativeElement.querySelectorAll(
+
+      // White belt: bogus 99 must clamp to the white cap of 4 — NOT 6.
+      // Without per-belt clamping, the badge would visually misrepresent
+      // a stale row from a previous schema as a 5- or 6-stripe white.
+      const whiteFixture = TestBed.createComponent(HostComponent);
+      whiteFixture.componentInstance.belt = 'white';
+      whiteFixture.componentInstance.stripes = 99;
+      whiteFixture.detectChanges();
+      const whiteTiles = whiteFixture.nativeElement.querySelectorAll(
         '[data-cy="belt-stripe-tile"]',
       ) as NodeListOf<Element>;
-      expect(tiles.length).toBe(6);
+      expect(whiteTiles.length).toBe(4);
+
+      // Black belt: bogus 99 clamps to 6, the genuine black-belt cap.
+      const blackFixture = TestBed.createComponent(HostComponent);
+      blackFixture.componentInstance.belt = 'black';
+      blackFixture.componentInstance.stripes = 99;
+      blackFixture.detectChanges();
+      const blackTiles = blackFixture.nativeElement.querySelectorAll(
+        '[data-cy="belt-stripe-tile"]',
+      ) as NodeListOf<Element>;
+      expect(blackTiles.length).toBe(6);
     });
 
     it('renders 5-6 tiles on a black belt (graus 5° / 6°, #229)', () => {

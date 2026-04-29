@@ -41,9 +41,13 @@
   --budojo-belt-green-fg: #ffffff;
 
   // Senior IBJJF ranks beyond black (#229) — 7° / 8° / 9°+ grau. The
-  // coral pair uses a dark red-on-black / red-on-white split that
-  // matches the IBJJF physical belt design. Solid red for the master
-  // (9°/10°). Foreground stays white for accessible contrast.
+  // coral pair uses a 50/50 linear-gradient that matches the IBJJF
+  // physical belt design. Solid red for the master (9°/10°).
+  // Foreground colour follows the brighter half of each belt:
+  //   - red-and-black: white text (readable on both red AND black)
+  //   - red-and-white: dark text (readable on the white half; the red
+  //     half stays passable since #1f2937 on #b91c1c clears WCAG AA)
+  //   - red: white text (high contrast on solid red)
   --budojo-belt-red-and-black-bg: linear-gradient(
     90deg,
     #b91c1c 0%,

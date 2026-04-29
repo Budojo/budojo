@@ -8,6 +8,7 @@ use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
+use App\Http\Requests\Concerns\ValidatesStripesAgainstBelt;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -17,6 +18,7 @@ class StoreAthleteRequest extends FormRequest
 {
     use ValidatesAddress;
     use ValidatesPhonePair;
+    use ValidatesStripesAgainstBelt;
 
     public function authorize(): bool
     {
@@ -97,29 +99,5 @@ class StoreAthleteRequest extends FormRequest
         throw new HttpResponseException(
             response()->json(['message' => 'Forbidden.'], 403),
         );
-    }
-
-    /**
-     * Enforces the per-belt stripes cap (#229). The static `max:6` rule
-     * lets a 6-stripes value through globally; this check rejects e.g.
-     * a 5-stripes blue belt — only black supports 5-6 graus.
-     */
-    private function validateStripesAgainstBelt(Validator $validator): void
-    {
-        $beltValue = $this->input('belt');
-        if (! \is_string($beltValue)) {
-            return;
-        }
-        $belt = Belt::tryFrom($beltValue);
-        if ($belt === null) {
-            return;
-        }
-        $stripes = $this->integer('stripes');
-        if ($stripes > $belt->maxStripes()) {
-            $validator->errors()->add(
-                'stripes',
-                "The {$belt->value} belt allows at most {$belt->maxStripes()} stripes.",
-            );
-        }
     }
 }
