@@ -15,18 +15,52 @@ const path = require('node:path');
 const OUT_PATH = path.resolve(__dirname, '..', 'src', 'environments', 'version.ts');
 
 function resolveVersion() {
+  // Best-effort tag fetch BEFORE describe. Cloudflare Pages (and most CI
+  // defaults) does a shallow clone with no tags, so `git describe --tags`
+  // can't reach the semantic-release tag and falls back to the bare
+  // commit SHA — the sidebar footer ends up rendering "42f69e" instead
+  // of "v1.2.0", which is gibberish to the user. Fetching tags
+  // explicitly is the canonical fix.
+  //
+  // Failure is swallowed (no remote access, offline build, no .git): we
+  // proceed with whatever local refs are available and let the SHA-only
+  // fallback below format something legible.
+  try {
+    execSync('git fetch --tags --quiet', {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    // best-effort — proceed
+  }
+
   try {
     // `stdio: [ignore, pipe, ignore]` silences stderr without a shell
     // redirection, so the script works on Windows / cmd shells too where
     // `2>/dev/null` is meaningless. A missing .git or git binary throws
     // and we fall through to the catch with the `dev` default.
-    const tag = execSync('git describe --tags --always', {
+    const raw = execSync('git describe --tags --always', {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     })
       .toString()
       .trim();
-    return tag || 'dev';
+
+    if (!raw) return 'dev';
+
+    // `git describe --tags --always` produces three shapes:
+    //   - "v1.2.0"             on a tagged commit (clean release)
+    //   - "v1.2.0-3-gabc1234"  N commits ahead of the tag, abbreviated SHA
+    //   - "abc1234"            no tags reachable — only the bare SHA
+    //
+    // The bare-SHA form reads as gibberish in the sidebar ("42f69e" tells
+    // the user nothing about the build). Re-format it with a `dev-`
+    // prefix so the version line at least communicates "untagged dev
+    // build at commit 42f69e". The tagged + ahead-of-tag forms already
+    // carry the semantic version up front, so they pass through as-is.
+    if (/^[0-9a-f]{7,40}$/.test(raw)) {
+      return `dev-${raw}`;
+    }
+    return raw;
   } catch {
     // Outside a git checkout (e.g. some Docker build stages) — leave the
     // default committed value alone rather than emit a bogus tag.
