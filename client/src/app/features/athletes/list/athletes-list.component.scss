@@ -170,3 +170,30 @@
     padding-left: 2.25rem;
   }
 }
+
+// ── Full-name 4-state sort header (#196) ───────────────────────────────────────
+//
+// The Full name <th> is wired directly (no `pSortableColumn`) because the
+// PrimeNG sort plumbing hard-codes a 2-state cycle. The signifier slot
+// to the right of the label shows F↑/F↓/L↑/L↓ when sorted, or `↕` when
+// neutral — always visible (Norman § signifier).
+
+.full-name-th {
+  cursor: pointer;
+  user-select: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color, var(--p-primary-color));
+    outline-offset: -2px;
+  }
+}
+
+.full-name-th__signifier {
+  display: inline-block;
+  min-width: 1.5rem;
+  margin-left: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-text-muted-color);
+}

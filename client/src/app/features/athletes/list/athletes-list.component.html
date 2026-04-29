@@ -91,8 +91,22 @@
     >
       <ng-template pTemplate="header">
         <tr>
-          <th pSortableColumn="last_name" data-cy="athletes-th-name">
-            Full name <p-sortIcon field="last_name" />
+          <th
+            class="full-name-th"
+            data-cy="athletes-th-name"
+            [pTooltip]="fullNameSortTooltip()"
+            tooltipPosition="top"
+            (click)="cycleFullNameSort()"
+            (keydown.enter)="cycleFullNameSort()"
+            (keydown.space)="cycleFullNameSort(); $event.preventDefault()"
+            tabindex="0"
+            role="button"
+            [attr.aria-label]="fullNameSortTooltip()"
+          >
+            Full name
+            <span class="full-name-th__signifier" aria-hidden="true">
+              {{ fullNameSortLabel() ?? '↕' }}
+            </span>
           </th>
           <th pSortableColumn="belt" data-cy="athletes-th-belt">
             Belt <p-sortIcon field="belt" />

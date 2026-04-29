@@ -98,6 +98,15 @@ class AthleteController extends Controller
 
         if ($sortBy === 'belt') {
             $this->applyBeltSort($query, $sortOrder);
+        } elseif ($sortBy === 'first_name' || $sortBy === 'last_name') {
+            // Name sort always tiebreaks on the OTHER name field in the same
+            // direction (#196). The "Full name" column on the SPA is a
+            // synthetic concatenation of two scalar columns; without a
+            // tiebreak, two athletes sharing the primary key would land in
+            // arbitrary order. The 4-state click cycle on the column header
+            // picks which name leads (first / last) and the order
+            // (asc / desc); the controller honors both consistently.
+            $this->applyNameSort($query, $sortBy, $sortOrder);
         } elseif ($sortBy !== null && \array_key_exists($sortBy, self::SORTABLE_COLUMNS)) {
             $query->orderBy(self::SORTABLE_COLUMNS[$sortBy], $sortOrder);
         } else {
@@ -222,6 +231,30 @@ class AthleteController extends Controller
         $query->orderByRaw($direction === 'asc' ? $caseAsc : $caseDesc);
         $query->orderBy('stripes', 'desc');
         $query->orderBy('last_name', 'asc');
+    }
+
+    /**
+     * Multi-column name sort (#196). The "Full name" column on the SPA is
+     * a synthetic field — `{first_name} {last_name}` — and the 4-state
+     * click cycle (first asc/desc, last asc/desc) maps to:
+     *
+     *   sort_by=first_name → ORDER BY first_name [dir], last_name [dir]
+     *   sort_by=last_name  → ORDER BY last_name  [dir], first_name [dir]
+     *
+     * Tiebreak direction matches the primary direction so that two
+     * athletes sharing the primary name fall into a stable, intuitive
+     * order ("Mario Bianchi" before "Mario Rossi" on asc; "Mario Rossi"
+     * before "Mario Bianchi" on desc). Without the tiebreak SQLite
+     * returns arbitrary order on ties — the test suite would be flaky on
+     * any list with a name collision.
+     *
+     * @param  Builder<Athlete>|HasMany<Athlete, Academy>  $query
+     */
+    private function applyNameSort(Builder|HasMany $query, string $primary, string $direction): void
+    {
+        $secondary = $primary === 'first_name' ? 'last_name' : 'first_name';
+        $query->orderBy($primary, $direction);
+        $query->orderBy($secondary, $direction);
     }
 
     /**
