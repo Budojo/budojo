@@ -162,6 +162,14 @@ export interface Academy {
   phone_country_code?: string | null;
   phone_national_number?: string | null;
   /**
+   * Contact links (#162) — three independently nullable URLs. Optional on
+   * this interface for fixture-compat (same reason as the phone pair);
+   * the wire shape always includes them from #162 onward.
+   */
+  website?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
+  /**
    * Structured address (#72). `null` means the academy has no address on
    * file (legitimate state — every owner can clear it). Keep this as a
    * required key (not optional) so a tooling miss surfaces at compile time.
@@ -202,6 +210,10 @@ export interface UpdateAcademyPayload {
   /** Phone pair (#161). `null` on both clears the saved phone. */
   phone_country_code?: string | null;
   phone_national_number?: string | null;
+  /** Contact links (#162). Each is independently nullable; `null` clears the field. */
+  website?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
   address?: Address | null;
   monthly_fee_cents?: number | null;
   training_days?: number[] | null;

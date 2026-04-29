@@ -608,3 +608,54 @@ it('ignores slug in the payload — slug is immutable by design', function (): v
 
     expect($academy->fresh()->slug)->toBe('original-slug-abcd1234');
 });
+
+// ─── #162 — contact links (website / facebook / instagram) ────────────────────
+
+it('persists academy contact links on PATCH /academy', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'website' => 'https://gracie-barra.com',
+        'facebook' => 'https://facebook.com/graciebarra',
+        'instagram' => 'https://instagram.com/graciebarra',
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.website', 'https://gracie-barra.com')
+        ->assertJsonPath('data.facebook', 'https://facebook.com/graciebarra')
+        ->assertJsonPath('data.instagram', 'https://instagram.com/graciebarra');
+});
+
+it('clears each contact link independently on PATCH /academy', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create([
+        'user_id' => $user->id,
+        'website' => 'https://old.example',
+        'facebook' => 'https://facebook.com/old',
+        'instagram' => 'https://instagram.com/old',
+    ]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'website' => null,
+        'facebook' => 'https://facebook.com/new',
+        'instagram' => null,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.website', null)
+        ->assertJsonPath('data.facebook', 'https://facebook.com/new')
+        ->assertJsonPath('data.instagram', null);
+});
+
+it('rejects a non-URL contact link with 422', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'instagram' => '@graciebarra',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['instagram']);
+});

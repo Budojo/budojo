@@ -1400,6 +1400,30 @@ components:
             Unformatted national digits (no spaces / dashes / parentheses).
             Validated together with `phone_country_code` via libphonenumber.
           example: '3331234567'
+        website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 255
+          description: |
+            Public website URL (#162). Independently nullable from the
+            other contact links. Validated as a parseable URL — bare
+            `@handles` are rejected with 422.
+          example: 'https://gracie-barra.com'
+        facebook:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 255
+          description: Facebook page URL (#162). See `website` for shape.
+          example: 'https://facebook.com/graciebarra'
+        instagram:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 255
+          description: Instagram profile URL (#162). See `website` for shape.
+          example: 'https://instagram.com/graciebarra'
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -1491,7 +1515,21 @@ components:
 
     Academy:
       type: object
-      required: [id, name, slug, address, logo_url, monthly_fee_cents, training_days, phone_country_code, phone_national_number]
+      required:
+        [
+          id,
+          name,
+          slug,
+          address,
+          logo_url,
+          monthly_fee_cents,
+          training_days,
+          phone_country_code,
+          phone_national_number,
+          website,
+          facebook,
+          instagram,
+        ]
       properties:
         id:
           type: integer
@@ -1518,6 +1556,27 @@ components:
           pattern: '^[0-9]+$'
           description: Unformatted national digits.
           example: '3331234567'
+        website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 255
+          description: Public website URL (#162). Each contact link is independently nullable.
+          example: 'https://gracie-barra.com'
+        facebook:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 255
+          description: Facebook page URL (#162).
+          example: 'https://facebook.com/graciebarra'
+        instagram:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 255
+          description: Instagram profile URL (#162).
+          example: 'https://instagram.com/graciebarra'
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -1606,6 +1665,27 @@ components:
           pattern: '^[0-9]+$'
           description: Unformatted national digits — no spaces, no dashes. Must be sent together with `phone_country_code`.
           example: '3331234567'
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          nullable: true
+          description: Public website URL (#162). Validated as a parseable URL — bare `@handles` are rejected.
+          example: 'https://mariorossi.com'
+        facebook:
+          type: string
+          format: uri
+          maxLength: 255
+          nullable: true
+          description: Facebook profile URL (#162). Same shape as `website`.
+          example: 'https://facebook.com/mariorossi'
+        instagram:
+          type: string
+          format: uri
+          maxLength: 255
+          nullable: true
+          description: Instagram profile URL (#162). Same shape as `website`.
+          example: 'https://instagram.com/mariorossi'
         date_of_birth:
           type: string
           format: date
@@ -1664,6 +1744,27 @@ components:
           pattern: '^[0-9]+$'
           description: Unformatted national digits — must be sent together with `phone_country_code`.
           example: '3331234567'
+        website:
+          type: string
+          format: uri
+          maxLength: 255
+          nullable: true
+          description: Public website URL (#162). Validated as a parseable URL.
+          example: 'https://mariorossi.com'
+        facebook:
+          type: string
+          format: uri
+          maxLength: 255
+          nullable: true
+          description: Facebook profile URL (#162).
+          example: 'https://facebook.com/mariorossi'
+        instagram:
+          type: string
+          format: uri
+          maxLength: 255
+          nullable: true
+          description: Instagram profile URL (#162).
+          example: 'https://instagram.com/mariorossi'
         date_of_birth:
           type: string
           format: date
@@ -1698,6 +1799,9 @@ components:
         - email
         - phone_country_code
         - phone_national_number
+        - website
+        - facebook
+        - instagram
         - date_of_birth
         - belt
         - stripes
@@ -1728,6 +1832,27 @@ components:
           nullable: true
           example: '3331234567'
           description: Unformatted national digits. Always paired with `phone_country_code`.
+        website:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 255
+          description: Public website URL (#162). Each contact link is independently nullable.
+          example: 'https://mariorossi.com'
+        facebook:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 255
+          description: Facebook profile URL (#162).
+          example: 'https://facebook.com/mariorossi'
+        instagram:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 255
+          description: Instagram profile URL (#162).
+          example: 'https://instagram.com/mariorossi'
         date_of_birth:
           type: string
           format: date
