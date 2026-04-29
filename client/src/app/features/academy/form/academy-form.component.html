@@ -49,7 +49,7 @@
       <label for="academy-phone-national-number"
         >Phone <span class="field__optional">(optional)</span></label
       >
-      <p-inputgroup>
+      <div class="phone-pair">
         <p-select
           inputId="academy-phone-country-code"
           [options]="countryCodeOptions"
@@ -78,8 +78,9 @@
           data-cy="academy-form-phone-national-number"
           [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
           [class.ng-dirty]="phoneNationalNumber.touched"
+          class="phone-national-number"
         />
-      </p-inputgroup>
+      </div>
       @if (phoneCountryCode.invalid && phoneCountryCode.touched) {
         <small class="field__error" data-cy="academy-form-phone-country-error">
           @if (phoneCountryCode.errors?.['phonePairRequired']) {

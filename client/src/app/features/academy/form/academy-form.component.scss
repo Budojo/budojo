@@ -168,14 +168,23 @@
   }
 }
 
-// Phone country-code dropdown (#161) — same width pin as the athlete form.
-// `<p-inputgroup>` applies its own `flex: 1 1 auto` rules within a CSS layer
-// that wins against unlayered single-class declarations on tiebreaker. We
-// match the athlete-form pattern: `flex` + `width` + `min-width`, all with
-// `!important` against the styleClass that PrimeNG attaches to the host.
-// 7rem comfortably fits "+999" + the chevron with breathing room.
+// Phone pair (#185): plain flex container with a small gap. See the
+// athlete form for the rationale on dropping `<p-inputgroup>`.
+.phone-pair {
+  display: flex;
+  align-items: stretch;
+  gap: 0.375rem;
+}
+
+// Country-code select pinned to a fixed width — 7rem comfortably fits
+// "+999" plus the chevron with breathing room.
 :host ::ng-deep .academy-phone-country-code {
-  flex: 0 0 7rem !important;
-  width: 7rem !important;
-  min-width: 7rem !important;
+  flex: 0 0 7rem;
+  width: 7rem;
+  min-width: 7rem;
+}
+
+.phone-national-number {
+  flex: 1 1 auto;
+  min-width: 0;
 }

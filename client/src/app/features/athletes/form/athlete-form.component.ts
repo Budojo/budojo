@@ -19,7 +19,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
-import { InputGroupModule } from 'primeng/inputgroup';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
@@ -104,7 +103,6 @@ function phonePairRequired(siblingName: string): ValidatorFn {
     ReactiveFormsModule,
     ButtonModule,
     DatePickerModule,
-    InputGroupModule,
     InputNumberModule,
     InputTextModule,
     MessageModule,

@@ -102,7 +102,7 @@
 
         <div class="field">
           <label for="phone_national_number">Phone <span class="optional">(optional)</span></label>
-          <p-inputgroup>
+          <div class="phone-pair">
             <p-select
               inputId="phone_country_code"
               [options]="countryCodeOptions"
@@ -143,8 +143,9 @@
               aria-label="Phone national number"
               [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
               [class.ng-dirty]="phoneNationalNumber.touched"
+              class="phone-national-number"
             />
-          </p-inputgroup>
+          </div>
           @if (phoneCountryCode.invalid && phoneCountryCode.touched) {
             <small class="field-error">
               @if (phoneCountryCode.errors?.['phonePairRequired']) {
