@@ -10,8 +10,28 @@
     } @else if (errored()) {
       <h3 class="summary-widget__title summary-widget__title--muted">Couldn't check</h3>
     } @else {
+      <!--
+        Headline switched from `totalDays training days` (a misnamed sum
+        of every athlete's count) to "avg athletes per session" (#170).
+        Em-dash fallback when training_days isn't configured or no
+        session has happened yet — see avgAthletesPerSession() for the
+        denominator semantics.
+      -->
       <h3 class="summary-widget__title" data-cy="monthly-summary-total">
-        {{ totalDays() }} training day{{ totalDays() === 1 ? '' : 's' }}
+        @let avg = avgAthletesPerSession();
+        @if (avg !== null) {
+          <!--
+            Explicit null check, NOT `@if (avg; as avg)` — 0.0 is a
+            legitimate value of avgAthletesPerSession() (e.g. 1
+            attendance event / 25 scheduled sessions rounds to 0.0)
+            and a truthiness check would silently render the em-dash
+            instead of the zero.
+          -->
+          {{ avg }}
+          <span class="summary-widget__title-unit">athletes / session</span>
+        } @else {
+          —
+        }
       </h3>
     }
   </header>

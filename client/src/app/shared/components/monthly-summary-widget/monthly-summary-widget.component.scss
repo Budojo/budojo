@@ -45,6 +45,16 @@
     }
   }
 
+  // Unit label trailing the headline value (#170: "8.4 athletes / session").
+  // Renders smaller + muted so the eye lands on the number first; the
+  // unit reads as a qualifier, not part of the figure itself.
+  &__title-unit {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-muted-color);
+    margin-left: 0.25rem;
+  }
+
   &__list {
     list-style: none;
     padding: 0;
