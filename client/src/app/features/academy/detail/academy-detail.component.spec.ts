@@ -157,19 +157,29 @@ describe('AcademyDetailComponent', () => {
     expect(link!.getAttribute('href')).toBe('tel:+393331234567');
   });
 
-  it('renders an em-dash when either half of the phone pair is missing', () => {
-    setupTestBed();
-    TestBed.inject(AcademyService).academy.set(
-      makeAcademy({ phone_country_code: null, phone_national_number: null }),
-    );
+  // Partial-data defence: the all-or-nothing validator on the wire keeps
+  // half-filled pairs from being saved on new rows, but legacy rows or
+  // schema migrations can land with one half null and the other set.
+  // The em-dash fallback must trigger in every "incomplete" shape, not
+  // just both-null — covering all three keeps the contract honest.
+  it.each([
+    { phone_country_code: null, phone_national_number: null },
+    { phone_country_code: '+39', phone_national_number: null },
+    { phone_country_code: null, phone_national_number: '3331234567' },
+  ])(
+    'renders an em-dash when the phone pair is partial (cc=$phone_country_code, nn=$phone_national_number)',
+    (overrides) => {
+      setupTestBed();
+      TestBed.inject(AcademyService).academy.set(makeAcademy(overrides));
 
-    const fixture = TestBed.createComponent(AcademyDetailComponent);
-    fixture.detectChanges();
+      const fixture = TestBed.createComponent(AcademyDetailComponent);
+      fixture.detectChanges();
 
-    const cell = fixture.nativeElement.querySelector(
-      '[data-cy="academy-row-phone"]',
-    ) as HTMLElement;
-    expect(cell.querySelector('a')).toBeNull();
-    expect(cell.textContent?.trim()).toBe('—');
-  });
+      const cell = fixture.nativeElement.querySelector(
+        '[data-cy="academy-row-phone"]',
+      ) as HTMLElement;
+      expect(cell.querySelector('a')).toBeNull();
+      expect(cell.textContent?.trim()).toBe('—');
+    },
+  );
 });

@@ -82,12 +82,12 @@
       <dd class="row__value" data-cy="academy-row-phone">
         @if (phoneE164(); as phone) {
           <!--
-            tel: link with the unspaced E.164 form for the href (`tel:`
-            schemes can't tolerate inner whitespace) but a human-spaced
-            label as the visible text. Tappable on mobile, copyable on
-            desktop, works for both audiences without a duplicate row.
+            tel: link — both forms come pre-built from the `phoneE164`
+            computed (full `tel:+393331234567` href + the human-spaced
+            label "+39 3331234567"). Template stays a pure projection,
+            no inline string concatenation.
           -->
-          <a [href]="'tel:' + phone.unspaced" class="row__link">{{ phone.spaced }}</a>
+          <a [href]="phone.telHref" class="row__link">{{ phone.label }}</a>
         } @else {
           —
         }
