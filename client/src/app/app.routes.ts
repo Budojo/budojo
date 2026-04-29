@@ -133,6 +133,16 @@ export const routes: Routes = [
       },
     ],
   },
+  // Public legal pages (#225). No auth — prospects, the Garante, and
+  // existing customers must be able to read these without a login.
+  // Also accessible offline if cached by the SPA service worker.
+  {
+    path: 'sub-processors',
+    loadComponent: () =>
+      import('./features/sub-processors/sub-processors.component').then(
+        (m) => m.SubProcessorsComponent,
+      ),
+  },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
   // Wildcard 404 (#226) — must stay last; everything above is matched
   // first. Hit on any URL that no other route resolves, including
