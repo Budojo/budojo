@@ -37,12 +37,9 @@ it('publishes the Budojo-branded vendor mail header + footer + theme files', fun
     expect(file_exists("{$base}/footer.blade.php"))->toBeTrue('mail footer is published');
     expect(file_exists("{$base}/themes/default.css"))->toBeTrue('mail theme css is published');
 
-    expect(str_contains(file_get_contents("{$base}/header.blade.php"), 'Budojo'))
-        ->toBeTrue('header carries the Budojo wordmark');
-    expect(str_contains(file_get_contents("{$base}/footer.blade.php"), 'Budojo'))
-        ->toBeTrue('footer carries the Budojo brand line');
-    expect(str_contains(file_get_contents("{$base}/themes/default.css"), '#5b6cff'))
-        ->toBeTrue('theme css uses the Budojo indigo accent on .button-primary');
+    expect(file_get_contents("{$base}/header.blade.php"))->toContain('Budojo');
+    expect(file_get_contents("{$base}/footer.blade.php"))->toContain('Budojo');
+    expect(file_get_contents("{$base}/themes/default.css"))->toContain('#5b6cff');
 });
 
 it('renders the verify-email body with the Budojo wordmark + indigo button', function (): void {
@@ -58,17 +55,18 @@ it('renders the verify-email body with the Budojo wordmark + indigo button', fun
         // templates are exercised end-to-end (not just file existence).
         function (VerifyEmail $notification) use ($user) {
             $message = $notification->toMail($user);
-            // `render()` returns an `Illuminate\Support\HtmlString`; cast
-            // to a plain string for `str_contains`.
+            // `render()` returns `Illuminate\Support\HtmlString`; cast to
+            // a plain string so Pest's `toContain` (which calls
+            // `assertStringContainsString` on string haystacks) gets the
+            // type it expects without the HtmlString wrapper.
             $rendered = (string) $message->render();
 
             // Budojo wordmark from the published header.blade.php +
             // indigo accent from themes/default.css inlined by the
-            // premailer. `Str::contains`-style assertions on the
-            // already-rendered string (Pest's `toContain` expects an
-            // iterable, not a haystack string).
-            expect(str_contains($rendered, 'Budojo'))->toBeTrue();
-            expect(str_contains($rendered, '#5b6cff'))->toBeTrue();
+            // premailer.
+            expect($rendered)
+                ->toContain('Budojo')
+                ->toContain('#5b6cff');
 
             return true;
         },
