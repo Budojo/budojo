@@ -86,6 +86,8 @@
       (onPage)="onPageChange($event)"
       [lazy]="true"
       (onSort)="onSort($event)"
+      [sortField]="sortField()"
+      [sortOrder]="primengSortOrder()"
       responsiveLayout="scroll"
       styleClass="p-datatable-sm"
     >
@@ -102,7 +104,11 @@
               [attr.aria-label]="fullNameSortTooltip()"
             >
               Full name
-              <span class="full-name-th__signifier" aria-hidden="true">
+              <span
+                class="full-name-th__signifier"
+                [class.full-name-th__signifier--active]="fullNameSortLabel() !== null"
+                aria-hidden="true"
+              >
                 {{ fullNameSortLabel() ?? '↕' }}
               </span>
             </button>

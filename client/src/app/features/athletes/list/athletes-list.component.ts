@@ -88,6 +88,16 @@ export class AthletesListComponent implements OnInit {
   readonly sortOrder = signal<AthleteSortOrder>('desc');
 
   /**
+   * PrimeNG's `<p-table>` represents sort direction as 1 (asc) / -1 (desc),
+   * where our internal signal uses `'asc' | 'desc'`. Bind this computed
+   * to `[sortOrder]` on the table so PrimeNG's internal sort state
+   * (and therefore every `<p-sortIcon>` in the header) tracks our own
+   * cycle — without this, the Belt column's sort icon stays "active"
+   * when the Full-name 4-state cycle takes over (#205).
+   */
+  readonly primengSortOrder = computed<1 | -1>(() => (this.sortOrder() === 'asc' ? 1 : -1));
+
+  /**
    * The paid badge + filter only make sense when the academy has configured
    * a monthly fee — otherwise there's no expectation of payment to assert
    * against. Reads from the cached `AcademyService.academy()` signal so we
