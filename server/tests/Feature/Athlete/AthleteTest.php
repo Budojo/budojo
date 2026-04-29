@@ -665,7 +665,10 @@ it('updates contact links on PUT and persists null when explicitly cleared', fun
         ->assertJsonPath('data.facebook', null)
         ->assertJsonPath('data.instagram', null);
 
-    expect($athlete->fresh()->website)->toBe('https://new.example');
-    expect($athlete->fresh()->facebook)->toBeNull();
-    expect($athlete->fresh()->instagram)->toBeNull();
+    // One re-fetch instead of three — `fresh()` issues a SELECT each
+    // time, and we want the assertions to all read the same row.
+    $fresh = $athlete->fresh();
+    expect($fresh->website)->toBe('https://new.example');
+    expect($fresh->facebook)->toBeNull();
+    expect($fresh->instagram)->toBeNull();
 });

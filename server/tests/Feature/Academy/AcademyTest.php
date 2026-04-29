@@ -613,7 +613,7 @@ it('ignores slug in the payload — slug is immutable by design', function (): v
 
 it('persists academy contact links on PATCH /academy', function (): void {
     $user = User::factory()->create();
-    Academy::factory()->create(['user_id' => $user->id]);
+    $academy = Academy::factory()->create(['user_id' => $user->id]);
     Sanctum::actingAs($user);
 
     $this->patchJson('/api/v1/academy', [
@@ -625,11 +625,19 @@ it('persists academy contact links on PATCH /academy', function (): void {
         ->assertJsonPath('data.website', 'https://gracie-barra.com')
         ->assertJsonPath('data.facebook', 'https://facebook.com/graciebarra')
         ->assertJsonPath('data.instagram', 'https://instagram.com/graciebarra');
+
+    // Belt-and-braces against an AcademyResource that mirrors the
+    // request payload back without ever touching the row — explicitly
+    // re-fetch and confirm the columns landed in the DB.
+    $fresh = $academy->fresh();
+    expect($fresh->website)->toBe('https://gracie-barra.com');
+    expect($fresh->facebook)->toBe('https://facebook.com/graciebarra');
+    expect($fresh->instagram)->toBe('https://instagram.com/graciebarra');
 });
 
 it('clears each contact link independently on PATCH /academy', function (): void {
     $user = User::factory()->create();
-    Academy::factory()->create([
+    $academy = Academy::factory()->create([
         'user_id' => $user->id,
         'website' => 'https://old.example',
         'facebook' => 'https://facebook.com/old',
@@ -646,6 +654,13 @@ it('clears each contact link independently on PATCH /academy', function (): void
         ->assertJsonPath('data.website', null)
         ->assertJsonPath('data.facebook', 'https://facebook.com/new')
         ->assertJsonPath('data.instagram', null);
+
+    // Confirm the DB row reflects the partial-clear semantics, not just
+    // the response envelope.
+    $fresh = $academy->fresh();
+    expect($fresh->website)->toBeNull();
+    expect($fresh->facebook)->toBe('https://facebook.com/new');
+    expect($fresh->instagram)->toBeNull();
 });
 
 it('rejects a non-URL contact link with 422', function (): void {
