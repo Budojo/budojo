@@ -102,6 +102,91 @@
     </div>
 
     <!--
+      Contact links (#162) — three independently nullable URL fields.
+      Each field is its own optional input; users can fill any subset
+      (e.g. only Instagram). The `url` validator mirrors the backend
+      `nullable|url|max:255` rule — bare `@handles` are rejected so the
+      detail page can render these as clickable `<a href>` without
+      special-casing.
+    -->
+    <div class="field">
+      <label for="academy-website">Website <span class="field__optional">(optional)</span></label>
+      <input
+        pInputText
+        id="academy-website"
+        type="url"
+        formControlName="website"
+        autocomplete="url"
+        placeholder="https://gracie-barra.com"
+        maxlength="255"
+        data-cy="academy-form-website"
+        [class.ng-invalid]="website.invalid && website.touched"
+        [class.ng-dirty]="website.touched"
+      />
+      @if (website.invalid && website.touched) {
+        <small class="field__error" data-cy="academy-form-website-error">
+          @if (website.errors?.['url']) {
+            Enter a full URL — e.g. <code>https://example.com</code>.
+          } @else if (website.errors?.['maxlength']) {
+            Maximum 255 characters.
+          }
+        </small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="academy-facebook">Facebook <span class="field__optional">(optional)</span></label>
+      <input
+        pInputText
+        id="academy-facebook"
+        type="url"
+        formControlName="facebook"
+        autocomplete="url"
+        placeholder="https://facebook.com/yourpage"
+        maxlength="255"
+        data-cy="academy-form-facebook"
+        [class.ng-invalid]="facebook.invalid && facebook.touched"
+        [class.ng-dirty]="facebook.touched"
+      />
+      @if (facebook.invalid && facebook.touched) {
+        <small class="field__error" data-cy="academy-form-facebook-error">
+          @if (facebook.errors?.['url']) {
+            Enter a full URL — e.g. <code>https://facebook.com/yourpage</code>.
+          } @else if (facebook.errors?.['maxlength']) {
+            Maximum 255 characters.
+          }
+        </small>
+      }
+    </div>
+
+    <div class="field">
+      <label for="academy-instagram"
+        >Instagram <span class="field__optional">(optional)</span></label
+      >
+      <input
+        pInputText
+        id="academy-instagram"
+        type="url"
+        formControlName="instagram"
+        autocomplete="url"
+        placeholder="https://instagram.com/yourprofile"
+        maxlength="255"
+        data-cy="academy-form-instagram"
+        [class.ng-invalid]="instagram.invalid && instagram.touched"
+        [class.ng-dirty]="instagram.touched"
+      />
+      @if (instagram.invalid && instagram.touched) {
+        <small class="field__error" data-cy="academy-form-instagram-error">
+          @if (instagram.errors?.['url']) {
+            Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>.
+          } @else if (instagram.errors?.['maxlength']) {
+            Maximum 255 characters.
+          }
+        </small>
+      }
+    </div>
+
+    <!--
       Permalink: rendered as a static info line, not an input. Using an
       <input readonly> would signal "you CAN edit this, just not right
       now" — wrong signifier. A <p> inside a muted row communicates the
