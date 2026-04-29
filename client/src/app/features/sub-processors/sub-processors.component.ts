@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 
@@ -7,14 +7,15 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
  * Public `/sub-processors` page (#225). GDPR Art. 28 transparency: the
  * canonical list of every third party that processes Budojo customer
  * data lives here. The markdown source of truth is
- * `docs/legal/sub-processors.md`; this component is the rendered SPA
- * surface that academy clients (and the Garante) can read.
+ * `docs/legal/sub-processors.md`; this component is the SPA surface
+ * that academy clients (and the Garante) can read.
  *
- * Static HTML translation of the markdown — no markdown loader so the
- * page is dependency-free and reads identically on the prerendered
- * SPA shell. The markdown file remains the canonical source — when it
- * changes, this component is updated in the same PR per CLAUDE.md
- * documentation discipline.
+ * The HTML carries the same data points as the markdown but the
+ * presentation is intentionally hand-tailored to the SPA layout —
+ * column count and copy can drift slightly so the on-page chrome
+ * stays readable on narrow viewports. When either side changes, the
+ * other gets refreshed in the same PR per CLAUDE.md documentation
+ * discipline.
  *
  * Public route (no auth) so prospects + the regulator can read it
  * without a login.
@@ -22,7 +23,7 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
 @Component({
   selector: 'app-sub-processors',
   standalone: true,
-  imports: [ButtonModule, BrandGlyphComponent],
+  imports: [ButtonModule, BrandGlyphComponent, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './sub-processors.component.html',
   styleUrl: './sub-processors.component.scss',

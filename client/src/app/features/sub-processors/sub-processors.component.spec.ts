@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { SubProcessorsComponent } from './sub-processors.component';
 
 describe('SubProcessorsComponent (#225)', () => {
@@ -7,9 +7,22 @@ describe('SubProcessorsComponent (#225)', () => {
     TestBed.configureTestingModule({
       imports: [SubProcessorsComponent],
       providers: [
-        { provide: Router, useValue: { navigateByUrl: vi.fn().mockResolvedValue(true) } },
+        // The component template uses `routerLink="/"` for the brand
+        // mark, which only resolves with a real Router instance in the
+        // injector tree. `provideRouter([])` gives us the lightest-weight
+        // wiring (no actual routes, no test bed setup ceremony) — the
+        // navigateByUrl call we assert on is mocked below by overriding
+        // the same Router AFTER provideRouter populated it.
+        provideRouter([]),
       ],
     });
+    // Spy on navigateByUrl on the live Router instance — overriding the
+    // provider via { provide: Router, useValue: ... } would crash the
+    // RouterLink directive on construction. Patching the method post-
+    // setup keeps both the directive happy AND lets us assert on the
+    // CTA navigation.
+    const router = TestBed.inject(Router);
+    router.navigateByUrl = vi.fn().mockResolvedValue(true) as never;
     const fixture = TestBed.createComponent(SubProcessorsComponent);
     fixture.detectChanges();
     return { fixture, cmp: fixture.componentInstance };

@@ -1,6 +1,6 @@
 <article class="legal-page">
   <header class="legal-page__header">
-    <a class="legal-page__brand" href="/" aria-label="Budojo home">
+    <a class="legal-page__brand" routerLink="/" aria-label="Budojo home">
       <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
       <span class="legal-page__brand-name">Budojo</span>
     </a>
@@ -139,7 +139,12 @@
     <h2>Related documents</h2>
     <ul>
       <li>DPA template — see your customer dashboard for the signed copy.</li>
-      <li><a routerLink="/privacy">Privacy policy</a></li>
+      <!--
+        Privacy policy link intentionally omitted until #219 ships the
+        `/privacy` route. Adding the link before the page exists would
+        funnel visitors into the wildcard 404, which is a worse
+        experience than a missing line. Re-add once #219 lands.
+      -->
     </ul>
   </section>
 
