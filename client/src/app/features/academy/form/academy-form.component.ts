@@ -69,6 +69,33 @@ function phonePairRequired(siblingName: string): ValidatorFn {
   };
 }
 
+/**
+ * Validates that, when the field has a value, that value is a parseable
+ * URL (http/https). Empty / whitespace-only values pass — the field is
+ * optional, so the validator's job is only to catch malformed input.
+ * Mirrors the backend's `nullable|url|max:255` rule for the contact-link
+ * fields (#162). Uses native `URL` parsing rather than a regex because
+ * Laravel's `url` rule defers to PHP's URL parser, and the two stay
+ * closely aligned in what they accept.
+ */
+const urlIfPresent: ValidatorFn = (control: AbstractControl) => {
+  const raw = (control.value ?? '').toString().trim();
+  if (raw === '') return null;
+  try {
+    const parsed = new URL(raw);
+    // Accept only http/https — `mailto:`, `tel:`, `javascript:` etc.
+    // would render as a clickable link on the detail page that does
+    // the wrong thing. Tighter than Laravel's default but appropriate
+    // for "social profile / website" semantics.
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { url: true };
+    }
+    return null;
+  } catch {
+    return { url: true };
+  }
+};
+
 interface SelectOption<T extends string> {
   label: string;
   value: T;
@@ -136,6 +163,15 @@ export class AcademyFormComponent implements OnInit {
         Validators.pattern(/^[0-9]+$/),
       ],
     ],
+    // Contact links (#162) — three independently nullable URLs.
+    // Laravel's `url` rule accepts any scheme it can parse (ftp:,
+    // mailto:, …), so the SPA's `urlIfPresent` is deliberately
+    // tighter: http/https only. We don't want a `mailto:` slipping
+    // through and rendering as a broken external link on the detail
+    // page.
+    website: ['', [Validators.maxLength(255), urlIfPresent]],
+    facebook: ['', [Validators.maxLength(255), urlIfPresent]],
+    instagram: ['', [Validators.maxLength(255), urlIfPresent]],
     address: this.fb.nonNullable.group(
       {
         line1: ['', Validators.maxLength(255)],
@@ -177,6 +213,9 @@ export class AcademyFormComponent implements OnInit {
       name: academy.name,
       phone_country_code: academy.phone_country_code ?? '',
       phone_national_number: academy.phone_national_number ?? '',
+      website: academy.website ?? '',
+      facebook: academy.facebook ?? '',
+      instagram: academy.instagram ?? '',
       address: {
         line1: academy.address?.line1 ?? '',
         line2: academy.address?.line2 ?? '',
@@ -232,6 +271,17 @@ export class AcademyFormComponent implements OnInit {
   }
   get phoneNationalNumber() {
     return this.form.controls.phone_national_number;
+  }
+
+  // Contact links (#162) — each independently optional.
+  get website() {
+    return this.form.controls.website;
+  }
+  get facebook() {
+    return this.form.controls.facebook;
+  }
+  get instagram() {
+    return this.form.controls.instagram;
   }
 
   get addressGroup() {
@@ -301,10 +351,22 @@ export class AcademyFormComponent implements OnInit {
     const phoneNn = v.phone_national_number.trim();
     const phoneEmpty = phoneCc === '' || phoneNn === '';
 
+    // Contact links (#162). Each is independently nullable — empty
+    // string clears the field on the wire (`null` semantics), a
+    // populated string is sent as-is. The validator already rejects
+    // malformed URLs, so reaching here means each value is either
+    // empty or a parseable http/https URL.
+    const website = v.website.trim();
+    const facebook = v.facebook.trim();
+    const instagram = v.instagram.trim();
+
     return {
       name: v.name.trim(),
       phone_country_code: phoneEmpty ? null : phoneCc,
       phone_national_number: phoneEmpty ? null : phoneNn,
+      website: website === '' ? null : website,
+      facebook: facebook === '' ? null : facebook,
+      instagram: instagram === '' ? null : instagram,
       address,
       training_days: v.training_days.length === 0 ? null : v.training_days,
     };
