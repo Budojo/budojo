@@ -10,8 +10,20 @@
     } @else if (errored()) {
       <h3 class="summary-widget__title summary-widget__title--muted">Couldn't check</h3>
     } @else {
+      <!--
+        Headline switched from `totalDays training days` (a misnamed sum
+        of every athlete's count) to "avg athletes per session" (#170).
+        Em-dash fallback when training_days isn't configured or no
+        session has happened yet — see avgAthletesPerSession() for the
+        denominator semantics.
+      -->
       <h3 class="summary-widget__title" data-cy="monthly-summary-total">
-        {{ totalDays() }} training day{{ totalDays() === 1 ? '' : 's' }}
+        @if (avgAthletesPerSession(); as avg) {
+          {{ avg }}
+          <span class="summary-widget__title-unit">athletes / session</span>
+        } @else {
+          —
+        }
       </h3>
     }
   </header>

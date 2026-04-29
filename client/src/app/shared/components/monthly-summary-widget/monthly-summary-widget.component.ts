@@ -61,6 +61,26 @@ export class MonthlySummaryWidgetComponent implements OnInit {
   );
 
   /**
+   * Headline metric (#170): average athletes per session held this
+   * month. Computed as `total attendance events / sessions actually
+   * held`. Returns `null` when the denominator is missing — academies
+   * that haven't configured `training_days` (no scheduledCount) or
+   * before any session has happened yet (scheduledCount === 0). The
+   * template renders an em-dash in that case so the user gets a clear
+   * "not enough data yet" signal instead of a misleading zero.
+   *
+   * Decimal precision: rounded to 1 decimal so small dojos (10–20
+   * athletes, 12–20 sessions/month) see the value move meaningfully
+   * across the month without integer banding hiding the signal.
+   */
+  protected readonly avgAthletesPerSession = computed<number | null>(() => {
+    const sessions = this.scheduledCount();
+    const total = this.totalDays();
+    if (sessions === null || sessions === 0 || total === 0) return null;
+    return Math.round((total / sessions) * 10) / 10;
+  });
+
+  /**
    * Sessions actually held by the academy in the current month (capped at
    * today). Drives the per-row "count / scheduled · pct%" display when the
    * academy has configured `training_days`. `null` when not configured —
