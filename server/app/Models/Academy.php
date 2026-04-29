@@ -21,12 +21,15 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property string              $name
  * @property string|null         $phone_country_code     E.164 prefix incl. `+`, e.g. `+39`. Pair with `phone_national_number` (#161). Both columns null OR both filled.
  * @property string|null         $phone_national_number  Unformatted national digits, e.g. `3331234567`.
+ * @property string|null         $website               Full URL incl. scheme, e.g. `https://gracie-barra.com` (#162).
+ * @property string|null         $facebook              Full Facebook page URL.
+ * @property string|null         $instagram             Full Instagram profile URL.
  * @property string              $slug
  * @property string|null         $logo_path
  * @property int|null            $monthly_fee_cents
  * @property list<int>|null      $training_days  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
  */
-#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'slug', 'logo_path', 'monthly_fee_cents', 'training_days'])]
+#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'training_days'])]
 #[ObservedBy([AcademyObserver::class])]
 class Academy extends Model implements HasAddress
 {

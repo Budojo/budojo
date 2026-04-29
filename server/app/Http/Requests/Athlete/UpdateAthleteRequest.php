@@ -70,6 +70,11 @@ class UpdateAthleteRequest extends FormRequest
                 'max:20',
                 'required_with:phone_country_code',
             ],
+            // Contact links (#162) — three independently nullable URLs.
+            // Same shape as the create / academy variants.
+            'website' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'facebook' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'instagram' => ['sometimes', 'nullable', 'url', 'max:255'],
             'date_of_birth' => ['sometimes', 'nullable', 'date', 'before:today'],
             'belt' => ['sometimes', Rule::enum(Belt::class)],
             'stripes' => ['sometimes', 'integer', 'min:0', 'max:4'],

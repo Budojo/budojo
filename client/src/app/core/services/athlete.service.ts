@@ -27,6 +27,15 @@ export interface Athlete {
    * caller's concern.
    */
   phone_national_number: string | null;
+  /**
+   * Contact links (#162) — three independently nullable URLs. The SPA
+   * renders these as external links on the athlete detail page; the
+   * form accepts each independently. Optional on this interface for
+   * fixture-compat (the wire shape always includes them from #162 on).
+   */
+  website?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
   date_of_birth: string | null;
   belt: Belt;
   stripes: number;
@@ -106,6 +115,13 @@ export interface AthletePayload {
    */
   phone_country_code?: string | null;
   phone_national_number?: string | null;
+  /**
+   * Contact links (#162) — three independently nullable URLs. Each field
+   * may be sent on create or update; `null` clears it.
+   */
+  website?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
   date_of_birth?: string | null;
   belt: Belt;
   stripes: number;

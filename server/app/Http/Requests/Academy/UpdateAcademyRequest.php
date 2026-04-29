@@ -66,6 +66,15 @@ class UpdateAcademyRequest extends FormRequest
                 'max:20',
                 'required_with:phone_country_code',
             ],
+            // Contact links (#162) — three independently nullable URL
+            // columns. `url` enforces a parseable scheme (`http://` or
+            // `https://`), so users can't paste a bare `@handle` and
+            // expect it to render as a clickable link on the SPA. Each
+            // field is independent — no all-or-nothing pairing like the
+            // phone columns.
+            'website' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'facebook' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'instagram' => ['sometimes', 'nullable', 'url', 'max:255'],
             // Cents — `integer` rejects "9.5" / floats; `min:0` blocks
             // negatives (refunds/discounts would be a different concept).
             // No upper bound — let the academy own the absurdity check.
