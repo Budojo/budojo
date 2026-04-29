@@ -23,20 +23,29 @@ describe('BeltBadgeComponent', () => {
     expect(badge.componentInstance.label()).toBe('Blue');
   });
 
-  it.each<Belt>(['white', 'blue', 'purple', 'brown', 'black'])(
-    'resolves the style via --budojo-belt-%s-* custom properties',
-    (belt) => {
-      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
-      const fixture = TestBed.createComponent(HostComponent);
-      fixture.componentInstance.belt = belt;
-      fixture.detectChanges();
+  it.each<Belt>([
+    // IBJJF Youth belts (#230).
+    'grey',
+    'yellow',
+    'orange',
+    'green',
+    // IBJJF Adult belts.
+    'white',
+    'blue',
+    'purple',
+    'brown',
+    'black',
+  ])('resolves the style via --budojo-belt-%s-* custom properties', (belt) => {
+    TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.belt = belt;
+    fixture.detectChanges();
 
-      const badge = fixture.debugElement.query((el) => el.name === 'app-belt-badge');
-      const style = badge.componentInstance.style();
-      expect(style['background']).toBe(`var(--budojo-belt-${belt}-bg)`);
-      expect(style['color']).toBe(`var(--budojo-belt-${belt}-fg)`);
-    },
-  );
+    const badge = fixture.debugElement.query((el) => el.name === 'app-belt-badge');
+    const style = badge.componentInstance.style();
+    expect(style['background']).toBe(`var(--budojo-belt-${belt}-bg)`);
+    expect(style['color']).toBe(`var(--budojo-belt-${belt}-fg)`);
+  });
 
   describe('stripes (#165)', () => {
     it('renders no stripe tiles when stripes input is 0 (default)', () => {

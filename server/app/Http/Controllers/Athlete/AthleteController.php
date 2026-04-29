@@ -225,8 +225,8 @@ class AthleteController extends Controller
      */
     private function applyBeltSort(Builder|HasMany $query, string $direction): void
     {
-        $caseAsc = "CASE belt WHEN 'white' THEN 1 WHEN 'blue' THEN 2 WHEN 'purple' THEN 3 WHEN 'brown' THEN 4 WHEN 'black' THEN 5 END ASC";
-        $caseDesc = "CASE belt WHEN 'white' THEN 1 WHEN 'blue' THEN 2 WHEN 'purple' THEN 3 WHEN 'brown' THEN 4 WHEN 'black' THEN 5 END DESC";
+        $caseAsc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 END ASC";
+        $caseDesc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 END DESC";
 
         $query->orderByRaw($direction === 'asc' ? $caseAsc : $caseDesc);
         $query->orderBy('stripes', 'desc');
