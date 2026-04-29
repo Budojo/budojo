@@ -152,6 +152,59 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/export:
+    get:
+      tags: [auth]
+      summary: Export the authenticated user's full account data (GDPR Art. 20)
+      description: |
+        Returns every byte we hold about the authenticated user — academy,
+        athletes (with their addresses, payments, attendance, document
+        metadata), and personal access tokens — as a single self-describing
+        envelope `{ version, exported_at, data }`.
+
+        Two output formats:
+
+        - **default (no `format`)** — `application/json` with a `Content-Disposition: attachment` header
+        - **`?format=zip`** — `application/zip` containing `data.json` plus the binary documents under `documents/athlete-{id}/{document-id}-{original-filename}`
+
+        Throttled to **1 request per minute per user** because the ZIP variant
+        is heavy on disk + bandwidth, and a tight cap protects against
+        accidental loops in client retry logic.
+      operationId: meExport
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, zip]
+            default: json
+      responses:
+        '200':
+          description: Account data download (JSON or ZIP per `format`)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version, exported_at, data]
+                properties:
+                  version:
+                    type: string
+                    example: "1.0"
+                  exported_at:
+                    type: string
+                    format: date-time
+                  data:
+                    type: object
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          description: Throttle limit exceeded — retry after the `Retry-After` header
+
   /email/verification-notification:
     post:
       tags: [auth]

@@ -79,4 +79,29 @@
       align-items: center;
     }
   }
+
+  // Export-data row: title + helper text on the left, action button on
+  // the right. Stacks vertically on mobile.
+  &__row--export {
+    align-items: flex-start;
+
+    @media (min-width: 768px) {
+      align-items: center;
+    }
+  }
+
+  &__export-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1 1 auto;
+  }
+
+  &__export-hint {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    max-width: 32rem;
+  }
 }
