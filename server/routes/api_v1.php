@@ -28,6 +28,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // the user state (incl. `email_verified_at`) after a page reload.
     Route::get('/auth/me', \App\Http\Controllers\Auth\MeController::class);
 
+    // GDPR Art. 20 (data portability) — export every byte we hold about
+    // the user. JSON by default; `?format=zip` returns the JSON plus
+    // bundled document binaries. Throttled to 1 req/min per user (#222)
+    // because the ZIP variant is heavy on disk + bandwidth.
+    Route::get('/me/export', \App\Http\Controllers\User\ExportController::class)
+        ->middleware('throttle:1,1');
+
     // Resend verification email — auth required, rate-limited via
     // `email-verification-resend` (one request per minute per user;
     // see AppServiceProvider::boot()).
