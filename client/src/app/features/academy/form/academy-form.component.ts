@@ -17,7 +17,6 @@ import {
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { InputGroupModule } from 'primeng/inputgroup';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
@@ -99,7 +98,6 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
   imports: [
     ReactiveFormsModule,
     ButtonModule,
-    InputGroupModule,
     InputTextModule,
     MessageModule,
     SelectModule,

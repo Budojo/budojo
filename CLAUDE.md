@@ -119,8 +119,8 @@ git commit -m "test(athletes): add pest feature test for list endpoint"
 git commit -m "feat(athletes): implement athlete list with belt/status filters"
 git commit -m "test(e2e): add cypress spec for athletes page navigation"
 
-# 4. Keep the branch up to date with develop (rebase, never merge)
-git fetch origin && git rebase origin/develop
+# 4. Keep the branch up to date with develop (merge develop in, no rebase)
+git fetch origin && git merge origin/develop
 
 # 5. Open PR → develop when all tests pass
 ```
@@ -492,7 +492,7 @@ Cross-cutting rules. For backend-only rules (Uncle Bob canon, pre-push PHP gates
 2. **Never commit to `main` or `develop` directly** — always cut a branch, then open a PR. After opening, add the PR to the GitHub Project board and set both the issue and PR items to `In Progress`.
 3. **Always suggest the branch name** (including issue number) before starting any work.
 4. **Use conventional commits** with lower-case subject in every `git commit`.
-5. **Rebase, don't merge**, when updating a feature branch from `develop`.
+5. **Merge `develop` into the feature branch** when it falls behind — no rebase. The feature branch's own history can carry merge commits; they all collapse into a single commit at PR squash-merge time anyway. No force-push gymnastics, no IDE confusion, GitHub's "Update branch" button does the right thing by default.
 6. **Squash merge** PRs into `develop`; merge commit (no squash) into `main`.
 7. **Never create a `version` field** in `package.json` — semantic-release owns versioning entirely.
 8. **Reply to all Copilot comments** after fixing: English only, always cite the short commit SHA (`Fixed in abc1234.`), re-read and update the PR body if the fixes changed anything it describes, then switch label to `🟢 ready to merge`.

@@ -14,24 +14,71 @@ const path = require('node:path');
 
 const OUT_PATH = path.resolve(__dirname, '..', 'src', 'environments', 'version.ts');
 
-function resolveVersion() {
+// `git describe --tags --always` produces three shapes:
+//   - "v1.2.0"             on a tagged commit (clean release)
+//   - "v1.2.0-3-gabc1234"  N commits ahead of the tag, abbreviated SHA
+//   - "abc1234"            no tags reachable — only the bare SHA
+//
+// We only need the network (a `git fetch`) to recover the first two
+// shapes from the third — i.e. when the local clone has no tags. Local
+// dev builds and tag-aware CI runners both produce the first two
+// shapes on the FIRST describe call, so they pay zero network cost.
+const SHA_ONLY = /^[0-9a-f]{7,40}$/;
+
+function tryDescribe() {
   try {
     // `stdio: [ignore, pipe, ignore]` silences stderr without a shell
     // redirection, so the script works on Windows / cmd shells too where
     // `2>/dev/null` is meaningless. A missing .git or git binary throws
-    // and we fall through to the catch with the `dev` default.
-    const tag = execSync('git describe --tags --always', {
+    // and the caller falls through to the `dev` default.
+    return execSync('git describe --tags --always', {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     })
       .toString()
       .trim();
-    return tag || 'dev';
   } catch {
-    // Outside a git checkout (e.g. some Docker build stages) — leave the
-    // default committed value alone rather than emit a bogus tag.
-    return 'dev';
+    return null;
   }
+}
+
+function resolveVersion() {
+  // 1. First describe attempt — local dev builds and tag-aware CI hit
+  //    this branch and exit immediately. No `git fetch`, no network,
+  //    no extra latency on every `npm run build`.
+  let raw = tryDescribe();
+
+  // 2. Bare-SHA result OR describe failed: best-effort `git fetch
+  //    --tags` and re-describe. Cloudflare Pages (and most CI defaults)
+  //    ship a shallow clone with no tags, which falls into this branch.
+  //    Stdout is fully ignored — we only care that the fetch updates
+  //    the local tag refs, not its output.
+  if (!raw || SHA_ONLY.test(raw)) {
+    try {
+      execSync('git fetch --tags --quiet', {
+        stdio: ['ignore', 'ignore', 'ignore'],
+      });
+      const refetched = tryDescribe();
+      if (refetched) {
+        raw = refetched;
+      }
+    } catch {
+      // No remote access (offline build, auth prompt, no remote at all)
+      // — proceed with whatever the first describe produced.
+    }
+  }
+
+  if (!raw) return 'dev';
+
+  // Bare-SHA fallback (shallow clone with no remote / no tags ever
+  // pushed). Prefix with `dev-` so the sidebar footer at least reads as
+  // "untagged dev build at commit 42f69e" instead of an unexplained
+  // hex string. The tagged + ahead-of-tag shapes already carry the
+  // semantic version up front, so they pass through as-is.
+  if (SHA_ONLY.test(raw)) {
+    return `dev-${raw}`;
+  }
+  return raw;
 }
 
 function main() {

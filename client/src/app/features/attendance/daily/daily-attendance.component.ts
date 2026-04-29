@@ -76,6 +76,10 @@ export class DailyAttendanceComponent implements OnInit {
    * `selectedDate` is bound via FormsModule `[(ngModel)]` to the date
    * picker. `<p-datepicker>` emits a Date, we convert to YYYY-MM-DD when
    * crossing the wire boundary (see loadDay).
+   *
+   * Initialised to today; ngOnInit() reseats this to the most recent past
+   * training day when today isn't one (#195) — without that step the user
+   * lands on a non-training-day default and every check-in click 422s.
    */
   protected readonly selectedDate = signal<Date>(new Date());
 
@@ -122,7 +126,47 @@ export class DailyAttendanceComponent implements OnInit {
   // appearing — a non-obvious gotcha worth recording at the call site.
 
   ngOnInit(): void {
+    this.initSelectedDate();
     this.loadDay();
+  }
+
+  /**
+   * If today isn't one of the academy's `training_days`, walk back from
+   * today (up to a week) and pick the most recent past training day as
+   * the default selection (#195). Without this, an academy that trains
+   * Mon/Wed/Fri loads the page on Thursday with today's date pre-selected
+   * — every "mark present" click then 422s server-side because Thursday
+   * isn't a valid training day for that academy. The future-date guard
+   * (#190) already handles tomorrow at the picker layer; this is the
+   * symmetric fix on the past side.
+   *
+   * Legacy fallback: if `training_days` is null (academy hasn't opted
+   * into the schedule yet) we keep today as the default — the field is
+   * unconfigured so every weekday is fair game.
+   */
+  private initSelectedDate(): void {
+    const trainingDays = this.academyService.academy()?.training_days ?? null;
+    if (trainingDays === null || trainingDays.length === 0) {
+      return;
+    }
+    const trainingSet = new Set(trainingDays);
+    const today = new Date();
+    if (trainingSet.has(today.getDay())) {
+      return;
+    }
+    // Walk back up to 7 days to find the most recent past training day.
+    // The 7-iteration cap guarantees termination even if `training_days`
+    // ever ends up containing only weekday values that aren't actually
+    // weekdays — the early-out `length === 0` check above is the common
+    // case, this loop's bound is the defensive backstop.
+    const cursor = new Date(today);
+    for (let i = 0; i < 7; i++) {
+      cursor.setDate(cursor.getDate() - 1);
+      if (trainingSet.has(cursor.getDay())) {
+        this.selectedDate.set(cursor);
+        return;
+      }
+    }
   }
 
   /**
