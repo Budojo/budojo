@@ -19,7 +19,33 @@ export type Belt =
   | 'blue'
   | 'purple'
   | 'brown'
-  | 'black';
+  | 'black'
+  // IBJJF senior ranks beyond black (#229) — 7°+ graus get their own
+  // colour. 1°-6° on black are tracked via `stripes`, not enum cases.
+  | 'red-and-black'
+  | 'red-and-white'
+  | 'red';
+
+/**
+ * Stripes ceiling per belt — single source of truth on the FE side
+ * (mirrors `App\Enums\Belt::maxStripes()` on the server). Black has
+ * 6 graus (1°-6°); every other belt caps at 4. Used by the form
+ * picker to render only valid options for the selected belt.
+ */
+export const MAX_STRIPES_PER_BELT: Record<Belt, number> = {
+  grey: 4,
+  yellow: 4,
+  orange: 4,
+  green: 4,
+  white: 4,
+  blue: 4,
+  purple: 4,
+  brown: 4,
+  black: 6,
+  'red-and-black': 4,
+  'red-and-white': 4,
+  red: 4,
+};
 export type AthleteStatus = 'active' | 'suspended' | 'inactive';
 
 export interface Athlete {

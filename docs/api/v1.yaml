@@ -488,7 +488,8 @@ paths:
           description: |
             Column to sort by. `belt` is rank-aware on the full IBJJF scale
             (kids: grey < yellow < orange < green; adults: white < blue <
-            purple < brown < black) via a SQL CASE expression — NOT a lexicographic
+            purple < brown < black; senior: red-and-black < red-and-white <
+            red) via a SQL CASE expression — NOT a lexicographic
             sort on the column value — and chains `stripes desc` + `last_name
             asc` as stable tiebreakers so two athletes at the same belt
             level always render in the same row order. `stripes` is not
@@ -1264,10 +1265,30 @@ components:
     Belt:
       type: string
       description: |-
-        IBJJF belt ranks on a single linear scale: youth belts (`grey`,
-        `yellow`, `orange`, `green`) precede adult belts (`white`, `blue`,
-        `purple`, `brown`, `black`). Youth belts added in #230.
-      enum: [grey, yellow, orange, green, white, blue, purple, brown, black]
+        IBJJF belt ranks on a single linear scale.
+          - Youth: `grey`, `yellow`, `orange`, `green` (added in #230).
+          - Adult: `white`, `blue`, `purple`, `brown`, `black`.
+          - Senior beyond black: `red-and-black` (7° grau, coral),
+            `red-and-white` (8° grau, coral), `red` (9°/10° grau, grand
+            master). Added in #229.
+
+        Per-belt stripes cap: `black` allows 0–6 (graus 1°–6° within the
+        black-belt phase); every other belt caps at 0–4.
+      enum:
+        [
+          grey,
+          yellow,
+          orange,
+          green,
+          white,
+          blue,
+          purple,
+          brown,
+          black,
+          red-and-black,
+          red-and-white,
+          red
+        ]
 
     AthleteStatus:
       type: string
