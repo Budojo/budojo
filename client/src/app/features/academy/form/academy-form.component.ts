@@ -163,11 +163,12 @@ export class AcademyFormComponent implements OnInit {
         Validators.pattern(/^[0-9]+$/),
       ],
     ],
-    // Contact links (#162) — three independently nullable URLs. The
-    // backend uses Laravel's `url` rule which requires a parseable
-    // scheme (http/https). Mirror that on the client so a bare
-    // `@handle` doesn't slip through with a 200 response shape and
-    // then fail to render as a link on the detail page.
+    // Contact links (#162) — three independently nullable URLs.
+    // Laravel's `url` rule accepts any scheme it can parse (ftp:,
+    // mailto:, …), so the SPA's `urlIfPresent` is deliberately
+    // tighter: http/https only. We don't want a `mailto:` slipping
+    // through and rendering as a broken external link on the detail
+    // page.
     website: ['', [Validators.maxLength(255), urlIfPresent]],
     facebook: ['', [Validators.maxLength(255), urlIfPresent]],
     instagram: ['', [Validators.maxLength(255), urlIfPresent]],

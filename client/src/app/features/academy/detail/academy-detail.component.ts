@@ -69,16 +69,15 @@ export class AcademyDetailComponent {
   });
 
   /**
-   * Contact links (#162) — emits the populated subset as `[icon, url]`
-   * tuples so the template can render only the rows that have a value
-   * (no empty placeholders for the social channels the academy hasn't
-   * filled). Returns `null` when ALL three are empty so the parent
-   * row collapses to an em-dash, matching the phone fallback shape.
+   * Contact links (#162) — emits the populated subset as `{ icon, url,
+   * label }` records so the template renders only the channels that
+   * have a value. Returns an empty array when none are filled; the
+   * template checks `links.length > 0` and falls back to an em-dash.
    *
    * Icon class names map to PrimeIcons (canon § iconography — `pi pi-*`
-   * only, no custom SVG). The URLs are passed through verbatim;
-   * validation at the form layer guarantees they're parseable
-   * http/https — the SPA doesn't sanitize again.
+   * only, no custom SVG). The URLs are passed through verbatim; the
+   * form-layer validator restricts input to http/https, so the SPA
+   * doesn't sanitize again here.
    */
   protected readonly contactLinks = computed<{ icon: string; url: string; label: string }[]>(() => {
     const a = this.academy();
