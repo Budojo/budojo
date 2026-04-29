@@ -43,4 +43,26 @@ it('keeps the AthleteController belt-rank SQL in sync with Belt::rank()', functi
             );
         }
     }
+
+    // Both CASE expressions must carry an explicit ELSE branch. Without
+    // it a belt value that fell outside the enum (the column is plain
+    // varchar with no CHECK constraint) would sort as NULL — first on
+    // ASC, last on DESC — silently hiding the data drift. The ELSE
+    // rank must be strictly greater than every legitimate Belt::rank()
+    // so unknown rows land at the end on ASC and at the top on DESC,
+    // surfaced rather than buried.
+    $maxRealRank = max(array_map(fn (Belt $b) => $b->rank(), Belt::cases()));
+    $elseCount = preg_match_all('/ELSE (\d+) END (ASC|DESC)/', $methodSource, $elseMatches);
+
+    expect($elseCount)->toBe(2, sprintf(
+        'AthleteController::applyBeltSort() must include an ELSE branch in both ASC and DESC CASEs, got %d',
+        $elseCount,
+    ));
+
+    foreach ($elseMatches[1] as $elseRank) {
+        expect((int) $elseRank)->toBeGreaterThan(
+            $maxRealRank,
+            "ELSE rank {$elseRank} must be strictly greater than the highest enum rank ({$maxRealRank}); otherwise unknown belts collide with real ones",
+        );
+    }
 });

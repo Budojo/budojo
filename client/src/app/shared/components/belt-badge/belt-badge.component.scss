@@ -11,7 +11,9 @@
    *   1. No hex literal lives in the TS file (shared component discipline).
    *   2. A future per-academy branding (e.g. Gracie palette) can override
    *      these variables from a parent scope without touching the component.
-   *   3. The mapping is trivially auditable — five pairs, nothing else.
+   *   3. The mapping stays trivially auditable — nine bg/fg pairs covering
+   *      the full IBJJF scale (kids: grey/yellow/orange/green; adults:
+   *      white/blue/purple/brown/black). New belts get appended here.
    */
   // Adult IBJJF belts.
   --budojo-belt-white-bg: #f3f4f6;

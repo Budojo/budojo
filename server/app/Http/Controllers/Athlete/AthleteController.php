@@ -225,8 +225,16 @@ class AthleteController extends Controller
      */
     private function applyBeltSort(Builder|HasMany $query, string $direction): void
     {
-        $caseAsc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 END ASC";
-        $caseDesc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 END DESC";
+        // `ELSE 99` traps any belt value that fell outside the enum (the
+        // column is plain varchar with no CHECK constraint, so a direct
+        // DB write or a future enum-removal migration could leave a
+        // stray row). Without an explicit ELSE the CASE returns NULL —
+        // and NULL sorts first on ASC, hiding the data drift exactly
+        // when we'd want it surfaced. 99 is far above the real ranks
+        // (1-9), so unknown values land at the end on ASC and at the
+        // top on DESC; either way they're visible, not buried.
+        $caseAsc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 ELSE 99 END ASC";
+        $caseDesc = "CASE belt WHEN 'grey' THEN 1 WHEN 'yellow' THEN 2 WHEN 'orange' THEN 3 WHEN 'green' THEN 4 WHEN 'white' THEN 5 WHEN 'blue' THEN 6 WHEN 'purple' THEN 7 WHEN 'brown' THEN 8 WHEN 'black' THEN 9 ELSE 99 END DESC";
 
         $query->orderByRaw($direction === 'asc' ? $caseAsc : $caseDesc);
         $query->orderBy('stripes', 'desc');
