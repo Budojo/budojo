@@ -176,12 +176,14 @@
   gap: 0.375rem;
 }
 
-// Country-code select pinned to a fixed width — 7rem comfortably fits
-// "+999" plus the chevron with breathing room.
+// Country-code select pinned to a fixed width. 9rem fits "+999" plus
+// BOTH the showClear "X" (#228) and the chevron without ellipsing the
+// prefix on a Pixel 8 Pro-class viewport — beta tester saw "+..." at
+// 7rem because the X and chevron together eat ~64px of the trigger.
 :host ::ng-deep .academy-phone-country-code {
-  flex: 0 0 7rem;
-  width: 7rem;
-  min-width: 7rem;
+  flex: 0 0 9rem;
+  width: 9rem;
+  min-width: 9rem;
 }
 
 .phone-national-number {
