@@ -15,6 +15,9 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 | `email` | string(255) | nullable | Optional contact email — uniqueness is scoped per academy (two academies can have a Mario Rossi with the same email, one academy cannot) |
 | `phone_country_code` | string(5) | nullable | E.164 prefix including the leading `+`, e.g. `+39`. Always paired with `phone_national_number` (both null OR both filled). See `Phone` business rule below. |
 | `phone_national_number` | string(20) | nullable | Unformatted national digits (no spaces, no dashes), e.g. `3331234567`. Always paired with `phone_country_code`. |
+| `website` | string(255) | nullable | Public website URL (#162). Validated as a parseable URL — bare `@handles` are rejected with 422. Independently nullable from the other contact links. |
+| `facebook` | string(255) | nullable | Facebook profile URL (#162). Same shape as `website`. |
+| `instagram` | string(255) | nullable | Instagram profile URL (#162). Same shape as `website`. |
 | `date_of_birth` | date | nullable | Cast to `Carbon\Carbon` in the model |
 | `belt` | string | not null | Cast to `App\Enums\Belt` backed enum (`white` / `blue` / `purple` / `brown` / `black`) |
 | `stripes` | tinyint unsigned | not null, default `0` | Range 0–4, enforced at validation layer |

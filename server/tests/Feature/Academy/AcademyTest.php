@@ -608,3 +608,69 @@ it('ignores slug in the payload — slug is immutable by design', function (): v
 
     expect($academy->fresh()->slug)->toBe('original-slug-abcd1234');
 });
+
+// ─── #162 — contact links (website / facebook / instagram) ────────────────────
+
+it('persists academy contact links on PATCH /academy', function (): void {
+    $user = User::factory()->create();
+    $academy = Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'website' => 'https://gracie-barra.com',
+        'facebook' => 'https://facebook.com/graciebarra',
+        'instagram' => 'https://instagram.com/graciebarra',
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.website', 'https://gracie-barra.com')
+        ->assertJsonPath('data.facebook', 'https://facebook.com/graciebarra')
+        ->assertJsonPath('data.instagram', 'https://instagram.com/graciebarra');
+
+    // Belt-and-braces against an AcademyResource that mirrors the
+    // request payload back without ever touching the row — explicitly
+    // re-fetch and confirm the columns landed in the DB.
+    $fresh = $academy->fresh();
+    expect($fresh->website)->toBe('https://gracie-barra.com');
+    expect($fresh->facebook)->toBe('https://facebook.com/graciebarra');
+    expect($fresh->instagram)->toBe('https://instagram.com/graciebarra');
+});
+
+it('clears each contact link independently on PATCH /academy', function (): void {
+    $user = User::factory()->create();
+    $academy = Academy::factory()->create([
+        'user_id' => $user->id,
+        'website' => 'https://old.example',
+        'facebook' => 'https://facebook.com/old',
+        'instagram' => 'https://instagram.com/old',
+    ]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'website' => null,
+        'facebook' => 'https://facebook.com/new',
+        'instagram' => null,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.website', null)
+        ->assertJsonPath('data.facebook', 'https://facebook.com/new')
+        ->assertJsonPath('data.instagram', null);
+
+    // Confirm the DB row reflects the partial-clear semantics, not just
+    // the response envelope.
+    $fresh = $academy->fresh();
+    expect($fresh->website)->toBeNull();
+    expect($fresh->facebook)->toBe('https://facebook.com/new');
+    expect($fresh->instagram)->toBeNull();
+});
+
+it('rejects a non-URL contact link with 422', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', [
+        'instagram' => '@graciebarra',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['instagram']);
+});
