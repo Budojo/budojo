@@ -1,4 +1,5 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
+import { VIEWPORT_PIXEL_8_PRO } from '../support/viewports';
 
 const ACADEMY_OK = {
   statusCode: 200,
@@ -112,9 +113,10 @@ describe('Topbar home link', () => {
   it('navigates to /dashboard when the Budojo wordmark is tapped', () => {
     // Topbar is mobile-only (`display: none` above the sidebar breakpoint
     // — see dashboard.component.scss). Cypress defaults to 1280×720 which
-    // hides it. Flip to a mobile viewport so the link is visible and the
-    // `.click()` actionability check passes.
-    cy.viewport(390, 844);
+    // hides it. Flip to a representative mobile viewport from the shared
+    // preset (#240) so the link is visible and the `.click()` actionability
+    // check passes.
+    cy.viewport(VIEWPORT_PIXEL_8_PRO.width, VIEWPORT_PIXEL_8_PRO.height);
     // Alias + wait on the guard-triggered requests, same pattern the rest
     // of this file uses. Clicking the topbar link before hasAcademyGuard
     // resolves can race the redirect under guard on slower CI runs.

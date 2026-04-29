@@ -1,4 +1,5 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
+import { MOBILE_VIEWPORTS } from '../support/viewports';
 
 // Responsive E2E coverage for the phone country-code dropdown (#238).
 //
@@ -65,15 +66,11 @@ function expectNoEllipsis(label$: JQuery<HTMLElement>): void {
   expect(el.scrollWidth, 'label.scrollWidth').to.be.lte(el.clientWidth);
 }
 
-// 412 × 915 is the Pixel 8 Pro CSS viewport — the device the bug was
-// reported on. iPhone SE (375 × 667) is the second-tightest mainstream
-// width we still want to honour; both should render the prefix in full.
-const VIEWPORTS: { name: string; width: number; height: number }[] = [
-  { name: 'Pixel 8 Pro', width: 412, height: 915 },
-  { name: 'iPhone SE', width: 375, height: 667 },
-];
-
-VIEWPORTS.forEach(({ name, width, height }) => {
+// Use the shared `MOBILE_VIEWPORTS` preset (#240) — Pixel 8 Pro is the
+// device the bug was originally reported on; iPhone SE is the
+// second-tightest mainstream width we still want to honour. Both must
+// render the prefix in full.
+MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
   describe(`Phone country-code prefix renders fully (${name}, ${width}×${height})`, () => {
     beforeEach(() => {
       cy.viewport(width, height);
