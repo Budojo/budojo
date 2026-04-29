@@ -6,15 +6,34 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { Subject, debounceTime, distinctUntilChanged, map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
 import { AcademyService } from '../../../core/services/academy.service';
-import { Athlete, AthleteService } from '../../../core/services/athlete.service';
+import {
+  Athlete,
+  AthleteService,
+  AthleteSortField,
+  AthleteSortOrder,
+  Belt,
+} from '../../../core/services/athlete.service';
 import { AttendanceService } from '../../../core/services/attendance.service';
+import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
+
+interface SelectOption<T extends string> {
+  label: string;
+  value: T | '';
+}
 
 const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
@@ -34,7 +53,19 @@ function toLocalDateString(d: Date): string {
 @Component({
   selector: 'app-daily-attendance',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ButtonModule, DatePickerModule, SkeletonModule, Toast],
+  imports: [
+    FormsModule,
+    ButtonModule,
+    DatePickerModule,
+    IconFieldModule,
+    InputIconModule,
+    InputTextModule,
+    SelectModule,
+    SkeletonModule,
+    TableModule,
+    Toast,
+    BeltBadgeComponent,
+  ],
   providers: [MessageService],
   templateUrl: './daily-attendance.component.html',
   styleUrl: './daily-attendance.component.scss',
@@ -118,6 +149,46 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private loadEpoch = 0;
 
+  // ── Search + filters (#184) ────────────────────────────────────────────────
+  // Mirrors the athletes-list filter strip — same shape, same debounce
+  // pipeline. Filter parameters are forwarded to the SAME paginated
+  // athletes endpoint the page already calls, so server-side filtering
+  // applies. Keeps the chrome consistent and the muscle memory shared
+  // with the main list (Jakob's law).
+
+  protected readonly searchTerm = signal<string>('');
+  protected readonly selectedBelt = signal<Belt | ''>('');
+  protected readonly sortField = signal<AthleteSortField | null>(null);
+  protected readonly sortOrder = signal<AthleteSortOrder>('desc');
+
+  /**
+   * Debounce pipeline matching athletes-list (#102): each keystroke
+   * pushes here, the trim+distinct guard collapses redundant emissions,
+   * the 200 ms window keeps the load count low without making the
+   * filter feel laggy (Doherty < 400 ms).
+   */
+  private readonly searchInputSubject = new Subject<string>();
+
+  protected readonly beltOptions: SelectOption<Belt>[] = [
+    { label: 'All belts', value: '' },
+    { label: 'White', value: 'white' },
+    { label: 'Blue', value: 'blue' },
+    { label: 'Purple', value: 'purple' },
+    { label: 'Brown', value: 'brown' },
+    { label: 'Black', value: 'black' },
+  ];
+
+  constructor() {
+    this.searchInputSubject
+      .pipe(
+        debounceTime(200),
+        map((value) => value.trim()),
+        distinctUntilChanged(),
+        takeUntilDestroyed(),
+      )
+      .subscribe((q) => this.applySearch(q));
+  }
+
   // Clear any pending undo toast before the next add to avoid stacked Undo
   // buttons. The component-scoped MessageService isolates this from global
   // toasts (see providers above). We intentionally don't use per-message
@@ -170,8 +241,12 @@ export class DailyAttendanceComponent implements OnInit {
   }
 
   /**
-   * Fetches the academy roster + the day's existing attendance, builds
-   * the present-map. Re-runs on date-picker change.
+   * Date-driven full refresh: roster + the day's attendance records.
+   * Used on init, on date change, and as the public name the existing
+   * test suite exercises. Internally splits to `fetchAthletes()` +
+   * `fetchAttendance()` so filter/sort changes can re-fetch ONLY the
+   * roster side without clobbering an in-flight optimistic mark on
+   * the present-map (#184 follow-up to Copilot review).
    *
    * Epoch-gated against double-trigger: the user clicking the date
    * picker rapidly fires multiple loadDay() calls; each captures its
@@ -181,7 +256,6 @@ export class DailyAttendanceComponent implements OnInit {
    */
   protected loadDay(): void {
     this.loading.set(true);
-    const date = toLocalDateString(this.selectedDate());
     const epoch = ++this.loadEpoch;
 
     let pending = 2;
@@ -192,22 +266,68 @@ export class DailyAttendanceComponent implements OnInit {
       }
     };
 
-    this.athleteService.list({ status: 'active' }).subscribe({
-      next: (page) => {
-        if (epoch === this.loadEpoch) {
-          this.athletes.set(page.data);
-          this.totalActiveAthletes.set(page.meta.total);
-        }
-        settle();
-      },
-      error: () => {
-        if (epoch === this.loadEpoch) {
-          this.toastError('Could not load the athletes list.');
-        }
-        settle();
-      },
-    });
+    this.fetchAthletes(epoch, settle);
+    this.fetchAttendance(epoch, settle);
+  }
 
+  /**
+   * Fetches ONLY the athletes list — used by filter/sort changes
+   * (q, belt, sort_by, sort_order). Crucially does NOT touch the
+   * present-map, so an in-flight optimistic mark can't be clobbered
+   * by a parallel attendance refetch racing the POST.
+   */
+  private loadAthletes(): void {
+    this.loading.set(true);
+    const epoch = ++this.loadEpoch;
+    this.fetchAthletes(epoch, () => {
+      if (epoch === this.loadEpoch) {
+        this.loading.set(false);
+      }
+    });
+  }
+
+  /**
+   * The actual athletes-list HTTP call. Epoch-gated so a stale
+   * response from a previous filter / sort / date change can no
+   * longer clobber the current state.
+   */
+  private fetchAthletes(epoch: number, settle: () => void): void {
+    const belt = this.selectedBelt();
+    const sortBy = this.sortField();
+    const q = this.searchTerm().trim();
+    this.athleteService
+      .list({
+        status: 'active',
+        ...(belt ? { belt } : {}),
+        ...(q ? { q } : {}),
+        ...(sortBy ? { sortBy, sortOrder: this.sortOrder() } : {}),
+      })
+      .subscribe({
+        next: (page) => {
+          if (epoch === this.loadEpoch) {
+            this.athletes.set(page.data);
+            this.totalActiveAthletes.set(page.meta.total);
+          }
+          settle();
+        },
+        error: () => {
+          if (epoch === this.loadEpoch) {
+            this.toastError('Could not load the athletes list.');
+          }
+          settle();
+        },
+      });
+  }
+
+  /**
+   * The attendance-records HTTP call. Same epoch-gated pattern.
+   * Rebuilds the present-map from the server's records on success
+   * — ONLY safe to call when no mark/unmark is in flight, hence the
+   * filter/sort handlers route through `loadAthletes()` instead of
+   * `loadDay()` to avoid clobbering an optimistic update.
+   */
+  private fetchAttendance(epoch: number, settle: () => void): void {
+    const date = toLocalDateString(this.selectedDate());
     this.attendanceService.getDaily(date).subscribe({
       next: (records) => {
         if (epoch === this.loadEpoch) {
@@ -320,6 +440,43 @@ export class DailyAttendanceComponent implements OnInit {
   protected onDateChanged(): void {
     // ngModel pushes the new Date into selectedDate(). Reload accordingly.
     this.loadDay();
+  }
+
+  // ── Filter handlers (#184) ─────────────────────────────────────────────────
+
+  /** Each keystroke pushes into the debounce pipeline. */
+  protected onSearchInput(value: string): void {
+    this.searchInputSubject.next(value);
+  }
+
+  protected applySearch(q: string): void {
+    this.searchTerm.set(q.trim());
+    // Filter/sort changes reload the ROSTER only — the date hasn't
+    // moved, so the attendance records on the wire are unchanged
+    // and a parallel re-fetch would race any in-flight optimistic
+    // mark on the present-map.
+    this.loadAthletes();
+  }
+
+  protected onBeltChange(belt: Belt | ''): void {
+    this.selectedBelt.set(belt);
+    this.loadAthletes();
+  }
+
+  /**
+   * 2-state header sort. Mirrors athletes-list's `onSort()` minus the
+   * Full-name 4-state cycle — daily attendance is small enough that a
+   * single primary sort + direction toggle covers the use case. Same
+   * allowlist (`first_name`, `last_name`, `belt`) the backend honors.
+   */
+  protected onSort(event: { field?: string; order?: number }): void {
+    const allowed: AthleteSortField[] = ['first_name', 'last_name', 'belt'];
+    const field = event.field;
+    if (!field || !(allowed as string[]).includes(field)) return;
+
+    this.sortField.set(field as AthleteSortField);
+    this.sortOrder.set(event.order === 1 ? 'asc' : 'desc');
+    this.loadAthletes();
   }
 
   // ── Helpers ────────────────────────────────────────────────────────

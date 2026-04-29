@@ -41,55 +41,125 @@
     />
   </header>
 
-  @if (loading()) {
-    <ul class="attendance__list" data-cy="attendance-skeleton">
-      @for (_ of [0, 0, 0, 0, 0]; track $index) {
-        <li class="attendance-row attendance-row--skeleton">
-          <p-skeleton width="60%" height="1.25rem" />
-          <p-skeleton shape="circle" size="2rem" />
-        </li>
-      }
-    </ul>
-  } @else if (athletes().length === 0) {
-    <div class="attendance__empty">
-      <i class="pi pi-users" aria-hidden="true"></i>
-      <p>No active athletes yet — add one from the Athletes page.</p>
-    </div>
-  } @else {
-    <ul class="attendance__list" role="list" data-cy="attendance-list">
-      @for (athlete of athletes(); track athlete.id) {
-        <li class="attendance-row__wrapper">
-          <button
-            type="button"
-            class="attendance-row"
-            [class.attendance-row--present]="isPresent(athlete.id)"
-            [class.attendance-row--inflight]="isInflight(athlete.id)"
-            [attr.aria-pressed]="isPresent(athlete.id)"
-            [attr.aria-busy]="isInflight(athlete.id)"
-            [disabled]="isInflight(athlete.id)"
-            (click)="togglePresent(athlete)"
-            [attr.data-cy]="'attendance-row-' + athlete.id"
-          >
-            <span class="attendance-row__name">
-              {{ athlete.first_name }} {{ athlete.last_name }}
-            </span>
-            <span class="attendance-row__indicator" aria-hidden="true">
-              @if (isPresent(athlete.id)) {
-                <i class="pi pi-check"></i>
-              } @else {
-                <i class="pi pi-circle"></i>
-              }
-            </span>
-          </button>
-        </li>
-      }
-    </ul>
+  <!--
+    Search + belt filter strip — same shape as athletes-list (#184).
+    Filters are forwarded to the same paginated athletes endpoint that
+    feeds the page, so server-side filtering applies. Status is fixed
+    to `active` (today's check-in only makes sense for active athletes)
+    and isn't surfaced as a control.
+  -->
+  <div class="attendance__filters">
+    <p-iconfield iconPosition="left" styleClass="attendance__search">
+      <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+      <input
+        pInputText
+        type="text"
+        placeholder="Search by name"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="onSearchInput($event)"
+        autocomplete="off"
+        data-cy="attendance-search-input"
+      />
+    </p-iconfield>
+    <p-select
+      [options]="beltOptions"
+      [ngModel]="selectedBelt()"
+      (ngModelChange)="onBeltChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Belt"
+      styleClass="attendance__filter-select"
+      data-cy="attendance-belt-filter"
+    />
+  </div>
 
-    @if (totalActiveAthletes() > athletes().length) {
-      <p class="attendance__pagination-hint">
-        Showing {{ athletes().length }} of {{ totalActiveAthletes() }} active athletes. Pagination
-        is on the M4.2.5 follow-up.
-      </p>
-    }
+  <div class="attendance__table-wrapper">
+    <p-table
+      [value]="athletes()"
+      [loading]="loading()"
+      [showLoader]="false"
+      [lazy]="true"
+      (onSort)="onSort($event)"
+      sortMode="single"
+      responsiveLayout="scroll"
+      styleClass="p-datatable-sm"
+      data-cy="attendance-list"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="last_name" data-cy="attendance-th-name">
+            Full name <p-sortIcon field="last_name" />
+          </th>
+          <th pSortableColumn="belt" data-cy="attendance-th-belt">
+            Belt <p-sortIcon field="belt" />
+          </th>
+          <th class="attendance-cell-indicator" aria-label="Present"></th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-athlete>
+        <!--
+          Whole-row click toggles "present today". Keyboard-equivalent on
+          the focused row through Enter / Space (keydown handlers below).
+          aria-pressed mirrors the visual state for screen readers.
+        -->
+        <tr
+          class="attendance-row"
+          [class.attendance-row--present]="isPresent(athlete.id)"
+          [class.attendance-row--inflight]="isInflight(athlete.id)"
+          [attr.aria-pressed]="isPresent(athlete.id)"
+          [attr.aria-busy]="isInflight(athlete.id)"
+          [attr.aria-disabled]="isInflight(athlete.id) ? 'true' : null"
+          tabindex="0"
+          role="button"
+          (click)="togglePresent(athlete)"
+          (keydown.enter)="togglePresent(athlete)"
+          (keydown.space)="togglePresent(athlete); $event.preventDefault()"
+          [attr.data-cy]="'attendance-row-' + athlete.id"
+        >
+          <td class="attendance-cell-name">{{ athlete.first_name }} {{ athlete.last_name }}</td>
+          <td>
+            <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
+          </td>
+          <td class="attendance-cell-indicator" aria-hidden="true">
+            @if (isPresent(athlete.id)) {
+              <i class="pi pi-check-circle attendance-indicator attendance-indicator--present"></i>
+            } @else {
+              <i class="pi pi-circle attendance-indicator"></i>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="3" class="attendance__empty-cell">
+            @if (loading()) {
+              <div class="attendance__skeleton" data-cy="attendance-skeleton">
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" styleClass="mb-2" />
+                <p-skeleton height="2rem" />
+              </div>
+            } @else {
+              <div class="attendance__empty">
+                <i class="pi pi-users" aria-hidden="true"></i>
+                @if (searchTerm() || selectedBelt()) {
+                  <p>No active athletes match the current filters.</p>
+                } @else {
+                  <p>No active athletes yet — add one from the Athletes page.</p>
+                }
+              </div>
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  @if (!loading() && athletes().length > 0 && totalActiveAthletes() > athletes().length) {
+    <p class="attendance__pagination-hint">
+      Showing {{ athletes().length }} of {{ totalActiveAthletes() }} active athletes. Pagination is
+      on the M4.2.5 follow-up.
+    </p>
   }
 </section>
