@@ -299,4 +299,163 @@ describe('DailyAttendanceComponent', () => {
       vi.useRealTimers();
     }
   });
+
+  // ─── Filter strip (#184) ────────────────────────────────────────────────────
+  // Search input + belt select forward to the same paginated athletes
+  // endpoint that backs the page. Filter changes re-trigger loadDay()
+  // so the daily roster reflects the new query.
+
+  it('forwards searchTerm.q to the athletes endpoint when applySearch runs', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    component['applySearch']('mario');
+
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('q') === 'mario')
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 1,
+          from: null,
+          last_page: 1,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 0,
+        },
+      });
+    // Filter/sort changes route through `loadAthletes()` (not loadDay) so
+    // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
+    // mark from being clobbered by a parallel attendance refetch.
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
+
+    expect(component['searchTerm']()).toBe('mario');
+  });
+
+  it('trims whitespace-only searchTerm to empty before forwarding (omits q)', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    component['applySearch']('   ');
+
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('q') === null)
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 1,
+          from: null,
+          last_page: 1,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 0,
+        },
+      });
+    // Filter/sort changes route through `loadAthletes()` (not loadDay) so
+    // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
+    // mark from being clobbered by a parallel attendance refetch.
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
+
+    expect(component['searchTerm']()).toBe('');
+  });
+
+  it('forwards belt filter to the athletes endpoint when onBeltChange runs', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    component['onBeltChange']('blue');
+
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('belt') === 'blue')
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 1,
+          from: null,
+          last_page: 1,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 0,
+        },
+      });
+    // Filter/sort changes route through `loadAthletes()` (not loadDay) so
+    // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
+    // mark from being clobbered by a parallel attendance refetch.
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
+
+    expect(component['selectedBelt']()).toBe('blue');
+  });
+
+  it('honors the sort allowlist and forwards sort_by + sort_order on header click', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    component['onSort']({ field: 'last_name', order: 1 });
+    expect(component['sortField']()).toBe('last_name');
+    expect(component['sortOrder']()).toBe('asc');
+
+    httpMock
+      .expectOne(
+        (r) =>
+          r.url === '/api/v1/athletes' &&
+          r.params.get('sort_by') === 'last_name' &&
+          r.params.get('sort_order') === 'asc',
+      )
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 1,
+          from: null,
+          last_page: 1,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 0,
+        },
+      });
+    // Filter/sort changes route through `loadAthletes()` (not loadDay) so
+    // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
+    // mark from being clobbered by a parallel attendance refetch.
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
+  });
+
+  it('rejects fields outside the sort allowlist (e.g. created_at)', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    component['onSort']({ field: 'last_name', order: 1 });
+    httpMock
+      .match((r) => r.url === '/api/v1/athletes')[0]
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 1,
+          from: null,
+          last_page: 1,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 0,
+        },
+      });
+    // No attendance refetch on sort change (loadAthletes path).
+
+    component['onSort']({ field: 'created_at', order: -1 });
+    // created_at is not in the daily-attendance allowlist (only the
+    // first/last_name + belt sorts are surfaced) — sortField stays put.
+    expect(component['sortField']()).toBe('last_name');
+  });
 });
