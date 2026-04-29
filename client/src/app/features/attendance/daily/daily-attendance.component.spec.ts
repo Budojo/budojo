@@ -233,4 +233,70 @@ describe('DailyAttendanceComponent', () => {
     // haven't opted in yet.
     expect(component['disabledWeekdays']()).toEqual([]);
   });
+
+  // ─── Default-date selection (#195) ──────────────────────────────────────────
+  // System time is pinned via vi.setSystemTime so `new Date()` inside the
+  // component is deterministic across runs. 2026-04-29 is a Wednesday
+  // (getDay() === 3), 2026-04-27 is the preceding Monday (getDay() === 1).
+
+  it('keeps today as the default date when today is a training day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-29T10:00:00')); // Wed
+    try {
+      const { fixture, component, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        training_days: [1, 3, 5], // Mon/Wed/Fri — Wed is in the set
+      });
+      fixture.detectChanges();
+      flushInit(httpMock, {});
+
+      expect(component['selectedDate']().getDay()).toBe(3); // still Wednesday
+      expect(component['selectedDate']().toDateString()).toBe(
+        new Date('2026-04-29').toDateString(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reseats to the most recent past training day when today is not a training day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-29T10:00:00')); // Wed
+    try {
+      const { fixture, component, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        training_days: [1], // only Monday — Wed is NOT in the set
+      });
+      fixture.detectChanges();
+      flushInit(httpMock, {});
+
+      // Walks back from Wed → Tue → Mon (2026-04-27) and stops there.
+      expect(component['selectedDate']().getDay()).toBe(1);
+      expect(component['selectedDate']().toDateString()).toBe(
+        new Date('2026-04-27').toDateString(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps today as the default date when training_days is unconfigured (legacy)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-29T10:00:00')); // Wed
+    try {
+      const { fixture, component, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, training_days: null });
+      fixture.detectChanges();
+      flushInit(httpMock, {});
+
+      // No training-day filter → today is a valid default, fall through.
+      expect(component['selectedDate']().toDateString()).toBe(
+        new Date('2026-04-29').toDateString(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
