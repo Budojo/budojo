@@ -7,7 +7,7 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
  * Wildcard 404 page (#226). Hit by any URL that no other route matches.
  *
  * The CTA navigates to `/dashboard/athletes` — the dashboard guards
- * (auth + has-academy) then take care of bouncing un-authenticated or
+ * (auth + has-academy) then take care of bouncing unauthenticated or
  * setup-pending users back where they belong, so this single CTA works
  * for every visitor state without coupling this page to AuthService.
  */

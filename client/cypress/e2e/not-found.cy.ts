@@ -19,11 +19,12 @@ describe('404 — wildcard route', () => {
     cy.contains('Pagina non trovata').should('be.visible');
   });
 
-  it('CTA navigates to /dashboard/athletes — auth/has-academy guards then bounce as needed', () => {
-    // Unauthenticated visitor — clicking "Torna alla home" lands on the
-    // dashboard route, where authGuard redirects to /auth/login.
-    cy.intercept('GET', '/api/v1/me*', { statusCode: 401 }).as('me');
-
+  it('CTA navigates to /dashboard/athletes — authGuard then redirects an unauthenticated visitor to /auth/login', () => {
+    // No interceptors needed: with localStorage cleared in beforeEach,
+    // authGuard redirects synchronously based on the missing auth token,
+    // before any guard ever fires an HTTP request. (loadCurrentUser hits
+    // /api/v1/auth/me; hasAcademyGuard hits /api/v1/academy — both are
+    // skipped on the unauthenticated path.)
     cy.visit('/asdfgh', { failOnStatusCode: false });
     cy.get('[data-cy="not-found-cta"]').click();
 
