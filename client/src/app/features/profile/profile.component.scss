@@ -65,7 +65,16 @@
   &__label {
     color: var(--p-text-color-secondary);
     font-size: 0.875rem;
-    flex: 0 0 8rem;
+
+    // The 8rem flex-basis reserves the left column at >=768px so the
+    // labels and values align in a clean two-column grid. Without
+    // scoping it to the breakpoint, the same `flex: 0 0 8rem` was
+    // applying to the column-direction layout below 768px — making
+    // the label take 8rem (128px) of VERTICAL space, leaving an
+    // empty gap before each value (Pixel 8 Pro screenshot, Luigi).
+    @media (min-width: 768px) {
+      flex: 0 0 8rem;
+    }
   }
 
   &__value {
