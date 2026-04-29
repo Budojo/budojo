@@ -178,6 +178,88 @@ describe('AthletesListComponent', () => {
     });
   });
 
+  describe('Belt 2-state sort cycle (#210)', () => {
+    // The Belt header has its own custom click handler (replacing the
+    // dropped pSortableColumn + p-sortIcon pair, see #205 / #210). The
+    // cycle is simpler than Full-name's 4-state — just asc / desc on
+    // the belt rank, since there's no first-vs-last lead to choose.
+
+    it('starts at belt asc when the sort is initially neutral', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.cycleBeltSort();
+      expect(component.sortField()).toBe('belt');
+      expect(component.sortOrder()).toBe('asc');
+    });
+
+    it('flips asc → desc → asc on subsequent clicks of the same column', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.cycleBeltSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['belt', 'asc']);
+
+      component.cycleBeltSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['belt', 'desc']);
+
+      component.cycleBeltSort();
+      expect([component.sortField(), component.sortOrder()]).toEqual(['belt', 'asc']);
+    });
+
+    it('restarts at asc when the active sort is on a different column', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      component.cycleFullNameSort(); // first_name asc
+      component.cycleFullNameSort(); // first_name desc
+      expect([component.sortField(), component.sortOrder()]).toEqual(['first_name', 'desc']);
+
+      component.cycleBeltSort();
+      // Coming in from a non-belt sort → back to asc, not flipped to desc.
+      expect([component.sortField(), component.sortOrder()]).toEqual(['belt', 'asc']);
+    });
+
+    it('renders the signifier as ↑/↓ when active and ↕ when inactive', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      // Neutral.
+      expect(component.beltSortLabel()).toBe('↕');
+
+      component.cycleBeltSort();
+      expect(component.beltSortLabel()).toBe('↑');
+
+      component.cycleBeltSort();
+      expect(component.beltSortLabel()).toBe('↓');
+
+      // Move to a different column — Belt signifier returns to neutral.
+      component.cycleFullNameSort();
+      expect(component.beltSortLabel()).toBe('↕');
+    });
+
+    it('forwards sort_by=belt + sort_order to the backend filter', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+
+      listSpy.mockClear();
+      component.cycleBeltSort();
+      expect(listSpy.mock.calls[0][0].sortBy).toBe('belt');
+      expect(listSpy.mock.calls[0][0].sortOrder).toBe('asc');
+
+      listSpy.mockClear();
+      component.cycleBeltSort();
+      expect(listSpy.mock.calls[0][0].sortBy).toBe('belt');
+      expect(listSpy.mock.calls[0][0].sortOrder).toBe('desc');
+    });
+  });
+
   describe('search filter (#102)', () => {
     // The search box drives a `searchTerm` signal. When non-empty, the term is
     // forwarded to the backend as `q=...` so the filter spans all pages —

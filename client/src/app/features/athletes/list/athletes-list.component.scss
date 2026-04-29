@@ -236,9 +236,55 @@
   // Active state (#205): the F↑/F↓/L↑/L↓ glyph switches to the primary
   // color when this column actually drives the sort. Norman § signifier
   // — "active" must be visually distinct from "neutral" (the `↕`
-  // placeholder below stays muted). Pairs with the `[sortField]` /
-  // `[sortOrder]` bindings on `<p-table>` so the Belt column's
-  // `<p-sortIcon>` deactivates symmetrically.
+  // placeholder stays muted).
+  &--active {
+    color: var(--p-primary-color);
+  }
+}
+
+// ── Belt 2-state sort header (#210) ───────────────────────────────────────────
+//
+// Same shape as the Full-name header so the two columns read as a pair.
+// Drops PrimeNG's `<p-sortIcon>` because PrimeNG's table doesn't know
+// about our Full-name cycle and would leave the Belt arrow active when
+// the sort moves elsewhere (#205 follow-up). The custom signifier below
+// reads from our `sortField` / `sortOrder` signals directly.
+
+.belt-th {
+  padding: 0;
+}
+
+.belt-th__btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color, var(--p-primary-color));
+    outline-offset: -2px;
+  }
+}
+
+.belt-th__signifier {
+  display: inline-block;
+  min-width: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-text-muted-color);
+
+  // Active state — primary color when the sort is on belt; neutral
+  // grey when the sort is elsewhere or unset.
   &--active {
     color: var(--p-primary-color);
   }

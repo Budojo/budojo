@@ -308,6 +308,68 @@ export class AthletesListComponent implements OnInit {
     return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
   });
 
+  /**
+   * Belt sort cycle (#210, follow-up to #205). Same pattern as the
+   * Full-name column but with only 2 states (asc / desc), since Belt
+   * isn't a synthetic column — there's no first-vs-last lead to choose,
+   * just a direction. The cycle:
+   *
+   *   none/other → asc → desc → asc → ...
+   *
+   * Backend's `applyBeltSort` is rank-aware (white < blue < ... < black)
+   * with stripes desc + last_name asc as stable tiebreakers. Direction
+   * here is the rank direction.
+   *
+   * Replaces the old `pSortableColumn="belt"` + `<p-sortIcon>` pair so
+   * the active visual reads from OUR signals — when the sort moves to
+   * first/last_name, this column's arrow goes back to neutral instead
+   * of staying highlighted via PrimeNG's stale internal state.
+   */
+  cycleBeltSort(): void {
+    const f = this.sortField();
+    const o = this.sortOrder();
+
+    let nextOrder: AthleteSortOrder;
+    if (f === 'belt' && o === 'asc') {
+      nextOrder = 'desc';
+    } else {
+      // First click on the column or coming in from any other state
+      // (null, name sort, etc.) → start at asc, the conventional default.
+      nextOrder = 'asc';
+    }
+
+    this.sortField.set('belt');
+    this.sortOrder.set(nextOrder);
+    this.resetPage();
+    this.load();
+  }
+
+  /**
+   * Compact direction signifier for the Belt header. `↑` when asc,
+   * `↓` when desc, `↕` when the sort is on a different column. Matches
+   * the visual rhythm of the Full-name signifier.
+   */
+  readonly beltSortLabel = computed<string>(() => {
+    if (this.sortField() !== 'belt') return '↕';
+    return this.sortOrder() === 'asc' ? '↑' : '↓';
+  });
+
+  /** Plain-English tooltip — Norman § signifier. */
+  readonly beltSortTooltip = computed<string>(() => {
+    const f = this.sortField();
+    if (f !== 'belt') {
+      return 'Click to sort by belt rank (white → black)';
+    }
+    const direction = this.sortOrder() === 'asc' ? 'white → black' : 'black → white';
+    return `Sorted by belt (${direction}). Click to flip.`;
+  });
+
+  /** WAI-ARIA sort state for the Belt <th>. */
+  readonly beltAriaSort = computed<'ascending' | 'descending' | 'none'>(() => {
+    if (this.sortField() !== 'belt') return 'none';
+    return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
+  });
+
   goToNew(): void {
     void this.router.navigate(['/dashboard/athletes/new']);
   }
