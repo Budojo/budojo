@@ -6,11 +6,46 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { providePrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
 import Material from '@primeuix/themes/material';
-import { provideTranslateService } from '@ngx-translate/core';
-import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
+import {
+  provideTranslateService,
+  TranslateLoader,
+  TranslationObject,
+} from '@ngx-translate/core';
+import { Observable, of } from 'rxjs';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+
+import EN_TRANSLATIONS from '../../public/assets/i18n/en.json';
+import IT_TRANSLATIONS from '../../public/assets/i18n/it.json';
+
+/**
+ * Synchronous translate loader (#273). The JSON files are imported
+ * at build time and bundled into the app, so the first paint always
+ * has translations available — no HTTP round-trip race that would
+ * leave Cypress assertions reading raw `nav.athletes` keys before
+ * the loader resolved.
+ *
+ * Trade-off vs the HTTP loader: ~10 kB inlined into the initial
+ * bundle. Acceptable for an auth-walled dashboard where the user
+ * sees the login screen translated immediately, and it removes the
+ * whole class of "translation hadn't arrived yet" flakes from the
+ * E2E suite.
+ *
+ * Adding a new locale (Spanish, German, etc.) means importing the
+ * matching JSON above and adding the case below — same shape as
+ * `client/src/test-utils/i18n-test.ts`.
+ */
+class BundledJsonLoader implements TranslateLoader {
+  private readonly bundles: Record<string, TranslationObject> = {
+    en: EN_TRANSLATIONS as unknown as TranslationObject,
+    it: IT_TRANSLATIONS as unknown as TranslationObject,
+  };
+
+  getTranslation(lang: string): Observable<TranslationObject> {
+    return of(this.bundles[lang] ?? this.bundles['en']);
+  }
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -59,18 +94,15 @@ export const appConfig: ApplicationConfig = {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
     }),
-    // i18n (#273) — runtime locale switch via JSON files in
-    // `public/assets/i18n/{lang}.json`. Default + fallback `en`. The
-    // `LanguageService.bootstrap()` call in `App.ngOnInit` sets the
-    // active language on first paint from localStorage / navigator
-    // with `en` fallback.
-    //
-    // ngx-translate v17 ships `provideTranslateHttpLoader` as the
-    // idiomatic way to wire the HTTP loader — internally it uses
-    // `inject()` for `HttpClient` and the prefix/suffix tokens, so
-    // the consumer only configures paths.
-    provideTranslateHttpLoader({ prefix: '/assets/i18n/', suffix: '.json' }),
+    // i18n (#273) — runtime locale switch with bundle-time JSON
+    // resolution. `BundledJsonLoader` returns the imported JSON
+    // synchronously, so a Cypress / Vitest assertion on translated
+    // text never sees the raw `nav.athletes` key. Default + fallback
+    // `en`; `LanguageService.bootstrap()` (called from `App.ngOnInit`)
+    // picks the active locale from localStorage / navigator with the
+    // `en` fallback.
     provideTranslateService({
+      loader: { provide: TranslateLoader, useClass: BundledJsonLoader },
       defaultLanguage: 'en',
       fallbackLang: 'en',
     }),
