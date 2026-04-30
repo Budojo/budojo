@@ -87,5 +87,16 @@ it('emits null deletion_pending on login when the user has no pending deletion',
         'password' => 'Password1!',
     ])->assertOk();
 
+    // assertJsonStructure first — without it, `json('data.deletion_pending')`
+    // would return null both when the key exists with value null AND when
+    // the key is missing from the payload entirely. The latter is exactly
+    // the silent-regression we want to prevent: if a future refactor drops
+    // the field altogether, the SPA's banner logic breaks but a `toBeNull`
+    // assertion alone would happily pass (Copilot review on #256).
+    $response->assertJsonStructure([
+        'data' => ['id', 'name', 'email', 'deletion_pending'],
+        'token',
+    ]);
+
     expect($response->json('data.deletion_pending'))->toBeNull();
 });
