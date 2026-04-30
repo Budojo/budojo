@@ -9,9 +9,17 @@ import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/bran
  *
  * Italian remains the **legally-citable source of truth** for the
  * Garante and IT customers, even though the SPA's default URL serves
- * English (#271 EN-first roadmap). When facts change — sub-processors,
- * retention windows, contact email — this Italian text MUST be updated
- * in lock-step with `/privacy` (English) in the same PR.
+ * English (#271 EN-first roadmap).
+ *
+ * **Three artefacts, one content domain.** Mirror of the rule
+ * documented on the English component:
+ *
+ *   1. `docs/legal/privacy-policy.md` — the canonical, auditor-readable
+ *      markdown source.
+ *   2. `../privacy-policy.component.html` — English rendering at /privacy.
+ *   3. This component's HTML — Italian rendering at /privacy/it.
+ *
+ * Edits to ANY ONE of the three MUST land in lock-step in the same PR.
  *
  * **Draft status.** Ships with a visible "Bozza tecnica — in
  * revisione legale" banner. Structure and technical facts (sub-
