@@ -127,38 +127,36 @@ git fetch origin && git merge origin/develop
 
 ### Pre-push Checklist — run before every `git push`
 
-**Whenever PHP files were changed:**
+The dev stack is Docker-only on this machine; both gate suites have to run
+inside their containers. Wrappers live under [`.claude/scripts/`](.claude/scripts/README.md):
 
 ```bash
-cd server
+# Whenever PHP files changed:
+./.claude/scripts/test-server.sh        # cs-fixer + phpstan + pest
 
-# 1. Auto-fix code style
-vendor/bin/php-cs-fixer fix
-
-# 2. Static analysis — must report 0 errors
-vendor/bin/phpstan analyse --no-progress
-
-# 3. Full test suite — must be all green
-vendor/bin/pest --parallel
+# Whenever Angular files changed:
+./.claude/scripts/test-client.sh        # prettier --write + lint + vitest
 ```
 
-**Whenever Angular files were changed:**
+Subcommands available: `all` (default), `quick` (skip the `--write` formatters
+when re-running mid-session), or any individual gate name (`pest`, `phpstan`,
+`vitest`, `lint`, etc.). Each script prints what it ran and tails the output —
+read it for failures, don't trust silent exit codes.
+
+The raw commands the wrappers run, for the curious or the script-skipping:
 
 ```bash
-cd client
+docker exec budojo_api sh -c "cd /var/www/api && vendor/bin/php-cs-fixer fix"
+docker exec budojo_api sh -c "cd /var/www/api && vendor/bin/phpstan analyse --no-progress --memory-limit=1G"
+docker exec budojo_api sh -c "cd /var/www/api && vendor/bin/pest --parallel"
 
-# 1. Auto-fix formatting
-npx prettier --write "src/**/*.{ts,html,scss}"
-
-# 2. Lint — must report 0 errors
-npm run lint
-
-# 3. Unit tests — must be all green
-npm test -- --watch=false
+docker exec budojo_client sh -c "cd /app && npx prettier --write 'src/**/*.{ts,html,scss}' cypress"
+docker exec budojo_client sh -c "cd /app && npm run lint"
+docker exec budojo_client sh -c "cd /app && npm test -- --watch=false"
 ```
 
 > Cypress E2E tests require `ng serve` running — they are validated in CI.
-> Run `npm run cy:open` locally when you need to debug a specific E2E spec.
+> Run `npm run cy:open` locally (`docker exec -it budojo_client …`) to debug a specific E2E spec.
 
 > Run formatters/fixers **before staging** so the fixed files are included in the commit.
 > Run static analysis / lint **after staging** to verify the final state.
@@ -219,30 +217,16 @@ The board tracks **both issues and their open PRs**. Issues are the primary item
 
 #### Standard flow — step by step
 
-1. **Create issue** → it lands on the board as `Todo`.
+1. **Create issue** → it lands on the repo. Note: GitHub does NOT auto-add to the project, so call `board-set.sh <N> todo` (or rely on the rest of the pipeline below to add it when the PR opens).
 2. **Cut branch** named `<type>/<issue-number>-<description>`.
 3. **Open PR** with `Closes #N` in the body.
-4. **Add the PR to the project board** (GitHub does NOT do this automatically):
+4. **Move issue + PR to In Progress on the board** — the [`board-set.sh`](.claude/scripts/board-set.sh) helper encapsulates the 3-step GraphQL pipeline (lookup node id, add to project, set Status field):
    ```bash
-   PR_NODE_ID=$(gh pr view <N> --json id --jq '.id')
-   gh api graphql -f query='
-   mutation($projectId: ID!, $contentId: ID!) {
-     addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-       item { id }
-     }
-   }' -f projectId="PVT_kwHOAsnvsM4BVW8P" -f contentId="$PR_NODE_ID"
+   ./.claude/scripts/board-set.sh <PR-N> in-progress
+   ./.claude/scripts/board-set.sh <ISSUE-N> in-progress
    ```
-5. **Set both the issue item AND the PR item to `In Progress`**:
-   ```bash
-   gh api graphql -f query='mutation { updateProjectV2ItemFieldValue(input: {
-     projectId: "PVT_kwHOAsnvsM4BVW8P"
-     itemId: "<ITEM_ID>"
-     fieldId: "PVTSSF_lAHOAsnvsM4BVW8PzhQzRlk"
-     value: { singleSelectOptionId: "47fc9ee4" }
-   }) { projectV2Item { id } } }'
-   ```
-   Status option IDs: `f75ad846` = Todo · `47fc9ee4` = In Progress · `98236657` = Done
-6. **When the PR is merged**, GitHub auto-closes the linked issue and both items move to `Done`.
+   Acceptable status arguments: `todo`, `in-progress`, `done`. Hardcoded project / field / option IDs live ONLY in the script — anywhere else referencing them is drift.
+5. **When the PR is merged**, GitHub auto-closes the linked issue and both items move to `Done` automatically (no script call needed).
 
 #### Rules
 
@@ -369,8 +353,12 @@ When Copilot leaves review comments on a PR:
 1. Fetch all comments: `gh api repos/m-bonanno/budojo/pulls/<N>/comments`
 2. For each comment: evaluate, fix if valid, skip with explanation if not applicable
 3. Commit all fixes in one commit: `fix(<scope>): address copilot review comments`
-4. Reply to every comment thread: `gh api repos/m-bonanno/budojo/pulls/<N>/comments/<id>/replies -X POST -f body="..."`
-5. **Re-read the PR body and update it if the fixes changed anything it describes** (counts, paths, commands, structure, examples). A stale PR body misleads reviewers. Rewrite `.claude/pr-body.md` and push with `gh pr edit <N> --body-file .claude/pr-body.md`.
+4. Reply to every thread + resolve them with the [`copilot-replies.sh`](.claude/scripts/copilot-replies.sh) helper:
+   ```bash
+   ./.claude/scripts/copilot-replies.sh <PR-N> "Fixed in <short-sha>. <one-sentence-rationale>."
+   ```
+   Encapsulates the case-sensitive filter gotcha (the `/comments` endpoint reports `user.login == "Copilot"` capital C, while `/reviews` reports `copilot-pull-request-reviewer[bot]` — a naive `startswith("copilot")` filter on `/comments` matches nothing). Idempotent.
+5. **Re-read the PR body and update it if the fixes changed anything it describes** (counts, paths, commands, structure, examples). A stale PR body misleads reviewers. Per-PR bodies live under `.claude/pr-bodies/<branch-or-pr>.md` so concurrent PRs don't overwrite each other; push with `gh pr edit <N> --body-file <path>`.
 6. Push and switch label to `🟢 ready to merge`.
 
 **Reply rules (mandatory):**
