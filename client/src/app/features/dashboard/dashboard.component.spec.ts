@@ -329,6 +329,31 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe("what's new link in sidebar footer (#254)", () => {
+    it('renders a routerLink="whats-new" entry above the Sign out button', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="nav-whats-new"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.tagName).toBe('A');
+      expect(link!.textContent).toContain("What's new");
+      expect(link!.querySelector('i.pi-sparkles')).not.toBeNull();
+
+      // Order check — What's new must appear in the DOM before the
+      // Sign out button so the user reads "what changed" before the
+      // finality of signing out (Krug + Norman: a sidebar's last
+      // entry is read as "the way out", not "the changelog").
+      const signOut = fixture.nativeElement.querySelector(
+        '[data-cy="nav-sign-out"]',
+      ) as HTMLButtonElement;
+      // DOCUMENT_POSITION_FOLLOWING = 4
+      expect(link!.compareDocumentPosition(signOut) & 4).toBe(4);
+    });
+  });
+
   describe('email-verification pillola — removed from sidebar (#179)', () => {
     // The pillola lives only on /dashboard/profile now. The dashboard shell
     // shouldn't render <app-email-verification-status> at all — the spot

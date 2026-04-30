@@ -1,0 +1,185 @@
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
+
+/**
+ * "What's new" page (#254). User-facing changelog for non-technical
+ * users (Luigi, an instructor, not a developer). Sits in the sidebar
+ * above Sign out so a user reading the dashboard can answer "did
+ * something change?" without leaving the app.
+ *
+ * **Two artefacts, one content domain.** The canonical changelog
+ * source lives in `docs/changelog/user-facing/v{X.Y.Z}.md` — one
+ * markdown file per release, written in plain English with light
+ * emoji use in section headers. This component renders a hand-
+ * tailored version of the same content as a typed `Release[]`
+ * array. The two are NOT auto-generated; they are kept in lock-
+ * step under the documentation discipline (CLAUDE.md): a release
+ * PR adds the markdown file AND the array entry in the same
+ * commit.
+ *
+ * Why the parallel artefacts: the markdown files are the citable
+ * source (auditable in the repo, easy to rewrite, easy to diff in
+ * a PR review); the typed array gives Angular full design control
+ * over typography, semantic HTML structure, and accessibility
+ * without dragging in a markdown parser dependency.
+ *
+ * Auth: this is a route inside the dashboard shell so it's behind
+ * the auth + has-academy guards. We deliberately do NOT make it
+ * public the way `/privacy` and `/sub-processors` are — the
+ * audience here is logged-in customers who just want to know what
+ * changed, not regulators or prospects.
+ */
+
+interface ChangelogSection {
+  readonly heading: string;
+  readonly bullets: readonly string[];
+}
+
+interface Release {
+  readonly version: string;
+  readonly date: string;
+  readonly headline: string;
+  readonly sections: readonly ChangelogSection[];
+}
+
+@Component({
+  selector: 'app-whats-new',
+  standalone: true,
+  imports: [ButtonModule, BrandGlyphComponent, RouterLink],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './whats-new.component.html',
+  styleUrl: './whats-new.component.scss',
+})
+export class WhatsNewComponent {
+  private readonly router = inject(Router);
+
+  protected readonly releases: readonly Release[] = [
+    {
+      version: 'v1.6.0',
+      date: '2026-04-30',
+      headline:
+        'A big compliance + privacy push, with full IBJJF belt support arriving alongside the legal scaffolding for our launch readiness.',
+      sections: [
+        {
+          heading: '🛡️ Privacy & data control',
+          bullets: [
+            'Download a copy of your data. Open Profile → Your data and grab a ZIP with everything: academy details, athletes, payments, attendance, and uploaded documents.',
+            'Delete your account. A new "Delete account" flow on the Profile page starts a 30-day grace window. Cancel anytime within those 30 days; after that, your data is wiped automatically.',
+            'A real Privacy Policy at /privacy. GDPR Art. 13, in Italian. Shipped as a draft pending lawyer review — the technical facts are accurate today.',
+            'Sub-processors page at /sub-processors. Full disclosure of every third party that touches your data, with a 30-day notice window before any change.',
+            'No cookie banner needed. We audited every cookie and storage entry the SPA writes. Result: zero tracking cookies, only two strictly-technical localStorage keys.',
+          ],
+        },
+        {
+          heading: '🥋 Athletes & belts',
+          bullets: [
+            'Full IBJJF belt support. Every belt and rank is now in the dropdown — kids (grey, yellow, orange, green), adults (white, blue, purple, brown, black with graus), and senior (red-and-black 7°, red-and-white 8°, red 9°+).',
+            'Per-belt stripe limits. Black belts go up to 6 graus; everyone else stops at 4. Red belts have no graus by definition.',
+          ],
+        },
+        {
+          heading: '📱 Mobile fixes',
+          bullets: [
+            'Phone country-code prefix renders cleanly on Pixel 8 Pro. No more "+..." ellipsis swallowing the country code on narrower viewports.',
+            'Profile page is tighter on mobile. Removed huge vertical gaps between labels and values — now stacks naturally on phones, keeps the two-column layout on tablet and up.',
+          ],
+        },
+        {
+          heading: '🧹 Behind the scenes',
+          bullets: [
+            'The register form now requires an explicit "I have read the privacy policy" checkbox.',
+            'New multi-viewport Cypress test infrastructure so layout regressions on Pixel-class phones get caught in CI, not by beta testers.',
+          ],
+        },
+      ],
+    },
+    {
+      version: 'v1.5.0',
+      date: '2026-04-29',
+      headline:
+        'Beta-tester feedback round. Two small but visible fixes plus the start of full IBJJF coverage.',
+      sections: [
+        {
+          heading: '🥋 Athletes & belts',
+          bullets: [
+            'Kids belts. Grey, yellow, orange, and green are now selectable on the athlete form — proper youth ranks instead of forcing kids onto an adult belt.',
+          ],
+        },
+        {
+          heading: '🐛 Fixes',
+          bullets: [
+            'Phone country-code is clearable. Previously, once you picked a country code on the athlete form there was no way to remove it without picking a different one. Now you can clear the field entirely.',
+            '404 page instead of a blank fallback. Typing a URL that doesn\'t exist no longer dumps you onto a white screen — you get a proper "page not found" with a link back home.',
+          ],
+        },
+      ],
+    },
+    {
+      version: 'v1.4.0',
+      date: '2026-04-29',
+      headline:
+        'Contact links across the app, an attendance redesign, and a polished email layout.',
+      sections: [
+        {
+          heading: '📞 Contact links everywhere',
+          bullets: [
+            'Academy contacts. Phone, email, Instagram, website, Google Maps — fill them on the academy form, and they render as tappable chips on the academy detail page.',
+            'Athlete contacts. Same pattern on the athlete profile: phone (with country code), email, Instagram. Tap a chip and your phone or email client opens.',
+          ],
+        },
+        {
+          heading: '📋 Attendance',
+          bullets: [
+            'Daily check-in redesigned. The check-in screen now mirrors the athletes list layout — same row shape, same density. Easier to scan a long roster on a phone.',
+            'Monthly summary headline updated. Instead of summing "training days" (a number that drifted from what coaches wanted to see), the page now leads with average athletes per session — a more useful gut check on attendance health.',
+          ],
+        },
+        {
+          heading: '📧 Emails',
+          bullets: [
+            'Branded transactional emails. Verification emails, deletion confirmations, and any future notifications now carry the Budojo wordmark and our indigo accent color. No more generic Laravel template look.',
+          ],
+        },
+        {
+          heading: '🐛 Fixes',
+          bullets: [
+            'Belt sort icon respects the active state. The little arrow next to the Belt column header now changes shape and color when Belt is the active sort — so you can see at a glance which column is sorting.',
+          ],
+        },
+      ],
+    },
+    {
+      version: 'v1.3.0',
+      date: '2026-04-29',
+      headline: 'A handful of small UX improvements on the athletes list and the attendance flow.',
+      sections: [
+        {
+          heading: '📋 Athletes list',
+          bullets: [
+            '4-state name sort. Tap the Full name column to cycle through first-name ascending, first-name descending, last-name ascending, last-name descending. Old behaviour was a single direction toggle.',
+            'Bigger tap target. The full-name header button now fills the entire cell — easier to hit on a phone.',
+          ],
+        },
+        {
+          heading: '📅 Attendance',
+          bullets: [
+            "Smarter default day. Open the daily check-in screen and it lands on the most recent training day — not always today. If today isn't a training day in your weekly schedule, you don't have to manually scroll back to find the last one.",
+          ],
+        },
+        {
+          heading: '🐛 Fixes',
+          bullets: [
+            'Phone country-code spacing. A small visible gap between the country code dropdown and the phone-number input (used to render flush against each other).',
+            'Version footer shows the real version. The bottom-of-sidebar tag now displays the proper "v1.3.0" instead of a bare commit SHA on production builds.',
+          ],
+        },
+      ],
+    },
+  ];
+
+  goHome(): void {
+    this.router.navigateByUrl('/dashboard');
+  }
+}
