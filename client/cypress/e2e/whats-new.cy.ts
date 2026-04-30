@@ -39,12 +39,12 @@ describe("What's new page (#254)", () => {
     cy.visitAuthenticated('/dashboard/whats-new');
   });
 
-  it('renders the title and all four backfilled release cards', () => {
+  it('renders the title and every shipped release card', () => {
     cy.get('.whats-new__title').should('contain.text', 'Recent updates');
 
     // The latest release sits at the top — assert it's actually
     // visible without scrolling (the user sees it on landing).
-    cy.get('[data-cy="whats-new-release-v1.6.0"]').should('be.visible');
+    cy.get('[data-cy="whats-new-release-v1.7.0"]').should('be.visible');
 
     // Older releases are below the fold of the default Cypress
     // viewport (1280×720) — the dashboard shell's `.main` container
@@ -52,6 +52,7 @@ describe("What's new page (#254)", () => {
     // clipped. We assert presence in the DOM, not visibility, since
     // a user has to scroll either way. The newest-first ordering
     // (which IS load-bearing UX) is pinned in the vitest spec.
+    cy.get('[data-cy="whats-new-release-v1.6.0"]').should('exist');
     cy.get('[data-cy="whats-new-release-v1.5.0"]').should('exist');
     cy.get('[data-cy="whats-new-release-v1.4.0"]').should('exist');
     cy.get('[data-cy="whats-new-release-v1.3.0"]').should('exist');

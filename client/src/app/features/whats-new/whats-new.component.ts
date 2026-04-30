@@ -80,7 +80,7 @@ export class WhatsNewComponent {
         {
           heading: '🧹 Behind the scenes',
           bullets: [
-            'Design system polish. Page widths and side padding now resolve through a small set of semantic tokens instead of being copy-pasted on every screen. No visible change — but adding a new screen now picks up the right chrome automatically.',
+            'Design system polish. Page widths and side padding now resolve through a small set of design tokens instead of being copy-pasted on every screen. No visible change — but adding a new screen now picks up the right chrome automatically.',
           ],
         },
       ],
