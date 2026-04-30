@@ -58,6 +58,34 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v1.7.0',
+      date: '2026-04-30',
+      headline:
+        'Payments tracking arrives. Mark whether each athlete has paid for the current month right from the roster, or open a per-athlete tab to see all twelve months at a glance.',
+      sections: [
+        {
+          heading: '💰 Payments',
+          bullets: [
+            'Per-athlete payments tab. Open any athlete profile and the new "Payments" tab shows every month of the current year as a row — Paid / Unpaid status and the amount. Tap a row to toggle the state.',
+            "Inline mark-paid on the athletes list. A quick toggle on each row of the athletes list flips the current month's payment state without leaving the roster. Useful at the start of the month when collecting fees.",
+          ],
+        },
+        {
+          heading: '🐛 Fixes',
+          bullets: [
+            'Profile › Your data card now in English. Was leaking the Italian copy "Esporta i tuoi dati" — now matches the rest of the SPA\'s English UI.',
+            "Pending-deletion banner shows on first sign-in. If you'd requested account deletion and signed back in within the 30-day grace window, the cancel-deletion banner sometimes didn't show until you reloaded. Fixed.",
+          ],
+        },
+        {
+          heading: '🧹 Behind the scenes',
+          bullets: [
+            'Design system polish. Page widths and side padding now resolve through a small set of design tokens instead of being copy-pasted on every screen. No visible change — but adding a new screen now picks up the right chrome automatically.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v1.6.0',
       date: '2026-04-30',
       headline:
