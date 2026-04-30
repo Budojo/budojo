@@ -8,9 +8,12 @@ import IT from '../../public/assets/i18n/it.json';
  * `nav.something` key in production because someone forgot the
  * `it.json` update.
  *
- * Walks the JSON object trees, collects the leaf paths, and asserts
- * the two sets are identical. Empty values are allowed — the spec
- * only cares about *coverage*, not *quality*.
+ * Two checks:
+ *   1. **Key parity** — walk both JSON object trees, collect leaf
+ *      paths, assert the two sets are identical.
+ *   2. **No empty stubs** — assert no leaf value is the empty string
+ *      in either file. Catches the `"key": ""` placeholder pattern
+ *      that bypasses parity but ships an invisible string to a user.
  */
 function collectLeafPaths(obj: Record<string, unknown>, prefix = ''): string[] {
   const out: string[] = [];

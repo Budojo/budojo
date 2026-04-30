@@ -6,11 +6,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { providePrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
 import Material from '@primeuix/themes/material';
-import {
-  provideTranslateService,
-  TranslateLoader,
-  TranslationObject,
-} from '@ngx-translate/core';
+import { provideTranslateService, TranslateLoader, TranslationObject } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 
 import { routes } from './app.routes';
