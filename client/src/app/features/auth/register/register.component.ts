@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
@@ -14,6 +15,7 @@ import { AuthService } from '../../../core/services/auth.service';
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,
+    CheckboxModule,
     InputTextModule,
     MessageModule,
     PasswordModule,
@@ -35,6 +37,13 @@ export class RegisterComponent {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
       password_confirmation: ['', Validators.required],
+      // GDPR Art. 13 acceptance gate (#219). The checkbox is required
+      // — Validators.requiredTrue rejects `false` AND `null`, which is
+      // exactly what we want here: a user must actively click "I have
+      // read..." for the form to submit. We don't send the value to
+      // the API; the implicit consent record is the timestamp of the
+      // successful POST /auth/register itself.
+      privacy_accepted: [false, Validators.requiredTrue],
     },
     { validators: this.passwordsMatch },
   );
@@ -81,5 +90,8 @@ export class RegisterComponent {
   }
   get passwordConfirmation() {
     return this.form.get('password_confirmation')!;
+  }
+  get privacyAccepted() {
+    return this.form.get('privacy_accepted')!;
   }
 }
