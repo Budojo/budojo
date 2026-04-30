@@ -158,9 +158,17 @@
         </button>
       </div>
       <p class="sidebar__version" data-cy="sidebar-version">
-        <a class="sidebar__legal-link" routerLink="/privacy" data-cy="sidebar-privacy-link">{{
-          'nav.privacy' | translate
-        }}</a>
+        <!-- Privacy link adapts to the active language (#291). EN users
+             land on the canonical /privacy; IT users go straight to
+             /privacy/it without bouncing through the English page +
+             toggle. The page itself ALSO carries an inline toggle so
+             the choice can be flipped from there too. -->
+        <a
+          class="sidebar__legal-link"
+          [routerLink]="currentLang() === 'it' ? '/privacy/it' : '/privacy'"
+          data-cy="sidebar-privacy-link"
+          >{{ 'nav.privacy' | translate }}</a
+        >
         <span aria-hidden="true">·</span>
         {{ versionTag }}
       </p>

@@ -155,6 +155,11 @@ export const routes: Routes = [
         (m) => m.SubProcessorsComponent,
       ),
   },
+  // /privacy serves the canonical English text (#291). The SPA is
+  // English-default for any visitor without a saved language
+  // preference; the faithful Italian translation lives at /privacy/it
+  // and remains the legal source of truth for IT customers and the
+  // Garante. Edits to either MUST land in lock-step in the same PR.
   {
     path: 'privacy',
     loadComponent: () =>
@@ -162,14 +167,11 @@ export const routes: Routes = [
         (m) => m.PrivacyPolicyComponent,
       ),
   },
-  // English translation of /privacy (#273). Italian remains the
-  // canonical legal source for IT customers and the Garante; this
-  // route is a faithful translation kept in lock-step.
   {
-    path: 'privacy/en',
+    path: 'privacy/it',
     loadComponent: () =>
-      import('./features/privacy-policy/en/privacy-policy-en.component').then(
-        (m) => m.PrivacyPolicyEnComponent,
+      import('./features/privacy-policy/it/privacy-policy-it.component').then(
+        (m) => m.PrivacyPolicyItComponent,
       ),
   },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
