@@ -305,7 +305,27 @@ describe('DashboardComponent', () => {
         '[data-cy="sidebar-version"]',
       ) as HTMLElement | null;
       expect(el).not.toBeNull();
-      expect(el!.textContent?.trim()).toBe(VERSION.tag);
+      // After #219 the same line carries a "Privacy" link beside the
+      // version, separated by a middle dot. We assert the version is
+      // present (not equality on the whole textContent) so adding more
+      // legal-footer atoms in future doesn't force this test to churn.
+      expect(el!.textContent ?? '').toContain(VERSION.tag);
+    });
+  });
+
+  describe('privacy link in sidebar footer (#219)', () => {
+    it('renders a /privacy link beside the version tag', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="sidebar-privacy-link"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.textContent?.trim()).toBe('Privacy');
+      // Lives inside the version paragraph (not duplicated above the
+      // sign-out button) so the chrome stays single-line.
+      expect(link!.closest('[data-cy="sidebar-version"]')).not.toBeNull();
     });
   });
 

@@ -1,0 +1,25 @@
+// Layout pulled from the shared `_legal-page` partial — the same
+// shape that powers `/sub-processors`. The only privacy-specific
+// rule below is the draft-status banner that warns users (and the
+// regulator) the legal text is still in lawyer review.
+
+@use '../legal-page';
+
+.legal-page__notice {
+  border: 1px solid var(--p-content-border-color);
+  border-left: 3px solid var(--budojo-warn, #c97316);
+  border-radius: var(--p-border-radius-md);
+  background: var(--p-content-hover-background);
+  padding: 1rem 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--p-text-color-secondary);
+
+  p {
+    margin: 0;
+  }
+
+  strong {
+    color: var(--p-text-color);
+  }
+}

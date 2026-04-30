@@ -120,3 +120,57 @@
     }
   }
 }
+
+// GDPR Art. 13 acceptance gate (#219). The label wraps the checkbox
+// + the body so a tap anywhere toggles, satisfying Fitts's law on
+// mobile. Italian copy because the link target — `/privacy` — is
+// itself the Italian informativa.
+.privacy-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+
+  &__label {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--p-text-color-secondary);
+
+    a {
+      color: var(--p-primary-color);
+      text-decoration: underline;
+      text-decoration-color: var(--p-content-border-color);
+      text-underline-offset: 0.15em;
+
+      &:hover,
+      &:focus-visible {
+        text-decoration-color: var(--p-primary-color);
+      }
+    }
+  }
+}
+
+// Ambient legal footer — small, unobtrusive, mirrors the "Privacy ·
+// Terms" pattern users see on most apps (Jakob's law). Lives below
+// the auth-nav-link so it never competes with the primary CTA.
+.auth-foot-link {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+
+  a {
+    color: var(--p-text-muted-color);
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--p-primary-color);
+      text-decoration: underline;
+    }
+  }
+}

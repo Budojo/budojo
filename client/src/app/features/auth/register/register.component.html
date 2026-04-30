@@ -104,6 +104,31 @@
         }
       </div>
 
+      <div class="field privacy-consent-field" data-cy="privacy-consent-field">
+        <label class="privacy-consent" for="privacy_accepted">
+          <p-checkbox
+            inputId="privacy_accepted"
+            formControlName="privacy_accepted"
+            [binary]="true"
+            data-cy="privacy-consent-checkbox"
+          />
+          <span class="privacy-consent__label">
+            Ho letto e accetto l'<a
+              routerLink="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-cy="privacy-consent-link"
+              >informativa sulla privacy</a
+            >.
+          </span>
+        </label>
+        @if (privacyAccepted.invalid && privacyAccepted.touched) {
+          <small class="field-error" data-cy="privacy-consent-error">
+            Devi accettare l'informativa sulla privacy per registrarti.
+          </small>
+        }
+      </div>
+
       <p-button
         type="submit"
         label="Create account"
@@ -116,6 +141,12 @@
     <p class="auth-nav-link">
       Already have an account?
       <a routerLink="/auth/login">Sign in</a>
+    </p>
+
+    <p class="auth-foot-link">
+      <a routerLink="/privacy" data-cy="auth-foot-privacy-link">Privacy</a>
+      <span aria-hidden="true">·</span>
+      <a routerLink="/sub-processors">Sub-processors</a>
     </p>
   </div>
 </div>

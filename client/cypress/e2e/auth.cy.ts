@@ -151,11 +151,36 @@ describe('Register page', () => {
     cy.get('input[id="email"]').type('test@example.com');
     cy.get('input[id="password"]').type('password123');
     cy.get('input[id="password_confirmation"]').type('password123');
+    // Privacy gate (#219) — submit blocks until this is ticked.
+    cy.get('[data-cy="privacy-consent-checkbox"]').click();
     cy.get('button[type="submit"]').click();
 
     cy.wait('@register');
     cy.wait('@academy');
     cy.url().should('include', '/dashboard/athletes');
+  });
+
+  it('blocks submit + shows the privacy error when consent is missing (#219)', () => {
+    cy.intercept('POST', '/api/v1/auth/register', cy.spy().as('register'));
+
+    cy.get('input[id="name"]').type('Test User');
+    cy.get('input[id="email"]').type('test@example.com');
+    cy.get('input[id="password"]').type('password123');
+    cy.get('input[id="password_confirmation"]').type('password123');
+    // Click submit WITHOUT ticking the consent box.
+    cy.get('button[type="submit"]').click();
+
+    cy.get('[data-cy="privacy-consent-error"]').should('be.visible');
+    // The API was never called — Validators.requiredTrue blocked it.
+    cy.get('@register').should('not.have.been.called');
+  });
+
+  it('the consent link points to /privacy and opens in a new tab (#219)', () => {
+    cy.get('[data-cy="privacy-consent-link"]')
+      .should('have.attr', 'target', '_blank')
+      .and('have.attr', 'rel')
+      .and('contain', 'noopener');
+    cy.get('[data-cy="privacy-consent-link"]').should('have.attr', 'href', '/privacy');
   });
 
   it('has a link to the login page', () => {
