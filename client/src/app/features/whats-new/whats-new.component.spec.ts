@@ -24,16 +24,16 @@ describe('WhatsNewComponent (#254)', () => {
     // Newest-first ordering is part of the contract — a user opening
     // the page wants to see what changed THIS week before scrolling.
     // We assert the first .whats-new__release card carries the latest
-    // version we've shipped (currently v1.6.0); when we ship v1.7.0
-    // and forget to prepend instead of append, this fails.
+    // version we've shipped; when we ship a new version and forget
+    // to prepend instead of append, this fails.
     const firstRelease = root.querySelector('.whats-new__release');
-    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v1.6.0');
+    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v1.7.0');
   });
 
-  it('renders all four backfilled releases', () => {
+  it('renders every shipped release in newest-first order', () => {
     const { fixture } = setup();
     const cards = fixture.nativeElement.querySelectorAll('.whats-new__release');
-    expect(cards.length).toBe(4);
+    expect(cards.length).toBe(5);
 
     // Pin every version in the order we ship them so a refactor that
     // accidentally reverses the array (e.g. a sort that reads ids
@@ -41,7 +41,7 @@ describe('WhatsNewComponent (#254)', () => {
     const versions = Array.from(cards).map((el) =>
       (el as HTMLElement).querySelector('.whats-new__version')?.textContent?.trim(),
     );
-    expect(versions).toEqual(['v1.6.0', 'v1.5.0', 'v1.4.0', 'v1.3.0']);
+    expect(versions).toEqual(['v1.7.0', 'v1.6.0', 'v1.5.0', 'v1.4.0', 'v1.3.0']);
   });
 
   it('the v1.6.0 card carries the four advertised sections', () => {
