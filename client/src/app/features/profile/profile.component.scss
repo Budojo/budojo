@@ -70,8 +70,9 @@
     // labels and values align in a clean two-column grid. Without
     // scoping it to the breakpoint, the same `flex: 0 0 8rem` was
     // applying to the column-direction layout below 768px — making
-    // the label take 8rem (128px) of VERTICAL space, leaving an
-    // empty gap before each value (Pixel 8 Pro screenshot, Luigi).
+    // the label take 8rem of VERTICAL space (~128px at the default
+    // 16px root, more if the user scaled their root font up), so
+    // each value rendered with a tall empty gap above it. See #245.
     @media (min-width: 768px) {
       flex: 0 0 8rem;
     }
