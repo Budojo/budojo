@@ -1,13 +1,12 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /**
- * Athlete payment ledger (#182). Surface 1 — mark paid / mark unpaid
- * for a specific (athlete, year, month). Surface 2 (per-athlete
- * payment history tab) is a follow-up; this service only exposes the
- * two write operations the athletes-list inline toggle needs today.
+ * Athlete payment ledger (#182). Surface 1 (athletes-list inline
+ * toggle) ships POST + DELETE; Surface 2 (per-athlete payments tab on
+ * the detail page) adds the GET list method.
  *
  * Server contract reference: `docs/api/v1.yaml` §
  * /athletes/{athlete}/payments and
@@ -17,6 +16,9 @@ import { environment } from '../../../environments/environment';
  *   the existing row. The client doesn't need to dedupe; the server does.
  * - DELETE returns 204; the absence of a row IS the canonical "unpaid"
  *   state (no soft-delete tombstone in the schema).
+ * - GET defaults to the current calendar year when `?year` is omitted;
+ *   we always pass `?year=` explicitly so the response is deterministic
+ *   regardless of server-side timezone.
  * - 422 on POST when the academy has no `monthly_fee_cents` configured —
  *   the UI is supposed to gate the click on `hasMonthlyFee()` so this
  *   shouldn't surface in normal use; treat it as an edge-case error.
@@ -34,10 +36,28 @@ interface AthletePaymentResponse {
   data: AthletePayment;
 }
 
+interface AthletePaymentListResponse {
+  data: AthletePayment[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBase}/api/v1/athletes`;
+
+  /**
+   * List the athlete's payments for a calendar year, ordered by month
+   * ascending. Used by the per-athlete payments tab (#182 Surface 2).
+   * Months without a row are absent from the response — the absence
+   * IS the unpaid state. Cross-academy returns 403; the auth
+   * interceptor handles that uniformly.
+   */
+  list(athleteId: number, year: number): Observable<AthletePayment[]> {
+    const params = new HttpParams().set('year', year.toString());
+    return this.http
+      .get<AthletePaymentListResponse>(`${this.base}/${athleteId}/payments`, { params })
+      .pipe(map((res) => res.data));
+  }
 
   /**
    * Record (or re-confirm) a payment for the given (athlete, year, month).

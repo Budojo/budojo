@@ -1,0 +1,43 @@
+.payments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
+    line-height: 1.5;
+  }
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__th-actions {
+    width: 9rem;
+  }
+
+  &__actions {
+    text-align: right;
+  }
+
+  &__dash {
+    color: var(--p-text-muted-color);
+  }
+}

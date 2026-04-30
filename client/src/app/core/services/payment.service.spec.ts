@@ -19,6 +19,33 @@ describe('PaymentService (#182)', () => {
 
   afterEach(() => httpMock.verify());
 
+  it('list GETs /athletes/{id}/payments?year=YYYY and unwraps the data array (#182 Surface 2)', () => {
+    const expected: AthletePayment[] = [
+      {
+        id: 1,
+        athlete_id: 42,
+        year: 2026,
+        month: 1,
+        amount_cents: 9500,
+        paid_at: '2026-01-15T10:00:00Z',
+      },
+      {
+        id: 2,
+        athlete_id: 42,
+        year: 2026,
+        month: 2,
+        amount_cents: 9500,
+        paid_at: '2026-02-12T10:00:00Z',
+      },
+    ];
+    let actual: AthletePayment[] | null = null;
+    service.list(42, 2026).subscribe((rows) => (actual = rows));
+    const req = httpMock.expectOne(`${base}/42/payments?year=2026`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ data: expected });
+    expect(actual).toEqual(expected);
+  });
+
   it('markPaid POSTs {year, month} to /athletes/{id}/payments and unwraps data', () => {
     const expected: AthletePayment = {
       id: 99,
