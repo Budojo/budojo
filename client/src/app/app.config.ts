@@ -1,5 +1,5 @@
 import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -13,15 +13,17 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 /**
- * ngx-translate HTTP loader factory (#273). Loads JSON files from
- * `src/assets/i18n/{lang}.json` at runtime. Single bundle deployed —
- * the user's language switch flips the loaded namespace at runtime,
- * no rebuild needed. Picked over Angular's built-in `$localize` for
- * the runtime-switch ergonomics; SEO is not load-bearing because
- * the dashboard is auth-walled.
+ * ngx-translate HTTP loader factory (#273). v17 uses an injectable loader
+ * that reads `HttpClient` + the prefix/suffix tokens via `inject()`; the
+ * constructor takes no args. Defaults are `/assets/i18n/` + `.json`,
+ * which match the JSON file layout in `public/assets/i18n/{lang}.json`.
+ *
+ * Picked over Angular's built-in `$localize` for the runtime-switch
+ * ergonomics; SEO is not load-bearing because the dashboard is
+ * auth-walled.
  */
-export function translateLoaderFactory(http: HttpClient): TranslateLoader {
-  return new TranslateHttpLoader(http, '/assets/i18n/', '.json');
+export function translateLoaderFactory(): TranslateLoader {
+  return new TranslateHttpLoader();
 }
 
 export const appConfig: ApplicationConfig = {
@@ -80,7 +82,6 @@ export const appConfig: ApplicationConfig = {
       loader: {
         provide: TranslateLoader,
         useFactory: translateLoaderFactory,
-        deps: [HttpClient],
       },
       defaultLanguage: 'en',
       fallbackLang: 'en',
