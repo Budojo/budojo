@@ -6,25 +6,11 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { providePrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
 import Material from '@primeuix/themes/material';
-import { provideTranslateService, TranslateLoader } from '@ngx-translate/core';
-import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
-
-/**
- * ngx-translate HTTP loader factory (#273). v17 uses an injectable loader
- * that reads `HttpClient` + the prefix/suffix tokens via `inject()`; the
- * constructor takes no args. Defaults are `/assets/i18n/` + `.json`,
- * which match the JSON file layout in `public/assets/i18n/{lang}.json`.
- *
- * Picked over Angular's built-in `$localize` for the runtime-switch
- * ergonomics; SEO is not load-bearing because the dashboard is
- * auth-walled.
- */
-export function translateLoaderFactory(): TranslateLoader {
-  return new TranslateHttpLoader();
-}
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -74,15 +60,17 @@ export const appConfig: ApplicationConfig = {
       registrationStrategy: 'registerWhenStable:30000',
     }),
     // i18n (#273) — runtime locale switch via JSON files in
-    // `src/assets/i18n/{lang}.json`. Default + fallback `en`. The
-    // `LanguageService.bootstrap()` call in `app.component.ts` sets
-    // the active language on init from localStorage / navigator with
-    // `en` fallback.
+    // `public/assets/i18n/{lang}.json`. Default + fallback `en`. The
+    // `LanguageService.bootstrap()` call in `App.ngOnInit` sets the
+    // active language on first paint from localStorage / navigator
+    // with `en` fallback.
+    //
+    // ngx-translate v17 ships `provideTranslateHttpLoader` as the
+    // idiomatic way to wire the HTTP loader — internally it uses
+    // `inject()` for `HttpClient` and the prefix/suffix tokens, so
+    // the consumer only configures paths.
+    provideTranslateHttpLoader({ prefix: '/assets/i18n/', suffix: '.json' }),
     provideTranslateService({
-      loader: {
-        provide: TranslateLoader,
-        useFactory: translateLoaderFactory,
-      },
       defaultLanguage: 'en',
       fallbackLang: 'en',
     }),
