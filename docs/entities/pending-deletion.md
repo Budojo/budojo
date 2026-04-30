@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Backs the GDPR Art. 17 right-to-erasure flow (#223). The presence of a row marks the owning `User` as **pending hard-deletion** — the user clicked "Delete account" and is in a 30-day grace window during which the SPA renders a cancellation banner; login and authenticated API calls still work, so the user can either change their mind (`DELETE /me/deletion-request`) or pull a final export (`GET /me/export`). After `scheduled_for`, a scheduled task (TODO follow-up) runs `App\Actions\User\PurgeAccountAction` to do the actual hard-delete cascade. The decision on whether to lock login during the window (vs the current "everything still works, banner only" UX) is the open question tracked at the bottom of this page.
+Backs the GDPR Art. 17 right-to-erasure flow (#223). The presence of a row marks the owning `User` as **pending hard-deletion** — the user clicked "Delete account" and is in a 30-day grace window during which the SPA renders a cancellation banner; login and authenticated API calls still work, so the user can either change their mind (`DELETE /me/deletion-request`) or pull a final export (`GET /me/export`). After `scheduled_for`, the hourly `budojo:purge-expired-pending-deletions` Artisan command runs `App\Actions\User\PurgeAccountAction` to do the actual hard-delete cascade. The decision on whether to lock login during the window (vs the current "everything still works, banner only" UX) is the open question tracked at the bottom of this page.
 
 ## Why a separate table, not soft-delete on `users`
 
@@ -57,7 +57,7 @@ A separate `pending_deletions` table gives us a **time-bounded explicit mechanis
 
 These are out of scope for the initial PR (#223) and tracked as follow-ups:
 
-- **Scheduled cron job** that hits all `pending_deletions` with `scheduled_for <= now()` and runs `PurgeAccountAction`. Until this lands, the grace window expires logically but the purge does not auto-execute — admin runs the Action manually.
+- ~~**Scheduled cron job**~~ — landed: `App\Console\Commands\PurgeExpiredPendingDeletions` runs hourly via the schedule in `routes/console.php`. Idempotent; per-row try/catch so a single stuck account doesn't block the cohort. Supports `--dry-run` for a safe production preview.
 - **Email reminders.** A 7-day-before-purge email with the cancel-token link, a 24-hour reminder, and a confirmation post-purge.
 - **`athlete_payments` retention.** Currently payments cascade-delete with the athlete during purge — wipe is GDPR-compliant but loses fiscal records. A migration will make `athlete_id` nullable plus snapshot the athlete name, and `PurgeAccountAction` will then anonymise payment rows instead of cascade-deleting them. Until then the user's `/me/export` (#222) is how they preserve a copy.
 - **SPA UI**: Profile danger zone with double confirm + topbar banner during grace + cancel-link landing page for the email confirmation flow.
