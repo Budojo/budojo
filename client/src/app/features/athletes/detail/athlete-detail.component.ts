@@ -90,7 +90,9 @@ export class AthleteDetailComponent implements OnInit {
   }
 
   private tabFromUrl(url: string): string {
-    return url.includes('/attendance') ? 'attendance' : 'documents';
+    if (url.includes('/payments')) return 'payments';
+    if (url.includes('/attendance')) return 'attendance';
+    return 'documents';
   }
 
   statusSeverity(status: AthleteStatus): 'success' | 'warn' | 'secondary' {

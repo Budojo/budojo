@@ -103,6 +103,13 @@ export const routes: Routes = [
                 (m) => m.AttendanceHistoryComponent,
               ),
           },
+          {
+            path: 'payments',
+            loadComponent: () =>
+              import('./features/athletes/detail/payments-list/payments-list.component').then(
+                (m) => m.PaymentsListComponent,
+              ),
+          },
         ],
       },
       {
