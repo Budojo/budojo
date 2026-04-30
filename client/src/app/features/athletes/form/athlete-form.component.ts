@@ -360,14 +360,29 @@ export class AthleteFormComponent implements OnInit {
           detail: `${athlete.first_name} ${athlete.last_name}`,
           life: 3000,
         });
-        void this.router.navigate(['/dashboard/athletes']);
+        // After #281, Edit lives INSIDE the athlete detail as a sub-tab.
+        // On update, return the user to the detail (Documents is the
+        // default child) instead of bouncing back to the list — keeps
+        // them in the page they were editing. On create, the new id
+        // came from the response so we land directly on the new
+        // athlete's home.
+        const targetId = id ?? athlete.id;
+        void this.router.navigate(['/dashboard/athletes', targetId]);
       },
       error: (err) => this.handleServerError(err),
     });
   }
 
   cancel(): void {
-    void this.router.navigate(['/dashboard/athletes']);
+    // Cancel from the Edit sub-tab returns to the parent detail (#281);
+    // cancel from /athletes/new (id === null) goes back to the list,
+    // which is where the user came from.
+    const id = this.athleteId();
+    if (id === null) {
+      void this.router.navigate(['/dashboard/athletes']);
+    } else {
+      void this.router.navigate(['/dashboard/athletes', id]);
+    }
   }
 
   get firstName() {
