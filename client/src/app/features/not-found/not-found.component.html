@@ -1,14 +1,11 @@
 <div class="not-found">
   <app-brand-glyph class="not-found__glyph" aria-hidden="true" />
-  <h1 class="not-found__title">Pagina non trovata</h1>
-  <p class="not-found__message">
-    L'indirizzo non corrisponde a nessuna pagina del sito. Forse è stato spostato o il link è
-    incompleto.
-  </p>
+  <h1 class="not-found__title">{{ 'notFound.title' | translate }}</h1>
+  <p class="not-found__message">{{ 'notFound.message' | translate }}</p>
   <p-button
     type="button"
     severity="primary"
-    label="Torna alla home"
+    [label]="'notFound.backHome' | translate"
     (onClick)="goHome()"
     data-cy="not-found-cta"
   />

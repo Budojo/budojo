@@ -2,8 +2,8 @@
   <div class="auth-card">
     <div class="auth-header">
       <img src="/logo-glyph.svg" alt="" class="logo-mark" aria-hidden="true" />
-      <h1>Welcome back</h1>
-      <p>Sign in to your Budojo account</p>
+      <h1>{{ 'auth.login.title' | translate }}</h1>
+      <p>{{ 'auth.login.subtitle' | translate }}</p>
     </div>
 
     @if (error()) {
@@ -12,13 +12,13 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="field">
-        <label for="email">Email</label>
+        <label for="email">{{ 'auth.login.email' | translate }}</label>
         <input
           pInputText
           id="email"
           type="email"
           formControlName="email"
-          placeholder="mario@example.com"
+          [placeholder]="'auth.login.emailPlaceholder' | translate"
           autocomplete="email"
           [class.ng-invalid]="email.invalid && email.touched"
           [class.ng-dirty]="email.touched"
@@ -26,20 +26,20 @@
         @if (email.invalid && email.touched) {
           <small class="field-error">
             @if (email.errors?.['required']) {
-              Email is required.
+              {{ 'auth.login.emailRequired' | translate }}
             } @else if (email.errors?.['email']) {
-              Enter a valid email address.
+              {{ 'auth.login.emailInvalid' | translate }}
             }
           </small>
         }
       </div>
 
       <div class="field">
-        <label for="password">Password</label>
+        <label for="password">{{ 'auth.login.password' | translate }}</label>
         <p-password
           inputId="password"
           formControlName="password"
-          placeholder="Your password"
+          [placeholder]="'auth.login.passwordPlaceholder' | translate"
           autocomplete="current-password"
           [feedback]="false"
           [toggleMask]="true"
@@ -49,13 +49,13 @@
           "
         />
         @if (password.invalid && password.touched) {
-          <small class="field-error">Password is required.</small>
+          <small class="field-error">{{ 'auth.login.passwordRequired' | translate }}</small>
         }
       </div>
 
       <p-button
         type="submit"
-        label="Sign in"
+        [label]="'auth.login.submit' | translate"
         styleClass="submit-btn"
         [loading]="loading()"
         [disabled]="loading()"
@@ -63,14 +63,16 @@
     </form>
 
     <p class="auth-nav-link">
-      Don't have an account?
-      <a routerLink="/auth/register">Create one</a>
+      {{ 'auth.login.noAccount' | translate }}
+      <a routerLink="/auth/register">{{ 'auth.login.registerLink' | translate }}</a>
     </p>
 
     <p class="auth-foot-link">
-      <a routerLink="/privacy" data-cy="auth-foot-privacy-link">Privacy</a>
+      <a routerLink="/privacy" data-cy="auth-foot-privacy-link">{{
+        'auth.shared.privacy' | translate
+      }}</a>
       <span aria-hidden="true">·</span>
-      <a routerLink="/sub-processors">Sub-processors</a>
+      <a routerLink="/sub-processors">{{ 'auth.shared.subProcessors' | translate }}</a>
     </p>
   </div>
 </div>
