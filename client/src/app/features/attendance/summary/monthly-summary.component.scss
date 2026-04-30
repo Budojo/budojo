@@ -1,10 +1,10 @@
 .summary-page {
   // Page chrome (max-width + side padding) comes from the dashboard
   // shell tokens — see `styles/budojo-theme.scss` and `.main` in the
-  // dashboard component. Adopting the content token (75rem) widens
-  // this page from a previous arbitrary 1024px to match the rest of
-  // the operative chrome.
-  max-width: var(--budojo-container-content);
+  // dashboard component. Adopting the content token (outer extent
+  // 75rem) widens this page from a previous arbitrary 1024px to
+  // match the rest of the operative chrome.
+  max-width: var(--budojo-page-content-max);
   margin: 0 auto;
   display: flex;
   flex-direction: column;

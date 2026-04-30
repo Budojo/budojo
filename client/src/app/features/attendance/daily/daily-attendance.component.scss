@@ -10,7 +10,7 @@
   // Page chrome (max-width + side padding) comes from the dashboard
   // shell tokens — see `styles/budojo-theme.scss` and `.main` in the
   // dashboard component.
-  max-width: var(--budojo-container-content);
+  max-width: var(--budojo-page-content-max);
   margin: 0 auto;
 }
 

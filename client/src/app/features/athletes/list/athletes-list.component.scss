@@ -1,8 +1,9 @@
 .athletes-page {
   // Page chrome (max-width + side padding) comes from the dashboard
   // shell tokens — see `styles/budojo-theme.scss` and `.main` in the
-  // dashboard component. Pages declare only the container choice.
-  max-width: var(--budojo-container-content);
+  // dashboard component. The page consumes the derived inner-width
+  // token so its outer visual extent matches `--budojo-container-content`.
+  max-width: var(--budojo-page-content-max);
   margin: 0 auto;
 
   &__header {

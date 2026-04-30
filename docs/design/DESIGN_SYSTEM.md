@@ -105,10 +105,17 @@ No bounce, no elastic. PWAs in standalone mode read bounce as "this app is broke
 
 Two semantic tokens replace the per-page `max-width` zoo. Pages pick the one that matches their content density — never a raw px value.
 
-| Token | Value | Use |
+| Token | Value | Semantic |
 |---|---|---|
-| `--budojo-container-content` | `75rem` (≈ 1200px) | Operative pages — lists, detail views, daily/monthly attendance, expiring documents |
-| `--budojo-container-prose` | `56rem` | Text-heavy pages — `/privacy`, `/sub-processors`, `/dashboard/whats-new`. Comfortable single-column line length (60–80ch) |
+| `--budojo-container-content` | `75rem` (≈ 1200px) | **Outer extent** for operative pages — lists, detail views, daily/monthly attendance, expiring documents |
+| `--budojo-container-prose` | `56rem` | **Outer extent** for text-heavy pages — `/privacy`, `/sub-processors`, `/dashboard/whats-new`. Sized for a 60–80ch line length |
+
+The base tokens above describe the **outer visual extent** of the page (edge-to-edge including the dashboard shell's `.main` padding). Pages don't consume them directly — they consume the **derived** inner-width tokens below, which subtract the shell padding so the inner content area matches the pre-#261 border-box behaviour:
+
+| Derived token | Resolves to | Use |
+|---|---|---|
+| `--budojo-page-content-max` | `calc(--budojo-container-content - 2 × --budojo-page-padding-x)` | Page wrappers inside the dashboard shell with operative content |
+| `--budojo-page-prose-max` | `calc(--budojo-container-prose - 2 × --budojo-page-padding-x)` | Page wrappers inside the dashboard shell with prose content (currently `/dashboard/whats-new`) |
 
 Page-chrome **padding** is set once at the dashboard shell `.main` element and consumed via tokens that scale at the sidebar breakpoint:
 
@@ -119,8 +126,8 @@ Page-chrome **padding** is set once at the dashboard shell `.main` element and c
 
 **Rules:**
 
-- Pages declare only their container choice — `max-width: var(--budojo-container-content); margin: 0 auto;`. Padding is **never** redeclared on a page wrapper.
-- Public pages outside the dashboard shell (`/privacy`, `/sub-processors`) keep their own padding in `_legal-page.scss` — the shell's `.main` doesn't reach them.
+- Pages inside the dashboard shell declare only their container choice — `max-width: var(--budojo-page-content-max); margin: 0 auto;`. Padding is **never** redeclared on a page wrapper.
+- Public pages outside the dashboard shell (`/privacy`, `/sub-processors`) keep their own padding in `_legal-page.scss` and consume `--budojo-container-prose` directly — the shell's `.main` doesn't reach them, and the global `box-sizing: border-box` rule already includes their own padding inside `max-width`.
 - Narrow-card layouts (`/profile`, `/dashboard/academy`, `/dashboard/academy/edit`, athlete form) currently use raw `max-width` (40rem / 640px / 900px) because they're slated for a hierarchy rework — wide page header + narrow card aligned left, instead of a viewport-restricting page.
 
 ---

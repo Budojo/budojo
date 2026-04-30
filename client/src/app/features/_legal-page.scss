@@ -9,12 +9,15 @@
 // pulls it through its own view-encapsulation.
 
 .legal-page {
-  // Prose container token (#261). Padding stays here because the
-  // consumers of this partial (`/privacy`, `/sub-processors`) are
-  // PUBLIC routes — they render WITHOUT the dashboard shell, so the
-  // shell's `.main` padding doesn't apply. The heavier vertical
-  // breathing room (`1.5rem`/`3rem` top, `4rem`/`6rem` bottom) is
-  // intentional for long-scroll legal documents.
+  // Prose container token (#261) — the OUTER width (56rem) because
+  // this partial keeps its own padding and the global
+  // `box-sizing: border-box` rule means max-width INCLUDES the
+  // padding. The consumers of this partial (`/privacy`,
+  // `/sub-processors`) are PUBLIC routes — they render WITHOUT the
+  // dashboard shell, so the shell's `.main` padding doesn't apply.
+  // The heavier vertical breathing room (`1.5rem`/`3rem` top,
+  // `4rem`/`6rem` bottom) is intentional for long-scroll legal
+  // documents.
   max-width: var(--budojo-container-prose);
   margin: 0 auto;
   padding: 1.5rem 1rem 4rem;

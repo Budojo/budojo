@@ -8,7 +8,7 @@
   // Prose container — narrower than operative content so release-note
   // line length stays in the 60–80ch reading sweet spot. Page padding
   // comes from the dashboard shell (#261).
-  max-width: var(--budojo-container-prose);
+  max-width: var(--budojo-page-prose-max);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
