@@ -150,16 +150,24 @@
     <h2>6. Cookie e archiviazione lato browser</h2>
     <p>
       Budojo <strong>non usa cookie di tracciamento</strong> né cookie di profilazione di terze
-      parti. L'audit completo e aggiornato è consultabile su
-      <a
-        href="https://github.com/m-bonanno/budojo/blob/develop/docs/legal/cookie-audit.md"
-        target="_blank"
-        rel="noopener noreferrer"
-        >docs/legal/cookie-audit.md</a
-      >. In sintesi: nessun cookie HTTP; in <code>localStorage</code> sono presenti solo
-      <code>auth_token</code> (sessione, strettamente tecnico) e
-      <code>documents.showCancelled</code> (preferenza UI). Per questo motivo non è richiesto un
-      cookie banner ai sensi delle linee guida del Garante del 10 giugno 2021.
+      parti.
+    </p>
+    <ul>
+      <li><strong>Cookie HTTP:</strong> nessuno.</li>
+      <li>
+        <strong>localStorage:</strong> due chiavi tecniche — <code>auth_token</code> (token di
+        sessione Sanctum, strettamente necessario per mantenere l'autenticazione) e
+        <code>documents.showCancelled</code> (preferenza UI sul filtro documenti, non identifica e
+        non profila).
+      </li>
+      <li><strong>sessionStorage / IndexedDB:</strong> nessuno usato direttamente dalla SPA.</li>
+    </ul>
+    <p>
+      Per questa configurazione non è richiesto un cookie banner ai sensi delle linee guida del
+      Garante del 10 giugno 2021. L'audit completo, con la metodologia di verifica e il record dei
+      controlli, è documentato in <code>docs/legal/cookie-audit.md</code> all'interno del nostro
+      repository sorgente; una richiesta scritta a
+      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a> ottiene la copia corrente.
     </p>
   </section>
 

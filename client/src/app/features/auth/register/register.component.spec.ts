@@ -100,4 +100,29 @@ describe('RegisterComponent — privacy consent gate (#219)', () => {
     expect(footPrivacy).toBeTruthy();
     expect(footPrivacy?.textContent?.trim()).toBe('Privacy');
   });
+
+  it('isolates the consent toggle from the policy link click (#249 copilot review)', () => {
+    // The original implementation wrapped both the checkbox and the
+    // <a routerLink="/privacy"> inside a single <label for=...>;
+    // Copilot pointed out that clicking the link would also toggle the
+    // checkbox via the implicit label association — actively wrong UX
+    // for "I want to read the policy before I accept it".
+    //
+    // The fix: the outer wrapper is a plain <div>, the inner <label>
+    // still wraps the consent text, and the <a> stops click
+    // propagation. This test pins the structural piece (wrapper is a
+    // div, link is inside a <label> but the wrapper isn't); the
+    // stopPropagation handler is asserted by the Cypress spec where
+    // a real browser DOM is available.
+    const root: HTMLElement = fixture.nativeElement;
+    const wrapper = root.querySelector('.privacy-consent');
+    expect(wrapper).toBeTruthy();
+    expect(wrapper!.tagName).toBe('DIV');
+
+    const link = root.querySelector('[data-cy="privacy-consent-link"]');
+    // Link still lives inside the inner <label> so a click on the text
+    // body still toggles the checkbox (Fitts) — only the link itself
+    // is shielded.
+    expect(link?.closest('label')).toBeTruthy();
+  });
 });

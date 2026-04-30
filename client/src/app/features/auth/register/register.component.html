@@ -105,23 +105,32 @@
       </div>
 
       <div class="field privacy-consent-field" data-cy="privacy-consent-field">
-        <label class="privacy-consent" for="privacy_accepted">
+        <!--
+          Wrapper is a plain <div>, not a <label> — Copilot caught (#249)
+          that nesting an <a> inside a <label for=...> would toggle the
+          checkbox when the user clicks the link to open the policy.
+          Both the checkbox and the label below carry the inputId/for
+          association explicitly; the link sits inside the label but
+          stops click propagation so the toggle stays a deliberate act.
+        -->
+        <div class="privacy-consent">
           <p-checkbox
             inputId="privacy_accepted"
             formControlName="privacy_accepted"
             [binary]="true"
             data-cy="privacy-consent-checkbox"
           />
-          <span class="privacy-consent__label">
+          <label class="privacy-consent__label" for="privacy_accepted">
             Ho letto e accetto l'<a
               routerLink="/privacy"
               target="_blank"
               rel="noopener noreferrer"
               data-cy="privacy-consent-link"
+              (click)="$event.stopPropagation()"
               >informativa sulla privacy</a
             >.
-          </span>
-        </label>
+          </label>
+        </div>
         @if (privacyAccepted.invalid && privacyAccepted.touched) {
           <small class="field-error" data-cy="privacy-consent-error">
             Devi accettare l'informativa sulla privacy per registrarti.

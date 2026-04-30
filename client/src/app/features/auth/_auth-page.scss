@@ -121,27 +121,31 @@
   }
 }
 
-// GDPR Art. 13 acceptance gate (#219). The label wraps the checkbox
-// + the body so a tap anywhere toggles, satisfying Fitts's law on
-// mobile. Italian copy because the link target — `/privacy` — is
-// itself the Italian informativa.
+// GDPR Art. 13 acceptance gate (#219). Outer wrapper is a plain div,
+// not a <label> — clicking the inner `<a routerLink="/privacy">` would
+// otherwise also toggle the checkbox via the implicit label association
+// (Copilot review on #249). The inner <label for="privacy_accepted">
+// still satisfies Fitts's law on the text body; the <a> calls
+// stopPropagation to keep the toggle a deliberate act when the user
+// is just opening the policy in a new tab.
 .privacy-consent {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
-  cursor: pointer;
-  user-select: none;
 
   &__label {
     font-size: 0.8125rem;
     line-height: 1.45;
     color: var(--p-text-color-secondary);
+    cursor: pointer;
+    user-select: none;
 
     a {
       color: var(--p-primary-color);
       text-decoration: underline;
       text-decoration-color: var(--p-content-border-color);
       text-underline-offset: 0.15em;
+      cursor: pointer;
 
       &:hover,
       &:focus-visible {
