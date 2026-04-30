@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -51,11 +51,27 @@ export class PaymentService {
 
   /**
    * Reverse the paid state for (athlete, year, month). 404 from the
-   * server means the row was already gone — the UI should treat that
-   * the same as success (the user's intent was "make it unpaid", and
-   * the end state matches).
+   * server means the row was already gone — the user's intent was
+   * "make it unpaid", and the end state matches, so we map 404 to
+   * a successful empty completion. Any other status (network error,
+   * 401, 403, 5xx) propagates as an error to the caller.
+   *
+   * This idempotency is the symmetric twin of the POST side: the
+   * server makes POST idempotent by returning the existing row;
+   * we make DELETE idempotent here by swallowing the 404. Without
+   * it, a double-click race or a stale list would surface a spurious
+   * "Couldn't update" toast on a state the user already wanted (#259
+   * Copilot review).
    */
   unmarkPaid(athleteId: number, year: number, month: number): Observable<void> {
-    return this.http.delete<void>(`${this.base}/${athleteId}/payments/${year}/${month}`);
+    return this.http.delete<void>(`${this.base}/${athleteId}/payments/${year}/${month}`).pipe(
+      // `of(undefined)` (not `EMPTY`) so the subscriber's `next`
+      // still fires — the caller's optimistic flip + success toast
+      // live in `next`, and we want both to run on the 404 → success
+      // path the same as on a real 204.
+      catchError((err: HttpErrorResponse) =>
+        err.status === 404 ? of(undefined) : throwError(() => err),
+      ),
+    );
   }
 }

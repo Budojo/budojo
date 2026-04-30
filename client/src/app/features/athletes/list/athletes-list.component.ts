@@ -395,10 +395,22 @@ export class AthletesListComponent implements OnInit {
    * an oncall should not regret.
    */
   confirmTogglePaid(event: MouseEvent, athlete: Athlete): void {
+    // Use UTC year/month/label to align with the server's
+    // `paid_current_month` derivation. The server runs in app
+    // timezone (UTC); around month boundaries (e.g. 23:30 Italy
+    // local on April 30 is May 1 UTC), local-clock arithmetic
+    // would write a different (year, month) than the server reads
+    // back, so the badge would show a confused state on the next
+    // page load. UTC on both ends keeps the round-trip honest
+    // (#259 Copilot review).
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const monthLabel = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth() + 1;
+    const monthLabel = now.toLocaleString('en-US', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
 
     const fullName = `${athlete.first_name} ${athlete.last_name}`;
     const willMarkPaid = !athlete.paid_current_month;

@@ -412,10 +412,7 @@ describe('AthletesListComponent', () => {
         return confirmService;
       }) as never;
 
-      const messageSpy = vi.spyOn(
-        fixture.componentRef.injector.get(MessageService),
-        'add',
-      );
+      const messageSpy = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
       const paymentSpy = TestBed.inject(PaymentService).markPaid as unknown as Mock;
 
       const target = document.createElement('button');
@@ -480,10 +477,7 @@ describe('AthletesListComponent', () => {
         throwError(() => ({ status: 422 })),
       );
 
-      const messageSpy = vi.spyOn(
-        fixture.componentRef.injector.get(MessageService),
-        'add',
-      );
+      const messageSpy = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
 
       const event = new MouseEvent('click');
       Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
