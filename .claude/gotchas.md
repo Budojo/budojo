@@ -24,6 +24,7 @@ Format: `→` separates the symptom from the action.
 - Inventing spacing values (`0.75rem`, `1.75rem`, `0.125rem`) → canon § MD3 8dp grid. Only `0.5rem / 1rem / 1.5rem / 2rem`.
 - Hex color in a component SCSS when a theme token exists → search `--p-*` first. Use the token. Raw hex only for true domain colors (e.g. belt colors) with rationale comment.
 - Fixed `width` on a `p-dialog` without `[breakpoints]` → overflows on mobile viewports. Always pair with `[breakpoints]="{ '768px': '92vw' }"`.
+- Reinventing the page chrome stack on a new page (`max-width: 1200px; padding: 1rem; @media …`) → use `var(--budojo-container-content)` (or `…-prose`) and let the dashboard shell `.main` provide padding via `--budojo-page-padding-{x,y}`. A page wrapper that re-declares its own padding stacks on top of the shell's and feels cramped at narrow viewports (#261). Public routes outside the shell — `/privacy`, `/sub-processors` — are the documented exception and keep their padding in `_legal-page.scss`.
 
 ## Cypress
 

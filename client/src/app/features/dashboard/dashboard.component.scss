@@ -345,6 +345,14 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   flex: 1;
   overflow-y: auto;
   background: var(--p-surface-50);
+
+  // Single source of truth for page-chrome padding (#261). Tokens scale
+  // at the 768px breakpoint via the rule in `styles/budojo-theme.scss`,
+  // so we don't need a media query here. Pages keep their own
+  // `max-width` + `margin: 0 auto` (using `--budojo-container-*`) but
+  // never declare their own padding — the prose pages override only
+  // when their reading rhythm genuinely demands it.
+  padding: var(--budojo-page-padding-y) var(--budojo-page-padding-x);
 }
 
 // ── Motion ─────────────────────────────────────────────────────────────────────

@@ -5,12 +5,10 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  // Narrow-card layout — kept at 40rem until the hierarchy rework
+  // (#261 follow-up) lands a wide header + narrow card aligned left.
+  // Page padding now comes from the dashboard shell.
   max-width: 40rem;
-  padding: 1rem;
-
-  @media (min-width: 768px) {
-    padding: 2rem;
-  }
 }
 
 .form__header {

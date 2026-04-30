@@ -101,6 +101,28 @@ Third shadow ramp is forbidden. If you reach for it, use a hairline border.
 
 No bounce, no elastic. PWAs in standalone mode read bounce as "this app is broken."
 
+### 1.7 Page containers (#261)
+
+Two semantic tokens replace the per-page `max-width` zoo. Pages pick the one that matches their content density — never a raw px value.
+
+| Token | Value | Use |
+|---|---|---|
+| `--budojo-container-content` | `75rem` (≈ 1200px) | Operative pages — lists, detail views, daily/monthly attendance, expiring documents |
+| `--budojo-container-prose` | `56rem` | Text-heavy pages — `/privacy`, `/sub-processors`, `/dashboard/whats-new`. Comfortable single-column line length (60–80ch) |
+
+Page-chrome **padding** is set once at the dashboard shell `.main` element and consumed via tokens that scale at the sidebar breakpoint:
+
+| Token | `< 768px` | `≥ 768px` |
+|---|---|---|
+| `--budojo-page-padding-x` | `1rem` | `2rem` |
+| `--budojo-page-padding-y` | `1rem` | `1.5rem` |
+
+**Rules:**
+
+- Pages declare only their container choice — `max-width: var(--budojo-container-content); margin: 0 auto;`. Padding is **never** redeclared on a page wrapper.
+- Public pages outside the dashboard shell (`/privacy`, `/sub-processors`) keep their own padding in `_legal-page.scss` — the shell's `.main` doesn't reach them.
+- Narrow-card layouts (`/profile`, `/dashboard/academy`, `/dashboard/academy/edit`, athlete form) currently use raw `max-width` (40rem / 640px / 900px) because they're slated for a hierarchy rework — wide page header + narrow card aligned left, instead of a viewport-restricting page.
+
 ---
 
 ## 2. `client/src/styles/budojo-theme.scss`

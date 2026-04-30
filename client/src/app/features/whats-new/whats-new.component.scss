@@ -5,17 +5,15 @@
 // the dense legal table layout.
 
 .whats-new {
-  max-width: 56rem;
+  // Prose container — narrower than operative content so release-note
+  // line length stays in the 60–80ch reading sweet spot. Page padding
+  // comes from the dashboard shell (#261).
+  max-width: var(--budojo-container-prose);
   margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;
   color: var(--p-text-color);
-
-  @media (min-width: 768px) {
-    padding: 3rem 2rem 6rem;
-  }
 
   &__header {
     display: flex;

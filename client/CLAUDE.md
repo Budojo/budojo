@@ -57,6 +57,7 @@ Hard rules, on top of the MD3 bullets above:
 - **Do not restyle PrimeNG internals from component SCSS.** Override via CSS custom properties; use `::ng-deep` only when a token truly doesn't exist AND the pattern is already documented in `DESIGN_SYSTEM.md`. The *global* override layer (`client/src/styles/budojo-theme.scss`) is the **sanctioned exception**: it's allowed to touch selectors like `.p-button` / `.p-dialog` when token overrides alone can't express the behavior (e.g. killing Material box-shadow, mobile bottom-sheet transform). Every selector there carries a one-line comment explaining why a token isn't enough. Component SCSS never does this.
 - **Motion uses the `--budojo-motion-*` tokens**, not hand-picked `200ms ease-out`. Three durations, one curve.
 - **Sentence-case everything.** Buttons, headers, tags. No title-case, no uppercase — except eyebrow labels (`EXPIRING SOON`, `letter-spacing: 0.06em`). If you find yourself writing `text-transform: uppercase` elsewhere, you're off-canon.
+- **Page chrome comes from the shell, not the page (#261).** Two semantic container tokens — `--budojo-container-content` (`75rem`, operative pages) and `--budojo-container-prose` (`56rem`, text-heavy pages) — replace per-page `max-width` values. Page padding is set once on `.main` in the dashboard shell via `--budojo-page-padding-{x,y}` (which scale at 768px in `:root`). A page wrapper declares `max-width: var(--budojo-container-content); margin: 0 auto;` and **nothing else** for chrome. Any new page that re-declares its own `padding` or invents a `max-width` is a red flag — push back. Public routes outside the dashboard shell (`/privacy`, `/sub-processors`) keep their padding in `_legal-page.scss` because the shell can't reach them. See `docs/design/DESIGN_SYSTEM.md` § 1.7 for the full rule.
 
 ### Don't Make Me Think — operational rules
 
@@ -133,7 +134,8 @@ A reviewer should push back when they see:
 - A `loading` state that's not reflected in the UI (user clicks, nothing happens for 2s, then redirect)
 - Inline styles (`style="..."`) instead of a component scss file
 - A Material Design rule or Law-of-UX cited in review that was dismissed with "I prefer it this way"
-- **A new component with a `max-width: 1024px`-style hard cap that doesn't also have a mobile-first base rule**
+- **A new page wrapper with a raw `max-width: 1024px`-style px value instead of `var(--budojo-container-{content,prose})` (#261)**
+- **A page wrapper that re-declares its own `padding` instead of inheriting from the dashboard shell `.main` (#261)**
 - **A `p-dialog` with a fixed `width` and no `[breakpoints]` for mobile**
 - **A custom breakpoint value that isn't one of `768 / 1024 / 1440`**
 
