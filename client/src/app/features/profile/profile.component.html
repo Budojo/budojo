@@ -33,31 +33,37 @@
     </p-card>
 
     <!--
-      GDPR data portability (#222). Single primary action — a ZIP that
+      GDPR data portability (#222). Single tertiary action — a ZIP that
       bundles the JSON metadata + every uploaded document. The endpoint
       enforces a 1-call/min throttle so accidental retries don't hammer
       the backend; the loading state on the button mirrors that.
+
+      Layout (#284): vertical stack — eyebrow → description → compact
+      button below. The previous "title left / big floating button right"
+      layout claimed visual hierarchy this action doesn't deserve (it's
+      a settings utility, not the primary action of the page) and broke
+      scan order — Krug § "self-evident UI" + canon § Card anatomy.
     -->
     <p-card styleClass="profile-page__card">
-      <div class="profile-page__row profile-page__row--export">
-        <div class="profile-page__export-text">
-          <span class="profile-page__label">Your data</span>
-          <p class="profile-page__export-hint">
-            Download a full copy of your account — academy details, athletes, payments, attendance,
-            and uploaded documents. The file is a ZIP you can open with any archive tool.
-          </p>
-        </div>
+      <section class="profile-page__data-export" data-cy="profile-data-export">
+        <span class="profile-page__label">Your data</span>
+        <p class="profile-page__export-hint">
+          Download a full copy of your account — academy details, athletes, payments, attendance,
+          and uploaded documents. The file is a ZIP you can open with any archive tool.
+        </p>
         <p-button
           type="button"
           icon="pi pi-download"
           label="Download my data"
           severity="secondary"
           [outlined]="true"
+          size="small"
           [loading]="exporting()"
           (onClick)="exportMyData()"
+          styleClass="profile-page__export-button"
           data-cy="profile-export-data"
         />
-      </div>
+      </section>
     </p-card>
 
     <!--
