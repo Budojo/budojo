@@ -17,6 +17,7 @@ import {
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
@@ -125,6 +126,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
   imports: [
     ReactiveFormsModule,
     ButtonModule,
+    InputNumberModule,
     InputTextModule,
     MessageModule,
     SelectModule,
@@ -183,6 +185,12 @@ export class AcademyFormComponent implements OnInit {
       },
       { validators: addressAllOrNothing },
     ),
+    // Monthly fee (#267) — euros at the form layer, persisted as cents on
+    // the wire. `null` means "no fee set" and turns off the v1.7.0
+    // payments features (athletes-list inline toggle, per-athlete tab).
+    // Server validator: `sometimes|nullable|integer|min:0` on
+    // `monthly_fee_cents`.
+    monthly_fee: this.fb.control<number | null>(null, [Validators.min(0)]),
     training_days: this.fb.nonNullable.control<number[]>([]),
   });
 
@@ -224,6 +232,9 @@ export class AcademyFormComponent implements OnInit {
         province: academy.address?.province ?? '',
         country: academy.address?.country ?? 'IT',
       },
+      // Cents → euros at the form boundary. `null` round-trips so an
+      // unset fee stays unset.
+      monthly_fee: academy.monthly_fee_cents == null ? null : academy.monthly_fee_cents / 100,
       training_days: academy.training_days ?? [],
     });
   }
@@ -286,6 +297,10 @@ export class AcademyFormComponent implements OnInit {
 
   get addressGroup() {
     return this.form.controls.address;
+  }
+
+  get monthlyFee() {
+    return this.form.controls.monthly_fee;
   }
 
   get addressLine1() {
@@ -360,6 +375,13 @@ export class AcademyFormComponent implements OnInit {
     const facebook = v.facebook.trim();
     const instagram = v.instagram.trim();
 
+    // Monthly fee (#267) — euros → cents at the wire boundary. `null`
+    // (cleared input) clears the server-side fee and turns the payments
+    // features off. `Math.round` keeps us safe against float artefacts —
+    // the server validator requires an integer.
+    const monthlyFeeEur = v.monthly_fee;
+    const monthlyFeeCents = monthlyFeeEur == null ? null : Math.round(monthlyFeeEur * 100);
+
     return {
       name: v.name.trim(),
       phone_country_code: phoneEmpty ? null : phoneCc,
@@ -368,6 +390,7 @@ export class AcademyFormComponent implements OnInit {
       facebook: facebook === '' ? null : facebook,
       instagram: instagram === '' ? null : instagram,
       address,
+      monthly_fee_cents: monthlyFeeCents,
       training_days: v.training_days.length === 0 ? null : v.training_days,
     };
   }
