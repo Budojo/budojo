@@ -7,22 +7,30 @@ import {
   signal,
 } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
+import { LanguageService, SupportedLanguage } from '../../core/services/language.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { VERSION } from '../../../environments/version';
 
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, BrandGlyphComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, BrandGlyphComponent, TranslatePipe],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly authService = inject(AuthService);
+  private readonly languageService = inject(LanguageService);
   private readonly router = inject(Router);
+
+  /** Bound by the sidebar language toggle (#273). Read of `currentLang`
+   *  drives the active-state styling; `setLang()` writes through the
+   *  service which persists to localStorage and flips ngx-translate. */
+  protected readonly currentLang = this.languageService.currentLang;
 
   /**
    * The cached user — drives the verification pillola in the sidebar header.
@@ -107,5 +115,12 @@ export class DashboardComponent implements OnInit {
   protected signOut(): void {
     this.closeSidebar();
     this.logout();
+  }
+
+  /** Sidebar language toggle (#273). Same call path the legal pages will
+   *  use — `LanguageService` is the single source of truth for the active
+   *  language across the SPA. */
+  protected setLang(lang: SupportedLanguage): void {
+    this.languageService.setLanguage(lang);
   }
 }

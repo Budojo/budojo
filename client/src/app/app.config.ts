@@ -1,14 +1,28 @@
 import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
 import { providePrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
 import Material from '@primeuix/themes/material';
+import { provideTranslateService, TranslateLoader } from '@ngx-translate/core';
+import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+
+/**
+ * ngx-translate HTTP loader factory (#273). Loads JSON files from
+ * `src/assets/i18n/{lang}.json` at runtime. Single bundle deployed —
+ * the user's language switch flips the loaded namespace at runtime,
+ * no rebuild needed. Picked over Angular's built-in `$localize` for
+ * the runtime-switch ergonomics; SEO is not load-bearing because
+ * the dashboard is auth-walled.
+ */
+export function translateLoaderFactory(http: HttpClient): TranslateLoader {
+  return new TranslateHttpLoader(http, '/assets/i18n/', '.json');
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -56,6 +70,20 @@ export const appConfig: ApplicationConfig = {
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
+    }),
+    // i18n (#273) — runtime locale switch via JSON files in
+    // `src/assets/i18n/{lang}.json`. Default + fallback `en`. The
+    // `LanguageService.bootstrap()` call in `app.component.ts` sets
+    // the active language on init from localStorage / navigator with
+    // `en` fallback.
+    provideTranslateService({
+      loader: {
+        provide: TranslateLoader,
+        useFactory: translateLoaderFactory,
+        deps: [HttpClient],
+      },
+      defaultLanguage: 'en',
+      fallbackLang: 'en',
     }),
   ],
 };
