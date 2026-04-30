@@ -100,31 +100,31 @@ export class AthletesListComponent implements OnInit {
   );
 
   /**
-   * Short month abbreviation for the "Paid" column header (#282) — e.g.
-   * "Apr". Derived once per component instance from the current date in
-   * UTC (matches the server-side payment-month resolution everywhere
-   * else in the SPA). A user keeping the page open across a month
-   * boundary sees a slightly stale header until refresh — acceptable
-   * trade-off for not adding a per-tick reactive timer just for a
-   * column header.
+   * Current-month labels for the "Paid" column (#282). BOTH labels are
+   * derived from a single `Date` instance (`_now`) so they can never
+   * disagree across a UTC month boundary — Copilot caught this on #289:
+   * two separate `new Date()` calls during initialization could legally
+   * straddle midnight UTC and produce a header reading "Paid · Apr"
+   * with a tooltip reading "May 2026 — Unpaid".
    *
-   * Locale: hard-coded `en-US` for now to match the existing
-   * `monthLabel` derivation in `confirmTogglePaid()` and the SPA's
-   * English-source dashboard. When the dashboard i18n PR-C lands
-   * (#279), this can switch to the active LanguageService locale.
+   * Derived once per component instance. A user keeping the page open
+   * across a month boundary sees a slightly stale label until refresh
+   * — acceptable trade-off vs. wiring a per-tick reactive timer just
+   * for a column header.
+   *
+   * Locale: hard-coded `en-US` to match the existing `monthLabel`
+   * derivation in `confirmTogglePaid()` and the SPA's English-source
+   * dashboard. When the dashboard i18n PR-C lands (#279), all three
+   * surfaces can switch to the active LanguageService locale at once.
    */
-  readonly currentMonthShort = new Date().toLocaleString('en-US', {
+  private readonly _now = new Date();
+
+  readonly currentMonthShort = this._now.toLocaleString('en-US', {
     month: 'short',
     timeZone: 'UTC',
   });
 
-  /**
-   * Full month + year for the per-row tooltip (#282) — e.g. "April 2026".
-   * Same locale + timezone discipline as `currentMonthShort`. Combined
-   * with the athlete's paid state in the template for a tooltip like
-   * "April 2026 — Unpaid".
-   */
-  readonly currentMonthLong = new Date().toLocaleString('en-US', {
+  readonly currentMonthLong = this._now.toLocaleString('en-US', {
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC',

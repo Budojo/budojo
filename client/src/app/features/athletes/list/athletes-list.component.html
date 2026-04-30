@@ -175,13 +175,23 @@
                    so the user gets unambiguous context on hover/long-press
                    without crowding the row visually. The bare badge
                    already carries Paid / Unpaid; the tooltip adds the
-                   "April 2026" anchor. -->
+                   "April 2026" anchor.
+
+                   Suppressed (empty string → no tooltip mounts) when
+                   `paid_current_month` is undefined — same gate that
+                   makes <app-paid-badge> render nothing for that athlete.
+                   Without the guard, an empty cell would still show a
+                   ghost tooltip reading "April 2026 — Unpaid" because
+                   the ternary defaults `undefined` to "Unpaid" (Copilot
+                   caught this on #289). -->
               <app-paid-badge
                 [paid]="athlete.paid_current_month"
                 [clickable]="true"
                 (paidToggle)="confirmTogglePaid($event, athlete)"
                 [pTooltip]="
-                  currentMonthLong + ' — ' + (athlete.paid_current_month ? 'Paid' : 'Unpaid')
+                  athlete.paid_current_month === undefined
+                    ? ''
+                    : currentMonthLong + ' — ' + (athlete.paid_current_month ? 'Paid' : 'Unpaid')
                 "
                 tooltipPosition="top"
               />
