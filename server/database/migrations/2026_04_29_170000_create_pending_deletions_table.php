@@ -9,8 +9,11 @@ use Illuminate\Support\Facades\Schema;
 /**
  * `pending_deletions` (#223). Backs the GDPR-Art-17 right-to-erasure
  * flow. A row in here means the user clicked "Delete account" — they
- * are in a 30-day grace period during which the account is locked
- * but recoverable. After `scheduled_for`, a scheduled task runs
+ * are in a 30-day grace window. The window is observed at the SPA
+ * layer for now (banner + cancel CTA); login and authenticated API
+ * access still work during the window — see the issue body's "Login
+ * during grace" open question for the planned hardening. After
+ * `scheduled_for`, a scheduled task (TODO follow-up) runs
  * `PurgeAccountAction` to do the actual hard-delete.
  *
  * Why a separate table instead of a `deleted_at`-style soft-delete on
@@ -41,12 +44,13 @@ return new class extends Migration
             // accounts that have aged past the grace window.
             $table->timestamp('scheduled_for')->index();
 
-            // Random 64-char opaque token issued at request time and
-            // mailed to the user as a one-time link to cancel the
-            // deletion within the grace window. NOT secret-grade —
-            // the user is already authenticated to even reach here —
-            // but unguessable enough to defeat URL-bar accidents.
-            $table->string('confirmation_token', 64);
+            // Random 64-char opaque token issued at request time. The
+            // current PR's cancellation flow uses the authenticated
+            // session (DELETE /me/deletion-request); a follow-up will
+            // surface this token as a one-time email link for the
+            // "click here to cancel" flow. UNIQUE so token-based
+            // lookup stays unambiguous and indexed cheaply.
+            $table->string('confirmation_token', 64)->unique();
 
             $table->timestamps();
         });

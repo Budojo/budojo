@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Backs the GDPR Art. 17 right-to-erasure flow (#223). The presence of a row marks the owning `User` as **pending hard-deletion** — the user clicked "Delete account" and is in a 30-day grace window during which the account is locked but recoverable. After `scheduled_for`, a scheduled task (TODO follow-up) runs `App\Actions\User\PurgeAccountAction` to do the actual hard-delete cascade.
+Backs the GDPR Art. 17 right-to-erasure flow (#223). The presence of a row marks the owning `User` as **pending hard-deletion** — the user clicked "Delete account" and is in a 30-day grace window during which the SPA renders a cancellation banner; login and authenticated API calls still work, so the user can either change their mind (`DELETE /me/deletion-request`) or pull a final export (`GET /me/export`). After `scheduled_for`, a scheduled task (TODO follow-up) runs `App\Actions\User\PurgeAccountAction` to do the actual hard-delete cascade. The decision on whether to lock login during the window (vs the current "everything still works, banner only" UX) is the open question tracked at the bottom of this page.
 
 ## Why a separate table, not soft-delete on `users`
 
@@ -23,7 +23,7 @@ A separate `pending_deletions` table gives us a **time-bounded explicit mechanis
 | `user_id` | bigint unsigned | FK `users.id`, **unique**, cascade on delete | One pending row per user max — a second click while one is already pending is a no-op (idempotent at the Action layer) |
 | `requested_at` | timestamp | not null | When the user actually clicked "Delete account" |
 | `scheduled_for` | timestamp | not null, **indexed** | Always `requested_at + 30 days`. Indexed because the cron job filters on `scheduled_for <= now()` to find the accounts that have aged past the grace window |
-| `confirmation_token` | string(64) | not null | Random 64-char opaque token mailed as a one-time link to cancel deletion via the public API. Not secret-grade — the user is already authenticated to even reach this — but unguessable enough to defeat URL-bar accidents |
+| `confirmation_token` | string(64) | not null, **unique** | Random 64-char opaque token. Today the cancellation flow uses the authenticated session (`DELETE /me/deletion-request`) — this column is reserved for the email-link cancellation flow that lands as a follow-up. UNIQUE so the future token-based lookup is unambiguous and indexed cheaply |
 | `created_at` | timestamp | nullable | Standard Eloquent timestamp |
 | `updated_at` | timestamp | nullable | Standard Eloquent timestamp |
 
@@ -37,6 +37,7 @@ A separate `pending_deletions` table gives us a **time-bounded explicit mechanis
 - `PRIMARY KEY(id)`
 - `UNIQUE(user_id)` — at-most-one pending row per user
 - `INDEX(scheduled_for)` — the cron's filter column
+- `UNIQUE(confirmation_token)` — the email-link lookup column (used by the future token-based cancel endpoint)
 
 ## Business rules
 

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Actions\User;
 
-use App\Models\Athlete;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -14,12 +13,26 @@ use Illuminate\Support\Facades\Storage;
  * it (#223). Called by the scheduled cron after the grace period
  * elapses, OR directly in tests.
  *
- * Cascade order matters: documents have files on the local disk that
- * the FK cascade does NOT clean up. We walk the athletes (including
- * soft-deleted ones via `withTrashed()`) and `Storage::delete` each
- * document file BEFORE hard-deleting the rows. Subsequent FK cascades
- * (academy → athletes → payments → attendance → documents) clear the
- * DB rows in one transaction.
+ * Two phases, in this order:
+ *
+ *   1. **Collect** the disk paths that would be orphaned by the DB
+ *      cascade (document files, academy logo).
+ *   2. **DB transaction** — `$user->delete()` triggers the FK cascade
+ *      chain (user → academy → athletes → payments, attendance,
+ *      documents). All wired with `cascadeOnDelete()` at the
+ *      migration level. Soft-deleted athletes get cleared via the FK
+ *      cascade too.
+ *   3. **Disk cleanup AFTER commit** — only the paths we collected
+ *      are unlinked, and only once the DB transaction has succeeded.
+ *
+ * Why disk-after-DB and not interleaved: if the disk wipe ran inside
+ * the transaction and `$user->delete()` then failed (deadlock, FK
+ * blip, etc.), the DB would roll back but the files would already
+ * be gone — irrecoverable. The reverse failure mode is recoverable:
+ * if disk cleanup fails after a successful DB commit, we end up
+ * with orphan files on disk that a maintenance script can later
+ * collect. Strictly preferable to losing user data permanently in a
+ * partial-success state.
  *
  * **Scope note (#223):** payments inherit the athlete's
  * `cascadeOnDelete()` — they are wiped along with the athlete here,
@@ -34,33 +47,53 @@ class PurgeAccountAction
 {
     public function execute(User $user): void
     {
-        $user->loadMissing(['academy.athletes' => fn ($q) => $q->withTrashed()]);
+        $pathsToWipe = $this->collectDiskPaths($user);
 
         DB::transaction(function () use ($user): void {
-            // Phase 1 — disk cleanup. The FK cascade does NOT touch
-            // files; we have to walk them ourselves before the rows
-            // are gone.
-            if ($user->academy !== null) {
-                /** @var \Illuminate\Database\Eloquent\Collection<int, Athlete> $athletes */
-                $athletes = $user->academy->athletes()->withTrashed()->with('documents')->get();
-                foreach ($athletes as $athlete) {
-                    foreach ($athlete->documents as $doc) {
-                        Storage::disk('local')->delete($doc->file_path);
-                    }
-                }
-
-                // Academy logo lives at `academies.logo_path` on the
-                // local disk. Wipe that too before the academy row goes.
-                if (\is_string($user->academy->logo_path) && $user->academy->logo_path !== '') {
-                    Storage::disk('local')->delete($user->academy->logo_path);
-                }
-            }
-
-            // Phase 2 — DB cascade. Deleting the user triggers the
-            // FK cascade chain: user → academy → athletes → (payments,
-            // attendance_records, documents). All wired with
-            // `cascadeOnDelete()` at the migration level.
+            // Deleting the user triggers the FK cascade chain (user →
+            // academy → athletes → payments, attendance, documents).
+            // All wired with `cascadeOnDelete()` at the migration
+            // level. Soft-deleted athletes get cleared via the FK
+            // cascade too.
             $user->delete();
         });
+
+        foreach ($pathsToWipe as $path) {
+            Storage::disk('local')->delete($path);
+        }
+    }
+
+    /**
+     * Walks the user's domain to find every file the FK cascade would
+     * leave orphaned. Runs BEFORE the transaction so the result is a
+     * plain `array` of strings — no Eloquent state survives the
+     * subsequent `$user->delete()` call.
+     *
+     * Includes soft-deleted athletes via `withTrashed()` so a kid
+     * who was removed from the roster six months ago still has their
+     * medical certificate scrubbed from disk on account hard-delete.
+     *
+     * @return list<string>
+     */
+    private function collectDiskPaths(User $user): array
+    {
+        $paths = [];
+
+        if ($user->academy === null) {
+            return $paths;
+        }
+
+        $athletes = $user->academy->athletes()->withTrashed()->with('documents')->get();
+        foreach ($athletes as $athlete) {
+            foreach ($athlete->documents as $doc) {
+                $paths[] = $doc->file_path;
+            }
+        }
+
+        if (\is_string($user->academy->logo_path) && $user->academy->logo_path !== '') {
+            $paths[] = $user->academy->logo_path;
+        }
+
+        return $paths;
     }
 }

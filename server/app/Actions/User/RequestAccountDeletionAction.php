@@ -39,22 +39,23 @@ class RequestAccountDeletionAction
             ]);
         }
 
-        // Idempotent — return the existing pending row if there is one.
-        // Re-running the request must NOT extend the grace window (that
-        // would be a way for a malicious caller to indefinitely defer
-        // the actual purge).
-        $existing = PendingDeletion::query()->where('user_id', $user->id)->first();
-        if ($existing !== null) {
-            return $existing;
-        }
-
+        // Idempotent: re-running the request must NOT extend the grace
+        // window (that would be a way for a malicious caller to
+        // indefinitely defer the actual purge). `firstOrCreate` keyed
+        // on `user_id` (which is unique on the table) is race-safe —
+        // two concurrent POSTs cannot both win the create. If one of
+        // them loses the race, the loser falls back to the existing
+        // row instead of trapping the unique-constraint violation as
+        // a 500.
         $now = Carbon::now();
 
-        return PendingDeletion::query()->create([
-            'user_id' => $user->id,
-            'requested_at' => $now,
-            'scheduled_for' => $now->copy()->addDays(self::GRACE_DAYS),
-            'confirmation_token' => Str::random(64),
-        ]);
+        return PendingDeletion::query()->firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'requested_at' => $now,
+                'scheduled_for' => $now->copy()->addDays(self::GRACE_DAYS),
+                'confirmation_token' => Str::random(64),
+            ],
+        );
     }
 }
