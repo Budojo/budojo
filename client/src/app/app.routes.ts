@@ -134,7 +134,7 @@ export const routes: Routes = [
       {
         path: 'whats-new',
         loadComponent: () =>
-          import('../app/features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),
+          import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),
       },
     ],
   },

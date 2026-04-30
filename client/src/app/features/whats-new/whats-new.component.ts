@@ -15,9 +15,10 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
  * emoji use in section headers. This component renders a hand-
  * tailored version of the same content as a typed `Release[]`
  * array. The two are NOT auto-generated; they are kept in lock-
- * step under the documentation discipline (CLAUDE.md): a release
- * PR adds the markdown file AND the array entry in the same
- * commit.
+ * step under the documentation discipline documented in
+ * `CLAUDE.md` § "User-facing changelog (#254)": a release PR
+ * adds the markdown file AND prepends the array entry in the
+ * same commit history.
  *
  * Why the parallel artefacts: the markdown files are the citable
  * source (auditable in the repo, easy to rewrite, easy to diff in
