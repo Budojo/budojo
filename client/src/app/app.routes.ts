@@ -131,6 +131,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/profile/profile.component').then((m) => m.ProfileComponent),
       },
+      {
+        path: 'whats-new',
+        loadComponent: () =>
+          import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),
+      },
     ],
   },
   // Public legal pages (#225). No auth — prospects, the Garante, and
