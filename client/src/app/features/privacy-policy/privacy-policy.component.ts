@@ -4,33 +4,19 @@ import { ButtonModule } from 'primeng/button';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 
 /**
- * Public `/privacy` page (#219). GDPR Art. 13 informativa for users
- * registering with Budojo. Italian copy because the audience is the
- * Italian academy market.
+ * Public `/privacy` page — **English-default** (#291).
  *
- * **Two artefacts, one content domain.** The canonical legal text
- * lives in `docs/legal/privacy-policy.md`; this component renders a
- * hand-tailored HTML translation of the same content for the SPA
- * layout. The two are NOT auto-generated from one another — they
- * are kept in lock-step by hand under the documentation discipline
- * in CLAUDE.md (a PR that changes one must change the other in the
- * same commit history). Same pattern the sub-processors page uses.
+ * The SPA serves English by default for any visitor without a saved
+ * language preference (#271 EN-first roadmap). The faithful Italian
+ * translation lives at `/privacy/it` and is still the legally-citable
+ * source of truth for the Garante and IT customers — facts in this
+ * English text and the Italian text MUST match. Editing one without
+ * the other is a lock-step violation.
  *
- * Why two artefacts: the markdown is the legally-citable source
- * (auditors, the Garante, future lawyer revisions read it raw); the
- * HTML lets us tune typography, table breakpoints, and the version-
- * stamp banner for the SPA without HTML-escaping markdown noise.
- *
- * **Draft status.** The page ships with a visible "Bozza tecnica —
- * in revisione legale" banner. The structure and the technical facts
- * (sub-processors, retention, hosting region, base giuridica) are
- * accurate today; the formal legal prose lands separately when the
- * lawyer-reviewed text is delivered. Shipping the scaffold + the
- * accurate facts NOW is the good-faith Art. 13 disclosure required
- * before launch — better than a 404 at `/privacy` while we wait.
- *
- * Public route (no auth) so a prospect filling the registration
- * form can read the policy before checking the consent box.
+ * Why a separate component per language (vs one component reading
+ * `LanguageService.currentLang()`): the legal text is dense and
+ * prose-heavy; reviewing it in two languages is much easier when each
+ * language lives in its own template. Same shape, different content.
  */
 @Component({
   selector: 'app-privacy-policy',
@@ -43,7 +29,7 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
 export class PrivacyPolicyComponent {
   private readonly router = inject(Router);
 
-  protected readonly version = '0.1 (bozza)';
+  protected readonly version = '0.1 (draft)';
   protected readonly lastUpdated = '2026-04-30';
 
   goHome(): void {
