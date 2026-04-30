@@ -367,6 +367,33 @@ describe('AthletesListComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-cy="athletes-th-paid"]')).not.toBeNull();
     });
 
+    it('Paid column header carries the current month abbreviation (#282)', () => {
+      // Header should read "Paid · Apr" (or whatever the current month
+      // is) so an instructor doesn't have to guess which month the
+      // status refers to. We don't pin a specific month here — that
+      // would make the test break every time the wall clock crosses
+      // a month boundary — but we DO assert the prefix + the
+      // separator + a 3-letter abbreviation matching the component's
+      // own derivation.
+      const academyService = TestBed.inject(AcademyService);
+      academyService.academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      const headerText = fixture.nativeElement
+        .querySelector('[data-cy="athletes-th-paid"]')
+        ?.textContent?.trim();
+      const expected = `Paid · ${fixture.componentInstance.currentMonthShort}`;
+      expect(headerText).toBe(expected);
+
+      // Sanity-check that the derived month is a recognisable
+      // 3-letter English abbreviation — guards against a future
+      // refactor that changes the format token (e.g. "month: 'numeric'")
+      // and silently breaks the contract.
+      expect(fixture.componentInstance.currentMonthShort).toMatch(/^[A-Z][a-z]{2}$/);
+    });
+
     function makeAthlete(over: Partial<Athlete> = {}): Athlete {
       return {
         id: 42,
