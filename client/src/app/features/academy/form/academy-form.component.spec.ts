@@ -142,6 +142,10 @@ describe('AcademyFormComponent', () => {
         province: 'RM',
         country: 'IT',
       },
+      // Monthly fee (#267) — `null` because makeAcademy() default has
+      // no fee set, so the form-level control hydrates to null and
+      // serializes to null on the wire.
+      monthly_fee_cents: null,
       training_days: null,
     });
     req.flush({
@@ -186,6 +190,7 @@ describe('AcademyFormComponent', () => {
       facebook: null,
       instagram: null,
       address: null,
+      monthly_fee_cents: null,
       training_days: null,
     });
     req.flush({ data: makeAcademy({ address: null }) });
@@ -326,5 +331,62 @@ describe('AcademyFormComponent', () => {
     expect(component.website.value).toBe('https://gracie-barra.com');
     expect(component.facebook.value).toBe('https://facebook.com/graciebarra');
     expect(component.instagram.value).toBe('https://instagram.com/graciebarra');
+  });
+
+  // ─── Monthly fee (#267) ─────────────────────────────────────────────────────
+
+  it('hydrates the monthly_fee input in euros from the cached cents value', () => {
+    const { component } = setup(makeAcademy({ monthly_fee_cents: 5000 }));
+    // 5000 cents → 50 euros at the form layer. The wire-level token
+    // stays cents; the form is euros for human input.
+    expect(component.monthlyFee.value).toBe(50);
+  });
+
+  it('hydrates monthly_fee to null when the cached fee_cents is null (no fee set)', () => {
+    const { component } = setup(makeAcademy({ monthly_fee_cents: null }));
+    expect(component.monthlyFee.value).toBeNull();
+  });
+
+  it('PATCHes monthly_fee_cents = euros × 100 on submit', () => {
+    const { component, httpMock } = setup();
+    component.form.patchValue({ name: 'Some', monthly_fee: 50 });
+    component.submit();
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.monthly_fee_cents).toBe(5000);
+    req.flush({ data: makeAcademy({ monthly_fee_cents: 5000 }) });
+  });
+
+  it('rounds half-euro fees to the nearest cent (no float artefacts)', () => {
+    // 50.5 euros × 100 = 5049.999999999999 in IEEE 754. The buildPayload
+    // uses Math.round so the wire value is an integer the server's
+    // `integer` validator accepts.
+    const { component, httpMock } = setup();
+    component.form.patchValue({ name: 'Some', monthly_fee: 50.5 });
+    component.submit();
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.monthly_fee_cents).toBe(5050);
+    expect(Number.isInteger(req.request.body.monthly_fee_cents)).toBe(true);
+    req.flush({ data: makeAcademy({ monthly_fee_cents: 5050 }) });
+  });
+
+  it('null round-trips — clearing the fee sends monthly_fee_cents: null on the wire', () => {
+    // User had a fee, clears the input, submits → server side is told
+    // explicitly to set the column to NULL (the v1.7.0 payments features
+    // hide again).
+    const { component, httpMock } = setup(makeAcademy({ monthly_fee_cents: 5000 }));
+    expect(component.monthlyFee.value).toBe(50);
+    component.form.patchValue({ monthly_fee: null });
+    component.submit();
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.monthly_fee_cents).toBeNull();
+    req.flush({ data: makeAcademy({ monthly_fee_cents: null }) });
+  });
+
+  it('rejects a negative monthly fee at the form level (no network roundtrip)', () => {
+    const { component, httpMock } = setup();
+    component.form.patchValue({ name: 'Some', monthly_fee: -1 });
+    expect(component.monthlyFee.errors?.['min']).toBeTruthy();
+    component.submit();
+    httpMock.expectNone('/api/v1/academy');
   });
 });
