@@ -264,11 +264,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '422':
-          description: Wrong password — request rejected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
+          $ref: '#/components/responses/ValidationError'
         '429':
           description: Throttle limit exceeded.
     delete:
