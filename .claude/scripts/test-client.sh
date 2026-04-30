@@ -31,7 +31,14 @@ run_in_client() {
 
 prettier_fix() {
   echo "── prettier --write ──"
-  run_in_client "npx prettier --write 'src/**/*.{ts,html,scss}' cypress 2>&1 | grep -v unchanged | tail -10"
+  # `grep -v unchanged` returns exit 1 when ALL of prettier's lines are
+  # "unchanged" (the typical clean-tree case). With `set -o pipefail` +
+  # `set -e` upstream that would kill the script even though there's no
+  # actual problem — `|| true` short-circuits the bogus exit code while
+  # leaving real prettier failures (which appear earlier in the pipe and
+  # are caught by `set -o pipefail` with no upstream non-match noise) to
+  # propagate.
+  run_in_client "npx prettier --write 'src/**/*.{ts,html,scss}' cypress 2>&1 | { grep -v unchanged || true; } | tail -10"
 }
 
 lint() {
