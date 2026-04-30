@@ -6,9 +6,13 @@
   flex-direction: column;
   gap: 1.5rem;
   // Narrow-card layout — kept at 40rem until the hierarchy rework
-  // (#261 follow-up) lands a wide header + narrow card aligned left.
-  // Page padding now comes from the dashboard shell.
+  // (#261 follow-up) lands a wide header + narrow card aligned left
+  // INSIDE a wide content container. Until then we centre on desktop
+  // (#268) so this page matches the operative chrome rhythm of
+  // Athletes / Attendance — `margin: 0 auto` is a no-op on mobile,
+  // where the wrapper already fills the shell content area.
   max-width: 40rem;
+  margin: 0 auto;
 }
 
 .form__header {
