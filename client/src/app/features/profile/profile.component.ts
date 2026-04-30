@@ -78,9 +78,9 @@ export class ProfileComponent {
         error: (err: { status?: number }) => {
           const detail =
             err.status === 429
-              ? 'Hai già scaricato i dati di recente. Riprova fra un minuto.'
-              : 'Non è stato possibile scaricare i tuoi dati. Riprova.';
-          this.messageService.add({ severity: 'error', summary: 'Errore', detail });
+              ? 'You already exported your data recently. Try again in a minute.'
+              : "Couldn't download your data. Please try again.";
+          this.messageService.add({ severity: 'error', summary: 'Error', detail });
         },
       });
   }
