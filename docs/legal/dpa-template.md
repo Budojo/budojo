@@ -19,7 +19,7 @@ L'art. 28 GDPR richiede che la relazione titolare ↔ responsabile sia regolata 
 
 ## Parti
 
-- **TITOLARE** — la palestra/associazione sportiva/club che ha sottoscritto un contratto di servizio Budojo. I dati identificativi (denominazione, sede, P.IVA / CF, legale rappresentante) sono inseriti dal Cliente al primo onboarding e archiviati nel record `academy` con timestamp di accettazione del DPA.
+- **TITOLARE** — la palestra/associazione sportiva/club che ha sottoscritto un contratto di servizio Budojo. I dati identificativi (denominazione, sede, P.IVA / CF, legale rappresentante) sono inseriti dal Cliente al primo onboarding nel record `academy`. _Pianificato (#220 follow-up): un timestamp di accettazione del DPA + l'IP da cui è stata effettuata la sottoscrizione saranno aggiunti al medesimo record una volta implementato il workflow di accettazione descritto fra i TODO in fondo a questo documento._
 - **RESPONSABILE** — Budojo, con sede in Italia, contattabile a `privacy@budojo.it` (mailbox da confermare in fase di revisione legale).
 
 ## 1. Oggetto del trattamento
@@ -35,7 +35,7 @@ Il presente DPA ha la stessa durata del contratto di servizio Budojo sottoscritt
 | Finalità | Operazioni effettuate sui dati |
 |---|---|
 | Gestione anagrafiche atleti | Inserimento, lettura, modifica, cancellazione record `Athlete`. |
-| Tracciamento presenze | Inserimento + lettura record `attendance` (data + atleta + tipo allenamento). |
+| Tracciamento presenze | Inserimento + lettura record `attendance_records` (data + atleta + tipo allenamento). |
 | Documenti tesseramento, certificati medici, identità | Upload, conservazione cifrata-in-transito, lettura, cancellazione, monitoraggio scadenze. |
 | Pagamenti (ledger interno) | Tracciamento mensile dell'incassato per atleta/quota. NON include processore di pagamenti — Budojo NON elabora carte di credito al momento. |
 | Comunicazioni di servizio | Email transazionali (verifica account, reminder scadenze, conferme di azioni). |
@@ -91,9 +91,10 @@ Il Responsabile adotta le seguenti misure tecniche e organizzative:
 - Trasmissione cifrata TLS 1.2+ per ogni richiesta verso il Servizio.
 - Password salvate solo come hash bcrypt; mai in chiaro.
 - Autenticazione tramite token Bearer (Laravel Sanctum); nessun cookie di sessione.
-- Backup giornalieri della base dati, retention 30 giorni, conservati nel medesimo provider e regione.
 - Accessi amministrativi via SSH con autenticazione a chiave; password disabilitate.
 - Patch management automatizzato del sistema operativo.
+
+> **Backup — pianificato.** Una strategia di backup automatizzata (decisione fra DigitalOcean Managed Database, `mysqldump` cron su object store, oppure snapshot del droplet) è documentata come prerequisito di go-live in `docs/infra/production-deployment.md` § Backups. Sarà implementata e questa clausola aggiornata prima del primo cliente con dati reali in produzione. Fino ad allora, i fattori di rischio aggiuntivi sono divulgati al Cliente in fase di onboarding e l'eventuale uso del Servizio è limitato a contesti compatibili con la mancanza di backup automatici.
 
 ### Sicurezza organizzativa
 
@@ -167,9 +168,9 @@ In caso di conflitto fra il presente DPA e il contratto di servizio Budojo, prev
 ## Riferimenti
 
 - [Sub-processor list](./sub-processors.md) (#225)
-- [Privacy policy](./privacy-policy.md) (#219)
 - [Cookie audit](./cookie-audit.md) (#221)
-- [DPIA certificati medici](./dpia-medical-certificates.md) — pianificata (#227)
+- Privacy policy — `docs/legal/privacy-policy.md`, in lavorazione su #219; link diretto attivato una volta che #219 sarà mergato.
+- DPIA certificati medici — `docs/legal/dpia-medical-certificates.md`, pianificata su #227; link attivato una volta che il documento sarà redatto.
 - GDPR Art. 28 — responsabili del trattamento
 - Standard Contractual Clauses Commissione UE 2021/914
 
