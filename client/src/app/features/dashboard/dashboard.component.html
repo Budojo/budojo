@@ -116,7 +116,13 @@
         <i class="pi pi-sign-out" aria-hidden="true"></i>
         <span>Sign out</span>
       </button>
-      <p class="sidebar__version" data-cy="sidebar-version">{{ versionTag }}</p>
+      <p class="sidebar__version" data-cy="sidebar-version">
+        <a class="sidebar__legal-link" routerLink="/privacy" data-cy="sidebar-privacy-link"
+          >Privacy</a
+        >
+        <span aria-hidden="true">·</span>
+        {{ versionTag }}
+      </p>
     </div>
   </aside>
 

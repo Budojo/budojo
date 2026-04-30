@@ -308,10 +308,10 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     flex-direction: column;
   }
 
-  // App version footer (#160). Apple-minimal — `surface-500` muted, 0.75rem,
-  // monospace digits, no background, no border, non-interactive. Sits below
-  // the Sign out row so it never competes with navigation but is glanceable
-  // for "what version am I running" debugging.
+  // App version footer (#160) + Privacy link (#219). Apple-minimal —
+  // muted, 0.75rem, single line, separated by a middle dot. The
+  // Privacy link sits beside the version because both are footer-of-
+  // every-page chrome; one anchor + one identifier, nothing more.
   &__version {
     margin: 0.5rem 0 0;
     padding: 0 0.5rem;
@@ -321,6 +321,21 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     font-variant-numeric: tabular-nums;
     text-align: center;
     user-select: text; // user can copy-paste the tag in a bug report
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  &__legal-link {
+    color: var(--p-surface-500);
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--p-primary-color);
+      text-decoration: underline;
+    }
   }
 }
 

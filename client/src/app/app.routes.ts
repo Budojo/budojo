@@ -143,6 +143,13 @@ export const routes: Routes = [
         (m) => m.SubProcessorsComponent,
       ),
   },
+  {
+    path: 'privacy',
+    loadComponent: () =>
+      import('./features/privacy-policy/privacy-policy.component').then(
+        (m) => m.PrivacyPolicyComponent,
+      ),
+  },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
   // Wildcard 404 (#226) — must stay last; everything above is matched
   // first. Hit on any URL that no other route resolves, including
