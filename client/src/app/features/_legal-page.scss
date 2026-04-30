@@ -93,6 +93,40 @@
     color: var(--p-text-muted-color);
   }
 
+  // Language toggle (#273) — Italian/English pill row at the top of
+  // each legal page. The active language is bold + non-clickable; the
+  // alternate is an `<a>` to the same content in the other language.
+  // Sits between the title block and the body sections — meta-control
+  // typography (footnote size, muted), so it reads as a preference,
+  // not a navigation entry.
+  &__lang {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    margin-left: -0.5rem;
+    border-radius: var(--p-border-radius-sm);
+
+    a {
+      color: var(--p-primary-color);
+      text-decoration: none;
+      padding: 0.25rem 0.25rem;
+
+      &:hover,
+      &:focus-visible {
+        text-decoration: underline;
+      }
+    }
+
+    strong {
+      color: var(--p-text-color);
+      font-weight: 600;
+    }
+  }
+
   &__section {
     display: flex;
     flex-direction: column;

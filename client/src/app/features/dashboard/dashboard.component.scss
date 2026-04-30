@@ -308,6 +308,58 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     flex-direction: column;
   }
 
+  // Language toggle (#273) — two pill buttons inline, the active
+  // language is disabled + visually emphasised. Sits in the footer
+  // block as a preference control. Touch target ≥ 44 px via padding
+  // (canon § Fitts; pill targets relax the 48 floor a touch since
+  // they live below the dense nav rows and don't compete for thumb
+  // reach the way nav rows do).
+  &__lang {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0.5rem 0.5rem 0.25rem;
+    padding: 0.25rem;
+    background: var(--p-surface-800);
+    border-radius: var(--p-border-radius-md);
+  }
+
+  &__lang-option {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    color: var(--p-surface-300);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--p-border-radius-sm);
+    cursor: pointer;
+    transition:
+      background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+      color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover:not(:disabled) {
+      background: var(--p-surface-700);
+      color: var(--p-surface-0);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-400);
+      outline-offset: 2px;
+    }
+
+    &--active {
+      background: var(--p-surface-0);
+      color: var(--p-surface-900);
+      cursor: default;
+    }
+
+    &:disabled {
+      cursor: default;
+    }
+  }
+
   // App version footer (#160) + Privacy link (#219). Apple-minimal —
   // muted, 0.75rem, single line, separated by a middle dot. The
   // Privacy link sits beside the version because both are footer-of-
