@@ -335,6 +335,19 @@ Separately from the semantic-release dev changelog above, the SPA ships a **user
 
 **Discipline:** every `develop → main` release PR adds the markdown file AND prepends the array entry in the same commit history. The vitest spec pinning the version order in the array (`renders all four backfilled releases`) fails when one is missing — that's the regression-catching trip-wire, by design.
 
+### Post-release tech-debt + docs/code cleanup sweep
+
+After every stable release — that is: release PR (`develop → main`) merged, semantic-release tag published on `main`, AND the post-release `main → develop` sync PR merged (the one that brings the merge commit back into `develop` so semantic-release reads the right base on the next push) — open a `chore/techdebt-sweep-v{X.Y.Z}` branch from `develop` and run the canonical checklist:
+
+- **Code-level**: triage every `TODO` / `FIXME` / `XXX` / `HACK`, every `@ts-expect-error` / `@ts-ignore` / `eslint-disable`, every stray `console.log` / `console.debug`, every `.skip` / `.only` / `.todo` test marker. `npm outdated` (under `client/`) + `composer outdated` (under `server/`). Walk `client/src/app/app.routes.ts` for dead routes.
+- **Docs-level**: `docs/entities/*.md` against migrations since last tag, `docs/api/v1.yaml` against controller / resource / form-request changes, `docs/design/DESIGN_SYSTEM.md` against `client/src/styles/budojo-theme.scss`, `client/CLAUDE.md` + `server/CLAUDE.md` + root `CLAUDE.md` for stale file paths / route names, `.claude/gotchas.md` for stale rules, every `README.md` for stale quick-start commands.
+- **Agent-memory-level**: the agent maintains a memory index file in its own memory directory (NOT in this repo) — the sweep makes sure the index reflects every memory file present, and each memory `description` accurately summarises its content. See `feedback_post_release_techdebt_sweep.md` (also agent-side) for the full inventory.
+- **Project-board**: stale issues (>90d no activity), umbrella issues carry honest current-state snapshots.
+
+The sweep is **not optional**, but finding nothing IS a valid outcome — an empty sweep that documents "checked everything, nothing to do" is a successful sweep. Squash-merge to develop; chore commits don't bump version. Findings that require real code change beyond hygiene (real bugs, missing tests, doc rewrites) get their own follow-up issue and a stub pointer in the sweep PR.
+
+Full checklist + rationale: `feedback_post_release_techdebt_sweep.md` in the agent's memory directory (outside this repo).
+
 ### Hotfix Flow
 
 ```bash
