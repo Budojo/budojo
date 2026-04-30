@@ -2,8 +2,8 @@
   <div class="auth-card">
     <div class="auth-header">
       <img src="/logo-glyph.svg" alt="" class="logo-mark" aria-hidden="true" />
-      <h1>Create your account</h1>
-      <p>Join Budojo and get started today</p>
+      <h1>{{ 'auth.register.title' | translate }}</h1>
+      <p>{{ 'auth.register.subtitle' | translate }}</p>
     </div>
 
     @if (error()) {
@@ -12,13 +12,13 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="field">
-        <label for="name">Full name</label>
+        <label for="name">{{ 'auth.register.name' | translate }}</label>
         <input
           pInputText
           id="name"
           type="text"
           formControlName="name"
-          placeholder="Mario Rossi"
+          [placeholder]="'auth.register.namePlaceholder' | translate"
           autocomplete="name"
           [class.ng-invalid]="name.invalid && name.touched"
           [class.ng-dirty]="name.touched"
@@ -26,22 +26,22 @@
         @if (name.invalid && name.touched) {
           <small class="field-error">
             @if (name.errors?.['required']) {
-              Name is required.
+              {{ 'auth.register.nameRequired' | translate }}
             } @else if (name.errors?.['minlength']) {
-              At least 2 characters.
+              {{ 'auth.register.nameMinlength' | translate }}
             }
           </small>
         }
       </div>
 
       <div class="field">
-        <label for="email">Email</label>
+        <label for="email">{{ 'auth.register.email' | translate }}</label>
         <input
           pInputText
           id="email"
           type="email"
           formControlName="email"
-          placeholder="mario@example.com"
+          [placeholder]="'auth.register.emailPlaceholder' | translate"
           autocomplete="email"
           [class.ng-invalid]="email.invalid && email.touched"
           [class.ng-dirty]="email.touched"
@@ -49,20 +49,20 @@
         @if (email.invalid && email.touched) {
           <small class="field-error">
             @if (email.errors?.['required']) {
-              Email is required.
+              {{ 'auth.register.emailRequired' | translate }}
             } @else if (email.errors?.['email']) {
-              Enter a valid email address.
+              {{ 'auth.register.emailInvalid' | translate }}
             }
           </small>
         }
       </div>
 
       <div class="field">
-        <label for="password">Password</label>
+        <label for="password">{{ 'auth.register.password' | translate }}</label>
         <p-password
           inputId="password"
           formControlName="password"
-          placeholder="Min. 8 characters"
+          [placeholder]="'auth.register.passwordPlaceholder' | translate"
           autocomplete="new-password"
           [feedback]="false"
           [toggleMask]="true"
@@ -74,20 +74,22 @@
         @if (password.invalid && password.touched) {
           <small class="field-error">
             @if (password.errors?.['required']) {
-              Password is required.
+              {{ 'auth.register.passwordRequired' | translate }}
             } @else if (password.errors?.['minlength']) {
-              At least 8 characters.
+              {{ 'auth.register.passwordMinlength' | translate }}
             }
           </small>
         }
       </div>
 
       <div class="field">
-        <label for="password_confirmation">Confirm password</label>
+        <label for="password_confirmation">{{
+          'auth.register.passwordConfirmation' | translate
+        }}</label>
         <p-password
           inputId="password_confirmation"
           formControlName="password_confirmation"
-          placeholder="Repeat your password"
+          [placeholder]="'auth.register.passwordConfirmationPlaceholder' | translate"
           autocomplete="new-password"
           [feedback]="false"
           [toggleMask]="true"
@@ -100,7 +102,7 @@
           "
         />
         @if (form.errors?.['mismatch'] && passwordConfirmation.touched) {
-          <small class="field-error">Passwords do not match.</small>
+          <small class="field-error">{{ 'auth.register.passwordsMismatch' | translate }}</small>
         }
       </div>
 
@@ -112,6 +114,12 @@
           Both the checkbox and the label below carry the inputId/for
           association explicitly; the link sits inside the label but
           stops click propagation so the toggle stays a deliberate act.
+
+          The privacy-accept text is split into THREE keys (Before /
+          LinkText / After) so translators can reorder around the
+          embedded <a> without HTML-escaping noise. ngx-translate's
+          interpolation can't carry HTML safely; per-segment keys are
+          the standard workaround for this shape.
         -->
         <div class="privacy-consent">
           <p-checkbox
@@ -121,26 +129,27 @@
             data-cy="privacy-consent-checkbox"
           />
           <label class="privacy-consent__label" for="privacy_accepted">
-            Ho letto e accetto l'<a
+            {{ 'auth.register.privacyAcceptBefore' | translate
+            }}<a
               routerLink="/privacy"
               target="_blank"
               rel="noopener noreferrer"
               data-cy="privacy-consent-link"
               (click)="$event.stopPropagation()"
-              >informativa sulla privacy</a
-            >.
+              >{{ 'auth.register.privacyAcceptLinkText' | translate }}</a
+            >{{ 'auth.register.privacyAcceptAfter' | translate }}
           </label>
         </div>
         @if (privacyAccepted.invalid && privacyAccepted.touched) {
           <small class="field-error" data-cy="privacy-consent-error">
-            Devi accettare l'informativa sulla privacy per registrarti.
+            {{ 'auth.register.privacyRequired' | translate }}
           </small>
         }
       </div>
 
       <p-button
         type="submit"
-        label="Create account"
+        [label]="'auth.register.submit' | translate"
         styleClass="submit-btn"
         [loading]="loading()"
         [disabled]="loading()"
@@ -148,14 +157,16 @@
     </form>
 
     <p class="auth-nav-link">
-      Already have an account?
-      <a routerLink="/auth/login">Sign in</a>
+      {{ 'auth.register.haveAccount' | translate }}
+      <a routerLink="/auth/login">{{ 'auth.register.loginLink' | translate }}</a>
     </p>
 
     <p class="auth-foot-link">
-      <a routerLink="/privacy" data-cy="auth-foot-privacy-link">Privacy</a>
+      <a routerLink="/privacy" data-cy="auth-foot-privacy-link">{{
+        'auth.shared.privacy' | translate
+      }}</a>
       <span aria-hidden="true">·</span>
-      <a routerLink="/sub-processors">Sub-processors</a>
+      <a routerLink="/sub-processors">{{ 'auth.shared.subProcessors' | translate }}</a>
     </p>
   </div>
 </div>

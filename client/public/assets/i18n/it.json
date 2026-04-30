@@ -2,8 +2,7 @@
   "language": {
     "label": "Lingua",
     "english": "English",
-    "italian": "Italiano",
-    "switchTo": "Passa a {{ language }}"
+    "italian": "Italiano"
   },
   "nav": {
     "open": "Apri navigazione",
@@ -18,66 +17,73 @@
     "privacy": "Privacy"
   },
   "auth": {
+    "shared": {
+      "privacy": "Privacy",
+      "subProcessors": "Sub-processors"
+    },
     "login": {
-      "title": "Accedi",
-      "subtitle": "Bentornato su Budojo.",
+      "title": "Bentornato",
+      "subtitle": "Accedi al tuo account Budojo",
       "email": "Email",
-      "emailPlaceholder": "tu@esempio.com",
+      "emailPlaceholder": "mario@example.com",
+      "emailRequired": "L'email è obbligatoria.",
+      "emailInvalid": "Inserisci un'email valida.",
       "password": "Password",
+      "passwordPlaceholder": "La tua password",
+      "passwordRequired": "La password è obbligatoria.",
       "submit": "Accedi",
-      "submittingLabel": "Accesso in corso…",
-      "noAccount": "Non hai ancora un account?",
-      "registerLink": "Creane uno",
-      "errorInvalidCredentials": "Email o password non valide.",
-      "errorGeneric": "Qualcosa è andato storto. Riprova.",
-      "errorEmailRequired": "L'email è obbligatoria.",
-      "errorEmailInvalid": "Inserisci un'email valida.",
-      "errorPasswordRequired": "La password è obbligatoria."
+      "noAccount": "Non hai un account?",
+      "registerLink": "Creane uno"
     },
     "register": {
       "title": "Crea il tuo account",
-      "subtitle": "Configura Budojo per la tua academy.",
-      "name": "Il tuo nome",
+      "subtitle": "Iscriviti a Budojo e parti subito",
+      "name": "Nome e cognome",
       "namePlaceholder": "Mario Rossi",
+      "nameRequired": "Il nome è obbligatorio.",
+      "nameMinlength": "Almeno 2 caratteri.",
       "email": "Email",
-      "emailPlaceholder": "tu@esempio.com",
+      "emailPlaceholder": "mario@example.com",
+      "emailRequired": "L'email è obbligatoria.",
+      "emailInvalid": "Inserisci un'email valida.",
       "password": "Password",
-      "passwordHint": "Almeno 8 caratteri.",
-      "privacyAccept": "Ho letto e accetto la {{ link }}.",
-      "privacyLink": "informativa privacy",
+      "passwordPlaceholder": "Min. 8 caratteri",
+      "passwordRequired": "La password è obbligatoria.",
+      "passwordMinlength": "Almeno 8 caratteri.",
+      "passwordConfirmation": "Conferma password",
+      "passwordConfirmationPlaceholder": "Ripeti la tua password",
+      "passwordsMismatch": "Le password non coincidono.",
+      "privacyAcceptBefore": "Ho letto e accetto l'",
+      "privacyAcceptLinkText": "informativa sulla privacy",
+      "privacyAcceptAfter": ".",
+      "privacyRequired": "Devi accettare l'informativa sulla privacy per registrarti.",
       "submit": "Crea account",
-      "submittingLabel": "Creazione account…",
       "haveAccount": "Hai già un account?",
-      "loginLink": "Accedi",
-      "errorNameRequired": "Il nome è obbligatorio.",
-      "errorEmailRequired": "L'email è obbligatoria.",
-      "errorEmailInvalid": "Inserisci un'email valida.",
-      "errorEmailTaken": "Questa email è già in uso.",
-      "errorPasswordRequired": "La password è obbligatoria.",
-      "errorPasswordMin": "La password deve essere di almeno 8 caratteri.",
-      "errorPrivacyRequired": "Devi accettare l'informativa privacy per continuare.",
-      "errorGeneric": "Qualcosa è andato storto. Riprova."
+      "loginLink": "Accedi"
     },
     "verifySuccess": {
       "title": "Email verificata",
-      "body": "La tua email è verificata. Ora puoi accedere e completare la configurazione della tua academy.",
-      "cta": "Accedi"
+      "message": "Tutto a posto. Ti stiamo reindirizzando alla dashboard…",
+      "cta": "Vai subito"
     },
     "verifyError": {
-      "title": "Link di verifica non più valido",
-      "body": "Questo link di verifica non è valido o è scaduto. Accedi e te ne invieremo uno nuovo.",
-      "cta": "Accedi"
+      "title": "Link di verifica non valido",
+      "messageCanResend": "Il link potrebbe essere scaduto o manomesso. Richiedine uno nuovo e te lo rimanderemo via email.",
+      "messageCannotResend": "Il link potrebbe essere scaduto o manomesso. Accedi al tuo account e richiedi un nuovo link di verifica dalla pagina profilo.",
+      "resendCta": "Invia un nuovo link",
+      "signinCta": "Accedi"
     }
   },
   "setup": {
     "title": "Configura la tua academy",
-    "subtitle": "Bastano un paio di dettagli e sei pronto. Puoi modificare tutto in seguito.",
-    "name": "Nome academy",
+    "subtitle": "Ci siamo quasi — raccontaci della tua palestra",
+    "nameLabel": "Nome academy",
     "namePlaceholder": "Gracie Barra Lisboa",
-    "submit": "Crea academy",
-    "submittingLabel": "Creazione academy…",
-    "errorNameRequired": "Il nome dell'academy è obbligatorio.",
-    "errorGeneric": "Qualcosa è andato storto. Riprova."
+    "nameRequired": "Il nome dell'academy è obbligatorio.",
+    "nameMaxlength": "Massimo 255 caratteri.",
+    "trainingDaysLabel": "Giorni di allenamento",
+    "optional": "(opzionale)",
+    "submit": "Crea academy"
   },
   "legal": {
     "chrome": {
@@ -88,15 +94,15 @@
     }
   },
   "whatsNew": {
-    "chrome": {
-      "title": "Novità recenti",
-      "subtitle": "Una lettura veloce sulle ultime novità.",
-      "back": "Torna alla dashboard"
-    }
+    "brandAriaLabel": "Budojo — torna alla dashboard",
+    "eyebrow": "Novità",
+    "title": "Aggiornamenti recenti",
+    "subtitle": "Le novità di Budojo in parole semplici. La più recente in cima.",
+    "back": "Torna alla dashboard"
   },
   "notFound": {
     "title": "Pagina non trovata",
-    "body": "La pagina che hai cercato non esiste o è stata spostata.",
+    "message": "L'indirizzo non corrisponde a nessuna pagina del sito. Forse è stato spostato o il link è incompleto.",
     "backHome": "Torna alla home"
   }
 }

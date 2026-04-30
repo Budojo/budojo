@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { WhatsNewComponent } from './whats-new.component';
+import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 describe('WhatsNewComponent (#254)', () => {
   function setup() {
     TestBed.configureTestingModule({
       imports: [WhatsNewComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), ...provideI18nTesting()],
     });
     const router = TestBed.inject(Router);
     router.navigateByUrl = vi.fn().mockResolvedValue(true) as never;

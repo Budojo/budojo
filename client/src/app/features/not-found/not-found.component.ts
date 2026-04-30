@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { TranslatePipe } from '@ngx-translate/core';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 
 /**
@@ -14,7 +15,7 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
 @Component({
   selector: 'app-not-found',
   standalone: true,
-  imports: [ButtonModule, BrandGlyphComponent],
+  imports: [ButtonModule, BrandGlyphComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './not-found.component.html',
   styleUrl: './not-found.component.scss',

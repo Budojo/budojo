@@ -5,6 +5,7 @@ import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { RegisterComponent } from './register.component';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 
 /**
  * The full feature is covered by Cypress; this spec focuses on the
@@ -27,6 +28,7 @@ describe('RegisterComponent — privacy consent gate (#219)', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        ...provideI18nTesting(),
         { provide: AuthService, useValue: { register: authRegisterSpy } },
       ],
     });
