@@ -139,7 +139,11 @@
           </th>
           <th>Status</th>
           @if (hasMonthlyFee()) {
-            <th data-cy="athletes-th-paid">Paid</th>
+            <!-- Header carries the current month abbreviation (#282) so an
+                 instructor reading "Unpaid" on a row knows which month the
+                 status refers to without hovering. The full month+year
+                 lives in the per-row tooltip below. -->
+            <th data-cy="athletes-th-paid">Paid · {{ currentMonthShort }}</th>
           }
           <th style="width: 8rem"></th>
         </tr>
@@ -167,10 +171,29 @@
           </td>
           @if (hasMonthlyFee()) {
             <td>
+              <!-- Tooltip telegraphs the full month + year + status (#282)
+                   so the user gets unambiguous context on hover/long-press
+                   without crowding the row visually. The bare badge
+                   already carries Paid / Unpaid; the tooltip adds the
+                   "April 2026" anchor.
+
+                   Suppressed (empty string → no tooltip mounts) when
+                   `paid_current_month` is undefined — same gate that
+                   makes <app-paid-badge> render nothing for that athlete.
+                   Without the guard, an empty cell would still show a
+                   ghost tooltip reading "April 2026 — Unpaid" because
+                   the ternary defaults `undefined` to "Unpaid" (Copilot
+                   caught this on #289). -->
               <app-paid-badge
                 [paid]="athlete.paid_current_month"
                 [clickable]="true"
                 (paidToggle)="confirmTogglePaid($event, athlete)"
+                [pTooltip]="
+                  athlete.paid_current_month === undefined
+                    ? ''
+                    : currentMonthLong + ' — ' + (athlete.paid_current_month ? 'Paid' : 'Unpaid')
+                "
+                tooltipPosition="top"
               />
             </td>
           }
