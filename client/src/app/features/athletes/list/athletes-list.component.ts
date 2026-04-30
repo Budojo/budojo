@@ -33,6 +33,7 @@ import {
   Belt,
   AthleteService,
 } from '../../../core/services/athlete.service';
+import { PaymentService } from '../../../core/services/payment.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/expiring-documents-widget/expiring-documents-widget.component';
@@ -72,6 +73,7 @@ interface SelectOption<T extends string> {
 })
 export class AthletesListComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
+  private readonly paymentService = inject(PaymentService);
   private readonly academyService = inject(AcademyService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
@@ -375,6 +377,90 @@ export class AthletesListComponent implements OnInit {
       target: event.target as EventTarget,
       message: `Delete ${athlete.first_name} ${athlete.last_name}?`,
       accept: () => this.delete(athlete),
+    });
+  }
+
+  /**
+   * Inline paid toggle on the athletes list (#182). Click the badge →
+   * confirm popup anchored on the badge button → POST /payments to mark
+   * paid, or DELETE /payments/{year}/{month} to mark unpaid. The local
+   * `paid_current_month` flips optimistically on success — we don't
+   * re-fetch the page because the only state that changed is the one
+   * we just toggled.
+   *
+   * The confirm popup is the friction layer that prevents accidental
+   * mis-clicks on a touch device (Krug + Norman: destructive-feeling
+   * actions ask once). Both directions are confirmed — flipping a
+   * paid-by-mistake row back to unpaid IS a write to the ledger that
+   * an oncall should not regret.
+   */
+  confirmTogglePaid(event: MouseEvent, athlete: Athlete): void {
+    // Use UTC year/month/label to align with the server's
+    // `paid_current_month` derivation. The server runs in app
+    // timezone (UTC); around month boundaries (e.g. 23:30 Italy
+    // local on April 30 is May 1 UTC), local-clock arithmetic
+    // would write a different (year, month) than the server reads
+    // back, so the badge would show a confused state on the next
+    // page load. UTC on both ends keeps the round-trip honest
+    // (#259 Copilot review).
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth() + 1;
+    const monthLabel = now.toLocaleString('en-US', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+
+    const fullName = `${athlete.first_name} ${athlete.last_name}`;
+    const willMarkPaid = !athlete.paid_current_month;
+    const message = willMarkPaid
+      ? `Mark ${fullName} paid for ${monthLabel}?`
+      : `Mark ${fullName} unpaid for ${monthLabel}?`;
+
+    this.confirmationService.confirm({
+      target: event.currentTarget as EventTarget,
+      message,
+      accept: () => this.applyPaidToggle(athlete, year, month, willMarkPaid),
+    });
+  }
+
+  private applyPaidToggle(athlete: Athlete, year: number, month: number, markPaid: boolean): void {
+    // Single shared `void` observable — markPaid returns the created
+    // payment row but the caller only cares about success/failure here,
+    // so we collapse to `void` via map(() => undefined). Keeps the
+    // `.subscribe({ next, error })` shape uniform on both branches
+    // (TypeScript would otherwise reject the union of two differently-
+    // typed observables on the same `.subscribe` call).
+    const op$ = markPaid
+      ? this.paymentService.markPaid(athlete.id, year, month).pipe(map(() => undefined))
+      : this.paymentService.unmarkPaid(athlete.id, year, month);
+
+    op$.subscribe({
+      next: () => {
+        // Optimistic local-state update — we replace just this row's
+        // `paid_current_month` flag instead of reloading the whole
+        // page. The signal swap forces OnPush to re-render the badge.
+        this.athletes.update((rows) =>
+          rows.map((a) => (a.id === athlete.id ? { ...a, paid_current_month: markPaid } : a)),
+        );
+        this.messageService.add({
+          severity: 'success',
+          summary: markPaid ? 'Marked paid' : 'Marked unpaid',
+          detail: `${athlete.first_name} ${athlete.last_name} — ${month}/${year}`,
+          life: 3000,
+        });
+      },
+      error: (err: { status?: number }) => {
+        // 422 means the academy never set monthly_fee_cents — UI shouldn't
+        // have surfaced the action in the first place (gated on
+        // `hasMonthlyFee()`), but if it slips through we explain.
+        const detail =
+          err.status === 422
+            ? 'Set a monthly fee on the academy first to record payments.'
+            : "Couldn't update the payment. Please try again.";
+        this.messageService.add({ severity: 'error', summary: 'Error', detail, life: 4000 });
+      },
     });
   }
 
