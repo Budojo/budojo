@@ -27,6 +27,16 @@ use Illuminate\Support\Carbon;
  * on the document-wipe pass), the command keeps going on user B —
  * the next hourly run will retry A. Without the try/catch a single
  * stuck row would block every other user's deletion.
+ *
+ * **Streaming:** processes the expired cohort via `chunkById(50)`
+ * so a backlog of thousands of expired accounts (after a long
+ * outage of the cron, say) does not load the whole set into memory
+ * at once.
+ *
+ * **PII discipline:** logs only `user_id`, never the email address.
+ * The cron output ends up in operational log aggregators that are
+ * not necessarily aligned with the GDPR-erasure pipeline; the
+ * minimum identifier sufficient to investigate is the row id.
  */
 class PurgeExpiredPendingDeletions extends Command
 {
@@ -49,12 +59,11 @@ class PurgeExpiredPendingDeletions extends Command
         $now = Carbon::now();
         $dryRun = (bool) $this->option('dry-run');
 
-        $expired = PendingDeletion::query()
+        $totalExpected = PendingDeletion::query()
             ->where('scheduled_for', '<=', $now)
-            ->with('user')
-            ->get();
+            ->count();
 
-        if ($expired->isEmpty()) {
+        if ($totalExpected === 0) {
             $this->info('No expired pending deletions.');
 
             return self::SUCCESS;
@@ -63,38 +72,58 @@ class PurgeExpiredPendingDeletions extends Command
         $this->info(\sprintf(
             '%s: found %d expired pending deletion(s).',
             $dryRun ? 'DRY RUN' : 'Processing',
-            $expired->count(),
+            $totalExpected,
         ));
 
         $purged = 0;
         $failed = 0;
 
-        foreach ($expired as $pending) {
-            // The FK is `cascadeOnDelete`, so `$pending->user` is
-            // typed non-null and an orphan row cannot exist via
-            // the normal lifecycle. If raw SQL outside the framework
-            // ever hand-deleted a user row, the next pass'd surface
-            // the orphan as a Throwable on `$this->purge->execute`
-            // and the resilient catch block below logs it without
-            // blocking the rest of the cohort.
-            $user = $pending->user;
+        // chunkById streams the cohort in batches of 50 — no full-
+        // cohort load into memory. The eager-loaded `user` relation
+        // dodges N+1 inside each chunk. NOTE: the loop body deletes
+        // rows from the same table the chunker is paginating, but
+        // chunkById is keyset-paginated on `id` ASC, so a deleted
+        // row never reappears and the cursor never re-visits its
+        // position.
+        PendingDeletion::query()
+            ->where('scheduled_for', '<=', $now)
+            ->with('user')
+            ->chunkById(50, function ($chunk) use ($dryRun, &$purged, &$failed): void {
+                foreach ($chunk as $pending) {
+                    $userId = $pending->user_id;
+                    // The FK is `cascadeOnDelete`, so `$pending->user` is
+                    // typed non-null and an orphan row cannot exist via
+                    // the normal lifecycle. Defensive null check still
+                    // here in case raw SQL outside the framework hand-
+                    // deletes a user row — we'd rather skip + log than
+                    // tank the whole cohort. PHPStan thinks the eager-
+                    // loaded relation is non-null; suppress because the
+                    // runtime guarantee is weaker than the type hint.
+                    $user = $pending->user;
+                    /** @phpstan-ignore identical.alwaysFalse */
+                    if ($user === null) {
+                        $this->warn("orphan pending_deletion id={$pending->id} (user_id={$userId}) — skipping");
 
-            if ($dryRun) {
-                $this->line("would purge user #{$user->id} ({$user->email})");
+                        continue;
+                    }
 
-                continue;
-            }
+                    if ($dryRun) {
+                        $this->line("would purge user #{$userId}");
 
-            try {
-                $this->purge->execute($user);
-                ++$purged;
-                $this->line("purged user #{$user->id} ({$user->email})");
-            } catch (\Throwable $e) {
-                ++$failed;
-                report($e); // Sentry / log channel will pick it up when configured.
-                $this->error("FAILED user #{$user->id}: {$e->getMessage()}");
-            }
-        }
+                        continue;
+                    }
+
+                    try {
+                        $this->purge->execute($user);
+                        ++$purged;
+                        $this->line("purged user #{$userId}");
+                    } catch (\Throwable $e) {
+                        ++$failed;
+                        report($e); // Sentry / log channel will pick it up when configured.
+                        $this->error("FAILED user #{$userId}: {$e->getMessage()}");
+                    }
+                }
+            });
 
         $this->info("Done. Purged: {$purged}. Failed: {$failed}.");
 

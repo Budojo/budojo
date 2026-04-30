@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\User\PurgeAccountAction;
 use App\Models\Athlete;
 use App\Models\PendingDeletion;
 use App\Models\User;
@@ -81,4 +82,63 @@ it('--dry-run reports what would happen without touching anything', function ():
     // User is still here — dry-run wrote nothing.
     expect(User::query()->where('id', $expiredUser->id)->count())->toBe(1);
     expect(PendingDeletion::query()->where('user_id', $expiredUser->id)->count())->toBe(1);
+});
+
+it('keeps going when one user`s purge throws + returns FAILURE exit code', function (): void {
+    $okUserA = userWithAcademy();
+    $okUserB = userWithAcademy();
+    $brokenUser = userWithAcademy();
+
+    makePendingDeletionFor($okUserA, Carbon::now()->subHour());
+    makePendingDeletionFor($brokenUser, Carbon::now()->subHour());
+    makePendingDeletionFor($okUserB, Carbon::now()->subHour());
+
+    // Stub the Action so it throws ONLY for $brokenUser; the others
+    // go through the real path. Bind a wrapper into the container
+    // that forwards to a real Action for non-broken ids.
+    $real = new PurgeAccountAction();
+    $brokenId = $brokenUser->id;
+    app()->instance(PurgeAccountAction::class, new class ($real, $brokenId) extends PurgeAccountAction {
+        public function __construct(private PurgeAccountAction $delegate, private int $brokenId)
+        {
+        }
+
+        public function execute(User $user): void
+        {
+            if ($user->id === $this->brokenId) {
+                throw new \RuntimeException('simulated disk-permission failure');
+            }
+            $this->delegate->execute($user);
+        }
+    });
+
+    $exitCode = $this->artisan('budojo:purge-expired-pending-deletions')
+        ->expectsOutputToContain('Done. Purged: 2. Failed: 1.')
+        ->run();
+
+    // Non-zero exit so cron alerts can fire.
+    expect($exitCode)->toBe(1);
+
+    // The two healthy users were purged despite the middle one failing.
+    expect(User::query()->where('id', $okUserA->id)->count())->toBe(0);
+    expect(User::query()->where('id', $okUserB->id)->count())->toBe(0);
+
+    // The broken user is still there + their pending row too — next
+    // hourly run will retry.
+    expect(User::query()->where('id', $brokenUser->id)->count())->toBe(1);
+    expect(PendingDeletion::query()->where('user_id', $brokenUser->id)->count())->toBe(1);
+});
+
+it('does not log the user`s email address (PII discipline for cron logs)', function (): void {
+    $expiredUser = userWithAcademy();
+    $email = $expiredUser->email;
+    makePendingDeletionFor($expiredUser, Carbon::now()->subSecond());
+
+    // doesntExpectOutputToContain isn`t available everywhere; instead
+    // capture the run and assert by content. Artisan's PendingCommand
+    // returns the buffered output via the command tester pattern.
+    $this->artisan('budojo:purge-expired-pending-deletions')
+        ->expectsOutputToContain("purged user #{$expiredUser->id}")
+        ->doesntExpectOutputToContain($email)
+        ->assertSuccessful();
 });
