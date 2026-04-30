@@ -4,7 +4,9 @@
       "Bash(gh project item-list *)",
       "Bash(gh label list *)",
       "Bash(gh run watch *)",
-      "Bash(git fetch *)"
+      "Bash(git fetch origin*)",
+      "Bash(git fetch --tags origin*)",
+      "Bash(git fetch --all)"
     ]
   }
 }
