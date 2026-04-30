@@ -24,11 +24,10 @@ class MeController extends Controller
 
         // Eager-load the deletion-pending relation so `UserResource`
         // can surface the `deletion_pending` field without a lazy
-        // follow-up query (#223). UserResource itself stays lazy
-        // (does NOT call `->first()` on its own) so the same shape
-        // doesn't slap an extra query onto every login / register
-        // response — `/auth/me` is the path that needs the field
-        // populated for the SPA's bootstrap banner.
+        // follow-up query (#223). The Login + Register controllers
+        // do the same now (#255 fixed the gap where they didn't,
+        // and a user in the grace window saw `deletion_pending: null`
+        // on the login response).
         $user->load('pendingDeletion');
 
         return new UserResource($user);
