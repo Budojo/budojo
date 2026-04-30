@@ -18,8 +18,12 @@ set -euo pipefail
 CONTAINER="budojo_api"
 WORKDIR="/var/www/api"
 
+# `set -o pipefail` inside the container shell — without it the pipeline
+# exit status comes from `tail` (always 0) and a failing cs-fixer /
+# phpstan / pest would silently report success. Copilot caught this on
+# #293.
 run_in_server() {
-  docker exec "$CONTAINER" sh -c "cd $WORKDIR && $1"
+  docker exec "$CONTAINER" sh -c "set -o pipefail; cd $WORKDIR && $1"
 }
 
 cs_fix() {

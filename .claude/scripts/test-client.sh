@@ -20,8 +20,13 @@ set -euo pipefail
 CONTAINER="budojo_client"
 WORKDIR="/app"
 
+# `set -o pipefail` inside the container shell — without it the pipeline
+# exit status comes from `tail` (always 0) and a failing prettier / lint
+# / vitest would silently report success. Enabling pipefail makes the
+# overall pipeline exit code reflect the FIRST failing command. Copilot
+# caught this on #293.
 run_in_client() {
-  docker exec "$CONTAINER" sh -c "cd $WORKDIR && $1"
+  docker exec "$CONTAINER" sh -c "set -o pipefail; cd $WORKDIR && $1"
 }
 
 prettier_fix() {

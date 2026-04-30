@@ -41,11 +41,15 @@ case "$STATUS" in
     ;;
 esac
 
-# `gh issue view` works for both issues AND PRs — GitHub returns the same
-# node-id shape for either, just different `__typename`. Saves a separate
-# code path to disambiguate the input number.
-NODE_ID=$(gh issue view "$NUMBER" --json id --jq '.id' 2>/dev/null \
-        || gh pr view "$NUMBER" --json id --jq '.id')
+# Try `gh issue view` first, fall back to `gh pr view`. Capturing the
+# failure with `|| true` is required because `set -e` would otherwise
+# kill the script before reaching the empty-check below — Copilot
+# caught this on #293. Each lookup gets its stderr swallowed so a
+# legitimate "not found" doesn't pollute the output.
+NODE_ID=$(gh issue view "$NUMBER" --json id --jq '.id' 2>/dev/null || true)
+if [ -z "$NODE_ID" ]; then
+  NODE_ID=$(gh pr view "$NUMBER" --json id --jq '.id' 2>/dev/null || true)
+fi
 
 if [ -z "$NODE_ID" ]; then
   echo "error: no issue or PR #$NUMBER found in this repo" >&2

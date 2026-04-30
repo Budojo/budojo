@@ -2,7 +2,7 @@
 
 Bash helpers that turn high-frequency manual workflows into one-liners. Every script in this folder exists because the equivalent inline command was typed repeatedly across PRs and would silently drift between sessions.
 
-> Run from the repo root (`/home/matteo/PhpstormProjects/budojo`) so relative paths resolve. Each script is self-documenting at the top.
+> Run from the repo root so relative paths resolve. Each script is self-documenting at the top.
 
 ## Scripts
 
