@@ -22,6 +22,15 @@ class MeController extends Controller
         /** @var User $user */
         $user = $request->user();
 
+        // Eager-load the deletion-pending relation so `UserResource`
+        // can surface the `deletion_pending` field without a lazy
+        // follow-up query (#223). UserResource itself stays lazy
+        // (does NOT call `->first()` on its own) so the same shape
+        // doesn't slap an extra query onto every login / register
+        // response — `/auth/me` is the path that needs the field
+        // populated for the SPA's bootstrap banner.
+        $user->load('pendingDeletion');
+
         return new UserResource($user);
     }
 }

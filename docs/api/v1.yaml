@@ -205,6 +205,97 @@ paths:
         '429':
           description: Throttle limit exceeded — retry after the `Retry-After` header
 
+  /me/deletion-request:
+    post:
+      tags: [auth]
+      summary: Request hard-deletion of the authenticated account (GDPR Art. 17)
+      description: |
+        Enters the user into a 30-day grace window. After the window
+        elapses, a scheduled task hard-deletes the account and the
+        full academy + athlete data tied to it.
+
+        Re-auth gate: the request body must include the current
+        account password. The user is already authenticated via
+        Sanctum to reach this route; the second password check is a
+        UX safeguard because the action is irreversible after the
+        grace window.
+
+        Idempotent: a second call by the same user while a pending
+        deletion already exists returns the EXISTING grace-window
+        timestamps rather than restarting the clock — preventing
+        indefinite deferral of the actual purge.
+
+        Throttled to 5 calls per minute per user (defeats brute-force
+        on the password gate).
+      operationId: meDeletionRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  description: Current account password.
+      responses:
+        '202':
+          description: Grace-window scheduled (or returned existing one if idempotent)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [requested_at, scheduled_for, grace_days]
+                    properties:
+                      requested_at:
+                        type: string
+                        format: date-time
+                      scheduled_for:
+                        type: string
+                        format: date-time
+                      grace_days:
+                        type: integer
+                        example: 30
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttle limit exceeded.
+    delete:
+      tags: [auth]
+      summary: Cancel a pending account deletion during the grace window
+      description: |
+        Removes the user's `pending_deletions` row, restoring full
+        access. Idempotent: cancelling something that was never
+        pending returns 200 with `cancelled: false` rather than
+        a 404 — the SPA can call this freely without checking
+        state first.
+      operationId: meDeletionCancel
+      responses:
+        '200':
+          description: Cancellation result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [cancelled]
+                    properties:
+                      cancelled:
+                        type: boolean
+                        description: True when a pending row existed and was removed.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
   /email/verification-notification:
     post:
       tags: [auth]
@@ -1409,7 +1500,7 @@ components:
 
     User:
       type: object
-      required: [id, name, email, email_verified_at]
+      required: [id, name, email, email_verified_at, deletion_pending]
       properties:
         id:
           type: integer
@@ -1428,6 +1519,22 @@ components:
             `null` until verified. Surfaced to the SPA so it can render the
             verification pillola without an extra round-trip.
           example: "2026-04-28T15:30:00+00:00"
+        deletion_pending:
+          nullable: true
+          description: |
+            GDPR Art. 17 (#223) — non-null when the user is in the 30-day
+            grace window after requesting account deletion. The SPA reads
+            this on bootstrap to decide whether to render the warning
+            banner + the cancel CTA. `null` for normal accounts.
+          type: object
+          required: [requested_at, scheduled_for]
+          properties:
+            requested_at:
+              type: string
+              format: date-time
+            scheduled_for:
+              type: string
+              format: date-time
 
     # ── Academy ───────────────────────────────────────────────────────────
 
