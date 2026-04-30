@@ -66,7 +66,7 @@ export class WhatsNewComponent {
         {
           heading: '🌍 Languages',
           bullets: [
-            "English by default, Italian one tap away. A new language toggle lives in the sidebar, just above the version footer. Pick English (default) or Italiano — your choice persists across sessions and devices. Right now the sidebar nav and the Privacy policy switch language; the rest of the dashboard text is already English everywhere. We'll bring Italian translations to the dashboard pages in the next release.",
+            "English by default, Italian one tap away. A new language toggle lives in the sidebar, just above the version footer. Pick English (default) or Italiano — your choice is remembered in your browser. Right now the sidebar nav and the Privacy policy switch language; the rest of the dashboard text is already English everywhere. We'll bring Italian translations to the dashboard pages in the next release.",
             'English Privacy policy at /privacy/en. Same content as the canonical Italian /privacy, faithfully translated. A small Italiano · English toggle at the top of each version lets you flip between the two without losing your spot.',
           ],
         },
