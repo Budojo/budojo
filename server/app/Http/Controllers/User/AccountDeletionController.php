@@ -15,9 +15,10 @@ use Illuminate\Http\Request;
 /**
  * GDPR Art. 17 right-to-erasure entry points (#223). The user
  * requests deletion (POST) — they enter a 30-day grace window —
- * and may cancel during that window (DELETE). The actual purge
- * runs from a scheduled task (TODO follow-up) once the window
- * elapses.
+ * and may cancel during that window (DELETE). After the window,
+ * the hourly Artisan command `budojo:purge-expired-pending-deletions`
+ * (scheduled in `routes/console.php`) runs `PurgeAccountAction`
+ * to do the actual hard-delete.
  */
 class AccountDeletionController extends Controller
 {

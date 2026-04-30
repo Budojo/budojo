@@ -134,9 +134,12 @@ it('does not log the user`s email address (PII discipline for cron logs)', funct
     $email = $expiredUser->email;
     makePendingDeletionFor($expiredUser, Carbon::now()->subSecond());
 
-    // doesntExpectOutputToContain isn`t available everywhere; instead
-    // capture the run and assert by content. Artisan's PendingCommand
-    // returns the buffered output via the command tester pattern.
+    // PII discipline: the cron output is consumed by ops log
+    // aggregators that aren't necessarily aligned with the GDPR
+    // erasure pipeline. We assert the user_id IS printed (so the
+    // run is auditable) and the email is NOT (so PII doesn't leak
+    // sideways). `expectsOutputToContain` + `doesntExpectOutputToContain`
+    // are part of Laravel's PendingCommand on this stack.
     $this->artisan('budojo:purge-expired-pending-deletions')
         ->expectsOutputToContain("purged user #{$expiredUser->id}")
         ->doesntExpectOutputToContain($email)

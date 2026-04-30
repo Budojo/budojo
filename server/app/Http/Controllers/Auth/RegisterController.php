@@ -26,6 +26,13 @@ class RegisterController extends Controller
 
         $token = $user->createToken('auth')->plainTextToken;
 
+        // Eager-load the deletion-pending relation so `UserResource`
+        // emits a coherent `deletion_pending` (always null for a
+        // fresh registration; we still load to keep the invariant
+        // that all UserResource consumers pre-load the relation).
+        // Mirrors LoginController + MeController (#255).
+        $user->load('pendingDeletion');
+
         return response()->json(
             [
                 'data' => new UserResource($user),

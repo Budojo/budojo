@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\Schema;
  * layer for now (banner + cancel CTA); login and authenticated API
  * access still work during the window — see the issue body's "Login
  * during grace" open question for the planned hardening. After
- * `scheduled_for`, a scheduled task (TODO follow-up) runs
- * `PurgeAccountAction` to do the actual hard-delete.
+ * `scheduled_for`, the hourly Artisan command
+ * `budojo:purge-expired-pending-deletions` (scheduled from
+ * `routes/console.php`) runs `PurgeAccountAction` to do the actual
+ * hard-delete.
  *
  * Why a separate table instead of a `deleted_at`-style soft-delete on
  * `users`: see the issue body's "Decisioni prese" — soft-delete on
