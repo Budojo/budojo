@@ -35,6 +35,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me/export', \App\Http\Controllers\User\ExportController::class)
         ->middleware('throttle:1,1');
 
+    // GDPR Art. 17 (right-to-erasure) — request hard-deletion of the
+    // account and all academy + athlete data tied to it (#223). POST
+    // enters a 30-day grace window; DELETE cancels during that window.
+    // The actual purge runs from a scheduled task (TODO follow-up)
+    // once the window elapses. Lightly throttled to defeat brute-force
+    // on the password re-auth gate.
+    Route::post('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'store'])
+        ->middleware('throttle:5,1');
+    Route::delete('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'destroy']);
+
     // Resend verification email — auth required, rate-limited via
     // `email-verification-resend` (one request per minute per user;
     // see AppServiceProvider::boot()).

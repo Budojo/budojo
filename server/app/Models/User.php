@@ -43,6 +43,18 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * GDPR-Art-17 right-to-erasure grace-period record (#223). At most
+     * one row exists at a time per user. Presence ⇒ account is in the
+     * 30-day pending-deletion window.
+     *
+     * @return HasOne<PendingDeletion, $this>
+     */
+    public function pendingDeletion(): HasOne
+    {
+        return $this->hasOne(PendingDeletion::class);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
