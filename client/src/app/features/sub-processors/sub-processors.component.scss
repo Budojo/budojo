@@ -1,0 +1,5 @@
+// Layout pulled from the shared `_legal-page` partial — the same
+// shape is reused by `/privacy` (#219) and (in future) `/legal/dpa`
+// (#220). No sub-processors-specific overrides today.
+
+@use '../legal-page';

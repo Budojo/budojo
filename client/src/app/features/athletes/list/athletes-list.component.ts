@@ -129,8 +129,8 @@ export class AthletesListComponent implements OnInit {
       .subscribe((q) => this.applySearch(q));
   }
 
-  // Order = IBJJF rank (kids first, adults after) so the dropdown reads
-  // bottom-up like a progression chart.
+  // Order = IBJJF rank (kids → adults → senior coral/red) so the
+  // dropdown reads bottom-up like a progression chart.
   readonly beltOptions: SelectOption<Belt>[] = [
     { label: 'All belts', value: '' },
     { label: 'Grey (kids)', value: 'grey' },
@@ -142,6 +142,9 @@ export class AthletesListComponent implements OnInit {
     { label: 'Purple', value: 'purple' },
     { label: 'Brown', value: 'brown' },
     { label: 'Black', value: 'black' },
+    { label: 'Red & black (7°)', value: 'red-and-black' },
+    { label: 'Red & white (8°)', value: 'red-and-white' },
+    { label: 'Red (9°/10°)', value: 'red' },
   ];
 
   readonly statusOptions: SelectOption<AthleteStatus>[] = [

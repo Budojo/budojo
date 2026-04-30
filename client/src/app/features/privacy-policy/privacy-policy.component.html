@@ -1,0 +1,262 @@
+<article class="legal-page">
+  <header class="legal-page__header">
+    <a class="legal-page__brand" routerLink="/" aria-label="Budojo home">
+      <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
+      <span class="legal-page__brand-name">Budojo</span>
+    </a>
+    <p class="legal-page__eyebrow">Legal</p>
+    <h1 class="legal-page__title">Informativa sulla Privacy</h1>
+    <p class="legal-page__subtitle">
+      Informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) per gli utenti del
+      servizio Budojo.
+    </p>
+  </header>
+
+  <aside class="legal-page__notice" data-cy="privacy-draft-banner">
+    <p>
+      <strong>Bozza tecnica — in revisione legale.</strong>
+      Il testo definitivo è in fase di revisione da parte di un legale. I fatti tecnici qui sotto
+      (responsabili del trattamento, regione di hosting, finestra di retention, sub-processor, base
+      giuridica) sono accurati e corrispondono a quanto effettivamente fatto in produzione. Il
+      legale potrà rivedere la formulazione, non i fatti tecnici.
+    </p>
+  </aside>
+
+  <section class="legal-page__section">
+    <h2>1. Titolare del trattamento</h2>
+    <p>
+      <strong>Budojo</strong> — sito web
+      <a href="https://budojo.it" target="_blank" rel="noopener noreferrer">budojo.it</a>. Email per
+      richieste privacy:
+      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>
+      <em>(da confermare in fase di revisione legale)</em>.
+    </p>
+    <p>
+      In molti scenari d'uso, il vero titolare del trattamento dei dati degli atleti è la palestra
+      (academy) che usa Budojo come gestionale: in tal caso Budojo opera come
+      <strong>responsabile del trattamento</strong>, secondo i termini del DPA fra Budojo e
+      l'academy. La presente informativa copre invece il trattamento per cui Budojo è
+      <strong>direttamente titolare</strong>: la registrazione e gestione del rapporto con l'utente
+      che apre l'account.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>2. Categorie di dati raccolti</h2>
+    <p>
+      Budojo raccoglie ed elabora esclusivamente i dati necessari al funzionamento del Servizio:
+    </p>
+    <ul>
+      <li><strong>Dati identificativi e di contatto</strong> — nome, cognome, email.</li>
+      <li>
+        <strong>Credenziali</strong> — hash bcrypt della password, token Sanctum opachi (mai testo
+        in chiaro).
+      </li>
+      <li>
+        <strong>Dati dell'academy</strong> — nome palestra, indirizzo, recapiti telefonici, link ai
+        contatti.
+      </li>
+      <li>
+        <strong>Dati degli atleti</strong> — nome, cognome, data di nascita, cintura, status di
+        tesseramento, recapiti dei tutori per i minori.
+      </li>
+      <li><strong>Dati di presenza</strong> — date di check-in degli atleti agli allenamenti.</li>
+      <li>
+        <strong>Documenti caricati</strong> — certificati medici, tesseramenti, documenti
+        d'identità.
+      </li>
+      <li>
+        <strong>Metadati tecnici</strong> — IP, user-agent, timestamp, limitatamente a sicurezza e
+        diagnostica.
+      </li>
+    </ul>
+    <p>
+      Budojo <strong>non raccoglie</strong> dati di geolocalizzazione, identificatori pubblicitari,
+      o cookie di tracciamento di terze parti.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>3. Finalità e base giuridica del trattamento</h2>
+    <div class="legal-page__table-wrapper">
+      <table class="legal-page__table">
+        <thead>
+          <tr>
+            <th>Finalità</th>
+            <th>Base giuridica (art. 6 GDPR)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Erogazione del Servizio richiesto dall'utente</td>
+            <td>Esecuzione di un contratto (art. 6.1.b)</td>
+          </tr>
+          <tr>
+            <td>Gestione del rapporto contrattuale, fatturazione, comunicazioni di servizio</td>
+            <td>Esecuzione di un contratto (art. 6.1.b)</td>
+          </tr>
+          <tr>
+            <td>Adempimenti fiscali e contabili</td>
+            <td>Obbligo di legge (art. 6.1.c)</td>
+          </tr>
+          <tr>
+            <td>Sicurezza dell'infrastruttura, prevenzione abusi, log diagnostici</td>
+            <td>Legittimo interesse (art. 6.1.f)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>4. Periodo di conservazione</h2>
+    <ul>
+      <li><strong>Account utente attivo</strong> — per tutta la durata del rapporto.</li>
+      <li>
+        <strong>Account in cancellazione</strong> — finestra di grace di 30 giorni durante i quali
+        l'utente può annullare la richiesta. Dopo tale finestra l'account è cancellato in modo
+        irreversibile.
+      </li>
+      <li>
+        <strong>Dati di fatturazione e contabilità</strong> — 10 anni dalla data di emissione
+        (obbligo art. 2220 c.c.).
+      </li>
+      <li><strong>Log applicativi</strong> — massimo 12 mesi.</li>
+    </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>5. Modalità di trattamento e misure di sicurezza</h2>
+    <p>
+      I dati sono trattati con strumenti elettronici e ospitati in
+      <strong>datacenter UE (Frankfurt — DigitalOcean <code>fra1</code>)</strong>. Misure adottate:
+    </p>
+    <ul>
+      <li>Trasmissione cifrata TLS 1.2+ per ogni richiesta.</li>
+      <li>Password salvate solo come hash bcrypt.</li>
+      <li>Autenticazione tramite token Bearer (Laravel Sanctum), nessun cookie di sessione.</li>
+      <li>Backup giornalieri della base dati con retention 30 giorni.</li>
+      <li>Accessi amministrativi via SSH con autenticazione a chiave.</li>
+      <li>Audit periodico dei sub-processor.</li>
+    </ul>
+    <p>
+      I certificati medici, in quanto dati relativi alla salute (art. 9 GDPR), sono oggetto di una
+      valutazione separata documentata in
+      <code>docs/legal/dpia-medical-certificates.md</code>.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>6. Cookie e archiviazione lato browser</h2>
+    <p>
+      Budojo <strong>non usa cookie di tracciamento</strong> né cookie di profilazione di terze
+      parti.
+    </p>
+    <ul>
+      <li><strong>Cookie HTTP:</strong> nessuno.</li>
+      <li>
+        <strong>localStorage:</strong> due chiavi tecniche — <code>auth_token</code> (token di
+        sessione Sanctum, strettamente necessario per mantenere l'autenticazione) e
+        <code>documents.showCancelled</code> (preferenza UI sul filtro documenti, non identifica e
+        non profila).
+      </li>
+      <li><strong>sessionStorage / IndexedDB:</strong> nessuno usato direttamente dalla SPA.</li>
+    </ul>
+    <p>
+      Per questa configurazione non è richiesto un cookie banner ai sensi delle linee guida del
+      Garante del 10 giugno 2021. L'audit completo, con la metodologia di verifica e il record dei
+      controlli, è documentato in <code>docs/legal/cookie-audit.md</code> all'interno del nostro
+      repository sorgente; una richiesta scritta a
+      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a> ottiene la copia corrente.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>7. Destinatari dei dati — sub-processor</h2>
+    <p>
+      I dati possono essere trasmessi ai seguenti soggetti come sub-responsabili del trattamento. La
+      lista canonica e aggiornata è pubblicata su
+      <a routerLink="/sub-processors">/sub-processors</a>:
+    </p>
+    <ul>
+      <li><strong>Cloudflare, Inc.</strong> — DNS, edge proxy / CDN, TLS termination.</li>
+      <li><strong>DigitalOcean, LLC</strong> — VM hosting (regione UE, Frankfurt).</li>
+      <li><strong>Laravel Forge / Tighten Co.</strong> — automazione di provisioning e deploy.</li>
+    </ul>
+    <p>
+      Ogni modifica dell'elenco è preceduta da un preavviso di 30 giorni all'academy. I dati non
+      vengono ceduti né venduti a terzi per finalità di marketing o profilazione.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>8. Trasferimenti extra-UE</h2>
+    <p>
+      I dati personali sono conservati in UE (DigitalOcean Frankfurt). Cloudflare opera
+      un'infrastruttura globale di edge node: il traffico HTTP transita su PoP geograficamente
+      vicini all'utente, con garanzie di trasferimento rette dalle Standard Contractual Clauses
+      (SCC) della Commissione UE.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>9. Diritti dell'interessato</h2>
+    <p>In ogni momento puoi esercitare i diritti previsti dagli articoli 15–22 GDPR:</p>
+    <ul>
+      <li>
+        <strong>Accesso ai dati</strong> (art. 15) — esporta tramite la sezione "Profilo" (JSON +
+        ZIP coi documenti).
+      </li>
+      <li><strong>Rettifica</strong> (art. 16) — modifica direttamente dalla sezione "Profilo".</li>
+      <li>
+        <strong>Cancellazione</strong> (art. 17) — pulsante "Elimina account" dalla sezione
+        "Profilo"; finestra di grace di 30 giorni.
+      </li>
+      <li>
+        <strong>Limitazione</strong> (art. 18) — email a
+        <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>.
+      </li>
+      <li><strong>Portabilità</strong> (art. 20) — l'export è in formato JSON aperto.</li>
+      <li>
+        <strong>Opposizione</strong> (art. 21) — email a
+        <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>.
+      </li>
+    </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>10. Reclamo all'autorità di controllo</h2>
+    <p>
+      Hai diritto di proporre reclamo all'autorità di controllo competente: per l'Italia il
+      <strong>Garante per la protezione dei dati personali</strong>, via
+      <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer"
+        >garanteprivacy.it</a
+      >.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>11. Modifiche all'informativa</h2>
+    <p>
+      Eventuali modifiche sostanziali saranno notificate all'utente via email almeno 30 giorni prima
+      dell'entrata in vigore. Il numero di versione e la data dell'ultima modifica sono pubblicati
+      qui sotto.
+    </p>
+  </section>
+
+  <p class="legal-page__updated" data-cy="privacy-version-stamp">
+    Versione {{ version }} · Ultima modifica: {{ lastUpdated }}
+  </p>
+
+  <footer class="legal-page__footer">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      label="Torna alla home"
+      icon="pi pi-arrow-left"
+      (onClick)="goHome()"
+      data-cy="privacy-home"
+    />
+  </footer>
+</article>

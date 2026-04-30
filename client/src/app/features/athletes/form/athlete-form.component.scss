@@ -171,17 +171,20 @@
   gap: 0.375rem;
 }
 
-// Country-code select pinned to a fixed width — 7rem comfortably fits
-// "+999" plus the chevron. Without the pin the select stretches to 50%
-// of the row, which dwarfs the prefix.
+// Country-code select pinned to a fixed width. 9rem fits "+999" plus
+// BOTH the showClear "X" (#228) and the chevron without ellipsing the
+// prefix on a Pixel 8 Pro-class viewport — beta tester saw "+..." at
+// 7rem because the X and chevron together eat ~64px of the trigger.
+// Without the pin the select stretches to 50% of the row, which dwarfs
+// the prefix on desktop.
 //
 // We deliberately don't try to nest `.phone-country-code .p-select` —
 // PrimeNG attaches both classes to the SAME element in this version
 // (verified in rendered DOM), so a descendant selector targets nothing.
 :host ::ng-deep .phone-country-code {
-  flex: 0 0 7rem;
-  width: 7rem;
-  min-width: 7rem;
+  flex: 0 0 9rem;
+  width: 9rem;
+  min-width: 9rem;
 }
 
 // National number flexes into the remaining row width.

@@ -126,7 +126,7 @@ it('returns 422 when belt value is invalid', function (): void {
         ->postJson('/api/v1/athletes', [
             'first_name' => 'Mario',
             'last_name' => 'Rossi',
-            'belt' => 'red',
+            'belt' => 'magenta', // not a real IBJJF belt — was 'red' before #229 added Red as a valid case
             'status' => 'active',
             'joined_at' => '2024-01-15',
         ])

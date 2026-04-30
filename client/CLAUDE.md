@@ -215,6 +215,12 @@ npm run cy:run                  # headless run (CI mode, requires ng serve runni
 - When the **same endpoint is called multiple times in a test** (e.g. `GET /api/v1/academy` fires once for `noAcademyGuard` on page load and again for `hasAcademyGuard` after a redirect), use `times: 1` in the `beforeEach` intercept and add a second intercept in the specific test for the post-action call.
 - Specs live in `cypress/e2e/*.cy.ts`; config in `cypress.config.ts`.
 
+**Multi-viewport responsive coverage (#240).** The default Cypress viewport is desktop (1280×720). Layout regressions at narrow widths — e.g. the phone-cc ellipsis on Pixel 8 Pro (#238) — are invisible at that size and have to be caught explicitly. The convention:
+- Use the shared presets from `client/cypress/support/viewports.ts` — never hardcode `cy.viewport(390, 844)` in a fresh spec. The presets cover `iPhone SE`, `Pixel 8 Pro`, `iPad mini`, and a `Desktop 1440` baseline; `MOBILE_VIEWPORTS` is the high-yield set, `ALL_VIEWPORTS` is the full sweep.
+- Convention for filename: a `*-mobile.cy.ts` spec is layout-only; the matching desktop spec covers business logic. Don't multiply test count by running the same business assertion at every viewport.
+- Apply the multi-viewport pattern only where layout actually matters (forms, lists, modals, navigation chrome). Pure logic specs stay at the default viewport.
+- The non-trivial assertion to add at narrow viewports is `document.scrollWidth <= clientWidth` — true exactly when no child element broke out of the viewport. CSS `text-overflow: ellipsis` does NOT change `textContent`, so checking visible text alone is a false-positive guard (lesson from #239 review).
+
 ---
 
 ## What Claude Should Always Do — client-specific

@@ -114,4 +114,36 @@ export class AuthService {
       {},
     );
   }
+
+  /**
+   * GDPR Art. 20 — data portability (#222). Downloads the authenticated
+   * user's full dataset, either as a JSON file or as a ZIP that bundles
+   * the JSON plus document binaries. Server enforces a 1-call-per-minute
+   * throttle.
+   *
+   * Returns the Blob + filename parsed from `Content-Disposition`; the
+   * caller (typically the profile page) is responsible for triggering
+   * the actual browser download via an anchor + `URL.createObjectURL`.
+   */
+  exportMyData(format: 'json' | 'zip' = 'zip'): Observable<{ blob: Blob; filename: string }> {
+    const url = `${environment.apiBase}/api/v1/me/export${format === 'zip' ? '?format=zip' : ''}`;
+    return this.http.get(url, { responseType: 'blob', observe: 'response' }).pipe(
+      map((res) => ({
+        blob: res.body as Blob,
+        filename: parseContentDispositionFilename(res.headers.get('Content-Disposition'), format),
+      })),
+    );
+  }
+}
+
+/**
+ * Pulls `filename="..."` out of a Content-Disposition header. Falls back
+ * to a format-aware sensible default when the header is missing or
+ * malformed — JSON exports stay `.json`, ZIP exports stay `.zip`.
+ */
+function parseContentDispositionFilename(header: string | null, format: 'json' | 'zip'): string {
+  const fallback = format === 'zip' ? 'budojo-export.zip' : 'budojo-export.json';
+  if (header === null) return fallback;
+  const match = /filename="?([^";]+)"?/i.exec(header);
+  return match?.[1] ?? fallback;
 }

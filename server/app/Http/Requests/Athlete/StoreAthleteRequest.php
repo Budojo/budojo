@@ -8,6 +8,7 @@ use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
+use App\Http\Requests\Concerns\ValidatesStripesAgainstBelt;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -17,6 +18,7 @@ class StoreAthleteRequest extends FormRequest
 {
     use ValidatesAddress;
     use ValidatesPhonePair;
+    use ValidatesStripesAgainstBelt;
 
     public function authorize(): bool
     {
@@ -68,7 +70,10 @@ class StoreAthleteRequest extends FormRequest
             'instagram' => ['nullable', 'url', 'max:255'],
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'belt' => ['required', Rule::enum(Belt::class)],
-            'stripes' => ['integer', 'min:0', 'max:4'],
+            // Global cap is 6 (the maximum among all belts — Black has 6
+            // graus, every other belt has 4). The per-belt cap is enforced
+            // cross-field in `withValidator` below via `Belt::maxStripes()`.
+            'stripes' => ['integer', 'min:0', 'max:6'],
             'status' => ['required', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['required', 'date'],
             ...$this->addressRules(),
@@ -78,6 +83,7 @@ class StoreAthleteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $this->validatePhonePairWithLibphonenumber($validator);
+        $this->validateStripesAgainstBelt($validator);
     }
 
     /**

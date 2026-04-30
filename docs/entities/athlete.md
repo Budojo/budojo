@@ -19,8 +19,8 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 | `facebook` | string(255) | nullable | Facebook profile URL (#162). Same shape as `website`. |
 | `instagram` | string(255) | nullable | Instagram profile URL (#162). Same shape as `website`. |
 | `date_of_birth` | date | nullable | Cast to `Carbon\Carbon` in the model |
-| `belt` | string | not null | Cast to `App\Enums\Belt` backed enum — kids (`grey` / `yellow` / `orange` / `green`) + adults (`white` / `blue` / `purple` / `brown` / `black`) |
-| `stripes` | tinyint unsigned | not null, default `0` | Range 0–4, enforced at validation layer |
+| `belt` | string | not null | Cast to `App\Enums\Belt` backed enum — kids (`grey` / `yellow` / `orange` / `green`) + adults (`white` / `blue` / `purple` / `brown` / `black`) + senior coral and red (`red-and-black` / `red-and-white` / `red`) |
+| `stripes` | tinyint unsigned | not null, default `0` | Range 0–6 on `black` (graus 1°–6°); 0–4 on every other belt. Enforced cross-field at the request layer via `Belt::maxStripes()` |
 | `status` | string | not null | Cast to `App\Enums\AthleteStatus` backed enum (`active` / `suspended` / `inactive`) |
 | `joined_at` | date | not null | When the athlete first enrolled |
 | `created_at` | timestamp | nullable | |
@@ -43,19 +43,28 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 
 ### `App\Enums\Belt`
 
-| Case | Value | Rank |
-|---|---|---|
-| `Grey` | `grey` | 1 |
-| `Yellow` | `yellow` | 2 |
-| `Orange` | `orange` | 3 |
-| `Green` | `green` | 4 |
-| `White` | `white` | 5 |
-| `Blue` | `blue` | 6 |
-| `Purple` | `purple` | 7 |
-| `Brown` | `brown` | 8 |
-| `Black` | `black` | 9 |
+| Case | Value | Rank | Max stripes |
+|---|---|---|---|
+| `Grey` | `grey` | 1 | 4 |
+| `Yellow` | `yellow` | 2 | 4 |
+| `Orange` | `orange` | 3 | 4 |
+| `Green` | `green` | 4 | 4 |
+| `White` | `white` | 5 | 4 |
+| `Blue` | `blue` | 6 | 4 |
+| `Purple` | `purple` | 7 | 4 |
+| `Brown` | `brown` | 8 | 4 |
+| `Black` | `black` | 9 | **6** |
+| `RedAndBlack` | `red-and-black` | 10 | 4 |
+| `RedAndWhite` | `red-and-white` | 11 | 4 |
+| `Red` | `red` | 12 | 4 |
 
-Covers both **IBJJF Youth** (kids/teens up to ~16) and **IBJJF Adult** belt ranks on a single linear rank scale, with kids belts ranking below `white`. The youth set was added in #230 (request from beta tester Luigi). Sub-progressions inside each kids belt (e.g. grey-white, grey, grey-black) are not modelled — only the four base colours.
+Covers the full **IBJJF rank scale** on a single linear axis:
+
+- **Youth** (kids/teens up to ~16) — grey, yellow, orange, green (added in #230).
+- **Adult** — white, blue, purple, brown, black (the canonical progression).
+- **Senior beyond black** — red-and-black (7° grau, coral), red-and-white (8° grau, coral), red (9° / 10° grau, grand master). Added in #229 — request from beta tester Luigi for "vendita all'esterno" credibility.
+
+**Stripes per belt** (`Belt::maxStripes()`): 4 for every belt EXCEPT `Black`, which carries the IBJJF graus 1°–6° as `stripes 1..6`. The cap is enforced both at the request level (cross-field validation in `StoreAthleteRequest::validateStripesAgainstBelt` / `UpdateAthleteRequest::validateStripesAgainstBelt`) and at the SPA picker level (`MAX_STRIPES_PER_BELT` in `client/src/app/core/services/athlete.service.ts`). Sub-progressions inside each kids belt (e.g. grey-white, grey, grey-black) are not modelled — only the four base colours.
 
 ### `App\Enums\AthleteStatus`
 
@@ -71,10 +80,10 @@ Covers both **IBJJF Youth** (kids/teens up to ~16) and **IBJJF Adult** belt rank
 - **Soft-delete semantics.** `DELETE /api/v1/athletes/{id}` sets `deleted_at` but never removes the row. Future reports (attendance history, belt promotions) can still reference historic athletes. The list endpoint never returns soft-deleted rows.
 - **Soft-delete cascades to documents.** An `AthleteObserver` (wired via `#[ObservedBy]` on the model) catches the `deleting` event and, for every `Document` belonging to the athlete, soft-deletes the row AND wipes the file from the `local` disk via `Storage::delete`. This is the GDPR-friendly policy locked in the M3 PRD — there is no "restore athlete → restore documents" flow.
 - **Email uniqueness ignores soft-deleted rows.** You can re-add a previously-deleted Mario Rossi with the same email, and the Form Request's `whereNull('deleted_at')` clause allows it.
-- **Stripes range `0..4`.** Enforced at the FormRequest level via `min:0|max:4`. The DB column is an unsigned tinyint with no CHECK constraint.
+- **Stripes range is per-belt.** `Black` allows `0..6` to track the IBJJF graus 1°–6°; every other belt allows `0..4`. The static rule on the FormRequest is `min:0|max:6` (the global ceiling), and the per-belt cap is then enforced cross-field in `withValidator` against `Belt::maxStripes()`. The DB column is an unsigned tinyint with no CHECK constraint.
 - **Address (#72b).** Athletes own at most one polymorphic `Address` row via `morphOne(Address::class, 'addressable')`. Update semantics on `PUT /api/v1/athletes/{id}` (Laravel's resource route also accepts `PATCH`): send `address: { line1, line2, city, postal_code, province, country }` to upsert in place, `address: null` to clear (delete the morph row), or omit the key to leave untouched. Same two-layer enforcement as `Academy`: DB UNIQUE index on `(addressable_type, addressable_id)` plus `SyncAddressAction`'s atomic `updateOrCreate`. On hard delete (`forceDelete`) the `AthleteObserver::forceDeleted` hook wipes the address; soft delete leaves it in place. See [`address.md`](./address.md).
 - **Phone is a structured pair (#75).** The two phone columns are jointly nullable: either both are `null` (no phone on file) or both carry a value. The FormRequest enforces this via `required_with` between the two fields, validates the country code with `regex:/^\+[1-9][0-9]{0,3}$/`, validates the national number with `regex:/^[0-9]+$/`, and runs a cross-field `withValidator` check that concatenates the pair and feeds it to `libphonenumber-for-php`'s `isValidNumber()` — combinations that are well-formed individually but unreachable in any numbering plan (e.g. `+39` + `1`) are rejected. The DB stores the raw national digits; formatting for display is the client's job.
-- **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (enum), `status` (enum), `paid` (`yes`|`no` — has a payment record for the current calendar month or not), and `q` (free-text token-AND search across `first_name` + `last_name`, case-insensitive). Sort: `sort_by` ∈ {`first_name`, `last_name`, `belt`, `joined_at`, `created_at`} with `sort_order` (`asc`|`desc`, default `desc`). `belt` is rank-aware (kids `grey < yellow < orange < green` < adults `white < blue < purple < brown < black`) with `stripes` desc + `last_name` asc as stable tiebreakers. Page via `?page=N`. The OpenAPI contract at `docs/api/v1.yaml` is the canonical reference for parameter shape and defaults.
+- **Paginated list is 20 per page.** Configured in `AthleteController@index`. Filters: `belt` (enum), `status` (enum), `paid` (`yes`|`no` — has a payment record for the current calendar month or not), and `q` (free-text token-AND search across `first_name` + `last_name`, case-insensitive). Sort: `sort_by` ∈ {`first_name`, `last_name`, `belt`, `joined_at`, `created_at`} with `sort_order` (`asc`|`desc`, default `desc`). `belt` is rank-aware (kids `grey < yellow < orange < green` < adults `white < blue < purple < brown < black` < senior `red-and-black < red-and-white < red`) with `stripes` desc + `last_name` asc as stable tiebreakers. Page via `?page=N`. The OpenAPI contract at `docs/api/v1.yaml` is the canonical reference for parameter shape and defaults.
 
 ## Related endpoints
 

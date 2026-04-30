@@ -152,6 +152,150 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/export:
+    get:
+      tags: [auth]
+      summary: Export the authenticated user's full account data (GDPR Art. 20)
+      description: |
+        Returns every byte we hold about the authenticated user — academy,
+        athletes (with their addresses, payments, attendance, document
+        metadata), and personal access tokens — as a single self-describing
+        envelope `{ version, exported_at, data }`.
+
+        Two output formats:
+
+        - **default (no `format`)** — `application/json` with a `Content-Disposition: attachment` header
+        - **`?format=zip`** — `application/zip` containing `data.json` plus the binary documents under `documents/athlete-{id}/{document-id}-{original-filename}`
+
+        Throttled to **1 request per minute per user** because the ZIP variant
+        is heavy on disk + bandwidth, and a tight cap protects against
+        accidental loops in client retry logic.
+      operationId: meExport
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema:
+            type: string
+            enum: [json, zip]
+            default: json
+      responses:
+        '200':
+          description: Account data download (JSON or ZIP per `format`)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version, exported_at, data]
+                properties:
+                  version:
+                    type: string
+                    example: "1.0"
+                  exported_at:
+                    type: string
+                    format: date-time
+                  data:
+                    type: object
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          description: Throttle limit exceeded — retry after the `Retry-After` header
+
+  /me/deletion-request:
+    post:
+      tags: [auth]
+      summary: Request hard-deletion of the authenticated account (GDPR Art. 17)
+      description: |
+        Enters the user into a 30-day grace window. After the window
+        elapses, a scheduled task hard-deletes the account and the
+        full academy + athlete data tied to it.
+
+        Re-auth gate: the request body must include the current
+        account password. The user is already authenticated via
+        Sanctum to reach this route; the second password check is a
+        UX safeguard because the action is irreversible after the
+        grace window.
+
+        Idempotent: a second call by the same user while a pending
+        deletion already exists returns the EXISTING grace-window
+        timestamps rather than restarting the clock — preventing
+        indefinite deferral of the actual purge.
+
+        Throttled to 5 calls per minute per user (defeats brute-force
+        on the password gate).
+      operationId: meDeletionRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  description: Current account password.
+      responses:
+        '202':
+          description: Grace-window scheduled (or returned existing one if idempotent)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [requested_at, scheduled_for, grace_days]
+                    properties:
+                      requested_at:
+                        type: string
+                        format: date-time
+                      scheduled_for:
+                        type: string
+                        format: date-time
+                      grace_days:
+                        type: integer
+                        example: 30
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttle limit exceeded.
+    delete:
+      tags: [auth]
+      summary: Cancel a pending account deletion during the grace window
+      description: |
+        Removes the user's `pending_deletions` row, restoring full
+        access. Idempotent: cancelling something that was never
+        pending returns 200 with `cancelled: false` rather than
+        a 404 — the SPA can call this freely without checking
+        state first.
+      operationId: meDeletionCancel
+      responses:
+        '200':
+          description: Cancellation result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [cancelled]
+                    properties:
+                      cancelled:
+                        type: boolean
+                        description: True when a pending row existed and was removed.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
   /email/verification-notification:
     post:
       tags: [auth]
@@ -435,7 +579,8 @@ paths:
           description: |
             Column to sort by. `belt` is rank-aware on the full IBJJF scale
             (kids: grey < yellow < orange < green; adults: white < blue <
-            purple < brown < black) via a SQL CASE expression — NOT a lexicographic
+            purple < brown < black; senior: red-and-black < red-and-white <
+            red) via a SQL CASE expression — NOT a lexicographic
             sort on the column value — and chains `stripes desc` + `last_name
             asc` as stable tiebreakers so two athletes at the same belt
             level always render in the same row order. `stripes` is not
@@ -1211,10 +1356,30 @@ components:
     Belt:
       type: string
       description: |-
-        IBJJF belt ranks on a single linear scale: youth belts (`grey`,
-        `yellow`, `orange`, `green`) precede adult belts (`white`, `blue`,
-        `purple`, `brown`, `black`). Youth belts added in #230.
-      enum: [grey, yellow, orange, green, white, blue, purple, brown, black]
+        IBJJF belt ranks on a single linear scale.
+          - Youth: `grey`, `yellow`, `orange`, `green` (added in #230).
+          - Adult: `white`, `blue`, `purple`, `brown`, `black`.
+          - Senior beyond black: `red-and-black` (7° grau, coral),
+            `red-and-white` (8° grau, coral), `red` (9°/10° grau, grand
+            master). Added in #229.
+
+        Per-belt stripes cap: `black` allows 0–6 (graus 1°–6° within the
+        black-belt phase); every other belt caps at 0–4.
+      enum:
+        [
+          grey,
+          yellow,
+          orange,
+          green,
+          white,
+          blue,
+          purple,
+          brown,
+          black,
+          red-and-black,
+          red-and-white,
+          red
+        ]
 
     AthleteStatus:
       type: string
@@ -1335,7 +1500,7 @@ components:
 
     User:
       type: object
-      required: [id, name, email, email_verified_at]
+      required: [id, name, email, email_verified_at, deletion_pending]
       properties:
         id:
           type: integer
@@ -1354,6 +1519,22 @@ components:
             `null` until verified. Surfaced to the SPA so it can render the
             verification pillola without an extra round-trip.
           example: "2026-04-28T15:30:00+00:00"
+        deletion_pending:
+          nullable: true
+          description: |
+            GDPR Art. 17 (#223) — non-null when the user is in the 30-day
+            grace window after requesting account deletion. The SPA reads
+            this on bootstrap to decide whether to render the warning
+            banner + the cancel CTA. `null` for normal accounts.
+          type: object
+          required: [requested_at, scheduled_for]
+          properties:
+            requested_at:
+              type: string
+              format: date-time
+            scheduled_for:
+              type: string
+              format: date-time
 
     # ── Academy ───────────────────────────────────────────────────────────
 
