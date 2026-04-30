@@ -82,6 +82,15 @@
           <i class="pi pi-euro"></i>
           <span>Payments</span>
         </p-tab>
+        <!-- Edit moved into the detail's tab strip (#281). The athlete
+             form lives in the same router-outlet as the other tabs;
+             the header above (name, belt, status) stays visible while
+             editing — Norman § "the editor belongs in the page about
+             the thing it edits". -->
+        <p-tab value="edit" routerLink="edit" data-cy="athlete-tab-edit">
+          <i class="pi pi-pencil"></i>
+          <span>Edit</span>
+        </p-tab>
       </p-tablist>
     </p-tabs>
 

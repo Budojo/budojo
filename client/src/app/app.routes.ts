@@ -75,13 +75,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'athletes/:id/edit',
-        loadComponent: () =>
-          import('./features/athletes/form/athlete-form.component').then(
-            (m) => m.AthleteFormComponent,
-          ),
-      },
-      {
         path: 'athletes/:id',
         loadComponent: () =>
           import('./features/athletes/detail/athlete-detail.component').then(
@@ -108,6 +101,19 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/athletes/detail/payments-list/payments-list.component').then(
                 (m) => m.PaymentsListComponent,
+              ),
+          },
+          // Edit form moved INSIDE the detail (#281) so the athlete
+          // header (name, belt, status) stays visible while editing
+          // and the form belongs visually to "this athlete" instead
+          // of being a sibling page. The child gets `:id` via the
+          // app-wide `paramsInheritanceStrategy: 'always'` set in
+          // `app.config.ts`.
+          {
+            path: 'edit',
+            loadComponent: () =>
+              import('./features/athletes/form/athlete-form.component').then(
+                (m) => m.AthleteFormComponent,
               ),
           },
         ],

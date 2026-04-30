@@ -1,6 +1,6 @@
 import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withRouterConfig } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
 import { providePrimeNG } from 'primeng/config';
@@ -46,7 +46,12 @@ class BundledJsonLoader implements TranslateLoader {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    // `paramsInheritanceStrategy: 'always'` (#281) — child routes
+    // inherit `:id`/etc from their parents. The athlete detail's
+    // child routes (documents, attendance, payments, edit) all need
+    // the parent `:id`, and the alternative would be `route.parent?.
+    // paramMap` reads scattered across each child component.
+    provideRouter(routes, withRouterConfig({ paramsInheritanceStrategy: 'always' })),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
     // App-level MessageService so shared components (the email verification

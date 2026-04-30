@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, finalize, map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -50,6 +50,7 @@ interface SelectOption<T extends string> {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    RouterLink,
     ButtonModule,
     IconFieldModule,
     InputIconModule,
@@ -397,10 +398,6 @@ export class AthletesListComponent implements OnInit {
 
   goToEdit(athlete: Athlete): void {
     void this.router.navigate(['/dashboard/athletes', athlete.id, 'edit']);
-  }
-
-  goToDocuments(athlete: Athlete): void {
-    void this.router.navigate(['/dashboard/athletes', athlete.id, 'documents']);
   }
 
   confirmDelete(event: Event, athlete: Athlete): void {
