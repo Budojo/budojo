@@ -112,6 +112,16 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+
+    // Reset `flex: 0 0 8rem` on the inner label (Copilot caught this on
+    // #290): the rule was added to `&__label` for the >=768px row layout
+    // where it correctly reserves an 8rem left column. In a column-flex
+    // parent like this section, that same rule reads as "8rem of HEIGHT"
+    // and would re-create the big blank gap between the eyebrow and the
+    // description that #245 already fixed for `__row`.
+    .profile-page__label {
+      flex: initial;
+    }
   }
 
   &__export-hint {
@@ -122,10 +132,10 @@
     max-width: 36rem;
   }
 
-  // Bottom margin separates the button from the description without
-  // requiring a different `gap` on the parent (which would also push
-  // the eyebrow apart from the body text — wrong rhythm). 0.25rem on
-  // top is the canon's "small breathing room before an action" beat.
+  // Top margin separates the button from the description above without
+  // widening the parent `gap` (which would also push the eyebrow apart
+  // from the body text — wrong rhythm). 0.25rem is the canon's "small
+  // breathing room before an action" beat.
   :host ::ng-deep .profile-page__export-button {
     margin-top: 0.25rem;
   }
