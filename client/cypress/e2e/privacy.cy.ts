@@ -32,9 +32,13 @@ describe('Privacy policy page (#219) — content + chrome', () => {
       .and('contain.text', '2026-04-30');
   });
 
-  it('the back-home CTA navigates to the root', () => {
+  it('the back-home CTA navigates away from /privacy (root redirects to /auth/login for unauth visitors)', () => {
     cy.get('[data-cy="privacy-home"]').click();
-    cy.location('pathname').should('eq', '/');
+    // The component calls `router.navigateByUrl('/')`; the public-route
+    // table at app.routes.ts then redirects unauthenticated visitors
+    // to /auth/login. We assert on the end state Cypress observes,
+    // not on the intermediate navigation target.
+    cy.location('pathname').should('eq', '/auth/login');
   });
 
   it('cross-links to /sub-processors so the chain stays auditable', () => {
