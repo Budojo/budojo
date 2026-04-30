@@ -141,6 +141,46 @@
   --budojo-safe-top: env(safe-area-inset-top, 0px);
   --budojo-safe-bottom: env(safe-area-inset-bottom, 0px);
 
+  // ───── Page container widths (#261) ──────────────────────────────
+  // Two semantic tokens replace the per-page max-width zoo. Pages pick
+  // the one that matches their content density, never a raw px value.
+  //   · content — operative pages (lists, detail views, dashboards).
+  //   · prose   — text-heavy pages (legal, whats-new). Narrower so
+  //               line length stays in the 60–80ch reading sweet spot.
+  // Narrow-card max-widths (e.g. 40rem profile / academy) are NOT
+  // page containers and stay raw until the hierarchy rework lands.
+  //
+  // The base tokens describe the **outer visual extent** of the page
+  // (edge-to-edge including the dashboard shell's `.main` padding).
+  // Pages don't consume these directly — they use the derived
+  // `--budojo-page-*-max` tokens below, which subtract the shell
+  // padding so the inner content area matches the pre-#261 border-box
+  // behaviour (where `max-width: 1200px` plus `padding: 2rem` resolved
+  // to a 1136px content area). Without the subtraction the content
+  // would widen by `2 × --budojo-page-padding-x` (4rem desktop / 2rem
+  // mobile) — a real visual hierarchy shift.
+  --budojo-container-content: 75rem;
+  --budojo-container-prose: 56rem;
+
+  // ───── Page padding (#261) ───────────────────────────────────────
+  // Applied once at the dashboard shell .main element. Pages drop
+  // their own padding declaration. Mobile-first base, scaled at the
+  // sidebar breakpoint (768px) — see the @media block below. Both
+  // axes stay on the 8dp grid.
+  --budojo-page-padding-x: 1rem;
+  --budojo-page-padding-y: 1rem;
+
+  // ───── Derived page-wrapper inner widths (#261) ──────────────────
+  // What page wrappers actually consume — the outer container token
+  // minus the shell padding-x on both sides, so the visual extent of
+  // the page matches the container token across viewports. Read these
+  // from the page wrapper's `max-width`; never read the bare
+  // `--budojo-container-*` from a page — the math is intentional.
+  --budojo-page-content-max: calc(
+    var(--budojo-container-content) - 2 * var(--budojo-page-padding-x)
+  );
+  --budojo-page-prose-max: calc(var(--budojo-container-prose) - 2 * var(--budojo-page-padding-x));
+
   // Semantic (iOS system)
   --budojo-success: #34c759;
   --budojo-warning: #ff9f0a;
@@ -151,6 +191,16 @@
   // (canon § Button matrix → destructive (soft)). Defined alongside the
   // hard danger so both render through tokens, not string literals.
   --budojo-danger-soft: #ffe5e3;
+}
+
+// Page padding scales up at the sidebar breakpoint — see `--budojo-page-
+// padding-*` above. Kept as a token bump (not a hardcoded media query in
+// the shell) so any future override lives next to the base values.
+@media (min-width: 768px) {
+  :root {
+    --budojo-page-padding-x: 2rem;
+    --budojo-page-padding-y: 1.5rem;
+  }
 }
 
 // ============================================================================

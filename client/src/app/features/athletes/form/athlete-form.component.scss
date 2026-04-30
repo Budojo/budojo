@@ -1,7 +1,10 @@
 .athlete-form-page {
+  // Intermediate-width form layout — kept at 900px until the hierarchy
+  // rework (#261 follow-up) decides whether this should fold into the
+  // wide-header + narrow-card pattern. Page padding comes from the
+  // dashboard shell.
   max-width: 900px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
