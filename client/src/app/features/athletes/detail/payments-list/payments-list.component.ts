@@ -191,15 +191,20 @@ export class PaymentsListComponent implements OnInit {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (payments) => this.payments.set(payments),
-        error: () => {
-          this.payments.set([]);
+        // On error we deliberately KEEP the previous `payments` value
+        // — Copilot caught (#260 review) that resetting to [] would
+        // make every paid month silently flip to "Unpaid" in the UI,
+        // which is misleading and removes the "Unmark" action right
+        // when the user can't act on it. Surfacing the toast is
+        // enough; the table stays at its last-known good state until
+        // a successful reload replaces it.
+        error: () =>
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
             detail: "Couldn't load payments.",
             life: 4000,
-          });
-        },
+          }),
       });
   }
 
