@@ -6,12 +6,16 @@ import EN_TRANSLATIONS from '../../public/assets/i18n/en.json';
 import IT_TRANSLATIONS from '../../public/assets/i18n/it.json';
 
 /**
- * Synchronous translate loader for vitest. Returns the bundled JSON files
- * directly without an HTTP round-trip — keeps component tests deterministic
- * and the production HttpLoader pipeline out of the test path.
+ * Synchronous translate loader for vitest. Returns the bundled JSON
+ * files directly via `of()` so component tests render translations
+ * on the first change-detection cycle, with no async settle. Same
+ * shape as the production loader (`BundledJsonLoader` in
+ * `app.config.ts`, also synchronous since #273) — the test variant
+ * exists only to keep the test bundle decoupled from the production
+ * provider wiring.
  *
- * Both EN and IT are exposed so a test that needs to assert the IT string
- * can `inject(TranslateService).use('it')` after `setup()`.
+ * Both EN and IT are exposed so a test that needs to assert the IT
+ * string can `inject(TranslateService).use('it')` after `setup()`.
  */
 class SyncJsonLoader implements TranslateLoader {
   private readonly bundles: Record<string, TranslationObject> = {
