@@ -8,6 +8,7 @@ import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { VERSION } from '../../../environments/version';
 import { DashboardComponent } from './dashboard.component';
+import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 // AuthService reads `localStorage` at construction time. Some local test
 // environments (e.g. node + jsdom combos) don't polyfill localStorage, which
@@ -36,6 +37,7 @@ describe('DashboardComponent', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        ...provideI18nTesting(),
         { provide: AuthService, useClass: FakeAuthService },
       ],
     });

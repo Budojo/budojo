@@ -162,6 +162,16 @@ export const routes: Routes = [
         (m) => m.PrivacyPolicyComponent,
       ),
   },
+  // English translation of /privacy (#273). Italian remains the
+  // canonical legal source for IT customers and the Garante; this
+  // route is a faithful translation kept in lock-step.
+  {
+    path: 'privacy/en',
+    loadComponent: () =>
+      import('./features/privacy-policy/en/privacy-policy-en.component').then(
+        (m) => m.PrivacyPolicyEnComponent,
+      ),
+  },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
   // Wildcard 404 (#226) — must stay last; everything above is matched
   // first. Hit on any URL that no other route resolves, including

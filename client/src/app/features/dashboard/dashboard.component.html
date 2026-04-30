@@ -11,7 +11,7 @@
     <button
       type="button"
       class="topbar__hamburger"
-      [attr.aria-label]="sidebarOpen() ? 'Close navigation' : 'Open navigation'"
+      [attr.aria-label]="(sidebarOpen() ? 'nav.close' : 'nav.open') | translate"
       [attr.aria-expanded]="sidebarOpen()"
       aria-controls="app-sidebar"
       (click)="toggleSidebar()"
@@ -22,7 +22,7 @@
     <a
       routerLink="/dashboard"
       class="topbar__title"
-      aria-label="Budojo — go to dashboard home"
+      [attr.aria-label]="'nav.homeAriaLabel' | translate"
       data-cy="topbar-home-link"
     >
       @if (academyLogoUrl(); as url) {
@@ -69,7 +69,7 @@
         (click)="closeSidebar()"
       >
         <i class="pi pi-home"></i>
-        <span>Academy</span>
+        <span>{{ 'nav.academy' | translate }}</span>
       </a>
       <a
         routerLink="athletes"
@@ -78,7 +78,7 @@
         (click)="closeSidebar()"
       >
         <i class="pi pi-users"></i>
-        <span>Athletes</span>
+        <span>{{ 'nav.athletes' | translate }}</span>
       </a>
       <a
         routerLink="attendance"
@@ -88,7 +88,7 @@
         (click)="closeSidebar()"
       >
         <i class="pi pi-check-square"></i>
-        <span>Attendance</span>
+        <span>{{ 'nav.attendance' | translate }}</span>
       </a>
       <a
         routerLink="profile"
@@ -98,7 +98,7 @@
         (click)="closeSidebar()"
       >
         <i class="pi pi-user"></i>
-        <span>Profile</span>
+        <span>{{ 'nav.profile' | translate }}</span>
       </a>
     </nav>
 
@@ -117,7 +117,7 @@
         data-cy="nav-whats-new"
       >
         <i class="pi pi-sparkles" aria-hidden="true"></i>
-        <span>What's new</span>
+        <span>{{ 'nav.whatsNew' | translate }}</span>
       </a>
       <button
         type="button"
@@ -126,12 +126,41 @@
         data-cy="nav-sign-out"
       >
         <i class="pi pi-sign-out" aria-hidden="true"></i>
-        <span>Sign out</span>
+        <span>{{ 'nav.signOut' | translate }}</span>
       </button>
-      <p class="sidebar__version" data-cy="sidebar-version">
-        <a class="sidebar__legal-link" routerLink="/privacy" data-cy="sidebar-privacy-link"
-          >Privacy</a
+      <!-- Language toggle (#273). Two pill buttons inline; the active
+           lang is non-clickable + carries aria-current="true". 48 px touch
+           target maintained via padding (canon § Fitts). Sits visually
+           between Sign out and the version footer so it reads as a
+           preference control, not navigation. -->
+      <div class="sidebar__lang" role="group" [attr.aria-label]="'language.label' | translate">
+        <button
+          type="button"
+          class="sidebar__lang-option"
+          [class.sidebar__lang-option--active]="currentLang() === 'en'"
+          [attr.aria-current]="currentLang() === 'en' ? 'true' : null"
+          [disabled]="currentLang() === 'en'"
+          (click)="setLang('en')"
+          data-cy="lang-toggle-en"
         >
+          {{ 'language.english' | translate }}
+        </button>
+        <button
+          type="button"
+          class="sidebar__lang-option"
+          [class.sidebar__lang-option--active]="currentLang() === 'it'"
+          [attr.aria-current]="currentLang() === 'it' ? 'true' : null"
+          [disabled]="currentLang() === 'it'"
+          (click)="setLang('it')"
+          data-cy="lang-toggle-it"
+        >
+          {{ 'language.italian' | translate }}
+        </button>
+      </div>
+      <p class="sidebar__version" data-cy="sidebar-version">
+        <a class="sidebar__legal-link" routerLink="/privacy" data-cy="sidebar-privacy-link">{{
+          'nav.privacy' | translate
+        }}</a>
         <span aria-hidden="true">·</span>
         {{ versionTag }}
       </p>

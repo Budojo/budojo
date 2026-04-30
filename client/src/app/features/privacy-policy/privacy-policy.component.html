@@ -4,11 +4,21 @@
       <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
       <span class="legal-page__brand-name">Budojo</span>
     </a>
-    <p class="legal-page__eyebrow">Legal</p>
+    <p class="legal-page__eyebrow">Legale</p>
     <h1 class="legal-page__title">Informativa sulla Privacy</h1>
     <p class="legal-page__subtitle">
       Informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) per gli utenti del
       servizio Budojo.
+    </p>
+    <!-- Language toggle (#273). Italian è il source of truth legale
+         per i clienti italiani e per il Garante; la versione inglese
+         è una traduzione fedele aggiornata in lock-step. Toggle
+         visibile su entrambe le lingue per consentire lo switch a
+         vista. -->
+    <p class="legal-page__lang" data-cy="privacy-lang-toggle">
+      <strong aria-current="true">Italiano</strong>
+      <span aria-hidden="true">·</span>
+      <a routerLink="/privacy/en" data-cy="privacy-lang-en">English</a>
     </p>
   </header>
 

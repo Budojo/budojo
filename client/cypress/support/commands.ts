@@ -28,6 +28,12 @@ Cypress.Commands.add(
       ...extra,
       onBeforeLoad(win) {
         win.localStorage.setItem('auth_token', token);
+        // Pin the language to English (#273) so all text-content
+        // assertions across the spec base remain deterministic. Tests
+        // that need to assert the Italian translation can override
+        // by setting `budojoLang` to `'it'` before the visit, or
+        // toggle it through the sidebar after landing.
+        win.localStorage.setItem('budojoLang', 'en');
         extra?.onBeforeLoad?.(win);
       },
     });
