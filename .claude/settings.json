@@ -3,7 +3,8 @@
     "allow": [
       "Bash(gh project item-list *)",
       "Bash(gh label list *)",
-      "Bash(gh run watch *)"
+      "Bash(gh run watch *)",
+      "Bash(git fetch *)"
     ]
   }
 }
