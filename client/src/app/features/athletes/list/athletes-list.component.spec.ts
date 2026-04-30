@@ -2,17 +2,33 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import type { Mock } from 'vitest';
 import { AthletesListComponent } from './athletes-list.component';
 import { AcademyService } from '../../../core/services/academy.service';
-import { AthleteService } from '../../../core/services/athlete.service';
+import { AthleteService, type Athlete } from '../../../core/services/athlete.service';
+import { PaymentService } from '../../../core/services/payment.service';
 
 class FakeAthleteService {
   readonly list = vi.fn(() =>
     of({ data: [], meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 } }),
   );
   readonly delete = vi.fn(() => of(void 0));
+}
+
+class FakePaymentService {
+  readonly markPaid = vi.fn(() =>
+    of({
+      id: 1,
+      athlete_id: 42,
+      year: 2026,
+      month: 4,
+      amount_cents: 9500,
+      paid_at: '2026-04-30T08:00:00Z',
+    }),
+  );
+  readonly unmarkPaid = vi.fn(() => of(void 0));
 }
 
 const ACADEMY_BASE = {
@@ -32,6 +48,7 @@ describe('AthletesListComponent', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
       ],
     });
   });
@@ -348,6 +365,134 @@ describe('AthletesListComponent', () => {
         fixture.nativeElement.querySelector('[data-cy="athletes-paid-filter"]'),
       ).not.toBeNull();
       expect(fixture.nativeElement.querySelector('[data-cy="athletes-th-paid"]')).not.toBeNull();
+    });
+
+    function makeAthlete(over: Partial<Athlete> = {}): Athlete {
+      return {
+        id: 42,
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        email: 'mario@example.com',
+        phone_country_code: null,
+        phone_national_number: null,
+        address: null,
+        date_of_birth: '1990-05-15',
+        belt: 'blue',
+        stripes: 2,
+        status: 'active',
+        joined_at: '2023-01-10',
+        created_at: '2026-04-22T10:00:00+00:00',
+        paid_current_month: false,
+        ...over,
+      } as Athlete;
+    }
+
+    function setupWithPopulatedRow(over: Partial<Athlete> = {}) {
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      const athlete = makeAthlete(over);
+      component.athletes.set([athlete]);
+      return { fixture, component, athlete };
+    }
+
+    it('confirmTogglePaid → on accept (mark paid) calls PaymentService.markPaid + flips local state + shows toast', () => {
+      const { fixture, component, athlete } = setupWithPopulatedRow({
+        paid_current_month: false,
+      });
+
+      // ConfirmationService and MessageService are component-level
+      // providers (declared on the @Component decorator), so we must
+      // resolve them from the component's own injector — TestBed.inject
+      // would walk up to the root injector and miss them.
+      const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+      confirmService.confirm = vi.fn((cfg: { accept: () => void }) => {
+        cfg.accept();
+        return confirmService;
+      }) as never;
+
+      const messageSpy = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+      const paymentSpy = TestBed.inject(PaymentService).markPaid as unknown as Mock;
+
+      const target = document.createElement('button');
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: target });
+
+      component.confirmTogglePaid(event, athlete);
+
+      expect(paymentSpy).toHaveBeenCalledTimes(1);
+      // Args: (athleteId, year, month). Year + month are computed from
+      // `new Date()` so we just check the athleteId is right and the
+      // year/month look like real values.
+      expect(paymentSpy.mock.calls[0][0]).toBe(42);
+      expect(paymentSpy.mock.calls[0][1]).toBeGreaterThanOrEqual(2025);
+      expect(paymentSpy.mock.calls[0][2]).toBeGreaterThanOrEqual(1);
+
+      // Local state flipped optimistically — no reload triggered.
+      expect(component.athletes()[0].paid_current_month).toBe(true);
+
+      expect(messageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ severity: 'success', summary: 'Marked paid' }),
+      );
+    });
+
+    it('confirmTogglePaid → on accept (mark unpaid when currently paid) calls unmarkPaid', () => {
+      const { fixture, component, athlete } = setupWithPopulatedRow({
+        paid_current_month: true,
+      });
+
+      const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+      confirmService.confirm = vi.fn((cfg: { accept: () => void }) => {
+        cfg.accept();
+        return confirmService;
+      }) as never;
+
+      const unmarkSpy = TestBed.inject(PaymentService).unmarkPaid as unknown as Mock;
+
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+
+      component.confirmTogglePaid(event, athlete);
+
+      expect(unmarkSpy).toHaveBeenCalledTimes(1);
+      // Local state flipped optimistically.
+      expect(component.athletes()[0].paid_current_month).toBe(false);
+    });
+
+    it('confirmTogglePaid → 422 from the server surfaces an error toast about the missing fee', () => {
+      const { fixture, component, athlete } = setupWithPopulatedRow({
+        paid_current_month: false,
+      });
+
+      const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+      confirmService.confirm = vi.fn((cfg: { accept: () => void }) => {
+        cfg.accept();
+        return confirmService;
+      }) as never;
+
+      // Override the markPaid spy to throw a 422.
+      const paymentSvc = TestBed.inject(PaymentService);
+      (paymentSvc as unknown as { markPaid: Mock }).markPaid = vi.fn(() =>
+        throwError(() => ({ status: 422 })),
+      );
+
+      const messageSpy = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+
+      const event = new MouseEvent('click');
+      Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+
+      component.confirmTogglePaid(event, athlete);
+
+      // Local state is NOT flipped on error — the server is the
+      // source of truth, optimistic update only happens on success.
+      expect(component.athletes()[0].paid_current_month).toBe(false);
+      expect(messageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'error',
+          detail: expect.stringContaining('monthly fee'),
+        }),
+      );
     });
 
     it('drops a stale paid filter when monthly_fee_cents is cleared after the filter was set', () => {

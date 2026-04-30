@@ -1,0 +1,45 @@
+<article class="whats-new">
+  <header class="whats-new__header">
+    <a class="whats-new__brand" routerLink="/dashboard" aria-label="Budojo dashboard home">
+      <app-brand-glyph class="whats-new__glyph" aria-hidden="true" />
+      <span class="whats-new__brand-name">Budojo</span>
+    </a>
+    <p class="whats-new__eyebrow">What's new</p>
+    <h1 class="whats-new__title">Recent updates</h1>
+    <p class="whats-new__subtitle">
+      What's changed in Budojo lately, in plain language. Newest at the top.
+    </p>
+  </header>
+
+  @for (release of releases; track release.version) {
+    <section class="whats-new__release" [attr.data-cy]="'whats-new-release-' + release.version">
+      <header class="whats-new__release-header">
+        <h2 class="whats-new__version">{{ release.version }}</h2>
+        <time class="whats-new__date" [attr.datetime]="release.date">{{ release.date }}</time>
+      </header>
+      <p class="whats-new__headline">{{ release.headline }}</p>
+      @for (section of release.sections; track section.heading) {
+        <section class="whats-new__section">
+          <h3 class="whats-new__section-heading">{{ section.heading }}</h3>
+          <ul class="whats-new__bullets">
+            @for (bullet of section.bullets; track bullet) {
+              <li>{{ bullet }}</li>
+            }
+          </ul>
+        </section>
+      }
+    </section>
+  }
+
+  <footer class="whats-new__footer">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      label="Back to dashboard"
+      icon="pi pi-arrow-left"
+      (onClick)="goHome()"
+      data-cy="whats-new-back"
+    />
+  </footer>
+</article>

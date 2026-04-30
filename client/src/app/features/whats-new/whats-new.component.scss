@@ -1,0 +1,145 @@
+// "What's new" page (#254). Reuses the shape of the legal-page
+// partial — same brand header + max-width + section rhythm — but
+// keeps its own block since the content style here (bulleted
+// release notes with section emoji headings) is different from
+// the dense legal table layout.
+
+.whats-new {
+  // Prose container — narrower than operative content so release-note
+  // line length stays in the 60–80ch reading sweet spot. Page padding
+  // comes from the dashboard shell (#261).
+  max-width: var(--budojo-page-prose-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  color: var(--p-text-color);
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--p-text-color);
+    text-decoration: none;
+    font-weight: 600;
+    width: fit-content;
+    padding: 0.25rem 0.5rem;
+    margin-left: -0.5rem;
+    border-radius: var(--p-border-radius-sm);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+  }
+
+  &__glyph {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  &__brand-name {
+    font-size: 0.9375rem;
+  }
+
+  &__eyebrow {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.018em;
+  }
+
+  &__subtitle {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 1rem;
+    line-height: 1.5;
+    max-width: 44rem;
+  }
+
+  &__release {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+  }
+
+  &__release-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__version {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__date {
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__headline {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--p-text-color-secondary);
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__section-heading {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__bullets {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+
+    li {
+      line-height: 1.55;
+      color: var(--p-text-color-secondary);
+      font-size: 0.9375rem;
+    }
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 1rem;
+  }
+}

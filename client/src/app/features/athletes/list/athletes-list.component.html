@@ -167,7 +167,11 @@
           </td>
           @if (hasMonthlyFee()) {
             <td>
-              <app-paid-badge [paid]="athlete.paid_current_month" />
+              <app-paid-badge
+                [paid]="athlete.paid_current_month"
+                [clickable]="true"
+                (paidToggle)="confirmTogglePaid($event, athlete)"
+              />
             </td>
           }
           <td class="athlete-actions">

@@ -23,16 +23,14 @@ class UserResource extends JsonResource
         // SPA can render the warning banner + the "cancel deletion"
         // CTA without an extra request.
         //
-        // We READ the relation only when it's been eager-loaded by
-        // the caller. UserResource is shared across `/auth/me`,
-        // `/auth/login`, `/auth/register`, and `Auth\AuthResponse`,
-        // so a lazy `pendingDeletion()->first()` here would slap an
-        // extra query onto every login + every register. The price
-        // of staying lazy is that callers MUST `->load('pendingDeletion')`
-        // when they want this field populated; otherwise the SPA
-        // sees `deletion_pending: null` even when one exists. The
-        // `MeController` does this load — see its source for the
-        // single-source upstream — so the bootstrap path is correct.
+        // The Resource itself stays passive: it READS the relation
+        // and never issues its own query. All three callers (the
+        // login + register + /me controllers) explicitly call
+        // `$user->load('pendingDeletion')` before constructing this
+        // Resource, so the `relationLoaded` check below is a defensive
+        // guard against future call sites that forget the load —
+        // `null` is a safer default than a silent N+1. (Incident
+        // #255 caught the missing loads on login + register.)
         $pending = $user->relationLoaded('pendingDeletion')
             ? $user->pendingDeletion
             : null;

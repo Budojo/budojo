@@ -1,13 +1,10 @@
 .athletes-page {
-  // Mobile-first: tight side padding so a 390-px viewport breathes. Scales
-  // up at the sidebar breakpoint where the main column is already narrower
-  // than the viewport. Values stay on the 8dp grid per canon.
-  padding: 1rem;
-  max-width: 1200px;
-
-  @media (min-width: 768px) {
-    padding: 1.5rem 2rem;
-  }
+  // Page chrome (max-width + side padding) comes from the dashboard
+  // shell tokens — see `styles/budojo-theme.scss` and `.main` in the
+  // dashboard component. The page consumes the derived inner-width
+  // token so its outer visual extent matches `--budojo-container-content`.
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
 
   &__header {
     display: flex;

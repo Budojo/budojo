@@ -105,8 +105,20 @@
     <!-- Sign out: dedicated, always-visible row. Lives apart from the nav
          to signal finality via the `--signout` modifier color. This is
          the only signout entry point in the shell after #166 retired the
-         redundant brand-area dropdown (Krug + Don't Make Me Think). -->
+         redundant brand-area dropdown (Krug + Don't Make Me Think).
+         "What's new" sits ABOVE Sign out (#254) so a returning user
+         spots the changelog before the finality of signing out. -->
     <div class="sidebar__footer">
+      <a
+        routerLink="whats-new"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item sidebar__nav-item--whats-new"
+        (click)="closeSidebar()"
+        data-cy="nav-whats-new"
+      >
+        <i class="pi pi-sparkles" aria-hidden="true"></i>
+        <span>What's new</span>
+      </a>
       <button
         type="button"
         class="sidebar__nav-item sidebar__nav-item--signout"

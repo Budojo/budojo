@@ -111,7 +111,7 @@ describe('ProfileComponent — data export (#222)', () => {
     expect(messageSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         severity: 'error',
-        detail: expect.stringContaining('un minuto'),
+        detail: expect.stringContaining('a minute'),
       }),
     );
     expect(cmp['exporting']()).toBe(false);

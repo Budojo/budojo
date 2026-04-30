@@ -103,6 +103,13 @@ export const routes: Routes = [
                 (m) => m.AttendanceHistoryComponent,
               ),
           },
+          {
+            path: 'payments',
+            loadComponent: () =>
+              import('./features/athletes/detail/payments-list/payments-list.component').then(
+                (m) => m.PaymentsListComponent,
+              ),
+          },
         ],
       },
       {
@@ -130,6 +137,11 @@ export const routes: Routes = [
         path: 'profile',
         loadComponent: () =>
           import('./features/profile/profile.component').then((m) => m.ProfileComponent),
+      },
+      {
+        path: 'whats-new',
+        loadComponent: () =>
+          import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),
       },
     ],
   },
