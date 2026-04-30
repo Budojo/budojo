@@ -96,21 +96,32 @@
     }
   }
 
-  // Export-data row: title + helper text on the left, action button on
-  // the right. Stacks vertically on mobile.
-  &__row--export {
-    align-items: flex-start;
-
-    @media (min-width: 768px) {
-      align-items: center;
-    }
-  }
-
-  &__export-text {
+  // Your-data export section (#284). Vertical stack — eyebrow label,
+  // descriptive text, compact button below. Replaces the previous
+  // horizontal "title left / oversized floating button right" layout
+  // that broke the SPA card-anatomy canon and visually claimed more
+  // attention than the action's tertiary nature warrants.
+  //
+  // Same vertical rhythm as the academy-detail card sub-blocks +
+  // every other settings-tier card in the SPA. Touch target stays
+  // ≥ 48 px via PrimeNG's default button padding (canon § Fitts);
+  // size="small" trims it from the marketing-CTA height it had to
+  // a settings-utility height that fits the visual hierarchy.
+  &__data-export {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    flex: 1 1 auto;
+    align-items: flex-start;
+    gap: 0.5rem;
+
+    // Reset `flex: 0 0 8rem` on the inner label (Copilot caught this on
+    // #290): the rule was added to `&__label` for the >=768px row layout
+    // where it correctly reserves an 8rem left column. In a column-flex
+    // parent like this section, that same rule reads as "8rem of HEIGHT"
+    // and would re-create the big blank gap between the eyebrow and the
+    // description that #245 already fixed for `__row`.
+    .profile-page__label {
+      flex: initial;
+    }
   }
 
   &__export-hint {
@@ -118,6 +129,14 @@
     color: var(--p-text-color-secondary);
     font-size: 0.8125rem;
     line-height: 1.45;
-    max-width: 32rem;
+    max-width: 36rem;
+  }
+
+  // Top margin separates the button from the description above without
+  // widening the parent `gap` (which would also push the eyebrow apart
+  // from the body text — wrong rhythm). 0.25rem is the canon's "small
+  // breathing room before an action" beat.
+  :host ::ng-deep .profile-page__export-button {
+    margin-top: 0.25rem;
   }
 }
