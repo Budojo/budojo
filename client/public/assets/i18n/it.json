@@ -281,7 +281,7 @@
         "hint": "Nessuna scadenza nei prossimi 30 giorni. Ricontrolla più avanti."
       },
       "toast": {
-        "errorSummary": "Download non riuscito",
+        "errorSummary": "Scaricamento non riuscito",
         "errorDetail": "Impossibile scaricare {{filename}}. Riprova."
       }
     },
