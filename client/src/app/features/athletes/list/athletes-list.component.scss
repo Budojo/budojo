@@ -71,6 +71,31 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+
+  // Name is the canonical "open this athlete's detail" affordance
+  // (#281). Visually a link by intent (Norman § signifier — looks
+  // like what it does), but kept low-chrome: text-decoration only
+  // on hover/focus so the row at rest reads as a roster line, not
+  // a wall of links. Matches the row-link pattern used elsewhere
+  // in the SPA (academy-detail row links).
+  &__text {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover,
+    &:focus-visible {
+      color: var(--p-primary-color);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+      border-radius: var(--p-border-radius-sm);
+    }
+  }
   flex-wrap: wrap;
 
   &__text {

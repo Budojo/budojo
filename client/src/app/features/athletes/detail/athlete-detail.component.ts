@@ -92,6 +92,7 @@ export class AthleteDetailComponent implements OnInit {
   private tabFromUrl(url: string): string {
     if (url.includes('/payments')) return 'payments';
     if (url.includes('/attendance')) return 'attendance';
+    if (url.includes('/edit')) return 'edit';
     return 'documents';
   }
 

@@ -232,7 +232,11 @@ describe('Athlete documents page', () => {
     cy.contains('The file field is required').should('be.visible');
   });
 
-  it('navigates to the documents page from the athletes list folder icon', () => {
+  it('navigates to the athlete detail (default tab: documents) from the list name link', () => {
+    // #281 dropped the standalone folder icon column; the athlete name
+    // is now the canonical tap target into the detail. Default tab is
+    // Documents per the route table redirect, so the URL ends in
+    // `/documents` after navigation.
     cy.intercept('GET', '/api/v1/athletes*', {
       statusCode: 200,
       body: {
@@ -249,7 +253,7 @@ describe('Athlete documents page', () => {
     cy.wait('@academy');
     cy.wait('@listAthletes');
 
-    cy.get('[data-cy="documents-btn"]').first().click();
+    cy.get('[data-cy="athlete-name-link"]').first().click();
     cy.url().should('include', '/dashboard/athletes/42/documents');
     cy.wait('@getAthlete');
     cy.wait('@getDocs');

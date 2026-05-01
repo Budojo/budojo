@@ -152,10 +152,17 @@
       <ng-template pTemplate="body" let-athlete>
         <tr>
           <td>
+            <!-- Name is the canonical affordance to open the athlete
+                 detail (#281) — replaces the dropped folder icon as
+                 the primary "go to this athlete" tap target. Pencil
+                 and trash remain inline for the fast paths. -->
             <div class="athlete-name">
-              <span class="athlete-name__text">
-                {{ athlete.first_name }} {{ athlete.last_name }}
-              </span>
+              <a
+                class="athlete-name__text"
+                [routerLink]="['/dashboard/athletes', athlete.id]"
+                data-cy="athlete-name-link"
+                >{{ athlete.first_name }} {{ athlete.last_name }}</a
+              >
               <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
             </div>
           </td>
@@ -198,17 +205,10 @@
             </td>
           }
           <td class="athlete-actions">
-            <p-button
-              icon="pi pi-folder"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              (onClick)="goToDocuments(athlete)"
-              [ariaLabel]="'Documents of ' + athlete.first_name + ' ' + athlete.last_name"
-              pTooltip="Documents"
-              tooltipPosition="left"
-              data-cy="documents-btn"
-            />
+            <!-- Folder icon dropped (#281) — was a redundant route into
+                 the detail (default tab is Documents anyway) and broke
+                 self-evident UI per Krug. Pencil + trash kept as the
+                 fast paths to "edit" and "delete this athlete". -->
             <p-button
               icon="pi pi-pencil"
               severity="secondary"
@@ -218,6 +218,7 @@
               [ariaLabel]="'Edit ' + athlete.first_name + ' ' + athlete.last_name"
               pTooltip="Edit"
               tooltipPosition="left"
+              data-cy="edit-btn"
             />
             <p-button
               icon="pi pi-trash"
@@ -235,7 +236,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td [attr.colspan]="hasMonthlyFee() ? 7 : 6" class="empty-message">
+          <td [attr.colspan]="hasMonthlyFee() ? 5 : 4" class="empty-message">
             @if (loading()) {
               <!-- Skeleton rows replace the PrimeNG header-spinner that
                    [showLoader]="false" suppressed. Canon § motion: skeletons
