@@ -13,6 +13,7 @@
     "attendance": "Presenze",
     "profile": "Profilo",
     "whatsNew": "Novità",
+    "feedback": "Invia feedback",
     "signOut": "Esci",
     "privacy": "Privacy"
   },
@@ -104,5 +105,33 @@
     "title": "Pagina non trovata",
     "message": "L'indirizzo non corrisponde a nessuna pagina del sito. Forse è stato spostato o il link è incompleto.",
     "backHome": "Torna alla home"
+  },
+  "feedback": {
+    "title": "Invia feedback",
+    "subtitle": "Hai notato qualcosa che non va, di rotto o che manca? Scrivi qui — il messaggio arriva direttamente al team. La versione attuale dell'app e le info del tuo dispositivo vengono allegate in automatico, così possiamo riprodurre il problema.",
+    "subject": {
+      "label": "Oggetto",
+      "placeholder": "Riassunto breve — es. \"La lista atleti non si ordina\"",
+      "error": "L'oggetto è obbligatorio (da 3 a 100 caratteri)."
+    },
+    "description": {
+      "label": "Descrizione",
+      "placeholder": "Cosa stavi facendo, cos'è successo, e cosa ti aspettavi che succedesse?",
+      "error": "La descrizione è obbligatoria (da 10 a 2000 caratteri)."
+    },
+    "image": {
+      "label": "Allega uno screenshot (opzionale)",
+      "hint": "PNG, JPEG o WEBP. Massimo 5 MB. Una sola immagine per invio.",
+      "remove": "Rimuovi",
+      "errorMime": "Sono accettate solo immagini PNG, JPEG e WEBP.",
+      "errorSize": "Immagine troppo grande. Dimensione massima 5 MB."
+    },
+    "submit": "Invia feedback",
+    "toast": {
+      "successSummary": "Feedback inviato",
+      "successDetail": "Grazie — il tuo messaggio è in viaggio.",
+      "errorSummary": "Invio non riuscito",
+      "errorDetail": "Qualcosa è andato storto durante l'invio del feedback. Riprova."
+    }
   }
 }

@@ -1,0 +1,87 @@
+<section class="feedback-page">
+  <p-toast />
+
+  <header class="feedback-page__header">
+    <h1 class="feedback-page__title">{{ 'feedback.title' | translate }}</h1>
+    <p class="feedback-page__subtitle">{{ 'feedback.subtitle' | translate }}</p>
+  </header>
+
+  <form
+    class="feedback-page__form"
+    [formGroup]="form"
+    (ngSubmit)="submit()"
+    novalidate
+    data-cy="feedback-form"
+  >
+    <label class="feedback-page__field">
+      <span class="feedback-page__label">{{ 'feedback.subject.label' | translate }}</span>
+      <input
+        type="text"
+        pInputText
+        formControlName="subject"
+        [maxlength]="100"
+        [placeholder]="'feedback.subject.placeholder' | translate"
+        data-cy="feedback-subject"
+      />
+      @if (form.controls.subject.invalid && form.controls.subject.touched) {
+        <span class="feedback-page__field-error" data-cy="feedback-subject-error">
+          {{ 'feedback.subject.error' | translate }}
+        </span>
+      }
+    </label>
+
+    <label class="feedback-page__field">
+      <span class="feedback-page__label">{{ 'feedback.description.label' | translate }}</span>
+      <textarea
+        pTextarea
+        formControlName="description"
+        rows="6"
+        [maxlength]="2000"
+        [placeholder]="'feedback.description.placeholder' | translate"
+        data-cy="feedback-description"
+      ></textarea>
+      @if (form.controls.description.invalid && form.controls.description.touched) {
+        <span class="feedback-page__field-error" data-cy="feedback-description-error">
+          {{ 'feedback.description.error' | translate }}
+        </span>
+      }
+    </label>
+
+    <div class="feedback-page__field feedback-page__field--image">
+      <span class="feedback-page__label">{{ 'feedback.image.label' | translate }}</span>
+      <span class="feedback-page__hint">{{ 'feedback.image.hint' | translate }}</span>
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        (change)="onFileSelected($event)"
+        data-cy="feedback-image"
+      />
+      @if (image(); as file) {
+        <div class="feedback-page__image-preview" data-cy="feedback-image-preview">
+          <span>{{ file.name }}</span>
+          <button
+            type="button"
+            class="feedback-page__image-clear"
+            (click)="clearImage()"
+            data-cy="feedback-image-clear"
+          >
+            {{ 'feedback.image.remove' | translate }}
+          </button>
+        </div>
+      }
+      @if (imageError(); as err) {
+        <span class="feedback-page__field-error" data-cy="feedback-image-error">{{ err }}</span>
+      }
+    </div>
+
+    <div class="feedback-page__actions">
+      <p-button
+        type="submit"
+        [label]="'feedback.submit' | translate"
+        [loading]="submitting()"
+        [disabled]="form.invalid || submitting()"
+        data-cy="feedback-submit"
+      />
+    </div>
+  </form>
+</section>
