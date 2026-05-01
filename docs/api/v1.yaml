@@ -1217,10 +1217,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '422':
-          description: Validation failed (missing/short subject or description, oversized or wrong-MIME image).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ValidationError' }
+          $ref: '#/components/responses/ValidationError'
         '429':
           description: Throttle limit hit (5 req/min per user).
           content:
