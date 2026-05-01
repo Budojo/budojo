@@ -31,7 +31,17 @@ run_in_client() {
 
 prettier_fix() {
   echo "── prettier --write ──"
-  run_in_client "npx prettier --write 'src/**/*.{ts,html,scss}' cypress 2>&1 | grep -v unchanged | tail -10"
+  # `grep -v unchanged` returns exit 1 when ALL of prettier's lines are
+  # "unchanged" (the typical clean-tree case). With `set -o pipefail` +
+  # `set -e` upstream that would kill the script even though there's no
+  # actual problem.
+  #
+  # Bare `|| true` would also swallow exit 2 (real grep error: bad regex,
+  # I/O failure, missing input) — Copilot caught this on #299. The
+  # brace-group below promotes ONLY the no-match case (exit 1) to
+  # success; any other non-zero exit still propagates, so a misbehaving
+  # grep keeps failing the gate.
+  run_in_client "npx prettier --write 'src/**/*.{ts,html,scss}' cypress 2>&1 | { grep -v unchanged || [ \$? -eq 1 ]; } | tail -10"
 }
 
 lint() {
