@@ -41,6 +41,25 @@
 
   &__actions {
     text-align: right;
+
+    // Pin every direct child of the actions cell — the icon-only
+    // p-button (when the row is editable) OR the dash placeholder
+    // (when it isn't) — to a uniform 2rem × 2rem inline-flex box.
+    // Without this, the bare text-dash undershoots the button's
+    // intrinsic min-height (small icon-only p-button is ~2rem tall
+    // on the Apple-minimal theme) and rows alternate between two
+    // visibly different heights — exactly the jumpy-grid regression
+    // #317 reported. The selector deliberately catches both
+    // <p-button> and <span class="__dash"> so the cell's content
+    // box stays load-bearing for row height regardless of which
+    // child is rendered.
+    & > * {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      block-size: 2rem;
+      min-inline-size: 2rem;
+    }
   }
 
   &__dash {
