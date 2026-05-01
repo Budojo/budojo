@@ -1,6 +1,6 @@
 name: Post-release main → develop sweep
 
-# Fires when semantic-release publishes a stable tag on `main`. The
+# Fires when semantic-release pushes a stable tag to `main`. The
 # develop ruleset forbids direct pushes (per branch-rulesets.md), so
 # this workflow opens the canonical
 # `chore/sync-main-into-develop-after-vX.Y.Z` PR instead of pushing
@@ -14,45 +14,53 @@ name: Post-release main → develop sweep
 # the workflow itself can't perform. The PR path needs only the
 # default GITHUB_TOKEN's `pull-requests: write` permission.
 #
+# Why `push: tags:` and NOT `release: published`: GitHub Actions
+# refuses to fire downstream workflows on `release.published` events
+# created by `GITHUB_TOKEN` — a documented safeguard against
+# recursive workflow firing. semantic-release publishes via
+# GITHUB_TOKEN, so the `release` trigger never fires in practice.
+# `push` events on tag refs DO fire under GITHUB_TOKEN, so we trigger
+# off the tag push instead. The tag-name glob filter `v*.*.*` plus
+# the `!v*-beta*` exclusion gives us the same "stable tags only"
+# guard the previous `if:` provided. Caught on the v1.10.0 release.
+#
 # Sweep merge style: per memory `project_release_merge_style.md`, the
 # main→develop sweep MUST use "Create a merge commit" (NOT squash).
 # Squash erases the parent linkage and breaks downstream merge
 # bookkeeping. The user picks the merge style at click time; the PR
 # body reminds them.
+#
+# Repo setting prerequisite: "Allow GitHub Actions to create and
+# approve pull requests" must be enabled in
+# Settings → Actions → General → Workflow permissions. Without it,
+# `gh pr create` from this workflow fails with
+# "GitHub Actions is not permitted to create or approve pull
+# requests". Caught on the v1.10.0 release; one-time admin toggle.
 
 on:
-  release:
-    types: [published]
-  # Manual fallback: if the workflow ever fails on the release event
-  # (e.g. transient API hiccup), a maintainer can re-run it from the
-  # Actions tab without having to re-publish the release.
+  push:
+    tags:
+      # Stable tags only. Glob (NOT regex): `*` matches any sequence
+      # of non-`/` chars. `v*.*.*` matches `v1.10.0` and also
+      # `v1.10.0-beta.1`; the second filter line excludes the betas.
+      # Tag protection (configured separately in the repo ruleset)
+      # ensures only main-merged commits can carry these tags, so
+      # we don't need a separate `target_commitish` guard.
+      - 'v*.*.*'
+      - '!v*-beta*'
+  # Manual fallback: re-run from the Actions tab if the push trigger
+  # ever misfires (e.g. tag protection rejects the push and the tag
+  # is created out of band).
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to sweep (e.g. v1.9.0)'
+        description: 'Release tag to sweep (e.g. v1.10.0)'
         required: true
 
 jobs:
   sweep:
     name: 'Open sweep PR'
     runs-on: ubuntu-latest
-    # Only stable releases AND only releases published from main.
-    # - Beta tags (v*-beta.N) live on `develop` and don't trigger a
-    #   sweep — they ARE the develop train. The release.published
-    #   event doesn't pass the prerelease flag through to `if:`
-    #   directly, so we filter on the tag name shape.
-    # - target_commitish guard: defensive against a stable-looking
-    #   tag accidentally published from a feature branch — without
-    #   this, the workflow would happily try to sweep a non-main
-    #   commit into develop. workflow_dispatch bypasses the guard
-    #   (a maintainer running the manual fallback already knows
-    #   what they're doing). Copilot caught this on #309.
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (
-        !contains(github.event.release.tag_name, 'beta') &&
-        github.event.release.target_commitish == 'main'
-      )
     permissions:
       contents: write
       # `--label` and `--assignee` on `gh pr create` go through the
@@ -68,7 +76,9 @@ jobs:
           if [ "${{ github.event_name }}" = 'workflow_dispatch' ]; then
             echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            # On `push: tags`, github.ref_name is the tag name
+            # without the refs/tags/ prefix (e.g. "v1.10.0").
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Checkout the release tag
@@ -91,6 +101,21 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Verify the tag commit is reachable from main
+        # Defense-in-depth on top of the tag-name glob filter. Tag
+        # protection rulesets restrict WHO can create tags, not WHICH
+        # commit they point at — a stable-looking tag accidentally
+        # created on a feature branch would otherwise open a sweep PR
+        # from an unmerged commit. Fail fast in that case so we don't
+        # silently sweep random changes into develop.
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          TAG_SHA="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "$TAG_SHA" origin/main; then
+            echo "::error::Tag commit $TAG_SHA is not an ancestor of origin/main; refusing to sweep."
+            exit 1
+          fi
 
       - name: Cut sweep branch from the tag
         id: branch
@@ -115,14 +140,28 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
           BRANCH: ${{ steps.branch.outputs.branch }}
         run: |
-          # PR body via --body-file (NOT --body / heredoc) per
-          # CLAUDE.md § PR Checklist. The heredoc shape was getting
-          # special-character mangling in practice. Copilot caught
-          # this on #309.
+          # PR body passed to gh pr create via --body-file (NOT
+          # --body "..."), which is the CLAUDE.md-compatible part —
+          # the inline --body shape was getting special-character
+          # mangling in practice. Copilot caught the original mistake
+          # on #309.
+          #
+          # CLAUDE.md's general "never use a bash heredoc" guidance
+          # targets the heredoc-as-arg-to-gh shape (`gh pr create
+          # --body "$(cat <<EOF ... EOF)"`), where the heredoc text
+          # is interpolated through shell quoting. The heredoc HERE
+          # only writes the body to a file; gh reads it back via
+          # --body-file, with no shell-quoting in between. Different
+          # context, different rules.
+          #
+          # The delimiter is intentionally unquoted so `${TAG}`
+          # expands from the env: block above. The markdown backticks
+          # below are escaped (`\`) so bash doesn't try to
+          # command-substitute their content while writing the file.
           cat > /tmp/sweep-body.md <<EOF
           ## What
 
-          Auto-opened by the post-release sweep workflow on \`release: published\` for tag **${TAG}**. Brings the release merge commit from \`main\` back into \`develop\` so semantic-release on the next \`develop\` push reads the right base for the next beta tag.
+          Auto-opened by the post-release sweep workflow on the \`${TAG}\` tag push. Brings the release merge commit from \`main\` back into \`develop\` so semantic-release on the next \`develop\` push reads the right base for the next beta tag.
 
           > **Merge style:** "Create a merge commit" — NOT squash. Squash erases the parent linkage and breaks downstream merge bookkeeping (memory \`project_release_merge_style.md\`).
 
