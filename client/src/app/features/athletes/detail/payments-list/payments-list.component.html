@@ -69,25 +69,31 @@
                 <p-button
                   type="button"
                   icon="pi pi-times"
-                  label="Unmark"
                   severity="secondary"
                   [text]="true"
                   size="small"
                   (onClick)="confirmToggleRow($event, row)"
+                  ariaLabel="Unmark paid"
+                  pTooltip="Unmark paid"
+                  tooltipPosition="left"
                   [attr.data-cy]="'payment-unmark-' + row.month"
                 />
               } @else {
                 <p-button
                   type="button"
                   icon="pi pi-check"
-                  label="Mark paid"
                   severity="primary"
                   [text]="true"
                   size="small"
                   (onClick)="confirmToggleRow($event, row)"
+                  ariaLabel="Mark paid"
+                  pTooltip="Mark paid"
+                  tooltipPosition="left"
                   [attr.data-cy]="'payment-mark-' + row.month"
                 />
               }
+            } @else {
+              <span class="payments-list__dash" aria-hidden="true">—</span>
             }
           </td>
         </tr>
