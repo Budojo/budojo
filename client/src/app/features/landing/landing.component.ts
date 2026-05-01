@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { LanguageService, SupportedLanguage } from '../../core/services/language.service';
@@ -42,7 +42,6 @@ import { LanguageService, SupportedLanguage } from '../../core/services/language
 })
 export class LandingComponent {
   private readonly languageService = inject(LanguageService);
-  protected readonly translateService = inject(TranslateService);
 
   /**
    * Current language for the header toggle. Two-state today (EN/IT) —
