@@ -171,9 +171,33 @@ jobs:
         run: npm run format:check
         working-directory: client
 
-  cypress-e2e:
-    name: "🎭 Cypress E2E"
+  # Cypress is the slowest CI gate; sharding across N runners cuts the
+  # wall-clock from 5-7 min to ~2-3 min. Manual matrix sharding (no
+  # Cypress Cloud account / no $CYPRESS_RECORD_KEY secret needed) —
+  # each shard runs a deterministic subset of the spec list built by
+  # enumerating `cypress/e2e/*.cy.ts` with `find`, sorting, and walking
+  # the array with a bash modulo (i+1) % N == shard % N. Sort-then-modulo
+  # gives a stable mapping that doesn't churn when a spec is added or
+  # renamed: a new spec ends up in the (count % N)-th bucket, the others
+  # shift by at most one slot. Closes #295.
+  #
+  # The required-status-check name (`🎭 Cypress E2E`) is preserved by
+  # the aggregator job below — `cypress-e2e-shard` produces N matrix
+  # checks (`Cypress E2E shard 1` etc.) that the aggregator depends
+  # on, so the develop / main rulesets keep working without any
+  # ruleset-edit coordination.
+  cypress-e2e-shard:
+    name: "Cypress E2E shard ${{ matrix.shard }}"
     runs-on: ubuntu-latest
+    strategy:
+      # Run all shards even if one fails — full visibility on which
+      # specs broke per shard. Sequential failures would mask up to
+      # N-1 other shards' results.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      TOTAL_SHARDS: 4
     steps:
       - uses: actions/checkout@v4
 
@@ -183,6 +207,39 @@ jobs:
           cache: "npm"
           cache-dependency-path: client/package-lock.json
 
+      - name: Compute spec list for this shard
+        id: specs
+        working-directory: client
+        run: |
+          # Sort-then-modulo split. Shard i (1-indexed) gets every
+          # (TOTAL_SHARDS)-th spec starting at i. Stable across renames /
+          # additions modulo a one-slot shift in the bucket of the new
+          # entry.
+          #
+          # `find` instead of `ls *.cy.ts` because GitHub Actions' default
+          # shell carries `-eo pipefail` — an unmatched glob makes `ls`
+          # fail with status 1 and aborts the step before the empty-shard
+          # branch below ever runs. `find` returns 0 on no matches, so the
+          # zero-spec fallback stays reachable.
+          mapfile -t SPECS < <(find cypress/e2e -maxdepth 1 -name '*.cy.ts' -type f | sort)
+          SHARD_SPECS=()
+          for i in "${!SPECS[@]}"; do
+            if [ $(( (i + 1) % TOTAL_SHARDS )) -eq $(( ${{ matrix.shard }} % TOTAL_SHARDS )) ]; then
+              SHARD_SPECS+=("${SPECS[$i]}")
+            fi
+          done
+          # Comma-separated for cypress's --spec arg. Empty fallback
+          # is `cypress/e2e/__none__.cy.ts` which cypress treats as a
+          # no-match; the shard step succeeds with 0 specs. Defensive
+          # only — at TOTAL_SHARDS=4 / 18 specs, every shard gets ≥4.
+          if [ ${#SHARD_SPECS[@]} -eq 0 ]; then
+            echo "spec=cypress/e2e/__none__.cy.ts" >> "$GITHUB_OUTPUT"
+          else
+            echo "spec=$(IFS=,; echo "${SHARD_SPECS[*]}")" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Shard ${{ matrix.shard }} runs:"
+          printf '  %s\n' "${SHARD_SPECS[@]}"
+
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
@@ -191,6 +248,26 @@ jobs:
           wait-on: "http://localhost:4200"
           wait-on-timeout: 120
           browser: chrome
+          spec: ${{ steps.specs.outputs.spec }}
+
+  cypress-e2e:
+    # Aggregator — preserves the `🎭 Cypress E2E` required-status-check
+    # name so the develop / main rulesets don't need editing. Fails if
+    # any shard failed (`needs.<job>.result` aggregates matrix
+    # outcomes via the `success / failure / cancelled / skipped`
+    # rollup).
+    name: "🎭 Cypress E2E"
+    needs: [cypress-e2e-shard]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all Cypress shards passed
+        run: |
+          if [ "${{ needs.cypress-e2e-shard.result }}" != "success" ]; then
+            echo "::error::At least one Cypress shard failed (rollup: ${{ needs.cypress-e2e-shard.result }})"
+            exit 1
+          fi
+          echo "All Cypress shards passed."
 
   openapi-lint:
     name: "🔬 OpenAPI Lint (Spectral)"
