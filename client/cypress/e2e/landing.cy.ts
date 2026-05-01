@@ -38,16 +38,18 @@ describe('Landing page (#330)', () => {
   });
 
   it('the header Sign-up button routes to /auth/register', () => {
-    cy.get('[data-cy="landing-signup"]')
-      .should('be.visible')
-      .find('a, button')
-      .should('have.attr', 'href', '/auth/register');
+    // <p-button [routerLink]> renders a programmatic-navigation
+    // <button> (not an <a>), so we click and verify the URL change
+    // rather than asserting `href`. The cypress-side equivalent of
+    // the unit test that verifies the data-cy hook + label.
+    cy.intercept('POST', '/api/v1/auth/login', { statusCode: 401 }).as('noLogin');
+    cy.get('[data-cy="landing-signup"]').should('be.visible').click();
+    cy.location('pathname').should('eq', '/auth/register');
   });
 
   it('the hero CTA also routes to /auth/register', () => {
-    cy.get('[data-cy="landing-hero-cta"]')
-      .find('a, button')
-      .should('have.attr', 'href', '/auth/register');
+    cy.get('[data-cy="landing-hero-cta"]').should('be.visible').click();
+    cy.location('pathname').should('eq', '/auth/register');
   });
 
   it('the footer carries Privacy + Sub-processors links + GitHub', () => {
