@@ -1,0 +1,84 @@
+// Feedback page (#311). Mirrors the prose-page chrome (max-width
+// var(--budojo-page-prose-max), centered) — text-heavy form, not a
+// dashboard table. Field rhythm follows the academy / athlete forms:
+// label above input, hint below label, error below input.
+
+.feedback-page {
+  max-width: var(--budojo-page-prose-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-block: 1rem;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: var(--p-text-color-secondary);
+    line-height: 1.5;
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-color);
+  }
+
+  &__hint {
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
+  }
+
+  &__field-error {
+    font-size: 0.8125rem;
+    color: var(--p-red-500);
+  }
+
+  &__image-preview {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--p-surface-100);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  &__image-clear {
+    background: none;
+    border: none;
+    color: var(--p-primary-color);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    padding: 0;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+}

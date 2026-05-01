@@ -149,6 +149,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),
       },
+      {
+        // In-app feedback (#311). Sits inside the dashboard shell so
+        // the sidebar context (academy name, version footer) is
+        // visible while the user composes — useful when the feedback
+        // refers to "I was on this academy when..."; also keeps the
+        // route behind the auth + has-academy guards by default.
+        path: 'feedback',
+        loadComponent: () =>
+          import('./features/feedback/feedback.component').then((m) => m.FeedbackComponent),
+      },
     ],
   },
   // Public legal pages (#225). No auth — prospects, the Garante, and
