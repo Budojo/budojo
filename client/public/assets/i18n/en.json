@@ -328,6 +328,11 @@
         "address": "Address"
       },
       "linksAria": "Academy contact links",
+      "links": {
+        "website": "Website",
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      },
       "permalinkHint": "Permalink stays stable across renames. Change the name anytime; the permalink never moves.",
       "toast": {
         "unsupportedSummary": "Unsupported file",

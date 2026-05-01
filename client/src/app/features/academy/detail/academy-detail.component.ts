@@ -14,6 +14,7 @@ import { Toast } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
+import { LanguageService } from '../../../core/services/language.service';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
@@ -40,6 +41,7 @@ export class AcademyDetailComponent {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
 
   @ViewChild('logoInput') private logoInput?: ElementRef<HTMLInputElement>;
 
@@ -81,13 +83,41 @@ export class AcademyDetailComponent {
    * form-layer validator restricts input to http/https, so the SPA
    * doesn't sanitize again here.
    */
-  protected readonly contactLinks = computed<{ icon: string; url: string; label: string }[]>(() => {
+  /**
+   * Each link carries a stable `id` (used by `data-cy` and as a tracking
+   * key) plus the translated `label` for `aria-label` / `title` / sr-only
+   * text. The labels come from `academy.detail.links.*` so they flip
+   * with the active language; `currentLang()` is read so this computed
+   * recomputes on toggle (Copilot review on PR #340).
+   */
+  protected readonly contactLinks = computed<
+    { id: string; icon: string; url: string; label: string }[]
+  >(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
     const a = this.academy();
     if (!a) return [];
-    const links: { icon: string; url: string; label: string }[] = [];
-    if (a.website) links.push({ icon: 'pi pi-globe', url: a.website, label: 'Website' });
-    if (a.facebook) links.push({ icon: 'pi pi-facebook', url: a.facebook, label: 'Facebook' });
-    if (a.instagram) links.push({ icon: 'pi pi-instagram', url: a.instagram, label: 'Instagram' });
+    const links: { id: string; icon: string; url: string; label: string }[] = [];
+    if (a.website)
+      links.push({
+        id: 'website',
+        icon: 'pi pi-globe',
+        url: a.website,
+        label: this.translate.instant('academy.detail.links.website'),
+      });
+    if (a.facebook)
+      links.push({
+        id: 'facebook',
+        icon: 'pi pi-facebook',
+        url: a.facebook,
+        label: this.translate.instant('academy.detail.links.facebook'),
+      });
+    if (a.instagram)
+      links.push({
+        id: 'instagram',
+        icon: 'pi pi-instagram',
+        url: a.instagram,
+        label: this.translate.instant('academy.detail.links.instagram'),
+      });
     return links;
   });
 

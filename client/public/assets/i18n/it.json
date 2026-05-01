@@ -328,6 +328,11 @@
         "address": "Indirizzo"
       },
       "linksAria": "Link di contatto dell'academy",
+      "links": {
+        "website": "Sito web",
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      },
       "permalinkHint": "Il permalink rimane stabile anche se rinomini. Cambia il nome quando vuoi: il permalink non si sposta.",
       "toast": {
         "unsupportedSummary": "Tipo di file non supportato",

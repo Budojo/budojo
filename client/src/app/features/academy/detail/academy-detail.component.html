@@ -114,7 +114,7 @@
             assistive tech and hover discovery.
           -->
           <ul class="contact-links" [attr.aria-label]="'academy.detail.linksAria' | translate">
-            @for (link of links; track link.label) {
+            @for (link of links; track link.id) {
               <li>
                 <a
                   class="contact-links__chip"
@@ -123,7 +123,7 @@
                   rel="noopener noreferrer"
                   [attr.aria-label]="link.label"
                   [attr.title]="link.label"
-                  [attr.data-cy]="'academy-link-' + link.label.toLowerCase()"
+                  [attr.data-cy]="'academy-link-' + link.id"
                 >
                   <i [class]="link.icon" aria-hidden="true"></i>
                   <span class="contact-links__sr">{{ link.label }}</span>
