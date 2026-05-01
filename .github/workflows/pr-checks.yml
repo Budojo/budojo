@@ -174,11 +174,12 @@ jobs:
   # Cypress is the slowest CI gate; sharding across N runners cuts the
   # wall-clock from 5-7 min to ~2-3 min. Manual matrix sharding (no
   # Cypress Cloud account / no $CYPRESS_RECORD_KEY secret needed) —
-  # each shard runs a deterministic subset of the spec list via the
-  # `--spec` glob built from `ls cypress/e2e/*.cy.ts | awk NR % N == k`.
-  # Sort-then-modulo gives a stable mapping that doesn't churn when a
-  # spec is added or renamed: a new spec ends up in the (count % N)-th
-  # bucket, the others shift by at most one slot. Closes #295.
+  # each shard runs a deterministic subset of the spec list built by
+  # enumerating `cypress/e2e/*.cy.ts` with `find`, sorting, and walking
+  # the array with a bash modulo (i+1) % N == shard % N. Sort-then-modulo
+  # gives a stable mapping that doesn't churn when a spec is added or
+  # renamed: a new spec ends up in the (count % N)-th bucket, the others
+  # shift by at most one slot. Closes #295.
   #
   # The required-status-check name (`🎭 Cypress E2E`) is preserved by
   # the aggregator job below — `cypress-e2e-shard` produces N matrix
@@ -214,7 +215,13 @@ jobs:
           # (TOTAL_SHARDS)-th spec starting at i. Stable across renames /
           # additions modulo a one-slot shift in the bucket of the new
           # entry.
-          mapfile -t SPECS < <(ls cypress/e2e/*.cy.ts | sort)
+          #
+          # `find` instead of `ls *.cy.ts` because GitHub Actions' default
+          # shell carries `-eo pipefail` — an unmatched glob makes `ls`
+          # fail with status 1 and aborts the step before the empty-shard
+          # branch below ever runs. `find` returns 0 on no matches, so the
+          # zero-spec fallback stays reachable.
+          mapfile -t SPECS < <(find cypress/e2e -maxdepth 1 -name '*.cy.ts' -type f | sort)
           SHARD_SPECS=()
           for i in "${!SPECS[@]}"; do
             if [ $(( (i + 1) % TOTAL_SHARDS )) -eq $(( ${{ matrix.shard }} % TOTAL_SHARDS )) ]; then
