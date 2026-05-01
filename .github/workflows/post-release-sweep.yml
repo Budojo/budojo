@@ -36,22 +36,32 @@ jobs:
   sweep:
     name: 'Open sweep PR'
     runs-on: ubuntu-latest
-    # Only stable releases. Beta tags (v*-beta.N) live on `develop`
-    # and don't trigger a sweep — they ARE the develop train.
-    # `release.published` doesn't pass the prerelease flag through to
-    # `if:` directly, so we filter on the tag name shape.
-    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.release.tag_name, 'beta') }}
+    # Only stable releases AND only releases published from main.
+    # - Beta tags (v*-beta.N) live on `develop` and don't trigger a
+    #   sweep — they ARE the develop train. The release.published
+    #   event doesn't pass the prerelease flag through to `if:`
+    #   directly, so we filter on the tag name shape.
+    # - target_commitish guard: defensive against a stable-looking
+    #   tag accidentally published from a feature branch — without
+    #   this, the workflow would happily try to sweep a non-main
+    #   commit into develop. workflow_dispatch bypasses the guard
+    #   (a maintainer running the manual fallback already knows
+    #   what they're doing). Copilot caught this on #309.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (
+        !contains(github.event.release.tag_name, 'beta') &&
+        github.event.release.target_commitish == 'main'
+      )
     permissions:
       contents: write
+      # `--label` and `--assignee` on `gh pr create` go through the
+      # Issues API, so the workflow needs `issues: write` even though
+      # it's operating on a PR. Copilot caught the missing scope on
+      # #309.
+      issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-          ref: main
-          persist-credentials: true
-
       - name: Resolve tag
         id: tag
         run: |
@@ -61,24 +71,42 @@ jobs:
             echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Checkout the release tag
+        # Cut the sweep branch from the EXACT tag commit, not from
+        # the current main HEAD. If main advances after the tag is
+        # published (a hotfix lands while the workflow is still
+        # queued), checking out main HEAD would carry those extra
+        # commits into the sweep PR — title says "v1.9.0" but the
+        # diff includes v1.9.1 changes. Tag checkout keeps the
+        # sweep deterministic to ${TAG}. Copilot caught this on
+        # #309.
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ steps.tag.outputs.tag }}
+          persist-credentials: true
+
       - name: Configure git
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-      - name: Cut sweep branch from main
+      - name: Cut sweep branch from the tag
         id: branch
         env:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           BRANCH="chore/sync-main-into-develop-after-${TAG}"
-          # Idempotent — if a previous run created the branch, delete
-          # it remotely first so we always push a fresh sweep state.
-          # The local checkout is a fresh clone via actions/checkout
-          # so no local branch pre-exists.
-          git push origin --delete "$BRANCH" || true
           git checkout -b "$BRANCH"
-          git push -u origin "$BRANCH"
+          # Idempotent — re-runs (workflow_dispatch fallback after a
+          # transient failure) force-update the existing remote branch
+          # instead of deleting it. Deletion under an open PR can
+          # mark the PR as having a deleted head (mergeability
+          # affected); --force-with-lease keeps the PR alive and
+          # refreshes the branch in place. Copilot caught this on
+          # #309.
+          git push --force-with-lease -u origin "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Open sweep PR
@@ -87,12 +115,11 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
           BRANCH: ${{ steps.branch.outputs.branch }}
         run: |
-          # If a PR for this branch already exists (re-run after a
-          # transient failure), update its body instead of creating a
-          # duplicate. gh handles the "no PR exists" branch implicitly.
-          EXISTING=$(gh pr list --head "$BRANCH" --base develop --state open --json number --jq '.[0].number // empty')
-
-          BODY=$(cat <<EOF
+          # PR body via --body-file (NOT --body / heredoc) per
+          # CLAUDE.md § PR Checklist. The heredoc shape was getting
+          # special-character mangling in practice. Copilot caught
+          # this on #309.
+          cat > /tmp/sweep-body.md <<EOF
           ## What
 
           Auto-opened by the post-release sweep workflow on \`release: published\` for tag **${TAG}**. Brings the release merge commit from \`main\` back into \`develop\` so semantic-release on the next \`develop\` push reads the right base for the next beta tag.
@@ -109,24 +136,32 @@ jobs:
 
           The release merge commit from main + any commits ahead of develop (should be just the merge commit on a clean release flow).
 
+          ## Manual follow-up
+
+          - Add to project board with \`./.claude/scripts/board-set.sh <PR-N> in-progress\` — the workflow does NOT do this today (project-board GraphQL needs hardcoded IDs that live in the helper script, not in the workflow). One-line manual step.
+
           ## References
 
           - Release tag: [${TAG}](https://github.com/m-bonanno/budojo/releases/tag/${TAG})
           - Workflow: \`.github/workflows/post-release-sweep.yml\`
           - Originating issue: #294
           EOF
-          )
+
+          # If a PR for this branch already exists (re-run after a
+          # transient failure), update its body instead of creating a
+          # duplicate.
+          EXISTING=$(gh pr list --head "$BRANCH" --base develop --state open --json number --jq '.[0].number // empty')
 
           if [ -n "$EXISTING" ]; then
             echo "Updating existing PR #${EXISTING}"
-            gh pr edit "$EXISTING" --body "$BODY"
+            gh pr edit "$EXISTING" --body-file /tmp/sweep-body.md
           else
             echo "Creating new sweep PR"
             gh pr create \
               --base develop \
               --head "$BRANCH" \
               --title "chore: sweep ${TAG} release merge commit from main into develop" \
-              --body "$BODY" \
+              --body-file /tmp/sweep-body.md \
               --label "🔧 maintenance" \
               --assignee m-bonanno
           fi
