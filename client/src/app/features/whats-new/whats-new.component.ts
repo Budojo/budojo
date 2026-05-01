@@ -67,13 +67,13 @@ export class WhatsNewComponent {
         {
           heading: '🛟 Chasing payments',
           bullets: [
-            '"Unpaid this month" widget on the dashboard home. New tile on the dashboard, between the expiring-documents and the monthly-attendance widgets. Shows you a count of athletes who haven\'t paid the current month yet, plus the first 5 names as direct links to each athlete\'s Payments tab. Tap "View all" to land on the athletes list filtered to the unpaid set. The widget appears only after the 16th of the month — first half is "still early"; second half is "actually chase". Hidden completely if the academy doesn\'t track payments through Budojo (no monthly fee configured = no widget).',
+            '"Unpaid this month" widget on the dashboard home. New tile on the dashboard, alongside the expiring-documents tile and the monthly-attendance tile. Shows you a count of athletes who haven\'t paid the current month yet, plus the first 5 names as direct links to each athlete\'s Payments tab. Tap "View all" to land on the athletes list filtered to the unpaid set. The widget appears from the 16th of the month onwards — first half is "still early"; second half is "actually chase". Hidden completely if the academy doesn\'t track payments through Budojo (no monthly fee configured = no widget).',
           ],
         },
         {
           heading: '🐛 Cosmetic polishes',
           bullets: [
-            "Payments tab rows line up at last. On each athlete's Payments tab, the row heights now stay uniform across paid, current-month, and future-month rows — no more visible jump between rows that carry an icon button and rows that show a dash placeholder. The table reads as a clean grid.",
+            'Payments tab — finishing the row-height fix from v1.10.0. v1.10.0 promised the Payments tab rows would line up; in practice the future-month rows (the ones with a dash placeholder) still rendered visibly shorter than the rows with an icon button. The dash placeholder now matches the icon-button height exactly, so paid / current-month / future-month rows are all the same height and the table reads as a clean grid.',
             'Date pickers read as one control. Every form field with a calendar icon (Date of birth, Joined, Document expires_at / issued_at, daily attendance) now renders as a single rounded outer shell instead of two visually-detached pieces. Hover and focus light up the whole composite, not just the input.',
           ],
         },
