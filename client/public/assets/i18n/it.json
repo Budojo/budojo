@@ -298,5 +298,74 @@
       "countOther": "{{count}} documenti da controllare",
       "countHint": "Scaduti o in scadenza entro 30 giorni"
     }
+  },
+  "belts": {
+    "all": "Tutte le cinture",
+    "grey": "Grigia (bambini)",
+    "yellow": "Gialla (bambini)",
+    "orange": "Arancione (bambini)",
+    "green": "Verde (bambini)",
+    "white": "Bianca",
+    "blue": "Blu",
+    "purple": "Viola",
+    "brown": "Marrone",
+    "black": "Nera",
+    "redAndBlack": "Rossa e nera (7°)",
+    "redAndWhite": "Rossa e bianca (8°)",
+    "red": "Rossa (9°/10°)"
+  },
+  "attendance": {
+    "daily": {
+      "eyebrow": "Presenze",
+      "title": "Check-in di oggi",
+      "searchPlaceholder": "Cerca per nome",
+      "beltPlaceholder": "Cintura",
+      "table": {
+        "fullName": "Nome e cognome",
+        "belt": "Cintura",
+        "presentAria": "Presente"
+      },
+      "empty": {
+        "filtered": "Nessun atleta attivo corrisponde ai filtri.",
+        "noAthletes": "Nessun atleta attivo ancora — aggiungine uno dalla pagina Atleti."
+      },
+      "paginationHint": "Mostrati {{shown}} di {{total}} atleti attivi. La paginazione arriva nel follow-up M4.2.5.",
+      "undo": "Annulla",
+      "toast": {
+        "loadAthletesError": "Impossibile caricare la lista atleti.",
+        "loadAttendanceError": "Impossibile caricare le presenze di oggi.",
+        "markedPresent": "{{name}} segnato presente.",
+        "unmarked": "{{name}} non più segnato.",
+        "markError": "Impossibile segnare {{name}} come presente. Riprova.",
+        "unmarkError": "Impossibile rimuovere il segno per {{name}}. Riprova."
+      }
+    },
+    "summary": {
+      "eyebrow": "Riepilogo presenze",
+      "daysOne": "{{count}} giorno di allenamento",
+      "daysOther": "{{count}} giorni di allenamento",
+      "athletesOne": "{{count}} atleta",
+      "athletesOther": "{{count}} atleti",
+      "prevAria": "Mese precedente",
+      "nextAria": "Mese successivo",
+      "filterPlaceholder": "Filtra per nome",
+      "filterAria": "Filtra atleti per nome",
+      "error": "Impossibile caricare questo mese. Riprova.",
+      "empty": {
+        "filtered": "Nessun atleta corrisponde al filtro.",
+        "none": "Nessuna presenza registrata questo mese."
+      },
+      "table": {
+        "athlete": "Atleta",
+        "days": "Giorni"
+      }
+    },
+    "summaryWidget": {
+      "eyebrowPrefix": "Presenze",
+      "errorTitle": "Impossibile verificare",
+      "athletesPerSession": "atleti / sessione",
+      "viewAll": "Vedi tutto →",
+      "empty": "Nessuna presenza registrata questo mese."
+    }
   }
 }

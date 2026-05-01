@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AcademyService } from '../../../core/services/academy.service';
 import { Athlete } from '../../../core/services/athlete.service';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { DailyAttendanceComponent } from './daily-attendance.component';
 
 const ACADEMY_BASE = {
@@ -42,7 +43,12 @@ interface Harness {
 function setup(): Harness {
   TestBed.configureTestingModule({
     imports: [DailyAttendanceComponent],
-    providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideRouter([]),
+      ...provideI18nTesting(),
+    ],
   });
 
   const fixture = TestBed.createComponent(DailyAttendanceComponent);

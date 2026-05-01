@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { MonthlySummaryWidgetComponent } from './monthly-summary-widget.component';
 import { AcademyService } from '../../../core/services/academy.service';
 
@@ -21,7 +22,12 @@ function makeRow(
 function setupTestBed(): HttpTestingController {
   TestBed.configureTestingModule({
     imports: [MonthlySummaryWidgetComponent],
-    providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideRouter([]),
+      ...provideI18nTesting(),
+    ],
   });
   return TestBed.inject(HttpTestingController);
 }

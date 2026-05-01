@@ -19,7 +19,9 @@ import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Toast } from 'primeng/toast';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
+import { LanguageService } from '../../../core/services/language.service';
 import {
   Athlete,
   AthleteService,
@@ -64,6 +66,7 @@ function toLocalDateString(d: Date): string {
     SkeletonModule,
     TableModule,
     Toast,
+    TranslatePipe,
     BeltBadgeComponent,
   ],
   providers: [MessageService],
@@ -75,6 +78,8 @@ export class DailyAttendanceComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
   private readonly academyService = inject(AcademyService);
   private readonly messageService = inject(MessageService);
+  private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
 
   /**
    * Weekdays the academy does NOT train on, expressed as Carbon-compatible
@@ -169,22 +174,34 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private readonly searchInputSubject = new Subject<string>();
 
-  // Order = IBJJF rank (kids → adults → senior coral/red).
-  protected readonly beltOptions: SelectOption<Belt>[] = [
-    { label: 'All belts', value: '' },
-    { label: 'Grey (kids)', value: 'grey' },
-    { label: 'Yellow (kids)', value: 'yellow' },
-    { label: 'Orange (kids)', value: 'orange' },
-    { label: 'Green (kids)', value: 'green' },
-    { label: 'White', value: 'white' },
-    { label: 'Blue', value: 'blue' },
-    { label: 'Purple', value: 'purple' },
-    { label: 'Brown', value: 'brown' },
-    { label: 'Black', value: 'black' },
-    { label: 'Red & black (7°)', value: 'red-and-black' },
-    { label: 'Red & white (8°)', value: 'red-and-white' },
-    { label: 'Red (9°/10°)', value: 'red' },
+  // Static map (Belt → translation key) — keeps the keys greppable and
+  // forces a TS error if Belt expands. Order = IBJJF rank (kids →
+  // adults → senior coral/red). The reactive `beltOptions` computed
+  // below re-renders when the user toggles language via the sidebar
+  // (LanguageService.currentLang signal dependency).
+  private readonly beltKeyOrder: { value: Belt | ''; key: string }[] = [
+    { value: '', key: 'belts.all' },
+    { value: 'grey', key: 'belts.grey' },
+    { value: 'yellow', key: 'belts.yellow' },
+    { value: 'orange', key: 'belts.orange' },
+    { value: 'green', key: 'belts.green' },
+    { value: 'white', key: 'belts.white' },
+    { value: 'blue', key: 'belts.blue' },
+    { value: 'purple', key: 'belts.purple' },
+    { value: 'brown', key: 'belts.brown' },
+    { value: 'black', key: 'belts.black' },
+    { value: 'red-and-black', key: 'belts.redAndBlack' },
+    { value: 'red-and-white', key: 'belts.redAndWhite' },
+    { value: 'red', key: 'belts.red' },
   ];
+
+  protected readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    return this.beltKeyOrder.map(({ value, key }) => ({
+      label: this.translate.instant(key),
+      value,
+    }));
+  });
 
   constructor() {
     this.searchInputSubject
@@ -320,7 +337,7 @@ export class DailyAttendanceComponent implements OnInit {
         },
         error: () => {
           if (epoch === this.loadEpoch) {
-            this.toastError('Could not load the athletes list.');
+            this.toastError(this.translate.instant('attendance.daily.toast.loadAthletesError'));
           }
           settle();
         },
@@ -349,7 +366,7 @@ export class DailyAttendanceComponent implements OnInit {
       },
       error: () => {
         if (epoch === this.loadEpoch) {
-          this.toastError("Could not load today's attendance.");
+          this.toastError(this.translate.instant('attendance.daily.toast.loadAttendanceError'));
         }
         settle();
       },
@@ -404,8 +421,11 @@ export class DailyAttendanceComponent implements OnInit {
         if (fresh) {
           this.optimisticAdd(athlete.id, fresh.id);
           if (!options.silent) {
-            this.toastUndo(`${athlete.first_name} ${athlete.last_name} marked present.`, () =>
-              this.unmark(athlete, fresh.id, { silent: true }),
+            this.toastUndo(
+              this.translate.instant('attendance.daily.toast.markedPresent', {
+                name: `${athlete.first_name} ${athlete.last_name}`,
+              }),
+              () => this.unmark(athlete, fresh.id, { silent: true }),
             );
           }
         }
@@ -414,7 +434,11 @@ export class DailyAttendanceComponent implements OnInit {
       error: () => {
         this.optimisticRemove(athlete.id);
         this.markInflight(athlete.id, false);
-        this.toastError(`Couldn't mark ${athlete.first_name} present. Try again.`);
+        this.toastError(
+          this.translate.instant('attendance.daily.toast.markError', {
+            name: athlete.first_name,
+          }),
+        );
       },
     });
   }
@@ -431,8 +455,11 @@ export class DailyAttendanceComponent implements OnInit {
     this.attendanceService.delete(recordId).subscribe({
       next: () => {
         if (!options.silent) {
-          this.toastUndo(`${athlete.first_name} ${athlete.last_name} un-marked.`, () =>
-            this.mark(athlete, { silent: true }),
+          this.toastUndo(
+            this.translate.instant('attendance.daily.toast.unmarked', {
+              name: `${athlete.first_name} ${athlete.last_name}`,
+            }),
+            () => this.mark(athlete, { silent: true }),
           );
         }
         this.markInflight(athlete.id, false);
@@ -440,7 +467,11 @@ export class DailyAttendanceComponent implements OnInit {
       error: () => {
         this.optimisticAdd(athlete.id, recordId);
         this.markInflight(athlete.id, false);
-        this.toastError(`Couldn't un-mark ${athlete.first_name}. Try again.`);
+        this.toastError(
+          this.translate.instant('attendance.daily.toast.unmarkError', {
+            name: athlete.first_name,
+          }),
+        );
       },
     });
   }
