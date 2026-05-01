@@ -4,14 +4,18 @@
   <header class="expiring-page__header">
     <a routerLink="/dashboard/athletes" class="expiring-page__back" data-cy="back-to-athletes">
       <i class="pi pi-chevron-left" aria-hidden="true"></i>
-      <span>Athletes</span>
+      <span>{{ 'documents.expiringList.backToAthletes' | translate }}</span>
     </a>
     <div class="expiring-page__title-area">
-      <h1 class="expiring-page__title">Expiring documents</h1>
+      <h1 class="expiring-page__title">{{ 'documents.expiringList.title' | translate }}</h1>
       @if (!loading() && !errored()) {
         <span class="expiring-page__count">
-          {{ count() }}
-          {{ count() === 1 ? 'document' : 'documents' }} expired or expiring within 30 days
+          {{
+            (count() === 1
+              ? 'documents.expiringList.countOne'
+              : 'documents.expiringList.countOther'
+            ) | translate: { count: count() }
+          }}
         </span>
       }
     </div>
@@ -20,8 +24,12 @@
   @if (errored()) {
     <div class="expiring-page__empty-state" data-cy="expiring-list-error">
       <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-      <p class="expiring-page__empty-title">Couldn't load expiring documents.</p>
-      <p class="expiring-page__empty-hint">Refresh the page to try again.</p>
+      <p class="expiring-page__empty-title">
+        {{ 'documents.expiringList.error.title' | translate }}
+      </p>
+      <p class="expiring-page__empty-hint">
+        {{ 'documents.expiringList.error.hint' | translate }}
+      </p>
     </div>
   } @else {
     <p-table
@@ -33,10 +41,10 @@
     >
       <ng-template pTemplate="header">
         <tr>
-          <th>Athlete</th>
-          <th>Type</th>
-          <th>Expires</th>
-          <th>Status</th>
+          <th>{{ 'documents.expiringList.table.athlete' | translate }}</th>
+          <th>{{ 'documents.expiringList.table.type' | translate }}</th>
+          <th>{{ 'documents.expiringList.table.expires' | translate }}</th>
+          <th>{{ 'documents.expiringList.table.status' | translate }}</th>
           <th style="width: 4rem"></th>
         </tr>
       </ng-template>
@@ -52,7 +60,7 @@
               {{ athleteNameFor(doc) }}
             </a>
           </td>
-          <td>{{ labelFor(doc) }}</td>
+          <td>{{ typeKeyFor(doc) | translate }}</td>
           <td>{{ doc.expires_at ?? '—' }}</td>
           <td>
             <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
@@ -64,8 +72,10 @@
               [text]="true"
               size="small"
               (onClick)="download(doc)"
-              [ariaLabel]="'Download ' + doc.original_name"
-              pTooltip="Download"
+              [ariaLabel]="
+                'documents.expiringList.downloadAria' | translate: { filename: doc.original_name }
+              "
+              [pTooltip]="'documents.expiringList.download' | translate"
               tooltipPosition="left"
               data-cy="download-btn"
             />
@@ -85,9 +95,11 @@
             } @else {
               <div class="expiring-page__empty-state" data-cy="expiring-list-empty">
                 <i class="pi pi-check-circle" aria-hidden="true"></i>
-                <p class="expiring-page__empty-title">All documents up to date.</p>
+                <p class="expiring-page__empty-title">
+                  {{ 'documents.expiringList.empty.title' | translate }}
+                </p>
                 <p class="expiring-page__empty-hint">
-                  No expirations in the next 30 days. Check back later.
+                  {{ 'documents.expiringList.empty.hint' | translate }}
                 </p>
               </div>
             }

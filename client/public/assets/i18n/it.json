@@ -251,5 +251,52 @@
       "errorSummary": "Invio non riuscito",
       "errorDetail": "Riprova — se il problema persiste, contatta l'assistenza."
     }
+  },
+  "documents": {
+    "types": {
+      "id_card": "Carta d'identità",
+      "medical_certificate": "Certificato medico",
+      "insurance": "Assicurazione",
+      "other": "Altro"
+    },
+    "expiringList": {
+      "title": "Documenti in scadenza",
+      "backToAthletes": "Atleti",
+      "countOne": "{{count}} documento scaduto o in scadenza entro 30 giorni",
+      "countOther": "{{count}} documenti scaduti o in scadenza entro 30 giorni",
+      "table": {
+        "athlete": "Atleta",
+        "type": "Tipo",
+        "expires": "Scadenza",
+        "status": "Stato"
+      },
+      "download": "Scarica",
+      "downloadAria": "Scarica {{filename}}",
+      "error": {
+        "title": "Impossibile caricare i documenti in scadenza.",
+        "hint": "Aggiorna la pagina per riprovare."
+      },
+      "empty": {
+        "title": "Tutti i documenti sono aggiornati.",
+        "hint": "Nessuna scadenza nei prossimi 30 giorni. Ricontrolla più avanti."
+      },
+      "toast": {
+        "errorSummary": "Download non riuscito",
+        "errorDetail": "Impossibile scaricare {{filename}}. Riprova."
+      }
+    },
+    "expiringWidget": {
+      "error": {
+        "title": "Impossibile verificare i documenti in scadenza",
+        "hint": "Aggiorna la pagina per riprovare"
+      },
+      "empty": {
+        "title": "Tutti i documenti sono aggiornati",
+        "hint": "Nessuna scadenza nei prossimi 30 giorni"
+      },
+      "countOne": "{{count}} documento da controllare",
+      "countOther": "{{count}} documenti da controllare",
+      "countHint": "Scaduti o in scadenza entro 30 giorni"
+    }
   }
 }

@@ -251,5 +251,52 @@
       "errorSummary": "Couldn’t send email",
       "errorDetail": "Please try again — if it persists, contact support."
     }
+  },
+  "documents": {
+    "types": {
+      "id_card": "ID card",
+      "medical_certificate": "Medical certificate",
+      "insurance": "Insurance",
+      "other": "Other"
+    },
+    "expiringList": {
+      "title": "Expiring documents",
+      "backToAthletes": "Athletes",
+      "countOne": "{{count}} document expired or expiring within 30 days",
+      "countOther": "{{count}} documents expired or expiring within 30 days",
+      "table": {
+        "athlete": "Athlete",
+        "type": "Type",
+        "expires": "Expires",
+        "status": "Status"
+      },
+      "download": "Download",
+      "downloadAria": "Download {{filename}}",
+      "error": {
+        "title": "Couldn’t load expiring documents.",
+        "hint": "Refresh the page to try again."
+      },
+      "empty": {
+        "title": "All documents up to date.",
+        "hint": "No expirations in the next 30 days. Check back later."
+      },
+      "toast": {
+        "errorSummary": "Download failed",
+        "errorDetail": "Could not download {{filename}}. Please try again."
+      }
+    },
+    "expiringWidget": {
+      "error": {
+        "title": "Couldn’t check expiring documents",
+        "hint": "Refresh the page to try again"
+      },
+      "empty": {
+        "title": "All documents up to date",
+        "hint": "No expirations in the next 30 days"
+      },
+      "countOne": "{{count}} document needs attention",
+      "countOther": "{{count}} documents need attention",
+      "countHint": "Expired or expiring within 30 days"
+    }
   }
 }
