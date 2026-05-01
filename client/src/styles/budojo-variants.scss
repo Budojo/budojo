@@ -296,9 +296,85 @@
 .p-inputtext,
 .p-password input,
 .p-select,
-.p-datepicker-input,
 .p-inputnumber-input {
   @extend %budojo-field;
+}
+
+// p-datepicker (with [showIcon]="true") renders as a host wrapper
+// containing an input + a calendar trigger button:
+//
+//   <p-datepicker class="p-datepicker p-component p-inputwrapper">
+//     <input class="p-datepicker-input" />
+//     <button class="p-datepicker-dropdown">…</button>
+//   </p-datepicker>
+//
+// The default Material preset styles input AND button independently,
+// so each one carries its own border + radius and the two read as
+// detached pieces meeting at a visible inner seam — exactly the
+// regression #318 reported.
+//
+// Fix: hoist the field chrome onto the host wrapper and make the
+// input + button transparent inheritors. The wrapper is now the ONE
+// rounded outer rectangle; input + button live INSIDE it without
+// their own radius / border. Focus state targets `:focus-within` on
+// the wrapper so the whole composite lights up as one control.
+//
+// Norman § affordance — a control that LOOKS like one element should
+// BEHAVE like one element. Closes #318.
+.p-datepicker {
+  @extend %budojo-field;
+  display: inline-flex;
+  align-items: stretch;
+  padding: 0;
+
+  // The actual <input> inside the wrapper. Strip its own pill so it
+  // becomes the wrapper's text body.
+  .p-datepicker-input {
+    flex: 1 1 auto;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    min-height: auto;
+    padding: 12px 14px;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    box-shadow: none;
+  }
+
+  // The trigger button. Make it a borderless, flat right-side cap
+  // sharing the wrapper's bg. No own radius (the wrapper carries it),
+  // no own border (a hairline divider on the left would be too busy
+  // for the Apple-minimal canon — the icon alone is signifier enough).
+  .p-datepicker-dropdown {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    color: var(--p-text-color-secondary);
+    padding: 0 12px;
+    cursor: pointer;
+    transition: color 160ms var(--budojo-motion-decelerate);
+
+    &:hover {
+      color: var(--p-text-color);
+      background: transparent;
+    }
+  }
+
+  // Hover / focus / invalid lift to the WRAPPER, not the inner
+  // input — so the affordance reads as a single control.
+  &:hover:not(:focus-within):not(.p-disabled) {
+    background: var(--p-form-field-filled-hover-background);
+  }
+  &:focus-within {
+    background: var(--p-form-field-filled-focus-background);
+    border-color: var(--p-primary-color);
+  }
+  &.ng-invalid.ng-touched,
+  &[aria-invalid='true'] {
+    border-color: var(--budojo-danger);
+  }
 }
 
 // Textarea: same semantics, bigger radius, min-height 96
