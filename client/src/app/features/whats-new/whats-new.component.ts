@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { TranslatePipe } from '@ngx-translate/core';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 
 /**
@@ -48,7 +49,7 @@ interface Release {
 @Component({
   selector: 'app-whats-new',
   standalone: true,
-  imports: [ButtonModule, BrandGlyphComponent, RouterLink],
+  imports: [ButtonModule, BrandGlyphComponent, RouterLink, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './whats-new.component.html',
   styleUrl: './whats-new.component.scss',

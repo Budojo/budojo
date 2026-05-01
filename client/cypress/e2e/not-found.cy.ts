@@ -11,12 +11,14 @@ describe('404 — wildcard route', () => {
     cy.visit('/does-not-exist', { failOnStatusCode: false });
 
     cy.get('[data-cy="not-found-cta"]').should('be.visible');
-    cy.contains('Pagina non trovata').should('be.visible');
+    // Default i18n locale is English (#278). Italian copy is exercised
+    // by the i18n-keys parity spec, not here.
+    cy.contains('Page not found').should('be.visible');
   });
 
   it('also catches deep paths under unknown roots', () => {
     cy.visit('/foo/bar/baz', { failOnStatusCode: false });
-    cy.contains('Pagina non trovata').should('be.visible');
+    cy.contains('Page not found').should('be.visible');
   });
 
   it('CTA navigates to /dashboard/athletes — authGuard then redirects an unauthenticated visitor to /auth/login', () => {
