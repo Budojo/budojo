@@ -16,6 +16,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
+import { Tooltip } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { AthleteService } from '../../../../core/services/athlete.service';
@@ -53,7 +54,15 @@ interface MonthRow {
 @Component({
   selector: 'app-payments-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonModule, ConfirmPopup, SkeletonModule, TableModule, TagModule, ToastModule],
+  imports: [
+    ButtonModule,
+    ConfirmPopup,
+    SkeletonModule,
+    TableModule,
+    TagModule,
+    ToastModule,
+    Tooltip,
+  ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './payments-list.component.html',
   styleUrl: './payments-list.component.scss',
