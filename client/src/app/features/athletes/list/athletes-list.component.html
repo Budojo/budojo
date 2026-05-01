@@ -139,7 +139,11 @@
           </th>
           <th>Status</th>
           @if (hasMonthlyFee()) {
-            <th data-cy="athletes-th-paid">Paid</th>
+            <!-- Header carries the current month abbreviation (#282) so an
+                 instructor reading "Unpaid" on a row knows which month the
+                 status refers to without hovering. The full month+year
+                 lives in the per-row tooltip below. -->
+            <th data-cy="athletes-th-paid">Paid · {{ currentMonthShort }}</th>
           }
           <th style="width: 8rem"></th>
         </tr>
@@ -148,10 +152,17 @@
       <ng-template pTemplate="body" let-athlete>
         <tr>
           <td>
+            <!-- Name is the canonical affordance to open the athlete
+                 detail (#281) — replaces the dropped folder icon as
+                 the primary "go to this athlete" tap target. Pencil
+                 and trash remain inline for the fast paths. -->
             <div class="athlete-name">
-              <span class="athlete-name__text">
-                {{ athlete.first_name }} {{ athlete.last_name }}
-              </span>
+              <a
+                class="athlete-name__text"
+                [routerLink]="['/dashboard/athletes', athlete.id]"
+                data-cy="athlete-name-link"
+                >{{ athlete.first_name }} {{ athlete.last_name }}</a
+              >
               <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
             </div>
           </td>
@@ -167,25 +178,37 @@
           </td>
           @if (hasMonthlyFee()) {
             <td>
+              <!-- Tooltip telegraphs the full month + year + status (#282)
+                   so the user gets unambiguous context on hover/long-press
+                   without crowding the row visually. The bare badge
+                   already carries Paid / Unpaid; the tooltip adds the
+                   "April 2026" anchor.
+
+                   Suppressed (empty string → no tooltip mounts) when
+                   `paid_current_month` is undefined — same gate that
+                   makes <app-paid-badge> render nothing for that athlete.
+                   Without the guard, an empty cell would still show a
+                   ghost tooltip reading "April 2026 — Unpaid" because
+                   the ternary defaults `undefined` to "Unpaid" (Copilot
+                   caught this on #289). -->
               <app-paid-badge
                 [paid]="athlete.paid_current_month"
                 [clickable]="true"
                 (paidToggle)="confirmTogglePaid($event, athlete)"
+                [pTooltip]="
+                  athlete.paid_current_month === undefined
+                    ? ''
+                    : currentMonthLong + ' — ' + (athlete.paid_current_month ? 'Paid' : 'Unpaid')
+                "
+                tooltipPosition="top"
               />
             </td>
           }
           <td class="athlete-actions">
-            <p-button
-              icon="pi pi-folder"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              (onClick)="goToDocuments(athlete)"
-              [ariaLabel]="'Documents of ' + athlete.first_name + ' ' + athlete.last_name"
-              pTooltip="Documents"
-              tooltipPosition="left"
-              data-cy="documents-btn"
-            />
+            <!-- Folder icon dropped (#281) — was a redundant route into
+                 the detail (default tab is Documents anyway) and broke
+                 self-evident UI per Krug. Pencil + trash kept as the
+                 fast paths to "edit" and "delete this athlete". -->
             <p-button
               icon="pi pi-pencil"
               severity="secondary"
@@ -195,6 +218,7 @@
               [ariaLabel]="'Edit ' + athlete.first_name + ' ' + athlete.last_name"
               pTooltip="Edit"
               tooltipPosition="left"
+              data-cy="edit-btn"
             />
             <p-button
               icon="pi pi-trash"
@@ -212,7 +236,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td [attr.colspan]="hasMonthlyFee() ? 7 : 6" class="empty-message">
+          <td [attr.colspan]="hasMonthlyFee() ? 5 : 4" class="empty-message">
             @if (loading()) {
               <!-- Skeleton rows replace the PrimeNG header-spinner that
                    [showLoader]="false" suppressed. Canon § motion: skeletons

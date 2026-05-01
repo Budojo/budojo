@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { WhatsNewComponent } from './whats-new.component';
+import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 describe('WhatsNewComponent (#254)', () => {
   function setup() {
     TestBed.configureTestingModule({
       imports: [WhatsNewComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), ...provideI18nTesting()],
     });
     const router = TestBed.inject(Router);
     router.navigateByUrl = vi.fn().mockResolvedValue(true) as never;
@@ -27,13 +28,13 @@ describe('WhatsNewComponent (#254)', () => {
     // version we've shipped; when we ship a new version and forget
     // to prepend instead of append, this fails.
     const firstRelease = root.querySelector('.whats-new__release');
-    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v1.8.0');
+    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v1.9.0');
   });
 
   it('renders every shipped release in newest-first order', () => {
     const { fixture } = setup();
     const cards = fixture.nativeElement.querySelectorAll('.whats-new__release');
-    expect(cards.length).toBe(6);
+    expect(cards.length).toBe(7);
 
     // Pin every version in the order we ship them so a refactor that
     // accidentally reverses the array (e.g. a sort that reads ids
@@ -41,7 +42,15 @@ describe('WhatsNewComponent (#254)', () => {
     const versions = Array.from(cards).map((el) =>
       (el as HTMLElement).querySelector('.whats-new__version')?.textContent?.trim(),
     );
-    expect(versions).toEqual(['v1.8.0', 'v1.7.0', 'v1.6.0', 'v1.5.0', 'v1.4.0', 'v1.3.0']);
+    expect(versions).toEqual([
+      'v1.9.0',
+      'v1.8.0',
+      'v1.7.0',
+      'v1.6.0',
+      'v1.5.0',
+      'v1.4.0',
+      'v1.3.0',
+    ]);
   });
 
   it('the v1.6.0 card carries the four advertised sections', () => {

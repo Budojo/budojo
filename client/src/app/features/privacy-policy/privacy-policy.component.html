@@ -4,114 +4,108 @@
       <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
       <span class="legal-page__brand-name">Budojo</span>
     </a>
-    <p class="legal-page__eyebrow">Legale</p>
-    <h1 class="legal-page__title">Informativa sulla Privacy</h1>
+    <p class="legal-page__eyebrow">Legal</p>
+    <h1 class="legal-page__title">Privacy Policy</h1>
     <p class="legal-page__subtitle">
-      Informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) per gli utenti del
-      servizio Budojo.
+      Notice pursuant to Article 13 of EU Regulation 2016/679 (GDPR) for users of the Budojo
+      service.
     </p>
-    <!-- Language toggle (#273). Italian è il source of truth legale
-         per i clienti italiani e per il Garante; la versione inglese
-         è una traduzione fedele aggiornata in lock-step. Toggle
-         visibile su entrambe le lingue per consentire lo switch a
-         vista. -->
+    <!-- Language toggle (#291). EN is the canonical default; IT lives at
+         /privacy/it. Italian remains the legal source of truth for IT
+         customers and the Garante, but the URL no one shared yet
+         (English-default) keeps lining up with what an arbitrary
+         visitor expects to see first. -->
     <p class="legal-page__lang" data-cy="privacy-lang-toggle">
-      <strong aria-current="true">Italiano</strong>
+      <a routerLink="/privacy/it" data-cy="privacy-lang-it">Italiano</a>
       <span aria-hidden="true">·</span>
-      <a routerLink="/privacy/en" data-cy="privacy-lang-en">English</a>
+      <strong aria-current="true">English</strong>
     </p>
   </header>
 
   <aside class="legal-page__notice" data-cy="privacy-draft-banner">
     <p>
-      <strong>Bozza tecnica — in revisione legale.</strong>
-      Il testo definitivo è in fase di revisione da parte di un legale. I fatti tecnici qui sotto
-      (responsabili del trattamento, regione di hosting, finestra di retention, sub-processor, base
-      giuridica) sono accurati e corrispondono a quanto effettivamente fatto in produzione. Il
-      legale potrà rivedere la formulazione, non i fatti tecnici.
+      <strong>Technical draft — under legal review.</strong>
+      The final wording is being reviewed by counsel. The technical facts below (data controller,
+      hosting region, retention windows, sub-processors, legal basis) are accurate and match what
+      the production system actually does. Counsel may revise the wording, not the technical facts.
     </p>
   </aside>
 
   <section class="legal-page__section">
-    <h2>1. Titolare del trattamento</h2>
+    <h2>1. Data controller</h2>
     <p>
-      <strong>Budojo</strong> — sito web
-      <a href="https://budojo.it" target="_blank" rel="noopener noreferrer">budojo.it</a>. Email per
-      richieste privacy:
+      <strong>Budojo</strong> — website
+      <a href="https://budojo.it" target="_blank" rel="noopener noreferrer">budojo.it</a>. Email for
+      privacy requests:
       <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>
-      <em>(da confermare in fase di revisione legale)</em>.
+      <em>(to be confirmed during legal review)</em>.
     </p>
     <p>
-      In molti scenari d'uso, il vero titolare del trattamento dei dati degli atleti è la palestra
-      (academy) che usa Budojo come gestionale: in tal caso Budojo opera come
-      <strong>responsabile del trattamento</strong>, secondo i termini del DPA fra Budojo e
-      l'academy. La presente informativa copre invece il trattamento per cui Budojo è
-      <strong>direttamente titolare</strong>: la registrazione e gestione del rapporto con l'utente
-      che apre l'account.
+      In many use cases the actual controller of the athletes' data is the academy that uses Budojo
+      as its management software: in that case Budojo acts as a
+      <strong>processor</strong>, under the terms of the DPA between Budojo and the academy. This
+      notice covers instead the processing for which Budojo is the
+      <strong>direct controller</strong>: the registration and management of the relationship with
+      the user who opens the account.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>2. Categorie di dati raccolti</h2>
-    <p>
-      Budojo raccoglie ed elabora esclusivamente i dati necessari al funzionamento del Servizio:
-    </p>
+    <h2>2. Categories of data collected</h2>
+    <p>Budojo only collects and processes the data necessary to operate the Service:</p>
     <ul>
-      <li><strong>Dati identificativi e di contatto</strong> — nome, cognome, email.</li>
+      <li><strong>Identifying and contact data</strong> — first name, last name, email.</li>
       <li>
-        <strong>Credenziali</strong> — hash bcrypt della password, token Sanctum opachi (mai testo
-        in chiaro).
+        <strong>Credentials</strong> — bcrypt hash of the password, opaque Sanctum tokens (never
+        plaintext).
+      </li>
+      <li><strong>Academy data</strong> — academy name, address, phone numbers, contact links.</li>
+      <li>
+        <strong>Athlete data</strong> — first name, last name, date of birth, belt, registration
+        status, guardian contacts for minors.
+      </li>
+      <li><strong>Attendance data</strong> — check-in dates of athletes at training sessions.</li>
+      <li>
+        <strong>Uploaded documents</strong> — medical certificates, federation registrations, ID
+        documents.
       </li>
       <li>
-        <strong>Dati dell'academy</strong> — nome palestra, indirizzo, recapiti telefonici, link ai
-        contatti.
-      </li>
-      <li>
-        <strong>Dati degli atleti</strong> — nome, cognome, data di nascita, cintura, status di
-        tesseramento, recapiti dei tutori per i minori.
-      </li>
-      <li><strong>Dati di presenza</strong> — date di check-in degli atleti agli allenamenti.</li>
-      <li>
-        <strong>Documenti caricati</strong> — certificati medici, tesseramenti, documenti
-        d'identità.
-      </li>
-      <li>
-        <strong>Metadati tecnici</strong> — IP, user-agent, timestamp, limitatamente a sicurezza e
-        diagnostica.
+        <strong>Technical metadata</strong> — IP address, user-agent, timestamps, limited to
+        security and diagnostics.
       </li>
     </ul>
     <p>
-      Budojo <strong>non raccoglie</strong> dati di geolocalizzazione, identificatori pubblicitari,
-      o cookie di tracciamento di terze parti.
+      Budojo <strong>does not collect</strong> geolocation data, advertising identifiers, or
+      third-party tracking cookies.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>3. Finalità e base giuridica del trattamento</h2>
+    <h2>3. Purposes and legal basis of processing</h2>
     <div class="legal-page__table-wrapper">
       <table class="legal-page__table">
         <thead>
           <tr>
-            <th>Finalità</th>
-            <th>Base giuridica (art. 6 GDPR)</th>
+            <th>Purpose</th>
+            <th>Legal basis (GDPR Art. 6)</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Erogazione del Servizio richiesto dall'utente</td>
-            <td>Esecuzione di un contratto (art. 6.1.b)</td>
+            <td>Delivery of the Service requested by the user</td>
+            <td>Performance of a contract (Art. 6(1)(b))</td>
           </tr>
           <tr>
-            <td>Gestione del rapporto contrattuale, fatturazione, comunicazioni di servizio</td>
-            <td>Esecuzione di un contratto (art. 6.1.b)</td>
+            <td>Management of the contractual relationship, billing, service notifications</td>
+            <td>Performance of a contract (Art. 6(1)(b))</td>
           </tr>
           <tr>
-            <td>Adempimenti fiscali e contabili</td>
-            <td>Obbligo di legge (art. 6.1.c)</td>
+            <td>Tax and accounting obligations</td>
+            <td>Legal obligation (Art. 6(1)(c))</td>
           </tr>
           <tr>
-            <td>Sicurezza dell'infrastruttura, prevenzione abusi, log diagnostici</td>
-            <td>Legittimo interesse (art. 6.1.f)</td>
+            <td>Infrastructure security, abuse prevention, diagnostic logs</td>
+            <td>Legitimate interest (Art. 6(1)(f))</td>
           </tr>
         </tbody>
       </table>
@@ -119,126 +113,127 @@
   </section>
 
   <section class="legal-page__section">
-    <h2>4. Periodo di conservazione</h2>
+    <h2>4. Retention period</h2>
     <ul>
-      <li><strong>Account utente attivo</strong> — per tutta la durata del rapporto.</li>
+      <li><strong>Active user account</strong> — for the entire duration of the relationship.</li>
       <li>
-        <strong>Account in cancellazione</strong> — finestra di grace di 30 giorni durante i quali
-        l'utente può annullare la richiesta. Dopo tale finestra l'account è cancellato in modo
-        irreversibile.
+        <strong>Account scheduled for deletion</strong> — 30-day grace window during which the user
+        can cancel the request. After this window the account is deleted irreversibly.
       </li>
       <li>
-        <strong>Dati di fatturazione e contabilità</strong> — 10 anni dalla data di emissione
-        (obbligo art. 2220 c.c.).
+        <strong>Billing and accounting data</strong> — 10 years from the date of issue (obligation
+        under Art. 2220 of the Italian Civil Code).
       </li>
-      <li><strong>Log applicativi</strong> — massimo 12 mesi.</li>
+      <li><strong>Application logs</strong> — at most 12 months.</li>
     </ul>
   </section>
 
   <section class="legal-page__section">
-    <h2>5. Modalità di trattamento e misure di sicurezza</h2>
+    <h2>5. Processing methods and security measures</h2>
     <p>
-      I dati sono trattati con strumenti elettronici e ospitati in
-      <strong>datacenter UE (Frankfurt — DigitalOcean <code>fra1</code>)</strong>. Misure adottate:
+      Data is processed with electronic tools and hosted in
+      <strong>EU datacenters (Frankfurt — DigitalOcean <code>fra1</code>)</strong>. Measures
+      adopted:
     </p>
     <ul>
-      <li>Trasmissione cifrata TLS 1.2+ per ogni richiesta.</li>
-      <li>Password salvate solo come hash bcrypt.</li>
-      <li>Autenticazione tramite token Bearer (Laravel Sanctum), nessun cookie di sessione.</li>
-      <li>Backup giornalieri della base dati con retention 30 giorni.</li>
-      <li>Accessi amministrativi via SSH con autenticazione a chiave.</li>
-      <li>Audit periodico dei sub-processor.</li>
+      <li>Encrypted transmission (TLS 1.2+) for every request.</li>
+      <li>Passwords stored only as bcrypt hashes.</li>
+      <li>Bearer-token authentication (Laravel Sanctum); no session cookies.</li>
+      <li>Daily database backups with 30-day retention.</li>
+      <li>Administrative SSH access via key-based authentication.</li>
+      <li>Periodic audit of sub-processors.</li>
     </ul>
     <p>
-      I certificati medici, in quanto dati relativi alla salute (art. 9 GDPR), sono oggetto di una
-      valutazione separata documentata in
-      <code>docs/legal/dpia-medical-certificates.md</code>.
+      Medical certificates, as health data (GDPR Art. 9), are subject to a separate assessment
+      documented in <code>docs/legal/dpia-medical-certificates.md</code>.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>6. Cookie e archiviazione lato browser</h2>
-    <p>
-      Budojo <strong>non usa cookie di tracciamento</strong> né cookie di profilazione di terze
-      parti.
-    </p>
+    <h2>6. Cookies and browser-side storage</h2>
+    <p>Budojo <strong>does not use tracking cookies</strong> nor third-party profiling cookies.</p>
     <ul>
-      <li><strong>Cookie HTTP:</strong> nessuno.</li>
+      <li><strong>HTTP cookies:</strong> none.</li>
       <li>
-        <strong>localStorage:</strong> due chiavi tecniche — <code>auth_token</code> (token di
-        sessione Sanctum, strettamente necessario per mantenere l'autenticazione) e
-        <code>documents.showCancelled</code> (preferenza UI sul filtro documenti, non identifica e
-        non profila).
+        <strong>localStorage:</strong> two strictly technical keys —
+        <code>auth_token</code> (Sanctum session token, strictly necessary to keep the user
+        authenticated) and <code>documents.showCancelled</code> (UI preference for the documents
+        filter; does not identify or profile).
       </li>
-      <li><strong>sessionStorage / IndexedDB:</strong> nessuno usato direttamente dalla SPA.</li>
+      <li><strong>sessionStorage / IndexedDB:</strong> not used directly by the SPA.</li>
     </ul>
     <p>
-      Per questa configurazione non è richiesto un cookie banner ai sensi delle linee guida del
-      Garante del 10 giugno 2021. L'audit completo, con la metodologia di verifica e il record dei
-      controlli, è documentato in <code>docs/legal/cookie-audit.md</code> all'interno del nostro
-      repository sorgente; una richiesta scritta a
-      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a> ottiene la copia corrente.
+      For this configuration no cookie banner is required under the Italian Garante guidelines of 10
+      June 2021. The full audit, with the verification methodology and the record of checks, is
+      documented in <code>docs/legal/cookie-audit.md</code> within our source repository; a written
+      request to <a href="mailto:privacy@budojo.it">privacy@budojo.it</a> will return the current
+      copy.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>7. Destinatari dei dati — sub-processor</h2>
+    <h2>7. Recipients of the data — sub-processors</h2>
     <p>
-      I dati possono essere trasmessi ai seguenti soggetti come sub-responsabili del trattamento. La
-      lista canonica e aggiornata è pubblicata su
-      <a routerLink="/sub-processors">/sub-processors</a>:
+      Data may be transmitted to the following parties as sub-processors. The canonical and
+      up-to-date list is published at
+      <a routerLink="/sub-processors">/sub-processors</a> (English-only):
     </p>
     <ul>
       <li><strong>Cloudflare, Inc.</strong> — DNS, edge proxy / CDN, TLS termination.</li>
-      <li><strong>DigitalOcean, LLC</strong> — VM hosting (regione UE, Frankfurt).</li>
-      <li><strong>Laravel Forge / Tighten Co.</strong> — automazione di provisioning e deploy.</li>
+      <li><strong>DigitalOcean, LLC</strong> — VM hosting (EU region, Frankfurt).</li>
+      <li>
+        <strong>Laravel Forge / Tighten Co.</strong> — provisioning and deployment automation.
+      </li>
     </ul>
     <p>
-      Ogni modifica dell'elenco è preceduta da un preavviso di 30 giorni all'academy. I dati non
-      vengono ceduti né venduti a terzi per finalità di marketing o profilazione.
+      Any change to this list is announced to the academy with 30 days' prior notice. Data is not
+      transferred or sold to third parties for marketing or profiling purposes.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>8. Trasferimenti extra-UE</h2>
+    <h2>8. Transfers outside the EU</h2>
     <p>
-      I dati personali sono conservati in UE (DigitalOcean Frankfurt). Cloudflare opera
-      un'infrastruttura globale di edge node: il traffico HTTP transita su PoP geograficamente
-      vicini all'utente, con garanzie di trasferimento rette dalle Standard Contractual Clauses
-      (SCC) della Commissione UE.
+      Personal data is stored within the EU (DigitalOcean Frankfurt). Cloudflare operates a global
+      edge-node infrastructure: HTTP traffic transits through PoPs geographically close to the user,
+      with transfer guarantees governed by the European Commission's Standard Contractual Clauses
+      (SCC).
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>9. Diritti dell'interessato</h2>
-    <p>In ogni momento puoi esercitare i diritti previsti dagli articoli 15–22 GDPR:</p>
+    <h2>9. Rights of the data subject</h2>
+    <p>You may exercise the rights set out in Articles 15–22 GDPR at any time:</p>
     <ul>
       <li>
-        <strong>Accesso ai dati</strong> (art. 15) — esporta tramite la sezione "Profilo" (JSON +
-        ZIP coi documenti).
-      </li>
-      <li><strong>Rettifica</strong> (art. 16) — modifica direttamente dalla sezione "Profilo".</li>
-      <li>
-        <strong>Cancellazione</strong> (art. 17) — pulsante "Elimina account" dalla sezione
-        "Profilo"; finestra di grace di 30 giorni.
+        <strong>Right of access</strong> (Art. 15) — export via the "Profile" section (JSON + ZIP
+        with documents).
       </li>
       <li>
-        <strong>Limitazione</strong> (art. 18) — email a
+        <strong>Right to rectification</strong> (Art. 16) — edit directly from the "Profile"
+        section.
+      </li>
+      <li>
+        <strong>Right to erasure</strong> (Art. 17) — "Delete account" button in the "Profile"
+        section; 30-day grace window.
+      </li>
+      <li>
+        <strong>Right to restriction</strong> (Art. 18) — email
         <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>.
       </li>
-      <li><strong>Portabilità</strong> (art. 20) — l'export è in formato JSON aperto.</li>
+      <li><strong>Right to portability</strong> (Art. 20) — the export is in open JSON format.</li>
       <li>
-        <strong>Opposizione</strong> (art. 21) — email a
+        <strong>Right to object</strong> (Art. 21) — email
         <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>.
       </li>
     </ul>
   </section>
 
   <section class="legal-page__section">
-    <h2>10. Reclamo all'autorità di controllo</h2>
+    <h2>10. Complaint to the supervisory authority</h2>
     <p>
-      Hai diritto di proporre reclamo all'autorità di controllo competente: per l'Italia il
-      <strong>Garante per la protezione dei dati personali</strong>, via
+      You have the right to file a complaint with the competent supervisory authority: for Italy the
+      <strong>Garante per la protezione dei dati personali</strong>, at
       <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer"
         >garanteprivacy.it</a
       >.
@@ -246,16 +241,15 @@
   </section>
 
   <section class="legal-page__section">
-    <h2>11. Modifiche all'informativa</h2>
+    <h2>11. Changes to this notice</h2>
     <p>
-      Eventuali modifiche sostanziali saranno notificate all'utente via email almeno 30 giorni prima
-      dell'entrata in vigore. Il numero di versione e la data dell'ultima modifica sono pubblicati
-      qui sotto.
+      Any material changes will be notified to the user by email at least 30 days before they take
+      effect. The version number and the date of the last change are published below.
     </p>
   </section>
 
   <p class="legal-page__updated" data-cy="privacy-version-stamp">
-    Versione {{ version }} · Ultima modifica: {{ lastUpdated }}
+    Version {{ version }} · Last updated: {{ lastUpdated }}
   </p>
 
   <footer class="legal-page__footer">
@@ -263,7 +257,7 @@
       type="button"
       severity="secondary"
       [outlined]="true"
-      label="Torna alla home"
+      label="Back to home"
       icon="pi pi-arrow-left"
       (onClick)="goHome()"
       data-cy="privacy-home"

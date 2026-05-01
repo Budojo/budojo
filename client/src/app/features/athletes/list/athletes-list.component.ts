@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, finalize, map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -50,6 +50,7 @@ interface SelectOption<T extends string> {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    RouterLink,
     ButtonModule,
     IconFieldModule,
     InputIconModule,
@@ -98,6 +99,37 @@ export class AthletesListComponent implements OnInit {
   readonly hasMonthlyFee = computed(
     () => (this.academyService.academy()?.monthly_fee_cents ?? null) !== null,
   );
+
+  /**
+   * Current-month labels for the "Paid" column (#282). BOTH labels are
+   * derived from a single `Date` instance (`_now`) so they can never
+   * disagree across a UTC month boundary — Copilot caught this on #289:
+   * two separate `new Date()` calls during initialization could legally
+   * straddle midnight UTC and produce a header reading "Paid · Apr"
+   * with a tooltip reading "May 2026 — Unpaid".
+   *
+   * Derived once per component instance. A user keeping the page open
+   * across a month boundary sees a slightly stale label until refresh
+   * — acceptable trade-off vs. wiring a per-tick reactive timer just
+   * for a column header.
+   *
+   * Locale: hard-coded `en-US` to match the existing `monthLabel`
+   * derivation in `confirmTogglePaid()` and the SPA's English-source
+   * dashboard. When the dashboard i18n PR-C lands (#279), all three
+   * surfaces can switch to the active LanguageService locale at once.
+   */
+  private readonly _now = new Date();
+
+  readonly currentMonthShort = this._now.toLocaleString('en-US', {
+    month: 'short',
+    timeZone: 'UTC',
+  });
+
+  readonly currentMonthLong = this._now.toLocaleString('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
   /**
    * Free-text name search. The signal mirrors the input control; the trimmed
@@ -366,10 +398,6 @@ export class AthletesListComponent implements OnInit {
 
   goToEdit(athlete: Athlete): void {
     void this.router.navigate(['/dashboard/athletes', athlete.id, 'edit']);
-  }
-
-  goToDocuments(athlete: Athlete): void {
-    void this.router.navigate(['/dashboard/athletes', athlete.id, 'documents']);
   }
 
   confirmDelete(event: Event, athlete: Athlete): void {

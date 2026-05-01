@@ -48,9 +48,16 @@ db_data/
 #   local overrides). The `/*` suffix (instead of `.claude/`) lets us re-include
 #   specific files — git can't re-include files inside an ignored directory.
 # - `gotchas.md` + `settings.json` are checked in so the team shares them.
+# - `scripts/` (workflow helpers — board, copilot, docker gates) is checked
+#   in. Same for `pr-bodies/` so the per-PR body convention works without a
+#   first-time mkdir step.
 .claude/*
 !.claude/gotchas.md
 !.claude/settings.json
+!.claude/scripts/
+!.claude/scripts/**
+!.claude/pr-bodies/
+!.claude/pr-bodies/.gitkeep
 
 # Superpowers — local agent plan/notes scratch dir. Same shape as .claude/:
 # personal worker artifacts, not codebase truth.

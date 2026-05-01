@@ -1,14 +1,16 @@
 <article class="whats-new">
   <header class="whats-new__header">
-    <a class="whats-new__brand" routerLink="/dashboard" aria-label="Budojo dashboard home">
+    <a
+      class="whats-new__brand"
+      routerLink="/dashboard"
+      [attr.aria-label]="'whatsNew.brandAriaLabel' | translate"
+    >
       <app-brand-glyph class="whats-new__glyph" aria-hidden="true" />
       <span class="whats-new__brand-name">Budojo</span>
     </a>
-    <p class="whats-new__eyebrow">What's new</p>
-    <h1 class="whats-new__title">Recent updates</h1>
-    <p class="whats-new__subtitle">
-      What's changed in Budojo lately, in plain language. Newest at the top.
-    </p>
+    <p class="whats-new__eyebrow">{{ 'whatsNew.eyebrow' | translate }}</p>
+    <h1 class="whats-new__title">{{ 'whatsNew.title' | translate }}</h1>
+    <p class="whats-new__subtitle">{{ 'whatsNew.subtitle' | translate }}</p>
   </header>
 
   @for (release of releases; track release.version) {
@@ -36,7 +38,7 @@
       type="button"
       severity="secondary"
       [outlined]="true"
-      label="Back to dashboard"
+      [label]="'whatsNew.back' | translate"
       icon="pi pi-arrow-left"
       (onClick)="goHome()"
       data-cy="whats-new-back"

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
 
 const AUTO_REDIRECT_MS = 3000;
@@ -13,7 +14,7 @@ const AUTO_REDIRECT_MS = 3000;
 @Component({
   selector: 'app-verify-success',
   standalone: true,
-  imports: [ButtonModule],
+  imports: [ButtonModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './verify-success.component.html',
   styleUrl: './verify-success.component.scss',

@@ -73,11 +73,22 @@ describe('Athlete create form', () => {
     cy.contains('Last name is required').scrollIntoView().should('be.visible');
   });
 
-  it('successfully creates an athlete and redirects to /dashboard/athletes', () => {
+  it("successfully creates an athlete and redirects to the new athlete's detail", () => {
     cy.intercept('POST', '/api/v1/athletes', {
       statusCode: 201,
       body: { data: { ...ATHLETE_MARIO, id: 99 } },
     }).as('createAthlete');
+    // The detail page mounts after the redirect and fetches the
+    // freshly-created athlete. Stub it so the spec doesn't depend
+    // on a live backend.
+    cy.intercept('GET', '/api/v1/athletes/99', {
+      statusCode: 200,
+      body: { data: { ...ATHLETE_MARIO, id: 99 } },
+    });
+    cy.intercept('GET', '/api/v1/athletes/99/documents*', {
+      statusCode: 200,
+      body: { data: [] },
+    });
 
     cy.visitAuthenticated('/dashboard/athletes/new');
     cy.wait('@academy');
@@ -96,7 +107,9 @@ describe('Athlete create form', () => {
       status: 'active',
     });
 
-    cy.url().should('match', /\/dashboard\/athletes$/);
+    // After #281 we land on the new athlete's detail (default child
+    // route Documents) instead of bouncing back to the list.
+    cy.url().should('match', /\/dashboard\/athletes\/99\/documents$/);
   });
 
   it('surfaces a 422 server error in the top banner', () => {
@@ -156,11 +169,17 @@ describe('Athlete edit form', () => {
     cy.contains('button', 'Save changes').scrollIntoView().should('be.visible');
   });
 
-  it('PUTs the updated payload and redirects to the list', () => {
+  it('PUTs the updated payload and returns to the athlete detail', () => {
     cy.intercept('PUT', '/api/v1/athletes/42', {
       statusCode: 200,
       body: { data: { ...ATHLETE_MARIO, first_name: 'Marco' } },
     }).as('updateAthlete');
+    // Detail re-fetches the athlete + its documents list when we
+    // land back on it after submit (#281).
+    cy.intercept('GET', '/api/v1/athletes/42/documents*', {
+      statusCode: 200,
+      body: { data: [] },
+    });
 
     cy.visitAuthenticated('/dashboard/athletes/42/edit');
     cy.wait('@academy');
@@ -173,6 +192,9 @@ describe('Athlete edit form', () => {
       .its('request.body')
       .should('deep.include', { first_name: 'Marco', last_name: 'Rossi' });
 
-    cy.url().should('match', /\/dashboard\/athletes$/);
+    // After #281, edit submit returns to the parent detail (default
+    // child route Documents) — keeps the user in the same page they
+    // were editing instead of bouncing to the list.
+    cy.url().should('match', /\/dashboard\/athletes\/42\/documents$/);
   });
 });

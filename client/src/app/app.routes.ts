@@ -75,13 +75,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'athletes/:id/edit',
-        loadComponent: () =>
-          import('./features/athletes/form/athlete-form.component').then(
-            (m) => m.AthleteFormComponent,
-          ),
-      },
-      {
         path: 'athletes/:id',
         loadComponent: () =>
           import('./features/athletes/detail/athlete-detail.component').then(
@@ -108,6 +101,19 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/athletes/detail/payments-list/payments-list.component').then(
                 (m) => m.PaymentsListComponent,
+              ),
+          },
+          // Edit form moved INSIDE the detail (#281) so the athlete
+          // header (name, belt, status) stays visible while editing
+          // and the form belongs visually to "this athlete" instead
+          // of being a sibling page. The child gets `:id` via the
+          // app-wide `paramsInheritanceStrategy: 'always'` set in
+          // `app.config.ts`.
+          {
+            path: 'edit',
+            loadComponent: () =>
+              import('./features/athletes/form/athlete-form.component').then(
+                (m) => m.AthleteFormComponent,
               ),
           },
         ],
@@ -155,6 +161,11 @@ export const routes: Routes = [
         (m) => m.SubProcessorsComponent,
       ),
   },
+  // /privacy serves the canonical English text (#291). The SPA is
+  // English-default for any visitor without a saved language
+  // preference; the faithful Italian translation lives at /privacy/it
+  // and remains the legal source of truth for IT customers and the
+  // Garante. Edits to either MUST land in lock-step in the same PR.
   {
     path: 'privacy',
     loadComponent: () =>
@@ -162,14 +173,11 @@ export const routes: Routes = [
         (m) => m.PrivacyPolicyComponent,
       ),
   },
-  // English translation of /privacy (#273). Italian remains the
-  // canonical legal source for IT customers and the Garante; this
-  // route is a faithful translation kept in lock-step.
   {
-    path: 'privacy/en',
+    path: 'privacy/it',
     loadComponent: () =>
-      import('./features/privacy-policy/en/privacy-policy-en.component').then(
-        (m) => m.PrivacyPolicyEnComponent,
+      import('./features/privacy-policy/it/privacy-policy-it.component').then(
+        (m) => m.PrivacyPolicyItComponent,
       ),
   },
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },

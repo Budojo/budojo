@@ -75,7 +75,7 @@ describe('AthleteFormComponent', () => {
       expect(cmp.firstName.touched).toBe(true);
     });
 
-    it('POSTs payload and navigates to /dashboard/athletes on success', () => {
+    it("POSTs payload and navigates to the new athlete's detail on success", () => {
       const fixture = TestBed.createComponent(AthleteFormComponent);
       fixture.detectChanges();
       const cmp = fixture.componentInstance;
@@ -122,9 +122,11 @@ describe('AthleteFormComponent', () => {
         joined_at: '2026-04-23',
         address: null,
       });
-      req.flush({ data: makeAthlete({ first_name: 'Mario', last_name: 'Rossi' }) });
+      req.flush({ data: makeAthlete({ id: 99, first_name: 'Mario', last_name: 'Rossi' }) });
 
-      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes']);
+      // After #281, on create we land directly on the new athlete's
+      // detail (id taken from the response) instead of the list.
+      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 99]);
       httpMock.verify();
     });
 
@@ -297,7 +299,10 @@ describe('AthleteFormComponent', () => {
       putReq.flush({ data: { ...athlete, belt: 'black' } });
 
       const router = TestBed.inject(Router);
-      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes']);
+      // After #281, edit success returns to the parent detail (default
+      // child tab Documents) instead of bouncing to the list — the
+      // user stays in the page they were editing.
+      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 42]);
       httpMock.verify();
     });
 
@@ -391,15 +396,39 @@ describe('AthleteFormComponent', () => {
   });
 
   describe('cancel', () => {
-    beforeEach(() => setupTestBed(null));
+    describe('from /athletes/new', () => {
+      beforeEach(() => setupTestBed(null));
 
-    it('navigates back to /dashboard/athletes', () => {
-      const fixture = TestBed.createComponent(AthleteFormComponent);
-      fixture.detectChanges();
-      fixture.componentInstance.cancel();
+      it('navigates back to the athletes list', () => {
+        const fixture = TestBed.createComponent(AthleteFormComponent);
+        fixture.detectChanges();
+        fixture.componentInstance.cancel();
 
-      const router = TestBed.inject(Router);
-      expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes']);
+        const router = TestBed.inject(Router);
+        expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes']);
+      });
+    });
+
+    describe('from /athletes/:id/edit', () => {
+      beforeEach(() => setupTestBed('42'));
+
+      it('navigates back to the athlete detail (#281)', () => {
+        const fixture = TestBed.createComponent(AthleteFormComponent);
+        const httpMock = TestBed.inject(HttpTestingController);
+        fixture.detectChanges();
+        // The form GET fires on init; flush it so the component is in
+        // a stable state before we exercise cancel().
+        httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ id: 42 }) });
+
+        fixture.componentInstance.cancel();
+
+        const router = TestBed.inject(Router);
+        // Edit lives INSIDE the athlete detail as a sub-tab — cancel
+        // returns to the parent so the header + tab strip remain
+        // visible, instead of dumping the user out to the list.
+        expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 42]);
+        httpMock.verify();
+      });
     });
   });
 
