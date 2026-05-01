@@ -70,8 +70,14 @@ class FeedbackMail extends Mailable
 
     public function content(): Content
     {
+        // text: (NOT view:) so the blade renders as text/plain — newlines
+        // and the dashed separators survive intact, and characters like
+        // "&" / "<" are not HTML-escaped into entities. The blade
+        // template carries no HTML markup; using `view:` would bury it
+        // in a text/html part and most clients would collapse the
+        // whitespace on render.
         return new Content(
-            view: 'emails.feedback',
+            text: 'emails.feedback',
             with: [
                 'subjectLine' => $this->subjectLine,
                 'description' => $this->description,

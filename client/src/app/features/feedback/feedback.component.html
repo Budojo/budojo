@@ -51,6 +51,7 @@
       <span class="feedback-page__label">{{ 'feedback.image.label' | translate }}</span>
       <span class="feedback-page__hint">{{ 'feedback.image.hint' | translate }}</span>
       <input
+        #fileInput
         type="file"
         accept="image/png,image/jpeg,image/webp"
         (change)="onFileSelected($event)"

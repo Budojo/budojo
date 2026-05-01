@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
@@ -66,6 +73,13 @@ export class FeedbackComponent {
   protected readonly imageError = signal<string | null>(null);
   protected readonly submitting = signal<boolean>(false);
 
+  // ViewChild on the native file input so clearImage() / a successful
+  // submit can reset `input.value = ''`. Without the reset the browser
+  // keeps the previously-selected file in the control: re-picking the
+  // SAME file does not fire a `change` event, and the native input
+  // visually keeps showing the filename even after our preview is gone.
+  private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
+
   /**
    * `<input type="file">` change handler. Validates client-side then
    * stores in the signal; rejected files surface an inline error
@@ -102,6 +116,10 @@ export class FeedbackComponent {
   protected clearImage(): void {
     this.image.set(null);
     this.imageError.set(null);
+    const input = this.fileInput()?.nativeElement;
+    if (input) {
+      input.value = '';
+    }
   }
 
   protected submit(): void {

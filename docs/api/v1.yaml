@@ -1171,9 +1171,10 @@ paths:
         Authenticated users can submit a feedback message; the server
         composes an email to the product owner carrying the user's text,
         the optional attached image, the SPA build version, and the
-        request User-Agent. The endpoint is fire-and-forget — the response
-        confirms the email was queued, NOT that it was delivered. Throttled
-        to 5 req/min per user.
+        request User-Agent. The mail is sent synchronously during request
+        handling — fire-and-forget from the client's perspective: the
+        202 confirms acceptance, NOT delivery (bounces / mailbox-side
+        issues are out of band). Throttled to 5 req/min per user.
 
         The image (when present) is sent as an attachment and is NOT
         persisted server-side; once the mail leaves the temp upload file
@@ -1205,7 +1206,7 @@ paths:
                   description: Optional single attachment, max 5 MB, png / jpeg / webp only.
       responses:
         '202':
-          description: Feedback received and queued for delivery.
+          description: Feedback accepted — mail sent synchronously, delivery not guaranteed.
           content:
             application/json:
               schema:

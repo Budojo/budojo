@@ -17,7 +17,7 @@ beforeEach(function (): void {
     Mail::fake();
 });
 
-it('submits a feedback with subject + description and queues the email', function (): void {
+it('submits a feedback with subject + description and sends the email', function (): void {
     $user = userWithAcademy();
 
     $this->actingAs($user)
@@ -183,8 +183,15 @@ it('rejects with 401 when unauthenticated', function (): void {
 });
 
 it('handles a user without an academy gracefully (academy_id null in mail)', function (): void {
-    // A registered user who has not completed setup yet has no academy.
-    // Feedback should still go through — the email carries academyId=null.
+    // Server-side defense: a registered user who has not completed setup
+    // yet has no academy. The endpoint accepts the submission and the
+    // email carries academyId=null. The SPA does NOT expose
+    // /dashboard/feedback to pre-setup users (hasAcademyGuard redirects
+    // to /setup), so this case is reachable only via a hand-crafted
+    // request — which we tolerate rather than 422 because (a) the only
+    // PII at risk is the user's own email, and (b) onboarding edge
+    // cases (an academy invitation that disappears mid-flow) could
+    // otherwise leave a user unable to reach support.
     $user = User::factory()->create();
 
     $this->actingAs($user)
