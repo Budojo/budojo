@@ -205,7 +205,9 @@ Examples:
 
 ### GitHub Project Board — PO workflow
 
-The board tracks **both issues and their open PRs**. Issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
+The board lives at [`github.com/orgs/Budojo/projects/1`](https://github.com/orgs/Budojo/projects/1) (Project #1 under the `Budojo` org). It tracks **both issues and their open PRs** — issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
+
+> **Post-org-transfer note:** before the v1.10.2 transfer the project lived under `m-bonanno` (the user account) as Project #2. After the move it was recreated under the org as Project #1; the active items were migrated, the 238 historical Done items were left behind. Old user-owned project URLs auto-redirect.
 
 #### Issue + PR lifecycle on the board
 
@@ -238,7 +240,7 @@ The board tracks **both issues and their open PRs**. Issues are the primary item
 #### Finding a project item ID
 
 ```bash
-gh project item-list 2 --owner m-bonanno --format json
+gh project item-list 1 --owner Budojo --format json
 ```
 
 ### PR Rules
@@ -355,7 +357,7 @@ git commit -m "fix(auth): prevent crash on expired token decode"
 
 When Copilot leaves review comments on a PR:
 
-1. Fetch all comments: `gh api repos/m-bonanno/budojo/pulls/<N>/comments`
+1. Fetch all comments: `gh api repos/Budojo/budojo/pulls/<N>/comments`
 2. For each comment: evaluate, fix if valid, skip with explanation if not applicable
 3. Commit all fixes in one commit: `fix(<scope>): address copilot review comments`
 4. Reply to every thread + resolve them with the [`copilot-replies.sh`](.claude/scripts/copilot-replies.sh) helper:

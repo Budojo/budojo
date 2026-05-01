@@ -181,7 +181,7 @@ jobs:
 
           ## References
 
-          - Release tag: [${TAG}](https://github.com/m-bonanno/budojo/releases/tag/${TAG})
+          - Release tag: [${TAG}](https://github.com/Budojo/budojo/releases/tag/${TAG})
           - Workflow: \`.github/workflows/post-release-sweep.yml\`
           - Originating issue: #294
           EOF

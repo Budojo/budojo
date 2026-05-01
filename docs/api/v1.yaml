@@ -13,7 +13,7 @@ info:
     same commit history.
   contact:
     name: Matteo Bonanno
-    url: https://github.com/m-bonanno/budojo
+    url: https://github.com/Budojo/budojo
 
 servers:
   - url: http://localhost:8000/api/v1

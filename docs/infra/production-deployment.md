@@ -12,7 +12,7 @@ deploy script.
 | Angular SPA (www alias) | https://www.budojo.it | Cloudflare Pages |
 | Laravel API | https://api.budojo.it | DigitalOcean droplet (Forge-managed) |
 | API health probe | https://api.budojo.it/api/v1/health | (returns `{"status":"ok"}`) |
-| GitHub repo | https://github.com/m-bonanno/budojo | — |
+| GitHub repo | https://github.com/Budojo/budojo | — |
 | Cloudflare Pages dashboard | dash.cloudflare.com → Pages → `budojo` | — |
 | Forge dashboard | forge.laravel.com → server `budojo-prod` → site `api.budojo.it` | — |
 
@@ -72,7 +72,7 @@ CNAME chain) is a Netsons leftover and can be removed.
 ### Forge site `api.budojo.it`
 
 - **Project type**: Laravel
-- **Repository**: `m-bonanno/budojo` on GitHub
+- **Repository**: `Budojo/budojo` on GitHub
 - **Branch**: `main` (pushed via `Push to deploy = ON` — every merge to main
   triggers a deploy)
 - **Root directory**: `/server` ← **critical**, this is a monorepo

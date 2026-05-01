@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # board-set.sh — set the project-board status field for an issue or PR
-# in the budojo project (Project #2).
+# in the Budojo MVP project (Budojo org / Project #1).
 #
 # Usage:
 #   ./board-set.sh <issue-or-pr-number> <todo|in-progress|done>
@@ -15,11 +15,16 @@
 # Why: this 3-step pipeline used to live as inline bash in every PR I opened.
 # Hardcoded IDs (project, field, options) live ONLY here so the rest of the
 # workflow stops carrying GraphQL boilerplate.
+#
+# Post-org-transfer note: the project moved from `m-bonanno` (user) to
+# `Budojo` (org) when the repo transferred — see CLAUDE.md § GitHub
+# Project board. The new project's IDs are below; the option IDs (Todo /
+# In Progress / Done) are GitHub-default values and stayed identical.
 
 set -euo pipefail
 
-PROJECT_ID="PVT_kwHOAsnvsM4BVW8P"
-STATUS_FIELD_ID="PVTSSF_lAHOAsnvsM4BVW8PzhQzRlk"
+PROJECT_ID="PVT_kwDOEL6JKc4BWTb0"
+STATUS_FIELD_ID="PVTSSF_lADOEL6JKc4BWTb0zhRo3Dg"
 
 usage() {
   echo "usage: $0 <issue-or-pr-number> <todo|in-progress|done>" >&2
