@@ -41,7 +41,7 @@ usage() {
 
 PR="$1"
 MESSAGE="$2"
-REPO="m-bonanno/budojo"
+REPO="Budojo/budojo"
 ME="$(gh api user --jq '.login')"
 
 # Reply to every TOP-LEVEL Copilot comment (in_reply_to_id == null) that
@@ -76,7 +76,7 @@ fi
 # replied first, if any) are intentionally left alone.
 gh api graphql \
   -f query="query {
-    repository(owner: \"m-bonanno\", name: \"budojo\") {
+    repository(owner: \"Budojo\", name: \"budojo\") {
       pullRequest(number: $PR) {
         reviewThreads(first: 50) {
           nodes {

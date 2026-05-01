@@ -4,7 +4,7 @@ An Apple HIG / iOS 17+ minimal override layer for the PrimeNG Material preset us
 
 ## Sources
 
-Everything here was read from the `m-bonanno/budojo` GitHub repo (not pre-loaded — browsed via GitHub tooling on demand). Key files referenced while building:
+Everything here was read from the `Budojo/budojo` GitHub repo (not pre-loaded — browsed via GitHub tooling on demand). Key files referenced while building:
 
 - `CLAUDE.md` — workflow + conventions
 - `client/CLAUDE.md` — design canon (MD3 8dp grid, mobile-first breakpoints, PWA scaffold)
