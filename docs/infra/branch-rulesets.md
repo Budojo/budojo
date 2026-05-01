@@ -2,7 +2,7 @@
 
 ## What this covers
 
-Two repository rulesets on `github.com/m-bonanno/budojo` that together:
+Two repository rulesets on `github.com/Budojo/budojo` that together:
 
 - Forbid direct commits to `main` and `develop` — everything goes through a pull request
 - Require all 8 CI jobs to be green before merge
@@ -69,28 +69,28 @@ The JSON files in `.github/rulesets/` are the source of truth. **First-time crea
 
 ```bash
 # One-shot: only when the ruleset does not exist yet on the repo.
-gh api -X POST repos/m-bonanno/budojo/rulesets --input .github/rulesets/main-protection.json
-gh api -X POST repos/m-bonanno/budojo/rulesets --input .github/rulesets/develop-protection.json
+gh api -X POST repos/Budojo/budojo/rulesets --input .github/rulesets/main-protection.json
+gh api -X POST repos/Budojo/budojo/rulesets --input .github/rulesets/develop-protection.json
 ```
 
 **Updates to an existing ruleset MUST use `PUT`** (replace) or `PATCH` (partial) targeting the ruleset ID — `POST` would silently create a duplicate instead of replacing, leaving overlapping rulesets that compose in confusing ways:
 
 ```bash
 # 1. Find the current ruleset IDs
-gh api repos/m-bonanno/budojo/rulesets --jq '.[] | {id, name}'
+gh api repos/Budojo/budojo/rulesets --jq '.[] | {id, name}'
 # -> e.g. { "id": 15504731, "name": "main-protection" }
 # -> e.g. { "id": 15504735, "name": "develop-protection" }
 
 # 2. Replace the ruleset body from the JSON file (PUT = full replace)
-gh api -X PUT repos/m-bonanno/budojo/rulesets/15504731 --input .github/rulesets/main-protection.json
-gh api -X PUT repos/m-bonanno/budojo/rulesets/15504735 --input .github/rulesets/develop-protection.json
+gh api -X PUT repos/Budojo/budojo/rulesets/15504731 --input .github/rulesets/main-protection.json
+gh api -X PUT repos/Budojo/budojo/rulesets/15504735 --input .github/rulesets/develop-protection.json
 ```
 
 To **review drift** (current live state vs JSON in repo), dump each ruleset and diff:
 
 ```bash
-gh api repos/m-bonanno/budojo/rulesets --jq '.[].id' | while read id; do
-  gh api repos/m-bonanno/budojo/rulesets/$id > "/tmp/ruleset-$id.json"
+gh api repos/Budojo/budojo/rulesets --jq '.[].id' | while read id; do
+  gh api repos/Budojo/budojo/rulesets/$id > "/tmp/ruleset-$id.json"
   echo "Dumped ruleset $id to /tmp/ruleset-$id.json"
 done
 # Then manual compare against .github/rulesets/*.json
@@ -101,7 +101,7 @@ If drift appears, decide which side to trust: either re-apply from the file via 
 **Accidental duplicate?** If a `POST` was run on an already-existing ruleset, you'll see two rulesets with the same name in `gh api repos/.../rulesets`. Delete the newer one:
 
 ```bash
-gh api -X DELETE repos/m-bonanno/budojo/rulesets/{newer-id}
+gh api -X DELETE repos/Budojo/budojo/rulesets/{newer-id}
 ```
 
 ## Emergency bypass (hotfix without PR)
@@ -120,6 +120,6 @@ Preferred alternative: open a PR anyway, mark it `hotfix`, and merge as soon as 
 
 ## Relationship with legacy branch protection
 
-`gh api repos/m-bonanno/budojo/branches/{main,develop}/protection` still returns branch-protection rules from before rulesets were introduced. They overlap with the ruleset but are **less strict** (their `required_status_checks.contexts: []` meant no CI was actually required — the gap this PR closes). The two systems coexist and the **most restrictive wins**.
+`gh api repos/Budojo/budojo/branches/{main,develop}/protection` still returns branch-protection rules from before rulesets were introduced. They overlap with the ruleset but are **less strict** (their `required_status_checks.contexts: []` meant no CI was actually required — the gap this PR closes). The two systems coexist and the **most restrictive wins**.
 
 **Follow-up**: after a few merges confirm the new rulesets behave correctly, remove the legacy branch protection to avoid two overlapping sources of truth. Do it in its own tiny PR with a link to this doc so the decision trail is clear.

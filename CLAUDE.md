@@ -205,7 +205,11 @@ Examples:
 
 ### GitHub Project Board — PO workflow
 
-The board tracks **both issues and their open PRs**. Issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
+The board lives at [`github.com/orgs/Budojo/projects/2`](https://github.com/orgs/Budojo/projects/2) under the `Budojo` org. It tracks **both issues and their open PRs** — issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
+
+> **Post-org-transfer note:** the repo originally lived under `m-bonanno/budojo` (user account) and the project board sat under that user account. When the repo moved to the `Budojo` org, the full project (structure + all 250 items + their statuses) was migrated via `copyProjectV2` + a one-shot bulk import script, and now lives as the org-level project linked above. Old user-owned project URLs continue to work via GitHub's redirect; the source project on `m-bonanno` was archived to avoid drift.
+
+> **Markdown gotcha:** never write `Project #N` in markdown rendered on GitHub (this file, PR bodies, READMEs) — `#N` is auto-linked to issue/PR `N` in the current repo. Use `[…/projects/N](URL)` form, or "the org-level project at /orgs/Budojo/projects/N", or "project number N" — anything but the bare `#N`. Caught on PR #328's body the first time around.
 
 #### Issue + PR lifecycle on the board
 
@@ -238,7 +242,7 @@ The board tracks **both issues and their open PRs**. Issues are the primary item
 #### Finding a project item ID
 
 ```bash
-gh project item-list 2 --owner m-bonanno --format json
+gh project item-list 2 --owner Budojo --format json
 ```
 
 ### PR Rules
@@ -310,10 +314,11 @@ The changelog is **not** checked back into the repo — there is no `CHANGELOG.m
 - Do not create a `version` field in `package.json` — semantic-release owns versioning.
 - `package-lock.json` is committed; always run `npm install` after changing `package.json`.
 
-**Repo setting prerequisite for the auto-sweep workflow** (`.github/workflows/post-release-sweep.yml`):
+**Auto-sweep main → develop after a stable release** (`.github/workflows/release.yml` § sweep job):
 
-- *Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests"* must be **enabled**. Without it, `gh pr create` from the workflow fails with `GitHub Actions is not permitted to create or approve pull requests`. Caught on the v1.10.0 release; one-time admin toggle.
-- The workflow triggers on `push: tags: 'v*.*.*'` (with `'!v*-beta*'` exclusion), NOT `release: published`. semantic-release publishes via `GITHUB_TOKEN`, which by GitHub Actions design refuses to fire downstream `release.published` workflows (recursion guard). Tag pushes DO fire under the same token.
+- The sweep that opens the canonical `chore/sync-main-into-develop-after-vX.Y.Z` PR runs as a **downstream job in the same Release workflow run** as semantic-release. Originally it was a separate workflow triggered on `release: published`, then on `push: tags:` — both silently no-op'd in production because GitHub Actions refuses to fire downstream workflows on events created by `GITHUB_TOKEN` (recursion guard) and semantic-release publishes via that token. Living in the same workflow run sidesteps the guard entirely.
+- **Repo setting prerequisite:** *Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests"* must be **enabled**. Without it, `gh pr create` from the sweep job fails with `GitHub Actions is not permitted to create or approve pull requests`. One-time admin toggle.
+- **Manual fallback** if the auto sweep ever misfires: open the sweep PR by hand from a `chore/sync-main-into-develop-after-vX.Y.Z` branch cut from the release tag, base = `develop`. The body template is in `.github/workflows/release.yml` § sweep job for reference.
 
 #### User-facing changelog (#254)
 
@@ -355,7 +360,7 @@ git commit -m "fix(auth): prevent crash on expired token decode"
 
 When Copilot leaves review comments on a PR:
 
-1. Fetch all comments: `gh api repos/m-bonanno/budojo/pulls/<N>/comments`
+1. Fetch all comments: `gh api repos/Budojo/budojo/pulls/<N>/comments`
 2. For each comment: evaluate, fix if valid, skip with explanation if not applicable
 3. Commit all fixes in one commit: `fix(<scope>): address copilot review comments`
 4. Reply to every thread + resolve them with the [`copilot-replies.sh`](.claude/scripts/copilot-replies.sh) helper:

@@ -307,12 +307,16 @@
   }
 }
 
-// Inputs — remove Material's underline, use filled iOS pill
+// Inputs — remove Material's underline, use filled iOS pill.
+// `.p-datepicker-input` is intentionally NOT in this list since #318:
+// the datepicker COMPOSITE (input + calendar trigger) is styled in
+// `budojo-variants.scss` so the host wrapper carries the chrome and
+// the inner input is transparent. Adding the input here too would
+// double-render the border at the seam between input and trigger.
 .p-inputtext,
 .p-password-input,
 .p-select,
-.p-textarea,
-.p-datepicker-input {
+.p-textarea {
   background: var(--p-form-field-background);
   border: 1px solid transparent;
   border-radius: var(--p-form-field-border-radius);

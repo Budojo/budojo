@@ -25,6 +25,11 @@
 
     <!-- Monthly attendance pulse — same shape, different signal. -->
     <app-monthly-summary-widget />
+
+    <!-- Unpaid-this-month chasing signal (#283) — only renders after the
+         16th of the month and only when the academy has a configured
+         monthly fee. Self-hides otherwise. -->
+    <app-unpaid-this-month-widget />
   </div>
 
   <!-- Filters -->
