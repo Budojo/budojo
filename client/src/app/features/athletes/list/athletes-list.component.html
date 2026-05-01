@@ -4,13 +4,15 @@
 <div class="athletes-page">
   <header class="athletes-page__header">
     <div class="athletes-page__title-area">
-      <h1 class="athletes-page__title">Athletes</h1>
+      <h1 class="athletes-page__title">{{ 'athletes.list.title' | translate }}</h1>
       @if (!loading() && totalRecords() > 0) {
-        <span class="athletes-page__count">{{ totalRecords() }} total</span>
+        <span class="athletes-page__count">
+          {{ 'athletes.list.totalCount' | translate: { count: totalRecords() } }}
+        </span>
       }
     </div>
     <p-button
-      label="Add athlete"
+      [label]="'athletes.list.addButton' | translate"
       icon="pi pi-plus"
       size="small"
       (onClick)="goToNew()"
@@ -39,7 +41,7 @@
       <input
         pInputText
         type="text"
-        placeholder="Search by name"
+        [placeholder]="'athletes.list.searchPlaceholder' | translate"
         [ngModel]="searchTerm()"
         (ngModelChange)="onSearchInput($event)"
         autocomplete="off"
@@ -47,31 +49,31 @@
       />
     </p-iconfield>
     <p-select
-      [options]="beltOptions"
+      [options]="beltOptions()"
       [ngModel]="selectedBelt()"
       (ngModelChange)="onBeltChange($event)"
       optionLabel="label"
       optionValue="value"
-      placeholder="Belt"
+      [placeholder]="'athletes.list.beltPlaceholder' | translate"
       styleClass="filter-select"
     />
     <p-select
-      [options]="statusOptions"
+      [options]="statusOptions()"
       [ngModel]="selectedStatus()"
       (ngModelChange)="onStatusChange($event)"
       optionLabel="label"
       optionValue="value"
-      placeholder="Status"
+      [placeholder]="'athletes.list.statusPlaceholder' | translate"
       styleClass="filter-select"
     />
     @if (hasMonthlyFee()) {
       <p-select
-        [options]="paidOptions"
+        [options]="paidOptions()"
         [ngModel]="selectedPaid()"
         (ngModelChange)="onPaidChange($event)"
         optionLabel="label"
         optionValue="value"
-        placeholder="Paid"
+        [placeholder]="'athletes.list.paidPlaceholder' | translate"
         styleClass="filter-select"
         data-cy="athletes-paid-filter"
       />
@@ -105,7 +107,7 @@
               (click)="cycleFullNameSort()"
               [attr.aria-label]="fullNameSortTooltip()"
             >
-              Full name
+              {{ 'athletes.list.table.fullName' | translate }}
               <span
                 class="full-name-th__signifier"
                 [class.full-name-th__signifier--active]="fullNameSortLabel() !== null"
@@ -125,7 +127,7 @@
               (click)="cycleBeltSort()"
               [attr.aria-label]="beltSortTooltip()"
             >
-              Belt
+              {{ 'athletes.list.table.belt' | translate }}
               <!--
                 Custom signifier (#210, follow-up to #205): drops PrimeNG's
                 `<p-sortIcon>` so the active state reads from OUR signals
@@ -142,13 +144,15 @@
               </span>
             </button>
           </th>
-          <th>Status</th>
+          <th>{{ 'athletes.list.table.status' | translate }}</th>
           @if (hasMonthlyFee()) {
             <!-- Header carries the current month abbreviation (#282) so an
                  instructor reading "Unpaid" on a row knows which month the
                  status refers to without hovering. The full month+year
                  lives in the per-row tooltip below. -->
-            <th data-cy="athletes-th-paid">Paid · {{ currentMonthShort }}</th>
+            <th data-cy="athletes-th-paid">
+              {{ 'athletes.list.table.paidPrefix' | translate }} · {{ currentMonthShort }}
+            </th>
           }
           <th style="width: 8rem"></th>
         </tr>
@@ -203,7 +207,11 @@
                 [pTooltip]="
                   athlete.paid_current_month === undefined
                     ? ''
-                    : currentMonthLong + ' — ' + (athlete.paid_current_month ? 'Paid' : 'Unpaid')
+                    : currentMonthLong +
+                      ' — ' +
+                      (athlete.paid_current_month
+                        ? ('athletes.list.tooltip.paid' | translate)
+                        : ('athletes.list.tooltip.unpaid' | translate))
                 "
                 tooltipPosition="top"
               />
@@ -220,8 +228,11 @@
               [text]="true"
               size="small"
               (onClick)="goToEdit(athlete)"
-              [ariaLabel]="'Edit ' + athlete.first_name + ' ' + athlete.last_name"
-              pTooltip="Edit"
+              [ariaLabel]="
+                'athletes.list.tooltip.editAria'
+                  | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+              "
+              [pTooltip]="'athletes.list.tooltip.edit' | translate"
               tooltipPosition="left"
               data-cy="edit-btn"
             />
@@ -231,8 +242,11 @@
               [text]="true"
               size="small"
               (onClick)="confirmDelete($event, athlete)"
-              [ariaLabel]="'Delete ' + athlete.first_name + ' ' + athlete.last_name"
-              pTooltip="Delete"
+              [ariaLabel]="
+                'athletes.list.tooltip.deleteAria'
+                  | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+              "
+              [pTooltip]="'athletes.list.tooltip.delete' | translate"
               tooltipPosition="left"
             />
           </td>
@@ -258,9 +272,13 @@
             } @else {
               <div class="empty-state">
                 <i class="pi pi-users empty-state__icon"></i>
-                <p class="empty-state__text">No athletes found.</p>
+                <p class="empty-state__text">
+                  {{ 'athletes.list.empty.title' | translate }}
+                </p>
                 @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
-                  <p class="empty-state__hint">Try clearing your filters or search.</p>
+                  <p class="empty-state__hint">
+                    {{ 'athletes.list.empty.filteredHint' | translate }}
+                  </p>
                 }
               </div>
             }
