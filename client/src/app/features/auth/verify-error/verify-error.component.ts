@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
+import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
 
 /**
@@ -15,7 +16,7 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-verify-error',
   standalone: true,
-  imports: [ButtonModule],
+  imports: [ButtonModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './verify-error.component.html',
   styleUrl: './verify-error.component.scss',

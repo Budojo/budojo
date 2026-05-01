@@ -11,6 +11,7 @@ import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { TranslatePipe } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 
@@ -26,6 +27,7 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
     InputTextModule,
     MessageModule,
     TrainingDaysPickerComponent,
+    TranslatePipe,
   ],
   templateUrl: './setup.component.html',
   styleUrl: './setup.component.scss',
