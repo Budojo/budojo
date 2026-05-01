@@ -205,9 +205,11 @@ Examples:
 
 ### GitHub Project Board — PO workflow
 
-The board lives at [`github.com/orgs/Budojo/projects/2`](https://github.com/orgs/Budojo/projects/2) (Project #2 under the `Budojo` org). It tracks **both issues and their open PRs** — issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
+The board lives at [`github.com/orgs/Budojo/projects/2`](https://github.com/orgs/Budojo/projects/2) under the `Budojo` org. It tracks **both issues and their open PRs** — issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
 
-> **Post-org-transfer note:** the repo originally lived under `m-bonanno/budojo` (user account) and the project board was Project #2 under that user. When the repo moved to the `Budojo` org, the full project (structure + all 250 items + their statuses) was migrated via `copyProjectV2` + a one-shot bulk import script, and now lives as Project #2 under the org. Old user-owned project URLs continue to work via GitHub's redirect; the source project on `m-bonanno` was archived to avoid drift.
+> **Post-org-transfer note:** the repo originally lived under `m-bonanno/budojo` (user account) and the project board sat under that user account. When the repo moved to the `Budojo` org, the full project (structure + all 250 items + their statuses) was migrated via `copyProjectV2` + a one-shot bulk import script, and now lives as the org-level project linked above. Old user-owned project URLs continue to work via GitHub's redirect; the source project on `m-bonanno` was archived to avoid drift.
+
+> **Markdown gotcha:** never write `Project #N` in markdown rendered on GitHub (this file, PR bodies, READMEs) — `#N` is auto-linked to issue/PR `N` in the current repo. Use `[…/projects/N](URL)` form, or "the org-level project at /orgs/Budojo/projects/N", or "project number N" — anything but the bare `#N`. Caught on PR #328's body the first time around.
 
 #### Issue + PR lifecycle on the board
 
