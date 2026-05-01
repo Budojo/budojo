@@ -1,16 +1,19 @@
 <!--
   Default PR body shape for the budojo repo. The structure encodes the
-  canonical body discipline documented in CLAUDE.md § PR Checklist for
-  Claude — `What`, `Why`, `How`, optional `Notes`, `References`,
-  `Test plan` checklist. Delete sections that don't apply (e.g. `Notes`
-  is optional); do NOT delete `What / Why / How / References / Test plan`.
+  canonical body discipline from CLAUDE.md § PR Checklist for Claude —
+  What / Why / How / optional Notes / optional Out of scope /
+  References / Test plan. Delete sections that don't apply (Notes and
+  Out of scope are optional); do NOT delete What / Why / How /
+  References / Test plan.
 
   English only — git artifacts (PR bodies, commits, code comments) are
-  in English even when the SPA copy itself is Italian. See feedback
-  memory `feedback_pr_body_english_default.md`.
+  in English even when the SPA copy itself is Italian. See CLAUDE.md
+  § PR Checklist for Claude.
 
   Keep AI-attribution OUT — no "Generated with Claude Code", no
-  "Co-Authored-By: Claude". Root CLAUDE.md rule #9.
+  "Co-Authored-By: Claude". See CLAUDE.md § PR Checklist for Claude,
+  item 6 (and the cross-cutting rule #9 in § What Claude Should
+  Always Do).
 -->
 
 ## What
@@ -41,7 +44,7 @@ _Optional — what this PR deliberately does NOT do, especially when reviewers m
 
 ## Test plan
 
-- [ ] `bash .claude/scripts/test-server.sh` (PHP changes) — phpstan + cs-fixer + pest green
-- [ ] `bash .claude/scripts/test-client.sh` (Angular changes) — prettier + lint + vitest green
+- [ ] `./.claude/scripts/test-server.sh` (PHP changes) — phpstan + cs-fixer + pest green
+- [ ] `./.claude/scripts/test-client.sh` (Angular changes) — prettier + lint + vitest green
 - [ ] Cypress green in CI
 - [ ] Manual smoke: _what to click + expected outcome_
