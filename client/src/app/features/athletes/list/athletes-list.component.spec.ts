@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import type { Mock } from 'vitest';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthletesListComponent } from './athletes-list.component';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AthleteService, type Athlete } from '../../../core/services/athlete.service';
@@ -49,6 +50,7 @@ describe('AthletesListComponent', () => {
         provideRouter([]),
         { provide: AthleteService, useClass: FakeAthleteService },
         { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
       ],
     });
   });

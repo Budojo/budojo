@@ -4,11 +4,15 @@
   data-cy="monthly-summary-widget"
 >
   <header class="summary-widget__header">
-    <p class="summary-widget__eyebrow">Attendance · {{ monthLabel() }}</p>
+    <p class="summary-widget__eyebrow">
+      {{ 'attendance.summaryWidget.eyebrowPrefix' | translate }} · {{ monthLabel() }}
+    </p>
     @if (loading()) {
       <p-skeleton width="9rem" height="1.75rem" />
     } @else if (errored()) {
-      <h3 class="summary-widget__title summary-widget__title--muted">Couldn't check</h3>
+      <h3 class="summary-widget__title summary-widget__title--muted">
+        {{ 'attendance.summaryWidget.errorTitle' | translate }}
+      </h3>
     } @else {
       <!--
         Headline switched from `totalDays training days` (a misnamed sum
@@ -28,7 +32,9 @@
             instead of the zero.
           -->
           {{ avg }}
-          <span class="summary-widget__title-unit">athletes / session</span>
+          <span class="summary-widget__title-unit">
+            {{ 'attendance.summaryWidget.athletesPerSession' | translate }}
+          </span>
         } @else {
           —
         }
@@ -63,10 +69,10 @@
         </li>
       }
     </ul>
-    <span class="summary-widget__cta">View all →</span>
+    <span class="summary-widget__cta">{{ 'attendance.summaryWidget.viewAll' | translate }}</span>
   } @else if (!errored()) {
     <p class="summary-widget__empty" data-cy="monthly-summary-empty">
-      No attendance recorded yet this month.
+      {{ 'attendance.summaryWidget.empty' | translate }}
     </p>
   }
 </a>

@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
@@ -35,7 +36,7 @@ function currentYearMonth(): string {
 @Component({
   selector: 'app-monthly-summary-widget',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, SkeletonModule],
+  imports: [RouterLink, SkeletonModule, TranslatePipe],
   templateUrl: './monthly-summary-widget.component.html',
   styleUrl: './monthly-summary-widget.component.scss',
 })
