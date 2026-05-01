@@ -1,0 +1,132 @@
+name: Post-release main → develop sweep
+
+# Fires when semantic-release publishes a stable tag on `main`. The
+# develop ruleset forbids direct pushes (per branch-rulesets.md), so
+# this workflow opens the canonical
+# `chore/sync-main-into-develop-after-vX.Y.Z` PR instead of pushing
+# straight. The user merges with the GitHub UI's "Merge" button (one
+# click) — the manual gh CLI dance documented in CLAUDE.md § Release
+# Flow becomes a half-step.
+#
+# Why a PR instead of a direct push: pushing to `develop` would need
+# either (a) the bot in the develop ruleset's bypass actor list, or
+# (b) a PAT secret with bypass authority. Both are admin-only setup
+# the workflow itself can't perform. The PR path needs only the
+# default GITHUB_TOKEN's `pull-requests: write` permission.
+#
+# Sweep merge style: per memory `project_release_merge_style.md`, the
+# main→develop sweep MUST use "Create a merge commit" (NOT squash).
+# Squash erases the parent linkage and breaks downstream merge
+# bookkeeping. The user picks the merge style at click time; the PR
+# body reminds them.
+
+on:
+  release:
+    types: [published]
+  # Manual fallback: if the workflow ever fails on the release event
+  # (e.g. transient API hiccup), a maintainer can re-run it from the
+  # Actions tab without having to re-publish the release.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to sweep (e.g. v1.9.0)'
+        required: true
+
+jobs:
+  sweep:
+    name: 'Open sweep PR'
+    runs-on: ubuntu-latest
+    # Only stable releases. Beta tags (v*-beta.N) live on `develop`
+    # and don't trigger a sweep — they ARE the develop train.
+    # `release.published` doesn't pass the prerelease flag through to
+    # `if:` directly, so we filter on the tag name shape.
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.release.tag_name, 'beta') }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: main
+          persist-credentials: true
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = 'workflow_dispatch' ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure git
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+      - name: Cut sweep branch from main
+        id: branch
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          BRANCH="chore/sync-main-into-develop-after-${TAG}"
+          # Idempotent — if a previous run created the branch, delete
+          # it remotely first so we always push a fresh sweep state.
+          # The local checkout is a fresh clone via actions/checkout
+          # so no local branch pre-exists.
+          git push origin --delete "$BRANCH" || true
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Open sweep PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          BRANCH: ${{ steps.branch.outputs.branch }}
+        run: |
+          # If a PR for this branch already exists (re-run after a
+          # transient failure), update its body instead of creating a
+          # duplicate. gh handles the "no PR exists" branch implicitly.
+          EXISTING=$(gh pr list --head "$BRANCH" --base develop --state open --json number --jq '.[0].number // empty')
+
+          BODY=$(cat <<EOF
+          ## What
+
+          Auto-opened by the post-release sweep workflow on \`release: published\` for tag **${TAG}**. Brings the release merge commit from \`main\` back into \`develop\` so semantic-release on the next \`develop\` push reads the right base for the next beta tag.
+
+          > **Merge style:** "Create a merge commit" — NOT squash. Squash erases the parent linkage and breaks downstream merge bookkeeping (memory \`project_release_merge_style.md\`).
+
+          > **Copilot wait:** none. Alignment-only — no new code, no review surface (memory \`feedback_release_pr_wait_for_copilot.md\`).
+
+          ## Why
+
+          Without the sweep, \`develop\`'s next beta tag stays on the OLD train (semantic-release can't see the new stable tag from \`develop\`'s history).
+
+          ## What's in the diff
+
+          The release merge commit from main + any commits ahead of develop (should be just the merge commit on a clean release flow).
+
+          ## References
+
+          - Release tag: [${TAG}](https://github.com/m-bonanno/budojo/releases/tag/${TAG})
+          - Workflow: \`.github/workflows/post-release-sweep.yml\`
+          - Originating issue: #294
+          EOF
+          )
+
+          if [ -n "$EXISTING" ]; then
+            echo "Updating existing PR #${EXISTING}"
+            gh pr edit "$EXISTING" --body "$BODY"
+          else
+            echo "Creating new sweep PR"
+            gh pr create \
+              --base develop \
+              --head "$BRANCH" \
+              --title "chore: sweep ${TAG} release merge commit from main into develop" \
+              --body "$BODY" \
+              --label "🔧 maintenance" \
+              --assignee m-bonanno
+          fi
