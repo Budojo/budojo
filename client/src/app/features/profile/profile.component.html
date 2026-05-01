@@ -1,33 +1,30 @@
 @if (user(); as u) {
   <div class="profile-page">
     <header class="profile-page__header">
-      <h1 class="profile-page__title">Profile</h1>
-      <p class="profile-page__subtitle">Account details and verification status.</p>
+      <h1 class="profile-page__title">{{ 'profile.title' | translate }}</h1>
+      <p class="profile-page__subtitle">{{ 'profile.subtitle' | translate }}</p>
     </header>
 
     @if (verifyRequired()) {
       <div class="profile-page__banner" role="alert" data-cy="profile-verify-required-banner">
         <i class="pi pi-info-circle" aria-hidden="true"></i>
-        <span>
-          You need to verify your email before adding athletes or documents. Check your inbox for
-          the verification link, or use the Resend button below.
-        </span>
+        <span>{{ 'profile.verifyRequiredBanner' | translate }}</span>
       </div>
     }
 
     <p-card styleClass="profile-page__card">
       <div class="profile-page__row">
-        <span class="profile-page__label">Name</span>
+        <span class="profile-page__label">{{ 'profile.name' | translate }}</span>
         <span class="profile-page__value" data-cy="profile-name">{{ u.name }}</span>
       </div>
 
       <div class="profile-page__row">
-        <span class="profile-page__label">Email</span>
+        <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
         <span class="profile-page__value" data-cy="profile-email">{{ u.email }}</span>
       </div>
 
       <div class="profile-page__row profile-page__row--status">
-        <span class="profile-page__label">Verification</span>
+        <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>
         <app-email-verification-status />
       </div>
     </p-card>
@@ -46,15 +43,12 @@
     -->
     <p-card styleClass="profile-page__card">
       <section class="profile-page__data-export" data-cy="profile-data-export">
-        <span class="profile-page__label">Your data</span>
-        <p class="profile-page__export-hint">
-          Download a full copy of your account — academy details, athletes, payments, attendance,
-          and uploaded documents. The file is a ZIP you can open with any archive tool.
-        </p>
+        <span class="profile-page__label">{{ 'profile.yourData' | translate }}</span>
+        <p class="profile-page__export-hint">{{ 'profile.exportHint' | translate }}</p>
         <p-button
           type="button"
           icon="pi pi-download"
-          label="Download my data"
+          [label]="'profile.exportButton' | translate"
           severity="secondary"
           [outlined]="true"
           size="small"

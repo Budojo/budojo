@@ -5,6 +5,7 @@ import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { MessageService } from 'primeng/api';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
 
@@ -25,7 +26,7 @@ import { EmailVerificationStatusComponent } from '../../shared/components/email-
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [ButtonModule, CardModule, EmailVerificationStatusComponent],
+  imports: [ButtonModule, CardModule, EmailVerificationStatusComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
@@ -34,6 +35,7 @@ export class ProfileComponent {
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly messageService = inject(MessageService);
+  private readonly translate = inject(TranslateService);
 
   protected readonly user = this.authService.user;
   protected readonly exporting = signal<boolean>(false);
@@ -76,11 +78,16 @@ export class ProfileComponent {
           URL.revokeObjectURL(url);
         },
         error: (err: { status?: number }) => {
-          const detail =
+          const detail = this.translate.instant(
             err.status === 429
-              ? 'You already exported your data recently. Try again in a minute.'
-              : "Couldn't download your data. Please try again.";
-          this.messageService.add({ severity: 'error', summary: 'Error', detail });
+              ? 'profile.exportToast.throttledDetail'
+              : 'profile.exportToast.genericErrorDetail',
+          );
+          this.messageService.add({
+            severity: 'error',
+            summary: this.translate.instant('profile.exportToast.errorSummary'),
+            detail,
+          });
         },
       });
   }

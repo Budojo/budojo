@@ -221,5 +221,35 @@
       "subProcessors": "Sub-processors",
       "tagline": "Made for the mat. Built in Italy."
     }
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Account details and verification status.",
+    "verifyRequiredBanner": "You need to verify your email before adding athletes or documents. Check your inbox for the verification link, or use the Resend button below.",
+    "name": "Name",
+    "email": "Email",
+    "verification": "Verification",
+    "yourData": "Your data",
+    "exportHint": "Download a full copy of your account — academy details, athletes, payments, attendance, and uploaded documents. The file is a ZIP you can open with any archive tool.",
+    "exportButton": "Download my data",
+    "exportToast": {
+      "errorSummary": "Error",
+      "throttledDetail": "You already exported your data recently. Try again in a minute.",
+      "genericErrorDetail": "Couldn't download your data. Please try again."
+    }
+  },
+  "emailVerification": {
+    "verified": "Email verified",
+    "notVerified": "Email not verified",
+    "resend": "Resend",
+    "resendIn": "Resend in {{seconds}}s",
+    "toast": {
+      "sentSummary": "Email sent",
+      "sentDetail": "Check your inbox — the verification link is on its way.",
+      "throttledSummary": "Try again in a moment",
+      "throttledDetail": "For security, you can only request a verification email once per minute.",
+      "errorSummary": "Couldn’t send email",
+      "errorDetail": "Please try again — if it persists, contact support."
+    }
   }
 }

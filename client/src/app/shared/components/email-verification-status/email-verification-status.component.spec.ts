@@ -6,6 +6,7 @@ import { of, throwError } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { AuthService, User } from '../../../core/services/auth.service';
 import { EmailVerificationStatusComponent } from './email-verification-status.component';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 
 class FakeAuthService {
   readonly user = signal<User | null>(null);
@@ -36,6 +37,7 @@ describe('EmailVerificationStatusComponent', () => {
         provideHttpClientTesting(),
         MessageService,
         { provide: AuthService, useClass: FakeAuthService },
+        ...provideI18nTesting(),
       ],
     });
     auth = TestBed.inject(AuthService) as unknown as FakeAuthService;
