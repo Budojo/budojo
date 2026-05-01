@@ -121,6 +121,20 @@ The app is installable as a PWA. Key files:
 
 **Don't** register a new service worker file or bypass the Angular builder — `ngsw-worker.js` is generated at build time from `ngsw-config.json`.
 
+**Auto-update on new SW version (#305).** `AppUpdateService` (in `client/src/app/core/services/app-update.service.ts`) wires `SwUpdate.versionUpdates` to `activateUpdate()` + `document.location.reload()` on `VERSION_READY`, plus a 1-hour periodic `checkForUpdate()` for long-lived mobile sessions. Wired from `App.ngOnInit`. Without this the prefetch cache strategy above leaves returning users on the old bundle until a manual hard-refresh — beta tester caught this on the v1.8.0 → v1.9.0 boundary. Don't add a "click to refresh" toast on top: the reload itself is the signal, and the trade-off (mid-form-fill data loss) is acceptable while forms are short.
+
+### i18n — ngx-translate framework (#273)
+
+The SPA runs **`@ngx-translate/core`** with a **synchronous bundled-JSON loader** (`client/src/test-utils/i18n-test.ts` for tests, `BundledJsonLoader` in `app.config.ts` for runtime). EN is the default + fallback; IT is opt-in via the sidebar toggle. Dashboard pages, auth flows, setup wizard, chrome, 404 + `/privacy` (English) / `/privacy/it` are all key-driven. Hard rules:
+
+- **Every new visible string lives in `client/src/assets/i18n/{en,it}.json`** — never hardcode a label / placeholder / message in a template or `.ts`. Use `| translate` in templates and `translateService.instant('key')` in components / services.
+- **`en.json` and `it.json` stay in lock-step.** The `i18n-keys.spec.ts` parity check fails when one has a key the other doesn't — that's the trip-wire by design. Adding a key to `en.json` requires the matching key in `it.json` (translated) in the same commit.
+- **Component specs use `provideI18nTesting()`** (from `client/src/test-utils/i18n-test.ts`) — never the production `BundledJsonLoader` directly. Asserting on translated text in a spec is fine; the harness renders English by default.
+- **Cypress specs override the language via `localStorage.budojoLang`** in `onBeforeLoad` — see `cypress/support/commands.ts`. A spec asserting on an Italian string pre-seeds `'it'`; default is `'en'`.
+- **Don't dynamically build translation keys with template strings** (`'errors.' + code`) without an explicit map of allowed keys — the JSON parity check can't see them and the IT translation drifts silently. If you genuinely need indirection, declare the allowed key set in code and lock it with a unit test.
+
+The roadmap (#271) adds Spanish + German next. The framework is multi-locale-ready — adding a third locale is "ship `es.json` + bump `SUPPORTED_LANGUAGES` in `LanguageService`".
+
 ### Red flags in code review
 
 A reviewer should push back when they see:
