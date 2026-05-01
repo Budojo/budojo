@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
+import { AppUpdateService } from './core/services/app-update.service';
 import { LanguageService } from './core/services/language.service';
 
 @Component({
@@ -11,6 +12,7 @@ import { LanguageService } from './core/services/language.service';
 })
 export class App implements OnInit {
   private readonly languageService = inject(LanguageService);
+  private readonly appUpdateService = inject(AppUpdateService);
 
   ngOnInit(): void {
     // i18n bootstrap (#273) — must run BEFORE any user-visible
@@ -18,5 +20,10 @@ export class App implements OnInit {
     // language. Reads localStorage / navigator.language with
     // an `en` fallback.
     this.languageService.bootstrap();
+
+    // Wire the PWA service worker update listener so a deploy on
+    // main lands in the user's browser without a manual cache
+    // clear. No-op in dev mode (SwUpdate.isEnabled is false there).
+    this.appUpdateService.start();
   }
 }
