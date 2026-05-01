@@ -107,8 +107,21 @@
          the only signout entry point in the shell after #166 retired the
          redundant brand-area dropdown (Krug + Don't Make Me Think).
          "What's new" sits ABOVE Sign out (#254) so a returning user
-         spots the changelog before the finality of signing out. -->
+         spots the changelog before the finality of signing out.
+         "Send feedback" (#311) sits ABOVE What's new — an active path
+         (the user has something to say) outranks the passive changelog
+         in the footer's read order. -->
     <div class="sidebar__footer">
+      <a
+        routerLink="feedback"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item sidebar__nav-item--feedback"
+        (click)="closeSidebar()"
+        data-cy="nav-feedback"
+      >
+        <i class="pi pi-comment" aria-hidden="true"></i>
+        <span>{{ 'nav.feedback' | translate }}</span>
+      </a>
       <a
         routerLink="whats-new"
         routerLinkActive="sidebar__nav-item--active"

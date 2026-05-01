@@ -1163,6 +1163,68 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /feedback:
+    post:
+      tags: [feedback]
+      summary: Submit in-app feedback (subject + description + optional image) — emails the product owner
+      description: |
+        Authenticated users can submit a feedback message; the server
+        composes an email to the product owner carrying the user's text,
+        the optional attached image, the SPA build version, and the
+        request User-Agent. The mail is sent synchronously during request
+        handling — fire-and-forget from the client's perspective: the
+        202 confirms acceptance, NOT delivery (bounces / mailbox-side
+        issues are out of band). Throttled to 5 req/min per user.
+
+        The image (when present) is sent as an attachment and is NOT
+        persisted server-side; once the mail leaves the temp upload file
+        is discarded with the request lifecycle.
+      operationId: submitFeedback
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [subject, description]
+              properties:
+                subject:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                description:
+                  type: string
+                  minLength: 10
+                  maxLength: 2000
+                app_version:
+                  type: string
+                  maxLength: 50
+                  description: SPA build tag (e.g. v1.9.0, dev). Optional — server falls back to "unknown".
+                image:
+                  type: string
+                  format: binary
+                  description: Optional single attachment, max 5 MB, png / jpeg / webp only.
+      responses:
+        '202':
+          description: Feedback accepted — mail sent synchronously, delivery not guaranteed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string }
+              example: { message: Feedback received. }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttle limit hit (5 req/min per user).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+
   /athletes/{athlete}/attendance:
     get:
       tags: [attendance]

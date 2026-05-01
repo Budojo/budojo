@@ -253,7 +253,7 @@ gh project item-list 2 --owner m-bonanno --format json
 ### PR Checklist for Claude — every PR must include
 
 1. **Title** — conventional commit format: `type(scope): description`
-2. **Description** — filled template (What / Why / How / Checklist / References) in English
+2. **Description** — filled template (What / Why / How / optional Notes / optional Out of scope / References / Test plan) in English. The default `.github/PULL_REQUEST_TEMPLATE.md` auto-populates this skeleton on UI-opened PRs.
 3. **Assignee** — always assign `m-bonanno` (`gh pr edit <N> --add-assignee m-bonanno`)
 4. **Labels** — apply the type label at creation (see table below).
 5. **Project board** — add the PR, set to `In Progress`.

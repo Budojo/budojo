@@ -106,4 +106,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'store']);
     Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy']);
     Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
+
+    // In-app feedback (#311). Authenticated user → email to product owner.
+    // Throttled lightly (5 req/min per user) so a script can't blast the
+    // owner's inbox; the shape lets a frustrated user fire several reports
+    // in quick succession but stops abuse.
+    Route::post('/feedback', [\App\Http\Controllers\Feedback\FeedbackController::class, 'store'])
+        ->middleware('throttle:5,1');
 });
