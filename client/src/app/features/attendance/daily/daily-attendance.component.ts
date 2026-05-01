@@ -174,31 +174,51 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private readonly searchInputSubject = new Subject<string>();
 
-  // Static map (Belt → translation key) — keeps the keys greppable and
-  // forces a TS error if Belt expands. Order = IBJJF rank (kids →
-  // adults → senior coral/red). The reactive `beltOptions` computed
-  // below re-renders when the user toggles language via the sidebar
-  // (LanguageService.currentLang signal dependency).
-  private readonly beltKeyOrder: { value: Belt | ''; key: string }[] = [
-    { value: '', key: 'belts.all' },
-    { value: 'grey', key: 'belts.grey' },
-    { value: 'yellow', key: 'belts.yellow' },
-    { value: 'orange', key: 'belts.orange' },
-    { value: 'green', key: 'belts.green' },
-    { value: 'white', key: 'belts.white' },
-    { value: 'blue', key: 'belts.blue' },
-    { value: 'purple', key: 'belts.purple' },
-    { value: 'brown', key: 'belts.brown' },
-    { value: 'black', key: 'belts.black' },
-    { value: 'red-and-black', key: 'belts.redAndBlack' },
-    { value: 'red-and-white', key: 'belts.redAndWhite' },
-    { value: 'red', key: 'belts.red' },
+  // Exhaustive Belt → translation-key map. `Record<Belt, string>` is the
+  // load-bearing piece: if Belt ever gains a new member (e.g. a kids' red
+  // band), TS fails compilation here until the matching key is added,
+  // closing the parity-gap loop on the i18n side too.
+  private readonly beltLabelKeys: Record<Belt, string> = {
+    grey: 'belts.grey',
+    yellow: 'belts.yellow',
+    orange: 'belts.orange',
+    green: 'belts.green',
+    white: 'belts.white',
+    blue: 'belts.blue',
+    purple: 'belts.purple',
+    brown: 'belts.brown',
+    black: 'belts.black',
+    'red-and-black': 'belts.redAndBlack',
+    'red-and-white': 'belts.redAndWhite',
+    red: 'belts.red',
+  };
+
+  // Render order = IBJJF rank (kids → adults → senior coral/red). Kept
+  // separate from the Record above because Record key order isn't a
+  // language guarantee, and the empty 'all' option isn't a Belt value.
+  private readonly beltOrder: readonly (Belt | '')[] = [
+    '',
+    'grey',
+    'yellow',
+    'orange',
+    'green',
+    'white',
+    'blue',
+    'purple',
+    'brown',
+    'black',
+    'red-and-black',
+    'red-and-white',
+    'red',
   ];
 
   protected readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
     this.languageService.currentLang(); // signal dep — recompute on toggle
-    return this.beltKeyOrder.map(({ value, key }) => ({
-      label: this.translate.instant(key),
+    return this.beltOrder.map((value) => ({
+      label:
+        value === ''
+          ? this.translate.instant('belts.all')
+          : this.translate.instant(this.beltLabelKeys[value]),
       value,
     }));
   });
