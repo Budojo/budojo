@@ -29,8 +29,14 @@
     gap: 0.5rem;
   }
 
+  // Icon-only action column — narrow enough to keep the row centred on
+  // Month / Status / Amount / Paid on without the action eating layout
+  // weight, but wide enough that the 32-px text-button never touches
+  // the cell wall. The dash placeholder for read-only rows uses the
+  // same slot, keeping vertical rhythm consistent across past, current
+  // AND future months. Canon § 8dp grid + Krug § scan-friendly tables.
   &__th-actions {
-    width: 9rem;
+    width: 3.5rem;
   }
 
   &__actions {
