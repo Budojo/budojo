@@ -314,10 +314,11 @@ The changelog is **not** checked back into the repo — there is no `CHANGELOG.m
 - Do not create a `version` field in `package.json` — semantic-release owns versioning.
 - `package-lock.json` is committed; always run `npm install` after changing `package.json`.
 
-**Repo setting prerequisite for the auto-sweep workflow** (`.github/workflows/post-release-sweep.yml`):
+**Auto-sweep main → develop after a stable release** (`.github/workflows/release.yml` § sweep job):
 
-- *Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests"* must be **enabled**. Without it, `gh pr create` from the workflow fails with `GitHub Actions is not permitted to create or approve pull requests`. Caught on the v1.10.0 release; one-time admin toggle.
-- The workflow triggers on `push: tags: 'v*.*.*'` (with `'!v*-beta*'` exclusion), NOT `release: published`. semantic-release publishes via `GITHUB_TOKEN`, which by GitHub Actions design refuses to fire downstream `release.published` workflows (recursion guard). Tag pushes DO fire under the same token.
+- The sweep that opens the canonical `chore/sync-main-into-develop-after-vX.Y.Z` PR runs as a **downstream job in the same Release workflow run** as semantic-release. Originally it was a separate workflow triggered on `release: published`, then on `push: tags:` — both silently no-op'd in production because GitHub Actions refuses to fire downstream workflows on events created by `GITHUB_TOKEN` (recursion guard) and semantic-release publishes via that token. Living in the same workflow run sidesteps the guard entirely.
+- **Repo setting prerequisite:** *Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests"* must be **enabled**. Without it, `gh pr create` from the sweep job fails with `GitHub Actions is not permitted to create or approve pull requests`. One-time admin toggle.
+- **Manual fallback** if the auto sweep ever misfires: open the sweep PR by hand from a `chore/sync-main-into-develop-after-vX.Y.Z` branch cut from the release tag, base = `develop`. The body template is in `.github/workflows/release.yml` § sweep job for reference.
 
 #### User-facing changelog (#254)
 
