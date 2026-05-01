@@ -242,7 +242,7 @@ The board lives at [`github.com/orgs/Budojo/projects/2`](https://github.com/orgs
 #### Finding a project item ID
 
 ```bash
-gh project item-list 1 --owner Budojo --format json
+gh project item-list 2 --owner Budojo --format json
 ```
 
 ### PR Rules
