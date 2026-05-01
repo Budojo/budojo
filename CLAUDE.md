@@ -207,7 +207,7 @@ Examples:
 
 The board lives at [`github.com/orgs/Budojo/projects/1`](https://github.com/orgs/Budojo/projects/1) (Project #1 under the `Budojo` org). It tracks **both issues and their open PRs** — issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
 
-> **Post-org-transfer note:** before the v1.10.2 transfer the project lived under `m-bonanno` (the user account) as Project #2. After the move it was recreated under the org as Project #1; the active items were migrated, the 238 historical Done items were left behind. Old user-owned project URLs auto-redirect.
+> **Post-org-transfer note:** the repo originally lived under `m-bonanno/budojo` (user account) and the project board was Project #2 under that user. When the repo moved to the `Budojo` org, the project was recreated as Project #1 under the org; the active items were migrated, the historical Done items were left behind on their issue/PR pages. Old user-owned project URLs continue to work via GitHub's redirect.
 
 #### Issue + PR lifecycle on the board
 
