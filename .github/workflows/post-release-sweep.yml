@@ -140,10 +140,17 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
           BRANCH: ${{ steps.branch.outputs.branch }}
         run: |
-          # PR body via --body-file (NOT --body / heredoc) per
-          # CLAUDE.md § PR Checklist. The heredoc shape was getting
-          # special-character mangling in practice. Copilot caught
-          # this on #309.
+          # PR body passed to gh pr create via --body-file (NOT
+          # --body "..."), per CLAUDE.md § PR Checklist — the inline
+          # --body shape was getting special-character mangling in
+          # practice. Copilot caught the original mistake on #309.
+          #
+          # The heredoc here just writes the body content to a file;
+          # it is NOT used to pass the body directly to gh. The
+          # delimiter is intentionally unquoted so `${TAG}` and
+          # `${BRANCH}` expand from the env: block above. The markdown
+          # backticks below are escaped (`\`) so bash doesn't try to
+          # command-substitute their content while writing the file.
           cat > /tmp/sweep-body.md <<EOF
           ## What
 
