@@ -127,7 +127,7 @@ The app is installable as a PWA. Key files:
 
 The SPA runs **`@ngx-translate/core`** with a **synchronous bundled-JSON loader** (`client/src/test-utils/i18n-test.ts` for tests, `BundledJsonLoader` in `app.config.ts` for runtime). EN is the default + fallback; IT is opt-in via the sidebar toggle. Dashboard pages, auth flows, setup wizard, chrome, 404 + `/privacy` (English) / `/privacy/it` are all key-driven. Hard rules:
 
-- **Every new visible string lives in `client/src/assets/i18n/{en,it}.json`** — never hardcode a label / placeholder / message in a template or `.ts`. Use `| translate` in templates and `translateService.instant('key')` in components / services.
+- **Every new visible string lives in `client/public/assets/i18n/{en,it}.json`** — never hardcode a label / placeholder / message in a template or `.ts`. Use `| translate` in templates and `translateService.instant('key')` in components / services.
 - **`en.json` and `it.json` stay in lock-step.** The `i18n-keys.spec.ts` parity check fails when one has a key the other doesn't — that's the trip-wire by design. Adding a key to `en.json` requires the matching key in `it.json` (translated) in the same commit.
 - **Component specs use `provideI18nTesting()`** (from `client/src/test-utils/i18n-test.ts`) — never the production `BundledJsonLoader` directly. Asserting on translated text in a spec is fine; the harness renders English by default.
 - **Cypress specs override the language via `localStorage.budojoLang`** in `onBeforeLoad` — see `cypress/support/commands.ts`. A spec asserting on an Italian string pre-seeds `'it'`; default is `'en'`.
