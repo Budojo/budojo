@@ -62,7 +62,13 @@
   &__row {
     font-size: 0.875rem;
 
+    // Skeleton rows render a single <p-skeleton> directly inside the
+    // <li>; flex-center keeps the placeholder vertically anchored so
+    // the row's height matches the populated state once the load
+    // settles. Without `display: flex`, `align-items: center` is a
+    // no-op (Copilot caught this on #283).
     &--skeleton {
+      display: flex;
       align-items: center;
     }
   }

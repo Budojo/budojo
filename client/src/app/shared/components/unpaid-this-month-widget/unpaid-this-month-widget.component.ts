@@ -83,13 +83,17 @@ export class UnpaidThisMonthWidgetComponent implements OnInit {
   );
 
   /**
-   * True on or after the 16th of the current month. Local-date based
-   * (matches the wall clock the instructor sees on their phone) — the
-   * other date-derived widgets in this app (monthly-summary) use the
-   * same convention.
+   * True on or after the 16th of the current month. **UTC-based** to
+   * match the server's clock — the Laravel app timezone is UTC and
+   * the `paid=no` filter uses `now()->month` / `now()->year` server-
+   * side, so the "current month" the API returns is the UTC current
+   * month. Using local time here would mean that around the UTC
+   * day/month boundaries the widget could surface "May" while the
+   * API was still returning April's unpaid set (or vice versa).
+   * Copilot caught this on #283.
    */
   protected readonly pastChasingThreshold = computed<boolean>(
-    () => this.now()().getDate() >= this.CHASING_THRESHOLD_DAY,
+    () => this.now()().getUTCDate() >= this.CHASING_THRESHOLD_DAY,
   );
 
   /**
@@ -101,10 +105,18 @@ export class UnpaidThisMonthWidgetComponent implements OnInit {
     () => this.hasMonthlyFee() && this.pastChasingThreshold(),
   );
 
-  /** Current month label, e.g. "May 2026". */
+  /**
+   * Current month label, e.g. "May 2026". Formatted with `timeZone: 'UTC'`
+   * so it cannot drift from the UTC-based threshold gate (or the UTC-
+   * based server filter) at day/month boundaries.
+   */
   protected readonly monthLabel = computed<string>(() => {
     const today = this.now()();
-    return today.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    return today.toLocaleDateString('en-GB', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
   });
 
   ngOnInit(): void {

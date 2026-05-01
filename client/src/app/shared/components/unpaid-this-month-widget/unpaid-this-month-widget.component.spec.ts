@@ -69,11 +69,17 @@ function setup(opts: { monthlyFee: number | null; date: Date }): {
 }
 
 describe('UnpaidThisMonthWidgetComponent (#283)', () => {
+  afterEach(() => {
+    // Verify no unexpected / unflushed HTTP requests after each test.
+    // Repo convention — keeps the suite honest as the component evolves.
+    TestBed.inject(HttpTestingController).verify();
+  });
+
   describe('visibility gates', () => {
     it('renders nothing when the academy has no monthly_fee_cents', () => {
       const { fixture, httpMock } = setup({
         monthlyFee: null,
-        date: new Date(2026, 4, 20), // 20 May 2026 — past threshold
+        date: new Date(Date.UTC(2026, 4, 20)), // 20 May 2026 — past threshold
       });
       fixture.detectChanges();
 
@@ -85,7 +91,7 @@ describe('UnpaidThisMonthWidgetComponent (#283)', () => {
     it('renders nothing before the 16th of the month even with a fee set', () => {
       const { fixture, httpMock } = setup({
         monthlyFee: 5000,
-        date: new Date(2026, 4, 15), // 15 May 2026 — strictly BEFORE threshold
+        date: new Date(Date.UTC(2026, 4, 15)), // 15 May 2026 — strictly BEFORE threshold
       });
       fixture.detectChanges();
 
@@ -96,7 +102,7 @@ describe('UnpaidThisMonthWidgetComponent (#283)', () => {
     it('renders + fetches on the 16th (boundary inclusive)', () => {
       const { fixture, httpMock } = setup({
         monthlyFee: 5000,
-        date: new Date(2026, 4, 16),
+        date: new Date(Date.UTC(2026, 4, 16)),
       });
       fixture.detectChanges();
 
@@ -113,7 +119,7 @@ describe('UnpaidThisMonthWidgetComponent (#283)', () => {
     it('shows the count + top 5 athlete names + a "View all" CTA when count > 5', () => {
       const { fixture, httpMock } = setup({
         monthlyFee: 5000,
-        date: new Date(2026, 4, 20),
+        date: new Date(Date.UTC(2026, 4, 20)),
       });
       fixture.detectChanges();
 
@@ -145,7 +151,7 @@ describe('UnpaidThisMonthWidgetComponent (#283)', () => {
     it('renders an empty-state headline when count is 0', () => {
       const { fixture, httpMock } = setup({
         monthlyFee: 5000,
-        date: new Date(2026, 4, 20),
+        date: new Date(Date.UTC(2026, 4, 20)),
       });
       fixture.detectChanges();
 
@@ -164,7 +170,7 @@ describe('UnpaidThisMonthWidgetComponent (#283)', () => {
     it('singularises the headline when count is 1', () => {
       const { fixture, httpMock } = setup({
         monthlyFee: 5000,
-        date: new Date(2026, 4, 20),
+        date: new Date(Date.UTC(2026, 4, 20)),
       });
       fixture.detectChanges();
 
@@ -185,7 +191,7 @@ describe('UnpaidThisMonthWidgetComponent (#283)', () => {
     it('falls back to the muted error tile if the fetch fails', () => {
       const { fixture, httpMock } = setup({
         monthlyFee: 5000,
-        date: new Date(2026, 4, 20),
+        date: new Date(Date.UTC(2026, 4, 20)),
       });
       fixture.detectChanges();
 
@@ -202,7 +208,7 @@ describe('UnpaidThisMonthWidgetComponent (#283)', () => {
     it('each name row links to the per-athlete payments tab', () => {
       const { fixture, httpMock } = setup({
         monthlyFee: 5000,
-        date: new Date(2026, 4, 20),
+        date: new Date(Date.UTC(2026, 4, 20)),
       });
       fixture.detectChanges();
 
