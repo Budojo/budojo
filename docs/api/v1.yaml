@@ -46,6 +46,12 @@ tags:
       **Email-verification gate.** Same shape as athletes: writes (`POST` /
       `PUT` / `DELETE`) are gated on `verified.api`; reads stay open. See the
       `VerificationRequired` response component.
+  - name: feedback
+    description: |
+      In-app feedback submitted by authenticated users — emails the
+      product owner with the user's text, the SPA build version, and
+      the request User-Agent. Single endpoint, single recipient
+      (hardcoded), throttled to 5 req/min per user.
 
 paths:
 

@@ -310,6 +310,11 @@ The changelog is **not** checked back into the repo — there is no `CHANGELOG.m
 - Do not create a `version` field in `package.json` — semantic-release owns versioning.
 - `package-lock.json` is committed; always run `npm install` after changing `package.json`.
 
+**Repo setting prerequisite for the auto-sweep workflow** (`.github/workflows/post-release-sweep.yml`):
+
+- *Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests"* must be **enabled**. Without it, `gh pr create` from the workflow fails with `GitHub Actions is not permitted to create or approve pull requests`. Caught on the v1.10.0 release; one-time admin toggle.
+- The workflow triggers on `push: tags: 'v*.*.*'` (with `'!v*-beta*'` exclusion), NOT `release: published`. semantic-release publishes via `GITHUB_TOKEN`, which by GitHub Actions design refuses to fire downstream `release.published` workflows (recursion guard). Tag pushes DO fire under the same token.
+
 #### User-facing changelog (#254)
 
 Separately from the semantic-release dev changelog above, the SPA ships a **user-facing changelog** at `/dashboard/whats-new` written in plain English for non-technical customers. Two artefacts kept in lock-step by hand:
