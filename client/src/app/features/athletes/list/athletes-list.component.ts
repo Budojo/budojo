@@ -38,6 +38,7 @@ import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-b
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/expiring-documents-widget/expiring-documents-widget.component';
 import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
+import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpaid-this-month-widget/unpaid-this-month-widget.component';
 import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
 
 interface SelectOption<T extends string> {
@@ -66,6 +67,7 @@ interface SelectOption<T extends string> {
     BeltBadgeComponent,
     ExpiringDocumentsWidgetComponent,
     MonthlySummaryWidgetComponent,
+    UnpaidThisMonthWidgetComponent,
     PaidBadgeComponent,
   ],
   providers: [ConfirmationService, MessageService],
