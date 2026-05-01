@@ -9,7 +9,8 @@
      `Athletes &amp; sorting &lt; broken` in the owner's inbox.
 
      Safety condition: this is safe ONLY because `FeedbackMail::content()`
-     uses `Content::text(...)` (not `view`), so the Mailable produces a
+     returns `new Content(text: 'emails.feedback', ...)` (using the
+     `text:` named argument, not `view:`), so the Mailable produces a
      `text/plain` body — no HTML interpretation client-side, no
      injection surface. **If the Mailable is ever switched back to
      `view: ...` (HTML rendering), revert these to `{{ ... }}` or
