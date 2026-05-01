@@ -205,9 +205,9 @@ Examples:
 
 ### GitHub Project Board — PO workflow
 
-The board lives at [`github.com/orgs/Budojo/projects/1`](https://github.com/orgs/Budojo/projects/1) (Project #1 under the `Budojo` org). It tracks **both issues and their open PRs** — issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
+The board lives at [`github.com/orgs/Budojo/projects/2`](https://github.com/orgs/Budojo/projects/2) (Project #2 under the `Budojo` org). It tracks **both issues and their open PRs** — issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
 
-> **Post-org-transfer note:** the repo originally lived under `m-bonanno/budojo` (user account) and the project board was Project #2 under that user. When the repo moved to the `Budojo` org, the project was recreated as Project #1 under the org; the active items were migrated, the historical Done items were left behind on their issue/PR pages. Old user-owned project URLs continue to work via GitHub's redirect.
+> **Post-org-transfer note:** the repo originally lived under `m-bonanno/budojo` (user account) and the project board was Project #2 under that user. When the repo moved to the `Budojo` org, the full project (structure + all 250 items + their statuses) was migrated via `copyProjectV2` + a one-shot bulk import script, and now lives as Project #2 under the org. Old user-owned project URLs continue to work via GitHub's redirect; the source project on `m-bonanno` was archived to avoid drift.
 
 #### Issue + PR lifecycle on the board
 
