@@ -1,0 +1,64 @@
+@if (visible()) {
+  <div class="unpaid-widget" data-cy="unpaid-widget">
+    <header class="unpaid-widget__header">
+      <p class="unpaid-widget__eyebrow">Unpaid · {{ monthLabel() }}</p>
+      @if (loading()) {
+        <p-skeleton width="9rem" height="1.75rem" />
+      } @else if (errored()) {
+        <h3 class="unpaid-widget__title unpaid-widget__title--muted" data-cy="unpaid-widget-error">
+          Couldn't check
+        </h3>
+      } @else if (count() === 0) {
+        <h3 class="unpaid-widget__title unpaid-widget__title--muted">
+          Everyone paid
+          <span class="unpaid-widget__title-unit">— nice month</span>
+        </h3>
+      } @else {
+        <h3 class="unpaid-widget__title" data-cy="unpaid-widget-count">
+          {{ count() }}
+          <span class="unpaid-widget__title-unit">
+            {{ count() === 1 ? 'athlete still owes' : 'athletes still owe' }}
+          </span>
+        </h3>
+      }
+    </header>
+
+    @if (loading()) {
+      <ul class="unpaid-widget__list" aria-hidden="true">
+        @for (_ of [0, 0, 0]; track $index) {
+          <li class="unpaid-widget__row unpaid-widget__row--skeleton">
+            <p-skeleton width="60%" height="0.875rem" />
+          </li>
+        }
+      </ul>
+    } @else if (!errored() && topNames().length > 0) {
+      <ul class="unpaid-widget__list" data-cy="unpaid-widget-list">
+        @for (athlete of topNames(); track athlete.id) {
+          <li class="unpaid-widget__row" [attr.data-cy]="'unpaid-widget-row-' + athlete.id">
+            <a
+              class="unpaid-widget__name-link"
+              [routerLink]="['/dashboard/athletes', athlete.id, 'payments']"
+            >
+              {{ athlete.first_name }} {{ athlete.last_name }}
+            </a>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (!loading() && !errored() && count() > 0) {
+      <a
+        class="unpaid-widget__cta"
+        routerLink="/dashboard/athletes"
+        [queryParams]="{ paid: 'no' }"
+        data-cy="unpaid-widget-cta"
+      >
+        @if (count() > topNames().length) {
+          View all {{ count() }} →
+        } @else {
+          View on the athletes list →
+        }
+      </a>
+    }
+  </div>
+}
