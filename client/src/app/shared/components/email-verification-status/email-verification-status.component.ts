@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -35,7 +36,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 @Component({
   selector: 'app-email-verification-status',
   standalone: true,
-  imports: [ButtonModule],
+  imports: [ButtonModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './email-verification-status.component.html',
   styleUrl: './email-verification-status.component.scss',
@@ -43,6 +44,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 export class EmailVerificationStatusComponent implements OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(MessageService);
+  private readonly translate = inject(TranslateService);
 
   /** Cooldown countdown in seconds. 0 = button enabled. */
   protected readonly cooldown = signal(0);
@@ -68,8 +70,8 @@ export class EmailVerificationStatusComponent implements OnDestroy {
         this.startCooldown();
         this.messageService.add({
           severity: 'success',
-          summary: 'Email sent',
-          detail: 'Check your inbox — the verification link is on its way.',
+          summary: this.translate.instant('emailVerification.toast.sentSummary'),
+          detail: this.translate.instant('emailVerification.toast.sentDetail'),
         });
       },
       error: (err) => {
@@ -80,15 +82,15 @@ export class EmailVerificationStatusComponent implements OnDestroy {
           this.startCooldown();
           this.messageService.add({
             severity: 'warn',
-            summary: 'Try again in a moment',
-            detail: 'For security, you can only request a verification email once per minute.',
+            summary: this.translate.instant('emailVerification.toast.throttledSummary'),
+            detail: this.translate.instant('emailVerification.toast.throttledDetail'),
           });
           return;
         }
         this.messageService.add({
           severity: 'error',
-          summary: 'Couldn’t send email',
-          detail: 'Please try again — if it persists, contact support.',
+          summary: this.translate.instant('emailVerification.toast.errorSummary'),
+          detail: this.translate.instant('emailVerification.toast.errorDetail'),
         });
       },
     });

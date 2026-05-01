@@ -221,5 +221,35 @@
       "subProcessors": "Sub-processor",
       "tagline": "Pensato per il tatami. Costruito in Italia."
     }
+  },
+  "profile": {
+    "title": "Profilo",
+    "subtitle": "Dettagli account e stato di verifica.",
+    "verifyRequiredBanner": "Devi verificare la tua email prima di aggiungere atleti o documenti. Controlla la casella di posta per il link di verifica, oppure usa il pulsante Reinvia qui sotto.",
+    "name": "Nome",
+    "email": "Email",
+    "verification": "Verifica",
+    "yourData": "I tuoi dati",
+    "exportHint": "Scarica una copia completa del tuo account — dati della palestra, atleti, pagamenti, presenze e documenti caricati. Il file è uno ZIP che puoi aprire con qualsiasi software di archiviazione.",
+    "exportButton": "Scarica i miei dati",
+    "exportToast": {
+      "errorSummary": "Errore",
+      "throttledDetail": "Hai già esportato i tuoi dati di recente. Riprova tra un minuto.",
+      "genericErrorDetail": "Non è stato possibile scaricare i tuoi dati. Riprova."
+    }
+  },
+  "emailVerification": {
+    "verified": "Email verificata",
+    "notVerified": "Email non verificata",
+    "resend": "Reinvia",
+    "resendIn": "Reinvia tra {{seconds}}s",
+    "toast": {
+      "sentSummary": "Email inviata",
+      "sentDetail": "Controlla la casella di posta — il link di verifica è in arrivo.",
+      "throttledSummary": "Riprova tra un attimo",
+      "throttledDetail": "Per sicurezza, puoi richiedere l'email di verifica una sola volta al minuto.",
+      "errorSummary": "Invio non riuscito",
+      "errorDetail": "Riprova — se il problema persiste, contatta l'assistenza."
+    }
   }
 }
