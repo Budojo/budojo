@@ -34,8 +34,8 @@ class SubmitFeedbackAction
      *
      * Domain mailbox on Zoho since #322 — replaced the placeholder
      * personal Gmail address. Survives an ownership change cleanly
-     * because the address belongs to the product domain, not to
-     * Matteo's personal account.
+     * because the address belongs to the product domain, not to a
+     * personal mailbox.
      */
     public const string OWNER_EMAIL = 'matteo.bonanno@budojo.it';
 
