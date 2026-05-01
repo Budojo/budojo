@@ -6,14 +6,14 @@
 <section class="detail" data-cy="academy-detail">
   <header class="detail__header">
     <div class="detail__heading">
-      <p class="detail__eyebrow">Academy</p>
+      <p class="detail__eyebrow">{{ 'academy.detail.eyebrow' | translate }}</p>
       <h1 class="detail__title" data-cy="academy-name">
         {{ a?.name ?? '—' }}
       </h1>
     </div>
 
     <p-button
-      label="Edit"
+      [label]="'academy.detail.edit' | translate"
       icon="pi pi-pencil"
       routerLink="/dashboard/academy/edit"
       styleClass="detail__edit"
@@ -24,7 +24,11 @@
   <div class="logo-card" data-cy="academy-logo-card">
     <div class="logo-card__preview" data-cy="academy-logo-preview">
       @if (logoUrl(); as url) {
-        <img [src]="url" alt="Academy logo" data-cy="academy-logo-image" />
+        <img
+          [src]="url"
+          [alt]="'academy.detail.logoAlt' | translate"
+          data-cy="academy-logo-image"
+        />
       } @else {
         <span class="logo-card__placeholder" aria-hidden="true">
           <i class="pi pi-image"></i>
@@ -32,11 +36,13 @@
       }
     </div>
     <div class="logo-card__body">
-      <p class="logo-card__title">Logo</p>
-      <p class="logo-card__hint">PNG, JPG, SVG or WebP, max 2 MB.</p>
+      <p class="logo-card__title">{{ 'academy.detail.logoTitle' | translate }}</p>
+      <p class="logo-card__hint">{{ 'academy.detail.logoHint' | translate }}</p>
       <div class="logo-card__actions">
         <p-button
-          [label]="logoUrl() ? 'Replace' : 'Upload'"
+          [label]="
+            (logoUrl() ? 'academy.detail.logoReplace' : 'academy.detail.logoUpload') | translate
+          "
           icon="pi pi-upload"
           [loading]="logoUploading()"
           (onClick)="onLogoBrowse()"
@@ -44,7 +50,7 @@
         />
         @if (logoUrl()) {
           <p-button
-            label="Remove"
+            [label]="'academy.detail.logoRemove' | translate"
             icon="pi pi-trash"
             severity="secondary"
             [text]="true"
@@ -64,21 +70,21 @@
     />
   </div>
 
-  <dl class="card" aria-label="Academy details">
+  <dl class="card" [attr.aria-label]="'academy.detail.detailsAria' | translate">
     <div class="row">
-      <dt class="row__label">Name</dt>
+      <dt class="row__label">{{ 'academy.detail.row.name' | translate }}</dt>
       <dd class="row__value" data-cy="academy-row-name">{{ a?.name ?? '—' }}</dd>
     </div>
 
     <div class="row">
-      <dt class="row__label">Permalink</dt>
+      <dt class="row__label">{{ 'academy.detail.row.permalink' | translate }}</dt>
       <dd class="row__value row__value--mono" data-cy="academy-row-slug">
         {{ a?.slug ?? '—' }}
       </dd>
     </div>
 
     <div class="row">
-      <dt class="row__label">Phone</dt>
+      <dt class="row__label">{{ 'academy.detail.row.phone' | translate }}</dt>
       <dd class="row__value" data-cy="academy-row-phone">
         @if (phoneE164(); as phone) {
           <!--
@@ -95,7 +101,7 @@
     </div>
 
     <div class="row">
-      <dt class="row__label">Links</dt>
+      <dt class="row__label">{{ 'academy.detail.row.links' | translate }}</dt>
       <dd class="row__value" data-cy="academy-row-links">
         @let links = contactLinks();
         @if (links.length > 0) {
@@ -107,7 +113,7 @@
             Tooltip + sr-only label provide the network name for
             assistive tech and hover discovery.
           -->
-          <ul class="contact-links" aria-label="Academy contact links">
+          <ul class="contact-links" [attr.aria-label]="'academy.detail.linksAria' | translate">
             @for (link of links; track link.label) {
               <li>
                 <a
@@ -133,7 +139,7 @@
 
     @let addr = a?.address;
     <div class="row">
-      <dt class="row__label">Address</dt>
+      <dt class="row__label">{{ 'academy.detail.row.address' | translate }}</dt>
       <dd class="row__value" data-cy="academy-row-address">
         @if (addr) {
           <!--
@@ -177,6 +183,6 @@
     rule (explain constraints at the affordance, not in a help doc).
   -->
   <p class="detail__hint">
-    Permalink stays stable across renames. Change the name anytime; the permalink never moves.
+    {{ 'academy.detail.permalinkHint' | translate }}
   </p>
 </section>

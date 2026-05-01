@@ -3,6 +3,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterLink, provideRouter } from '@angular/router';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AcademyDetailComponent } from './academy-detail.component';
 import { Academy, AcademyService } from '../../../core/services/academy.service';
 
@@ -27,7 +28,12 @@ function makeAcademy(overrides: Partial<Academy> = {}): Academy {
 function setupTestBed() {
   TestBed.configureTestingModule({
     imports: [AcademyDetailComponent],
-    providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideRouter([]),
+      ...provideI18nTesting(),
+    ],
   });
 }
 

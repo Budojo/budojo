@@ -298,5 +298,127 @@
       "countOther": "{{count}} documents need attention",
       "countHint": "Expired or expiring within 30 days"
     }
+  },
+  "weekdays": {
+    "groupAria": "Training days of the week",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+  "academy": {
+    "detail": {
+      "eyebrow": "Academy",
+      "edit": "Edit",
+      "logoAlt": "Academy logo",
+      "logoTitle": "Logo",
+      "logoHint": "PNG, JPG, SVG or WebP, max 2 MB.",
+      "logoUpload": "Upload",
+      "logoReplace": "Replace",
+      "logoRemove": "Remove",
+      "detailsAria": "Academy details",
+      "row": {
+        "name": "Name",
+        "permalink": "Permalink",
+        "phone": "Phone",
+        "links": "Links",
+        "address": "Address"
+      },
+      "linksAria": "Academy contact links",
+      "permalinkHint": "Permalink stays stable across renames. Change the name anytime; the permalink never moves.",
+      "toast": {
+        "unsupportedSummary": "Unsupported file",
+        "unsupportedDetail": "Use PNG, JPG, SVG or WebP.",
+        "tooLargeSummary": "File too large",
+        "tooLargeDetail": "Maximum 2 MB.",
+        "uploadSuccess": "Logo updated",
+        "uploadErrorSummary": "Upload failed",
+        "uploadErrorDetail": "Could not save the new logo. Please try again.",
+        "removeSuccess": "Logo removed",
+        "removeErrorSummary": "Remove failed",
+        "removeErrorDetail": "Could not remove the logo. Please try again."
+      },
+      "confirm": {
+        "removeMessage": "Remove the academy logo?",
+        "removeAccept": "Remove",
+        "removeReject": "Cancel"
+      }
+    },
+    "form": {
+      "eyebrow": "Academy",
+      "title": "Edit academy",
+      "optional": "(optional)",
+      "name": {
+        "label": "Name",
+        "errorRequired": "Academy name is required.",
+        "errorMaxlength": "Maximum 255 characters."
+      },
+      "phone": {
+        "label": "Phone",
+        "codePlaceholder": "Code",
+        "codeAria": "Phone country code",
+        "nationalPlaceholder": "National number",
+        "nationalAria": "Phone national number",
+        "errorCodeRequired": "Country code is required when a national number is entered.",
+        "errorNationalRequired": "National number is required when a country code is selected.",
+        "errorPattern": "Digits only — no spaces, dashes, or parentheses.",
+        "errorMaxlength": "Maximum 20 digits."
+      },
+      "url": {
+        "errorMaxlength": "Maximum 255 characters."
+      },
+      "website": {
+        "label": "Website",
+        "errorUrl": "Enter a full URL — e.g. <code>https://example.com</code>."
+      },
+      "facebook": {
+        "label": "Facebook",
+        "errorUrl": "Enter a full URL — e.g. <code>https://facebook.com/yourpage</code>."
+      },
+      "instagram": {
+        "label": "Instagram",
+        "errorUrl": "Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>."
+      },
+      "permalink": {
+        "label": "Permalink",
+        "hint": "Stays stable across renames — bookmarks and shared links keep working."
+      },
+      "address": {
+        "legend": "Address",
+        "legendOptional": "(optional — fill all marked fields below or none)",
+        "requiredWhenFilledTooltip": "Required when any address field is filled",
+        "requiredWhenFilledAria": "required when any address field is filled",
+        "line1Label": "Street + civic number",
+        "line2Label": "Apt / floor / unit",
+        "zipLabel": "ZIP",
+        "zipErrorPattern": "ZIP must be exactly 5 digits.",
+        "cityLabel": "City",
+        "provinceLabel": "Province",
+        "provinceAria": "Province",
+        "errorIncomplete": "Fill every required address field, or clear them all to leave the academy without an address.",
+        "clearHint": "Leave every field empty to clear the address on file."
+      },
+      "monthlyFee": {
+        "label": "Monthly fee",
+        "errorMin": "Fee can't be negative.",
+        "hint": "How much each athlete pays per month. Drives the Payments tab on the athlete detail and the inline mark-paid toggle on the athletes list. Leave empty if you don't want to track payments through Budojo."
+      },
+      "trainingDays": {
+        "label": "Training days",
+        "hint": "Pick the weekdays your academy holds class. Deselect every day to clear the schedule."
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "toast": {
+        "successSummary": "Academy updated"
+      },
+      "errorValidation": "Validation failed.",
+      "errorGeneric": "Something went wrong. Please try again."
+    }
   }
 }

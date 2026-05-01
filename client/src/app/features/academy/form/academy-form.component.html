@@ -2,8 +2,8 @@
 
 <section class="form" data-cy="academy-form">
   <header class="form__header">
-    <p class="form__eyebrow">Academy</p>
-    <h1 class="form__title">Edit academy</h1>
+    <p class="form__eyebrow">{{ 'academy.form.eyebrow' | translate }}</p>
+    <h1 class="form__title">{{ 'academy.form.title' | translate }}</h1>
   </header>
 
   @if (error()) {
@@ -17,9 +17,10 @@
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form__fields">
     <div class="field">
-      <label for="academy-name"
-        >Name <span class="field__required" aria-hidden="true">*</span></label
-      >
+      <label for="academy-name">
+        {{ 'academy.form.name.label' | translate }}
+        <span class="field__required" aria-hidden="true">*</span>
+      </label>
       <input
         pInputText
         id="academy-name"
@@ -37,18 +38,19 @@
       @if (name.invalid && name.touched) {
         <small id="academy-name-error" class="field__error" data-cy="academy-form-name-error">
           @if (name.errors?.['required'] || name.errors?.['whitespace']) {
-            Academy name is required.
+            {{ 'academy.form.name.errorRequired' | translate }}
           } @else if (name.errors?.['maxlength']) {
-            Maximum 255 characters.
+            {{ 'academy.form.name.errorMaxlength' | translate }}
           }
         </small>
       }
     </div>
 
     <div class="field">
-      <label for="academy-phone-national-number"
-        >Phone <span class="field__optional">(optional)</span></label
-      >
+      <label for="academy-phone-national-number">
+        {{ 'academy.form.phone.label' | translate }}
+        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
+      </label>
       <div class="phone-pair">
         <p-select
           inputId="academy-phone-country-code"
@@ -56,8 +58,8 @@
           formControlName="phone_country_code"
           optionLabel="label"
           optionValue="value"
-          placeholder="Code"
-          ariaLabel="Phone country code"
+          [placeholder]="'academy.form.phone.codePlaceholder' | translate"
+          [ariaLabel]="'academy.form.phone.codeAria' | translate"
           appendTo="body"
           styleClass="academy-phone-country-code"
           [showClear]="true"
@@ -74,8 +76,8 @@
           type="tel"
           formControlName="phone_national_number"
           autocomplete="tel-national"
-          placeholder="National number"
-          aria-label="Phone national number"
+          [placeholder]="'academy.form.phone.nationalPlaceholder' | translate"
+          [attr.aria-label]="'academy.form.phone.nationalAria' | translate"
           data-cy="academy-form-phone-national-number"
           [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
           [class.ng-dirty]="phoneNationalNumber.touched"
@@ -85,18 +87,18 @@
       @if (phoneCountryCode.invalid && phoneCountryCode.touched) {
         <small class="field__error" data-cy="academy-form-phone-country-error">
           @if (phoneCountryCode.errors?.['phonePairRequired']) {
-            Country code is required when a national number is entered.
+            {{ 'academy.form.phone.errorCodeRequired' | translate }}
           }
         </small>
       }
       @if (phoneNationalNumber.invalid && phoneNationalNumber.touched) {
         <small class="field__error" data-cy="academy-form-phone-national-error">
           @if (phoneNationalNumber.errors?.['phonePairRequired']) {
-            National number is required when a country code is selected.
+            {{ 'academy.form.phone.errorNationalRequired' | translate }}
           } @else if (phoneNationalNumber.errors?.['pattern']) {
-            Digits only — no spaces, dashes, or parentheses.
+            {{ 'academy.form.phone.errorPattern' | translate }}
           } @else if (phoneNationalNumber.errors?.['maxlength']) {
-            Maximum 20 digits.
+            {{ 'academy.form.phone.errorMaxlength' | translate }}
           }
         </small>
       }
@@ -111,7 +113,10 @@
       special-casing.
     -->
     <div class="field">
-      <label for="academy-website">Website <span class="field__optional">(optional)</span></label>
+      <label for="academy-website">
+        {{ 'academy.form.website.label' | translate }}
+        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
+      </label>
       <input
         pInputText
         id="academy-website"
@@ -127,16 +132,19 @@
       @if (website.invalid && website.touched) {
         <small class="field__error" data-cy="academy-form-website-error">
           @if (website.errors?.['url']) {
-            Enter a full URL — e.g. <code>https://example.com</code>.
+            <span [innerHTML]="'academy.form.website.errorUrl' | translate"></span>
           } @else if (website.errors?.['maxlength']) {
-            Maximum 255 characters.
+            {{ 'academy.form.url.errorMaxlength' | translate }}
           }
         </small>
       }
     </div>
 
     <div class="field">
-      <label for="academy-facebook">Facebook <span class="field__optional">(optional)</span></label>
+      <label for="academy-facebook">
+        {{ 'academy.form.facebook.label' | translate }}
+        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
+      </label>
       <input
         pInputText
         id="academy-facebook"
@@ -152,18 +160,19 @@
       @if (facebook.invalid && facebook.touched) {
         <small class="field__error" data-cy="academy-form-facebook-error">
           @if (facebook.errors?.['url']) {
-            Enter a full URL — e.g. <code>https://facebook.com/yourpage</code>.
+            <span [innerHTML]="'academy.form.facebook.errorUrl' | translate"></span>
           } @else if (facebook.errors?.['maxlength']) {
-            Maximum 255 characters.
+            {{ 'academy.form.url.errorMaxlength' | translate }}
           }
         </small>
       }
     </div>
 
     <div class="field">
-      <label for="academy-instagram"
-        >Instagram <span class="field__optional">(optional)</span></label
-      >
+      <label for="academy-instagram">
+        {{ 'academy.form.instagram.label' | translate }}
+        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
+      </label>
       <input
         pInputText
         id="academy-instagram"
@@ -179,9 +188,9 @@
       @if (instagram.invalid && instagram.touched) {
         <small class="field__error" data-cy="academy-form-instagram-error">
           @if (instagram.errors?.['url']) {
-            Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>.
+            <span [innerHTML]="'academy.form.instagram.errorUrl' | translate"></span>
           } @else if (instagram.errors?.['maxlength']) {
-            Maximum 255 characters.
+            {{ 'academy.form.url.errorMaxlength' | translate }}
           }
         </small>
       }
@@ -194,29 +203,31 @@
       immutability correctly (Norman § affordance + signifier).
     -->
     <div class="field field--readonly">
-      <span class="field__label">Permalink</span>
+      <span class="field__label">{{ 'academy.form.permalink.label' | translate }}</span>
       <p class="field__readonly-value" data-cy="academy-form-slug">
         {{ slug() || '—' }}
       </p>
       <small class="field__hint">
-        Stays stable across renames — bookmarks and shared links keep working.
+        {{ 'academy.form.permalink.hint' | translate }}
       </small>
     </div>
 
     <fieldset class="field address-group" formGroupName="address">
       <legend class="field__label">
-        Address
-        <span class="field__optional">(optional — fill all marked fields below or none)</span>
+        {{ 'academy.form.address.legend' | translate }}
+        <span class="field__optional">
+          {{ 'academy.form.address.legendOptional' | translate }}
+        </span>
       </legend>
 
       <div class="field">
         <label for="academy-address-line1">
-          Street + civic number
+          {{ 'academy.form.address.line1Label' | translate }}
           <span
             class="required-when-filled"
-            pTooltip="Required when any address field is filled"
+            [pTooltip]="'academy.form.address.requiredWhenFilledTooltip' | translate"
             tooltipPosition="top"
-            aria-label="required when any address field is filled"
+            [attr.aria-label]="'academy.form.address.requiredWhenFilledAria' | translate"
           >
             *
           </span>
@@ -237,7 +248,8 @@
 
       <div class="field">
         <label for="academy-address-line2">
-          Apt / floor / unit <span class="field__optional">(optional)</span>
+          {{ 'academy.form.address.line2Label' | translate }}
+          <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
         </label>
         <input
           pInputText
@@ -254,12 +266,12 @@
       <div class="address-group__row">
         <div class="field">
           <label for="academy-address-postal-code">
-            ZIP
+            {{ 'academy.form.address.zipLabel' | translate }}
             <span
               class="required-when-filled"
-              pTooltip="Required when any address field is filled"
+              [pTooltip]="'academy.form.address.requiredWhenFilledTooltip' | translate"
               tooltipPosition="top"
-              aria-label="required when any address field is filled"
+              [attr.aria-label]="'academy.form.address.requiredWhenFilledAria' | translate"
             >
               *
             </span>
@@ -280,7 +292,7 @@
           @if (addressPostalCode.invalid && addressPostalCode.touched) {
             <small class="field__error">
               @if (addressPostalCode.errors?.['pattern']) {
-                ZIP must be exactly 5 digits.
+                {{ 'academy.form.address.zipErrorPattern' | translate }}
               }
             </small>
           }
@@ -288,12 +300,12 @@
 
         <div class="field">
           <label for="academy-address-city">
-            City
+            {{ 'academy.form.address.cityLabel' | translate }}
             <span
               class="required-when-filled"
-              pTooltip="Required when any address field is filled"
+              [pTooltip]="'academy.form.address.requiredWhenFilledTooltip' | translate"
               tooltipPosition="top"
-              aria-label="required when any address field is filled"
+              [attr.aria-label]="'academy.form.address.requiredWhenFilledAria' | translate"
             >
               *
             </span>
@@ -312,12 +324,12 @@
 
         <div class="field">
           <label for="academy-address-province">
-            Province
+            {{ 'academy.form.address.provinceLabel' | translate }}
             <span
               class="required-when-filled"
-              pTooltip="Required when any address field is filled"
+              [pTooltip]="'academy.form.address.requiredWhenFilledTooltip' | translate"
               tooltipPosition="top"
-              aria-label="required when any address field is filled"
+              [attr.aria-label]="'academy.form.address.requiredWhenFilledAria' | translate"
             >
               *
             </span>
@@ -328,7 +340,7 @@
             formControlName="province"
             optionLabel="label"
             optionValue="value"
-            ariaLabel="Province"
+            [ariaLabel]="'academy.form.address.provinceAria' | translate"
             appendTo="body"
             styleClass="w-full"
             [showClear]="true"
@@ -359,11 +371,12 @@
 
       @if (addressGroup.errors?.['addressIncomplete'] && addressGroup.touched) {
         <small class="field__error" data-cy="academy-form-address-error">
-          Fill every required address field, or clear them all to leave the academy without an
-          address.
+          {{ 'academy.form.address.errorIncomplete' | translate }}
         </small>
       }
-      <small class="field__hint"> Leave every field empty to clear the address on file. </small>
+      <small class="field__hint">
+        {{ 'academy.form.address.clearHint' | translate }}
+      </small>
     </fieldset>
 
     <!--
@@ -376,9 +389,10 @@
       removes the fee and the payments features hide again.
     -->
     <div class="field">
-      <label for="academy-monthly-fee"
-        >Monthly fee <span class="field__optional">(optional)</span></label
-      >
+      <label for="academy-monthly-fee">
+        {{ 'academy.form.monthlyFee.label' | translate }}
+        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
+      </label>
       <p-inputnumber
         inputId="academy-monthly-fee"
         formControlName="monthly_fee"
@@ -396,35 +410,34 @@
       @if (monthlyFee.invalid && monthlyFee.touched) {
         <small class="field__error" data-cy="academy-form-monthly-fee-error">
           @if (monthlyFee.errors?.['min']) {
-            Fee can't be negative.
+            {{ 'academy.form.monthlyFee.errorMin' | translate }}
           }
         </small>
       }
       <small class="field__hint">
-        How much each athlete pays per month. Drives the Payments tab on the athlete detail and the
-        inline mark-paid toggle on the athletes list. Leave empty if you don't want to track
-        payments through Budojo.
+        {{ 'academy.form.monthlyFee.hint' | translate }}
       </small>
     </div>
 
     <div class="field">
-      <span class="field__label"
-        >Training days <span class="field__optional">(optional)</span></span
-      >
+      <span class="field__label">
+        {{ 'academy.form.trainingDays.label' | translate }}
+        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
+      </span>
       <app-training-days-picker
         [value]="form.value.training_days ?? []"
         (valueChange)="setTrainingDays($event)"
         data-cy="academy-form-training-days"
       />
       <small class="field__hint">
-        Pick the weekdays your academy holds class. Deselect every day to clear the schedule.
+        {{ 'academy.form.trainingDays.hint' | translate }}
       </small>
     </div>
 
     <div class="form__actions">
       <p-button
         type="button"
-        label="Cancel"
+        [label]="'academy.form.actions.cancel' | translate"
         severity="secondary"
         [text]="true"
         (onClick)="cancel()"
@@ -433,7 +446,7 @@
       />
       <p-button
         type="submit"
-        label="Save"
+        [label]="'academy.form.actions.save' | translate"
         [loading]="submitting()"
         [disabled]="submitting()"
         styleClass="form__save"

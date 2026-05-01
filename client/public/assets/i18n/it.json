@@ -298,5 +298,127 @@
       "countOther": "{{count}} documenti da controllare",
       "countHint": "Scaduti o in scadenza entro 30 giorni"
     }
+  },
+  "weekdays": {
+    "groupAria": "Giorni di allenamento della settimana",
+    "mon": "Lun",
+    "tue": "Mar",
+    "wed": "Mer",
+    "thu": "Gio",
+    "fri": "Ven",
+    "sat": "Sab",
+    "sun": "Dom"
+  },
+  "academy": {
+    "detail": {
+      "eyebrow": "Academy",
+      "edit": "Modifica",
+      "logoAlt": "Logo dell'academy",
+      "logoTitle": "Logo",
+      "logoHint": "PNG, JPG, SVG o WebP, massimo 2 MB.",
+      "logoUpload": "Carica",
+      "logoReplace": "Sostituisci",
+      "logoRemove": "Rimuovi",
+      "detailsAria": "Dettagli academy",
+      "row": {
+        "name": "Nome",
+        "permalink": "Permalink",
+        "phone": "Telefono",
+        "links": "Link",
+        "address": "Indirizzo"
+      },
+      "linksAria": "Link di contatto dell'academy",
+      "permalinkHint": "Il permalink rimane stabile anche se rinomini. Cambia il nome quando vuoi: il permalink non si sposta.",
+      "toast": {
+        "unsupportedSummary": "Tipo di file non supportato",
+        "unsupportedDetail": "Usa PNG, JPG, SVG o WebP.",
+        "tooLargeSummary": "File troppo grande",
+        "tooLargeDetail": "Massimo 2 MB.",
+        "uploadSuccess": "Logo aggiornato",
+        "uploadErrorSummary": "Caricamento non riuscito",
+        "uploadErrorDetail": "Impossibile salvare il nuovo logo. Riprova.",
+        "removeSuccess": "Logo rimosso",
+        "removeErrorSummary": "Rimozione non riuscita",
+        "removeErrorDetail": "Impossibile rimuovere il logo. Riprova."
+      },
+      "confirm": {
+        "removeMessage": "Rimuovere il logo dell'academy?",
+        "removeAccept": "Rimuovi",
+        "removeReject": "Annulla"
+      }
+    },
+    "form": {
+      "eyebrow": "Academy",
+      "title": "Modifica academy",
+      "optional": "(opzionale)",
+      "name": {
+        "label": "Nome",
+        "errorRequired": "Il nome dell'academy è obbligatorio.",
+        "errorMaxlength": "Massimo 255 caratteri."
+      },
+      "phone": {
+        "label": "Telefono",
+        "codePlaceholder": "Prefisso",
+        "codeAria": "Prefisso telefonico",
+        "nationalPlaceholder": "Numero nazionale",
+        "nationalAria": "Numero nazionale",
+        "errorCodeRequired": "Il prefisso è obbligatorio quando inserisci un numero nazionale.",
+        "errorNationalRequired": "Il numero nazionale è obbligatorio quando selezioni un prefisso.",
+        "errorPattern": "Solo cifre — niente spazi, trattini o parentesi.",
+        "errorMaxlength": "Massimo 20 cifre."
+      },
+      "url": {
+        "errorMaxlength": "Massimo 255 caratteri."
+      },
+      "website": {
+        "label": "Sito web",
+        "errorUrl": "Inserisci un URL completo — es. <code>https://example.com</code>."
+      },
+      "facebook": {
+        "label": "Facebook",
+        "errorUrl": "Inserisci un URL completo — es. <code>https://facebook.com/lapagina</code>."
+      },
+      "instagram": {
+        "label": "Instagram",
+        "errorUrl": "Inserisci un URL completo — es. <code>https://instagram.com/ilprofilo</code>."
+      },
+      "permalink": {
+        "label": "Permalink",
+        "hint": "Rimane stabile anche se rinomini — segnalibri e link condivisi continuano a funzionare."
+      },
+      "address": {
+        "legend": "Indirizzo",
+        "legendOptional": "(opzionale — compila tutti i campi contrassegnati o nessuno)",
+        "requiredWhenFilledTooltip": "Obbligatorio quando un campo dell'indirizzo è compilato",
+        "requiredWhenFilledAria": "obbligatorio quando un campo dell'indirizzo è compilato",
+        "line1Label": "Via e numero civico",
+        "line2Label": "Scala / piano / interno",
+        "zipLabel": "CAP",
+        "zipErrorPattern": "Il CAP deve essere di 5 cifre.",
+        "cityLabel": "Città",
+        "provinceLabel": "Provincia",
+        "provinceAria": "Provincia",
+        "errorIncomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure svuotali tutti per lasciare l'academy senza indirizzo.",
+        "clearHint": "Lascia tutti i campi vuoti per rimuovere l'indirizzo salvato."
+      },
+      "monthlyFee": {
+        "label": "Quota mensile",
+        "errorMin": "La quota non può essere negativa.",
+        "hint": "Quanto paga ogni atleta al mese. Attiva la tab Pagamenti sul dettaglio atleta e il toggle pagato/non pagato sulla lista atleti. Lascia vuoto se non vuoi gestire i pagamenti tramite Budojo."
+      },
+      "trainingDays": {
+        "label": "Giorni di allenamento",
+        "hint": "Seleziona i giorni della settimana in cui si tiene lezione. Deseleziona tutti i giorni per cancellare la programmazione."
+      },
+      "actions": {
+        "cancel": "Annulla",
+        "save": "Salva"
+      },
+      "toast": {
+        "successSummary": "Academy aggiornata"
+      },
+      "errorValidation": "Validazione non riuscita.",
+      "errorGeneric": "Qualcosa è andato storto. Riprova."
+    }
   }
 }
