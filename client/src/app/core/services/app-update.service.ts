@@ -1,4 +1,5 @@
 import { DOCUMENT, DestroyRef, Injectable, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter } from 'rxjs';
 
@@ -60,12 +61,27 @@ export class AppUpdateService {
    */
   start(): void {
     if (this.started) return;
-    this.started = true;
 
+    // Guard runs BEFORE the started latch flips so a hypothetical
+    // future call after the SW becomes available (e.g. test re-init,
+    // a manual provider swap) can still wire updates. Today
+    // SwUpdate.isEnabled is fixed at boot via provideServiceWorker;
+    // the order is defensive against that contract changing.
+    // Copilot caught this on #305.
     if (!this.swUpdate.isEnabled) return;
 
+    this.started = true;
+
     this.swUpdate.versionUpdates
-      .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
+      .pipe(
+        filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'),
+        // takeUntilDestroyed mirrors the canonical subscription
+        // teardown pattern used elsewhere in the SPA (e.g.
+        // athlete-detail.component.ts:71-88). Without it the
+        // subscription would outlive the app context in HMR / test
+        // tear-downs and slowly leak. Copilot caught this on #305.
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe(() => {
         // activateUpdate() swaps the new SW into the controller slot
         // for the next page load. The reload picks up the fresh bundle.

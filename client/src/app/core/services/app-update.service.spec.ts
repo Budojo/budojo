@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { SwUpdate, VersionEvent, VersionReadyEvent } from '@angular/service-worker';
 import { Subject } from 'rxjs';
@@ -28,17 +29,18 @@ describe('AppUpdateService', () => {
             checkForUpdate,
           },
         },
+        // DOCUMENT is provided as a TestBed token (not a private-field
+        // override) so the spec interacts only with public DI surfaces —
+        // a subsequent refactor that renames the service's `document`
+        // field doesn't break the spec. Copilot caught the previous
+        // `Object.defineProperty(service, 'document', ...)` shape on #305.
+        {
+          provide: DOCUMENT,
+          useValue: { location: { reload } },
+        },
       ],
     });
-    const service = TestBed.inject(AppUpdateService);
-    // Stub the reload-bearing surface — touching `document.location.reload`
-    // directly would actually navigate the test runner. The service injects
-    // DOCUMENT, so we can replace its location with a controlled fake.
-    Object.defineProperty(service, 'document', {
-      value: { location: { reload } },
-      writable: true,
-    });
-    return service;
+    return TestBed.inject(AppUpdateService);
   }
 
   beforeEach(() => {
@@ -47,7 +49,14 @@ describe('AppUpdateService', () => {
   });
 
   afterEach(() => {
+    // Belt-and-suspenders cleanup: the service registers a long-lived
+    // setInterval inside start(); without explicit timer + module
+    // teardown a leak across tests can manifest as flakes when
+    // checkForUpdate() observers see calls that "belong" to a prior
+    // test's interval. Copilot caught the missing teardown on #305.
+    vi.clearAllTimers();
     vi.useRealTimers();
+    TestBed.resetTestingModule();
   });
 
   it('start() is a no-op when the service worker is disabled', async () => {
