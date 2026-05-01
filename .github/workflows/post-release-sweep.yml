@@ -102,6 +102,21 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
+      - name: Verify the tag commit is reachable from main
+        # Defense-in-depth on top of the tag-name glob filter. Tag
+        # protection rulesets restrict WHO can create tags, not WHICH
+        # commit they point at — a stable-looking tag accidentally
+        # created on a feature branch would otherwise open a sweep PR
+        # from an unmerged commit. Fail fast in that case so we don't
+        # silently sweep random changes into develop.
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          TAG_SHA="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "$TAG_SHA" origin/main; then
+            echo "::error::Tag commit $TAG_SHA is not an ancestor of origin/main; refusing to sweep."
+            exit 1
+          fi
+
       - name: Cut sweep branch from the tag
         id: branch
         env:

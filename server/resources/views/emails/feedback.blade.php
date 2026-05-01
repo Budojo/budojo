@@ -6,11 +6,14 @@
      server-derived field. Blade's default `{{ }}` calls `htmlspecialchars`
      even when the Mailable renders this as `text/plain`, so a user
      typing `Athletes & sorting < broken` would arrive as
-     `Athletes &amp; sorting &lt; broken` in the owner's inbox. The
-     unescaped form is safe here because (a) the Content-Type IS
-     text/plain — no HTML interpretation client-side — and (b) the
-     recipient is fixed (the owner), so there is no XSS surface
-     even if a client did render HTML. --}}
+     `Athletes &amp; sorting &lt; broken` in the owner's inbox.
+
+     Safety condition: this is safe ONLY because `FeedbackMail::content()`
+     uses `Content::text(...)` (not `view`), so the Mailable produces a
+     `text/plain` body — no HTML interpretation client-side, no
+     injection surface. **If the Mailable is ever switched back to
+     `view: ...` (HTML rendering), revert these to `{{ ... }}` or
+     actively sanitize the input** before rendering. --}}
 
 NEW FEEDBACK SUBMITTED
 ======================
