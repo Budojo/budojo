@@ -31,8 +31,13 @@ class SubmitFeedbackAction
     /**
      * Recipient for every feedback email. Hardcoded by design — single-
      * owner product, single inbox. See class docblock.
+     *
+     * Domain mailbox on Zoho since #322 — replaced the placeholder
+     * personal Gmail address. Survives an ownership change cleanly
+     * because the address belongs to the product domain, not to
+     * Matteo's personal account.
      */
-    public const string OWNER_EMAIL = 'matteobonanno1990@gmail.com';
+    public const string OWNER_EMAIL = 'matteo.bonanno@budojo.it';
 
     public function execute(
         User $user,
