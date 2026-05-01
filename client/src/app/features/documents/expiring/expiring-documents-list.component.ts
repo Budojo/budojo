@@ -15,6 +15,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { ToastModule } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   DocumentService,
   DocumentType,
@@ -45,6 +46,7 @@ import { triggerBrowserDownload } from '../../../shared/utils/download';
     TableModule,
     ToastModule,
     Tooltip,
+    TranslatePipe,
     ExpiryStatusBadgeComponent,
   ],
   providers: [MessageService],
@@ -55,6 +57,7 @@ export class ExpiringDocumentsListComponent implements OnInit {
   private readonly documentService = inject(DocumentService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly messageService = inject(MessageService);
+  private readonly translate = inject(TranslateService);
 
   readonly documents = signal<ExpiringDocument[]>([]);
   readonly loading = signal<boolean>(true);
@@ -62,15 +65,18 @@ export class ExpiringDocumentsListComponent implements OnInit {
 
   readonly count = computed<number>(() => this.documents().length);
 
-  private readonly typeLabels: Record<DocumentType, string> = {
-    id_card: 'ID card',
-    medical_certificate: 'Medical certificate',
-    insurance: 'Insurance',
-    other: 'Other',
+  // Static map (DocumentType → translation key) keeps the keys greppable and
+  // forces TS to flag any new DocumentType case missing a translation, per
+  // the dynamic-key rule in client/CLAUDE.md § i18n.
+  private readonly typeKeys: Record<DocumentType, string> = {
+    id_card: 'documents.types.id_card',
+    medical_certificate: 'documents.types.medical_certificate',
+    insurance: 'documents.types.insurance',
+    other: 'documents.types.other',
   };
 
-  labelFor(doc: ExpiringDocument): string {
-    return this.typeLabels[doc.type];
+  typeKeyFor(doc: ExpiringDocument): string {
+    return this.typeKeys[doc.type];
   }
 
   athleteNameFor(doc: ExpiringDocument): string {
@@ -101,8 +107,10 @@ export class ExpiringDocumentsListComponent implements OnInit {
         // broken. A toast surfaces the error without blocking the page.
         this.messageService.add({
           severity: 'error',
-          summary: 'Download failed',
-          detail: `Could not download ${doc.original_name}. Please try again.`,
+          summary: this.translate.instant('documents.expiringList.toast.errorSummary'),
+          detail: this.translate.instant('documents.expiringList.toast.errorDetail', {
+            filename: doc.original_name,
+          }),
           life: 4000,
         });
       },
