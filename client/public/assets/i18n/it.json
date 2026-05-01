@@ -133,5 +133,93 @@
       "errorSummary": "Invio non riuscito",
       "errorDetail": "Qualcosa è andato storto durante l'invio del feedback. Riprova."
     }
+  },
+  "landing": {
+    "nav": {
+      "login": "Accedi",
+      "signup": "Inizia gratis",
+      "switchLanguage": "Cambia lingua"
+    },
+    "hero": {
+      "headline": "Gestisci la tua palestra dal telefono, non da un foglio Excel.",
+      "sub": "Costruito da un istruttore di BJJ per chi sale sul tatami. Tutto quello che tenevi su post-it e Google Sheets, in un posto solo — sullo stesso telefono che porti già a bordo del materassino.",
+      "cta": "Inizia gratis",
+      "fineprint": "Nessuna carta di credito. 2 minuti per partire."
+    },
+    "pain": {
+      "heading": "Se ti suona familiare, abbiamo costruito Budojo per te.",
+      "point1": "Promozioni di cintura segnate su un quaderno che hai perso almeno due volte.",
+      "point2": "Certificati medici che scadono senza che nessuno se ne accorga, finché un ragazzino non può più fare la gara.",
+      "point3": "Quel genitore che è indietro di due mesi sulla quota e tu continui a dimenticarti di sollecitarlo.",
+      "point4": "Presenze segnate su un blocchetto più vecchio della metà dei tuoi atleti."
+    },
+    "features": {
+      "heading": "Cosa fa Budojo",
+      "roster": {
+        "title": "I tuoi atleti, ordinati.",
+        "body": "Ogni atleta in un posto solo — cintura, stripes, contatti, data d'iscrizione. Vedi chi sta venendo, chi è pronto per la promozione, chi è indietro con i pagamenti. Tutto a colpo d'occhio."
+      },
+      "documents": {
+        "title": "Documenti che non ti scadono di nascosto.",
+        "body": "Carica certificati medici, documenti d'identità, assicurazioni — con la data di scadenza. La dashboard ti segnala in anticipo tutto quello che scade nei prossimi 30 giorni."
+      },
+      "attendance": {
+        "title": "Presenze senza il blocchetto.",
+        "body": "Un tap per atleta, riepilogo giornaliero, andamento mensile. L'interfaccia è pensata per il bordo del tatami, non per la scrivania dell'ufficio."
+      },
+      "payments": {
+        "title": "Chi non ha pagato questo mese?",
+        "body": "Imposta una quota mensile, segna ogni atleta come pagato (o no). Dal 16 in poi, un widget sulla dashboard ti dice chi devi ancora sollecitare — prima che qualcuno te lo chieda."
+      },
+      "pwa": {
+        "title": "La tua palestra, in tasca.",
+        "body": "Installabile come app su iOS e Android. Si aggiorna da sola quando rilasciamo nuove versioni. Funziona uguale sul telefono e sul portatile."
+      },
+      "feedback": {
+        "title": "Mandaci un messaggio quando qualcosa si rompe.",
+        "body": "Hai visto un bug o vorresti una funzione? Il form di feedback dentro l'app ce lo manda direttamente, con la versione e le info del tuo dispositivo già allegate."
+      }
+    },
+    "trust": {
+      "heading": "Perché Budojo, non altri",
+      "builtBy": {
+        "title": "Costruito da un istruttore di BJJ.",
+        "body": "Non un software aziendale che fa finta di conoscere il tuo mondo. Ogni funzione esiste perché qualcuno — di solito il fondatore — ne aveva bisogno sul tatami."
+      },
+      "gdpr": {
+        "title": "GDPR-first. I tuoi dati sono tuoi.",
+        "body": "Esporti tutto quello che hai inserito con un click. Cancelli l'account e ti puliamo i dati entro 30 giorni. Niente cookie di tracciamento. Niente analytics di terze parti."
+      },
+      "italian": {
+        "title": "In italiano. In inglese.",
+        "body": "Entrambe le lingue sono di prima classe. Tradotte da una persona che si allena davvero, non da una macchina. Altre lingue in arrivo man mano che cresciamo."
+      }
+    },
+    "how": {
+      "heading": "Come funziona",
+      "signup": {
+        "title": "Iscriviti.",
+        "body": "Email e password. 30 secondi."
+      },
+      "setup": {
+        "title": "Configura la tua palestra.",
+        "body": "Nome, indirizzo, calendario degli allenamenti, quota mensile se la richiedi. Circa un minuto."
+      },
+      "firstAthlete": {
+        "title": "Aggiungi il primo atleta.",
+        "body": "Fatto — stai usando il prodotto. Altri 30 secondi."
+      }
+    },
+    "pricing": {
+      "heading": "Prezzi",
+      "eyebrow": "Per ora che siamo all'inizio",
+      "headline": "Gratis durante l'MVP.",
+      "body": "Nessuna carta di credito. Te lo diremo con largo anticipo se questo cambia — e potrai sempre esportare tutto e andartene."
+    },
+    "footer": {
+      "privacy": "Privacy",
+      "subProcessors": "Sub-processor",
+      "tagline": "Pensato per il tatami. Costruito in Italia."
+    }
   }
 }

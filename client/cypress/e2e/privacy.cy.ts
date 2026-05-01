@@ -44,9 +44,12 @@ describe('Privacy policy — canonical English /privacy (#291)', () => {
     );
   });
 
-  it('the back-home CTA navigates away from /privacy (root redirects to /auth/login for unauth visitors)', () => {
+  it('the back-home CTA navigates to / (the public landing page since #330)', () => {
+    // Pre-#330 the root redirected to /auth/login. Post-#330 the
+    // root IS the landing / about page; the back-home CTA on
+    // /privacy lands the unauth visitor there directly.
     cy.get('[data-cy="privacy-home"]').click();
-    cy.location('pathname').should('eq', '/auth/login');
+    cy.location('pathname').should('eq', '/');
   });
 
   it('cross-links to /sub-processors so the chain stays auditable', () => {
@@ -76,9 +79,9 @@ describe('Privacy policy — Italian /privacy/it (#291)', () => {
     );
   });
 
-  it('the back-home CTA navigates to /auth/login (unauth root redirect)', () => {
+  it('the back-home CTA navigates to / (the public landing page since #330)', () => {
     cy.get('[data-cy="privacy-home"]').click();
-    cy.location('pathname').should('eq', '/auth/login');
+    cy.location('pathname').should('eq', '/');
   });
 });
 

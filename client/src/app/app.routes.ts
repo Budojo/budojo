@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { hasAcademyGuard } from './core/guards/has-academy.guard';
 import { noAcademyGuard } from './core/guards/no-academy.guard';
+import { publicGuard } from './core/guards/public.guard';
 
 export const routes: Routes = [
   {
@@ -190,7 +191,20 @@ export const routes: Routes = [
         (m) => m.PrivacyPolicyItComponent,
       ),
   },
-  { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
+  // Public landing / about page (#330). Replaces the cold redirect to
+  // `/auth/login` we used to ship — standard SaaS pattern: marketing
+  // surface at the root, login one click away in the header. The
+  // `publicGuard` short-circuits authenticated visitors back to
+  // `/dashboard/athletes` so the marketing page is never visible to
+  // someone who already has an account. Pairs with #331 (login
+  // repositioning, which is the routing change in this very block).
+  {
+    path: '',
+    pathMatch: 'full',
+    canActivate: [publicGuard],
+    loadComponent: () =>
+      import('./features/landing/landing.component').then((m) => m.LandingComponent),
+  },
   // Wildcard 404 (#226) — must stay last; everything above is matched
   // first. Hit on any URL that no other route resolves, including
   // dead deep-links that used to exist but were removed/renamed.

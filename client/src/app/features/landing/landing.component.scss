@@ -1,0 +1,450 @@
+// Public landing page (#330). Apple-minimal canon — same tokens as the
+// dashboard, more breathing room because this is a marketing surface
+// not an operational one. Mobile-first; the desktop layout layers in
+// at 768px / 1024px breakpoints.
+
+.landing {
+  // The marketing page lives OUTSIDE the dashboard shell; the shell's
+  // `--budojo-page-padding-*` tokens don't apply here. Pad on the
+  // outer container instead, with generous breathing room.
+  padding-inline: clamp(1rem, 5vw, 4rem);
+  padding-block: clamp(1.5rem, 4vw, 3rem);
+  max-width: 80rem;
+  margin: 0 auto;
+  color: var(--p-text-color);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3rem, 8vw, 6rem);
+
+  // ============================================================
+  // Header / nav
+  // ============================================================
+  &__nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    text-decoration: none;
+    color: inherit;
+
+    app-brand-glyph {
+      width: 2rem;
+      height: 2rem;
+      display: inline-flex;
+    }
+  }
+
+  &__brand-name {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  &__nav-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    @media (max-width: 480px) {
+      gap: 0.5rem;
+    }
+  }
+
+  &__lang-toggle,
+  &__footer-lang {
+    background: transparent;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-full);
+    padding: 0.25rem 0.625rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--p-text-color-secondary);
+    cursor: pointer;
+    transition:
+      border-color 160ms var(--budojo-motion-decelerate),
+      color 160ms var(--budojo-motion-decelerate);
+
+    &:hover {
+      border-color: var(--p-primary-300);
+      color: var(--p-text-color);
+    }
+  }
+
+  &__nav-link {
+    color: var(--p-text-color);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+
+    &:hover {
+      color: var(--p-primary-700);
+    }
+  }
+
+  // ============================================================
+  // Hero — punch line + supporting paragraph + CTA + visual
+  // ============================================================
+  &__hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    align-items: center;
+
+    @media (min-width: 1024px) {
+      grid-template-columns: 1.2fr 1fr;
+      gap: 4rem;
+    }
+  }
+
+  &__hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__hero-headline {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  &__hero-sub {
+    margin: 0;
+    font-size: clamp(1rem, 2vw, 1.125rem);
+    line-height: 1.5;
+    color: var(--p-text-color-secondary);
+    max-width: 36ch;
+  }
+
+  &__hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__hero-secondary {
+    color: var(--p-text-color);
+    font-weight: 500;
+
+    &:hover {
+      color: var(--p-primary-700);
+    }
+  }
+
+  &__hero-fineprint {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
+  }
+
+  // Hero visual placeholder. A real screenshot drops in here later;
+  // for now a soft surface tile with the brand glyph centred. Square-
+  // ish so the dimensions transfer to a real PNG without rework.
+  &__hero-visual {
+    aspect-ratio: 4 / 5;
+    background: var(--p-surface-100);
+    border-radius: var(--p-border-radius-lg);
+    border: 1px solid var(--p-content-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--budojo-elevation-floating);
+
+    @media (min-width: 1024px) {
+      aspect-ratio: 1 / 1;
+    }
+  }
+
+  &__hero-visual-card {
+    background: var(--p-content-background);
+    border-radius: var(--p-border-radius-md);
+    padding: 2rem;
+    box-shadow: var(--budojo-elevation-surface);
+
+    app-brand-glyph {
+      width: 4rem;
+      height: 4rem;
+      display: inline-flex;
+    }
+  }
+
+  // ============================================================
+  // Section title (shared across pain, features, trust, how, pricing)
+  // ============================================================
+  &__section-title {
+    margin: 0 0 1.5rem;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  // ============================================================
+  // Pain — bullet list, prose register
+  // ============================================================
+  &__pain-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    max-width: 56rem;
+  }
+
+  &__pain-item {
+    font-size: clamp(1rem, 2vw, 1.125rem);
+    line-height: 1.5;
+    color: var(--p-text-color);
+    padding-inline-start: 1.5rem;
+    position: relative;
+
+    &::before {
+      content: '·';
+      position: absolute;
+      left: 0;
+      font-weight: 700;
+      color: var(--p-primary-color);
+    }
+  }
+
+  // ============================================================
+  // Features — 6-card grid, icon + heading + body
+  // ============================================================
+  &__features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+  }
+
+  &__feature-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+    transition: border-color 160ms var(--budojo-motion-decelerate);
+
+    &:hover {
+      border-color: var(--p-primary-300);
+    }
+  }
+
+  &__feature-icon {
+    font-size: 1.5rem;
+    color: var(--p-primary-color);
+  }
+
+  &__feature-title {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+
+  &__feature-body {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--p-text-color-secondary);
+  }
+
+  // ============================================================
+  // Trust — 3 short claims, icon-led
+  // ============================================================
+  &__trust-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+  }
+
+  &__trust-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__trust-icon {
+    font-size: 1.25rem;
+    color: var(--p-primary-color);
+  }
+
+  &__trust-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  &__trust-body {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--p-text-color-secondary);
+  }
+
+  // ============================================================
+  // How it works — 3-step ordered arc
+  // ============================================================
+  &__how-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 56rem;
+  }
+
+  &__how-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  &__how-step-number {
+    flex: 0 0 auto;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--p-border-radius-full);
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  &__how-step-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__how-step-title {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+
+  &__how-step-body {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--p-text-color-secondary);
+  }
+
+  &__how-cta {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  // ============================================================
+  // Pricing — single MVP tile
+  // ============================================================
+  &__pricing-card {
+    padding: 2rem;
+    background: var(--p-surface-100);
+    border-radius: var(--p-border-radius-lg);
+    border: 1px solid var(--p-content-border-color);
+    max-width: 36rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__pricing-eyebrow {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-color-secondary);
+  }
+
+  &__pricing-headline {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+
+  &__pricing-body {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--p-text-color-secondary);
+  }
+
+  // ============================================================
+  // Footer — discrete, hairline, language + privacy + GitHub
+  // ============================================================
+  &__footer {
+    border-top: 1px solid var(--p-content-border-color);
+    padding-block: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row-reverse;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+
+  &__footer-links {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem 1.25rem;
+
+    a,
+    button {
+      color: var(--p-text-color-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+
+      &:hover {
+        color: var(--p-text-color);
+      }
+    }
+  }
+
+  &__footer-lang {
+    cursor: pointer;
+  }
+
+  &__footer-meta {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
+  }
+}
