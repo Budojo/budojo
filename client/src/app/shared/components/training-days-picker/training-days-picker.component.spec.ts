@@ -1,5 +1,6 @@
 import { ComponentRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { TrainingDaysPickerComponent } from './training-days-picker.component';
 
 describe('TrainingDaysPickerComponent', () => {
@@ -18,7 +19,10 @@ describe('TrainingDaysPickerComponent', () => {
   }
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [TrainingDaysPickerComponent] });
+    TestBed.configureTestingModule({
+      imports: [TrainingDaysPickerComponent],
+      providers: [...provideI18nTesting()],
+    });
   });
 
   it('renders 7 toggleable buttons in Mon-first order', () => {

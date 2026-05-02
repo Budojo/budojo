@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AcademyFormComponent } from './academy-form.component';
 import { Academy, AcademyService, Address } from '../../../core/services/academy.service';
 
@@ -38,7 +39,12 @@ interface Harness {
 function setup(cached: Academy | null = makeAcademy()): Harness {
   TestBed.configureTestingModule({
     imports: [AcademyFormComponent],
-    providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideRouter([]),
+      ...provideI18nTesting(),
+    ],
   });
   TestBed.inject(AcademyService).academy.set(cached);
 

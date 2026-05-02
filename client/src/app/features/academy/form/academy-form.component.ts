@@ -24,6 +24,7 @@ import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   AcademyService,
   Address,
@@ -132,6 +133,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
     SelectModule,
     ToastModule,
     Tooltip,
+    TranslatePipe,
     TrainingDaysPickerComponent,
   ],
   providers: [MessageService],
@@ -144,6 +146,7 @@ export class AcademyFormComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly translate = inject(TranslateService);
 
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
@@ -256,7 +259,7 @@ export class AcademyFormComponent implements OnInit {
         next: (updated) => {
           this.messageService.add({
             severity: 'success',
-            summary: 'Academy updated',
+            summary: this.translate.instant('academy.form.toast.successSummary'),
             detail: updated.name,
             life: 3000,
           });
@@ -405,13 +408,15 @@ export class AcademyFormComponent implements OnInit {
   }): void {
     if (err.status === 422 && err.error?.errors) {
       const firstError = Object.values(err.error.errors)[0]?.[0];
-      this.error.set(firstError ?? err.error.message ?? 'Validation failed.');
+      this.error.set(
+        firstError ?? err.error.message ?? this.translate.instant('academy.form.errorValidation'),
+      );
       return;
     }
     if (err.status === 403) {
       void this.router.navigate(['/dashboard']);
       return;
     }
-    this.error.set(err.error?.message ?? 'Something went wrong. Please try again.');
+    this.error.set(err.error?.message ?? this.translate.instant('academy.form.errorGeneric'));
   }
 }

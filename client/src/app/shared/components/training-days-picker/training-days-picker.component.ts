@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 const WEEKDAYS = [
-  { label: 'Mon', value: 1 },
-  { label: 'Tue', value: 2 },
-  { label: 'Wed', value: 3 },
-  { label: 'Thu', value: 4 },
-  { label: 'Fri', value: 5 },
-  { label: 'Sat', value: 6 },
-  { label: 'Sun', value: 0 },
+  { key: 'weekdays.mon', value: 1 },
+  { key: 'weekdays.tue', value: 2 },
+  { key: 'weekdays.wed', value: 3 },
+  { key: 'weekdays.thu', value: 4 },
+  { key: 'weekdays.fri', value: 5 },
+  { key: 'weekdays.sat', value: 6 },
+  { key: 'weekdays.sun', value: 0 },
 ] as const;
 
 /**
@@ -20,8 +21,13 @@ const WEEKDAYS = [
 @Component({
   selector: 'app-training-days-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslatePipe],
   template: `
-    <div class="training-days-picker" role="group" aria-label="Training days of the week">
+    <div
+      class="training-days-picker"
+      role="group"
+      [attr.aria-label]="'weekdays.groupAria' | translate"
+    >
       @for (day of weekdays; track day.value) {
         <button
           type="button"
@@ -31,7 +37,7 @@ const WEEKDAYS = [
           (click)="toggle(day.value)"
           [attr.data-cy]="'training-day-' + day.value"
         >
-          {{ day.label }}
+          {{ day.key | translate }}
         </button>
       }
     </div>
