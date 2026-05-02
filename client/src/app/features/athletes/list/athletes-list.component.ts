@@ -115,28 +115,30 @@ export class AthletesListComponent implements OnInit {
    * straddle midnight UTC and produce a header reading "Paid · Apr"
    * with a tooltip reading "May 2026 — Unpaid".
    *
-   * Derived once per component instance. A user keeping the page open
-   * across a month boundary sees a slightly stale label until refresh
-   * — acceptable trade-off vs. wiring a per-tick reactive timer just
-   * for a column header.
-   *
-   * Locale: hard-coded `en-US` to match the existing `monthLabel`
-   * derivation in `confirmTogglePaid()` and the SPA's English-source
-   * dashboard. When the dashboard i18n PR-C lands (#279), all three
-   * surfaces can switch to the active LanguageService locale at once.
+   * Derived once per component instance for the date itself; the locale
+   * is read from `LanguageService.currentLang()` so toggling EN ↔ IT
+   * re-renders both surfaces in the active language.
    */
   private readonly _now = new Date();
 
-  readonly currentMonthShort = this._now.toLocaleString('en-US', {
-    month: 'short',
-    timeZone: 'UTC',
-  });
+  private readonly locale = computed<string>(() =>
+    this.languageService.currentLang() === 'it' ? 'it-IT' : 'en-US',
+  );
 
-  readonly currentMonthLong = this._now.toLocaleString('en-US', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  readonly currentMonthShort = computed<string>(() =>
+    this._now.toLocaleString(this.locale(), {
+      month: 'short',
+      timeZone: 'UTC',
+    }),
+  );
+
+  readonly currentMonthLong = computed<string>(() =>
+    this._now.toLocaleString(this.locale(), {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }),
+  );
 
   /**
    * Free-text name search. The signal mirrors the input control; the trimmed
@@ -475,6 +477,9 @@ export class AthletesListComponent implements OnInit {
       message: this.translate.instant('athletes.list.confirm.deleteMessage', {
         name: `${athlete.first_name} ${athlete.last_name}`,
       }),
+      acceptLabel: this.translate.instant('athletes.list.confirm.deleteAccept'),
+      rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
+      acceptButtonProps: { severity: 'danger' },
       accept: () => this.delete(athlete),
     });
   }
@@ -505,7 +510,7 @@ export class AthletesListComponent implements OnInit {
     const now = new Date();
     const year = now.getUTCFullYear();
     const month = now.getUTCMonth() + 1;
-    const monthLabel = now.toLocaleString('en-US', {
+    const monthLabel = now.toLocaleString(this.locale(), {
       month: 'long',
       year: 'numeric',
       timeZone: 'UTC',
@@ -523,6 +528,12 @@ export class AthletesListComponent implements OnInit {
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
       message,
+      acceptLabel: this.translate.instant(
+        willMarkPaid
+          ? 'athletes.list.confirm.markPaidAccept'
+          : 'athletes.list.confirm.markUnpaidAccept',
+      ),
+      rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
       accept: () => this.applyPaidToggle(athlete, year, month, willMarkPaid),
     });
   }

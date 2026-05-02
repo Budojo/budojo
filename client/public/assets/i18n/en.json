@@ -377,7 +377,8 @@
   "athletes": {
     "list": {
       "title": "Athletes",
-      "totalCount": "{{count}} total",
+      "totalCountOne": "{{count}} total",
+      "totalCountOther": "{{count}} total",
       "addButton": "Add athlete",
       "searchPlaceholder": "Search by name",
       "beltPlaceholder": "Belt",
@@ -427,8 +428,12 @@
       },
       "confirm": {
         "deleteMessage": "Delete {{name}}?",
+        "deleteAccept": "Delete",
         "markPaidMessage": "Mark {{name}} paid for {{month}}?",
-        "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?"
+        "markPaidAccept": "Mark paid",
+        "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?",
+        "markUnpaidAccept": "Mark unpaid",
+        "cancel": "Cancel"
       }
     }
   }

@@ -7,7 +7,10 @@
       <h1 class="athletes-page__title">{{ 'athletes.list.title' | translate }}</h1>
       @if (!loading() && totalRecords() > 0) {
         <span class="athletes-page__count">
-          {{ 'athletes.list.totalCount' | translate: { count: totalRecords() } }}
+          {{
+            (totalRecords() === 1 ? 'athletes.list.totalCountOne' : 'athletes.list.totalCountOther')
+              | translate: { count: totalRecords() }
+          }}
         </span>
       }
     </div>
@@ -151,7 +154,7 @@
                  status refers to without hovering. The full month+year
                  lives in the per-row tooltip below. -->
             <th data-cy="athletes-th-paid">
-              {{ 'athletes.list.table.paidPrefix' | translate }} · {{ currentMonthShort }}
+              {{ 'athletes.list.table.paidPrefix' | translate }} · {{ currentMonthShort() }}
             </th>
           }
           <th style="width: 8rem"></th>
@@ -207,7 +210,7 @@
                 [pTooltip]="
                   athlete.paid_current_month === undefined
                     ? ''
-                    : currentMonthLong +
+                    : currentMonthLong() +
                       ' — ' +
                       (athlete.paid_current_month
                         ? ('athletes.list.tooltip.paid' | translate)

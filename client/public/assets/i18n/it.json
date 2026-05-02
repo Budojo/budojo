@@ -377,7 +377,8 @@
   "athletes": {
     "list": {
       "title": "Atleti",
-      "totalCount": "{{count}} totali",
+      "totalCountOne": "{{count}} totale",
+      "totalCountOther": "{{count}} totali",
       "addButton": "Aggiungi atleta",
       "searchPlaceholder": "Cerca per nome",
       "beltPlaceholder": "Cintura",
@@ -427,8 +428,12 @@
       },
       "confirm": {
         "deleteMessage": "Eliminare {{name}}?",
+        "deleteAccept": "Elimina",
         "markPaidMessage": "Segnare {{name}} come pagato per {{month}}?",
-        "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?"
+        "markPaidAccept": "Segna pagato",
+        "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
+        "markUnpaidAccept": "Segna non pagato",
+        "cancel": "Annulla"
       }
     }
   }

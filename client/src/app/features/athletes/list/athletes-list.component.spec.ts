@@ -386,14 +386,14 @@ describe('AthletesListComponent', () => {
       const headerText = fixture.nativeElement
         .querySelector('[data-cy="athletes-th-paid"]')
         ?.textContent?.trim();
-      const expected = `Paid · ${fixture.componentInstance.currentMonthShort}`;
+      const expected = `Paid · ${fixture.componentInstance.currentMonthShort()}`;
       expect(headerText).toBe(expected);
 
       // Sanity-check that the derived month is a recognisable
       // 3-letter English abbreviation — guards against a future
       // refactor that changes the format token (e.g. "month: 'numeric'")
       // and silently breaks the contract.
-      expect(fixture.componentInstance.currentMonthShort).toMatch(/^[A-Z][a-z]{2}$/);
+      expect(fixture.componentInstance.currentMonthShort()).toMatch(/^[A-Z][a-z]{2}$/);
     });
 
     function makeAthlete(over: Partial<Athlete> = {}): Athlete {
