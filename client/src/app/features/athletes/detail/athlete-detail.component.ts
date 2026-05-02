@@ -10,7 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, finalize } from 'rxjs';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { TabsModule } from 'primeng/tabs';
 import { TagModule } from 'primeng/tag';
@@ -38,6 +38,7 @@ export class AthleteDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly athleteService = inject(AthleteService);
+  private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(false);
@@ -60,13 +61,33 @@ export class AthleteDetailComponent implements OnInit {
    * URLs are passed through verbatim — the form-layer validator
    * restricts input to http/https, so the SPA doesn't sanitize again.
    */
-  readonly contactLinks = computed<{ icon: string; url: string; label: string }[]>(() => {
+  readonly contactLinks = computed<
+    { icon: string; url: string; labelKey: string; cyKey: string }[]
+  >(() => {
     const a = this.athlete();
     if (!a) return [];
-    const links: { icon: string; url: string; label: string }[] = [];
-    if (a.website) links.push({ icon: 'pi pi-globe', url: a.website, label: 'Website' });
-    if (a.facebook) links.push({ icon: 'pi pi-facebook', url: a.facebook, label: 'Facebook' });
-    if (a.instagram) links.push({ icon: 'pi pi-instagram', url: a.instagram, label: 'Instagram' });
+    const links: { icon: string; url: string; labelKey: string; cyKey: string }[] = [];
+    if (a.website)
+      links.push({
+        icon: 'pi pi-globe',
+        url: a.website,
+        labelKey: 'athletes.detail.contactLinks.website',
+        cyKey: 'website',
+      });
+    if (a.facebook)
+      links.push({
+        icon: 'pi pi-facebook',
+        url: a.facebook,
+        labelKey: 'athletes.detail.contactLinks.facebook',
+        cyKey: 'facebook',
+      });
+    if (a.instagram)
+      links.push({
+        icon: 'pi pi-instagram',
+        url: a.instagram,
+        labelKey: 'athletes.detail.contactLinks.instagram',
+        cyKey: 'instagram',
+      });
     return links;
   });
 
@@ -109,8 +130,8 @@ export class AthleteDetailComponent implements OnInit {
     }
   }
 
-  statusLabel(status: AthleteStatus): string {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+  statusLabelKey(status: AthleteStatus): string {
+    return `statuses.${status}`;
   }
 
   private loadAthlete(id: number): void {
@@ -121,7 +142,7 @@ export class AthleteDetailComponent implements OnInit {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (a) => this.athlete.set(a),
-        error: () => this.error.set('Could not load this athlete.'),
+        error: () => this.error.set(this.translate.instant('athletes.detail.loadError')),
       });
   }
 }

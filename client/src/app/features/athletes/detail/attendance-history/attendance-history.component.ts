@@ -11,6 +11,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { catchError, finalize, of } from 'rxjs';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -22,6 +23,21 @@ import {
   countScheduledTrainingDays,
 } from '../../../../shared/utils/attendance-rate';
 import { YearMonth, buildCalendarGrid, shiftMonth } from './calendar-grid';
+
+const MONTH_KEYS = [
+  'month.january',
+  'month.february',
+  'month.march',
+  'month.april',
+  'month.may',
+  'month.june',
+  'month.july',
+  'month.august',
+  'month.september',
+  'month.october',
+  'month.november',
+  'month.december',
+] as const;
 
 /**
  * YYYY-MM-DD from local components — same canon as the daily check-in surface;
@@ -68,7 +84,7 @@ function currentYearMonth(): YearMonth {
 @Component({
   selector: 'app-attendance-history',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonModule, PopoverModule, SkeletonModule],
+  imports: [TranslatePipe, ButtonModule, PopoverModule, SkeletonModule],
   templateUrl: './attendance-history.component.html',
   styleUrl: './attendance-history.component.scss',
 })
@@ -186,11 +202,17 @@ export class AttendanceHistoryComponent implements OnInit {
     return buildCalendarGrid(ym.year, ym.month);
   });
 
-  protected readonly monthLabel = computed(() => {
-    const ym = this.visible();
-    const d = new Date(ym.year, ym.month - 1, 1);
-    return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  /**
+   * i18n key for the visible month name (e.g. `month.may`). Rendered
+   * via the `| translate` pipe in the template so the label reacts
+   * to language toggles without a language signal dependency.
+   */
+  protected readonly monthLabelKey = computed(() => {
+    const m = this.visible().month; // 1-12
+    return MONTH_KEYS[m - 1];
   });
+
+  protected readonly visibleYear = computed(() => this.visible().year);
 
   protected readonly canGoPrev = computed(() => {
     const a = this.athlete();

@@ -1,10 +1,11 @@
 <div class="payments-list">
   <header class="payments-list__header">
-    <h2 class="payments-list__title">Payments — {{ year }}</h2>
+    <h2 class="payments-list__title">
+      {{ 'athletes.detail.payments.title' | translate: { year } }}
+    </h2>
     @if (!hasMonthlyFee()) {
       <p class="payments-list__hint" data-cy="payments-no-fee-hint">
-        Set a monthly fee on the academy to start recording payments. Until then this page stays
-        read-only.
+        {{ 'athletes.detail.payments.noFeeHint' | translate }}
       </p>
     }
   </header>
@@ -28,12 +29,22 @@
     >
       <ng-template #header>
         <tr>
-          <th scope="col" class="payments-list__th-month">Month</th>
-          <th scope="col" class="payments-list__th-status">Status</th>
-          <th scope="col" class="payments-list__th-amount">Amount</th>
-          <th scope="col" class="payments-list__th-paid-at">Paid on</th>
+          <th scope="col" class="payments-list__th-month">
+            {{ 'athletes.detail.payments.columns.month' | translate }}
+          </th>
+          <th scope="col" class="payments-list__th-status">
+            {{ 'athletes.detail.payments.columns.status' | translate }}
+          </th>
+          <th scope="col" class="payments-list__th-amount">
+            {{ 'athletes.detail.payments.columns.amount' | translate }}
+          </th>
+          <th scope="col" class="payments-list__th-paid-at">
+            {{ 'athletes.detail.payments.columns.paidOn' | translate }}
+          </th>
           <th scope="col" class="payments-list__th-actions">
-            <span class="payments-list__sr">Actions</span>
+            <span class="payments-list__sr">
+              {{ 'athletes.detail.payments.columns.actions' | translate }}
+            </span>
           </th>
         </tr>
       </ng-template>
@@ -42,9 +53,17 @@
           <td>{{ row.labelKey | translate }}</td>
           <td>
             @if (row.payment) {
-              <p-tag value="Paid" severity="success" [rounded]="true" />
+              <p-tag
+                [value]="'shared.paidBadge.paid' | translate"
+                severity="success"
+                [rounded]="true"
+              />
             } @else {
-              <p-tag value="Unpaid" severity="warn" [rounded]="true" />
+              <p-tag
+                [value]="'shared.paidBadge.unpaid' | translate"
+                severity="warn"
+                [rounded]="true"
+              />
             }
           </td>
           <td>
@@ -73,8 +92,8 @@
                   [text]="true"
                   size="small"
                   (onClick)="confirmToggleRow($event, row)"
-                  ariaLabel="Unmark paid"
-                  pTooltip="Unmark paid"
+                  [ariaLabel]="'athletes.detail.payments.button.unmarkPaid' | translate"
+                  [pTooltip]="'athletes.detail.payments.button.unmarkPaid' | translate"
                   tooltipPosition="left"
                   [attr.data-cy]="'payment-unmark-' + row.month"
                 />
@@ -86,8 +105,8 @@
                   [text]="true"
                   size="small"
                   (onClick)="confirmToggleRow($event, row)"
-                  ariaLabel="Mark paid"
-                  pTooltip="Mark paid"
+                  [ariaLabel]="'athletes.detail.payments.button.markPaid' | translate"
+                  [pTooltip]="'athletes.detail.payments.button.markPaid' | translate"
                   tooltipPosition="left"
                   [attr.data-cy]="'payment-mark-' + row.month"
                 />

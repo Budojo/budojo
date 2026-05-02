@@ -19,13 +19,9 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { Tooltip } from 'primeng/tooltip';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import {
-  Document,
-  DocumentService,
-  DocumentType,
-} from '../../../../core/services/document.service';
+import { Document, DocumentService } from '../../../../core/services/document.service';
 import { ExpiryStatusBadgeComponent } from '../../../../shared/components/expiry-status-badge/expiry-status-badge.component';
 import { triggerBrowserDownload } from '../../../../shared/utils/download';
 import { UploadDocumentDialogComponent } from '../upload-document-dialog/upload-document-dialog.component';
@@ -37,6 +33,7 @@ const TOGGLE_STORAGE_KEY = 'documents.showCancelled';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    TranslatePipe,
     ButtonModule,
     ConfirmPopup,
     SkeletonModule,
@@ -69,16 +66,9 @@ export class DocumentsListComponent implements OnInit {
   readonly activeCount = computed(() => this.documents().filter((d) => !d.deleted_at).length);
   readonly cancelledCount = computed(() => this.documents().filter((d) => !!d.deleted_at).length);
 
-  private readonly typeLabels: Record<DocumentType, string> = {
-    id_card: 'ID card',
-    medical_certificate: 'Medical certificate',
-    insurance: 'Insurance',
-    other: 'Other',
-  };
-
   /** Presentational helper — used by the template to avoid typing issues on p-table's `let-doc`. */
-  labelFor(doc: Document): string {
-    return this.typeLabels[doc.type];
+  labelKeyFor(doc: Document): string {
+    return `documents.types.${doc.type}`;
   }
 
   ngOnInit(): void {
