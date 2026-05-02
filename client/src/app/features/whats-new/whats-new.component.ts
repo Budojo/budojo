@@ -59,6 +59,30 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v1.12.0',
+      date: '2026-05-02',
+      headline:
+        'The headline this month: the dashboard speaks Italian. Every screen you use day-to-day — Profile, Athletes, Attendance, Documents, Academy — flips between English and Italian with a single toggle in the sidebar. And Budojo finally has a public landing page at the root URL, so prospects landing on budojo.app see what the product is before being asked to log in.',
+      sections: [
+        {
+          heading: '🌍 Italian translation across the dashboard',
+          bullets: [
+            "Sidebar language toggle, EN ↔ IT. Pick your language once from the sidebar and the whole dashboard flips: buttons, table headers, filter dropdowns, tooltips, confirm dialogs, toast messages, error states, empty states. The choice persists per device — close the browser, come back tomorrow, and you're still in the language you picked.",
+            'Five areas covered. Profile (your account page), Athletes list (titles, filters, sort tooltips, paid badges, mark-paid / mark-unpaid confirms), Attendance (daily check-in + monthly summary + the home-dashboard widget), Documents (the cross-athlete expiring list and its dashboard widget), and Academy (the read-only detail page + the edit form, including the training-days picker).',
+            'Locale-aware month names. When you toggle to Italian, the "Paid · Apr" column header reads "Pagato · apr", and the mark-paid confirm dialog reads "Segnare Mario Rossi come pagato per maggio 2026?" instead of mixing English month names into Italian sentences.',
+            'Italian belts and statuses respect the IT register. "Cintura blu" not "Belt blu", "Sospeso" / "Inattivo" / "Attivo" with masculine agreement (atleta is the implicit subject), "Pagato" / "Non pagato" for the paid status. Nothing reads like a machine translation.',
+          ],
+        },
+        {
+          heading: '🚪 Public landing page',
+          bullets: [
+            'Visit budojo.app and see the product. The root URL now serves a public landing page explaining what Budojo does, with clear "Log in" and "Sign up" entry points. Previously the root redirected straight to the login form, which read as cold to prospects and gave first-time visitors no context for what they were logging into.',
+            "Logged-in users are unaffected. If you're already authenticated, the landing page sends you straight to the dashboard the same way the old root did. Bookmarks to dashboard URLs keep working unchanged.",
+          ],
+        },
+      ],
+    },
+    {
       version: 'v1.11.0',
       date: '2026-05-01',
       headline:
