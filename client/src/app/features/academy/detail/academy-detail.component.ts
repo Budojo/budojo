@@ -12,7 +12,9 @@ import { ButtonModule } from 'primeng/button';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { Toast } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
+import { LanguageService } from '../../../core/services/language.service';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
@@ -29,7 +31,7 @@ const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/we
 @Component({
   selector: 'app-academy-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ButtonModule, ConfirmPopup, Toast],
+  imports: [RouterLink, ButtonModule, ConfirmPopup, Toast, TranslatePipe],
   providers: [ConfirmationService, MessageService],
   templateUrl: './academy-detail.component.html',
   styleUrl: './academy-detail.component.scss',
@@ -38,6 +40,8 @@ export class AcademyDetailComponent {
   private readonly academyService = inject(AcademyService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
 
   @ViewChild('logoInput') private logoInput?: ElementRef<HTMLInputElement>;
 
@@ -79,13 +83,41 @@ export class AcademyDetailComponent {
    * form-layer validator restricts input to http/https, so the SPA
    * doesn't sanitize again here.
    */
-  protected readonly contactLinks = computed<{ icon: string; url: string; label: string }[]>(() => {
+  /**
+   * Each link carries a stable `id` (used by `data-cy` and as a tracking
+   * key) plus the translated `label` for `aria-label` / `title` / sr-only
+   * text. The labels come from `academy.detail.links.*` so they flip
+   * with the active language; `currentLang()` is read so this computed
+   * recomputes on toggle (Copilot review on PR #340).
+   */
+  protected readonly contactLinks = computed<
+    { id: string; icon: string; url: string; label: string }[]
+  >(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
     const a = this.academy();
     if (!a) return [];
-    const links: { icon: string; url: string; label: string }[] = [];
-    if (a.website) links.push({ icon: 'pi pi-globe', url: a.website, label: 'Website' });
-    if (a.facebook) links.push({ icon: 'pi pi-facebook', url: a.facebook, label: 'Facebook' });
-    if (a.instagram) links.push({ icon: 'pi pi-instagram', url: a.instagram, label: 'Instagram' });
+    const links: { id: string; icon: string; url: string; label: string }[] = [];
+    if (a.website)
+      links.push({
+        id: 'website',
+        icon: 'pi pi-globe',
+        url: a.website,
+        label: this.translate.instant('academy.detail.links.website'),
+      });
+    if (a.facebook)
+      links.push({
+        id: 'facebook',
+        icon: 'pi pi-facebook',
+        url: a.facebook,
+        label: this.translate.instant('academy.detail.links.facebook'),
+      });
+    if (a.instagram)
+      links.push({
+        id: 'instagram',
+        icon: 'pi pi-instagram',
+        url: a.instagram,
+        label: this.translate.instant('academy.detail.links.instagram'),
+      });
     return links;
   });
 
@@ -101,8 +133,8 @@ export class AcademyDetailComponent {
     if (!ALLOWED_LOGO_MIME.includes(file.type)) {
       this.messageService.add({
         severity: 'error',
-        summary: 'Unsupported file',
-        detail: 'Use PNG, JPG, SVG or WebP.',
+        summary: this.translate.instant('academy.detail.toast.unsupportedSummary'),
+        detail: this.translate.instant('academy.detail.toast.unsupportedDetail'),
         life: 4000,
       });
       input.value = '';
@@ -112,8 +144,8 @@ export class AcademyDetailComponent {
     if (file.size > MAX_LOGO_BYTES) {
       this.messageService.add({
         severity: 'error',
-        summary: 'File too large',
-        detail: 'Maximum 2 MB.',
+        summary: this.translate.instant('academy.detail.toast.tooLargeSummary'),
+        detail: this.translate.instant('academy.detail.toast.tooLargeDetail'),
         life: 4000,
       });
       input.value = '';
@@ -127,7 +159,7 @@ export class AcademyDetailComponent {
         input.value = '';
         this.messageService.add({
           severity: 'success',
-          summary: 'Logo updated',
+          summary: this.translate.instant('academy.detail.toast.uploadSuccess'),
           life: 2500,
         });
       },
@@ -136,8 +168,8 @@ export class AcademyDetailComponent {
         input.value = '';
         this.messageService.add({
           severity: 'error',
-          summary: 'Upload failed',
-          detail: 'Could not save the new logo. Please try again.',
+          summary: this.translate.instant('academy.detail.toast.uploadErrorSummary'),
+          detail: this.translate.instant('academy.detail.toast.uploadErrorDetail'),
           life: 4000,
         });
       },
@@ -147,9 +179,9 @@ export class AcademyDetailComponent {
   protected confirmRemoveLogo(event: Event): void {
     this.confirmationService.confirm({
       target: event.currentTarget as HTMLElement,
-      message: 'Remove the academy logo?',
-      acceptLabel: 'Remove',
-      rejectLabel: 'Cancel',
+      message: this.translate.instant('academy.detail.confirm.removeMessage'),
+      acceptLabel: this.translate.instant('academy.detail.confirm.removeAccept'),
+      rejectLabel: this.translate.instant('academy.detail.confirm.removeReject'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.removeLogo(),
     });
@@ -160,14 +192,14 @@ export class AcademyDetailComponent {
       next: () =>
         this.messageService.add({
           severity: 'success',
-          summary: 'Logo removed',
+          summary: this.translate.instant('academy.detail.toast.removeSuccess'),
           life: 2500,
         }),
       error: () =>
         this.messageService.add({
           severity: 'error',
-          summary: 'Remove failed',
-          detail: 'Could not remove the logo. Please try again.',
+          summary: this.translate.instant('academy.detail.toast.removeErrorSummary'),
+          detail: this.translate.instant('academy.detail.toast.removeErrorDetail'),
           life: 4000,
         }),
     });
