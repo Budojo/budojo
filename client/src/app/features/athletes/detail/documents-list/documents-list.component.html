@@ -7,12 +7,15 @@
        (Norman signifier). -->
   <header class="documents-list__controls">
     <div class="documents-list__heading">
-      <h2>Documents</h2>
+      <h2>{{ 'athletes.detail.documents.heading' | translate }}</h2>
       @if (!loading()) {
         <span class="documents-list__count">
-          {{ activeCount() }} active
+          {{ 'athletes.detail.documents.activeCount' | translate: { count: activeCount() } }}
           @if (showCancelled() && cancelledCount() > 0) {
-            , {{ cancelledCount() }} cancelled
+            ,
+            {{
+              'athletes.detail.documents.cancelledCount' | translate: { count: cancelledCount() }
+            }}
           }
         </span>
       }
@@ -23,14 +26,16 @@
         <p-toggleswitch
           [ngModel]="showCancelled()"
           (ngModelChange)="onToggleCancelled($event)"
-          [ariaLabel]="'Show cancelled documents'"
+          [ariaLabel]="'athletes.detail.documents.toggle.aria' | translate"
           inputId="show-cancelled"
         />
-        <span class="documents-list__toggle-label">Show cancelled</span>
+        <span class="documents-list__toggle-label">
+          {{ 'athletes.detail.documents.toggle.label' | translate }}
+        </span>
       </label>
 
       <p-button
-        label="Add document"
+        [label]="'athletes.detail.documents.button.add' | translate"
         icon="pi pi-plus"
         size="small"
         [disabled]="athleteId() === null"
@@ -58,18 +63,18 @@
   >
     <ng-template pTemplate="header">
       <tr>
-        <th>Type</th>
-        <th>File</th>
-        <th>Issued</th>
-        <th>Expires</th>
-        <th>Status</th>
+        <th>{{ 'athletes.detail.documents.columns.type' | translate }}</th>
+        <th>{{ 'athletes.detail.documents.columns.file' | translate }}</th>
+        <th>{{ 'athletes.detail.documents.columns.issued' | translate }}</th>
+        <th>{{ 'athletes.detail.documents.columns.expires' | translate }}</th>
+        <th>{{ 'athletes.detail.documents.columns.status' | translate }}</th>
         <th style="width: 8rem"></th>
       </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-doc>
       <tr [class.documents-list__row--cancelled]="!!doc.deleted_at">
-        <td>{{ labelFor(doc) }}</td>
+        <td>{{ labelKeyFor(doc) | translate }}</td>
         <td class="documents-list__filename">
           <span>{{ doc.original_name }}</span>
         </td>
@@ -80,7 +85,10 @@
             <p-tag
               severity="danger"
               [rounded]="true"
-              [value]="'Cancelled on ' + cancelledOn(doc)"
+              [value]="
+                'athletes.detail.documents.status.cancelledOn'
+                  | translate: { date: cancelledOn(doc) }
+              "
             />
           } @else {
             <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
@@ -96,8 +104,11 @@
               [text]="true"
               size="small"
               (onClick)="download(doc)"
-              [ariaLabel]="'Download ' + doc.original_name"
-              pTooltip="Download"
+              [ariaLabel]="
+                'athletes.detail.documents.button.downloadAria'
+                  | translate: { name: doc.original_name }
+              "
+              [pTooltip]="'athletes.detail.documents.tooltip.download' | translate"
               tooltipPosition="left"
               data-cy="download-btn"
             />
@@ -107,8 +118,11 @@
               [text]="true"
               size="small"
               (onClick)="confirmDelete($event, doc)"
-              [ariaLabel]="'Delete ' + doc.original_name"
-              pTooltip="Delete"
+              [ariaLabel]="
+                'athletes.detail.documents.button.deleteAria'
+                  | translate: { name: doc.original_name }
+              "
+              [pTooltip]="'athletes.detail.documents.tooltip.delete' | translate"
               tooltipPosition="left"
               data-cy="delete-btn"
             />
@@ -133,14 +147,15 @@
               <i class="pi pi-folder-open"></i>
               <p class="documents-list__empty-title">
                 @if (showCancelled()) {
-                  No documents yet — active or cancelled.
+                  {{ 'athletes.detail.documents.empty.withCancelled' | translate }}
                 } @else {
-                  No documents yet.
+                  {{ 'athletes.detail.documents.empty.default' | translate }}
                 }
               </p>
-              <p class="documents-list__empty-hint">
-                Use <strong>Add document</strong> above to upload the first one.
-              </p>
+              <p
+                class="documents-list__empty-hint"
+                [innerHTML]="'athletes.detail.documents.empty.hint' | translate"
+              ></p>
             </div>
           }
         </td>

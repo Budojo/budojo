@@ -590,6 +590,19 @@
           "errorMissingFee": "Set a monthly fee on the academy first to record payments.",
           "errorGeneric": "Couldn't update the payment. Please try again.",
           "loadErrorDetail": "Couldn't load payments."
+        },
+        "title": "Payments — {{year}}",
+        "noFeeHint": "Set a monthly fee on the academy to start recording payments. Until then this page stays read-only.",
+        "columns": {
+          "month": "Month",
+          "status": "Status",
+          "amount": "Amount",
+          "paidOn": "Paid on",
+          "actions": "Actions"
+        },
+        "button": {
+          "markPaid": "Mark paid",
+          "unmarkPaid": "Unmark paid"
         }
       },
       "documents": {
@@ -608,7 +621,63 @@
           "deletedDetail": "{{name}} removed.",
           "deleteErrorSummary": "Delete failed",
           "deleteErrorDetail": "Could not delete this document. Please try again."
+        },
+        "heading": "Documents",
+        "activeCount": "{{count}} active",
+        "cancelledCount": "{{count}} cancelled",
+        "toggle": {
+          "aria": "Show cancelled documents",
+          "label": "Show cancelled"
+        },
+        "button": {
+          "add": "Add document",
+          "downloadAria": "Download {{name}}",
+          "deleteAria": "Delete {{name}}"
+        },
+        "tooltip": {
+          "download": "Download",
+          "delete": "Delete"
+        },
+        "columns": {
+          "type": "Type",
+          "file": "File",
+          "issued": "Issued",
+          "expires": "Expires",
+          "status": "Status"
+        },
+        "status": {
+          "cancelledOn": "Cancelled on {{date}}"
+        },
+        "empty": {
+          "withCancelled": "No documents yet — active or cancelled.",
+          "default": "No documents yet.",
+          "hint": "Use <strong>Add document</strong> above to upload the first one."
         }
+      },
+      "backToList": "Athletes",
+      "loading": "Loading athlete…",
+      "loadError": "Could not load this athlete.",
+      "joinedLabel": "Joined {{date}}",
+      "tabs": {
+        "documents": "Documents",
+        "attendance": "Attendance",
+        "payments": "Payments",
+        "edit": "Edit"
+      },
+      "contactLinks": {
+        "website": "Website",
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      },
+      "attendance": {
+        "eyebrow": "Attendance",
+        "daysFormat": "{{attended}} / {{scheduled}} days",
+        "daysThisMonthOne": "{{count}} day this month",
+        "daysThisMonthMany": "{{count}} days this month",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month",
+        "dayPresent": "{{day}} — present",
+        "dayNotRecorded": "{{day}} — not recorded"
       }
     }
   },

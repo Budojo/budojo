@@ -1,14 +1,19 @@
 <section class="attendance-history" data-cy="attendance-history">
   <header class="attendance-history__header">
     <div class="attendance-history__heading">
-      <p class="attendance-history__eyebrow">Attendance</p>
+      <p class="attendance-history__eyebrow">
+        {{ 'athletes.detail.attendance.eyebrow' | translate }}
+      </p>
       <h2 class="attendance-history__title" data-cy="attendance-month-label">
-        {{ monthLabel() }}
+        {{ monthLabelKey() | translate }} {{ visibleYear() }}
       </h2>
       @if (ratePercent() !== null) {
         <p class="attendance-history__counter" data-cy="attendance-counter">
           <span class="attendance-history__counter-numbers">
-            {{ attendedCount() }} / {{ scheduledCount() }} days
+            {{
+              'athletes.detail.attendance.daysFormat'
+                | translate: { attended: attendedCount(), scheduled: scheduledCount() }
+            }}
           </span>
           <span class="attendance-history__counter-pct" data-cy="attendance-rate-pct">
             · {{ ratePercent() }}%
@@ -34,7 +39,12 @@
              only honest display — "0 days · 0%" reads as a judgement when
              the class hasn't even happened. -->
         <p class="attendance-history__counter" data-cy="attendance-counter">
-          {{ attendedCount() }} day{{ attendedCount() === 1 ? '' : 's' }} this month
+          {{
+            (attendedCount() === 1
+              ? 'athletes.detail.attendance.daysThisMonthOne'
+              : 'athletes.detail.attendance.daysThisMonthMany'
+            ) | translate: { count: attendedCount() }
+          }}
         </p>
       }
     </div>
@@ -46,7 +56,7 @@
         [rounded]="true"
         [disabled]="!canGoPrev()"
         (onClick)="prevMonth()"
-        ariaLabel="Previous month"
+        [ariaLabel]="'athletes.detail.attendance.prevMonth' | translate"
         data-cy="attendance-prev"
       />
       <p-button
@@ -55,15 +65,20 @@
         [rounded]="true"
         [disabled]="!canGoNext()"
         (onClick)="nextMonth()"
-        ariaLabel="Next month"
+        [ariaLabel]="'athletes.detail.attendance.nextMonth' | translate"
         data-cy="attendance-next"
       />
     </div>
   </header>
 
   <div class="attendance-history__weekdays" aria-hidden="true">
-    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span
-    ><span>Sun</span>
+    <span>{{ 'weekdays.mon' | translate }}</span
+    ><span>{{ 'weekdays.tue' | translate }}</span
+    ><span>{{ 'weekdays.wed' | translate }}</span
+    ><span>{{ 'weekdays.thu' | translate }}</span
+    ><span>{{ 'weekdays.fri' | translate }}</span
+    ><span>{{ 'weekdays.sat' | translate }}</span
+    ><span>{{ 'weekdays.sun' | translate }}</span>
   </div>
 
   @if (loading()) {
@@ -98,7 +113,12 @@
               [disabled]="!hasNotes"
               [attr.data-cy]="attended ? 'attendance-day-attended' : 'attendance-day'"
               [attr.data-day]="day"
-              [attr.aria-label]="attended ? day + ' — present' : day + ' — not recorded'"
+              [attr.aria-label]="
+                (attended
+                  ? 'athletes.detail.attendance.dayPresent'
+                  : 'athletes.detail.attendance.dayNotRecorded'
+                ) | translate: { day: day }
+              "
               (click)="hasNotes && openNotesFor($event, key)"
             >
               <span class="attendance-history__day-num">{{ day }}</span>

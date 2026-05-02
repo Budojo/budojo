@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { AttendanceHistoryComponent } from './attendance-history.component';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { Athlete } from '../../../../core/services/athlete.service';
@@ -55,6 +56,7 @@ function setupTestBed(): HttpTestingController {
           parent: { paramMap: of(parentParamMap) },
         },
       },
+      ...provideI18nTesting(),
     ],
   });
   return TestBed.inject(HttpTestingController);

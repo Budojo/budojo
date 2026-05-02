@@ -590,6 +590,19 @@
           "errorMissingFee": "Imposta una quota mensile sull'accademia prima di registrare i pagamenti.",
           "errorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
           "loadErrorDetail": "Impossibile caricare i pagamenti."
+        },
+        "title": "Pagamenti — {{year}}",
+        "noFeeHint": "Imposta una quota mensile sull'accademia per iniziare a registrare i pagamenti. Fino ad allora questa pagina rimane di sola lettura.",
+        "columns": {
+          "month": "Mese",
+          "status": "Stato",
+          "amount": "Importo",
+          "paidOn": "Pagato il",
+          "actions": "Azioni"
+        },
+        "button": {
+          "markPaid": "Segna pagato",
+          "unmarkPaid": "Annulla pagato"
         }
       },
       "documents": {
@@ -608,7 +621,63 @@
           "deletedDetail": "{{name}} rimosso.",
           "deleteErrorSummary": "Eliminazione fallita",
           "deleteErrorDetail": "Impossibile eliminare questo documento. Riprova."
+        },
+        "heading": "Documenti",
+        "activeCount": "{{count}} attivi",
+        "cancelledCount": "{{count}} cancellati",
+        "toggle": {
+          "aria": "Mostra documenti cancellati",
+          "label": "Mostra cancellati"
+        },
+        "button": {
+          "add": "Aggiungi documento",
+          "downloadAria": "Scarica {{name}}",
+          "deleteAria": "Elimina {{name}}"
+        },
+        "tooltip": {
+          "download": "Scarica",
+          "delete": "Elimina"
+        },
+        "columns": {
+          "type": "Tipo",
+          "file": "File",
+          "issued": "Emesso",
+          "expires": "Scade",
+          "status": "Stato"
+        },
+        "status": {
+          "cancelledOn": "Cancellato il {{date}}"
+        },
+        "empty": {
+          "withCancelled": "Nessun documento — attivo o cancellato.",
+          "default": "Nessun documento.",
+          "hint": "Usa <strong>Aggiungi documento</strong> sopra per caricare il primo."
         }
+      },
+      "backToList": "Atleti",
+      "loading": "Caricamento atleta…",
+      "loadError": "Impossibile caricare l'atleta.",
+      "joinedLabel": "Iscritto il {{date}}",
+      "tabs": {
+        "documents": "Documenti",
+        "attendance": "Presenze",
+        "payments": "Pagamenti",
+        "edit": "Modifica"
+      },
+      "contactLinks": {
+        "website": "Sito web",
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      },
+      "attendance": {
+        "eyebrow": "Presenze",
+        "daysFormat": "{{attended}} / {{scheduled}} giorni",
+        "daysThisMonthOne": "{{count}} giorno questo mese",
+        "daysThisMonthMany": "{{count}} giorni questo mese",
+        "prevMonth": "Mese precedente",
+        "nextMonth": "Mese successivo",
+        "dayPresent": "{{day}} — presente",
+        "dayNotRecorded": "{{day}} — non registrato"
       }
     }
   },
