@@ -494,5 +494,74 @@
       "viewAll": "View all →",
       "empty": "No attendance recorded yet this month."
     }
+  },
+  "statuses": {
+    "all": "All statuses",
+    "active": "Active",
+    "suspended": "Suspended",
+    "inactive": "Inactive"
+  },
+  "athletes": {
+    "list": {
+      "title": "Athletes",
+      "totalCountOne": "{{count}} total",
+      "totalCountOther": "{{count}} total",
+      "addButton": "Add athlete",
+      "searchPlaceholder": "Search by name",
+      "beltPlaceholder": "Belt",
+      "statusPlaceholder": "Status",
+      "paidPlaceholder": "Paid",
+      "paidOptions": {
+        "all": "All",
+        "yes": "Paid",
+        "no": "Unpaid"
+      },
+      "table": {
+        "fullName": "Full name",
+        "belt": "Belt",
+        "status": "Status",
+        "paidPrefix": "Paid"
+      },
+      "tooltip": {
+        "fullNameSortInitial": "Click to sort by first name (A → Z)",
+        "fullNameSortFirstAsc": "Sorted by first name (A → Z). Click to cycle.",
+        "fullNameSortFirstDesc": "Sorted by first name (Z → A). Click to cycle.",
+        "fullNameSortLastAsc": "Sorted by last name (A → Z). Click to cycle.",
+        "fullNameSortLastDesc": "Sorted by last name (Z → A). Click to cycle.",
+        "beltSortInitial": "Click to sort by belt rank (white → black)",
+        "beltSortAsc": "Sorted by belt (white → black). Click to flip.",
+        "beltSortDesc": "Sorted by belt (black → white). Click to flip.",
+        "edit": "Edit",
+        "delete": "Delete",
+        "editAria": "Edit {{name}}",
+        "deleteAria": "Delete {{name}}",
+        "paid": "Paid",
+        "unpaid": "Unpaid"
+      },
+      "empty": {
+        "title": "No athletes found.",
+        "filteredHint": "Try clearing your filters or search."
+      },
+      "toast": {
+        "markedPaid": "Marked paid",
+        "markedUnpaid": "Marked unpaid",
+        "errorSummary": "Error",
+        "deletedSummary": "Deleted",
+        "deletedDetail": "{{name}} removed.",
+        "loadErrorDetail": "Could not load athletes. Please try again.",
+        "paidErrorMissingFee": "Set a monthly fee on the academy first to record payments.",
+        "paidErrorGeneric": "Couldn't update the payment. Please try again.",
+        "deleteErrorDetail": "Could not delete athlete. Please try again."
+      },
+      "confirm": {
+        "deleteMessage": "Delete {{name}}?",
+        "deleteAccept": "Delete",
+        "markPaidMessage": "Mark {{name}} paid for {{month}}?",
+        "markPaidAccept": "Mark paid",
+        "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?",
+        "markUnpaidAccept": "Mark unpaid",
+        "cancel": "Cancel"
+      }
+    }
   }
 }

@@ -494,5 +494,74 @@
       "viewAll": "Vedi tutto →",
       "empty": "Nessuna presenza registrata questo mese."
     }
+  },
+  "statuses": {
+    "all": "Tutti gli stati",
+    "active": "Attivo",
+    "suspended": "Sospeso",
+    "inactive": "Inattivo"
+  },
+  "athletes": {
+    "list": {
+      "title": "Atleti",
+      "totalCountOne": "{{count}} totale",
+      "totalCountOther": "{{count}} totali",
+      "addButton": "Aggiungi atleta",
+      "searchPlaceholder": "Cerca per nome",
+      "beltPlaceholder": "Cintura",
+      "statusPlaceholder": "Stato",
+      "paidPlaceholder": "Pagamento",
+      "paidOptions": {
+        "all": "Tutti",
+        "yes": "Pagato",
+        "no": "Non pagato"
+      },
+      "table": {
+        "fullName": "Nome e cognome",
+        "belt": "Cintura",
+        "status": "Stato",
+        "paidPrefix": "Pagato"
+      },
+      "tooltip": {
+        "fullNameSortInitial": "Clicca per ordinare per nome (A → Z)",
+        "fullNameSortFirstAsc": "Ordinato per nome (A → Z). Clicca per cambiare.",
+        "fullNameSortFirstDesc": "Ordinato per nome (Z → A). Clicca per cambiare.",
+        "fullNameSortLastAsc": "Ordinato per cognome (A → Z). Clicca per cambiare.",
+        "fullNameSortLastDesc": "Ordinato per cognome (Z → A). Clicca per cambiare.",
+        "beltSortInitial": "Clicca per ordinare per grado di cintura (bianca → nera)",
+        "beltSortAsc": "Ordinato per cintura (bianca → nera). Clicca per invertire.",
+        "beltSortDesc": "Ordinato per cintura (nera → bianca). Clicca per invertire.",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "editAria": "Modifica {{name}}",
+        "deleteAria": "Elimina {{name}}",
+        "paid": "Pagato",
+        "unpaid": "Non pagato"
+      },
+      "empty": {
+        "title": "Nessun atleta trovato.",
+        "filteredHint": "Prova a rimuovere i filtri o la ricerca."
+      },
+      "toast": {
+        "markedPaid": "Segnato come pagato",
+        "markedUnpaid": "Segnato come non pagato",
+        "errorSummary": "Errore",
+        "deletedSummary": "Eliminato",
+        "deletedDetail": "{{name}} rimosso.",
+        "loadErrorDetail": "Impossibile caricare gli atleti. Riprova.",
+        "paidErrorMissingFee": "Imposta prima una quota mensile sull'academy per registrare i pagamenti.",
+        "paidErrorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
+        "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova."
+      },
+      "confirm": {
+        "deleteMessage": "Eliminare {{name}}?",
+        "deleteAccept": "Elimina",
+        "markPaidMessage": "Segnare {{name}} come pagato per {{month}}?",
+        "markPaidAccept": "Segna pagato",
+        "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
+        "markUnpaidAccept": "Segna non pagato",
+        "cancel": "Annulla"
+      }
+    }
   }
 }

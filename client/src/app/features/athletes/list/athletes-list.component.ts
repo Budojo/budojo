@@ -22,7 +22,9 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { Tooltip } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
+import { LanguageService } from '../../../core/services/language.service';
 import {
   Athlete,
   AthleteFilters,
@@ -63,6 +65,7 @@ interface SelectOption<T extends string> {
     ToastModule,
     ConfirmPopup,
     Tooltip,
+    TranslatePipe,
     AgeBadgeComponent,
     BeltBadgeComponent,
     ExpiringDocumentsWidgetComponent,
@@ -81,6 +84,8 @@ export class AthletesListComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
+  private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
 
   readonly athletes = signal<Athlete[]>([]);
   readonly totalRecords = signal(0);
@@ -110,28 +115,30 @@ export class AthletesListComponent implements OnInit {
    * straddle midnight UTC and produce a header reading "Paid · Apr"
    * with a tooltip reading "May 2026 — Unpaid".
    *
-   * Derived once per component instance. A user keeping the page open
-   * across a month boundary sees a slightly stale label until refresh
-   * — acceptable trade-off vs. wiring a per-tick reactive timer just
-   * for a column header.
-   *
-   * Locale: hard-coded `en-US` to match the existing `monthLabel`
-   * derivation in `confirmTogglePaid()` and the SPA's English-source
-   * dashboard. When the dashboard i18n PR-C lands (#279), all three
-   * surfaces can switch to the active LanguageService locale at once.
+   * Derived once per component instance for the date itself; the locale
+   * is read from `LanguageService.currentLang()` so toggling EN ↔ IT
+   * re-renders both surfaces in the active language.
    */
   private readonly _now = new Date();
 
-  readonly currentMonthShort = this._now.toLocaleString('en-US', {
-    month: 'short',
-    timeZone: 'UTC',
-  });
+  private readonly locale = computed<string>(() =>
+    this.languageService.currentLang() === 'it' ? 'it-IT' : 'en-US',
+  );
 
-  readonly currentMonthLong = this._now.toLocaleString('en-US', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  readonly currentMonthShort = computed<string>(() =>
+    this._now.toLocaleString(this.locale(), {
+      month: 'short',
+      timeZone: 'UTC',
+    }),
+  );
+
+  readonly currentMonthLong = computed<string>(() =>
+    this._now.toLocaleString(this.locale(), {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }),
+  );
 
   /**
    * Free-text name search. The signal mirrors the input control; the trimmed
@@ -165,36 +172,87 @@ export class AthletesListComponent implements OnInit {
       .subscribe((q) => this.applySearch(q));
   }
 
-  // Order = IBJJF rank (kids → adults → senior coral/red) so the
-  // dropdown reads bottom-up like a progression chart.
-  readonly beltOptions: SelectOption<Belt>[] = [
-    { label: 'All belts', value: '' },
-    { label: 'Grey (kids)', value: 'grey' },
-    { label: 'Yellow (kids)', value: 'yellow' },
-    { label: 'Orange (kids)', value: 'orange' },
-    { label: 'Green (kids)', value: 'green' },
-    { label: 'White', value: 'white' },
-    { label: 'Blue', value: 'blue' },
-    { label: 'Purple', value: 'purple' },
-    { label: 'Brown', value: 'brown' },
-    { label: 'Black', value: 'black' },
-    { label: 'Red & black (7°)', value: 'red-and-black' },
-    { label: 'Red & white (8°)', value: 'red-and-white' },
-    { label: 'Red (9°/10°)', value: 'red' },
+  // Belt → translation key map. Same exhaustive `Record<Belt, string>`
+  // pattern as DailyAttendanceComponent (#339): adding a new Belt member
+  // fails TS compilation here until the matching translation key is added.
+  // Order is kept separate (IBJJF rank, kids → adults → senior coral/red)
+  // because Record key order isn't a language guarantee.
+  private readonly beltLabelKeys: Record<Belt, string> = {
+    grey: 'belts.grey',
+    yellow: 'belts.yellow',
+    orange: 'belts.orange',
+    green: 'belts.green',
+    white: 'belts.white',
+    blue: 'belts.blue',
+    purple: 'belts.purple',
+    brown: 'belts.brown',
+    black: 'belts.black',
+    'red-and-black': 'belts.redAndBlack',
+    'red-and-white': 'belts.redAndWhite',
+    red: 'belts.red',
+  };
+
+  private readonly beltOrder: readonly (Belt | '')[] = [
+    '',
+    'grey',
+    'yellow',
+    'orange',
+    'green',
+    'white',
+    'blue',
+    'purple',
+    'brown',
+    'black',
+    'red-and-black',
+    'red-and-white',
+    'red',
   ];
 
-  readonly statusOptions: SelectOption<AthleteStatus>[] = [
-    { label: 'All statuses', value: '' },
-    { label: 'Active', value: 'active' },
-    { label: 'Suspended', value: 'suspended' },
-    { label: 'Inactive', value: 'inactive' },
+  readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    return this.beltOrder.map((value) => ({
+      label:
+        value === ''
+          ? this.translate.instant('belts.all')
+          : this.translate.instant(this.beltLabelKeys[value]),
+      value,
+    }));
+  });
+
+  // Same exhaustiveness pattern as belts. AthleteStatus is the load-bearing
+  // type — adding a new status case fails TS until a matching key is added.
+  private readonly statusLabelKeys: Record<AthleteStatus, string> = {
+    active: 'statuses.active',
+    suspended: 'statuses.suspended',
+    inactive: 'statuses.inactive',
+  };
+
+  private readonly statusOrder: readonly (AthleteStatus | '')[] = [
+    '',
+    'active',
+    'suspended',
+    'inactive',
   ];
 
-  readonly paidOptions: SelectOption<AthletePaidFilter>[] = [
-    { label: 'All', value: '' },
-    { label: 'Paid', value: 'yes' },
-    { label: 'Unpaid', value: 'no' },
-  ];
+  readonly statusOptions = computed<SelectOption<AthleteStatus>[]>(() => {
+    this.languageService.currentLang();
+    return this.statusOrder.map((value) => ({
+      label:
+        value === ''
+          ? this.translate.instant('statuses.all')
+          : this.translate.instant(this.statusLabelKeys[value]),
+      value,
+    }));
+  });
+
+  readonly paidOptions = computed<SelectOption<AthletePaidFilter>[]>(() => {
+    this.languageService.currentLang();
+    return [
+      { label: this.translate.instant('athletes.list.paidOptions.all'), value: '' },
+      { label: this.translate.instant('athletes.list.paidOptions.yes'), value: 'yes' },
+      { label: this.translate.instant('athletes.list.paidOptions.no'), value: 'no' },
+    ];
+  });
 
   ngOnInit(): void {
     this.load();
@@ -308,14 +366,21 @@ export class AthletesListComponent implements OnInit {
    * tooltip spells it out for the first-time user.
    */
   readonly fullNameSortTooltip = computed<string>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
     const f = this.sortField();
     const o = this.sortOrder();
     if (f !== 'first_name' && f !== 'last_name') {
-      return 'Click to sort by first name (A → Z)';
+      return this.translate.instant('athletes.list.tooltip.fullNameSortInitial');
     }
-    const lead = f === 'first_name' ? 'first name' : 'last name';
-    const direction = o === 'asc' ? 'A → Z' : 'Z → A';
-    return `Sorted by ${lead} (${direction}). Click to cycle.`;
+    const key =
+      f === 'first_name'
+        ? o === 'asc'
+          ? 'athletes.list.tooltip.fullNameSortFirstAsc'
+          : 'athletes.list.tooltip.fullNameSortFirstDesc'
+        : o === 'asc'
+          ? 'athletes.list.tooltip.fullNameSortLastAsc'
+          : 'athletes.list.tooltip.fullNameSortLastDesc';
+    return this.translate.instant(key);
   });
 
   /**
@@ -380,12 +445,16 @@ export class AthletesListComponent implements OnInit {
 
   /** Plain-English tooltip — Norman § signifier. */
   readonly beltSortTooltip = computed<string>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
     const f = this.sortField();
     if (f !== 'belt') {
-      return 'Click to sort by belt rank (white → black)';
+      return this.translate.instant('athletes.list.tooltip.beltSortInitial');
     }
-    const direction = this.sortOrder() === 'asc' ? 'white → black' : 'black → white';
-    return `Sorted by belt (${direction}). Click to flip.`;
+    return this.translate.instant(
+      this.sortOrder() === 'asc'
+        ? 'athletes.list.tooltip.beltSortAsc'
+        : 'athletes.list.tooltip.beltSortDesc',
+    );
   });
 
   /** WAI-ARIA sort state for the Belt <th>. */
@@ -405,7 +474,12 @@ export class AthletesListComponent implements OnInit {
   confirmDelete(event: Event, athlete: Athlete): void {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
-      message: `Delete ${athlete.first_name} ${athlete.last_name}?`,
+      message: this.translate.instant('athletes.list.confirm.deleteMessage', {
+        name: `${athlete.first_name} ${athlete.last_name}`,
+      }),
+      acceptLabel: this.translate.instant('athletes.list.confirm.deleteAccept'),
+      rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
+      acceptButtonProps: { severity: 'danger' },
       accept: () => this.delete(athlete),
     });
   }
@@ -436,7 +510,7 @@ export class AthletesListComponent implements OnInit {
     const now = new Date();
     const year = now.getUTCFullYear();
     const month = now.getUTCMonth() + 1;
-    const monthLabel = now.toLocaleString('en-US', {
+    const monthLabel = now.toLocaleString(this.locale(), {
       month: 'long',
       year: 'numeric',
       timeZone: 'UTC',
@@ -444,13 +518,22 @@ export class AthletesListComponent implements OnInit {
 
     const fullName = `${athlete.first_name} ${athlete.last_name}`;
     const willMarkPaid = !athlete.paid_current_month;
-    const message = willMarkPaid
-      ? `Mark ${fullName} paid for ${monthLabel}?`
-      : `Mark ${fullName} unpaid for ${monthLabel}?`;
+    const message = this.translate.instant(
+      willMarkPaid
+        ? 'athletes.list.confirm.markPaidMessage'
+        : 'athletes.list.confirm.markUnpaidMessage',
+      { name: fullName, month: monthLabel },
+    );
 
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
       message,
+      acceptLabel: this.translate.instant(
+        willMarkPaid
+          ? 'athletes.list.confirm.markPaidAccept'
+          : 'athletes.list.confirm.markUnpaidAccept',
+      ),
+      rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
       accept: () => this.applyPaidToggle(athlete, year, month, willMarkPaid),
     });
   }
@@ -476,7 +559,9 @@ export class AthletesListComponent implements OnInit {
         );
         this.messageService.add({
           severity: 'success',
-          summary: markPaid ? 'Marked paid' : 'Marked unpaid',
+          summary: this.translate.instant(
+            markPaid ? 'athletes.list.toast.markedPaid' : 'athletes.list.toast.markedUnpaid',
+          ),
           detail: `${athlete.first_name} ${athlete.last_name} — ${month}/${year}`,
           life: 3000,
         });
@@ -485,11 +570,17 @@ export class AthletesListComponent implements OnInit {
         // 422 means the academy never set monthly_fee_cents — UI shouldn't
         // have surfaced the action in the first place (gated on
         // `hasMonthlyFee()`), but if it slips through we explain.
-        const detail =
+        const detail = this.translate.instant(
           err.status === 422
-            ? 'Set a monthly fee on the academy first to record payments.'
-            : "Couldn't update the payment. Please try again.";
-        this.messageService.add({ severity: 'error', summary: 'Error', detail, life: 4000 });
+            ? 'athletes.list.toast.paidErrorMissingFee'
+            : 'athletes.list.toast.paidErrorGeneric',
+        );
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('athletes.list.toast.errorSummary'),
+          detail,
+          life: 4000,
+        });
       },
     });
   }
@@ -506,7 +597,7 @@ export class AthletesListComponent implements OnInit {
   }
 
   statusLabel(status: AthleteStatus): string {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    return this.translate.instant(this.statusLabelKeys[status]);
   }
 
   private resetPage(): void {
@@ -549,8 +640,8 @@ export class AthletesListComponent implements OnInit {
           this.totalRecords.set(0);
           this.messageService.add({
             severity: 'error',
-            summary: 'Error',
-            detail: 'Could not load athletes. Please try again.',
+            summary: this.translate.instant('athletes.list.toast.errorSummary'),
+            detail: this.translate.instant('athletes.list.toast.loadErrorDetail'),
             life: 4000,
           });
         },
@@ -564,16 +655,18 @@ export class AthletesListComponent implements OnInit {
         this.totalRecords.update((n) => n - 1);
         this.messageService.add({
           severity: 'success',
-          summary: 'Deleted',
-          detail: `${athlete.first_name} ${athlete.last_name} removed.`,
+          summary: this.translate.instant('athletes.list.toast.deletedSummary'),
+          detail: this.translate.instant('athletes.list.toast.deletedDetail', {
+            name: `${athlete.first_name} ${athlete.last_name}`,
+          }),
           life: 3000,
         });
       },
       error: () => {
         this.messageService.add({
           severity: 'error',
-          summary: 'Error',
-          detail: 'Could not delete athlete. Please try again.',
+          summary: this.translate.instant('athletes.list.toast.errorSummary'),
+          detail: this.translate.instant('athletes.list.toast.deleteErrorDetail'),
           life: 4000,
         });
       },
