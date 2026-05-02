@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { TagModule } from 'primeng/tag';
 
 /**
@@ -22,7 +23,7 @@ import { TagModule } from 'primeng/tag';
 @Component({
   selector: 'app-paid-badge',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TagModule],
+  imports: [TagModule, TranslatePipe],
   template: `
     @if (paid() !== undefined) {
       @if (clickable()) {
@@ -30,11 +31,13 @@ import { TagModule } from 'primeng/tag';
           type="button"
           class="paid-badge-button"
           (click)="paidToggle.emit($event)"
-          [attr.aria-label]="paid() ? 'Mark unpaid' : 'Mark paid'"
+          [attr.aria-label]="
+            (paid() ? 'shared.paidBadge.ariaUnmark' : 'shared.paidBadge.ariaMark') | translate
+          "
           data-cy="paid-badge-button"
         >
           <p-tag
-            [value]="paid() ? 'Paid' : 'Unpaid'"
+            [value]="(paid() ? 'shared.paidBadge.paid' : 'shared.paidBadge.unpaid') | translate"
             [severity]="paid() ? 'success' : 'warn'"
             [rounded]="true"
             data-cy="paid-badge"
@@ -42,7 +45,7 @@ import { TagModule } from 'primeng/tag';
         </button>
       } @else {
         <p-tag
-          [value]="paid() ? 'Paid' : 'Unpaid'"
+          [value]="(paid() ? 'shared.paidBadge.paid' : 'shared.paidBadge.unpaid') | translate"
           [severity]="paid() ? 'success' : 'warn'"
           [rounded]="true"
           data-cy="paid-badge"

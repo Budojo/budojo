@@ -562,7 +562,16 @@ export class AthletesListComponent implements OnInit {
           summary: this.translate.instant(
             markPaid ? 'athletes.list.toast.markedPaid' : 'athletes.list.toast.markedUnpaid',
           ),
-          detail: `${athlete.first_name} ${athlete.last_name} — ${month}/${year}`,
+          detail: this.translate.instant(
+            markPaid
+              ? 'athletes.list.toast.markedPaidDetail'
+              : 'athletes.list.toast.markedUnpaidDetail',
+            {
+              name: `${athlete.first_name} ${athlete.last_name}`,
+              month,
+              year,
+            },
+          ),
           life: 3000,
         });
       },

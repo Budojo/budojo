@@ -8,7 +8,7 @@
     "open": "Apri navigazione",
     "close": "Chiudi navigazione",
     "homeAriaLabel": "Budojo — torna alla dashboard",
-    "academy": "Academy",
+    "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
     "profile": "Profilo",
@@ -72,7 +72,13 @@
       "messageCanResend": "Il link potrebbe essere scaduto o manomesso. Richiedine uno nuovo e te lo rimanderemo via email.",
       "messageCannotResend": "Il link potrebbe essere scaduto o manomesso. Accedi al tuo account e richiedi un nuovo link di verifica dalla pagina profilo.",
       "resendCta": "Invia un nuovo link",
-      "signinCta": "Accedi"
+      "signinCta": "Accedi",
+      "toast": {
+        "throttledSummary": "Riprova fra un momento",
+        "throttledDetail": "Per sicurezza, puoi richiedere un'email di verifica solo una volta al minuto.",
+        "errorSummary": "Impossibile inviare l'email",
+        "errorDetail": "Riprova — se persiste, contatta il supporto."
+      }
     }
   },
   "setup": {
@@ -92,7 +98,8 @@
       "eyebrow": "Legale",
       "languageToggleEn": "English",
       "languageToggleIt": "Italiano"
-    }
+    },
+    "brandAriaLabel": "Home Budojo"
   },
   "whatsNew": {
     "brandAriaLabel": "Budojo — torna alla dashboard",
@@ -138,7 +145,9 @@
     "nav": {
       "login": "Accedi",
       "signup": "Inizia gratis",
-      "switchLanguage": "Cambia lingua"
+      "switchLanguage": "Cambia lingua",
+      "brandAriaLabel": "Home Budojo",
+      "primaryAriaLabel": "Principale"
     },
     "hero": {
       "headline": "Gestisci la tua palestra dal telefono, non da un foglio Excel.",
@@ -551,7 +560,9 @@
         "loadErrorDetail": "Impossibile caricare gli atleti. Riprova.",
         "paidErrorMissingFee": "Imposta prima una quota mensile sull'academy per registrare i pagamenti.",
         "paidErrorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
-        "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova."
+        "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova.",
+        "markedPaidDetail": "{{name}} — {{month}}/{{year}}",
+        "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}"
       },
       "confirm": {
         "deleteMessage": "Eliminare {{name}}?",
@@ -562,6 +573,79 @@
         "markUnpaidAccept": "Segna non pagato",
         "cancel": "Annulla"
       }
+    },
+    "detail": {
+      "contactLinksAriaLabel": "Link di contatto dell'atleta",
+      "payments": {
+        "fallbackName": "questo atleta",
+        "confirm": {
+          "markPaidMessage": "Segnare {{name}} come pagato per {{month}} {{year}}?",
+          "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}} {{year}}?"
+        },
+        "toast": {
+          "markedPaidSummary": "Pagato",
+          "markedUnpaidSummary": "Non pagato",
+          "markedDetail": "{{month}} {{year}}",
+          "errorSummary": "Errore",
+          "errorMissingFee": "Imposta una quota mensile sull'accademia prima di registrare i pagamenti.",
+          "errorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
+          "loadErrorDetail": "Impossibile caricare i pagamenti."
+        }
+      },
+      "documents": {
+        "confirm": {
+          "deleteMessage": "Eliminare {{name}}? Il file verrà rimosso dal disco.",
+          "deleteAccept": "Elimina",
+          "cancel": "Annulla"
+        },
+        "toast": {
+          "uploadedSummary": "Documento caricato",
+          "downloadErrorSummary": "Download fallito",
+          "downloadErrorDetail": "Impossibile scaricare questo documento. Riprova.",
+          "loadErrorSummary": "Errore",
+          "loadErrorDetail": "Impossibile caricare i documenti. Riprova.",
+          "deletedSummary": "Eliminato",
+          "deletedDetail": "{{name}} rimosso.",
+          "deleteErrorSummary": "Eliminazione fallita",
+          "deleteErrorDetail": "Impossibile eliminare questo documento. Riprova."
+        }
+      }
+    }
+  },
+  "month": {
+    "january": "gennaio",
+    "february": "febbraio",
+    "march": "marzo",
+    "april": "aprile",
+    "may": "maggio",
+    "june": "giugno",
+    "july": "luglio",
+    "august": "agosto",
+    "september": "settembre",
+    "october": "ottobre",
+    "november": "novembre",
+    "december": "dicembre"
+  },
+  "shared": {
+    "paidBadge": {
+      "paid": "Pagato",
+      "unpaid": "Non pagato",
+      "ariaMark": "Segna pagato",
+      "ariaUnmark": "Segna non pagato"
+    },
+    "beltBadge": {
+      "stripeOne": "{{count}} striscia",
+      "stripeMany": "{{count}} strisce"
+    },
+    "unpaidWidget": {
+      "eyebrow": "Non pagati",
+      "error": "Impossibile verificare",
+      "allPaid": "Hanno pagato tutti",
+      "allPaidSubtitle": "— bel mese",
+      "countOne": "atleta deve ancora pagare",
+      "countMany": "atleti devono ancora pagare",
+      "viewAll": "Vedi tutti i {{count}} →",
+      "viewList": "Vedi nella lista atleti →"
     }
   }
 }

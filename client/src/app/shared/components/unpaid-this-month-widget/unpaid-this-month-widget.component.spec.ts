@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AcademyService, Academy } from '../../../core/services/academy.service';
 import { Athlete } from '../../../core/services/athlete.service';
 import { UnpaidThisMonthWidgetComponent } from './unpaid-this-month-widget.component';
@@ -52,6 +53,7 @@ function setup(opts: { monthlyFee: number | null; date: Date }): {
       provideHttpClient(),
       provideHttpClientTesting(),
       provideRouter([]),
+      ...provideI18nTesting(),
     ],
   });
 

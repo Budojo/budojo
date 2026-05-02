@@ -10,6 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, finalize } from 'rxjs';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { TabsModule } from 'primeng/tabs';
 import { TagModule } from 'primeng/tag';
@@ -21,6 +22,7 @@ import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-b
   selector: 'app-athlete-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TranslatePipe,
     RouterOutlet,
     RouterLink,
     ButtonModule,

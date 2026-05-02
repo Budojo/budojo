@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { PrivacyPolicyComponent } from './privacy-policy.component';
 
 describe('PrivacyPolicyComponent — canonical English /privacy (#291)', () => {
   function setup() {
     TestBed.configureTestingModule({
       imports: [PrivacyPolicyComponent],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), ...provideI18nTesting()],
     });
     const router = TestBed.inject(Router);
     router.navigateByUrl = vi.fn().mockResolvedValue(true) as never;

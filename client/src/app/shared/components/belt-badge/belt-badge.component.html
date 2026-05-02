@@ -1,11 +1,14 @@
 <p-tag [style]="style()" [rounded]="true">
   <span class="belt-badge__inner">
-    <span class="belt-badge__label">{{ label() }}</span>
+    <span class="belt-badge__label">{{ labelKey() | translate }}</span>
     @if (stripeTiles().length > 0) {
       <span
         class="belt-badge__stripes"
         [attr.aria-label]="
-          stripeTiles().length + ' stripe' + (stripeTiles().length === 1 ? '' : 's')
+          (stripeTiles().length === 1
+            ? 'shared.beltBadge.stripeOne'
+            : 'shared.beltBadge.stripeMany'
+          ) | translate: { count: stripeTiles().length }
         "
       >
         @for (_ of stripeTiles(); track $index) {

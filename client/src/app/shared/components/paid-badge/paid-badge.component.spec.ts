@@ -1,9 +1,13 @@
 import { TestBed } from '@angular/core/testing';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { PaidBadgeComponent } from './paid-badge.component';
 
 describe('PaidBadgeComponent', () => {
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [PaidBadgeComponent] });
+    TestBed.configureTestingModule({
+      imports: [PaidBadgeComponent],
+      providers: [...provideI18nTesting()],
+    });
   });
 
   it('renders a "Paid" tag when paid=true', () => {

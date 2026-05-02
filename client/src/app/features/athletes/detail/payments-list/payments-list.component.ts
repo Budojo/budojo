@@ -10,6 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { finalize, map } from 'rxjs';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -46,7 +47,7 @@ import { AthletePayment, PaymentService } from '../../../../core/services/paymen
 
 interface MonthRow {
   readonly month: number;
-  readonly label: string;
+  readonly labelKey: string;
   readonly payment: AthletePayment | null;
   readonly canEdit: boolean;
 }
@@ -55,6 +56,7 @@ interface MonthRow {
   selector: 'app-payments-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TranslatePipe,
     ButtonModule,
     ConfirmPopup,
     SkeletonModule,
@@ -74,6 +76,7 @@ export class PaymentsListComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly athleteId = signal<number | null>(null);
@@ -109,7 +112,7 @@ export class PaymentsListComponent implements OnInit {
     for (const p of this.payments()) byMonth.set(p.month, p);
 
     const fee = this.hasMonthlyFee();
-    return MONTH_LABELS.map((label, i) => {
+    return MONTH_KEYS.map((labelKey, i) => {
       const month = i + 1;
       // Future months can't be paid (the month hasn't happened); past
       // and current months can. Read-only when no monthly fee is
@@ -117,7 +120,7 @@ export class PaymentsListComponent implements OnInit {
       const canEdit = fee && month <= this.currentMonth;
       return {
         month,
-        label,
+        labelKey,
         payment: byMonth.get(month) ?? null,
         canEdit,
       };
@@ -150,10 +153,15 @@ export class PaymentsListComponent implements OnInit {
     if (!row.canEdit || this.athleteId() === null) return;
 
     const willMarkPaid = row.payment === null;
-    const fullName = this.athleteName() || 'this athlete';
-    const message = willMarkPaid
-      ? `Mark ${fullName} paid for ${row.label} ${this.year}?`
-      : `Mark ${fullName} unpaid for ${row.label} ${this.year}?`;
+    const fullName =
+      this.athleteName() || this.translate.instant('athletes.detail.payments.fallbackName');
+    const monthLabel = this.translate.instant(row.labelKey);
+    const message = this.translate.instant(
+      willMarkPaid
+        ? 'athletes.detail.payments.confirm.markPaidMessage'
+        : 'athletes.detail.payments.confirm.markUnpaidMessage',
+      { name: fullName, month: monthLabel, year: this.year },
+    );
 
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
@@ -176,19 +184,33 @@ export class PaymentsListComponent implements OnInit {
         // truth — cheaper than synthesising a partial AthletePayment row
         // (we'd need amount_cents and paid_at, which the server picks).
         this.load(id);
+        const monthLabel = this.translate.instant(MONTH_KEYS[month - 1]);
         this.messageService.add({
           severity: 'success',
-          summary: markPaid ? 'Marked paid' : 'Marked unpaid',
-          detail: `${MONTH_LABELS[month - 1]} ${this.year}`,
+          summary: this.translate.instant(
+            markPaid
+              ? 'athletes.detail.payments.toast.markedPaidSummary'
+              : 'athletes.detail.payments.toast.markedUnpaidSummary',
+          ),
+          detail: this.translate.instant('athletes.detail.payments.toast.markedDetail', {
+            month: monthLabel,
+            year: this.year,
+          }),
           life: 3000,
         });
       },
       error: (err: { status?: number }) => {
-        const detail =
+        const detail = this.translate.instant(
           err.status === 422
-            ? 'Set a monthly fee on the academy first to record payments.'
-            : "Couldn't update the payment. Please try again.";
-        this.messageService.add({ severity: 'error', summary: 'Error', detail, life: 4000 });
+            ? 'athletes.detail.payments.toast.errorMissingFee'
+            : 'athletes.detail.payments.toast.errorGeneric',
+        );
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('athletes.detail.payments.toast.errorSummary'),
+          detail,
+          life: 4000,
+        });
       },
     });
   }
@@ -210,8 +232,8 @@ export class PaymentsListComponent implements OnInit {
         error: () =>
           this.messageService.add({
             severity: 'error',
-            summary: 'Error',
-            detail: "Couldn't load payments.",
+            summary: this.translate.instant('athletes.detail.payments.toast.errorSummary'),
+            detail: this.translate.instant('athletes.detail.payments.toast.loadErrorDetail'),
             life: 4000,
           }),
       });
@@ -244,17 +266,17 @@ export class PaymentsListComponent implements OnInit {
   }
 }
 
-const MONTH_LABELS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+const MONTH_KEYS = [
+  'month.january',
+  'month.february',
+  'month.march',
+  'month.april',
+  'month.may',
+  'month.june',
+  'month.july',
+  'month.august',
+  'month.september',
+  'month.october',
+  'month.november',
+  'month.december',
 ] as const;

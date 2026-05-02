@@ -9,9 +9,25 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AthleteService, Athlete } from '../../../core/services/athlete.service';
+
+const MONTH_KEYS = [
+  'month.january',
+  'month.february',
+  'month.march',
+  'month.april',
+  'month.may',
+  'month.june',
+  'month.july',
+  'month.august',
+  'month.september',
+  'month.october',
+  'month.november',
+  'month.december',
+] as const;
 
 /**
  * Date provider abstraction so vitest can freeze "today" without
@@ -49,13 +65,14 @@ export type NowProvider = () => Date;
 @Component({
   selector: 'app-unpaid-this-month-widget',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, SkeletonModule],
+  imports: [RouterLink, SkeletonModule, TranslatePipe],
   templateUrl: './unpaid-this-month-widget.component.html',
   styleUrl: './unpaid-this-month-widget.component.scss',
 })
 export class UnpaidThisMonthWidgetComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly athleteService = inject(AthleteService);
+  private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
   /**
@@ -106,17 +123,16 @@ export class UnpaidThisMonthWidgetComponent implements OnInit {
   );
 
   /**
-   * Current month label, e.g. "May 2026". Formatted with `timeZone: 'UTC'`
-   * so it cannot drift from the UTC-based threshold gate (or the UTC-
-   * based server filter) at day/month boundaries.
+   * Current month label, e.g. "May 2026" / "maggio 2026". Resolved
+   * via the i18n month key + the UTC-based year so it cannot drift
+   * from the UTC threshold gate (or the UTC-based server filter) at
+   * day/month boundaries, and gets the user's locale automatically.
    */
   protected readonly monthLabel = computed<string>(() => {
     const today = this.now()();
-    return today.toLocaleDateString('en-GB', {
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
+    const month = this.translate.instant(MONTH_KEYS[today.getUTCMonth()]);
+    const year = today.getUTCFullYear();
+    return `${month} ${year}`;
   });
 
   ngOnInit(): void {

@@ -47,7 +47,10 @@
           `noopener noreferrer` is canon-mandatory for external `_blank`
           targets.
         -->
-        <ul class="contact-links" aria-label="Athlete contact links">
+        <ul
+          class="contact-links"
+          [attr.aria-label]="'athletes.detail.contactLinksAriaLabel' | translate"
+        >
           @for (link of links; track link.label) {
             <li>
               <a

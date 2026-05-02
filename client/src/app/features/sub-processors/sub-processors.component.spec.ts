@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { SubProcessorsComponent } from './sub-processors.component';
 
 describe('SubProcessorsComponent (#225)', () => {
@@ -14,6 +15,7 @@ describe('SubProcessorsComponent (#225)', () => {
         // navigateByUrl call we assert on is mocked below by overriding
         // the same Router AFTER provideRouter populated it.
         provideRouter([]),
+        ...provideI18nTesting(),
       ],
     });
     // Spy on navigateByUrl on the live Router instance — overriding the

@@ -75,26 +75,63 @@ export class LandingComponent {
 
   /**
    * Solution-section feature cards. Each card has a heading + body +
-   * icon — the icon class lives in the data so the template doesn't
-   * have to switch on the index. Same structure mirrored in
-   * `en.json`/`it.json` under `landing.features.*`.
+   * icon. `titleKey`/`bodyKey` are the FULL translation paths so the
+   * template never builds keys via string concatenation — that
+   * pattern is banned (`client/CLAUDE.md` § i18n) because the parity
+   * check can't see dynamically-built keys and IT translations drift
+   * silently.
    */
-  protected readonly features: readonly { iconClass: string; key: string }[] = [
-    { iconClass: 'pi-users', key: 'roster' },
-    { iconClass: 'pi-file', key: 'documents' },
-    { iconClass: 'pi-check-circle', key: 'attendance' },
-    { iconClass: 'pi-credit-card', key: 'payments' },
-    { iconClass: 'pi-mobile', key: 'pwa' },
-    { iconClass: 'pi-comment', key: 'feedback' },
+  protected readonly features: readonly {
+    iconClass: string;
+    titleKey: string;
+    bodyKey: string;
+  }[] = [
+    {
+      iconClass: 'pi-users',
+      titleKey: 'landing.features.roster.title',
+      bodyKey: 'landing.features.roster.body',
+    },
+    {
+      iconClass: 'pi-file',
+      titleKey: 'landing.features.documents.title',
+      bodyKey: 'landing.features.documents.body',
+    },
+    {
+      iconClass: 'pi-check-circle',
+      titleKey: 'landing.features.attendance.title',
+      bodyKey: 'landing.features.attendance.body',
+    },
+    {
+      iconClass: 'pi-credit-card',
+      titleKey: 'landing.features.payments.title',
+      bodyKey: 'landing.features.payments.body',
+    },
+    {
+      iconClass: 'pi-mobile',
+      titleKey: 'landing.features.pwa.title',
+      bodyKey: 'landing.features.pwa.body',
+    },
+    {
+      iconClass: 'pi-comment',
+      titleKey: 'landing.features.feedback.title',
+      bodyKey: 'landing.features.feedback.body',
+    },
   ];
 
   /**
-   * 3-step "how it works" arc. Same shape: numbered step + heading +
-   * body. Keys live under `landing.steps.*` in the i18n bundles.
+   * 3-step "how it works" arc. Same explicit-keys rule as `features`.
    */
-  protected readonly steps: readonly { number: string; key: string }[] = [
-    { number: '1', key: 'signup' },
-    { number: '2', key: 'setup' },
-    { number: '3', key: 'firstAthlete' },
+  protected readonly steps: readonly {
+    number: string;
+    titleKey: string;
+    bodyKey: string;
+  }[] = [
+    { number: '1', titleKey: 'landing.how.signup.title', bodyKey: 'landing.how.signup.body' },
+    { number: '2', titleKey: 'landing.how.setup.title', bodyKey: 'landing.how.setup.body' },
+    {
+      number: '3',
+      titleKey: 'landing.how.firstAthlete.title',
+      bodyKey: 'landing.how.firstAthlete.body',
+    },
   ];
 }

@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
+import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { DocumentsListComponent } from './documents-list.component';
 import { Document } from '../../../../core/services/document.service';
 
@@ -39,6 +40,7 @@ function setupTestBed(): HttpTestingController {
           snapshot: { paramMap: convertToParamMap({}) },
         },
       },
+      ...provideI18nTesting(),
     ],
   });
   return TestBed.inject(HttpTestingController);

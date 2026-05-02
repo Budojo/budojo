@@ -1,23 +1,30 @@
 @if (visible()) {
   <div class="unpaid-widget" data-cy="unpaid-widget">
     <header class="unpaid-widget__header">
-      <p class="unpaid-widget__eyebrow">Unpaid · {{ monthLabel() }}</p>
+      <p class="unpaid-widget__eyebrow">
+        {{ 'shared.unpaidWidget.eyebrow' | translate }} · {{ monthLabel() }}
+      </p>
       @if (loading()) {
         <p-skeleton width="9rem" height="1.75rem" />
       } @else if (errored()) {
         <h3 class="unpaid-widget__title unpaid-widget__title--muted" data-cy="unpaid-widget-error">
-          Couldn't check
+          {{ 'shared.unpaidWidget.error' | translate }}
         </h3>
       } @else if (count() === 0) {
         <h3 class="unpaid-widget__title unpaid-widget__title--muted">
-          Everyone paid
-          <span class="unpaid-widget__title-unit">— nice month</span>
+          {{ 'shared.unpaidWidget.allPaid' | translate }}
+          <span class="unpaid-widget__title-unit">
+            {{ 'shared.unpaidWidget.allPaidSubtitle' | translate }}
+          </span>
         </h3>
       } @else {
         <h3 class="unpaid-widget__title" data-cy="unpaid-widget-count">
           {{ count() }}
           <span class="unpaid-widget__title-unit">
-            {{ count() === 1 ? 'athlete still owes' : 'athletes still owe' }}
+            {{
+              (count() === 1 ? 'shared.unpaidWidget.countOne' : 'shared.unpaidWidget.countMany')
+                | translate
+            }}
           </span>
         </h3>
       }
@@ -54,9 +61,9 @@
         data-cy="unpaid-widget-cta"
       >
         @if (count() > topNames().length) {
-          View all {{ count() }} →
+          {{ 'shared.unpaidWidget.viewAll' | translate: { count: count() } }}
         } @else {
-          View on the athletes list →
+          {{ 'shared.unpaidWidget.viewList' | translate }}
         }
       </a>
     }
