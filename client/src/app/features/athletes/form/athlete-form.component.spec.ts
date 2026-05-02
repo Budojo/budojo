@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthleteFormComponent } from './athlete-form.component';
 import { Athlete } from '../../../core/services/athlete.service';
 
@@ -44,6 +45,7 @@ function setupTestBed(routeId: string | null = null): void {
           snapshot: { paramMap },
         },
       },
+      ...provideI18nTesting(),
     ],
   });
 }

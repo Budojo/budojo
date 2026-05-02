@@ -679,6 +679,114 @@
         "dayPresent": "{{day}} — presente",
         "dayNotRecorded": "{{day}} — non registrato"
       }
+    },
+    "form": {
+      "title": {
+        "create": "Aggiungi atleta",
+        "edit": "Modifica atleta"
+      },
+      "subtitle": {
+        "create": "Crea un nuovo atleta nella tua accademia",
+        "edit": "Aggiorna i dettagli di questo atleta"
+      },
+      "loading": "Caricamento atleta…",
+      "loadError": "Impossibile caricare l'atleta. Riprova.",
+      "validationFailed": "Validazione fallita.",
+      "serverError": "Qualcosa è andato storto. Riprova.",
+      "optional": "(opzionale)",
+      "optionalAddress": "(opzionale — compila tutti i campi sotto o lasciali tutti vuoti)",
+      "label": {
+        "firstName": "Nome",
+        "lastName": "Cognome",
+        "email": "Email",
+        "phone": "Telefono",
+        "website": "Sito web",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "dateOfBirth": "Data di nascita",
+        "joined": "Iscritto",
+        "belt": "Cintura",
+        "stripes": "Stripes",
+        "status": "Stato",
+        "addressLegend": "Indirizzo",
+        "addressLine1": "Via e numero civico",
+        "addressLine2": "Interno / piano / scala",
+        "addressZip": "CAP",
+        "addressCity": "Città",
+        "addressProvince": "Provincia"
+      },
+      "placeholder": {
+        "phoneCountryCode": "Prefisso",
+        "phoneNationalNumber": "Numero"
+      },
+      "aria": {
+        "phoneCountryCode": "Prefisso telefonico",
+        "phoneNationalNumber": "Numero nazionale",
+        "province": "Provincia",
+        "requiredWhenFilled": "obbligatorio quando un campo dell'indirizzo è compilato"
+      },
+      "tooltip": {
+        "requiredWhenFilled": "Obbligatorio quando un campo dell'indirizzo è compilato"
+      },
+      "validation": {
+        "maxLength100": "Massimo 100 caratteri.",
+        "maxLength255": "Massimo 255 caratteri.",
+        "firstName": {
+          "required": "Il nome è obbligatorio."
+        },
+        "lastName": {
+          "required": "Il cognome è obbligatorio."
+        },
+        "email": {
+          "invalid": "Inserisci un'email valida."
+        },
+        "phone": {
+          "countryRequired": "Il prefisso è obbligatorio se inserisci un numero.",
+          "numberRequired": "Il numero è obbligatorio se selezioni un prefisso.",
+          "pattern": "Solo cifre — niente spazi, trattini o parentesi.",
+          "maxLength": "Massimo 20 cifre."
+        },
+        "url": {
+          "website": "Inserisci un URL completo — es. <code>https://example.com</code>.",
+          "facebook": "Inserisci un URL completo — es. <code>https://facebook.com/iltuoprofilo</code>.",
+          "instagram": "Inserisci un URL completo — es. <code>https://instagram.com/iltuoprofilo</code>."
+        },
+        "joined": {
+          "required": "La data di iscrizione è obbligatoria."
+        },
+        "address": {
+          "postalCode": "Il CAP deve essere di 5 cifre.",
+          "incomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure lasciali tutti vuoti per non assegnarne nessuno."
+        }
+      },
+      "hint": {
+        "address": "Lascia tutti i campi vuoti per non assegnare un indirizzo all'atleta."
+      },
+      "button": {
+        "cancel": "Annulla",
+        "submitCreate": "Crea atleta",
+        "submitEdit": "Salva modifiche"
+      },
+      "toast": {
+        "invalidIdSummary": "Atleta non valido",
+        "invalidIdDetail": "L'ID atleta richiesto non è valido.",
+        "createdSummary": "Atleta creato",
+        "updatedSummary": "Atleta aggiornato"
+      },
+      "phone": {
+        "countryCode": {
+          "italy": "Italia",
+          "france": "Francia",
+          "spain": "Spagna",
+          "uk": "Regno Unito",
+          "germany": "Germania",
+          "usCanada": "USA / Canada",
+          "switzerland": "Svizzera",
+          "austria": "Austria",
+          "portugal": "Portogallo",
+          "netherlands": "Paesi Bassi"
+        }
+      }
     }
   },
   "month": {

@@ -3,13 +3,15 @@
 <div class="athlete-form-page">
   <header class="athlete-form-page__header">
     <h1 class="athlete-form-page__title">
-      {{ mode() === 'create' ? 'Add athlete' : 'Edit athlete' }}
+      {{
+        (mode() === 'create' ? 'athletes.form.title.create' : 'athletes.form.title.edit')
+          | translate
+      }}
     </h1>
     <p class="athlete-form-page__subtitle">
       {{
-        mode() === 'create'
-          ? 'Create a new athlete in your academy'
-          : 'Update this athlete’s details'
+        (mode() === 'create' ? 'athletes.form.subtitle.create' : 'athletes.form.subtitle.edit')
+          | translate
       }}
     </p>
   </header>
@@ -21,7 +23,7 @@
   @if (loading()) {
     <div class="athlete-form-page__loading">
       <i class="pi pi-spin pi-spinner"></i>
-      <span>Loading athlete…</span>
+      <span>{{ 'athletes.form.loading' | translate }}</span>
     </div>
   } @else {
     <form
@@ -33,7 +35,10 @@
     >
       <div class="athlete-form__row">
         <div class="field">
-          <label for="first_name">First name <span class="required">*</span></label>
+          <label for="first_name">
+            {{ 'athletes.form.label.firstName' | translate }}
+            <span class="required">*</span>
+          </label>
           <input
             pInputText
             id="first_name"
@@ -46,16 +51,19 @@
           @if (firstName.invalid && firstName.touched) {
             <small class="field-error">
               @if (firstName.errors?.['required']) {
-                First name is required.
+                {{ 'athletes.form.validation.firstName.required' | translate }}
               } @else if (firstName.errors?.['maxlength']) {
-                Maximum 100 characters.
+                {{ 'athletes.form.validation.maxLength100' | translate }}
               }
             </small>
           }
         </div>
 
         <div class="field">
-          <label for="last_name">Last name <span class="required">*</span></label>
+          <label for="last_name">
+            {{ 'athletes.form.label.lastName' | translate }}
+            <span class="required">*</span>
+          </label>
           <input
             pInputText
             id="last_name"
@@ -68,9 +76,9 @@
           @if (lastName.invalid && lastName.touched) {
             <small class="field-error">
               @if (lastName.errors?.['required']) {
-                Last name is required.
+                {{ 'athletes.form.validation.lastName.required' | translate }}
               } @else if (lastName.errors?.['maxlength']) {
-                Maximum 100 characters.
+                {{ 'athletes.form.validation.maxLength100' | translate }}
               }
             </small>
           }
@@ -79,7 +87,10 @@
 
       <div class="athlete-form__row">
         <div class="field">
-          <label for="email">Email <span class="optional">(optional)</span></label>
+          <label for="email">
+            {{ 'athletes.form.label.email' | translate }}
+            <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
+          </label>
           <input
             pInputText
             id="email"
@@ -92,25 +103,28 @@
           @if (email.invalid && email.touched) {
             <small class="field-error">
               @if (email.errors?.['email']) {
-                Enter a valid email address.
+                {{ 'athletes.form.validation.email.invalid' | translate }}
               } @else if (email.errors?.['maxlength']) {
-                Maximum 255 characters.
+                {{ 'athletes.form.validation.maxLength255' | translate }}
               }
             </small>
           }
         </div>
 
         <div class="field">
-          <label for="phone_national_number">Phone <span class="optional">(optional)</span></label>
+          <label for="phone_national_number">
+            {{ 'athletes.form.label.phone' | translate }}
+            <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
+          </label>
           <div class="phone-pair">
             <p-select
               inputId="phone_country_code"
-              [options]="countryCodeOptions"
+              [options]="countryCodeOptions()"
               formControlName="phone_country_code"
               optionLabel="label"
               optionValue="value"
-              placeholder="Code"
-              ariaLabel="Phone country code"
+              [placeholder]="'athletes.form.placeholder.phoneCountryCode' | translate"
+              [ariaLabel]="'athletes.form.aria.phoneCountryCode' | translate"
               appendTo="body"
               styleClass="phone-country-code"
               [showClear]="true"
@@ -140,8 +154,8 @@
               type="tel"
               formControlName="phone_national_number"
               autocomplete="tel-national"
-              placeholder="National number"
-              aria-label="Phone national number"
+              [placeholder]="'athletes.form.placeholder.phoneNationalNumber' | translate"
+              [attr.aria-label]="'athletes.form.aria.phoneNationalNumber' | translate"
               [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
               [class.ng-dirty]="phoneNationalNumber.touched"
               class="phone-national-number"
@@ -150,18 +164,18 @@
           @if (phoneCountryCode.invalid && phoneCountryCode.touched) {
             <small class="field-error">
               @if (phoneCountryCode.errors?.['phonePairRequired']) {
-                Country code is required when a national number is entered.
+                {{ 'athletes.form.validation.phone.countryRequired' | translate }}
               }
             </small>
           }
           @if (phoneNationalNumber.invalid && phoneNationalNumber.touched) {
             <small class="field-error">
               @if (phoneNationalNumber.errors?.['phonePairRequired']) {
-                National number is required when a country code is selected.
+                {{ 'athletes.form.validation.phone.numberRequired' | translate }}
               } @else if (phoneNationalNumber.errors?.['pattern']) {
-                Digits only — no spaces, dashes, or parentheses.
+                {{ 'athletes.form.validation.phone.pattern' | translate }}
               } @else if (phoneNationalNumber.errors?.['maxlength']) {
-                Maximum 20 digits.
+                {{ 'athletes.form.validation.phone.maxLength' | translate }}
               }
             </small>
           }
@@ -174,7 +188,10 @@
       -->
       <div class="athlete-form__row">
         <div class="field">
-          <label for="website">Website <span class="optional">(optional)</span></label>
+          <label for="website">
+            {{ 'athletes.form.label.website' | translate }}
+            <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
+          </label>
           <input
             pInputText
             id="website"
@@ -188,18 +205,22 @@
             [class.ng-dirty]="website.touched"
           />
           @if (website.invalid && website.touched) {
-            <small class="field-error">
-              @if (website.errors?.['url']) {
-                Enter a full URL — e.g. <code>https://example.com</code>.
-              } @else if (website.errors?.['maxlength']) {
-                Maximum 255 characters.
-              }
-            </small>
+            <small
+              class="field-error"
+              [innerHTML]="
+                website.errors?.['url']
+                  ? ('athletes.form.validation.url.website' | translate)
+                  : ('athletes.form.validation.maxLength255' | translate)
+              "
+            ></small>
           }
         </div>
 
         <div class="field">
-          <label for="facebook">Facebook <span class="optional">(optional)</span></label>
+          <label for="facebook">
+            {{ 'athletes.form.label.facebook' | translate }}
+            <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
+          </label>
           <input
             pInputText
             id="facebook"
@@ -213,20 +234,24 @@
             [class.ng-dirty]="facebook.touched"
           />
           @if (facebook.invalid && facebook.touched) {
-            <small class="field-error">
-              @if (facebook.errors?.['url']) {
-                Enter a full URL — e.g. <code>https://facebook.com/yourprofile</code>.
-              } @else if (facebook.errors?.['maxlength']) {
-                Maximum 255 characters.
-              }
-            </small>
+            <small
+              class="field-error"
+              [innerHTML]="
+                facebook.errors?.['url']
+                  ? ('athletes.form.validation.url.facebook' | translate)
+                  : ('athletes.form.validation.maxLength255' | translate)
+              "
+            ></small>
           }
         </div>
       </div>
 
       <div class="athlete-form__row">
         <div class="field">
-          <label for="instagram">Instagram <span class="optional">(optional)</span></label>
+          <label for="instagram">
+            {{ 'athletes.form.label.instagram' | translate }}
+            <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
+          </label>
           <input
             pInputText
             id="instagram"
@@ -240,13 +265,14 @@
             [class.ng-dirty]="instagram.touched"
           />
           @if (instagram.invalid && instagram.touched) {
-            <small class="field-error">
-              @if (instagram.errors?.['url']) {
-                Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>.
-              } @else if (instagram.errors?.['maxlength']) {
-                Maximum 255 characters.
-              }
-            </small>
+            <small
+              class="field-error"
+              [innerHTML]="
+                instagram.errors?.['url']
+                  ? ('athletes.form.validation.url.instagram' | translate)
+                  : ('athletes.form.validation.maxLength255' | translate)
+              "
+            ></small>
           }
         </div>
         <div class="field"><!-- empty cell to keep the 2-col grid balance --></div>
@@ -254,7 +280,10 @@
 
       <div class="athlete-form__row">
         <div class="field">
-          <label for="date_of_birth">Date of birth <span class="optional">(optional)</span></label>
+          <label for="date_of_birth">
+            {{ 'athletes.form.label.dateOfBirth' | translate }}
+            <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
+          </label>
           <p-datepicker
             inputId="date_of_birth"
             formControlName="date_of_birth"
@@ -267,7 +296,10 @@
         </div>
 
         <div class="field">
-          <label for="joined_at">Joined <span class="required">*</span></label>
+          <label for="joined_at">
+            {{ 'athletes.form.label.joined' | translate }}
+            <span class="required">*</span>
+          </label>
           <p-datepicker
             inputId="joined_at"
             formControlName="joined_at"
@@ -278,17 +310,22 @@
             [class.ng-invalid]="joinedAt.invalid && joinedAt.touched"
           />
           @if (joinedAt.invalid && joinedAt.touched) {
-            <small class="field-error">Joined date is required.</small>
+            <small class="field-error">
+              {{ 'athletes.form.validation.joined.required' | translate }}
+            </small>
           }
         </div>
       </div>
 
       <div class="athlete-form__row athlete-form__row--three">
         <div class="field">
-          <label for="belt">Belt <span class="required">*</span></label>
+          <label for="belt">
+            {{ 'athletes.form.label.belt' | translate }}
+            <span class="required">*</span>
+          </label>
           <p-select
             inputId="belt"
-            [options]="beltOptions"
+            [options]="beltOptions()"
             formControlName="belt"
             optionLabel="label"
             optionValue="value"
@@ -298,7 +335,10 @@
         </div>
 
         <div class="field">
-          <label for="stripes">Stripes <span class="required">*</span></label>
+          <label for="stripes">
+            {{ 'athletes.form.label.stripes' | translate }}
+            <span class="required">*</span>
+          </label>
           <p-select
             inputId="stripes"
             [options]="stripesOptions()"
@@ -311,10 +351,13 @@
         </div>
 
         <div class="field">
-          <label for="status">Status <span class="required">*</span></label>
+          <label for="status">
+            {{ 'athletes.form.label.status' | translate }}
+            <span class="required">*</span>
+          </label>
           <p-select
             inputId="status"
-            [options]="statusOptions"
+            [options]="statusOptions()"
             formControlName="status"
             optionLabel="label"
             optionValue="value"
@@ -326,17 +369,18 @@
 
       <fieldset class="field address-group" formGroupName="address">
         <legend class="field__label">
-          Address <span class="optional">(optional — fill all marked fields below or none)</span>
+          {{ 'athletes.form.label.addressLegend' | translate }}
+          <span class="optional">{{ 'athletes.form.optionalAddress' | translate }}</span>
         </legend>
 
         <div class="field">
           <label for="athlete-address-line1">
-            Street + civic number
+            {{ 'athletes.form.label.addressLine1' | translate }}
             <span
               class="required-when-filled"
-              pTooltip="Required when any address field is filled"
+              [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
               tooltipPosition="top"
-              aria-label="required when any address field is filled"
+              [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
             >
               *
             </span>
@@ -357,7 +401,8 @@
 
         <div class="field">
           <label for="athlete-address-line2">
-            Apt / floor / unit <span class="optional">(optional)</span>
+            {{ 'athletes.form.label.addressLine2' | translate }}
+            <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
           </label>
           <input
             pInputText
@@ -374,12 +419,12 @@
         <div class="address-group__row">
           <div class="field">
             <label for="athlete-address-postal-code">
-              ZIP
+              {{ 'athletes.form.label.addressZip' | translate }}
               <span
                 class="required-when-filled"
-                pTooltip="Required when any address field is filled"
+                [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
                 tooltipPosition="top"
-                aria-label="required when any address field is filled"
+                [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
               >
                 *
               </span>
@@ -400,7 +445,7 @@
             @if (addressPostalCode.invalid && addressPostalCode.touched) {
               <small class="field-error">
                 @if (addressPostalCode.errors?.['pattern']) {
-                  ZIP must be exactly 5 digits.
+                  {{ 'athletes.form.validation.address.postalCode' | translate }}
                 }
               </small>
             }
@@ -408,12 +453,12 @@
 
           <div class="field">
             <label for="athlete-address-city">
-              City
+              {{ 'athletes.form.label.addressCity' | translate }}
               <span
                 class="required-when-filled"
-                pTooltip="Required when any address field is filled"
+                [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
                 tooltipPosition="top"
-                aria-label="required when any address field is filled"
+                [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
               >
                 *
               </span>
@@ -432,12 +477,12 @@
 
           <div class="field">
             <label for="athlete-address-province">
-              Province
+              {{ 'athletes.form.label.addressProvince' | translate }}
               <span
                 class="required-when-filled"
-                pTooltip="Required when any address field is filled"
+                [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
                 tooltipPosition="top"
-                aria-label="required when any address field is filled"
+                [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
               >
                 *
               </span>
@@ -448,7 +493,7 @@
               formControlName="province"
               optionLabel="label"
               optionValue="value"
-              ariaLabel="Province"
+              [ariaLabel]="'athletes.form.aria.province' | translate"
               appendTo="body"
               styleClass="w-full"
               [showClear]="true"
@@ -479,19 +524,16 @@
 
         @if (addressGroup.errors?.['addressIncomplete'] && addressGroup.touched) {
           <small class="field-error" data-cy="athlete-form-address-error">
-            Fill every required address field, or clear them all to leave the athlete without an
-            address.
+            {{ 'athletes.form.validation.address.incomplete' | translate }}
           </small>
         }
-        <small class="field-hint">
-          Leave every field empty to keep the athlete without an address on file.
-        </small>
+        <small class="field-hint">{{ 'athletes.form.hint.address' | translate }}</small>
       </fieldset>
 
       <div class="athlete-form__actions">
         <p-button
           type="button"
-          label="Cancel"
+          [label]="'athletes.form.button.cancel' | translate"
           severity="secondary"
           [text]="true"
           (onClick)="cancel()"
@@ -499,7 +541,12 @@
         />
         <p-button
           type="submit"
-          [label]="mode() === 'create' ? 'Create athlete' : 'Save changes'"
+          [label]="
+            (mode() === 'create'
+              ? 'athletes.form.button.submitCreate'
+              : 'athletes.form.button.submitEdit'
+            ) | translate
+          "
           [loading]="submitting()"
           [disabled]="submitting()"
         />

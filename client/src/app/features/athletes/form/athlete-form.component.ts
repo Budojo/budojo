@@ -17,6 +17,7 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -34,12 +35,75 @@ import {
   MAX_STRIPES_PER_BELT,
 } from '../../../core/services/athlete.service';
 import { Address, CountryCode, ItalianProvinceCode } from '../../../core/services/academy.service';
+import { LanguageService } from '../../../core/services/language.service';
 import {
   COUNTRY_OPTIONS,
   PROVINCE_OPTIONS,
   addressAllOrNothing,
   italianPostalCode,
 } from '../../../shared/utils/address-form';
+
+/**
+ * Explicit allow-list maps per `client/CLAUDE.md` § i18n: dynamic key
+ * concatenation is banned (parity check can't see runtime-built keys),
+ * so we declare the full key set up-front. The compiler enforces every
+ * enum case is mapped, and the keys are statically greppable.
+ */
+const BELT_KEYS: Readonly<Record<Belt, string>> = {
+  grey: 'belts.grey',
+  yellow: 'belts.yellow',
+  orange: 'belts.orange',
+  green: 'belts.green',
+  white: 'belts.white',
+  blue: 'belts.blue',
+  purple: 'belts.purple',
+  brown: 'belts.brown',
+  black: 'belts.black',
+  'red-and-black': 'belts.redAndBlack',
+  'red-and-white': 'belts.redAndWhite',
+  red: 'belts.red',
+};
+
+const STATUS_KEYS: Readonly<Record<AthleteStatus, string>> = {
+  active: 'statuses.active',
+  suspended: 'statuses.suspended',
+  inactive: 'statuses.inactive',
+};
+
+const BELT_ORDER: readonly Belt[] = [
+  'grey',
+  'yellow',
+  'orange',
+  'green',
+  'white',
+  'blue',
+  'purple',
+  'brown',
+  'black',
+  'red-and-black',
+  'red-and-white',
+  'red',
+] as const;
+
+const STATUS_ORDER: readonly AthleteStatus[] = ['active', 'suspended', 'inactive'] as const;
+
+interface CountryCodeEntry {
+  code: string;
+  labelKey: string;
+}
+
+const COUNTRY_CODE_ENTRIES: readonly CountryCodeEntry[] = [
+  { code: '+39', labelKey: 'athletes.form.phone.countryCode.italy' },
+  { code: '+33', labelKey: 'athletes.form.phone.countryCode.france' },
+  { code: '+34', labelKey: 'athletes.form.phone.countryCode.spain' },
+  { code: '+44', labelKey: 'athletes.form.phone.countryCode.uk' },
+  { code: '+49', labelKey: 'athletes.form.phone.countryCode.germany' },
+  { code: '+1', labelKey: 'athletes.form.phone.countryCode.usCanada' },
+  { code: '+41', labelKey: 'athletes.form.phone.countryCode.switzerland' },
+  { code: '+43', labelKey: 'athletes.form.phone.countryCode.austria' },
+  { code: '+351', labelKey: 'athletes.form.phone.countryCode.portugal' },
+  { code: '+31', labelKey: 'athletes.form.phone.countryCode.netherlands' },
+] as const;
 
 interface SelectOption<T extends string> {
   label: string;
@@ -129,6 +193,7 @@ const urlIfPresent: ValidatorFn = (control: AbstractControl) => {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    TranslatePipe,
     ButtonModule,
     DatePickerModule,
     InputNumberModule,
@@ -148,6 +213,8 @@ export class AthleteFormComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
+  private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(false);
@@ -160,51 +227,48 @@ export class AthleteFormComponent implements OnInit {
     this.athleteId() === null ? 'create' : 'edit',
   );
 
-  // Order = IBJJF rank (kids → adults → senior coral/red) so the picker
-  // reads bottom-up like a progression chart.
-  readonly beltOptions: SelectOption<Belt>[] = [
-    { label: 'Grey (kids)', value: 'grey' },
-    { label: 'Yellow (kids)', value: 'yellow' },
-    { label: 'Orange (kids)', value: 'orange' },
-    { label: 'Green (kids)', value: 'green' },
-    { label: 'White', value: 'white' },
-    { label: 'Blue', value: 'blue' },
-    { label: 'Purple', value: 'purple' },
-    { label: 'Brown', value: 'brown' },
-    { label: 'Black', value: 'black' },
-    { label: 'Red & black (7°)', value: 'red-and-black' },
-    { label: 'Red & white (8°)', value: 'red-and-white' },
-    { label: 'Red (9°/10°)', value: 'red' },
-  ];
+  /**
+   * Belt picker options. Order = IBJJF rank (kids → adults → senior
+   * coral/red) so the picker reads bottom-up like a progression chart.
+   * Computed against `languageService.currentLang()` so the labels
+   * recompute on a runtime locale toggle (signal dependency triggers
+   * re-evaluation; `translate.instant()` reads the now-active bundle).
+   */
+  readonly beltOptions = computed<SelectOption<Belt>[]>(() => {
+    this.languageService.currentLang();
+    return BELT_ORDER.map((value) => ({
+      label: this.translate.instant(BELT_KEYS[value]),
+      value,
+    }));
+  });
 
-  readonly statusOptions: SelectOption<AthleteStatus>[] = [
-    { label: 'Active', value: 'active' },
-    { label: 'Suspended', value: 'suspended' },
-    { label: 'Inactive', value: 'inactive' },
-  ];
+  readonly statusOptions = computed<SelectOption<AthleteStatus>[]>(() => {
+    this.languageService.currentLang();
+    return STATUS_ORDER.map((value) => ({
+      label: this.translate.instant(STATUS_KEYS[value]),
+      value,
+    }));
+  });
 
   /**
-   * Curated country code list (#75). Italy-first because that's the primary
-   * market; the rest covers the typical European + transatlantic mix we see
-   * in BJJ academies. The `value` is the E.164 prefix that goes on the wire,
-   * the `label` is what the user picks from the dropdown.
+   * Curated country code list (#75). Italy-first because that's the
+   * primary market; the rest covers the typical European + transatlantic
+   * mix we see in BJJ academies. The `value` is the E.164 prefix that
+   * goes on the wire; the `label` is the localised dropdown text
+   * (e.g. `+39 Italia` in IT, `+39 Italy` in EN).
    *
-   * If we ever need a code that isn't in this list we expand it here — the
-   * backend regex (`^\+[1-9][0-9]{0,3}$`) accepts any well-formed prefix,
-   * so the constraint is purely UX, not API.
+   * If we ever need a code that isn't in this list we expand
+   * `COUNTRY_CODE_ENTRIES` and add the matching key to en.json + it.json
+   * — the backend regex (`^\+[1-9][0-9]{0,3}$`) accepts any well-formed
+   * prefix, so the constraint is purely UX, not API.
    */
-  readonly countryCodeOptions: SelectOption<string>[] = [
-    { label: '+39 Italy', value: '+39' },
-    { label: '+33 France', value: '+33' },
-    { label: '+34 Spain', value: '+34' },
-    { label: '+44 United Kingdom', value: '+44' },
-    { label: '+49 Germany', value: '+49' },
-    { label: '+1 US / Canada', value: '+1' },
-    { label: '+41 Switzerland', value: '+41' },
-    { label: '+43 Austria', value: '+43' },
-    { label: '+351 Portugal', value: '+351' },
-    { label: '+31 Netherlands', value: '+31' },
-  ];
+  readonly countryCodeOptions = computed<SelectOption<string>[]>(() => {
+    this.languageService.currentLang();
+    return COUNTRY_CODE_ENTRIES.map(({ code, labelKey }) => ({
+      label: `${code} ${this.translate.instant(labelKey)}`,
+      value: code,
+    }));
+  });
 
   readonly provinceOptions = PROVINCE_OPTIONS;
   readonly countryOptions = COUNTRY_OPTIONS;
@@ -324,8 +388,8 @@ export class AthleteFormComponent implements OnInit {
       if (!Number.isFinite(id)) {
         this.messageService.add({
           severity: 'error',
-          summary: 'Invalid athlete',
-          detail: 'The requested athlete id is invalid.',
+          summary: this.translate.instant('athletes.form.toast.invalidIdSummary'),
+          detail: this.translate.instant('athletes.form.toast.invalidIdDetail'),
           life: 3000,
         });
         void this.router.navigate(['/dashboard/athletes']);
@@ -356,7 +420,11 @@ export class AthleteFormComponent implements OnInit {
       next: (athlete) => {
         this.messageService.add({
           severity: 'success',
-          summary: id === null ? 'Athlete created' : 'Athlete updated',
+          summary: this.translate.instant(
+            id === null
+              ? 'athletes.form.toast.createdSummary'
+              : 'athletes.form.toast.updatedSummary',
+          ),
           detail: `${athlete.first_name} ${athlete.last_name}`,
           life: 3000,
         });
@@ -483,7 +551,7 @@ export class AthleteFormComponent implements OnInit {
           });
         },
         error: () => {
-          this.error.set('Could not load this athlete. Please try again.');
+          this.error.set(this.translate.instant('athletes.form.loadError'));
         },
       });
   }
@@ -561,9 +629,11 @@ export class AthleteFormComponent implements OnInit {
   }): void {
     if (err.status === 422 && err.error?.errors) {
       const firstError = Object.values(err.error.errors)[0]?.[0];
-      this.error.set(firstError ?? err.error.message ?? 'Validation failed.');
+      this.error.set(
+        firstError ?? err.error.message ?? this.translate.instant('athletes.form.validationFailed'),
+      );
       return;
     }
-    this.error.set(err.error?.message ?? 'Something went wrong. Please try again.');
+    this.error.set(err.error?.message ?? this.translate.instant('athletes.form.serverError'));
   }
 }
