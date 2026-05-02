@@ -706,7 +706,7 @@
         "dateOfBirth": "Data di nascita",
         "joined": "Iscritto",
         "belt": "Cintura",
-        "stripes": "Stripes",
+        "stripes": "Gradi",
         "status": "Stato",
         "addressLegend": "Indirizzo",
         "addressLine1": "Via e numero civico",
@@ -717,7 +717,16 @@
       },
       "placeholder": {
         "phoneCountryCode": "Prefisso",
-        "phoneNationalNumber": "Numero"
+        "phoneNationalNumber": "Numero",
+        "website": "https://example.com",
+        "facebook": "https://facebook.com/iltuoprofilo",
+        "instagram": "https://instagram.com/iltuoprofilo",
+        "address": {
+          "line1": "Via Roma 1",
+          "line2": "Scala B, interno 4",
+          "zip": "00100",
+          "city": "Roma"
+        }
       },
       "aria": {
         "phoneCountryCode": "Prefisso telefonico",

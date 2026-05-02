@@ -717,7 +717,16 @@
       },
       "placeholder": {
         "phoneCountryCode": "Code",
-        "phoneNationalNumber": "National number"
+        "phoneNationalNumber": "National number",
+        "website": "https://example.com",
+        "facebook": "https://facebook.com/yourprofile",
+        "instagram": "https://instagram.com/yourprofile",
+        "address": {
+          "line1": "Via Roma 1",
+          "line2": "Apt B, unit 4",
+          "zip": "00100",
+          "city": "Rome"
+        }
       },
       "aria": {
         "phoneCountryCode": "Phone country code",

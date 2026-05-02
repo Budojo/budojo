@@ -17,18 +17,7 @@ import { TagModule } from 'primeng/tag';
 import { Athlete, AthleteService, AthleteStatus } from '../../../core/services/athlete.service';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
-
-/**
- * Explicit allow-list of `statuses.*` translation keys per
- * `client/CLAUDE.md` § i18n: dynamic key construction is banned. The
- * compiler enforces the map covers every `AthleteStatus` enum case so
- * adding a backend status without a key would fail to build.
- */
-const STATUS_KEYS: Readonly<Record<AthleteStatus, string>> = {
-  active: 'statuses.active',
-  suspended: 'statuses.suspended',
-  inactive: 'statuses.inactive',
-};
+import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
 
 @Component({
   selector: 'app-athlete-detail',

@@ -42,50 +42,12 @@ import {
   addressAllOrNothing,
   italianPostalCode,
 } from '../../../shared/utils/address-form';
-
-/**
- * Explicit allow-list maps per `client/CLAUDE.md` § i18n: dynamic key
- * concatenation is banned (parity check can't see runtime-built keys),
- * so we declare the full key set up-front. The compiler enforces every
- * enum case is mapped, and the keys are statically greppable.
- */
-const BELT_KEYS: Readonly<Record<Belt, string>> = {
-  grey: 'belts.grey',
-  yellow: 'belts.yellow',
-  orange: 'belts.orange',
-  green: 'belts.green',
-  white: 'belts.white',
-  blue: 'belts.blue',
-  purple: 'belts.purple',
-  brown: 'belts.brown',
-  black: 'belts.black',
-  'red-and-black': 'belts.redAndBlack',
-  'red-and-white': 'belts.redAndWhite',
-  red: 'belts.red',
-};
-
-const STATUS_KEYS: Readonly<Record<AthleteStatus, string>> = {
-  active: 'statuses.active',
-  suspended: 'statuses.suspended',
-  inactive: 'statuses.inactive',
-};
-
-const BELT_ORDER: readonly Belt[] = [
-  'grey',
-  'yellow',
-  'orange',
-  'green',
-  'white',
-  'blue',
-  'purple',
-  'brown',
-  'black',
-  'red-and-black',
-  'red-and-white',
-  'red',
-] as const;
-
-const STATUS_ORDER: readonly AthleteStatus[] = ['active', 'suspended', 'inactive'] as const;
+import {
+  BELT_KEYS,
+  BELT_ORDER,
+  STATUS_KEYS,
+  STATUS_ORDER,
+} from '../../../shared/utils/i18n-enum-keys';
 
 interface CountryCodeEntry {
   code: string;
