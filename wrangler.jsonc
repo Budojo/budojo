@@ -1,0 +1,8 @@
+{
+  "name": "budojo",
+  "compatibility_date": "2026-05-02",
+  "assets": {
+    "directory": "./client/dist/client/browser",
+    "not_found_handling": "single-page-application"
+  }
+}
