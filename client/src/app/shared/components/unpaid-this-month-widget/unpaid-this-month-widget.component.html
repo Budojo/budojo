@@ -2,7 +2,8 @@
   <div class="unpaid-widget" data-cy="unpaid-widget">
     <header class="unpaid-widget__header">
       <p class="unpaid-widget__eyebrow">
-        {{ 'shared.unpaidWidget.eyebrow' | translate }} · {{ monthLabel() }}
+        {{ 'shared.unpaidWidget.eyebrow' | translate }} · {{ monthKey() | translate }}
+        {{ year() }}
       </p>
       @if (loading()) {
         <p-skeleton width="9rem" height="1.75rem" />

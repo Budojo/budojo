@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AthleteService, Athlete } from '../../../core/services/athlete.service';
@@ -72,7 +72,6 @@ export type NowProvider = () => Date;
 export class UnpaidThisMonthWidgetComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly athleteService = inject(AthleteService);
-  private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
   /**
@@ -123,17 +122,17 @@ export class UnpaidThisMonthWidgetComponent implements OnInit {
   );
 
   /**
-   * Current month label, e.g. "May 2026" / "maggio 2026". Resolved
-   * via the i18n month key + the UTC-based year so it cannot drift
-   * from the UTC threshold gate (or the UTC-based server filter) at
-   * day/month boundaries, and gets the user's locale automatically.
+   * i18n key for the current month (e.g. `month.may`). Rendered via
+   * `| translate` in the template so it reacts to language toggles
+   * without needing the language signal as a `computed` dependency.
+   * UTC-based to match the threshold gate and the server's filter.
    */
-  protected readonly monthLabel = computed<string>(() => {
-    const today = this.now()();
-    const month = this.translate.instant(MONTH_KEYS[today.getUTCMonth()]);
-    const year = today.getUTCFullYear();
-    return `${month} ${year}`;
-  });
+  protected readonly monthKey = computed<string>(() => MONTH_KEYS[this.now()().getUTCMonth()]);
+
+  /**
+   * UTC-based year for the month label.
+   */
+  protected readonly year = computed<number>(() => this.now()().getUTCFullYear());
 
   ngOnInit(): void {
     if (!this.visible()) {

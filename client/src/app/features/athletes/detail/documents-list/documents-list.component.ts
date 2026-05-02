@@ -112,10 +112,13 @@ export class DocumentsListComponent implements OnInit {
     return doc.deleted_at.slice(0, 10);
   }
 
-  confirmDelete(event: Event, doc: Document): void {
+  confirmDelete(event: MouseEvent, doc: Document): void {
     // Krug "forgiveness for mistakes": destructive action always confirms.
+    // Anchor the popup on the clicked button via `currentTarget` — PrimeNG
+    // renders nested elements inside `<p-button>` so `event.target` could
+    // resolve to an inner span/icon and misplace the popup.
     this.confirmationService.confirm({
-      target: event.target as EventTarget,
+      target: event.currentTarget as EventTarget,
       message: this.translate.instant('athletes.detail.documents.confirm.deleteMessage', {
         name: doc.original_name,
       }),

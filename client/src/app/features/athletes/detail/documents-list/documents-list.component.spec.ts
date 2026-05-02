@@ -138,7 +138,7 @@ describe('DocumentsListComponent', () => {
       return confirm;
     });
 
-    fixture.componentInstance.confirmDelete(new Event('click'), doc);
+    fixture.componentInstance.confirmDelete(new MouseEvent('click'), doc);
 
     // Optimistic removal: BEFORE the DELETE round-trip completes, the row is gone.
     expect(fixture.componentInstance.documents()).toHaveLength(0);
@@ -164,7 +164,7 @@ describe('DocumentsListComponent', () => {
       return confirm;
     });
 
-    fixture.componentInstance.confirmDelete(new Event('click'), doc);
+    fixture.componentInstance.confirmDelete(new MouseEvent('click'), doc);
     expect(fixture.componentInstance.documents()).toHaveLength(0);
 
     // Server fails — component must restore the row.
