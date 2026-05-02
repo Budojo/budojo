@@ -133,5 +133,435 @@
       "errorSummary": "Couldn't send",
       "errorDetail": "Something went wrong sending your feedback. Please try again."
     }
+  },
+  "landing": {
+    "nav": {
+      "login": "Log in",
+      "signup": "Start free",
+      "switchLanguage": "Switch language"
+    },
+    "hero": {
+      "headline": "Run your academy from your phone, not from a spreadsheet.",
+      "sub": "Built by a BJJ instructor for instructors. Everything you used to keep on sticky notes and Google Sheets, in one place — on the phone you already carry to the mat.",
+      "cta": "Start free",
+      "fineprint": "No credit card. 2 minutes to set up."
+    },
+    "pain": {
+      "heading": "If any of this sounds familiar, we built Budojo for you.",
+      "point1": "Belt promotions tracked in a notebook that's gone missing twice.",
+      "point2": "Medical certificates expiring without anyone noticing until the kid can't compete.",
+      "point3": "That one parent who's behind two months on the fee and you keep forgetting to chase.",
+      "point4": "Attendance scrawled on a clipboard that's older than half your students."
+    },
+    "features": {
+      "heading": "What Budojo does",
+      "roster": {
+        "title": "Your roster, sorted.",
+        "body": "Every athlete in one place — belt, stripes, contact info, joining date. See who's been training, who's due for a promotion, who's owing fees. At a glance."
+      },
+      "documents": {
+        "title": "Documents that won't expire on you.",
+        "body": "Upload medical certificates, ID, insurance — with expiry dates. The dashboard surfaces anything within 30 days of expiring before it becomes a problem."
+      },
+      "attendance": {
+        "title": "Attendance without the clipboard.",
+        "body": "One tap per student, daily summary, monthly trends. The mobile-first interface is built for the side of the mat, not the office desk."
+      },
+      "payments": {
+        "title": "Who hasn't paid this month?",
+        "body": "Set a monthly fee, mark each athlete paid (or not). After the 15th, a dashboard widget surfaces who you still need to chase — before anyone has to ask."
+      },
+      "pwa": {
+        "title": "Your academy, in your pocket.",
+        "body": "Installable as an app on iOS and Android. Updates itself automatically when we ship. Works as well on a phone as it does on a laptop."
+      },
+      "feedback": {
+        "title": "Send us a note when something breaks.",
+        "body": "Spotted a bug or wishing for a feature? The in-app feedback form sends a message straight to us with the version + device info already attached."
+      }
+    },
+    "trust": {
+      "heading": "Why us, not them",
+      "builtBy": {
+        "title": "Built by a BJJ instructor.",
+        "body": "Not enterprise software pretending to know your world. Every feature exists because someone — usually the founder — needed it on the mat."
+      },
+      "gdpr": {
+        "title": "GDPR-first. Your data is yours.",
+        "body": "Export everything you've put in with one click. Delete your account and we wipe it within 30 days. No tracking cookies. No third-party analytics."
+      },
+      "italian": {
+        "title": "In English. In Italian.",
+        "body": "Both languages are first-class. Translated by a person who actually trains, not a machine. More languages on the way as the product reaches new markets."
+      }
+    },
+    "how": {
+      "heading": "How it works",
+      "signup": {
+        "title": "Sign up.",
+        "body": "Email and password. 30 seconds."
+      },
+      "setup": {
+        "title": "Set up your academy.",
+        "body": "Name, address, training schedule, monthly fee if you charge one. About a minute."
+      },
+      "firstAthlete": {
+        "title": "Add your first athlete.",
+        "body": "Done — you're using the product. Another 30 seconds."
+      }
+    },
+    "pricing": {
+      "heading": "Pricing",
+      "eyebrow": "While we're getting started",
+      "headline": "Free during MVP.",
+      "body": "No credit card. We'll tell you well before that changes — and you'll always be able to export everything and walk away."
+    },
+    "footer": {
+      "privacy": "Privacy",
+      "subProcessors": "Sub-processors",
+      "tagline": "Made for the mat. Built in Italy."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Account details and verification status.",
+    "verifyRequiredBanner": "You need to verify your email before adding athletes or documents. Check your inbox for the verification link, or use the Resend button below.",
+    "name": "Name",
+    "email": "Email",
+    "verification": "Verification",
+    "yourData": "Your data",
+    "exportHint": "Download a full copy of your account — academy details, athletes, payments, attendance, and uploaded documents. The file is a ZIP you can open with any archive tool.",
+    "exportButton": "Download my data",
+    "exportToast": {
+      "errorSummary": "Error",
+      "throttledDetail": "You already exported your data recently. Try again in a minute.",
+      "genericErrorDetail": "Couldn't download your data. Please try again."
+    }
+  },
+  "emailVerification": {
+    "verified": "Email verified",
+    "notVerified": "Email not verified",
+    "resend": "Resend",
+    "resendIn": "Resend in {{seconds}}s",
+    "toast": {
+      "sentSummary": "Email sent",
+      "sentDetail": "Check your inbox — the verification link is on its way.",
+      "throttledSummary": "Try again in a moment",
+      "throttledDetail": "For security, you can only request a verification email once per minute.",
+      "errorSummary": "Couldn’t send email",
+      "errorDetail": "Please try again — if it persists, contact support."
+    }
+  },
+  "documents": {
+    "types": {
+      "id_card": "ID card",
+      "medical_certificate": "Medical certificate",
+      "insurance": "Insurance",
+      "other": "Other"
+    },
+    "expiringList": {
+      "title": "Expiring documents",
+      "backToAthletes": "Athletes",
+      "countOne": "{{count}} document expired or expiring within 30 days",
+      "countOther": "{{count}} documents expired or expiring within 30 days",
+      "table": {
+        "athlete": "Athlete",
+        "type": "Type",
+        "expires": "Expires",
+        "status": "Status"
+      },
+      "download": "Download",
+      "downloadAria": "Download {{filename}}",
+      "error": {
+        "title": "Couldn’t load expiring documents.",
+        "hint": "Refresh the page to try again."
+      },
+      "empty": {
+        "title": "All documents up to date.",
+        "hint": "No expirations in the next 30 days. Check back later."
+      },
+      "toast": {
+        "errorSummary": "Download failed",
+        "errorDetail": "Could not download {{filename}}. Please try again."
+      }
+    },
+    "expiringWidget": {
+      "error": {
+        "title": "Couldn’t check expiring documents",
+        "hint": "Refresh the page to try again"
+      },
+      "empty": {
+        "title": "All documents up to date",
+        "hint": "No expirations in the next 30 days"
+      },
+      "countOne": "{{count}} document needs attention",
+      "countOther": "{{count}} documents need attention",
+      "countHint": "Expired or expiring within 30 days"
+    }
+  },
+  "weekdays": {
+    "groupAria": "Training days of the week",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+  "academy": {
+    "detail": {
+      "eyebrow": "Academy",
+      "edit": "Edit",
+      "logoAlt": "Academy logo",
+      "logoTitle": "Logo",
+      "logoHint": "PNG, JPG, SVG or WebP, max 2 MB.",
+      "logoUpload": "Upload",
+      "logoReplace": "Replace",
+      "logoRemove": "Remove",
+      "detailsAria": "Academy details",
+      "row": {
+        "name": "Name",
+        "permalink": "Permalink",
+        "phone": "Phone",
+        "links": "Links",
+        "address": "Address"
+      },
+      "linksAria": "Academy contact links",
+      "links": {
+        "website": "Website",
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      },
+      "permalinkHint": "Permalink stays stable across renames. Change the name anytime; the permalink never moves.",
+      "toast": {
+        "unsupportedSummary": "Unsupported file",
+        "unsupportedDetail": "Use PNG, JPG, SVG or WebP.",
+        "tooLargeSummary": "File too large",
+        "tooLargeDetail": "Maximum 2 MB.",
+        "uploadSuccess": "Logo updated",
+        "uploadErrorSummary": "Upload failed",
+        "uploadErrorDetail": "Could not save the new logo. Please try again.",
+        "removeSuccess": "Logo removed",
+        "removeErrorSummary": "Remove failed",
+        "removeErrorDetail": "Could not remove the logo. Please try again."
+      },
+      "confirm": {
+        "removeMessage": "Remove the academy logo?",
+        "removeAccept": "Remove",
+        "removeReject": "Cancel"
+      }
+    },
+    "form": {
+      "eyebrow": "Academy",
+      "title": "Edit academy",
+      "optional": "(optional)",
+      "name": {
+        "label": "Name",
+        "errorRequired": "Academy name is required.",
+        "errorMaxlength": "Maximum 255 characters."
+      },
+      "phone": {
+        "label": "Phone",
+        "codePlaceholder": "Code",
+        "codeAria": "Phone country code",
+        "nationalPlaceholder": "National number",
+        "nationalAria": "Phone national number",
+        "errorCodeRequired": "Country code is required when a national number is entered.",
+        "errorNationalRequired": "National number is required when a country code is selected.",
+        "errorPattern": "Digits only — no spaces, dashes, or parentheses.",
+        "errorMaxlength": "Maximum 20 digits."
+      },
+      "url": {
+        "errorMaxlength": "Maximum 255 characters."
+      },
+      "website": {
+        "label": "Website",
+        "errorUrl": "Enter a full URL — e.g. <code>https://example.com</code>."
+      },
+      "facebook": {
+        "label": "Facebook",
+        "errorUrl": "Enter a full URL — e.g. <code>https://facebook.com/yourpage</code>."
+      },
+      "instagram": {
+        "label": "Instagram",
+        "errorUrl": "Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>."
+      },
+      "permalink": {
+        "label": "Permalink",
+        "hint": "Stays stable across renames — bookmarks and shared links keep working."
+      },
+      "address": {
+        "legend": "Address",
+        "legendOptional": "(optional — fill all marked fields below or none)",
+        "requiredWhenFilledTooltip": "Required when any address field is filled",
+        "requiredWhenFilledAria": "required when any address field is filled",
+        "line1Label": "Street + civic number",
+        "line2Label": "Apt / floor / unit",
+        "zipLabel": "ZIP",
+        "zipErrorPattern": "ZIP must be exactly 5 digits.",
+        "cityLabel": "City",
+        "provinceLabel": "Province",
+        "provinceAria": "Province",
+        "errorIncomplete": "Fill every required address field, or clear them all to leave the academy without an address.",
+        "clearHint": "Leave every field empty to clear the address on file."
+      },
+      "monthlyFee": {
+        "label": "Monthly fee",
+        "errorMin": "Fee can't be negative.",
+        "hint": "How much each athlete pays per month. Drives the Payments tab on the athlete detail and the inline mark-paid toggle on the athletes list. Leave empty if you don't want to track payments through Budojo."
+      },
+      "trainingDays": {
+        "label": "Training days",
+        "hint": "Pick the weekdays your academy holds class. Deselect every day to clear the schedule."
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "toast": {
+        "successSummary": "Academy updated"
+      },
+      "errorValidation": "Validation failed.",
+      "errorGeneric": "Something went wrong. Please try again."
+    }
+  },
+  "belts": {
+    "all": "All belts",
+    "grey": "Grey (kids)",
+    "yellow": "Yellow (kids)",
+    "orange": "Orange (kids)",
+    "green": "Green (kids)",
+    "white": "White",
+    "blue": "Blue",
+    "purple": "Purple",
+    "brown": "Brown",
+    "black": "Black",
+    "redAndBlack": "Red & black (7°)",
+    "redAndWhite": "Red & white (8°)",
+    "red": "Red (9°/10°)"
+  },
+  "attendance": {
+    "daily": {
+      "eyebrow": "Attendance",
+      "title": "Today's check-in",
+      "searchPlaceholder": "Search by name",
+      "beltPlaceholder": "Belt",
+      "table": {
+        "fullName": "Full name",
+        "belt": "Belt",
+        "presentAria": "Present"
+      },
+      "empty": {
+        "filtered": "No active athletes match the current filters.",
+        "noAthletes": "No active athletes yet — add one from the Athletes page."
+      },
+      "paginationHint": "Showing {{shown}} of {{total}} active athletes. Pagination is on the M4.2.5 follow-up.",
+      "undo": "Undo",
+      "toast": {
+        "loadAthletesError": "Could not load the athletes list.",
+        "loadAttendanceError": "Could not load today's attendance.",
+        "markedPresent": "{{name}} marked present.",
+        "unmarked": "{{name}} un-marked.",
+        "markError": "Couldn't mark {{name}} present. Try again.",
+        "unmarkError": "Couldn't un-mark {{name}}. Try again."
+      }
+    },
+    "summary": {
+      "eyebrow": "Attendance summary",
+      "daysOne": "{{count}} training day",
+      "daysOther": "{{count}} training days",
+      "athletesOne": "{{count}} athlete",
+      "athletesOther": "{{count}} athletes",
+      "prevAria": "Previous month",
+      "nextAria": "Next month",
+      "filterPlaceholder": "Filter by name",
+      "filterAria": "Filter athletes by name",
+      "error": "Couldn't load this month. Please try again.",
+      "empty": {
+        "filtered": "No athletes match your filter.",
+        "none": "No attendance recorded this month yet."
+      },
+      "table": {
+        "athlete": "Athlete",
+        "days": "Days"
+      }
+    },
+    "summaryWidget": {
+      "eyebrowPrefix": "Attendance",
+      "errorTitle": "Couldn't check",
+      "athletesPerSession": "athletes / session",
+      "viewAll": "View all →",
+      "empty": "No attendance recorded yet this month."
+    }
+  },
+  "statuses": {
+    "all": "All statuses",
+    "active": "Active",
+    "suspended": "Suspended",
+    "inactive": "Inactive"
+  },
+  "athletes": {
+    "list": {
+      "title": "Athletes",
+      "totalCountOne": "{{count}} total",
+      "totalCountOther": "{{count}} total",
+      "addButton": "Add athlete",
+      "searchPlaceholder": "Search by name",
+      "beltPlaceholder": "Belt",
+      "statusPlaceholder": "Status",
+      "paidPlaceholder": "Paid",
+      "paidOptions": {
+        "all": "All",
+        "yes": "Paid",
+        "no": "Unpaid"
+      },
+      "table": {
+        "fullName": "Full name",
+        "belt": "Belt",
+        "status": "Status",
+        "paidPrefix": "Paid"
+      },
+      "tooltip": {
+        "fullNameSortInitial": "Click to sort by first name (A → Z)",
+        "fullNameSortFirstAsc": "Sorted by first name (A → Z). Click to cycle.",
+        "fullNameSortFirstDesc": "Sorted by first name (Z → A). Click to cycle.",
+        "fullNameSortLastAsc": "Sorted by last name (A → Z). Click to cycle.",
+        "fullNameSortLastDesc": "Sorted by last name (Z → A). Click to cycle.",
+        "beltSortInitial": "Click to sort by belt rank (white → black)",
+        "beltSortAsc": "Sorted by belt (white → black). Click to flip.",
+        "beltSortDesc": "Sorted by belt (black → white). Click to flip.",
+        "edit": "Edit",
+        "delete": "Delete",
+        "editAria": "Edit {{name}}",
+        "deleteAria": "Delete {{name}}",
+        "paid": "Paid",
+        "unpaid": "Unpaid"
+      },
+      "empty": {
+        "title": "No athletes found.",
+        "filteredHint": "Try clearing your filters or search."
+      },
+      "toast": {
+        "markedPaid": "Marked paid",
+        "markedUnpaid": "Marked unpaid",
+        "errorSummary": "Error",
+        "deletedSummary": "Deleted",
+        "deletedDetail": "{{name}} removed.",
+        "loadErrorDetail": "Could not load athletes. Please try again.",
+        "paidErrorMissingFee": "Set a monthly fee on the academy first to record payments.",
+        "paidErrorGeneric": "Couldn't update the payment. Please try again.",
+        "deleteErrorDetail": "Could not delete athlete. Please try again."
+      },
+      "confirm": {
+        "deleteMessage": "Delete {{name}}?",
+        "deleteAccept": "Delete",
+        "markPaidMessage": "Mark {{name}} paid for {{month}}?",
+        "markPaidAccept": "Mark paid",
+        "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?",
+        "markUnpaidAccept": "Mark unpaid",
+        "cancel": "Cancel"
+      }
+    }
   }
 }

@@ -10,8 +10,8 @@
   <div class="widget widget--muted" data-cy="expiring-widget-error">
     <i class="widget__icon pi pi-exclamation-circle" aria-hidden="true"></i>
     <div class="widget__text">
-      <span class="widget__title">Couldn't check expiring documents</span>
-      <span class="widget__hint">Refresh the page to try again</span>
+      <span class="widget__title">{{ 'documents.expiringWidget.error.title' | translate }}</span>
+      <span class="widget__hint">{{ 'documents.expiringWidget.error.hint' | translate }}</span>
     </div>
   </div>
 } @else {
@@ -31,13 +31,18 @@
     ></i>
     <div class="widget__text">
       @if (count() === 0) {
-        <span class="widget__title">All documents up to date</span>
-        <span class="widget__hint">No expirations in the next 30 days</span>
+        <span class="widget__title">{{ 'documents.expiringWidget.empty.title' | translate }}</span>
+        <span class="widget__hint">{{ 'documents.expiringWidget.empty.hint' | translate }}</span>
       } @else {
         <span class="widget__title" data-cy="expiring-widget-count">
-          {{ count() }} {{ count() === 1 ? 'document needs' : 'documents need' }} attention
+          {{
+            (count() === 1
+              ? 'documents.expiringWidget.countOne'
+              : 'documents.expiringWidget.countOther'
+            ) | translate: { count: count() }
+          }}
         </span>
-        <span class="widget__hint">Expired or expiring within 30 days</span>
+        <span class="widget__hint">{{ 'documents.expiringWidget.countHint' | translate }}</span>
       }
     </div>
     <i class="widget__chevron pi pi-chevron-right" aria-hidden="true"></i>

@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ExpiringDocument } from '../../../core/services/document.service';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { ExpiringDocumentsWidgetComponent } from './expiring-documents-widget.component';
 
 function makeExpiring(overrides: Partial<ExpiringDocument> = {}): ExpiringDocument {
@@ -29,7 +30,12 @@ describe('ExpiringDocumentsWidgetComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [ExpiringDocumentsWidgetComponent],
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        ...provideI18nTesting(),
+      ],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });

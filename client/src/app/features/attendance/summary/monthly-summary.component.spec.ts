@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { MonthlySummaryComponent } from './monthly-summary.component';
 import { AcademyService } from '../../../core/services/academy.service';
 
@@ -32,6 +33,7 @@ function setupTestBed(): Harness {
           queryParamMap: queryParams.asObservable(),
         },
       },
+      ...provideI18nTesting(),
     ],
   });
   return {

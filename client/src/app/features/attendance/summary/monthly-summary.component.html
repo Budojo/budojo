@@ -1,11 +1,20 @@
 <section class="summary-page" data-cy="monthly-summary-page">
   <header class="summary-page__header">
     <div class="summary-page__heading">
-      <p class="summary-page__eyebrow">Attendance summary</p>
+      <p class="summary-page__eyebrow">{{ 'attendance.summary.eyebrow' | translate }}</p>
       <h1 class="summary-page__title" data-cy="monthly-summary-month">{{ monthLabel() }}</h1>
       <p class="summary-page__counter">
-        {{ totalDays() }} training day{{ totalDays() === 1 ? '' : 's' }} ·
-        {{ rows().length }} athlete{{ rows().length === 1 ? '' : 's' }}
+        {{
+          (totalDays() === 1 ? 'attendance.summary.daysOne' : 'attendance.summary.daysOther')
+            | translate: { count: totalDays() }
+        }}
+        ·
+        {{
+          (rows().length === 1
+            ? 'attendance.summary.athletesOne'
+            : 'attendance.summary.athletesOther'
+          ) | translate: { count: rows().length }
+        }}
       </p>
     </div>
 
@@ -15,7 +24,7 @@
         [text]="true"
         [rounded]="true"
         (onClick)="prevMonth()"
-        ariaLabel="Previous month"
+        [ariaLabel]="'attendance.summary.prevAria' | translate"
         data-cy="monthly-summary-prev"
       />
       <p-button
@@ -24,7 +33,7 @@
         [rounded]="true"
         [disabled]="!canGoNext()"
         (onClick)="nextMonth()"
-        ariaLabel="Next month"
+        [ariaLabel]="'attendance.summary.nextAria' | translate"
         data-cy="monthly-summary-next"
       />
     </div>
@@ -34,11 +43,11 @@
     <input
       pInputText
       type="search"
-      placeholder="Filter by name"
+      [placeholder]="'attendance.summary.filterPlaceholder' | translate"
       [ngModel]="nameFilter()"
       (ngModelChange)="onFilterChange($event)"
       data-cy="monthly-summary-filter"
-      aria-label="Filter athletes by name"
+      [attr.aria-label]="'attendance.summary.filterAria' | translate"
     />
   </div>
 
@@ -51,16 +60,16 @@
   } @else if (errored()) {
     <div class="summary-page__error" role="alert" data-cy="monthly-summary-error">
       <i class="pi pi-exclamation-triangle"></i>
-      <span>Couldn't load this month. Please try again.</span>
+      <span>{{ 'attendance.summary.error' | translate }}</span>
     </div>
   } @else if (displayRows().length === 0) {
     <div class="summary-page__empty" data-cy="monthly-summary-empty-page">
       <i class="pi pi-users" aria-hidden="true"></i>
       <p>
         @if (nameFilter().trim()) {
-          No athletes match your filter.
+          {{ 'attendance.summary.empty.filtered' | translate }}
         } @else {
-          No attendance recorded this month yet.
+          {{ 'attendance.summary.empty.none' | translate }}
         }
       </p>
     </div>
@@ -73,8 +82,10 @@
     >
       <ng-template pTemplate="header">
         <tr>
-          <th scope="col">Athlete</th>
-          <th scope="col" class="summary-page__count-col">Days</th>
+          <th scope="col">{{ 'attendance.summary.table.athlete' | translate }}</th>
+          <th scope="col" class="summary-page__count-col">
+            {{ 'attendance.summary.table.days' | translate }}
+          </th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-row>

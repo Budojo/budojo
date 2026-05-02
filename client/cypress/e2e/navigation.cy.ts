@@ -22,9 +22,14 @@ describe('Navigation guards', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
-  it('redirects unauthenticated visitor from / to /auth/login', () => {
+  it('lands unauthenticated visitor on the public landing page at / (#330)', () => {
+    // Pre-#330 behaviour: cold visit to / redirected to /auth/login.
+    // Post-#330: the root is the public landing / about page; login
+    // is one click away in the header. The auth-redirect from
+    // /dashboard and /setup is unchanged (those tests below).
     cy.visit('/');
-    cy.url().should('include', '/auth/login');
+    cy.location('pathname').should('eq', '/');
+    cy.get('.landing__hero-headline').should('be.visible');
   });
 
   it('redirects unauthenticated visitor from /dashboard to /auth/login', () => {

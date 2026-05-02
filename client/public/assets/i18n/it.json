@@ -133,5 +133,435 @@
       "errorSummary": "Invio non riuscito",
       "errorDetail": "Qualcosa è andato storto durante l'invio del feedback. Riprova."
     }
+  },
+  "landing": {
+    "nav": {
+      "login": "Accedi",
+      "signup": "Inizia gratis",
+      "switchLanguage": "Cambia lingua"
+    },
+    "hero": {
+      "headline": "Gestisci la tua palestra dal telefono, non da un foglio Excel.",
+      "sub": "Costruito da un istruttore di BJJ per chi sale sul tatami. Tutto quello che tenevi su post-it e Google Sheets, in un posto solo — sullo stesso telefono che porti già a bordo del materassino.",
+      "cta": "Inizia gratis",
+      "fineprint": "Nessuna carta di credito. 2 minuti per partire."
+    },
+    "pain": {
+      "heading": "Se ti suona familiare, abbiamo costruito Budojo per te.",
+      "point1": "Promozioni di cintura segnate su un quaderno che hai perso almeno due volte.",
+      "point2": "Certificati medici che scadono senza che nessuno se ne accorga, finché un ragazzino non può più fare la gara.",
+      "point3": "Quel genitore che è indietro di due mesi sulla quota e tu continui a dimenticarti di sollecitarlo.",
+      "point4": "Presenze segnate su un blocchetto più vecchio della metà dei tuoi atleti."
+    },
+    "features": {
+      "heading": "Cosa fa Budojo",
+      "roster": {
+        "title": "I tuoi atleti, ordinati.",
+        "body": "Ogni atleta in un posto solo — cintura, stripes, contatti, data d'iscrizione. Vedi chi sta venendo, chi è pronto per la promozione, chi è indietro con i pagamenti. Tutto a colpo d'occhio."
+      },
+      "documents": {
+        "title": "Documenti che non ti scadono di nascosto.",
+        "body": "Carica certificati medici, documenti d'identità, assicurazioni — con la data di scadenza. La dashboard ti segnala in anticipo tutto quello che scade nei prossimi 30 giorni."
+      },
+      "attendance": {
+        "title": "Presenze senza il blocchetto.",
+        "body": "Un tap per atleta, riepilogo giornaliero, andamento mensile. L'interfaccia è pensata per il bordo del tatami, non per la scrivania dell'ufficio."
+      },
+      "payments": {
+        "title": "Chi non ha pagato questo mese?",
+        "body": "Imposta una quota mensile, segna ogni atleta come pagato (o no). Dal 16 in poi, un widget sulla dashboard ti dice chi devi ancora sollecitare — prima che qualcuno te lo chieda."
+      },
+      "pwa": {
+        "title": "La tua palestra, in tasca.",
+        "body": "Installabile come app su iOS e Android. Si aggiorna da sola quando rilasciamo nuove versioni. Funziona uguale sul telefono e sul portatile."
+      },
+      "feedback": {
+        "title": "Mandaci un messaggio quando qualcosa si rompe.",
+        "body": "Hai visto un bug o vorresti una funzione? Il form di feedback dentro l'app ce lo manda direttamente, con la versione e le info del tuo dispositivo già allegate."
+      }
+    },
+    "trust": {
+      "heading": "Perché Budojo, non altri",
+      "builtBy": {
+        "title": "Costruito da un istruttore di BJJ.",
+        "body": "Non un software aziendale che fa finta di conoscere il tuo mondo. Ogni funzione esiste perché qualcuno — di solito il fondatore — ne aveva bisogno sul tatami."
+      },
+      "gdpr": {
+        "title": "GDPR-first. I tuoi dati sono tuoi.",
+        "body": "Esporti tutto quello che hai inserito con un click. Cancelli l'account e ti puliamo i dati entro 30 giorni. Niente cookie di tracciamento. Niente analytics di terze parti."
+      },
+      "italian": {
+        "title": "In italiano. In inglese.",
+        "body": "Entrambe le lingue sono di prima classe. Tradotte da una persona che si allena davvero, non da una macchina. Altre lingue in arrivo man mano che cresciamo."
+      }
+    },
+    "how": {
+      "heading": "Come funziona",
+      "signup": {
+        "title": "Iscriviti.",
+        "body": "Email e password. 30 secondi."
+      },
+      "setup": {
+        "title": "Configura la tua palestra.",
+        "body": "Nome, indirizzo, calendario degli allenamenti, quota mensile se la richiedi. Circa un minuto."
+      },
+      "firstAthlete": {
+        "title": "Aggiungi il primo atleta.",
+        "body": "Fatto — stai usando il prodotto. Altri 30 secondi."
+      }
+    },
+    "pricing": {
+      "heading": "Prezzi",
+      "eyebrow": "Per ora che siamo all'inizio",
+      "headline": "Gratis durante l'MVP.",
+      "body": "Nessuna carta di credito. Te lo diremo con largo anticipo se questo cambia — e potrai sempre esportare tutto e andartene."
+    },
+    "footer": {
+      "privacy": "Privacy",
+      "subProcessors": "Sub-processor",
+      "tagline": "Pensato per il tatami. Costruito in Italia."
+    }
+  },
+  "profile": {
+    "title": "Profilo",
+    "subtitle": "Dettagli account e stato di verifica.",
+    "verifyRequiredBanner": "Devi verificare la tua email prima di aggiungere atleti o documenti. Controlla la casella di posta per il link di verifica, oppure usa il pulsante Reinvia qui sotto.",
+    "name": "Nome",
+    "email": "Email",
+    "verification": "Verifica",
+    "yourData": "I tuoi dati",
+    "exportHint": "Scarica una copia completa del tuo account — dati della palestra, atleti, pagamenti, presenze e documenti caricati. Il file è uno ZIP che puoi aprire con qualsiasi software di archiviazione.",
+    "exportButton": "Scarica i miei dati",
+    "exportToast": {
+      "errorSummary": "Errore",
+      "throttledDetail": "Hai già esportato i tuoi dati di recente. Riprova tra un minuto.",
+      "genericErrorDetail": "Non è stato possibile scaricare i tuoi dati. Riprova."
+    }
+  },
+  "emailVerification": {
+    "verified": "Email verificata",
+    "notVerified": "Email non verificata",
+    "resend": "Reinvia",
+    "resendIn": "Reinvia tra {{seconds}}s",
+    "toast": {
+      "sentSummary": "Email inviata",
+      "sentDetail": "Controlla la casella di posta — il link di verifica è in arrivo.",
+      "throttledSummary": "Riprova tra un attimo",
+      "throttledDetail": "Per sicurezza, puoi richiedere l'email di verifica una sola volta al minuto.",
+      "errorSummary": "Invio non riuscito",
+      "errorDetail": "Riprova — se il problema persiste, contatta l'assistenza."
+    }
+  },
+  "documents": {
+    "types": {
+      "id_card": "Carta d'identità",
+      "medical_certificate": "Certificato medico",
+      "insurance": "Assicurazione",
+      "other": "Altro"
+    },
+    "expiringList": {
+      "title": "Documenti in scadenza",
+      "backToAthletes": "Atleti",
+      "countOne": "{{count}} documento scaduto o in scadenza entro 30 giorni",
+      "countOther": "{{count}} documenti scaduti o in scadenza entro 30 giorni",
+      "table": {
+        "athlete": "Atleta",
+        "type": "Tipo",
+        "expires": "Scadenza",
+        "status": "Stato"
+      },
+      "download": "Scarica",
+      "downloadAria": "Scarica {{filename}}",
+      "error": {
+        "title": "Impossibile caricare i documenti in scadenza.",
+        "hint": "Aggiorna la pagina per riprovare."
+      },
+      "empty": {
+        "title": "Tutti i documenti sono aggiornati.",
+        "hint": "Nessuna scadenza nei prossimi 30 giorni. Ricontrolla più avanti."
+      },
+      "toast": {
+        "errorSummary": "Scaricamento non riuscito",
+        "errorDetail": "Impossibile scaricare {{filename}}. Riprova."
+      }
+    },
+    "expiringWidget": {
+      "error": {
+        "title": "Impossibile verificare i documenti in scadenza",
+        "hint": "Aggiorna la pagina per riprovare"
+      },
+      "empty": {
+        "title": "Tutti i documenti sono aggiornati",
+        "hint": "Nessuna scadenza nei prossimi 30 giorni"
+      },
+      "countOne": "{{count}} documento da controllare",
+      "countOther": "{{count}} documenti da controllare",
+      "countHint": "Scaduti o in scadenza entro 30 giorni"
+    }
+  },
+  "weekdays": {
+    "groupAria": "Giorni di allenamento della settimana",
+    "mon": "Lun",
+    "tue": "Mar",
+    "wed": "Mer",
+    "thu": "Gio",
+    "fri": "Ven",
+    "sat": "Sab",
+    "sun": "Dom"
+  },
+  "academy": {
+    "detail": {
+      "eyebrow": "Academy",
+      "edit": "Modifica",
+      "logoAlt": "Logo dell'academy",
+      "logoTitle": "Logo",
+      "logoHint": "PNG, JPG, SVG o WebP, massimo 2 MB.",
+      "logoUpload": "Carica",
+      "logoReplace": "Sostituisci",
+      "logoRemove": "Rimuovi",
+      "detailsAria": "Dettagli academy",
+      "row": {
+        "name": "Nome",
+        "permalink": "Permalink",
+        "phone": "Telefono",
+        "links": "Link",
+        "address": "Indirizzo"
+      },
+      "linksAria": "Link di contatto dell'academy",
+      "links": {
+        "website": "Sito web",
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      },
+      "permalinkHint": "Il permalink rimane stabile anche se rinomini. Cambia il nome quando vuoi: il permalink non si sposta.",
+      "toast": {
+        "unsupportedSummary": "Tipo di file non supportato",
+        "unsupportedDetail": "Usa PNG, JPG, SVG o WebP.",
+        "tooLargeSummary": "File troppo grande",
+        "tooLargeDetail": "Massimo 2 MB.",
+        "uploadSuccess": "Logo aggiornato",
+        "uploadErrorSummary": "Caricamento non riuscito",
+        "uploadErrorDetail": "Impossibile salvare il nuovo logo. Riprova.",
+        "removeSuccess": "Logo rimosso",
+        "removeErrorSummary": "Rimozione non riuscita",
+        "removeErrorDetail": "Impossibile rimuovere il logo. Riprova."
+      },
+      "confirm": {
+        "removeMessage": "Rimuovere il logo dell'academy?",
+        "removeAccept": "Rimuovi",
+        "removeReject": "Annulla"
+      }
+    },
+    "form": {
+      "eyebrow": "Academy",
+      "title": "Modifica academy",
+      "optional": "(opzionale)",
+      "name": {
+        "label": "Nome",
+        "errorRequired": "Il nome dell'academy è obbligatorio.",
+        "errorMaxlength": "Massimo 255 caratteri."
+      },
+      "phone": {
+        "label": "Telefono",
+        "codePlaceholder": "Prefisso",
+        "codeAria": "Prefisso telefonico",
+        "nationalPlaceholder": "Numero nazionale",
+        "nationalAria": "Numero nazionale",
+        "errorCodeRequired": "Il prefisso è obbligatorio quando inserisci un numero nazionale.",
+        "errorNationalRequired": "Il numero nazionale è obbligatorio quando selezioni un prefisso.",
+        "errorPattern": "Solo cifre — niente spazi, trattini o parentesi.",
+        "errorMaxlength": "Massimo 20 cifre."
+      },
+      "url": {
+        "errorMaxlength": "Massimo 255 caratteri."
+      },
+      "website": {
+        "label": "Sito web",
+        "errorUrl": "Inserisci un URL completo — es. <code>https://example.com</code>."
+      },
+      "facebook": {
+        "label": "Facebook",
+        "errorUrl": "Inserisci un URL completo — es. <code>https://facebook.com/lapagina</code>."
+      },
+      "instagram": {
+        "label": "Instagram",
+        "errorUrl": "Inserisci un URL completo — es. <code>https://instagram.com/ilprofilo</code>."
+      },
+      "permalink": {
+        "label": "Permalink",
+        "hint": "Rimane stabile anche se rinomini — segnalibri e link condivisi continuano a funzionare."
+      },
+      "address": {
+        "legend": "Indirizzo",
+        "legendOptional": "(opzionale — compila tutti i campi contrassegnati o nessuno)",
+        "requiredWhenFilledTooltip": "Obbligatorio quando un campo dell'indirizzo è compilato",
+        "requiredWhenFilledAria": "obbligatorio quando un campo dell'indirizzo è compilato",
+        "line1Label": "Via e numero civico",
+        "line2Label": "Scala / piano / interno",
+        "zipLabel": "CAP",
+        "zipErrorPattern": "Il CAP deve essere di 5 cifre.",
+        "cityLabel": "Città",
+        "provinceLabel": "Provincia",
+        "provinceAria": "Provincia",
+        "errorIncomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure svuotali tutti per lasciare l'academy senza indirizzo.",
+        "clearHint": "Lascia tutti i campi vuoti per rimuovere l'indirizzo salvato."
+      },
+      "monthlyFee": {
+        "label": "Quota mensile",
+        "errorMin": "La quota non può essere negativa.",
+        "hint": "Quanto paga ogni atleta al mese. Attiva la tab Pagamenti sul dettaglio atleta e il toggle pagato/non pagato sulla lista atleti. Lascia vuoto se non vuoi gestire i pagamenti tramite Budojo."
+      },
+      "trainingDays": {
+        "label": "Giorni di allenamento",
+        "hint": "Seleziona i giorni della settimana in cui si tiene lezione. Deseleziona tutti i giorni per cancellare la programmazione."
+      },
+      "actions": {
+        "cancel": "Annulla",
+        "save": "Salva"
+      },
+      "toast": {
+        "successSummary": "Academy aggiornata"
+      },
+      "errorValidation": "Validazione non riuscita.",
+      "errorGeneric": "Qualcosa è andato storto. Riprova."
+    }
+  },
+  "belts": {
+    "all": "Tutte le cinture",
+    "grey": "Grigia (bambini)",
+    "yellow": "Gialla (bambini)",
+    "orange": "Arancione (bambini)",
+    "green": "Verde (bambini)",
+    "white": "Bianca",
+    "blue": "Blu",
+    "purple": "Viola",
+    "brown": "Marrone",
+    "black": "Nera",
+    "redAndBlack": "Rossa e nera (7°)",
+    "redAndWhite": "Rossa e bianca (8°)",
+    "red": "Rossa (9°/10°)"
+  },
+  "attendance": {
+    "daily": {
+      "eyebrow": "Presenze",
+      "title": "Check-in di oggi",
+      "searchPlaceholder": "Cerca per nome",
+      "beltPlaceholder": "Cintura",
+      "table": {
+        "fullName": "Nome e cognome",
+        "belt": "Cintura",
+        "presentAria": "Presente"
+      },
+      "empty": {
+        "filtered": "Nessun atleta attivo corrisponde ai filtri.",
+        "noAthletes": "Nessun atleta attivo ancora — aggiungine uno dalla pagina Atleti."
+      },
+      "paginationHint": "Mostrati {{shown}} di {{total}} atleti attivi. La paginazione arriva nel follow-up M4.2.5.",
+      "undo": "Annulla",
+      "toast": {
+        "loadAthletesError": "Impossibile caricare la lista atleti.",
+        "loadAttendanceError": "Impossibile caricare le presenze di oggi.",
+        "markedPresent": "{{name}} segnato presente.",
+        "unmarked": "{{name}} non più segnato.",
+        "markError": "Impossibile segnare {{name}} come presente. Riprova.",
+        "unmarkError": "Impossibile rimuovere il segno per {{name}}. Riprova."
+      }
+    },
+    "summary": {
+      "eyebrow": "Riepilogo presenze",
+      "daysOne": "{{count}} giorno di allenamento",
+      "daysOther": "{{count}} giorni di allenamento",
+      "athletesOne": "{{count}} atleta",
+      "athletesOther": "{{count}} atleti",
+      "prevAria": "Mese precedente",
+      "nextAria": "Mese successivo",
+      "filterPlaceholder": "Filtra per nome",
+      "filterAria": "Filtra atleti per nome",
+      "error": "Impossibile caricare questo mese. Riprova.",
+      "empty": {
+        "filtered": "Nessun atleta corrisponde al filtro.",
+        "none": "Nessuna presenza registrata questo mese."
+      },
+      "table": {
+        "athlete": "Atleta",
+        "days": "Giorni"
+      }
+    },
+    "summaryWidget": {
+      "eyebrowPrefix": "Presenze",
+      "errorTitle": "Impossibile verificare",
+      "athletesPerSession": "atleti / sessione",
+      "viewAll": "Vedi tutto →",
+      "empty": "Nessuna presenza registrata questo mese."
+    }
+  },
+  "statuses": {
+    "all": "Tutti gli stati",
+    "active": "Attivo",
+    "suspended": "Sospeso",
+    "inactive": "Inattivo"
+  },
+  "athletes": {
+    "list": {
+      "title": "Atleti",
+      "totalCountOne": "{{count}} totale",
+      "totalCountOther": "{{count}} totali",
+      "addButton": "Aggiungi atleta",
+      "searchPlaceholder": "Cerca per nome",
+      "beltPlaceholder": "Cintura",
+      "statusPlaceholder": "Stato",
+      "paidPlaceholder": "Pagamento",
+      "paidOptions": {
+        "all": "Tutti",
+        "yes": "Pagato",
+        "no": "Non pagato"
+      },
+      "table": {
+        "fullName": "Nome e cognome",
+        "belt": "Cintura",
+        "status": "Stato",
+        "paidPrefix": "Pagato"
+      },
+      "tooltip": {
+        "fullNameSortInitial": "Clicca per ordinare per nome (A → Z)",
+        "fullNameSortFirstAsc": "Ordinato per nome (A → Z). Clicca per cambiare.",
+        "fullNameSortFirstDesc": "Ordinato per nome (Z → A). Clicca per cambiare.",
+        "fullNameSortLastAsc": "Ordinato per cognome (A → Z). Clicca per cambiare.",
+        "fullNameSortLastDesc": "Ordinato per cognome (Z → A). Clicca per cambiare.",
+        "beltSortInitial": "Clicca per ordinare per grado di cintura (bianca → nera)",
+        "beltSortAsc": "Ordinato per cintura (bianca → nera). Clicca per invertire.",
+        "beltSortDesc": "Ordinato per cintura (nera → bianca). Clicca per invertire.",
+        "edit": "Modifica",
+        "delete": "Elimina",
+        "editAria": "Modifica {{name}}",
+        "deleteAria": "Elimina {{name}}",
+        "paid": "Pagato",
+        "unpaid": "Non pagato"
+      },
+      "empty": {
+        "title": "Nessun atleta trovato.",
+        "filteredHint": "Prova a rimuovere i filtri o la ricerca."
+      },
+      "toast": {
+        "markedPaid": "Segnato come pagato",
+        "markedUnpaid": "Segnato come non pagato",
+        "errorSummary": "Errore",
+        "deletedSummary": "Eliminato",
+        "deletedDetail": "{{name}} rimosso.",
+        "loadErrorDetail": "Impossibile caricare gli atleti. Riprova.",
+        "paidErrorMissingFee": "Imposta prima una quota mensile sull'academy per registrare i pagamenti.",
+        "paidErrorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
+        "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova."
+      },
+      "confirm": {
+        "deleteMessage": "Eliminare {{name}}?",
+        "deleteAccept": "Elimina",
+        "markPaidMessage": "Segnare {{name}} come pagato per {{month}}?",
+        "markPaidAccept": "Segna pagato",
+        "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
+        "markUnpaidAccept": "Segna non pagato",
+        "cancel": "Annulla"
+      }
+    }
   }
 }

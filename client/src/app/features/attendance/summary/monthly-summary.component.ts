@@ -14,6 +14,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
+import { TranslatePipe } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
 import { attendanceRate, countScheduledTrainingDays } from '../../../shared/utils/attendance-rate';
@@ -55,7 +56,7 @@ function compareYearMonth(a: YearMonth, b: YearMonth): number {
 @Component({
   selector: 'app-monthly-summary',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ButtonModule, InputTextModule, SkeletonModule, TableModule],
+  imports: [FormsModule, ButtonModule, InputTextModule, SkeletonModule, TableModule, TranslatePipe],
   templateUrl: './monthly-summary.component.html',
   styleUrl: './monthly-summary.component.scss',
 })

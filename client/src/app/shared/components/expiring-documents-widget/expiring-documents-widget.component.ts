@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { DocumentService, ExpiringDocument } from '../../../core/services/document.service';
 
@@ -32,7 +33,7 @@ import { DocumentService, ExpiringDocument } from '../../../core/services/docume
 @Component({
   selector: 'app-expiring-documents-widget',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, SkeletonModule],
+  imports: [RouterLink, SkeletonModule, TranslatePipe],
   templateUrl: './expiring-documents-widget.component.html',
   styleUrl: './expiring-documents-widget.component.scss',
 })

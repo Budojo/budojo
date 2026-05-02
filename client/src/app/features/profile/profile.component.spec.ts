@@ -5,6 +5,7 @@ import { Subject, of, throwError } from 'rxjs';
 import { ProfileComponent } from './profile.component';
 import { AuthService, User } from '../../core/services/auth.service';
 import { MessageService } from 'primeng/api';
+import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 const FAKE_USER: User = {
   id: 1,
@@ -36,6 +37,7 @@ function setup(authOverrides: Partial<AuthService> = {}) {
           snapshot: { queryParamMap: convertToParamMap({}) },
         },
       },
+      ...provideI18nTesting(),
     ],
   });
   const fixture = TestBed.createComponent(ProfileComponent);

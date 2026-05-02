@@ -14,7 +14,7 @@
           (click)="message.data.undo()"
           data-cy="attendance-undo"
         >
-          Undo
+          {{ 'attendance.daily.undo' | translate }}
         </button>
       }
     </div>
@@ -24,8 +24,8 @@
 <section class="attendance" data-cy="attendance-page">
   <header class="attendance__header">
     <div class="attendance__heading">
-      <p class="attendance__eyebrow">Attendance</p>
-      <h1 class="attendance__title">Today's check-in</h1>
+      <p class="attendance__eyebrow">{{ 'attendance.daily.eyebrow' | translate }}</p>
+      <h1 class="attendance__title">{{ 'attendance.daily.title' | translate }}</h1>
     </div>
 
     <p-datepicker
@@ -54,7 +54,7 @@
       <input
         pInputText
         type="text"
-        placeholder="Search by name"
+        [placeholder]="'attendance.daily.searchPlaceholder' | translate"
         [ngModel]="searchTerm()"
         (ngModelChange)="onSearchInput($event)"
         autocomplete="off"
@@ -62,12 +62,12 @@
       />
     </p-iconfield>
     <p-select
-      [options]="beltOptions"
+      [options]="beltOptions()"
       [ngModel]="selectedBelt()"
       (ngModelChange)="onBeltChange($event)"
       optionLabel="label"
       optionValue="value"
-      placeholder="Belt"
+      [placeholder]="'attendance.daily.beltPlaceholder' | translate"
       styleClass="attendance__filter-select"
       data-cy="attendance-belt-filter"
     />
@@ -88,12 +88,15 @@
       <ng-template pTemplate="header">
         <tr>
           <th pSortableColumn="last_name" data-cy="attendance-th-name">
-            Full name <p-sortIcon field="last_name" />
+            {{ 'attendance.daily.table.fullName' | translate }} <p-sortIcon field="last_name" />
           </th>
           <th pSortableColumn="belt" data-cy="attendance-th-belt">
-            Belt <p-sortIcon field="belt" />
+            {{ 'attendance.daily.table.belt' | translate }} <p-sortIcon field="belt" />
           </th>
-          <th class="attendance-cell-indicator" aria-label="Present"></th>
+          <th
+            class="attendance-cell-indicator"
+            [attr.aria-label]="'attendance.daily.table.presentAria' | translate"
+          ></th>
         </tr>
       </ng-template>
 
@@ -144,9 +147,9 @@
               <div class="attendance__empty">
                 <i class="pi pi-users" aria-hidden="true"></i>
                 @if (searchTerm() || selectedBelt()) {
-                  <p>No active athletes match the current filters.</p>
+                  <p>{{ 'attendance.daily.empty.filtered' | translate }}</p>
                 } @else {
-                  <p>No active athletes yet — add one from the Athletes page.</p>
+                  <p>{{ 'attendance.daily.empty.noAthletes' | translate }}</p>
                 }
               </div>
             }
@@ -158,8 +161,10 @@
 
   @if (!loading() && athletes().length > 0 && totalActiveAthletes() > athletes().length) {
     <p class="attendance__pagination-hint">
-      Showing {{ athletes().length }} of {{ totalActiveAthletes() }} active athletes. Pagination is
-      on the M4.2.5 follow-up.
+      {{
+        'attendance.daily.paginationHint'
+          | translate: { shown: athletes().length, total: totalActiveAthletes() }
+      }}
     </p>
   }
 </section>
