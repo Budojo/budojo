@@ -425,5 +425,74 @@
       "errorValidation": "Validation failed.",
       "errorGeneric": "Something went wrong. Please try again."
     }
+  },
+  "belts": {
+    "all": "All belts",
+    "grey": "Grey (kids)",
+    "yellow": "Yellow (kids)",
+    "orange": "Orange (kids)",
+    "green": "Green (kids)",
+    "white": "White",
+    "blue": "Blue",
+    "purple": "Purple",
+    "brown": "Brown",
+    "black": "Black",
+    "redAndBlack": "Red & black (7°)",
+    "redAndWhite": "Red & white (8°)",
+    "red": "Red (9°/10°)"
+  },
+  "attendance": {
+    "daily": {
+      "eyebrow": "Attendance",
+      "title": "Today's check-in",
+      "searchPlaceholder": "Search by name",
+      "beltPlaceholder": "Belt",
+      "table": {
+        "fullName": "Full name",
+        "belt": "Belt",
+        "presentAria": "Present"
+      },
+      "empty": {
+        "filtered": "No active athletes match the current filters.",
+        "noAthletes": "No active athletes yet — add one from the Athletes page."
+      },
+      "paginationHint": "Showing {{shown}} of {{total}} active athletes. Pagination is on the M4.2.5 follow-up.",
+      "undo": "Undo",
+      "toast": {
+        "loadAthletesError": "Could not load the athletes list.",
+        "loadAttendanceError": "Could not load today's attendance.",
+        "markedPresent": "{{name}} marked present.",
+        "unmarked": "{{name}} un-marked.",
+        "markError": "Couldn't mark {{name}} present. Try again.",
+        "unmarkError": "Couldn't un-mark {{name}}. Try again."
+      }
+    },
+    "summary": {
+      "eyebrow": "Attendance summary",
+      "daysOne": "{{count}} training day",
+      "daysOther": "{{count}} training days",
+      "athletesOne": "{{count}} athlete",
+      "athletesOther": "{{count}} athletes",
+      "prevAria": "Previous month",
+      "nextAria": "Next month",
+      "filterPlaceholder": "Filter by name",
+      "filterAria": "Filter athletes by name",
+      "error": "Couldn't load this month. Please try again.",
+      "empty": {
+        "filtered": "No athletes match your filter.",
+        "none": "No attendance recorded this month yet."
+      },
+      "table": {
+        "athlete": "Athlete",
+        "days": "Days"
+      }
+    },
+    "summaryWidget": {
+      "eyebrowPrefix": "Attendance",
+      "errorTitle": "Couldn't check",
+      "athletesPerSession": "athletes / session",
+      "viewAll": "View all →",
+      "empty": "No attendance recorded yet this month."
+    }
   }
 }
