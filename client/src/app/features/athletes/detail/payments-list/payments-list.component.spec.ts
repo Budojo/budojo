@@ -5,6 +5,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import type { Mock } from 'vitest';
+import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { AthleteService } from '../../../../core/services/athlete.service';
 import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
@@ -59,6 +60,7 @@ function setup(opts: { fee?: number | null; payments?: AthletePayment[] } = {}) 
           },
         },
       },
+      ...provideI18nTesting(),
     ],
   });
 

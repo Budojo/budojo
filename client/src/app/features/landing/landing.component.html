@@ -5,11 +5,18 @@
        arc happens in the page body, not in the nav.
        ============================================================ -->
   <header class="landing__nav">
-    <a class="landing__brand" routerLink="/" aria-label="Budojo home">
+    <a
+      class="landing__brand"
+      routerLink="/"
+      [attr.aria-label]="'landing.nav.brandAriaLabel' | translate"
+    >
       <app-brand-glyph />
       <span class="landing__brand-name">Budojo</span>
     </a>
-    <nav class="landing__nav-actions" aria-label="Primary">
+    <nav
+      class="landing__nav-actions"
+      [attr.aria-label]="'landing.nav.primaryAriaLabel' | translate"
+    >
       <button
         type="button"
         class="landing__lang-toggle"
@@ -94,14 +101,14 @@
       {{ 'landing.features.heading' | translate }}
     </h2>
     <div class="landing__features-grid">
-      @for (feature of features; track feature.key) {
+      @for (feature of features; track feature.titleKey) {
         <article class="landing__feature-card">
           <i [class]="'landing__feature-icon pi ' + feature.iconClass" aria-hidden="true"></i>
           <h3 class="landing__feature-title">
-            {{ 'landing.features.' + feature.key + '.title' | translate }}
+            {{ feature.titleKey | translate }}
           </h3>
           <p class="landing__feature-body">
-            {{ 'landing.features.' + feature.key + '.body' | translate }}
+            {{ feature.bodyKey | translate }}
           </p>
         </article>
       }
@@ -150,15 +157,15 @@
       {{ 'landing.how.heading' | translate }}
     </h2>
     <ol class="landing__how-steps">
-      @for (step of steps; track step.key) {
+      @for (step of steps; track step.titleKey) {
         <li class="landing__how-step">
           <span class="landing__how-step-number">{{ step.number }}</span>
           <div class="landing__how-step-text">
             <h3 class="landing__how-step-title">
-              {{ 'landing.how.' + step.key + '.title' | translate }}
+              {{ step.titleKey | translate }}
             </h3>
             <p class="landing__how-step-body">
-              {{ 'landing.how.' + step.key + '.body' | translate }}
+              {{ step.bodyKey | translate }}
             </p>
           </div>
         </li>

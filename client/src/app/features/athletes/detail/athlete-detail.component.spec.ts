@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { Subject, of } from 'rxjs';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthleteDetailComponent } from './athlete-detail.component';
 import { Athlete } from '../../../core/services/athlete.service';
 
@@ -62,6 +63,7 @@ function setupTestBed(
           snapshot: { paramMap },
         },
       },
+      ...provideI18nTesting(),
     ],
   });
   return { http: TestBed.inject(HttpTestingController), routerEvents };

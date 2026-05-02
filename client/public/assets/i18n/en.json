@@ -72,7 +72,13 @@
       "messageCanResend": "The link may have expired or been tampered with. Request a fresh one and we'll send you a new email.",
       "messageCannotResend": "The link may have expired or been tampered with. Sign in to your account, then request a fresh verification email from the profile page.",
       "resendCta": "Send a new link",
-      "signinCta": "Sign in"
+      "signinCta": "Sign in",
+      "toast": {
+        "throttledSummary": "Try again in a moment",
+        "throttledDetail": "For security, you can only request a verification email once per minute.",
+        "errorSummary": "Couldn't send email",
+        "errorDetail": "Please try again — if it persists, contact support."
+      }
     }
   },
   "setup": {
@@ -92,7 +98,8 @@
       "eyebrow": "Legal",
       "languageToggleEn": "English",
       "languageToggleIt": "Italiano"
-    }
+    },
+    "brandAriaLabel": "Budojo home"
   },
   "whatsNew": {
     "brandAriaLabel": "Budojo dashboard home",
@@ -138,7 +145,9 @@
     "nav": {
       "login": "Log in",
       "signup": "Start free",
-      "switchLanguage": "Switch language"
+      "switchLanguage": "Switch language",
+      "brandAriaLabel": "Budojo home",
+      "primaryAriaLabel": "Primary"
     },
     "hero": {
       "headline": "Run your academy from your phone, not from a spreadsheet.",
@@ -551,7 +560,9 @@
         "loadErrorDetail": "Could not load athletes. Please try again.",
         "paidErrorMissingFee": "Set a monthly fee on the academy first to record payments.",
         "paidErrorGeneric": "Couldn't update the payment. Please try again.",
-        "deleteErrorDetail": "Could not delete athlete. Please try again."
+        "deleteErrorDetail": "Could not delete athlete. Please try again.",
+        "markedPaidDetail": "{{name}} — {{month}}/{{year}}",
+        "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}"
       },
       "confirm": {
         "deleteMessage": "Delete {{name}}?",
@@ -562,6 +573,79 @@
         "markUnpaidAccept": "Mark unpaid",
         "cancel": "Cancel"
       }
+    },
+    "detail": {
+      "contactLinksAriaLabel": "Athlete contact links",
+      "payments": {
+        "fallbackName": "this athlete",
+        "confirm": {
+          "markPaidMessage": "Mark {{name}} paid for {{month}} {{year}}?",
+          "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?"
+        },
+        "toast": {
+          "markedPaidSummary": "Marked paid",
+          "markedUnpaidSummary": "Marked unpaid",
+          "markedDetail": "{{month}} {{year}}",
+          "errorSummary": "Error",
+          "errorMissingFee": "Set a monthly fee on the academy first to record payments.",
+          "errorGeneric": "Couldn't update the payment. Please try again.",
+          "loadErrorDetail": "Couldn't load payments."
+        }
+      },
+      "documents": {
+        "confirm": {
+          "deleteMessage": "Delete {{name}}? The file will be removed from disk.",
+          "deleteAccept": "Delete",
+          "cancel": "Cancel"
+        },
+        "toast": {
+          "uploadedSummary": "Document uploaded",
+          "downloadErrorSummary": "Download failed",
+          "downloadErrorDetail": "Could not download this document. Please try again.",
+          "loadErrorSummary": "Error",
+          "loadErrorDetail": "Could not load documents. Please try again.",
+          "deletedSummary": "Deleted",
+          "deletedDetail": "{{name}} removed.",
+          "deleteErrorSummary": "Delete failed",
+          "deleteErrorDetail": "Could not delete this document. Please try again."
+        }
+      }
+    }
+  },
+  "month": {
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
+  },
+  "shared": {
+    "paidBadge": {
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "ariaMark": "Mark paid",
+      "ariaUnmark": "Mark unpaid"
+    },
+    "beltBadge": {
+      "stripeOne": "{{count}} stripe",
+      "stripeMany": "{{count}} stripes"
+    },
+    "unpaidWidget": {
+      "eyebrow": "Unpaid",
+      "error": "Couldn't check",
+      "allPaid": "Everyone paid",
+      "allPaidSubtitle": "— nice month",
+      "countOne": "athlete still owes",
+      "countMany": "athletes still owe",
+      "viewAll": "View all {{count}} →",
+      "viewList": "View on the athletes list →"
     }
   }
 }

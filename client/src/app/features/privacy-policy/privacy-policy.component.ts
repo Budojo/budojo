@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 
@@ -35,7 +36,7 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
 @Component({
   selector: 'app-privacy-policy',
   standalone: true,
-  imports: [ButtonModule, BrandGlyphComponent, RouterLink],
+  imports: [TranslatePipe, ButtonModule, BrandGlyphComponent, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './privacy-policy.component.html',
   styleUrl: './privacy-policy.component.scss',

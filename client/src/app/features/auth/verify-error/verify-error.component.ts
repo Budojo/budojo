@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
 
 /**
@@ -25,6 +25,7 @@ export class VerifyErrorComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(MessageService);
+  private readonly translate = inject(TranslateService);
 
   protected readonly canResend = !!this.authService.getToken();
   protected readonly sending = signal(false);
@@ -43,8 +44,8 @@ export class VerifyErrorComponent {
         if (status === 429) {
           this.messageService.add({
             severity: 'warn',
-            summary: 'Try again in a moment',
-            detail: 'For security, you can only request a verification email once per minute.',
+            summary: this.translate.instant('auth.verifyError.toast.throttledSummary'),
+            detail: this.translate.instant('auth.verifyError.toast.throttledDetail'),
           });
           return;
         }
@@ -56,8 +57,8 @@ export class VerifyErrorComponent {
         }
         this.messageService.add({
           severity: 'error',
-          summary: 'Couldn’t send email',
-          detail: 'Please try again — if it persists, contact support.',
+          summary: this.translate.instant('auth.verifyError.toast.errorSummary'),
+          detail: this.translate.instant('auth.verifyError.toast.errorDetail'),
         });
       },
     });

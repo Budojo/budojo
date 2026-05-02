@@ -39,7 +39,7 @@
       </ng-template>
       <ng-template #body let-row>
         <tr [attr.data-cy]="'payment-row-' + row.month">
-          <td>{{ row.label }}</td>
+          <td>{{ row.labelKey | translate }}</td>
           <td>
             @if (row.payment) {
               <p-tag value="Paid" severity="success" [rounded]="true" />
