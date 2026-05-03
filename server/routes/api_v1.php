@@ -119,7 +119,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Grouped under /stats so T3 (payments) and T4 (age bands) can extend
     // this block without touching other route sections.
     Route::prefix('stats')->group(function (): void {
-        Route::get('attendance/monthly', [StatsController::class, 'attendanceMonthly']);
+        Route::get('attendance/daily', [StatsController::class, 'attendanceDaily']);
         Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
         Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
     });
