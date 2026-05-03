@@ -120,5 +120,6 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // this block without touching other route sections.
     Route::prefix('stats')->group(function (): void {
         Route::get('attendance/monthly', [StatsController::class, 'attendanceMonthly']);
+        Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
     });
 });
