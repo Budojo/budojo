@@ -1,1 +1,43 @@
-<p data-cy="stats-athletes-stub">{{ 'stats.tabs.athletes' | translate }}</p>
+<section class="stats-athletes" data-cy="stats-athletes">
+  <header class="stats-athletes__header">
+    <h2 class="stats-athletes__title">{{ 'stats.athletes.ageBandsTitle' | translate }}</h2>
+    <p class="stats-athletes__hint">{{ 'stats.athletes.ageBandsHint' | translate }}</p>
+  </header>
+
+  @if (errored()) {
+    <p class="stats-athletes__error" data-cy="stats-athletes-error">
+      {{ 'stats.athletes.errored' | translate }}
+    </p>
+  } @else if (loading()) {
+    <p-skeleton
+      height="20rem"
+      data-cy="stats-athletes-loading"
+      [attr.aria-label]="'stats.athletes.loading' | translate"
+    />
+  } @else if (isEmpty()) {
+    <p class="stats-athletes__empty" data-cy="stats-athletes-empty">
+      {{ 'stats.athletes.empty' | translate }}
+    </p>
+  } @else {
+    <div class="stats-athletes__toolbar">
+      <p-selectbutton
+        [options]="scopeOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="scope()"
+        (ngModelChange)="scope.set($event)"
+        data-cy="stats-athletes-scope"
+      />
+    </div>
+
+    <div class="stats-athletes__chart" data-cy="stats-athletes-chart">
+      <p-chart type="bar" [data]="chartData()" [options]="chartOptions" />
+    </div>
+
+    @if (payload().missing_dob > 0) {
+      <p class="stats-athletes__missing" data-cy="stats-athletes-missing">
+        {{ 'stats.athletes.missingDob' | translate: { count: payload().missing_dob } }}
+      </p>
+    }
+  }
+</section>

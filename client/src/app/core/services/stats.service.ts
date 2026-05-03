@@ -14,6 +14,35 @@ export interface MonthlyPaymentsBucket {
   readonly amount_cents: number;
 }
 
+export type AgeBandCode =
+  | 'mighty_mite'
+  | 'pee_wee'
+  | 'junior'
+  | 'teen'
+  | 'juvenile'
+  | 'adult'
+  | 'master_1'
+  | 'master_2'
+  | 'master_3'
+  | 'master_4'
+  | 'master_5'
+  | 'master_6'
+  | 'master_7';
+
+export interface AgeBand {
+  readonly code: AgeBandCode;
+  readonly category: 'kids' | 'adults';
+  readonly min: number;
+  readonly max: number | null;
+  readonly count: number;
+}
+
+export interface AgeBandsPayload {
+  readonly bands: readonly AgeBand[];
+  readonly total: number;
+  readonly missing_dob: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StatsService {
   private readonly http = inject(HttpClient);
@@ -31,6 +60,12 @@ export class StatsService {
       .get<{
         data: MonthlyPaymentsBucket[];
       }>(`${environment.apiBase}/api/v1/stats/payments/monthly?months=${months}`)
+      .pipe(map((r) => r.data));
+  }
+
+  ageBands(): Observable<AgeBandsPayload> {
+    return this.http
+      .get<{ data: AgeBandsPayload }>(`${environment.apiBase}/api/v1/stats/athletes/age-bands`)
       .pipe(map((r) => r.data));
   }
 }

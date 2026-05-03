@@ -46,4 +46,25 @@ describe('StatsService', () => {
     service.paymentsMonthly(6).subscribe();
     http.expectOne('/api/v1/stats/payments/monthly?months=6').flush({ data: [] });
   });
+
+  it('GETs /api/v1/stats/athletes/age-bands and unwraps the envelope', () => {
+    let received: unknown;
+    service.ageBands().subscribe((r) => (received = r));
+
+    const req = http.expectOne('/api/v1/stats/athletes/age-bands');
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      data: {
+        bands: [{ code: 'adult', category: 'adults', min: 18, max: null, count: 10 }],
+        total: 10,
+        missing_dob: 2,
+      },
+    });
+
+    expect(received).toEqual({
+      bands: [{ code: 'adult', category: 'adults', min: 18, max: null, count: 10 }],
+      total: 10,
+      missing_dob: 2,
+    });
+  });
 });

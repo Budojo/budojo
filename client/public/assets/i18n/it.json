@@ -873,6 +873,34 @@
       "loading": "Caricamento incassi…",
       "errored": "Impossibile caricare il trend.",
       "empty": "Nessun pagamento registrato negli ultimi 12 mesi."
+    },
+    "athletes": {
+      "ageBandsTitle": "Atleti per divisione IBJJF",
+      "ageBandsHint": "Tutti gli atleti con data di nascita, raggruppati per età odierna",
+      "loading": "Caricamento distribuzione…",
+      "errored": "Impossibile caricare la distribuzione.",
+      "empty": "Nessun atleta con data di nascita.",
+      "missingDob": "{{count}} atleti senza data di nascita",
+      "scope": {
+        "kids": "Kids",
+        "adults": "Adulti",
+        "all": "Tutti"
+      },
+      "bands": {
+        "mighty_mite": "Mighty Mite",
+        "pee_wee": "Pee Wee",
+        "junior": "Junior",
+        "teen": "Teen",
+        "juvenile": "Juvenile",
+        "adult": "Adult",
+        "master_1": "Master 1",
+        "master_2": "Master 2",
+        "master_3": "Master 3",
+        "master_4": "Master 4",
+        "master_5": "Master 5",
+        "master_6": "Master 6",
+        "master_7": "Master 7"
+      }
     }
   }
 }
