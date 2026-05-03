@@ -48,9 +48,12 @@ class DemoAcademyPaymentSeeder extends Seeder
         }
 
         // Fresh start: drop existing payments for this academy's athletes.
+        // `withTrashed()` so the cleanup also targets payments belonging to
+        // soft-deleted athletes — the SoftDeletes global scope on Athlete
+        // would otherwise leave orphaned payment rows behind on a re-seed.
         AthletePayment::whereIn(
             'athlete_id',
-            Athlete::where('academy_id', $academy->id)->pluck('id'),
+            Athlete::withTrashed()->where('academy_id', $academy->id)->pluck('id'),
         )->delete();
 
         $today = CarbonImmutable::now();
@@ -89,14 +92,23 @@ class DemoAcademyPaymentSeeder extends Seeder
             }
 
             foreach ($candidates as $bucket) {
+                // `paid_at` is the wall-clock recording time. For seeded
+                // historical payments we backdate it to the END of the
+                // business month they cover — closer to "this fee was
+                // recorded around then" than collapsing every row onto
+                // today, which would skew any future cash-flow analytics
+                // run on the seed.
+                $paidAt = CarbonImmutable::create($bucket['year'], $bucket['month'])
+                    ->endOfMonth();
+
                 $rows[] = [
                     'athlete_id' => $athlete->id,
                     'year' => $bucket['year'],
                     'month' => $bucket['month'],
                     'amount_cents' => $academy->monthly_fee_cents,
-                    'paid_at' => $today,
-                    'created_at' => $today,
-                    'updated_at' => $today,
+                    'paid_at' => $paidAt,
+                    'created_at' => $paidAt,
+                    'updated_at' => $paidAt,
                 ];
             }
         }
