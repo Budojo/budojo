@@ -54,6 +54,30 @@
     margin-top: 0.25rem;
   }
 
+  // Knob wrapper — relative-positioned so the custom centre label can
+  // absolute-overlay over the SVG. We feed the knob's `[ngModel]`
+  // a clamped value (visual arc stays within 100) and render the
+  // literal `ratePercent()` here, so off-schedule values (>100%)
+  // still appear in the centre — Copilot caught this on PR #367.
+  &__rate-knob {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    .attendance-history__rate-knob-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none; // let the knob own hit-testing
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--p-text-color);
+    }
+  }
+
   &__rate-detail {
     color: var(--p-text-muted-color);
     font-size: 0.875rem;

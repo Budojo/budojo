@@ -14,20 +14,33 @@
           glance (Norman feedback: same value, denser visual).
 
           The knob is `[readonly]="true"` so it can't be dragged; it's a
-          display only. We pass `ariaValueNow()` (clamped to [0,100])
-          rather than `ratePercent()` directly because the ARIA contract
-          on `aria-valuemax="100"` rejects out-of-range values — mirrors
-          the previous `<div role="progressbar">`.
+          display only. Two-source pattern (Copilot review on this PR):
+            - `[ngModel]="ariaValueNow()"` (clamped to [0,100]) drives
+              the visual arc fill so an off-schedule 150% doesn't try
+              to render past the full circle.
+            - `[showValue]="false"` hides PrimeNG's built-in centre
+              label, and we render our own overlay below from
+              `ratePercent()` directly — that way the literal value
+              (incl. > 100%) stays on screen, only the arc clamps.
         -->
         <div class="attendance-history__rate" data-cy="attendance-counter">
-          <p-knob
-            [ngModel]="ariaValueNow()"
-            [readonly]="true"
-            [size]="100"
-            [strokeWidth]="10"
-            [valueTemplate]="'{value}%'"
-            data-cy="attendance-rate-knob"
-          />
+          <div class="attendance-history__rate-knob">
+            <p-knob
+              [ngModel]="ariaValueNow()"
+              [readonly]="true"
+              [showValue]="false"
+              [size]="100"
+              [strokeWidth]="10"
+              data-cy="attendance-rate-knob"
+            />
+            <span
+              class="attendance-history__rate-knob-label"
+              data-cy="attendance-rate-pct"
+              aria-hidden="true"
+            >
+              {{ ratePercent() }}%
+            </span>
+          </div>
           <span class="attendance-history__rate-detail" data-cy="attendance-rate-detail">
             {{
               'athletes.detail.attendance.daysFormat'
