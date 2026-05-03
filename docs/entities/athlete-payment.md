@@ -49,6 +49,16 @@ This is the explicit **fact-of-payment** ledger. Marking a month "paid" creates 
 - `athletes` — see [`athlete.md`](./athlete.md)
 - `academies` — see [`academy.md`](./academy.md) (specifically the `monthly_fee_cents` field)
 
+## Stats aggregation — monthly revenue trend
+
+`GET /api/v1/stats/payments/monthly` (defined in the `Stats` group of `routes/api_v1.php`, served by `MonthlyPaymentsStatsAction`) buckets revenue by the **business month** stored on `(year, month)` — the month the fee covers — NOT by `paid_at` (the wall-clock recording time).
+
+The two values are typically equal today because the API does not accept a custom `paid_at`. They can diverge the day a "back-date a payment" feature ships. The chart label "Monthly revenue" always means *revenue **for** this month*, not *revenue **received in** this month*. Consumers building UI on top of this endpoint should respect that semantic.
+
+Because `amount_cents` is snapshotted at insert time (see Business rules above), historical sums returned by the trend endpoint stay stable against future changes to `academies.monthly_fee_cents`.
+
+The endpoint does NOT split by payment status today — the schema currently has no `payment_status` column (only paid rows exist as records). When that schema grows, the response can extend to a stacked split without breaking clients (additive change).
+
 ## Resource-level derivation: `paid_current_month`
 
 `AthleteResource` exposes a derived boolean `paid_current_month` so the SPA roster page can render the "paid" badge without a per-row payments-list call. The list endpoint (`GET /athletes`) eager-loads only the current-month payments slice (`WHERE year = NOW()->year AND month = NOW()->month`) to keep this derivation O(1) per row instead of N+1.
