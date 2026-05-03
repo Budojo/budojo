@@ -857,11 +857,15 @@
       "athletes": "Atleti"
     },
     "attendance": {
-      "monthlyTitle": "Presenze mensili",
-      "monthlyHint": "Ultimi 12 mesi · presenze medie per giornata di allenamento",
-      "loading": "Caricamento presenze…",
-      "errored": "Impossibile caricare il trend.",
-      "empty": "Nessuna presenza negli ultimi 12 mesi."
+      "heatmapTitle": "Mappa presenze",
+      "loading": "Caricamento mappa presenze…",
+      "errored": "Impossibile caricare la mappa presenze.",
+      "empty": "Nessuna presenza nel periodo selezionato.",
+      "heatmap": {
+        "ariaLabel": "Mappa presenze giornaliera",
+        "less": "Meno",
+        "more": "Più"
+      }
     }
   }
 }

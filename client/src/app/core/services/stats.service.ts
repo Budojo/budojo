@@ -3,21 +3,20 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-export interface MonthlyAttendanceBucket {
-  readonly month: string; // 'YYYY-MM'
-  readonly attendance_count: number;
-  readonly training_days: number;
+export interface DailyAttendancePoint {
+  readonly date: string; // 'YYYY-MM-DD'
+  readonly count: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class StatsService {
   private readonly http = inject(HttpClient);
 
-  attendanceMonthly(months = 12): Observable<readonly MonthlyAttendanceBucket[]> {
+  attendanceDaily(months: 3 | 6 | 12 = 3): Observable<readonly DailyAttendancePoint[]> {
     return this.http
       .get<{
-        data: MonthlyAttendanceBucket[];
-      }>(`${environment.apiBase}/api/v1/stats/attendance/monthly?months=${months}`)
+        data: DailyAttendancePoint[];
+      }>(`${environment.apiBase}/api/v1/stats/attendance/daily?months=${months}`)
       .pipe(map((r) => r.data));
   }
 }

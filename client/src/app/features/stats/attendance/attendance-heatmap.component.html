@@ -1,0 +1,52 @@
+<div class="heatmap" data-cy="attendance-heatmap">
+  <svg
+    class="heatmap__svg"
+    [attr.viewBox]="'0 0 ' + (grid().length * 13 + 30) + ' 110'"
+    role="img"
+    [attr.aria-label]="'stats.attendance.heatmap.ariaLabel' | translate"
+  >
+    <!-- Day-of-week labels on the left -->
+    <g class="heatmap__dow-labels">
+      <text x="0" y="32" class="heatmap__dow">Mon</text>
+      <text x="0" y="60" class="heatmap__dow">Wed</text>
+      <text x="0" y="88" class="heatmap__dow">Fri</text>
+    </g>
+
+    <!-- Month labels above the columns -->
+    <g class="heatmap__month-labels" transform="translate(30, 0)">
+      @for (m of monthLabels(); track m.col) {
+        <text [attr.x]="m.col * 13" y="10" class="heatmap__month">{{ m.label }}</text>
+      }
+    </g>
+
+    <!-- Cells -->
+    <g class="heatmap__cells" transform="translate(30, 16)">
+      @for (week of grid(); let colIdx = $index; track colIdx) {
+        @for (cell of week; let rowIdx = $index; track rowIdx) {
+          <rect
+            [attr.x]="colIdx * 13"
+            [attr.y]="rowIdx * 13"
+            width="11"
+            height="11"
+            rx="2"
+            [class]="'heatmap__cell heatmap__cell--bucket-' + cell.bucket"
+            [class.heatmap__cell--out]="!cell.inWindow"
+          >
+            <title>{{ cell.iso }} · {{ cell.count }}</title>
+          </rect>
+        }
+      }
+    </g>
+  </svg>
+
+  <!-- Legend -->
+  <div class="heatmap__legend" aria-hidden="true">
+    <span>{{ 'stats.attendance.heatmap.less' | translate }}</span>
+    <span class="heatmap__legend-cell heatmap__cell--bucket-0"></span>
+    <span class="heatmap__legend-cell heatmap__cell--bucket-1"></span>
+    <span class="heatmap__legend-cell heatmap__cell--bucket-2"></span>
+    <span class="heatmap__legend-cell heatmap__cell--bucket-3"></span>
+    <span class="heatmap__legend-cell heatmap__cell--bucket-4"></span>
+    <span>{{ 'stats.attendance.heatmap.more' | translate }}</span>
+  </div>
+</div>

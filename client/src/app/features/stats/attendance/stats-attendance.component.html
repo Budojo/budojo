@@ -1,7 +1,14 @@
 <section class="stats-attendance" data-cy="stats-attendance">
   <header class="stats-attendance__header">
-    <h2 class="stats-attendance__title">{{ 'stats.attendance.monthlyTitle' | translate }}</h2>
-    <p class="stats-attendance__hint">{{ 'stats.attendance.monthlyHint' | translate }}</p>
+    <h2 class="stats-attendance__title">{{ 'stats.attendance.heatmapTitle' | translate }}</h2>
+    <p-selectbutton
+      [options]="rangeOptions"
+      [ngModel]="range()"
+      (ngModelChange)="range.set($event)"
+      optionLabel="label"
+      optionValue="value"
+      data-cy="stats-attendance-range"
+    />
   </header>
 
   @if (errored()) {
@@ -10,7 +17,7 @@
     </p>
   } @else if (loading()) {
     <p-skeleton
-      height="20rem"
+      height="8rem"
       data-cy="stats-attendance-loading"
       [attr.aria-label]="'stats.attendance.loading' | translate"
     />
@@ -19,13 +26,11 @@
       {{ 'stats.attendance.empty' | translate }}
     </p>
   } @else {
-    <div class="stats-attendance__chart">
-      <p-chart
-        type="bar"
-        [data]="chartData()"
-        [options]="chartOptions"
-        data-cy="stats-attendance-chart"
-      />
-    </div>
+    <app-attendance-heatmap
+      [points]="points()"
+      [windowStart]="windowStart()"
+      [windowEnd]="windowEnd"
+      data-cy="stats-attendance-heatmap"
+    />
   }
 </section>

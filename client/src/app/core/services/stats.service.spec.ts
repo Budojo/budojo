@@ -17,19 +17,19 @@ describe('StatsService', () => {
 
   afterEach(() => http.verify());
 
-  it('GETs /api/v1/stats/attendance/monthly with default months=12', () => {
+  it('GETs /api/v1/stats/attendance/daily with default months=3', () => {
     let received: unknown;
-    service.attendanceMonthly().subscribe((r) => (received = r));
+    service.attendanceDaily().subscribe((r) => (received = r));
 
-    const req = http.expectOne('/api/v1/stats/attendance/monthly?months=12');
+    const req = http.expectOne('/api/v1/stats/attendance/daily?months=3');
     expect(req.request.method).toBe('GET');
-    req.flush({ data: [{ month: '2026-05', attendance_count: 4, training_days: 4 }] });
+    req.flush({ data: [{ date: '2026-05-01', count: 4 }] });
 
-    expect(received).toEqual([{ month: '2026-05', attendance_count: 4, training_days: 4 }]);
+    expect(received).toEqual([{ date: '2026-05-01', count: 4 }]);
   });
 
-  it('honours a custom months argument', () => {
-    service.attendanceMonthly(24).subscribe();
-    http.expectOne('/api/v1/stats/attendance/monthly?months=24').flush({ data: [] });
+  it('honours months=12 (max range)', () => {
+    service.attendanceDaily(12).subscribe();
+    http.expectOne('/api/v1/stats/attendance/daily?months=12').flush({ data: [] });
   });
 });
