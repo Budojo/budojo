@@ -33,7 +33,7 @@ const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const CYPRESS_IMAGE = 'cypress/included:13.17.0';
+const CYPRESS_IMAGE = 'cypress/included:15.14.2';
 const CLIENT_CONTAINER = 'budojo_client';
 
 // Config values passed to Cypress at runtime:
