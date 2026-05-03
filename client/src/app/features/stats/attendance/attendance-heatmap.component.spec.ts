@@ -39,7 +39,7 @@ describe('AttendanceHeatmapComponent', () => {
     expect(rects.length).toBeLessThanOrEqual(98);
   });
 
-  it('applies a month-hued fill to populated cells and the neutral fill to empty cells', () => {
+  it('applies a month-hued fill to populated cells and no inline fill to empty cells', () => {
     // Use local-time dates to avoid UTC-parse timezone drift.
     // May 2026: month index 4 → MONTH_HUES[4] = '#9ccc65'
     const windowStart = new Date(2026, 4, 4); // 2026-05-04 (Mon) local
@@ -55,8 +55,9 @@ describe('AttendanceHeatmapComponent', () => {
     );
     expect(populatedRects.length).toBe(1);
 
-    // All other cells (count=0) should have the neutral empty fill.
-    const emptyRects = Array.from(rects).filter((r) => r.getAttribute('fill') === '#e9ecef');
+    // Empty cells (count=0) have no inline fill attribute — the CSS default
+    // (var(--p-surface-200)) applies instead, enabling dark-mode adaptation.
+    const emptyRects = Array.from(rects).filter((r) => r.getAttribute('fill') === null);
     expect(emptyRects.length).toBe(6);
   });
 

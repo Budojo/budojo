@@ -89,7 +89,9 @@ class AthleteAgeBandsAction
                 continue;
             }
 
-            $age = CarbonImmutable::parse($dob)->diffInYears($today);
+            // $dob is already a Carbon instance (cast via 'date' in the Athlete model).
+            // CarbonImmutable::instance() wraps it without a string round-trip.
+            $age = CarbonImmutable::instance($dob)->diffInYears($today);
             $code = self::bandCodeFor((int) $age);
             if ($code !== null) {
                 $counts[$code]++;

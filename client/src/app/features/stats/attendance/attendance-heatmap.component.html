@@ -9,9 +9,15 @@
   >
     <!-- Day-of-week labels on the left -->
     <g class="heatmap__dow-labels">
-      <text x="0" y="32" class="heatmap__dow">Mon</text>
-      <text x="0" y="60" class="heatmap__dow">Wed</text>
-      <text x="0" y="88" class="heatmap__dow">Fri</text>
+      <text x="0" y="32" class="heatmap__dow">
+        {{ 'stats.attendance.heatmap.dow.mon' | translate }}
+      </text>
+      <text x="0" y="60" class="heatmap__dow">
+        {{ 'stats.attendance.heatmap.dow.wed' | translate }}
+      </text>
+      <text x="0" y="88" class="heatmap__dow">
+        {{ 'stats.attendance.heatmap.dow.fri' | translate }}
+      </text>
     </g>
 
     <!-- Month labels above the columns -->
@@ -45,11 +51,11 @@
   <!-- Legend -->
   <div class="heatmap__legend" aria-hidden="true">
     <span>{{ 'stats.attendance.heatmap.less' | translate }}</span>
-    <span class="heatmap__legend-cell" style="background: #e9ecef"></span>
-    <span class="heatmap__legend-cell" style="background: #5b6cff40"></span>
-    <span class="heatmap__legend-cell" style="background: #5b6cff80"></span>
-    <span class="heatmap__legend-cell" style="background: #5b6cffbf"></span>
-    <span class="heatmap__legend-cell" style="background: #5b6cff"></span>
+    <span class="heatmap__legend-cell heatmap__legend-cell--b0"></span>
+    <span class="heatmap__legend-cell heatmap__legend-cell--b1"></span>
+    <span class="heatmap__legend-cell heatmap__legend-cell--b2"></span>
+    <span class="heatmap__legend-cell heatmap__legend-cell--b3"></span>
+    <span class="heatmap__legend-cell heatmap__legend-cell--b4"></span>
     <span>{{ 'stats.attendance.heatmap.more' | translate }}</span>
   </div>
 </div>

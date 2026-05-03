@@ -21,8 +21,10 @@
   }
 
   &__cell {
+    // Default fill for bucket-0 (empty) cells. Bucket-1..4 cells override this
+    // via the inline [attr.fill] attribute, which wins over CSS in SVG.
+    fill: var(--p-surface-200);
     transition: opacity var(--budojo-motion-fast, 160ms) ease-out;
-    // Fill is set per-cell via [attr.fill] in the template (month-hued palette).
 
     &--out {
       opacity: 0.15;
@@ -42,6 +44,22 @@
       width: 11px;
       height: 11px;
       border-radius: 2px;
+
+      &--b0 {
+        background: var(--p-surface-200);
+      }
+      &--b1 {
+        background: color-mix(in srgb, var(--p-primary-color) 25%, var(--p-surface-200));
+      }
+      &--b2 {
+        background: color-mix(in srgb, var(--p-primary-color) 50%, var(--p-surface-200));
+      }
+      &--b3 {
+        background: color-mix(in srgb, var(--p-primary-color) 75%, var(--p-surface-200));
+      }
+      &--b4 {
+        background: var(--p-primary-color);
+      }
     }
   }
 }

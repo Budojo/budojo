@@ -49,7 +49,12 @@ export class StatsAthletesComponent {
     return s === 'all' ? bands : bands.filter((b) => b.category === s);
   });
 
-  protected readonly isEmpty = computed(() => this.payload().total === 0);
+  // "empty" means no athletes with a usable DOB — missing-dob athletes are
+  // excluded from all bands and would render an all-zero chart.
+  protected readonly isEmpty = computed(() => {
+    const p = this.payload();
+    return p.total - p.missing_dob === 0;
+  });
 
   /**
    * Chart.js data derived from the visible bands.

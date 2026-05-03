@@ -871,7 +871,12 @@
         "less": "Less",
         "more": "More",
         "tooltipCount": "{{count}} attendances on {{date}}",
-        "tooltipEmpty": "No attendance on {{date}}"
+        "tooltipEmpty": "No attendance on {{date}}",
+        "dow": {
+          "mon": "Mon",
+          "wed": "Wed",
+          "fri": "Fri"
+        }
       }
     },
     "payments": {

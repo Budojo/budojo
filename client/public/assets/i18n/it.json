@@ -871,7 +871,12 @@
         "less": "Meno",
         "more": "Più",
         "tooltipCount": "{{count}} presenze il {{date}}",
-        "tooltipEmpty": "Nessuna presenza il {{date}}"
+        "tooltipEmpty": "Nessuna presenza il {{date}}",
+        "dow": {
+          "mon": "Lun",
+          "wed": "Mer",
+          "fri": "Ven"
+        }
       }
     },
     "payments": {
