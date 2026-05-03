@@ -9,27 +9,31 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Aggregates attendance counts per (year, month) for the academy over
- * the trailing N months ending with the current month, INCLUSIVE.
+ * Aggregates attendance counts and distinct training days per (year, month)
+ * for the academy over the trailing N months ending with the current month,
+ * INCLUSIVE.
  *
- * Buckets split by the athlete's CURRENT status (active vs paused) at
- * query time — NOT status-at-attendance-time. This is the conscious
- * tradeoff documented in the spec: "where are these people NOW" is
- * the operationally useful read, and it dodges the join + temporal
- * lookup that status-at-record-time would require.
+ * Returns two numerals per bucket:
+ *  - attendance_count: total non-deleted attendance rows in the month.
+ *  - training_days: COUNT(DISTINCT attended_on) — the number of distinct
+ *    dates where at least one attendance was recorded. This is the honest
+ *    denominator for "average attendance per training day", requiring no
+ *    "scheduled training days" config and no backfill for closed days.
  *
- * The response key "paused" groups all non-active statuses (suspended
- * + inactive) — a binary active/non-active split is sufficient for
- * the bar chart, and the enum does not have a "paused" case.
+ * The frontend computes the average as attendance_count / training_days
+ * (with a ?? 0 guard when training_days === 0). Returning the two
+ * components instead of the pre-computed average lets the same payload
+ * drive both "average per training day" and "raw monthly total" charts
+ * without an additive contract change.
  *
  * Returns the full month sequence even when a month has zero records
- * (frontend draws a continuous line / contiguous bars). SQL groupBy
- * never emits empty buckets, so we backfill in PHP.
+ * (frontend draws contiguous bars). SQL groupBy never emits empty
+ * buckets, so we backfill in PHP.
  */
 class MonthlyAttendanceStatsAction
 {
     /**
-     * @return list<array{month: string, active: int, paused: int}>
+     * @return list<array{month: string, attendance_count: int, training_days: int}>
      */
     public function execute(Academy $academy, int $months): array
     {
@@ -57,28 +61,25 @@ class MonthlyAttendanceStatsAction
                 $start->toDateString(),
                 $now->endOfMonth()->toDateString(),
             ])
-            ->groupBy(DB::raw($yearExpr), DB::raw($monthExpr), 'athletes.status')
+            ->groupBy(DB::raw($yearExpr), DB::raw($monthExpr))
             ->orderBy(DB::raw($yearExpr))
             ->orderBy(DB::raw($monthExpr))
             ->select([
                 DB::raw("{$yearExpr} as year"),
                 DB::raw("{$monthExpr} as month"),
-                'athletes.status as status',
-                DB::raw('COUNT(*) as count'),
+                DB::raw('COUNT(*) as attendance_count'),
+                DB::raw('COUNT(DISTINCT attendance_records.attended_on) as training_days'),
             ])
             ->get();
 
         // Bucket map keyed by 'YYYY-MM' for O(1) backfill.
-        // Non-active statuses (suspended, inactive) map to the "paused"
-        // response key — a binary active/non-active split for the chart.
         $byKey = [];
         foreach ($rows as $row) {
             $key = \sprintf('%04d-%02d', (int) $row->year, (int) $row->month);
-            if (! isset($byKey[$key])) {
-                $byKey[$key] = ['active' => 0, 'paused' => 0];
-            }
-            $bucket = $row->status === 'active' ? 'active' : 'paused';
-            $byKey[$key][$bucket] += (int) $row->count;
+            $byKey[$key] = [
+                'attendance_count' => (int) $row->attendance_count,
+                'training_days' => (int) $row->training_days,
+            ];
         }
 
         // Backfill the full month sequence, oldest → newest.
@@ -88,8 +89,8 @@ class MonthlyAttendanceStatsAction
             $key = $cursor->format('Y-m');
             $out[] = [
                 'month' => $key,
-                'active' => $byKey[$key]['active'] ?? 0,
-                'paused' => $byKey[$key]['paused'] ?? 0,
+                'attendance_count' => $byKey[$key]['attendance_count'] ?? 0,
+                'training_days' => $byKey[$key]['training_days'] ?? 0,
             ];
             $cursor = $cursor->addMonth();
         }

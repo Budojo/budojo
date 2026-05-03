@@ -11,24 +11,23 @@ afterEach(function (): void {
     CarbonImmutable::setTestNow(null);
 });
 
-it('returns 12 monthly attendance buckets split by athlete current status', function (): void {
+it('returns 12 monthly attendance buckets with count and training days', function (): void {
     $user = userWithAcademy();
     $active = Athlete::factory()->for($user->academy)->create(['status' => 'active']);
-    // The response key is "paused" and groups all non-active statuses
-    // (suspended + inactive). Using 'suspended' here exercises that mapping.
     $suspended = Athlete::factory()->for($user->academy)->create(['status' => 'suspended']);
 
     // Lock the test clock to a known month so the 12-month window is deterministic.
     $now = CarbonImmutable::create(2026, 5, 15);
     CarbonImmutable::setTestNow($now);
 
-    // 3 active records in current month, 1 suspended record same month.
+    // 3 active records on 3 distinct dates + 1 suspended record on a 4th distinct date.
+    // Expected: attendance_count = 4, training_days = 4 (4 distinct dates in the month).
     AttendanceRecord::factory()->for($active)->on('2026-05-01')->create();
     AttendanceRecord::factory()->for($active)->on('2026-05-08')->create();
     AttendanceRecord::factory()->for($active)->on('2026-05-15')->create();
     AttendanceRecord::factory()->for($suspended)->on('2026-05-10')->create();
 
-    // 2 active records in 2025-09 (within the 12-month window).
+    // 2 active records in 2025-09 on 2 distinct dates (within the 12-month window).
     AttendanceRecord::factory()->for($active)->on('2025-09-04')->create();
     AttendanceRecord::factory()->for($active)->on('2025-09-18')->create();
 
@@ -42,13 +41,15 @@ it('returns 12 monthly attendance buckets split by athlete current status', func
 
     expect($data)->toHaveCount(12);
     expect($data[11]['month'])->toBe('2026-05');
-    expect($data[11]['active'])->toBe(3);
-    expect($data[11]['paused'])->toBe(1);
+    // Total rows across active + suspended = 4.
+    expect($data[11]['attendance_count'])->toBe(4);
+    // 4 distinct dates: 2026-05-01, 2026-05-08, 2026-05-15, 2026-05-10.
+    expect($data[11]['training_days'])->toBe(4);
 
     $sept = collect($data)->firstWhere('month', '2025-09');
     expect($sept)->not->toBeNull();
-    expect($sept['active'])->toBe(2);
-    expect($sept['paused'])->toBe(0);
+    expect($sept['attendance_count'])->toBe(2);
+    expect($sept['training_days'])->toBe(2);
 
     // Window cutoff: 2025-04 is OLDER than the 12-month window, so the
     // earliest bucket is 2025-06 (May 2026 minus 11 months = June 2025).
@@ -84,7 +85,7 @@ it('isolates academies — academy A cannot see academy B counts', function (): 
     Sanctum::actingAs($userA);
     $response = $this->getJson('/api/v1/stats/attendance/monthly')->assertOk();
 
-    $totals = collect($response->json('data'))->sum(fn (array $row) => $row['active'] + $row['paused']);
+    $totals = collect($response->json('data'))->sum(fn (array $row) => $row['attendance_count']);
     expect($totals)->toBe(0);
 });
 

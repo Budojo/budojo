@@ -1276,12 +1276,14 @@ paths:
   /stats/attendance/monthly:
     get:
       operationId: statsAttendanceMonthly
-      summary: Monthly attendance counts split by athlete status
+      summary: Monthly attendance count and training days for average computation
       description: |
         Returns N consecutive calendar-month buckets ending with the current
-        month (default 12, max 24). Each bucket contains the total attendance
-        row count split by athlete current status: `active` for active athletes,
-        `paused` for all non-active statuses (suspended + inactive).
+        month (default 12, max 24). Each bucket contains the total non-deleted
+        attendance row count and the number of distinct days where at least one
+        attendance was recorded (`training_days`). The frontend computes the
+        average attendance per training day as `attendance_count / training_days`
+        (with a fallback to 0 when `training_days === 0`).
         Buckets with zero records are included so the frontend can render a
         continuous chart without gap-filling.
       tags: [Stats]
@@ -1302,11 +1304,11 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [month, active, paused]
+                      required: [month, attendance_count, training_days]
                       properties:
                         month: { type: string, pattern: '^\d{4}-\d{2}$' }
-                        active: { type: integer, minimum: 0 }
-                        paused: { type: integer, minimum: 0 }
+                        attendance_count: { type: integer, minimum: 0 }
+                        training_days: { type: integer, minimum: 0 }
         '401': { description: Unauthenticated }
         '403': { description: Forbidden — user has no academy. }
         '422': { description: Validation error }
