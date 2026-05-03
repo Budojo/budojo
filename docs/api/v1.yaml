@@ -52,6 +52,11 @@ tags:
       product owner with the user's text, the SPA build version, and
       the request User-Agent. Single endpoint, single recipient
       (hardcoded), throttled to 5 req/min per user.
+  - name: Stats
+    description: |
+      Server-side aggregations for the /dashboard/stats charts.
+      Endpoints return pre-bucketed data so the frontend never N+1s
+      through the athletes or payments tables.
 
 paths:
 
@@ -1267,6 +1272,43 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
+
+  /stats/attendance/monthly:
+    get:
+      operationId: statsAttendanceMonthly
+      summary: Monthly attendance counts split by athlete status
+      description: |
+        Returns N consecutive calendar-month buckets ending with the current
+        month (default 12, max 24). Each bucket contains the total attendance
+        row count split by athlete current status: `active` for active athletes,
+        `paused` for all non-active statuses (suspended + inactive).
+        Buckets with zero records are included so the frontend can render a
+        continuous chart without gap-filling.
+      tags: [Stats]
+      parameters:
+        - in: query
+          name: months
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 24, default: 12 }
+      responses:
+        '200':
+          description: Monthly attendance buckets, oldest to newest
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [month, active, paused]
+                      properties:
+                        month: { type: string, pattern: '^\d{4}-\d{2}$' }
+                        active: { type: integer, minimum: 0 }
+                        paused: { type: integer, minimum: 0 }
+        '401': { description: Unauthenticated }
+        '422': { description: Validation error }
 
 components:
 

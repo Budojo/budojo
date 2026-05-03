@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Stats\StatsController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -113,4 +114,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // in quick succession but stops abuse.
     Route::post('/feedback', [\App\Http\Controllers\Feedback\FeedbackController::class, 'store'])
         ->middleware('throttle:5,1');
+
+    // Stats — server-side aggregations for the /dashboard/stats charts.
+    // Grouped under /stats so T3 (payments) and T4 (age bands) can extend
+    // this block without touching other route sections.
+    Route::prefix('stats')->group(function (): void {
+        Route::get('attendance/monthly', [StatsController::class, 'attendanceMonthly']);
+    });
 });
