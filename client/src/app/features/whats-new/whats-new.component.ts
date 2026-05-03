@@ -59,6 +59,31 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v1.13.0',
+      date: '2026-05-03',
+      headline:
+        'The headline this month: the dashboard now speaks Italian everywhere. v1.12.0 covered the pages you use day-to-day; v1.13.0 finishes the job — every screen, every form field, every tooltip and dropdown reads in Italian when you toggle the language. After this release there is nowhere left in the dashboard where Italian users see English by mistake.',
+      sections: [
+        {
+          heading: '🌍 Italian translation completes the dashboard',
+          bullets: [
+            'Athlete detail tabs. Open any athlete and the four sub-tabs read in Italian end-to-end: Documenti (column headers, "Aggiungi documento", download/elimina tooltips, empty states), Presenze (the eyebrow, the "X / Y giorni" counter, the prev/next-month buttons, the day-cell screen-reader labels), Pagamenti (the "Pagamenti — 2026" title, the no-fee hint, every column header and button, the "Segna pagato" / "Annulla pagato" actions), and the header itself (the back link "Atleti", the joined-on date, the contact-link aria-labels).',
+            'Athlete form, every label. Add or edit an athlete and every visible label reads in Italian: Nome, Cognome, Telefono (with the country-code dropdown showing "+39 Italia / +33 Francia / +44 Regno Unito / …"), Cintura (Bianca / Blu / Viola / Marrone / Nera / Rossa e nera / Rossa e bianca / Rossa), Stato (Attivo / Sospeso / Inattivo), the address fieldset with localised placeholders. The "Aggiungi atleta" / "Modifica atleta" titles and the "Crea atleta" / "Salva modifiche" buttons match the action being performed.',
+            'Validation messages too. Submit a form with empty required fields and the inline errors come back in Italian: "Il nome è obbligatorio", "L\'email non è valida", "Il prefisso è obbligatorio se inserisci un numero", "Il CAP deve essere di 5 cifre". Every guard the form runs has a translated message — no more English errors mixed into Italian forms.',
+            'Sidebar fix. "Academy" in the sidebar was still reading in English even on the IT locale because the translation key was missing. Now reads "Accademia" as it should.',
+            'Reactive language toggle. The dropdowns (belts, statuses, country codes) all update live when you flip the language — no need to refresh the page.',
+          ],
+        },
+        {
+          heading: '🛠 Behind the scenes',
+          bullets: [
+            "Cloudflare deploy reliability. A configuration drift between our internal commit conventions and the release tagging tool meant some urgent fixes weren't producing a tag (silently). Sorted — every commit type the team uses now produces a tag and a release entry on the right cadence.",
+            'Frontend dependency refresh. Angular runtime + tooling moved up to the latest patch level (21.2.11 / 21.2.9) and the test environment jumped a major version (jsdom 28 → 29). No visible behaviour change; foundation for the bigger Cypress + TypeScript bumps still on the roadmap.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v1.12.0',
       date: '2026-05-02',
       headline:
