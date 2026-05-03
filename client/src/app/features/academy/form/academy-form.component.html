@@ -398,7 +398,7 @@
         formControlName="monthly_fee"
         mode="currency"
         currency="EUR"
-        locale="it-IT"
+        [locale]="currentLocale()"
         [min]="0"
         [maxFractionDigits]="2"
         [showButtons]="false"

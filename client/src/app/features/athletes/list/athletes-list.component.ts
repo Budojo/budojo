@@ -42,6 +42,7 @@ import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/exp
 import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
 import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpaid-this-month-widget/unpaid-this-month-widget.component';
 import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
+import { localeFor } from '../../../shared/utils/locale';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -121,9 +122,7 @@ export class AthletesListComponent implements OnInit {
    */
   private readonly _now = new Date();
 
-  private readonly locale = computed<string>(() =>
-    this.languageService.currentLang() === 'it' ? 'it-IT' : 'en-US',
-  );
+  private readonly locale = computed<string>(() => localeFor(this.languageService.currentLang()));
 
   readonly currentMonthShort = computed<string>(() =>
     this._now.toLocaleString(this.locale(), {

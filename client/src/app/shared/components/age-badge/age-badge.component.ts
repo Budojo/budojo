@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { TagModule } from 'primeng/tag';
 import { Tooltip } from 'primeng/tooltip';
+import { LanguageService } from '../../../core/services/language.service';
+import { localeFor } from '../../utils/locale';
 
 /**
  * Compact age chip rendered next to athlete names. Computes age from a
@@ -35,6 +37,8 @@ import { Tooltip } from 'primeng/tooltip';
   styleUrl: './age-badge.component.scss',
 })
 export class AgeBadgeComponent {
+  private readonly languageService = inject(LanguageService);
+
   /** ISO `YYYY-MM-DD`. May be null/empty when the athlete has no DOB on file. */
   readonly dateOfBirth = input<string | null | undefined>(null);
 
@@ -61,7 +65,8 @@ export class AgeBadgeComponent {
     const parsed = parseDob(dob);
     if (!parsed) return '';
     const d = new Date(parsed.year, parsed.month - 1, parsed.day);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const locale = localeFor(this.languageService.currentLang());
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
   });
 }
 

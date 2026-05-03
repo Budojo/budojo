@@ -1,9 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AgeBadgeComponent } from './age-badge.component';
 
 function createWith(dateOfBirth: string | null | undefined) {
-  TestBed.configureTestingModule({ imports: [AgeBadgeComponent] });
+  TestBed.configureTestingModule({
+    imports: [AgeBadgeComponent],
+    providers: [...provideI18nTesting()],
+  });
   const fixture = TestBed.createComponent(AgeBadgeComponent);
   fixture.componentRef.setInput('dateOfBirth', dateOfBirth);
   fixture.detectChanges();

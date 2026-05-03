@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -32,6 +33,8 @@ import {
   ItalianProvinceCode,
   UpdateAcademyPayload,
 } from '../../../core/services/academy.service';
+import { LanguageService } from '../../../core/services/language.service';
+import { localeFor } from '../../../shared/utils/locale';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 import {
   COUNTRY_OPTIONS,
@@ -147,11 +150,21 @@ export class AcademyFormComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
 
   readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
 
   readonly slug = signal<string>('');
+
+  /**
+   * BCP-47 locale tag derived from the active SPA language. Bound to
+   * `<p-inputnumber [locale]>` so the EUR currency formatting flips
+   * separators when the user toggles language ("€ 50.00" in EN,
+   * "€ 50,00" in IT). Computed against the language signal so it
+   * recomputes reactively without a manual subscription.
+   */
+  readonly currentLocale = computed(() => localeFor(this.languageService.currentLang()));
 
   readonly provinceOptions = PROVINCE_OPTIONS;
   readonly countryOptions = COUNTRY_OPTIONS;
