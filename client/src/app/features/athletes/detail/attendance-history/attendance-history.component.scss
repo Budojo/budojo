@@ -34,42 +34,30 @@
     color: var(--p-text-color);
   }
 
+  // Bare-count fallback used when training_days isn't configured (no
+  // ratePercent computable). Sits where the knob would otherwise be.
   &__counter {
     margin: 0;
     font-size: 0.875rem;
     color: var(--p-text-muted-color);
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.25rem;
   }
 
-  &__counter-numbers {
-    color: var(--p-text-color);
-    font-weight: 600;
-  }
-
-  &__counter-pct {
-    color: var(--p-text-muted-color);
-  }
-
-  // Thin progress bar under the counter — quiet signifier of the rate.
-  // 4 px tall, full radius, surface-200 track, primary fill. MD3 motion on
-  // width transitions so a month-flip animates instead of jumping.
-  &__progress {
-    width: 100%;
-    max-width: 18rem;
-    height: 0.25rem;
-    border-radius: var(--p-border-radius-sm);
-    background: var(--p-surface-200, var(--p-content-border-color));
-    overflow: hidden;
+  // Knob + caption pair shown when ratePercent is non-null. The knob
+  // (PrimeNG `<p-knob>`, readonly) replaces the previous "X / Y · 87%"
+  // text + linear progress bar with a glance-readable circular meter.
+  // Caption sits to the right on tablet+ and stacks below on mobile.
+  &__rate {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
     margin-top: 0.25rem;
   }
 
-  &__progress-fill {
-    height: 100%;
-    background: var(--p-primary-color);
-    transition: width var(--budojo-motion-base, 240ms)
-      var(--budojo-motion-decelerate, cubic-bezier(0.2, 0, 0, 1));
+  &__rate-detail {
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+    font-weight: 500;
   }
 
   &__nav {

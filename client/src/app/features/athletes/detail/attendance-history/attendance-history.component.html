@@ -8,30 +8,33 @@
         {{ monthLabelKey() | translate }} {{ visibleYear() }}
       </h2>
       @if (ratePercent() !== null) {
-        <p class="attendance-history__counter" data-cy="attendance-counter">
-          <span class="attendance-history__counter-numbers">
+        <!--
+          Attendance rate readout — replaces the previous "X / Y days · 87%"
+          text + linear progress bar with a `<p-knob>` that reads at a
+          glance (Norman feedback: same value, denser visual).
+
+          The knob is `[readonly]="true"` so it can't be dragged; it's a
+          display only. We pass `ariaValueNow()` (clamped to [0,100])
+          rather than `ratePercent()` directly because the ARIA contract
+          on `aria-valuemax="100"` rejects out-of-range values — mirrors
+          the previous `<div role="progressbar">`.
+        -->
+        <div class="attendance-history__rate" data-cy="attendance-counter">
+          <p-knob
+            [ngModel]="ariaValueNow()"
+            [readonly]="true"
+            [size]="100"
+            [strokeWidth]="10"
+            [valueTemplate]="'{value}%'"
+            data-cy="attendance-rate-knob"
+          />
+          <span class="attendance-history__rate-detail" data-cy="attendance-rate-detail">
             {{
               'athletes.detail.attendance.daysFormat'
                 | translate: { attended: attendedCount(), scheduled: scheduledCount() }
             }}
           </span>
-          <span class="attendance-history__counter-pct" data-cy="attendance-rate-pct">
-            · {{ ratePercent() }}%
-          </span>
-        </p>
-        @if (progressBarWidth(); as w) {
-          <div
-            class="attendance-history__progress"
-            role="progressbar"
-            [attr.aria-valuenow]="ariaValueNow()"
-            [attr.aria-valuetext]="ratePercent() + '%'"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            data-cy="attendance-progress"
-          >
-            <div class="attendance-history__progress-fill" [style.width]="w"></div>
-          </div>
-        }
+        </div>
       } @else {
         <!-- Either training_days is unconfigured (null) OR the visible month
              has zero scheduled sessions yet (future month, or current month
