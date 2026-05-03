@@ -57,10 +57,12 @@ export const appConfig: ApplicationConfig = {
     // the parent `:id`, and the alternative would be `route.parent?.
     // paramMap` reads scattered across each child component.
     // PreloadAllModules: every lazy chunk is fetched in the background AFTER
-    // the app becomes interactive. Eliminates the "blank-page on first nav"
-    // race when a route has chained lazy loads (e.g. parent + child child
-    // route both lazy — Stats has this shape). The preload work is idle-time
-    // only; the initial bundle stays the same.
+    // the initial bundle finishes bootstrapping (Angular schedules the
+    // preload work via the router's preloader, not via requestIdleCallback —
+    // it runs on a microtask after bootstrap completes). Eliminates the
+    // "blank-page on first nav" race when a route has chained lazy loads
+    // (e.g. parent route + child route both lazy — Stats has this shape).
+    // The initial bundle stays the same.
     provideRouter(
       routes,
       withRouterConfig({ paramsInheritanceStrategy: 'always' }),
