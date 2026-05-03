@@ -11,8 +11,8 @@ describe('Stats — attendance trend tab', () => {
       body: {
         data: Array.from({ length: 12 }, (_, i) => ({
           month: `2026-${String(i + 1).padStart(2, '0')}`,
-          active: i * 3,
-          paused: i,
+          attendance_count: (i + 1) * 100,
+          training_days: 10,
         })),
       },
     }).as('attendanceMonthly');

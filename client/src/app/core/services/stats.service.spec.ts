@@ -23,9 +23,9 @@ describe('StatsService', () => {
 
     const req = http.expectOne('/api/v1/stats/attendance/monthly?months=12');
     expect(req.request.method).toBe('GET');
-    req.flush({ data: [{ month: '2026-05', active: 3, paused: 1 }] });
+    req.flush({ data: [{ month: '2026-05', attendance_count: 4, training_days: 4 }] });
 
-    expect(received).toEqual([{ month: '2026-05', active: 3, paused: 1 }]);
+    expect(received).toEqual([{ month: '2026-05', attendance_count: 4, training_days: 4 }]);
   });
 
   it('honours a custom months argument', () => {

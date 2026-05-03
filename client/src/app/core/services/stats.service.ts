@@ -5,8 +5,8 @@ import { environment } from '../../../environments/environment';
 
 export interface MonthlyAttendanceBucket {
   readonly month: string; // 'YYYY-MM'
-  readonly active: number;
-  readonly paused: number;
+  readonly attendance_count: number;
+  readonly training_days: number;
 }
 
 @Injectable({ providedIn: 'root' })
