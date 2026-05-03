@@ -15,7 +15,8 @@
     "whatsNew": "What's new",
     "feedback": "Send feedback",
     "signOut": "Sign out",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "stats": "Stats"
   },
   "auth": {
     "shared": {
@@ -832,6 +833,22 @@
       "countMany": "athletes still owe",
       "viewAll": "View all {{count}} →",
       "viewList": "View on the athletes list →"
+    }
+  },
+  "stats": {
+    "eyebrow": "Insights",
+    "title": "Academy at a glance",
+    "subtitle": "Quick read on your academy — belt distribution and active roster — pulled live from your athletes.",
+    "loadError": "Couldn't load the stats. Please try again.",
+    "empty": "Add your first athlete and the charts will populate here.",
+    "total": "Across {{count}} athletes on file.",
+    "belt": {
+      "title": "Belts",
+      "hint": "Athletes by IBJJF rank, kids → seniors. Hover a slice for the count + share."
+    },
+    "status": {
+      "title": "Active roster",
+      "hint": "Active vs. suspended vs. inactive — the slice you focus on day to day."
     }
   }
 }
