@@ -9,9 +9,25 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AthleteService, Athlete } from '../../../core/services/athlete.service';
+
+const MONTH_KEYS = [
+  'month.january',
+  'month.february',
+  'month.march',
+  'month.april',
+  'month.may',
+  'month.june',
+  'month.july',
+  'month.august',
+  'month.september',
+  'month.october',
+  'month.november',
+  'month.december',
+] as const;
 
 /**
  * Date provider abstraction so vitest can freeze "today" without
@@ -49,7 +65,7 @@ export type NowProvider = () => Date;
 @Component({
   selector: 'app-unpaid-this-month-widget',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, SkeletonModule],
+  imports: [RouterLink, SkeletonModule, TranslatePipe],
   templateUrl: './unpaid-this-month-widget.component.html',
   styleUrl: './unpaid-this-month-widget.component.scss',
 })
@@ -106,18 +122,17 @@ export class UnpaidThisMonthWidgetComponent implements OnInit {
   );
 
   /**
-   * Current month label, e.g. "May 2026". Formatted with `timeZone: 'UTC'`
-   * so it cannot drift from the UTC-based threshold gate (or the UTC-
-   * based server filter) at day/month boundaries.
+   * i18n key for the current month (e.g. `month.may`). Rendered via
+   * `| translate` in the template so it reacts to language toggles
+   * without needing the language signal as a `computed` dependency.
+   * UTC-based to match the threshold gate and the server's filter.
    */
-  protected readonly monthLabel = computed<string>(() => {
-    const today = this.now()();
-    return today.toLocaleDateString('en-GB', {
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
-  });
+  protected readonly monthKey = computed<string>(() => MONTH_KEYS[this.now()().getUTCMonth()]);
+
+  /**
+   * UTC-based year for the month label.
+   */
+  protected readonly year = computed<number>(() => this.now()().getUTCFullYear());
 
   ngOnInit(): void {
     if (!this.visible()) {

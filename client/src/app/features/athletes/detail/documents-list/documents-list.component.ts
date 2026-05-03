@@ -19,12 +19,27 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { Tooltip } from 'primeng/tooltip';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import {
   Document,
   DocumentService,
   DocumentType,
 } from '../../../../core/services/document.service';
+
+/**
+ * Explicit allow-list of `documents.types.*` translation keys per
+ * `client/CLAUDE.md` § i18n: dynamic key construction is banned because
+ * the parity check can't see runtime-built keys and IT translations
+ * drift silently. The compiler enforces the map covers every
+ * `DocumentType` enum case (#354 Copilot review).
+ */
+const DOCUMENT_TYPE_KEYS: Readonly<Record<DocumentType, string>> = {
+  id_card: 'documents.types.id_card',
+  medical_certificate: 'documents.types.medical_certificate',
+  insurance: 'documents.types.insurance',
+  other: 'documents.types.other',
+};
 import { ExpiryStatusBadgeComponent } from '../../../../shared/components/expiry-status-badge/expiry-status-badge.component';
 import { triggerBrowserDownload } from '../../../../shared/utils/download';
 import { UploadDocumentDialogComponent } from '../upload-document-dialog/upload-document-dialog.component';
@@ -36,6 +51,7 @@ const TOGGLE_STORAGE_KEY = 'documents.showCancelled';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    TranslatePipe,
     ButtonModule,
     ConfirmPopup,
     SkeletonModule,
@@ -56,6 +72,7 @@ export class DocumentsListComponent implements OnInit {
   private readonly documentService = inject(DocumentService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly documents = signal<Document[]>([]);
@@ -67,16 +84,9 @@ export class DocumentsListComponent implements OnInit {
   readonly activeCount = computed(() => this.documents().filter((d) => !d.deleted_at).length);
   readonly cancelledCount = computed(() => this.documents().filter((d) => !!d.deleted_at).length);
 
-  private readonly typeLabels: Record<DocumentType, string> = {
-    id_card: 'ID card',
-    medical_certificate: 'Medical certificate',
-    insurance: 'Insurance',
-    other: 'Other',
-  };
-
   /** Presentational helper — used by the template to avoid typing issues on p-table's `let-doc`. */
-  labelFor(doc: Document): string {
-    return this.typeLabels[doc.type];
+  labelKeyFor(doc: Document): string {
+    return DOCUMENT_TYPE_KEYS[doc.type];
   }
 
   ngOnInit(): void {
@@ -110,13 +120,18 @@ export class DocumentsListComponent implements OnInit {
     return doc.deleted_at.slice(0, 10);
   }
 
-  confirmDelete(event: Event, doc: Document): void {
+  confirmDelete(event: MouseEvent, doc: Document): void {
     // Krug "forgiveness for mistakes": destructive action always confirms.
+    // Anchor the popup on the clicked button via `currentTarget` — PrimeNG
+    // renders nested elements inside `<p-button>` so `event.target` could
+    // resolve to an inner span/icon and misplace the popup.
     this.confirmationService.confirm({
-      target: event.target as EventTarget,
-      message: `Delete ${doc.original_name}? The file will be removed from disk.`,
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
+      target: event.currentTarget as EventTarget,
+      message: this.translate.instant('athletes.detail.documents.confirm.deleteMessage', {
+        name: doc.original_name,
+      }),
+      acceptLabel: this.translate.instant('athletes.detail.documents.confirm.deleteAccept'),
+      rejectLabel: this.translate.instant('athletes.detail.documents.confirm.cancel'),
       acceptButtonProps: { severity: 'danger' },
       accept: () => this.delete(doc),
     });
@@ -134,7 +149,7 @@ export class DocumentsListComponent implements OnInit {
     this.documents.update((list) => [doc, ...list]);
     this.messageService.add({
       severity: 'success',
-      summary: 'Document uploaded',
+      summary: this.translate.instant('athletes.detail.documents.toast.uploadedSummary'),
       detail: doc.original_name,
       life: 3000,
     });
@@ -148,8 +163,8 @@ export class DocumentsListComponent implements OnInit {
       error: () => {
         this.messageService.add({
           severity: 'error',
-          summary: 'Download failed',
-          detail: 'Could not download this document. Please try again.',
+          summary: this.translate.instant('athletes.detail.documents.toast.downloadErrorSummary'),
+          detail: this.translate.instant('athletes.detail.documents.toast.downloadErrorDetail'),
           life: 4000,
         });
       },
@@ -170,8 +185,8 @@ export class DocumentsListComponent implements OnInit {
           this.documents.set([]);
           this.messageService.add({
             severity: 'error',
-            summary: 'Error',
-            detail: 'Could not load documents. Please try again.',
+            summary: this.translate.instant('athletes.detail.documents.toast.loadErrorSummary'),
+            detail: this.translate.instant('athletes.detail.documents.toast.loadErrorDetail'),
             life: 4000,
           });
         },
@@ -188,8 +203,10 @@ export class DocumentsListComponent implements OnInit {
       next: () => {
         this.messageService.add({
           severity: 'success',
-          summary: 'Deleted',
-          detail: `${doc.original_name} removed.`,
+          summary: this.translate.instant('athletes.detail.documents.toast.deletedSummary'),
+          detail: this.translate.instant('athletes.detail.documents.toast.deletedDetail', {
+            name: doc.original_name,
+          }),
           life: 3000,
         });
         // If the toggle is on we might want to show the new tombstone — refetch
@@ -201,8 +218,8 @@ export class DocumentsListComponent implements OnInit {
         this.documents.set(previous);
         this.messageService.add({
           severity: 'error',
-          summary: 'Delete failed',
-          detail: 'Could not delete this document. Please try again.',
+          summary: this.translate.instant('athletes.detail.documents.toast.deleteErrorSummary'),
+          detail: this.translate.instant('athletes.detail.documents.toast.deleteErrorDetail'),
           life: 4000,
         });
       },

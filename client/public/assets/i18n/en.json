@@ -72,7 +72,13 @@
       "messageCanResend": "The link may have expired or been tampered with. Request a fresh one and we'll send you a new email.",
       "messageCannotResend": "The link may have expired or been tampered with. Sign in to your account, then request a fresh verification email from the profile page.",
       "resendCta": "Send a new link",
-      "signinCta": "Sign in"
+      "signinCta": "Sign in",
+      "toast": {
+        "throttledSummary": "Try again in a moment",
+        "throttledDetail": "For security, you can only request a verification email once per minute.",
+        "errorSummary": "Couldn't send email",
+        "errorDetail": "Please try again — if it persists, contact support."
+      }
     }
   },
   "setup": {
@@ -92,7 +98,8 @@
       "eyebrow": "Legal",
       "languageToggleEn": "English",
       "languageToggleIt": "Italiano"
-    }
+    },
+    "brandAriaLabel": "Budojo home"
   },
   "whatsNew": {
     "brandAriaLabel": "Budojo dashboard home",
@@ -138,7 +145,9 @@
     "nav": {
       "login": "Log in",
       "signup": "Start free",
-      "switchLanguage": "Switch language"
+      "switchLanguage": "Switch language",
+      "brandAriaLabel": "Budojo home",
+      "primaryAriaLabel": "Primary"
     },
     "hero": {
       "headline": "Run your academy from your phone, not from a spreadsheet.",
@@ -551,7 +560,9 @@
         "loadErrorDetail": "Could not load athletes. Please try again.",
         "paidErrorMissingFee": "Set a monthly fee on the academy first to record payments.",
         "paidErrorGeneric": "Couldn't update the payment. Please try again.",
-        "deleteErrorDetail": "Could not delete athlete. Please try again."
+        "deleteErrorDetail": "Could not delete athlete. Please try again.",
+        "markedPaidDetail": "{{name}} — {{month}}/{{year}}",
+        "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}"
       },
       "confirm": {
         "deleteMessage": "Delete {{name}}?",
@@ -562,6 +573,265 @@
         "markUnpaidAccept": "Mark unpaid",
         "cancel": "Cancel"
       }
+    },
+    "detail": {
+      "contactLinksAriaLabel": "Athlete contact links",
+      "payments": {
+        "fallbackName": "this athlete",
+        "confirm": {
+          "markPaidMessage": "Mark {{name}} paid for {{month}} {{year}}?",
+          "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?"
+        },
+        "toast": {
+          "markedPaidSummary": "Marked paid",
+          "markedUnpaidSummary": "Marked unpaid",
+          "markedDetail": "{{month}} {{year}}",
+          "errorSummary": "Error",
+          "errorMissingFee": "Set a monthly fee on the academy first to record payments.",
+          "errorGeneric": "Couldn't update the payment. Please try again.",
+          "loadErrorDetail": "Couldn't load payments."
+        },
+        "title": "Payments — {{year}}",
+        "noFeeHint": "Set a monthly fee on the academy to start recording payments. Until then this page stays read-only.",
+        "columns": {
+          "month": "Month",
+          "status": "Status",
+          "amount": "Amount",
+          "paidOn": "Paid on",
+          "actions": "Actions"
+        },
+        "button": {
+          "markPaid": "Mark paid",
+          "unmarkPaid": "Unmark paid"
+        }
+      },
+      "documents": {
+        "confirm": {
+          "deleteMessage": "Delete {{name}}? The file will be removed from disk.",
+          "deleteAccept": "Delete",
+          "cancel": "Cancel"
+        },
+        "toast": {
+          "uploadedSummary": "Document uploaded",
+          "downloadErrorSummary": "Download failed",
+          "downloadErrorDetail": "Could not download this document. Please try again.",
+          "loadErrorSummary": "Error",
+          "loadErrorDetail": "Could not load documents. Please try again.",
+          "deletedSummary": "Deleted",
+          "deletedDetail": "{{name}} removed.",
+          "deleteErrorSummary": "Delete failed",
+          "deleteErrorDetail": "Could not delete this document. Please try again."
+        },
+        "heading": "Documents",
+        "activeCount": "{{count}} active",
+        "cancelledCount": "{{count}} cancelled",
+        "toggle": {
+          "aria": "Show cancelled documents",
+          "label": "Show cancelled"
+        },
+        "button": {
+          "add": "Add document",
+          "downloadAria": "Download {{name}}",
+          "deleteAria": "Delete {{name}}"
+        },
+        "tooltip": {
+          "download": "Download",
+          "delete": "Delete"
+        },
+        "columns": {
+          "type": "Type",
+          "file": "File",
+          "issued": "Issued",
+          "expires": "Expires",
+          "status": "Status"
+        },
+        "status": {
+          "cancelledOn": "Cancelled on {{date}}"
+        },
+        "empty": {
+          "withCancelled": "No documents yet — active or cancelled.",
+          "default": "No documents yet.",
+          "hint": "Use <strong>Add document</strong> above to upload the first one."
+        }
+      },
+      "backToList": "Athletes",
+      "loading": "Loading athlete…",
+      "loadError": "Could not load this athlete.",
+      "joinedLabel": "Joined {{date}}",
+      "tabs": {
+        "documents": "Documents",
+        "attendance": "Attendance",
+        "payments": "Payments",
+        "edit": "Edit"
+      },
+      "contactLinks": {
+        "website": "Website",
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      },
+      "attendance": {
+        "eyebrow": "Attendance",
+        "daysFormat": "{{attended}} / {{scheduled}} days",
+        "daysThisMonthOne": "{{count}} day this month",
+        "daysThisMonthMany": "{{count}} days this month",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month",
+        "dayPresent": "{{day}} — present",
+        "dayNotRecorded": "{{day}} — not recorded"
+      }
+    },
+    "form": {
+      "title": {
+        "create": "Add athlete",
+        "edit": "Edit athlete"
+      },
+      "subtitle": {
+        "create": "Create a new athlete in your academy",
+        "edit": "Update this athlete's details"
+      },
+      "loading": "Loading athlete…",
+      "loadError": "Could not load this athlete. Please try again.",
+      "validationFailed": "Validation failed.",
+      "serverError": "Something went wrong. Please try again.",
+      "optional": "(optional)",
+      "optionalAddress": "(optional — fill all marked fields below or none)",
+      "label": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "email": "Email",
+        "phone": "Phone",
+        "website": "Website",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "dateOfBirth": "Date of birth",
+        "joined": "Joined",
+        "belt": "Belt",
+        "stripes": "Stripes",
+        "status": "Status",
+        "addressLegend": "Address",
+        "addressLine1": "Street + civic number",
+        "addressLine2": "Apt / floor / unit",
+        "addressZip": "ZIP",
+        "addressCity": "City",
+        "addressProvince": "Province"
+      },
+      "placeholder": {
+        "phoneCountryCode": "Code",
+        "phoneNationalNumber": "National number",
+        "website": "https://example.com",
+        "facebook": "https://facebook.com/yourprofile",
+        "instagram": "https://instagram.com/yourprofile",
+        "address": {
+          "line1": "Via Roma 1",
+          "line2": "Apt B, unit 4",
+          "zip": "00100",
+          "city": "Rome"
+        }
+      },
+      "aria": {
+        "phoneCountryCode": "Phone country code",
+        "phoneNationalNumber": "Phone national number",
+        "province": "Province",
+        "requiredWhenFilled": "required when any address field is filled"
+      },
+      "tooltip": {
+        "requiredWhenFilled": "Required when any address field is filled"
+      },
+      "validation": {
+        "maxLength100": "Maximum 100 characters.",
+        "maxLength255": "Maximum 255 characters.",
+        "firstName": {
+          "required": "First name is required."
+        },
+        "lastName": {
+          "required": "Last name is required."
+        },
+        "email": {
+          "invalid": "Enter a valid email address."
+        },
+        "phone": {
+          "countryRequired": "Country code is required when a national number is entered.",
+          "numberRequired": "National number is required when a country code is selected.",
+          "pattern": "Digits only — no spaces, dashes, or parentheses.",
+          "maxLength": "Maximum 20 digits."
+        },
+        "url": {
+          "website": "Enter a full URL — e.g. <code>https://example.com</code>.",
+          "facebook": "Enter a full URL — e.g. <code>https://facebook.com/yourprofile</code>.",
+          "instagram": "Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>."
+        },
+        "joined": {
+          "required": "Joined date is required."
+        },
+        "address": {
+          "postalCode": "ZIP must be exactly 5 digits.",
+          "incomplete": "Fill every required address field, or clear them all to leave the athlete without an address."
+        }
+      },
+      "hint": {
+        "address": "Leave every field empty to keep the athlete without an address on file."
+      },
+      "button": {
+        "cancel": "Cancel",
+        "submitCreate": "Create athlete",
+        "submitEdit": "Save changes"
+      },
+      "toast": {
+        "invalidIdSummary": "Invalid athlete",
+        "invalidIdDetail": "The requested athlete id is invalid.",
+        "createdSummary": "Athlete created",
+        "updatedSummary": "Athlete updated"
+      },
+      "phone": {
+        "countryCode": {
+          "italy": "Italy",
+          "france": "France",
+          "spain": "Spain",
+          "uk": "United Kingdom",
+          "germany": "Germany",
+          "usCanada": "US / Canada",
+          "switzerland": "Switzerland",
+          "austria": "Austria",
+          "portugal": "Portugal",
+          "netherlands": "Netherlands"
+        }
+      }
+    }
+  },
+  "month": {
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
+  },
+  "shared": {
+    "paidBadge": {
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "ariaMark": "Mark paid",
+      "ariaUnmark": "Mark unpaid"
+    },
+    "beltBadge": {
+      "stripeOne": "{{count}} stripe",
+      "stripeMany": "{{count}} stripes"
+    },
+    "unpaidWidget": {
+      "eyebrow": "Unpaid",
+      "error": "Couldn't check",
+      "allPaid": "Everyone paid",
+      "allPaidSubtitle": "— nice month",
+      "countOne": "athlete still owes",
+      "countMany": "athletes still owe",
+      "viewAll": "View all {{count}} →",
+      "viewList": "View on the athletes list →"
     }
   }
 }

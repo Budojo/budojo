@@ -1,6 +1,10 @@
 <article class="legal-page">
   <header class="legal-page__header">
-    <a class="legal-page__brand" routerLink="/" aria-label="Budojo home">
+    <a
+      class="legal-page__brand"
+      routerLink="/"
+      [attr.aria-label]="'legal.brandAriaLabel' | translate"
+    >
       <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
       <span class="legal-page__brand-name">Budojo</span>
     </a>

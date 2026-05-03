@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { TagModule } from 'primeng/tag';
 import { Belt, MAX_STRIPES_PER_BELT } from '../../../core/services/athlete.service';
+import { BELT_KEYS } from '../../utils/i18n-enum-keys';
 
 /**
  * Renders the IBJJF belt as a coloured pill, optionally with stripe markers
@@ -17,7 +19,7 @@ import { Belt, MAX_STRIPES_PER_BELT } from '../../../core/services/athlete.servi
 @Component({
   selector: 'app-belt-badge',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TagModule],
+  imports: [TagModule, TranslatePipe],
   templateUrl: './belt-badge.component.html',
   styleUrl: './belt-badge.component.scss',
 })
@@ -31,13 +33,7 @@ export class BeltBadgeComponent {
    */
   readonly stripes = input<number>(0);
 
-  readonly label = computed(() => {
-    const belt = this.belt();
-    // The two coral belts have multi-word values; spell them out.
-    if (belt === 'red-and-black') return 'Red & black';
-    if (belt === 'red-and-white') return 'Red & white';
-    return belt.charAt(0).toUpperCase() + belt.slice(1);
-  });
+  readonly labelKey = computed(() => BELT_KEYS[this.belt()]);
 
   /**
    * Stripe count clamped to the SELECTED belt's cap (#229 review).

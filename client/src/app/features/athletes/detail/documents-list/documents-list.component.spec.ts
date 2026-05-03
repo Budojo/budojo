@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
+import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { DocumentsListComponent } from './documents-list.component';
 import { Document } from '../../../../core/services/document.service';
 
@@ -39,6 +40,7 @@ function setupTestBed(): HttpTestingController {
           snapshot: { paramMap: convertToParamMap({}) },
         },
       },
+      ...provideI18nTesting(),
     ],
   });
   return TestBed.inject(HttpTestingController);
@@ -136,7 +138,7 @@ describe('DocumentsListComponent', () => {
       return confirm;
     });
 
-    fixture.componentInstance.confirmDelete(new Event('click'), doc);
+    fixture.componentInstance.confirmDelete(new MouseEvent('click'), doc);
 
     // Optimistic removal: BEFORE the DELETE round-trip completes, the row is gone.
     expect(fixture.componentInstance.documents()).toHaveLength(0);
@@ -162,7 +164,7 @@ describe('DocumentsListComponent', () => {
       return confirm;
     });
 
-    fixture.componentInstance.confirmDelete(new Event('click'), doc);
+    fixture.componentInstance.confirmDelete(new MouseEvent('click'), doc);
     expect(fixture.componentInstance.documents()).toHaveLength(0);
 
     // Server fails — component must restore the row.

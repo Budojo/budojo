@@ -8,7 +8,7 @@
     "open": "Apri navigazione",
     "close": "Chiudi navigazione",
     "homeAriaLabel": "Budojo — torna alla dashboard",
-    "academy": "Academy",
+    "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
     "profile": "Profilo",
@@ -72,7 +72,13 @@
       "messageCanResend": "Il link potrebbe essere scaduto o manomesso. Richiedine uno nuovo e te lo rimanderemo via email.",
       "messageCannotResend": "Il link potrebbe essere scaduto o manomesso. Accedi al tuo account e richiedi un nuovo link di verifica dalla pagina profilo.",
       "resendCta": "Invia un nuovo link",
-      "signinCta": "Accedi"
+      "signinCta": "Accedi",
+      "toast": {
+        "throttledSummary": "Riprova fra un momento",
+        "throttledDetail": "Per sicurezza, puoi richiedere un'email di verifica solo una volta al minuto.",
+        "errorSummary": "Impossibile inviare l'email",
+        "errorDetail": "Riprova — se persiste, contatta il supporto."
+      }
     }
   },
   "setup": {
@@ -92,7 +98,8 @@
       "eyebrow": "Legale",
       "languageToggleEn": "English",
       "languageToggleIt": "Italiano"
-    }
+    },
+    "brandAriaLabel": "Home Budojo"
   },
   "whatsNew": {
     "brandAriaLabel": "Budojo — torna alla dashboard",
@@ -138,7 +145,9 @@
     "nav": {
       "login": "Accedi",
       "signup": "Inizia gratis",
-      "switchLanguage": "Cambia lingua"
+      "switchLanguage": "Cambia lingua",
+      "brandAriaLabel": "Home Budojo",
+      "primaryAriaLabel": "Principale"
     },
     "hero": {
       "headline": "Gestisci la tua palestra dal telefono, non da un foglio Excel.",
@@ -551,7 +560,9 @@
         "loadErrorDetail": "Impossibile caricare gli atleti. Riprova.",
         "paidErrorMissingFee": "Imposta prima una quota mensile sull'academy per registrare i pagamenti.",
         "paidErrorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
-        "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova."
+        "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova.",
+        "markedPaidDetail": "{{name}} — {{month}}/{{year}}",
+        "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}"
       },
       "confirm": {
         "deleteMessage": "Eliminare {{name}}?",
@@ -562,6 +573,265 @@
         "markUnpaidAccept": "Segna non pagato",
         "cancel": "Annulla"
       }
+    },
+    "detail": {
+      "contactLinksAriaLabel": "Link di contatto dell'atleta",
+      "payments": {
+        "fallbackName": "questo atleta",
+        "confirm": {
+          "markPaidMessage": "Segnare {{name}} come pagato per {{month}} {{year}}?",
+          "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}} {{year}}?"
+        },
+        "toast": {
+          "markedPaidSummary": "Pagato",
+          "markedUnpaidSummary": "Non pagato",
+          "markedDetail": "{{month}} {{year}}",
+          "errorSummary": "Errore",
+          "errorMissingFee": "Imposta una quota mensile sull'accademia prima di registrare i pagamenti.",
+          "errorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
+          "loadErrorDetail": "Impossibile caricare i pagamenti."
+        },
+        "title": "Pagamenti — {{year}}",
+        "noFeeHint": "Imposta una quota mensile sull'accademia per iniziare a registrare i pagamenti. Fino ad allora questa pagina rimane di sola lettura.",
+        "columns": {
+          "month": "Mese",
+          "status": "Stato",
+          "amount": "Importo",
+          "paidOn": "Pagato il",
+          "actions": "Azioni"
+        },
+        "button": {
+          "markPaid": "Segna pagato",
+          "unmarkPaid": "Annulla pagato"
+        }
+      },
+      "documents": {
+        "confirm": {
+          "deleteMessage": "Eliminare {{name}}? Il file verrà rimosso dal disco.",
+          "deleteAccept": "Elimina",
+          "cancel": "Annulla"
+        },
+        "toast": {
+          "uploadedSummary": "Documento caricato",
+          "downloadErrorSummary": "Download fallito",
+          "downloadErrorDetail": "Impossibile scaricare questo documento. Riprova.",
+          "loadErrorSummary": "Errore",
+          "loadErrorDetail": "Impossibile caricare i documenti. Riprova.",
+          "deletedSummary": "Eliminato",
+          "deletedDetail": "{{name}} rimosso.",
+          "deleteErrorSummary": "Eliminazione fallita",
+          "deleteErrorDetail": "Impossibile eliminare questo documento. Riprova."
+        },
+        "heading": "Documenti",
+        "activeCount": "{{count}} attivi",
+        "cancelledCount": "{{count}} cancellati",
+        "toggle": {
+          "aria": "Mostra documenti cancellati",
+          "label": "Mostra cancellati"
+        },
+        "button": {
+          "add": "Aggiungi documento",
+          "downloadAria": "Scarica {{name}}",
+          "deleteAria": "Elimina {{name}}"
+        },
+        "tooltip": {
+          "download": "Scarica",
+          "delete": "Elimina"
+        },
+        "columns": {
+          "type": "Tipo",
+          "file": "File",
+          "issued": "Emesso",
+          "expires": "Scade",
+          "status": "Stato"
+        },
+        "status": {
+          "cancelledOn": "Cancellato il {{date}}"
+        },
+        "empty": {
+          "withCancelled": "Nessun documento — attivo o cancellato.",
+          "default": "Nessun documento.",
+          "hint": "Usa <strong>Aggiungi documento</strong> sopra per caricare il primo."
+        }
+      },
+      "backToList": "Atleti",
+      "loading": "Caricamento atleta…",
+      "loadError": "Impossibile caricare l'atleta.",
+      "joinedLabel": "Iscritto il {{date}}",
+      "tabs": {
+        "documents": "Documenti",
+        "attendance": "Presenze",
+        "payments": "Pagamenti",
+        "edit": "Modifica"
+      },
+      "contactLinks": {
+        "website": "Sito web",
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      },
+      "attendance": {
+        "eyebrow": "Presenze",
+        "daysFormat": "{{attended}} / {{scheduled}} giorni",
+        "daysThisMonthOne": "{{count}} giorno questo mese",
+        "daysThisMonthMany": "{{count}} giorni questo mese",
+        "prevMonth": "Mese precedente",
+        "nextMonth": "Mese successivo",
+        "dayPresent": "{{day}} — presente",
+        "dayNotRecorded": "{{day}} — non registrato"
+      }
+    },
+    "form": {
+      "title": {
+        "create": "Aggiungi atleta",
+        "edit": "Modifica atleta"
+      },
+      "subtitle": {
+        "create": "Crea un nuovo atleta nella tua accademia",
+        "edit": "Aggiorna i dettagli di questo atleta"
+      },
+      "loading": "Caricamento atleta…",
+      "loadError": "Impossibile caricare l'atleta. Riprova.",
+      "validationFailed": "Validazione fallita.",
+      "serverError": "Qualcosa è andato storto. Riprova.",
+      "optional": "(opzionale)",
+      "optionalAddress": "(opzionale — compila tutti i campi sotto o lasciali tutti vuoti)",
+      "label": {
+        "firstName": "Nome",
+        "lastName": "Cognome",
+        "email": "Email",
+        "phone": "Telefono",
+        "website": "Sito web",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "dateOfBirth": "Data di nascita",
+        "joined": "Iscritto",
+        "belt": "Cintura",
+        "stripes": "Gradi",
+        "status": "Stato",
+        "addressLegend": "Indirizzo",
+        "addressLine1": "Via e numero civico",
+        "addressLine2": "Interno / piano / scala",
+        "addressZip": "CAP",
+        "addressCity": "Città",
+        "addressProvince": "Provincia"
+      },
+      "placeholder": {
+        "phoneCountryCode": "Prefisso",
+        "phoneNationalNumber": "Numero",
+        "website": "https://example.com",
+        "facebook": "https://facebook.com/iltuoprofilo",
+        "instagram": "https://instagram.com/iltuoprofilo",
+        "address": {
+          "line1": "Via Roma 1",
+          "line2": "Scala B, interno 4",
+          "zip": "00100",
+          "city": "Roma"
+        }
+      },
+      "aria": {
+        "phoneCountryCode": "Prefisso telefonico",
+        "phoneNationalNumber": "Numero nazionale",
+        "province": "Provincia",
+        "requiredWhenFilled": "obbligatorio quando un campo dell'indirizzo è compilato"
+      },
+      "tooltip": {
+        "requiredWhenFilled": "Obbligatorio quando un campo dell'indirizzo è compilato"
+      },
+      "validation": {
+        "maxLength100": "Massimo 100 caratteri.",
+        "maxLength255": "Massimo 255 caratteri.",
+        "firstName": {
+          "required": "Il nome è obbligatorio."
+        },
+        "lastName": {
+          "required": "Il cognome è obbligatorio."
+        },
+        "email": {
+          "invalid": "Inserisci un'email valida."
+        },
+        "phone": {
+          "countryRequired": "Il prefisso è obbligatorio se inserisci un numero.",
+          "numberRequired": "Il numero è obbligatorio se selezioni un prefisso.",
+          "pattern": "Solo cifre — niente spazi, trattini o parentesi.",
+          "maxLength": "Massimo 20 cifre."
+        },
+        "url": {
+          "website": "Inserisci un URL completo — es. <code>https://example.com</code>.",
+          "facebook": "Inserisci un URL completo — es. <code>https://facebook.com/iltuoprofilo</code>.",
+          "instagram": "Inserisci un URL completo — es. <code>https://instagram.com/iltuoprofilo</code>."
+        },
+        "joined": {
+          "required": "La data di iscrizione è obbligatoria."
+        },
+        "address": {
+          "postalCode": "Il CAP deve essere di 5 cifre.",
+          "incomplete": "Compila tutti i campi obbligatori dell'indirizzo, oppure lasciali tutti vuoti per non assegnarne nessuno."
+        }
+      },
+      "hint": {
+        "address": "Lascia tutti i campi vuoti per non assegnare un indirizzo all'atleta."
+      },
+      "button": {
+        "cancel": "Annulla",
+        "submitCreate": "Crea atleta",
+        "submitEdit": "Salva modifiche"
+      },
+      "toast": {
+        "invalidIdSummary": "Atleta non valido",
+        "invalidIdDetail": "L'ID atleta richiesto non è valido.",
+        "createdSummary": "Atleta creato",
+        "updatedSummary": "Atleta aggiornato"
+      },
+      "phone": {
+        "countryCode": {
+          "italy": "Italia",
+          "france": "Francia",
+          "spain": "Spagna",
+          "uk": "Regno Unito",
+          "germany": "Germania",
+          "usCanada": "USA / Canada",
+          "switzerland": "Svizzera",
+          "austria": "Austria",
+          "portugal": "Portogallo",
+          "netherlands": "Paesi Bassi"
+        }
+      }
+    }
+  },
+  "month": {
+    "january": "gennaio",
+    "february": "febbraio",
+    "march": "marzo",
+    "april": "aprile",
+    "may": "maggio",
+    "june": "giugno",
+    "july": "luglio",
+    "august": "agosto",
+    "september": "settembre",
+    "october": "ottobre",
+    "november": "novembre",
+    "december": "dicembre"
+  },
+  "shared": {
+    "paidBadge": {
+      "paid": "Pagato",
+      "unpaid": "Non pagato",
+      "ariaMark": "Segna pagato",
+      "ariaUnmark": "Segna non pagato"
+    },
+    "beltBadge": {
+      "stripeOne": "{{count}} striscia",
+      "stripeMany": "{{count}} strisce"
+    },
+    "unpaidWidget": {
+      "eyebrow": "Non pagati",
+      "error": "Impossibile verificare",
+      "allPaid": "Hanno pagato tutti",
+      "allPaidSubtitle": "— bel mese",
+      "countOne": "atleta deve ancora pagare",
+      "countMany": "atleti devono ancora pagare",
+      "viewAll": "Vedi tutti i {{count}} →",
+      "viewList": "Vedi nella lista atleti →"
     }
   }
 }

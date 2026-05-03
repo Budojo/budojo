@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { BeltBadgeComponent } from './belt-badge.component';
 import { Belt } from '../../../core/services/athlete.service';
 
@@ -13,14 +14,21 @@ class HostComponent {
 }
 
 describe('BeltBadgeComponent', () => {
-  it('capitalizes the belt name for the label', () => {
-    TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+  it('renders the belt name via the shared i18n key', () => {
+    TestBed.configureTestingModule({
+      imports: [BeltBadgeComponent, HostComponent],
+      providers: [...provideI18nTesting()],
+    });
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.belt = 'blue';
     fixture.detectChanges();
 
     const badge = fixture.debugElement.query((el) => el.name === 'app-belt-badge');
-    expect(badge.componentInstance.label()).toBe('Blue');
+    expect(badge.componentInstance.labelKey()).toBe('belts.blue');
+    // Rendered text is the EN translation in the test default locale —
+    // confirms the pipe wires through to the shared `belts.*` namespace.
+    const label = fixture.nativeElement.querySelector('.belt-badge__label') as HTMLElement | null;
+    expect(label?.textContent?.trim()).toBe('Blue');
   });
 
   it.each<Belt>([
@@ -40,7 +48,10 @@ describe('BeltBadgeComponent', () => {
     'red-and-white',
     'red',
   ])('resolves the style via --budojo-belt-%s-* custom properties', (belt) => {
-    TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+    TestBed.configureTestingModule({
+      imports: [BeltBadgeComponent, HostComponent],
+      providers: [...provideI18nTesting()],
+    });
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.belt = belt;
     fixture.detectChanges();
@@ -53,7 +64,10 @@ describe('BeltBadgeComponent', () => {
 
   describe('stripes (#165)', () => {
     it('renders no stripe tiles when stripes input is 0 (default)', () => {
-      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      TestBed.configureTestingModule({
+        imports: [BeltBadgeComponent, HostComponent],
+        providers: [...provideI18nTesting()],
+      });
       const fixture = TestBed.createComponent(HostComponent);
       fixture.detectChanges();
       const tiles = fixture.nativeElement.querySelectorAll(
@@ -63,7 +77,10 @@ describe('BeltBadgeComponent', () => {
     });
 
     it.each([1, 2, 3, 4])('renders %d stripe tiles inside the pill', (n) => {
-      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      TestBed.configureTestingModule({
+        imports: [BeltBadgeComponent, HostComponent],
+        providers: [...provideI18nTesting()],
+      });
       const fixture = TestBed.createComponent(HostComponent);
       fixture.componentInstance.stripes = n;
       fixture.detectChanges();
@@ -74,7 +91,10 @@ describe('BeltBadgeComponent', () => {
     });
 
     it('clamps stripes per belt — non-black caps at 4, black caps at 6 (#229 review)', () => {
-      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      TestBed.configureTestingModule({
+        imports: [BeltBadgeComponent, HostComponent],
+        providers: [...provideI18nTesting()],
+      });
 
       // White belt: bogus 99 must clamp to the white cap of 4 — NOT 6.
       // Without per-belt clamping, the badge would visually misrepresent
@@ -100,7 +120,10 @@ describe('BeltBadgeComponent', () => {
     });
 
     it('renders 5-6 tiles on a black belt (graus 5° / 6°, #229)', () => {
-      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      TestBed.configureTestingModule({
+        imports: [BeltBadgeComponent, HostComponent],
+        providers: [...provideI18nTesting()],
+      });
       const fixture = TestBed.createComponent(HostComponent);
       fixture.componentInstance.belt = 'black';
       fixture.componentInstance.stripes = 6;
@@ -112,7 +135,10 @@ describe('BeltBadgeComponent', () => {
     });
 
     it('exposes an aria-label on the stripe group for screen readers', () => {
-      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      TestBed.configureTestingModule({
+        imports: [BeltBadgeComponent, HostComponent],
+        providers: [...provideI18nTesting()],
+      });
       const fixture = TestBed.createComponent(HostComponent);
       fixture.componentInstance.stripes = 2;
       fixture.detectChanges();
@@ -121,7 +147,10 @@ describe('BeltBadgeComponent', () => {
     });
 
     it('uses singular "stripe" in aria-label when count is 1', () => {
-      TestBed.configureTestingModule({ imports: [BeltBadgeComponent, HostComponent] });
+      TestBed.configureTestingModule({
+        imports: [BeltBadgeComponent, HostComponent],
+        providers: [...provideI18nTesting()],
+      });
       const fixture = TestBed.createComponent(HostComponent);
       fixture.componentInstance.stripes = 1;
       fixture.detectChanges();

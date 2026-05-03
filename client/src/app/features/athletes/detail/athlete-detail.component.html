@@ -7,13 +7,13 @@
     data-cy="athlete-detail-back"
   >
     <i class="pi pi-arrow-left"></i>
-    <span>Athletes</span>
+    <span>{{ 'athletes.detail.backToList' | translate }}</span>
   </a>
 
   @if (loading()) {
     <div class="athlete-detail-page__loading">
       <i class="pi pi-spin pi-spinner"></i>
-      <span>Loading athlete…</span>
+      <span>{{ 'athletes.detail.loading' | translate }}</span>
     </div>
   }
 
@@ -31,12 +31,14 @@
         <app-age-badge [dateOfBirth]="a.date_of_birth" />
         <app-belt-badge [belt]="a.belt" />
         <p-tag
-          [value]="statusLabel(a.status)"
+          [value]="statusLabelKey(a.status) | translate"
           [severity]="statusSeverity(a.status)"
           [rounded]="true"
         />
       </div>
-      <p class="athlete-detail-page__meta">Joined {{ a.joined_at }}</p>
+      <p class="athlete-detail-page__meta">
+        {{ 'athletes.detail.joinedLabel' | translate: { date: a.joined_at } }}
+      </p>
 
       @let links = contactLinks();
       @if (links.length > 0) {
@@ -47,20 +49,23 @@
           `noopener noreferrer` is canon-mandatory for external `_blank`
           targets.
         -->
-        <ul class="contact-links" aria-label="Athlete contact links">
-          @for (link of links; track link.label) {
+        <ul
+          class="contact-links"
+          [attr.aria-label]="'athletes.detail.contactLinksAriaLabel' | translate"
+        >
+          @for (link of links; track link.labelKey) {
             <li>
               <a
                 class="contact-links__chip"
                 [href]="link.url"
                 target="_blank"
                 rel="noopener noreferrer"
-                [attr.aria-label]="link.label"
-                [attr.title]="link.label"
-                [attr.data-cy]="'athlete-link-' + link.label.toLowerCase()"
+                [attr.aria-label]="link.labelKey | translate"
+                [attr.title]="link.labelKey | translate"
+                [attr.data-cy]="'athlete-link-' + link.cyKey"
               >
                 <i [class]="link.icon" aria-hidden="true"></i>
-                <span class="contact-links__sr">{{ link.label }}</span>
+                <span class="contact-links__sr">{{ link.labelKey | translate }}</span>
               </a>
             </li>
           }
@@ -72,15 +77,15 @@
       <p-tablist>
         <p-tab value="documents" routerLink="documents" data-cy="athlete-tab-documents">
           <i class="pi pi-file"></i>
-          <span>Documents</span>
+          <span>{{ 'athletes.detail.tabs.documents' | translate }}</span>
         </p-tab>
         <p-tab value="attendance" routerLink="attendance" data-cy="athlete-tab-attendance">
           <i class="pi pi-calendar"></i>
-          <span>Attendance</span>
+          <span>{{ 'athletes.detail.tabs.attendance' | translate }}</span>
         </p-tab>
         <p-tab value="payments" routerLink="payments" data-cy="athlete-tab-payments">
           <i class="pi pi-euro"></i>
-          <span>Payments</span>
+          <span>{{ 'athletes.detail.tabs.payments' | translate }}</span>
         </p-tab>
         <!-- Edit moved into the detail's tab strip (#281). The athlete
              form lives in the same router-outlet as the other tabs;
@@ -89,7 +94,7 @@
              the thing it edits". -->
         <p-tab value="edit" routerLink="edit" data-cy="athlete-tab-edit">
           <i class="pi pi-pencil"></i>
-          <span>Edit</span>
+          <span>{{ 'athletes.detail.tabs.edit' | translate }}</span>
         </p-tab>
       </p-tablist>
     </p-tabs>

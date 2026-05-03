@@ -55,7 +55,7 @@ Il `ngsw-worker.js` (Angular Service Worker, configurato in `client/ngsw-config.
 ## 6. Conclusione operativa
 
 - **Banner cookie**: **non necessario**. Tutto ciò che la SPA scrive lato client serve a erogare la funzione richiesta dall'utente.
-- **Privacy policy**: deve comunque contenere una sezione "Cookie e archiviazione locale" che dichiara cosa salviamo, perché, e per quanto. Il testo entra nell'informativa privacy gestita in [#219](https://github.com/m-bonanno/budojo/issues/219).
+- **Privacy policy**: deve comunque contenere una sezione "Cookie e archiviazione locale" che dichiara cosa salviamo, perché, e per quanto. Il testo entra nell'informativa privacy gestita in [#219](https://github.com/Budojo/budojo/issues/219).
 - **Re-audit obbligatorio quando**:
   - Si aggiunge **qualunque** strumento di analytics, error tracking, A/B testing, marketing pixel, recaptcha, embed video / iframe esterno
   - Si introduce un sub-processor che setta cookie propri (es. integrazione Stripe Checkout, Google Maps embed, Calendly)
