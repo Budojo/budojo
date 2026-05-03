@@ -45,7 +45,7 @@
     "@angular/compiler-cli": "^21.2.11",
     "@eslint/js": "^10.0.1",
     "angular-eslint": "^21.3.1",
-    "cypress": "^13.17.0",
+    "cypress": "^15.14.2",
     "eslint": "^10.2.1",
     "jsdom": "^29.1.1",
     "prettier": "^3.8.1",
