@@ -80,6 +80,12 @@ it('isolates academies on payments aggregation', function (): void {
     expect(collect($data)->sum('amount_cents'))->toBe(0);
 });
 
+it('honours ?months= up to 24 on payments endpoint', function (): void {
+    Sanctum::actingAs(userWithAcademy());
+    $response = $this->getJson('/api/v1/stats/payments/monthly?months=24')->assertOk();
+    expect($response->json('data'))->toHaveCount(24);
+});
+
 it('rejects months outside [1, 24]', function (): void {
     Sanctum::actingAs(userWithAcademy());
 

@@ -46,23 +46,20 @@ class MonthlyPaymentsStatsAction
         $rows = DB::table('athlete_payments')
             ->join('athletes', 'athletes.id', '=', 'athlete_payments.athlete_id')
             ->where('athletes.academy_id', $academy->id)
-            // Window: only months whose (year, month) tuple is within
-            // [start, now]. Cheaper than a date-string comparison;
-            // (year, month) are tinyint/smallint so the predicate stays
-            // sargable on the existing primary key.
+            // (year, month) >= (startYear, startMonth) AND (year, month) <= (nowYear, nowMonth)
             ->where(function ($q) use ($startYear, $startMonth, $nowYear, $nowMonth): void {
-                $q->where(function ($q2) use ($startYear, $startMonth): void {
-                    $q2->where('athlete_payments.year', '>', $startYear)
-                       ->orWhere(function ($q3) use ($startYear, $startMonth): void {
-                           $q3->where('athlete_payments.year', $startYear)
-                              ->where('athlete_payments.month', '>=', $startMonth);
-                       });
-                })->where(function ($q2) use ($nowYear, $nowMonth): void {
-                    $q2->where('athlete_payments.year', '<', $nowYear)
-                       ->orWhere(function ($q3) use ($nowYear, $nowMonth): void {
-                           $q3->where('athlete_payments.year', $nowYear)
-                              ->where('athlete_payments.month', '<=', $nowMonth);
-                       });
+                $q->where(function ($lowerBound) use ($startYear, $startMonth): void {
+                    $lowerBound->where('athlete_payments.year', '>', $startYear)
+                               ->orWhere(function ($year) use ($startYear, $startMonth): void {
+                                   $year->where('athlete_payments.year', $startYear)
+                                        ->where('athlete_payments.month', '>=', $startMonth);
+                               });
+                })->where(function ($upperBound) use ($nowYear, $nowMonth): void {
+                    $upperBound->where('athlete_payments.year', '<', $nowYear)
+                               ->orWhere(function ($year) use ($nowYear, $nowMonth): void {
+                                   $year->where('athlete_payments.year', $nowYear)
+                                        ->where('athlete_payments.month', '<=', $nowMonth);
+                               });
                 });
             })
             ->groupBy('athlete_payments.year', 'athlete_payments.month')
