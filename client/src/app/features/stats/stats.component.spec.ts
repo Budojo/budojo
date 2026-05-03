@@ -51,9 +51,9 @@ describe('StatsComponent', () => {
     const fixture = TestBed.createComponent(StatsComponent);
     fixture.detectChanges();
 
-    httpMock.expectOne((r) => r.url.endsWith('/athletes') && r.params.get('page') === '1').flush(
-      makeListResponse([], 1),
-    );
+    httpMock
+      .expectOne((r) => r.url.endsWith('/athletes') && r.params.get('page') === '1')
+      .flush(makeListResponse([], 1));
     fixture.detectChanges();
 
     const empty = fixture.nativeElement.querySelector('[data-cy="stats-empty"]') as HTMLElement;
