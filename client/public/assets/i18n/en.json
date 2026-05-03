@@ -678,7 +678,12 @@
         "prevMonth": "Previous month",
         "nextMonth": "Next month",
         "dayPresent": "{{day}} — present",
-        "dayNotRecorded": "{{day}} — not recorded"
+        "dayNotRecorded": "{{day}} — not recorded",
+        "heatmap": {
+          "dayLabel": "Trained on {{date}}",
+          "monthLabel": "{{month}} attendance",
+          "empty": "No sessions recorded this month."
+        }
       }
     },
     "form": {

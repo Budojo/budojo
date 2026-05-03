@@ -678,7 +678,12 @@
         "prevMonth": "Mese precedente",
         "nextMonth": "Mese successivo",
         "dayPresent": "{{day}} — presente",
-        "dayNotRecorded": "{{day}} — non registrato"
+        "dayNotRecorded": "{{day}} — non registrato",
+        "heatmap": {
+          "dayLabel": "Allenamento del {{date}}",
+          "monthLabel": "Presenze di {{month}}",
+          "empty": "Nessuna sessione registrata questo mese."
+        }
       }
     },
     "form": {

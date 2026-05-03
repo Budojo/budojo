@@ -54,14 +54,20 @@
              before the first training day). Either way, the raw count is the
              only honest display — "0 days · 0%" reads as a judgement when
              the class hasn't even happened. -->
-        <p class="attendance-history__counter" data-cy="attendance-counter">
-          {{
-            (attendedCount() === 1
-              ? 'athletes.detail.attendance.daysThisMonthOne'
-              : 'athletes.detail.attendance.daysThisMonthMany'
-            ) | translate: { count: attendedCount() }
-          }}
-        </p>
+        <div class="attendance-history__heatmap" data-cy="attendance-counter">
+          <span class="attendance-history__counter">
+            {{
+              (attendedCount() === 1
+                ? 'athletes.detail.attendance.daysThisMonthOne'
+                : 'athletes.detail.attendance.daysThisMonthMany'
+              ) | translate: { count: attendedCount() }
+            }}
+          </span>
+          <app-attendance-month-heatmap
+            [month]="visibleMonth()"
+            [attendedDates]="attendedDatesArray()"
+          />
+        </div>
       }
     </div>
 
