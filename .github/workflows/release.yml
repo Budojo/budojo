@@ -259,16 +259,23 @@ jobs:
             echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
           else
             echo "Creating new sweep PR"
-            PR_URL=$(gh pr create \
+            gh pr create \
               --base develop \
               --head "$BRANCH" \
               --title "chore: sweep ${TAG} release merge commit from main into develop" \
               --body-file /tmp/sweep-body.md \
               --label "🔧 maintenance" \
-              --assignee m-bonanno)
-            # Extract the trailing number from the PR URL gh prints
-            # on success (e.g. "https://github.com/Budojo/budojo/pull/362").
-            PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+              --assignee m-bonanno
+            # Look up the PR number via a structured JSON query rather
+            # than parsing `gh pr create` stdout — the CLI's output
+            # format isn't stable across versions, and a trailing-digit
+            # grep can silently miss multi-line output (the next
+            # auto-merge step then no-ops without a clear error).
+            PR_NUMBER=$(gh pr list --head "$BRANCH" --base develop --state open --json number --jq '.[0].number // empty')
+            if [ -z "$PR_NUMBER" ]; then
+              echo "::error::Sweep PR was created but could not be looked up via 'gh pr list' — bailing out before auto-merge."
+              exit 1
+            fi
             echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           fi
 
@@ -281,6 +288,15 @@ jobs:
         # pr-checks.yml on the new PR — this step then enables
         # auto-merge so GitHub merges the moment all required
         # checks land green.
+        #
+        # **Repo-level prerequisite:** "Allow auto-merge" must be
+        # ENABLED at *Settings → General → Pull Requests*. Without
+        # the toggle, `gh pr merge --auto` returns a GraphQL
+        # `enablePullRequestAutoMerge` error and the workflow turns
+        # red even though the sweep PR opened correctly. The step
+        # is wrapped to surface that as a `::warning::` instead —
+        # we don't want an admin-side toggle missing to fail the
+        # whole release run after a tag is already published.
         #
         # Memory `feedback_release_pr_wait_for_copilot` says the
         # sweep is alignment-only — no Copilot wait, no review
@@ -295,5 +311,13 @@ jobs:
             echo "::warning::No sweep PR number captured — skipping auto-merge."
             exit 0
           fi
-          gh pr merge "$PR" --merge --auto
-          echo "✅ Auto-merge enabled on PR #${PR} — will merge when required checks pass."
+          if gh pr merge "$PR" --merge --auto; then
+            echo "✅ Auto-merge enabled on PR #${PR} — will merge when required checks pass."
+          else
+            # Most likely cause: repo's "Allow auto-merge" toggle is off
+            # (Settings → General → Pull Requests). Surface this as a
+            # warning, not a hard failure — the release tag has already
+            # been published at this point and the sweep PR is open;
+            # a maintainer can merge it by hand.
+            echo "::warning::gh pr merge --auto failed for PR #${PR}. Most common cause: repo-level 'Allow auto-merge' is disabled (Settings → General → Pull Requests). Falling back to manual merge."
+          fi

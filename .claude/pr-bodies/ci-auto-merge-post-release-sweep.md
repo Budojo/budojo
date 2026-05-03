@@ -29,20 +29,21 @@ The job's existing `env:` block exposes `HAS_BOT_TOKEN` as a string because GitH
 
 The auto-generated sweep PR body now carries a one-line note in "Manual follow-up" telling the reader whether the PR will auto-merge (PAT configured) or stays manual (PAT not configured).
 
-## What you need to do once (admin step)
+## What you need to do once (admin steps)
 
-To activate full automation:
+To activate full automation, **both** of the following are required:
 
-1. **Create a fine-grained PAT** at https://github.com/settings/tokens (or a classic PAT with `repo` scope):
+1. **Enable repo-level auto-merge** at *Settings → General → Pull Requests*: tick "**Allow auto-merge**". Without this `gh pr merge --auto` fails with an `enablePullRequestAutoMerge` GraphQL error. The repo did not have this enabled at the time this PR was opened — verify before relying on the automation.
+2. **Create a fine-grained PAT** at https://github.com/settings/tokens (or a classic PAT with `repo` scope):
    - Repository access: only `Budojo/budojo`
-   - Permissions: **Contents: Read & write**, **Pull requests: Read & write** (these are the minimum — the PAT pushes the sweep branch and creates / merges the PR)
-   - Expiration: pick a sane horizon (90d / 1y) — when it expires the workflow falls back to manual-merge, no breakage
-2. **Save it as a repo secret** at *Settings → Secrets and variables → Actions → New repository secret*:
+   - Permissions: **Contents: Read & write**, **Pull requests: Read & write**, **Issues: Read & write** (the last because `gh pr create --label --assignee` goes through the Issues API — Copilot caught this in the first review pass)
+   - Expiration: pick a sane horizon (90d / 1y) — when the PAT expires the workflow falls back to manual-merge with a `::warning::`, no breakage
+3. **Save the PAT as a repo secret** at *Settings → Secrets and variables → Actions → New repository secret*:
    - Name: `BUDOJO_BOT_TOKEN`
-   - Value: the PAT from step 1
-3. The next stable release sweep will auto-merge end-to-end.
+   - Value: the PAT from step 2
+4. The next stable release sweep will auto-merge end-to-end.
 
-If you skip this, the workflow runs exactly as today — sweep PR opens, manual merge, no breakage.
+The auto-merge step is **non-fatal**: if either prerequisite is missing it logs a `::warning::` and exits 0, so the release tag stays published and the sweep PR remains open and mergeable by hand. The fallback path is the same as the pre-PR behaviour — no regression.
 
 ## Out of scope
 
