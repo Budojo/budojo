@@ -855,6 +855,15 @@
       "attendance": "Presenze",
       "payments": "Pagamenti",
       "athletes": "Atleti"
+    },
+    "attendance": {
+      "monthlyTitle": "Presenze mensili",
+      "monthlyHint": "Ultimi 12 mesi · numero presenze per stato atleta",
+      "active": "Attivi",
+      "paused": "In pausa",
+      "loading": "Caricamento presenze…",
+      "errored": "Impossibile caricare il trend.",
+      "empty": "Nessuna presenza negli ultimi 12 mesi."
     }
   }
 }

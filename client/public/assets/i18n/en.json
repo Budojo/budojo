@@ -855,6 +855,15 @@
       "attendance": "Attendance",
       "payments": "Payments",
       "athletes": "Athletes"
+    },
+    "attendance": {
+      "monthlyTitle": "Monthly attendance",
+      "monthlyHint": "Last 12 months · attendance count split by athlete current status",
+      "active": "Active",
+      "paused": "Paused",
+      "loading": "Loading attendance trend…",
+      "errored": "Couldn't load attendance trend.",
+      "empty": "No attendance recorded in the last 12 months."
     }
   }
 }
