@@ -70,8 +70,10 @@ export class StatsAthletesComponent {
       datasets: [
         {
           data: bands.map((b) => b.count),
-          // Literal hex (mirrors --p-primary-color in budojo-theme.scss).
-          // Chart.js canvas can't resolve var(--*) tokens at paint time.
+          // Primary indigo — uniform with the payments tab. Heatmap is
+          // intentionally per-month rainbow because the color encodes
+          // information; Athletes / Payments are monocolor by design.
+          // Literal hex because Chart.js canvas can't resolve var(--*).
           backgroundColor: '#5b6cff',
         },
       ],
