@@ -38,8 +38,6 @@ class MonthsRangeRequest extends FormRequest
 
     public function months(): int
     {
-        $value = $this->query('months');
-
-        return is_numeric($value) ? (int) $value : 12;
+        return $this->has('months') ? $this->integer('months') : 12;
     }
 }

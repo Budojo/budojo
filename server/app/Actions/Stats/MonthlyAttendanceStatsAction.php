@@ -35,7 +35,6 @@ class MonthlyAttendanceStatsAction
     {
         $now = CarbonImmutable::now()->startOfMonth();
         $start = $now->subMonths($months - 1);
-        $end = $now->endOfMonth();
 
         // Cross-DB year/month extraction: feature tests use sqlite
         // in-memory (strftime), production uses MySQL (YEAR/MONTH).
@@ -56,7 +55,7 @@ class MonthlyAttendanceStatsAction
             ->whereNull('attendance_records.deleted_at')
             ->whereBetween('attendance_records.attended_on', [
                 $start->toDateString(),
-                $end->toDateString(),
+                $now->endOfMonth()->toDateString(),
             ])
             ->groupBy(DB::raw($yearExpr), DB::raw($monthExpr), 'athletes.status')
             ->orderBy(DB::raw($yearExpr))
@@ -78,7 +77,7 @@ class MonthlyAttendanceStatsAction
             if (! isset($byKey[$key])) {
                 $byKey[$key] = ['active' => 0, 'paused' => 0];
             }
-            $bucket = (string) $row->status === 'active' ? 'active' : 'paused';
+            $bucket = $row->status === 'active' ? 'active' : 'paused';
             $byKey[$key][$bucket] += (int) $row->count;
         }
 
