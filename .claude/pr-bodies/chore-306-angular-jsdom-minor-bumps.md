@@ -43,7 +43,7 @@ These three remain on #306 (which stays open after this PR).
 ## References
 
 - Part of #306 (the issue stays open for the three deferred items above)
-- No code changes — only `package.json` + `package-lock.json`
+- No runtime / app code changes — only `package.json` + `package-lock.json` (plus this PR body markdown)
 
 ## Test plan
 
