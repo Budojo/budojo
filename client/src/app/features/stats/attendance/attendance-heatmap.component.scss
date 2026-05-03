@@ -5,9 +5,10 @@
   overflow-x: auto;
 
   &__svg {
-    width: 100%;
-    min-width: 600px; // forces horizontal scroll on mobile when needed
-    height: auto;
+    display: block;
+    // Intrinsic size from explicit width/height attributes — matches the
+    // viewBox so cells render at 11px (GitHub-contribution scale).
+    // The wrapper's overflow-x: auto handles narrow viewports.
   }
 
   &__dow,

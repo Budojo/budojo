@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
+import { DailyAttendancePoint } from '../../../core/services/stats.service';
 
 interface Cell {
   readonly date: Date;
@@ -18,7 +19,7 @@ interface Cell {
   styleUrl: './attendance-heatmap.component.scss',
 })
 export class AttendanceHeatmapComponent {
-  readonly points = input.required<readonly { date: string; count: number }[]>();
+  readonly points = input.required<readonly DailyAttendancePoint[]>();
   readonly windowStart = input.required<Date>();
   readonly windowEnd = input.required<Date>();
 

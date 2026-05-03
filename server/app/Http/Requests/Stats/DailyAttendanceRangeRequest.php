@@ -37,6 +37,6 @@ class DailyAttendanceRangeRequest extends FormRequest
 
     public function months(): int
     {
-        return $this->has('months') ? $this->integer('months') : 3;
+        return $this->integer('months', 3);
     }
 }

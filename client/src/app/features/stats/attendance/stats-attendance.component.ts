@@ -10,7 +10,6 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
-import { Subscription } from 'rxjs';
 import { DailyAttendancePoint, StatsService } from '../../../core/services/stats.service';
 import { AttendanceHeatmapComponent } from './attendance-heatmap.component';
 
@@ -62,16 +61,13 @@ export class StatsAttendanceComponent {
     return end;
   });
 
-  private sub: Subscription | null = null;
-
   constructor() {
-    effect(() => {
-      this.sub?.unsubscribe();
+    effect((onCleanup) => {
       this.loading.set(true);
       this.errored.set(false);
-      this.sub = this.stats.attendanceDaily(this.range()).subscribe({
-        next: (pts) => {
-          this.points.set(pts);
+      const sub = this.stats.attendanceDaily(this.range()).subscribe({
+        next: (points) => {
+          this.points.set(points);
           this.loading.set(false);
         },
         error: () => {
@@ -79,6 +75,7 @@ export class StatsAttendanceComponent {
           this.loading.set(false);
         },
       });
+      onCleanup(() => sub.unsubscribe());
     });
   }
 }

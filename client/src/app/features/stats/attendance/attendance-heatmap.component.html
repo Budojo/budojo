@@ -1,6 +1,8 @@
 <div class="heatmap" data-cy="attendance-heatmap">
   <svg
     class="heatmap__svg"
+    [attr.width]="grid().length * 13 + 30"
+    [attr.height]="110"
     [attr.viewBox]="'0 0 ' + (grid().length * 13 + 30) + ' 110'"
     role="img"
     [attr.aria-label]="'stats.attendance.heatmap.ariaLabel' | translate"
