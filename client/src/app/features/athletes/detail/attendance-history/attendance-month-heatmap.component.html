@@ -1,0 +1,41 @@
+<div
+  class="attendance-month-heatmap"
+  [attr.aria-label]="
+    'athletes.detail.attendance.heatmap.monthLabel'
+      | translate: { month: month().toLocaleString(undefined, { month: 'long', year: 'numeric' }) }
+  "
+>
+  <div class="attendance-month-heatmap__grid" role="grid">
+    @for (cell of cells(); track $index) {
+      @if (cell.day === null) {
+        <span
+          class="attendance-month-heatmap__cell attendance-month-heatmap__cell--blank"
+          aria-hidden="true"
+          data-cy="heatmap-cell-blank"
+        ></span>
+      } @else if (cell.filled) {
+        <span
+          class="attendance-month-heatmap__cell attendance-month-heatmap__cell--filled"
+          [attr.aria-label]="
+            'athletes.detail.attendance.heatmap.dayLabel' | translate: { date: cell.iso }
+          "
+          data-cy="heatmap-cell-filled"
+          >{{ cell.day }}</span
+        >
+      } @else {
+        <span
+          class="attendance-month-heatmap__cell attendance-month-heatmap__cell--idle"
+          aria-hidden="true"
+          data-cy="heatmap-cell-idle"
+          >{{ cell.day }}</span
+        >
+      }
+    }
+  </div>
+
+  @if (isEmpty()) {
+    <p class="attendance-month-heatmap__empty" data-cy="heatmap-empty">
+      {{ 'athletes.detail.attendance.heatmap.empty' | translate }}
+    </p>
+  }
+</div>

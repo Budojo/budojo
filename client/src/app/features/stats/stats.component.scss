@@ -1,110 +1,11 @@
 .stats-page {
-  max-width: var(--budojo-page-content-max);
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
 
-  &__header {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  &__eyebrow {
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--p-text-muted-color);
-  }
-
-  &__title {
-    margin: 0;
-    font-size: 1.75rem;
-    font-weight: 600;
-    color: var(--p-text-color);
-  }
-
-  &__subtitle {
-    margin: 0;
-    color: var(--p-text-muted-color);
-    font-size: 0.95rem;
-    line-height: 1.4;
-  }
-
-  &__total {
-    color: var(--p-text-muted-color);
-    font-size: 0.9rem;
-  }
-
-  &__grid {
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: 1fr;
-
-    @media (min-width: 1024px) {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  &__skeleton {
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: 1fr;
-
-    @media (min-width: 1024px) {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  &__error,
-  &__empty {
-    color: var(--p-text-muted-color);
-    text-align: center;
-    padding: 3rem 1rem;
-    border: 1px dashed var(--p-content-border-color);
-    border-radius: var(--p-border-radius);
-  }
-
-  &__error {
-    color: var(--p-message-error-color);
-    border-color: var(--p-message-error-border-color);
-    background: var(--p-message-error-background);
-  }
-}
-
-.stats-card {
-  background: var(--p-content-background);
-  border: 1px solid var(--p-content-border-color);
-  border-radius: var(--p-border-radius);
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  // Card sits at canon elevation 1 — same lift as the dashboard
-  // tiles. Hover doesn't add interactivity (no click target on the
-  // card itself), so no hover lift either.
-
-  &__title {
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--p-text-color);
-  }
-
-  &__hint {
-    margin: 0 0 0.5rem;
-    color: var(--p-text-muted-color);
-    font-size: 0.85rem;
-    line-height: 1.4;
-  }
-
-  &__chart {
-    flex: 1;
-    height: 22rem;
-    // Constrain the canvas; PrimeNG `<p-chart>` with
-    // `maintainAspectRatio: false` flexes to fit the parent height.
+  &__outlet {
+    min-height: 0;
   }
 }

@@ -154,6 +154,37 @@ export const routes: Routes = [
         path: 'stats',
         loadComponent: () =>
           import('./features/stats/stats.component').then((m) => m.StatsComponent),
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'overview' },
+          {
+            path: 'overview',
+            loadComponent: () =>
+              import('./features/stats/overview/stats-overview.component').then(
+                (m) => m.StatsOverviewComponent,
+              ),
+          },
+          {
+            path: 'attendance',
+            loadComponent: () =>
+              import('./features/stats/attendance/stats-attendance.component').then(
+                (m) => m.StatsAttendanceComponent,
+              ),
+          },
+          {
+            path: 'payments',
+            loadComponent: () =>
+              import('./features/stats/payments/stats-payments.component').then(
+                (m) => m.StatsPaymentsComponent,
+              ),
+          },
+          {
+            path: 'athletes',
+            loadComponent: () =>
+              import('./features/stats/athletes/stats-athletes.component').then(
+                (m) => m.StatsAthletesComponent,
+              ),
+          },
+        ],
       },
       {
         // In-app feedback (#311). Sits inside the dashboard shell so

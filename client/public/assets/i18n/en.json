@@ -678,7 +678,12 @@
         "prevMonth": "Previous month",
         "nextMonth": "Next month",
         "dayPresent": "{{day}} — present",
-        "dayNotRecorded": "{{day}} — not recorded"
+        "dayNotRecorded": "{{day}} — not recorded",
+        "heatmap": {
+          "dayLabel": "Trained on {{date}}",
+          "monthLabel": "{{month}} attendance",
+          "empty": "No sessions recorded this month."
+        }
       }
     },
     "form": {
@@ -838,7 +843,7 @@
   "stats": {
     "eyebrow": "Insights",
     "title": "Academy at a glance",
-    "subtitle": "Quick read on your academy — belt distribution and active roster — pulled live from your athletes.",
+    "subtitle": "Quick read on your academy — belt distribution — pulled live from your athletes.",
     "loadError": "Couldn't load the stats. Please try again.",
     "empty": "Add your first athlete and the charts will populate here.",
     "total": "Across {{count}} athletes on file.",
@@ -846,9 +851,64 @@
       "title": "Belts",
       "hint": "Athletes by IBJJF rank, kids → seniors. Hover a slice for the count + share."
     },
-    "status": {
-      "title": "Active roster",
-      "hint": "Active vs. suspended vs. inactive — the slice you focus on day to day."
+    "tabs": {
+      "overview": "Overview",
+      "attendance": "Attendance",
+      "payments": "Payments",
+      "athletes": "Athletes"
+    },
+    "attendance": {
+      "heatmapTitle": "Attendance heatmap",
+      "loading": "Loading attendance heatmap…",
+      "errored": "Couldn’t load attendance heatmap.",
+      "empty": "No attendance recorded in the selected period.",
+      "heatmap": {
+        "ariaLabel": "Daily attendance heatmap",
+        "less": "Less",
+        "more": "More",
+        "tooltipCount": "{{count}} attendances on {{date}}",
+        "tooltipEmpty": "No attendance on {{date}}",
+        "dow": {
+          "mon": "Mon",
+          "wed": "Wed",
+          "fri": "Fri"
+        }
+      }
+    },
+    "payments": {
+      "monthlyTitle": "Monthly revenue",
+      "monthlyHint": "Last 12 months · sum of recorded payments per business month",
+      "loading": "Loading revenue trend…",
+      "errored": "Couldn't load revenue trend.",
+      "empty": "No payments recorded in the last 12 months."
+    },
+    "athletes": {
+      "ageBandsTitle": "Athletes by IBJJF age division",
+      "ageBandsHint": "All athletes with a date of birth, bucketed by today's age",
+      "loading": "Loading distribution…",
+      "errored": "Couldn't load distribution.",
+      "empty": "No athletes with a date of birth yet.",
+      "missingDob": "{{count}} athletes without date of birth",
+      "scope": {
+        "kids": "Kids",
+        "adults": "Adults",
+        "all": "All"
+      },
+      "bands": {
+        "mighty_mite": "Mighty Mite",
+        "pee_wee": "Pee Wee",
+        "junior": "Junior",
+        "teen": "Teen",
+        "juvenile": "Juvenile",
+        "adult": "Adult",
+        "master_1": "Master 1",
+        "master_2": "Master 2",
+        "master_3": "Master 3",
+        "master_4": "Master 4",
+        "master_5": "Master 5",
+        "master_6": "Master 6",
+        "master_7": "Master 7"
+      }
     }
   }
 }

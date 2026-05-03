@@ -1,0 +1,65 @@
+.heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-x: auto;
+
+  &__svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    // max-width is set inline via [style.maxWidth.px] — depends on the
+    // current number of weeks (range selector). ~17-18px effective cell
+    // size at the cap, ~11px below.
+    margin: 0 auto;
+  }
+
+  &__dow,
+  &__month {
+    font-size: 9px;
+    fill: var(--p-text-muted-color);
+  }
+
+  &__cell {
+    // Default fill for bucket-0 (empty) cells. Bucket-1..4 cells override this
+    // via the inline [attr.fill] attribute, which wins over CSS in SVG.
+    fill: var(--p-surface-200);
+    transition: opacity var(--budojo-motion-fast, 160ms) ease-out;
+
+    &--out {
+      opacity: 0.15;
+    }
+  }
+
+  &__legend {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+    align-self: flex-end;
+
+    &-cell {
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      border-radius: 2px;
+
+      &--b0 {
+        background: var(--p-surface-200);
+      }
+      &--b1 {
+        background: color-mix(in srgb, var(--p-primary-color) 25%, var(--p-surface-200));
+      }
+      &--b2 {
+        background: color-mix(in srgb, var(--p-primary-color) 50%, var(--p-surface-200));
+      }
+      &--b3 {
+        background: color-mix(in srgb, var(--p-primary-color) 75%, var(--p-surface-200));
+      }
+      &--b4 {
+        background: var(--p-primary-color);
+      }
+    }
+  }
+}
