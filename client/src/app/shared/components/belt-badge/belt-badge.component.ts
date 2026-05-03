@@ -2,21 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { TranslatePipe } from '@ngx-translate/core';
 import { TagModule } from 'primeng/tag';
 import { Belt, MAX_STRIPES_PER_BELT } from '../../../core/services/athlete.service';
-
-const BELT_KEYS: Readonly<Record<Belt, string>> = {
-  grey: 'belts.grey',
-  yellow: 'belts.yellow',
-  orange: 'belts.orange',
-  green: 'belts.green',
-  white: 'belts.white',
-  blue: 'belts.blue',
-  purple: 'belts.purple',
-  brown: 'belts.brown',
-  black: 'belts.black',
-  'red-and-black': 'belts.redAndBlack',
-  'red-and-white': 'belts.redAndWhite',
-  red: 'belts.red',
-};
+import { BELT_KEYS } from '../../utils/i18n-enum-keys';
 
 /**
  * Renders the IBJJF belt as a coloured pill, optionally with stripe markers

@@ -679,6 +679,123 @@
         "dayPresent": "{{day}} — present",
         "dayNotRecorded": "{{day}} — not recorded"
       }
+    },
+    "form": {
+      "title": {
+        "create": "Add athlete",
+        "edit": "Edit athlete"
+      },
+      "subtitle": {
+        "create": "Create a new athlete in your academy",
+        "edit": "Update this athlete's details"
+      },
+      "loading": "Loading athlete…",
+      "loadError": "Could not load this athlete. Please try again.",
+      "validationFailed": "Validation failed.",
+      "serverError": "Something went wrong. Please try again.",
+      "optional": "(optional)",
+      "optionalAddress": "(optional — fill all marked fields below or none)",
+      "label": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "email": "Email",
+        "phone": "Phone",
+        "website": "Website",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "dateOfBirth": "Date of birth",
+        "joined": "Joined",
+        "belt": "Belt",
+        "stripes": "Stripes",
+        "status": "Status",
+        "addressLegend": "Address",
+        "addressLine1": "Street + civic number",
+        "addressLine2": "Apt / floor / unit",
+        "addressZip": "ZIP",
+        "addressCity": "City",
+        "addressProvince": "Province"
+      },
+      "placeholder": {
+        "phoneCountryCode": "Code",
+        "phoneNationalNumber": "National number",
+        "website": "https://example.com",
+        "facebook": "https://facebook.com/yourprofile",
+        "instagram": "https://instagram.com/yourprofile",
+        "address": {
+          "line1": "Via Roma 1",
+          "line2": "Apt B, unit 4",
+          "zip": "00100",
+          "city": "Rome"
+        }
+      },
+      "aria": {
+        "phoneCountryCode": "Phone country code",
+        "phoneNationalNumber": "Phone national number",
+        "province": "Province",
+        "requiredWhenFilled": "required when any address field is filled"
+      },
+      "tooltip": {
+        "requiredWhenFilled": "Required when any address field is filled"
+      },
+      "validation": {
+        "maxLength100": "Maximum 100 characters.",
+        "maxLength255": "Maximum 255 characters.",
+        "firstName": {
+          "required": "First name is required."
+        },
+        "lastName": {
+          "required": "Last name is required."
+        },
+        "email": {
+          "invalid": "Enter a valid email address."
+        },
+        "phone": {
+          "countryRequired": "Country code is required when a national number is entered.",
+          "numberRequired": "National number is required when a country code is selected.",
+          "pattern": "Digits only — no spaces, dashes, or parentheses.",
+          "maxLength": "Maximum 20 digits."
+        },
+        "url": {
+          "website": "Enter a full URL — e.g. <code>https://example.com</code>.",
+          "facebook": "Enter a full URL — e.g. <code>https://facebook.com/yourprofile</code>.",
+          "instagram": "Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>."
+        },
+        "joined": {
+          "required": "Joined date is required."
+        },
+        "address": {
+          "postalCode": "ZIP must be exactly 5 digits.",
+          "incomplete": "Fill every required address field, or clear them all to leave the athlete without an address."
+        }
+      },
+      "hint": {
+        "address": "Leave every field empty to keep the athlete without an address on file."
+      },
+      "button": {
+        "cancel": "Cancel",
+        "submitCreate": "Create athlete",
+        "submitEdit": "Save changes"
+      },
+      "toast": {
+        "invalidIdSummary": "Invalid athlete",
+        "invalidIdDetail": "The requested athlete id is invalid.",
+        "createdSummary": "Athlete created",
+        "updatedSummary": "Athlete updated"
+      },
+      "phone": {
+        "countryCode": {
+          "italy": "Italy",
+          "france": "France",
+          "spain": "Spain",
+          "uk": "United Kingdom",
+          "germany": "Germany",
+          "usCanada": "US / Canada",
+          "switzerland": "Switzerland",
+          "austria": "Austria",
+          "portugal": "Portugal",
+          "netherlands": "Netherlands"
+        }
+      }
     }
   },
   "month": {
