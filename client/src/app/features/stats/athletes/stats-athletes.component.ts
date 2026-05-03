@@ -65,7 +65,9 @@ export class StatsAthletesComponent {
       datasets: [
         {
           data: bands.map((b) => b.count),
-          backgroundColor: 'var(--p-primary-color)',
+          // Literal hex (mirrors --p-primary-color in budojo-theme.scss).
+          // Chart.js canvas can't resolve var(--*) tokens at paint time.
+          backgroundColor: '#5b6cff',
         },
       ],
     };

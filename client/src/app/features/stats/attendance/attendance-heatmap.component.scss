@@ -9,7 +9,7 @@
     width: 100%;
     height: auto;
     // max-width is set inline via [style.maxWidth.px] — depends on the
-    // current number of weeks (range selector). 14-15px effective cell
+    // current number of weeks (range selector). ~17-18px effective cell
     // size at the cap, ~11px below.
     margin: 0 auto;
   }
@@ -22,22 +22,7 @@
 
   &__cell {
     transition: opacity var(--budojo-motion-fast, 160ms) ease-out;
-
-    &--bucket-0 {
-      fill: var(--p-surface-200);
-    }
-    &--bucket-1 {
-      fill: color-mix(in srgb, var(--p-primary-color) 25%, var(--p-surface-200));
-    }
-    &--bucket-2 {
-      fill: color-mix(in srgb, var(--p-primary-color) 50%, var(--p-surface-200));
-    }
-    &--bucket-3 {
-      fill: color-mix(in srgb, var(--p-primary-color) 75%, var(--p-surface-200));
-    }
-    &--bucket-4 {
-      fill: var(--p-primary-color);
-    }
+    // Fill is set per-cell via [attr.fill] in the template (month-hued palette).
 
     &--out {
       opacity: 0.15;

@@ -2,7 +2,7 @@
   <svg
     class="heatmap__svg"
     [attr.viewBox]="'0 0 ' + (grid().length * 13 + 30) + ' 110'"
-    [style.maxWidth.px]="grid().length * 18 + 30"
+    [style.maxWidth.px]="grid().length * 22 + 30"
     preserveAspectRatio="xMinYMin meet"
     role="img"
     [attr.aria-label]="'stats.attendance.heatmap.ariaLabel' | translate"
@@ -31,10 +31,11 @@
             width="11"
             height="11"
             rx="2"
-            [class]="'heatmap__cell heatmap__cell--bucket-' + cell.bucket"
+            class="heatmap__cell"
             [class.heatmap__cell--out]="!cell.inWindow"
+            [attr.fill]="cell.fill"
           >
-            <title>{{ cell.iso }} · {{ cell.count }}</title>
+            <title>{{ cell.tooltip }}</title>
           </rect>
         }
       }
@@ -44,11 +45,11 @@
   <!-- Legend -->
   <div class="heatmap__legend" aria-hidden="true">
     <span>{{ 'stats.attendance.heatmap.less' | translate }}</span>
-    <span class="heatmap__legend-cell heatmap__cell--bucket-0"></span>
-    <span class="heatmap__legend-cell heatmap__cell--bucket-1"></span>
-    <span class="heatmap__legend-cell heatmap__cell--bucket-2"></span>
-    <span class="heatmap__legend-cell heatmap__cell--bucket-3"></span>
-    <span class="heatmap__legend-cell heatmap__cell--bucket-4"></span>
+    <span class="heatmap__legend-cell" style="background: #e9ecef"></span>
+    <span class="heatmap__legend-cell" style="background: #5b6cff40"></span>
+    <span class="heatmap__legend-cell" style="background: #5b6cff80"></span>
+    <span class="heatmap__legend-cell" style="background: #5b6cffbf"></span>
+    <span class="heatmap__legend-cell" style="background: #5b6cff"></span>
     <span>{{ 'stats.attendance.heatmap.more' | translate }}</span>
   </div>
 </div>

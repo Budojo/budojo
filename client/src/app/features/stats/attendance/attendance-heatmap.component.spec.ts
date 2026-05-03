@@ -39,18 +39,25 @@ describe('AttendanceHeatmapComponent', () => {
     expect(rects.length).toBeLessThanOrEqual(98);
   });
 
-  it('applies bucket-1+ classes only to cells with count > 0', () => {
+  it('applies a month-hued fill to populated cells and the neutral fill to empty cells', () => {
     // Use local-time dates to avoid UTC-parse timezone drift.
+    // May 2026: month index 4 → MONTH_HUES[4] = '#9ccc65'
     const windowStart = new Date(2026, 4, 4); // 2026-05-04 (Mon) local
     const windowEnd = new Date(2026, 4, 10); // 2026-05-10 (Sun) local
-    const points = [{ date: '2026-05-04', count: 3 }]; // bucket-2
+    const points = [{ date: '2026-05-04', count: 3 }]; // bucket-2 → '#9ccc6580'
     createComponent(points, windowStart, windowEnd);
-    // Scope to <rect> elements only — legend cells share the CSS class name.
-    const populated = fixture.nativeElement.querySelectorAll('rect.heatmap__cell--bucket-2');
-    expect(populated.length).toBe(1);
-    // All other rect cells (count=0) should be bucket-0.
-    const empty = fixture.nativeElement.querySelectorAll('rect.heatmap__cell--bucket-0');
-    expect(empty.length).toBe(6);
+
+    // The populated cell (2026-05-04, bucket 2 in May) should carry the May hue at 50% alpha.
+    const rects: NodeListOf<SVGRectElement> =
+      fixture.nativeElement.querySelectorAll('rect.heatmap__cell');
+    const populatedRects = Array.from(rects).filter((r) =>
+      r.getAttribute('fill')?.startsWith('#9ccc65'),
+    );
+    expect(populatedRects.length).toBe(1);
+
+    // All other cells (count=0) should have the neutral empty fill.
+    const emptyRects = Array.from(rects).filter((r) => r.getAttribute('fill') === '#e9ecef');
+    expect(emptyRects.length).toBe(6);
   });
 
   it('gives cells outside the window the --out modifier class', () => {

@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { DailyAttendancePoint } from '../../../core/services/stats.service';
 
 interface Cell {
@@ -8,6 +8,8 @@ interface Cell {
   readonly count: number;
   readonly bucket: 0 | 1 | 2 | 3 | 4; // intensity bucket
   readonly inWindow: boolean; // false for cells outside the data range (alignment padding)
+  readonly tooltip: string; // localized, prebuilt for the <title>
+  readonly fill: string; // per-month hued fill color
 }
 
 @Component({
@@ -19,6 +21,24 @@ interface Cell {
   styleUrl: './attendance-heatmap.component.scss',
 })
 export class AttendanceHeatmapComponent {
+  private readonly translate = inject(TranslateService);
+
+  /** One hue per calendar month (index 0 = Jan … 11 = Dec). */
+  private static readonly MONTH_HUES: readonly string[] = [
+    '#5b6cff', // Jan — primary blue
+    '#7c4dff', // Feb — violet
+    '#26a69a', // Mar — teal
+    '#66bb6a', // Apr — green
+    '#9ccc65', // May — lime
+    '#ffca28', // Jun — amber
+    '#ffa726', // Jul — orange
+    '#ef5350', // Aug — red
+    '#ec407a', // Sep — pink
+    '#ab47bc', // Oct — purple
+    '#5c6bc0', // Nov — indigo
+    '#42a5f5', // Dec — light blue
+  ];
+
   readonly points = input.required<readonly DailyAttendancePoint[]>();
   readonly windowStart = input.required<Date>();
   readonly windowEnd = input.required<Date>();
@@ -48,12 +68,29 @@ export class AttendanceHeatmapComponent {
         const iso = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
         const count = counts.get(iso) ?? 0;
         const inWindow = cursor >= start && cursor <= end;
+        const bucket = this.bucketFor(count);
+        const cellDate = new Date(cursor);
+        const dateLabel = cellDate.toLocaleDateString(undefined, {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
+        const tooltip =
+          count === 0
+            ? this.translate.instant('stats.attendance.heatmap.tooltipEmpty', { date: dateLabel })
+            : this.translate.instant('stats.attendance.heatmap.tooltipCount', {
+                date: dateLabel,
+                count,
+              });
         week.push({
-          date: new Date(cursor),
+          date: cellDate,
           iso,
           count,
-          bucket: this.bucketFor(count),
+          bucket,
           inWindow,
+          tooltip,
+          fill: this.fillFor(cellDate, bucket),
         });
         cursor.setDate(cursor.getDate() + 1);
       }
@@ -89,5 +126,12 @@ export class AttendanceHeatmapComponent {
     if (count <= 5) return 2;
     if (count <= 10) return 3;
     return 4;
+  }
+
+  private fillFor(date: Date, bucket: 0 | 1 | 2 | 3 | 4): string {
+    if (bucket === 0) return '#e9ecef';
+    const hue = AttendanceHeatmapComponent.MONTH_HUES[date.getMonth()];
+    const alphas = ['', '40', '80', 'bf', ''] as const;
+    return `${hue}${alphas[bucket]}`;
   }
 }

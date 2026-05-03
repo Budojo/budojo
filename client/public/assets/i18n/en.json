@@ -869,7 +869,9 @@
       "heatmap": {
         "ariaLabel": "Daily attendance heatmap",
         "less": "Less",
-        "more": "More"
+        "more": "More",
+        "tooltipCount": "{{count}} attendances on {{date}}",
+        "tooltipEmpty": "No attendance on {{date}}"
       }
     },
     "payments": {

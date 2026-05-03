@@ -20,13 +20,15 @@
             'athletes.detail.attendance.heatmap.dayLabel' | translate: { date: cell.iso }
           "
           data-cy="heatmap-cell-filled"
-        >{{ cell.day }}</span>
+          >{{ cell.day }}</span
+        >
       } @else {
         <span
           class="attendance-month-heatmap__cell attendance-month-heatmap__cell--idle"
           aria-hidden="true"
           data-cy="heatmap-cell-idle"
-        >{{ cell.day }}</span>
+          >{{ cell.day }}</span
+        >
       }
     }
   </div>

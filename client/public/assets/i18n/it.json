@@ -869,7 +869,9 @@
       "heatmap": {
         "ariaLabel": "Mappa presenze giornaliera",
         "less": "Meno",
-        "more": "Più"
+        "more": "Più",
+        "tooltipCount": "{{count}} presenze il {{date}}",
+        "tooltipEmpty": "Nessuna presenza il {{date}}"
       }
     },
     "payments": {
