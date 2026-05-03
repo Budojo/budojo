@@ -71,7 +71,7 @@ export class StatsAthletesComponent {
         {
           data: bands.map((b) => b.count),
           // Primary indigo — uniform with the payments tab. Heatmap is
-          // intentionally per-month rainbow because there color encodes
+          // intentionally per-month rainbow because the color encodes
           // information; Athletes / Payments are monocolor by design.
           // Literal hex because Chart.js canvas can't resolve var(--*).
           backgroundColor: '#5b6cff',

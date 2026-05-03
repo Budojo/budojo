@@ -30,7 +30,7 @@ export class StatsPaymentsComponent {
       {
         data: this.buckets().map((b) => b.amount_cents / 100),
         // Primary indigo — uniform with the athletes histogram. Heatmap is
-        // intentionally per-month rainbow because there color encodes
+        // intentionally per-month rainbow because the color encodes
         // information; this trend chart is monocolor by design.
         // Literal hex because Chart.js canvas can't resolve var(--*).
         backgroundColor: '#5b6cff',
