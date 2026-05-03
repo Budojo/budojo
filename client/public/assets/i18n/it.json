@@ -15,7 +15,8 @@
     "whatsNew": "Novità",
     "feedback": "Invia feedback",
     "signOut": "Esci",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "stats": "Statistiche"
   },
   "auth": {
     "shared": {
@@ -832,6 +833,22 @@
       "countMany": "atleti devono ancora pagare",
       "viewAll": "Vedi tutti i {{count}} →",
       "viewList": "Vedi nella lista atleti →"
+    }
+  },
+  "stats": {
+    "eyebrow": "Panoramica",
+    "title": "L'accademia a colpo d'occhio",
+    "subtitle": "Lettura rapida dell'accademia — distribuzione cinture e roster attivo — calcolata in tempo reale dai tuoi atleti.",
+    "loadError": "Impossibile caricare le statistiche. Riprova.",
+    "empty": "Aggiungi il primo atleta e i grafici si popolano qui.",
+    "total": "Su {{count}} atleti totali.",
+    "belt": {
+      "title": "Cinture",
+      "hint": "Atleti per grado IBJJF, kids → senior. Passa sopra a una fetta per il conteggio + percentuale."
+    },
+    "status": {
+      "title": "Roster attivo",
+      "hint": "Attivi vs. sospesi vs. inattivi — la fetta su cui ti concentri ogni giorno."
     }
   }
 }

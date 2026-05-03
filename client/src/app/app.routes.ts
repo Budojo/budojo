@@ -151,6 +151,11 @@ export const routes: Routes = [
           import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),
       },
       {
+        path: 'stats',
+        loadComponent: () =>
+          import('./features/stats/stats.component').then((m) => m.StatsComponent),
+      },
+      {
         // In-app feedback (#311). Sits inside the dashboard shell so
         // the sidebar context (academy name, version footer) is
         // visible while the user composes — useful when the feedback

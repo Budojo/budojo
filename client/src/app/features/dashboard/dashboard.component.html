@@ -123,6 +123,16 @@
         <span>{{ 'nav.feedback' | translate }}</span>
       </a>
       <a
+        routerLink="stats"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item"
+        (click)="closeSidebar()"
+        data-cy="nav-stats"
+      >
+        <i class="pi pi-chart-pie" aria-hidden="true"></i>
+        <span>{{ 'nav.stats' | translate }}</span>
+      </a>
+      <a
         routerLink="whats-new"
         routerLinkActive="sidebar__nav-item--active"
         class="sidebar__nav-item sidebar__nav-item--whats-new"
