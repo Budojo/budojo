@@ -6,9 +6,12 @@
 
   &__svg {
     display: block;
-    // Intrinsic size from explicit width/height attributes — matches the
-    // viewBox so cells render at 11px (GitHub-contribution scale).
-    // The wrapper's overflow-x: auto handles narrow viewports.
+    width: 100%;
+    height: auto;
+    // max-width is set inline via [style.maxWidth.px] — depends on the
+    // current number of weeks (range selector). 14-15px effective cell
+    // size at the cap, ~11px below.
+    margin: 0 auto;
   }
 
   &__dow,
