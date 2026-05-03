@@ -1,0 +1,26 @@
+<section class="stats-payments" data-cy="stats-payments">
+  <header class="stats-payments__header">
+    <h2 class="stats-payments__title">{{ 'stats.payments.monthlyTitle' | translate }}</h2>
+    <p class="stats-payments__hint">{{ 'stats.payments.monthlyHint' | translate }}</p>
+  </header>
+
+  @if (errored()) {
+    <p class="stats-payments__error" data-cy="stats-payments-error">
+      {{ 'stats.payments.errored' | translate }}
+    </p>
+  } @else if (loading()) {
+    <p-skeleton
+      height="20rem"
+      data-cy="stats-payments-loading"
+      [attr.aria-label]="'stats.payments.loading' | translate"
+    />
+  } @else if (isEmpty()) {
+    <p class="stats-payments__empty" data-cy="stats-payments-empty">
+      {{ 'stats.payments.empty' | translate }}
+    </p>
+  } @else {
+    <div class="stats-payments__chart-wrap" data-cy="stats-payments-chart">
+      <p-chart type="bar" [data]="chartData()" [options]="chartOptions" />
+    </div>
+  }
+</section>

@@ -330,6 +330,89 @@ describe('AttendanceHistoryComponent', () => {
     httpMock.verify();
   });
 
+  it('renders the knob + caption with the literal off-schedule percentage in the centre label', () => {
+    // Two-source pattern (Copilot review on PR #367): the knob's
+    // arc fill clamps via `ariaValueNow()` so a 150% off-schedule
+    // doesn't try to render past the full circle, but the centre
+    // label reads from `ratePercent()` directly so the literal
+    // 150 stays on screen. This spec pins both halves so a refactor
+    // that re-ties them silently breaks the off-schedule signal
+    // again.
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: [3], // Wednesdays only — 4 scheduled in April 2026
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({
+        data: [
+          makeRecord({ id: 1, attended_on: '2026-04-01' }),
+          makeRecord({ id: 2, attended_on: '2026-04-04' }),
+          makeRecord({ id: 3, attended_on: '2026-04-08' }),
+          makeRecord({ id: 4, attended_on: '2026-04-11' }),
+          makeRecord({ id: 5, attended_on: '2026-04-15' }),
+          makeRecord({ id: 6, attended_on: '2026-04-22' }),
+        ],
+      });
+    fixture.detectChanges();
+
+    // Knob is rendered.
+    const knob = fixture.nativeElement.querySelector('[data-cy="attendance-rate-knob"]');
+    expect(knob, 'attendance rate knob').not.toBeNull();
+
+    // Centre label shows the literal off-schedule reading (not clamped).
+    const pct = fixture.nativeElement.querySelector('[data-cy="attendance-rate-pct"]');
+    expect(pct, 'attendance rate centre label').not.toBeNull();
+    expect((pct as HTMLElement).textContent?.trim()).toBe('150%');
+
+    // Caption renders via the i18n helper with attended + scheduled tokens.
+    const detail = fixture.nativeElement.querySelector('[data-cy="attendance-rate-detail"]');
+    expect(detail, 'attendance rate caption').not.toBeNull();
+    const detailText = (detail as HTMLElement).textContent?.trim() ?? '';
+    expect(detailText).toContain('6');
+    expect(detailText).toContain('4');
+    httpMock.verify();
+  });
+
+  it('renders the bare-count fallback (no knob) when training_days is unconfigured', () => {
+    const httpMock = setupTestBed();
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      training_days: null,
+    });
+
+    const fixture = TestBed.createComponent(AttendanceHistoryComponent);
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/v1/athletes/${ATHLETE_ID}`).flush({ data: makeAthlete() });
+    httpMock
+      .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
+      .flush({
+        data: [makeRecord({ id: 1, attended_on: '2026-04-15' })],
+      });
+    fixture.detectChanges();
+
+    // No rate → no knob; the bare-count fallback paragraph renders instead.
+    expect(fixture.nativeElement.querySelector('[data-cy="attendance-rate-knob"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="attendance-rate-pct"]')).toBeNull();
+    expect(fixture.componentInstance['ratePercent']()).toBeNull();
+    httpMock.verify();
+  });
+
   it('prev navigation refetches the previous month with correct params', () => {
     const httpMock = setupTestBed();
     const fixture = TestBed.createComponent(AttendanceHistoryComponent);

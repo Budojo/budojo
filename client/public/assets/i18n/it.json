@@ -15,7 +15,8 @@
     "whatsNew": "Novità",
     "feedback": "Invia feedback",
     "signOut": "Esci",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "stats": "Statistiche"
   },
   "auth": {
     "shared": {
@@ -677,7 +678,12 @@
         "prevMonth": "Mese precedente",
         "nextMonth": "Mese successivo",
         "dayPresent": "{{day}} — presente",
-        "dayNotRecorded": "{{day}} — non registrato"
+        "dayNotRecorded": "{{day}} — non registrato",
+        "heatmap": {
+          "dayLabel": "Allenamento del {{date}}",
+          "monthLabel": "Presenze di {{month}}",
+          "empty": "Nessuna sessione registrata questo mese."
+        }
       }
     },
     "form": {
@@ -832,6 +838,77 @@
       "countMany": "atleti devono ancora pagare",
       "viewAll": "Vedi tutti i {{count}} →",
       "viewList": "Vedi nella lista atleti →"
+    }
+  },
+  "stats": {
+    "eyebrow": "Panoramica",
+    "title": "L'accademia a colpo d'occhio",
+    "subtitle": "Lettura rapida dell’accademia — distribuzione cinture — calcolata in tempo reale dai tuoi atleti.",
+    "loadError": "Impossibile caricare le statistiche. Riprova.",
+    "empty": "Aggiungi il primo atleta e i grafici si popolano qui.",
+    "total": "Su {{count}} atleti totali.",
+    "belt": {
+      "title": "Cinture",
+      "hint": "Atleti per grado IBJJF, kids → senior. Passa sopra a una fetta per il conteggio + percentuale."
+    },
+    "tabs": {
+      "overview": "Panoramica",
+      "attendance": "Presenze",
+      "payments": "Pagamenti",
+      "athletes": "Atleti"
+    },
+    "attendance": {
+      "heatmapTitle": "Mappa presenze",
+      "loading": "Caricamento mappa presenze…",
+      "errored": "Impossibile caricare la mappa presenze.",
+      "empty": "Nessuna presenza nel periodo selezionato.",
+      "heatmap": {
+        "ariaLabel": "Mappa presenze giornaliera",
+        "less": "Meno",
+        "more": "Più",
+        "tooltipCount": "{{count}} presenze il {{date}}",
+        "tooltipEmpty": "Nessuna presenza il {{date}}",
+        "dow": {
+          "mon": "Lun",
+          "wed": "Mer",
+          "fri": "Ven"
+        }
+      }
+    },
+    "payments": {
+      "monthlyTitle": "Incassi mensili",
+      "monthlyHint": "Ultimi 12 mesi · somma pagamenti registrati per mese di competenza",
+      "loading": "Caricamento incassi…",
+      "errored": "Impossibile caricare il trend.",
+      "empty": "Nessun pagamento registrato negli ultimi 12 mesi."
+    },
+    "athletes": {
+      "ageBandsTitle": "Atleti per divisione IBJJF",
+      "ageBandsHint": "Tutti gli atleti con data di nascita, raggruppati per età odierna",
+      "loading": "Caricamento distribuzione…",
+      "errored": "Impossibile caricare la distribuzione.",
+      "empty": "Nessun atleta con data di nascita.",
+      "missingDob": "{{count}} atleti senza data di nascita",
+      "scope": {
+        "kids": "Kids",
+        "adults": "Adulti",
+        "all": "Tutti"
+      },
+      "bands": {
+        "mighty_mite": "Mighty Mite",
+        "pee_wee": "Pee Wee",
+        "junior": "Junior",
+        "teen": "Teen",
+        "juvenile": "Juvenile",
+        "adult": "Adult",
+        "master_1": "Master 1",
+        "master_2": "Master 2",
+        "master_3": "Master 3",
+        "master_4": "Master 4",
+        "master_5": "Master 5",
+        "master_6": "Master 6",
+        "master_7": "Master 7"
+      }
     }
   }
 }

@@ -121,6 +121,16 @@ export class AthletesListComponent implements OnInit {
    */
   private readonly _now = new Date();
 
+  /**
+   * NOTE: pinned to `en-US` (not `en-GB` from `localeFor`) for English
+   * specifically because `month: 'short'` returns the 4-char "Sept"
+   * under en-GB (modern Intl) — the paid-column header design relies
+   * on a 3-char token ("Apr" / "Sep" / "Oct") for column-width stability.
+   * `en-US` returns 3-char tokens for every month, including September.
+   * Long-form month-name screens elsewhere DO use the shared
+   * `localeFor()` helper (en-GB) to get day-first dates; only this
+   * fixed-width 3-char-month spot opts out.
+   */
   private readonly locale = computed<string>(() =>
     this.languageService.currentLang() === 'it' ? 'it-IT' : 'en-US',
   );

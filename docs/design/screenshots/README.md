@@ -32,7 +32,7 @@ npm run design:inventory
 
 That's it. Windows, macOS, Linux — same command.
 
-Under the hood the script launches a `cypress/included:13.17.0`
+Under the hood the script launches a `cypress/included:15.14.2`
 container that shares the network namespace of `budojo_client`, runs
 [`cypress/inventory/design-inventory.cy.ts`](../../../client/cypress/inventory/design-inventory.cy.ts)
 once per declared page × three viewports, and writes

@@ -151,6 +151,53 @@ export const routes: Routes = [
           import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),
       },
       {
+        path: 'stats',
+        loadComponent: () =>
+          import('./features/stats/stats.component').then((m) => m.StatsComponent),
+        children: [
+          // Empty path eagerly loads Overview instead of `redirectTo: 'overview'`
+          // — the redirect form had a race on first lazy-load that landed users
+          // on a blank `<router-outlet>` for one tick. Direct loadComponent
+          // resolves synchronously once the parent chunk is in.
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('./features/stats/overview/stats-overview.component').then(
+                (m) => m.StatsOverviewComponent,
+              ),
+          },
+          {
+            path: 'overview',
+            loadComponent: () =>
+              import('./features/stats/overview/stats-overview.component').then(
+                (m) => m.StatsOverviewComponent,
+              ),
+          },
+          {
+            path: 'attendance',
+            loadComponent: () =>
+              import('./features/stats/attendance/stats-attendance.component').then(
+                (m) => m.StatsAttendanceComponent,
+              ),
+          },
+          {
+            path: 'payments',
+            loadComponent: () =>
+              import('./features/stats/payments/stats-payments.component').then(
+                (m) => m.StatsPaymentsComponent,
+              ),
+          },
+          {
+            path: 'athletes',
+            loadComponent: () =>
+              import('./features/stats/athletes/stats-athletes.component').then(
+                (m) => m.StatsAthletesComponent,
+              ),
+          },
+        ],
+      },
+      {
         // In-app feedback (#311). Sits inside the dashboard shell so
         // the sidebar context (academy name, version footer) is
         // visible while the user composes — useful when the feedback

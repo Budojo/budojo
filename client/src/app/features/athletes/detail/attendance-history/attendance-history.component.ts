@@ -9,10 +9,12 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { catchError, finalize, of } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
+import { KnobModule } from 'primeng/knob';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../../core/services/academy.service';
@@ -23,6 +25,7 @@ import {
   countScheduledTrainingDays,
 } from '../../../../shared/utils/attendance-rate';
 import { YearMonth, buildCalendarGrid, shiftMonth } from './calendar-grid';
+import { AttendanceMonthHeatmapComponent } from './attendance-month-heatmap.component';
 
 const MONTH_KEYS = [
   'month.january',
@@ -84,7 +87,15 @@ function currentYearMonth(): YearMonth {
 @Component({
   selector: 'app-attendance-history',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, ButtonModule, PopoverModule, SkeletonModule],
+  imports: [
+    FormsModule,
+    TranslatePipe,
+    ButtonModule,
+    KnobModule,
+    PopoverModule,
+    SkeletonModule,
+    AttendanceMonthHeatmapComponent,
+  ],
   templateUrl: './attendance-history.component.html',
   styleUrl: './attendance-history.component.scss',
 })
@@ -116,6 +127,27 @@ export class AttendanceHistoryComponent implements OnInit {
     () => new Set(this.records().map((r) => r.attended_on)),
   );
   protected readonly attendedCount = computed(() => this.records().length);
+
+  /**
+   * Attended sessions as an array of `Date` objects for the month heatmap.
+   * Uses local-date parsing (split YYYY-MM-DD) to avoid TZ-shifting — the
+   * same discipline as `toLocalDateString` and `parseCreatedYearMonth`.
+   */
+  protected readonly attendedDatesArray = computed<readonly Date[]>(() =>
+    this.records().map((r) => {
+      const [y, m, d] = r.attended_on.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }),
+  );
+
+  /**
+   * First-of-month `Date` for the currently visible month.
+   * Consumed by the month heatmap as the `[month]` input.
+   */
+  protected readonly visibleMonth = computed(() => {
+    const ym = this.visible();
+    return new Date(ym.year, ym.month - 1, 1);
+  });
 
   /**
    * Sessions actually held by the academy in the visible month (capped at

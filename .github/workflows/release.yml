@@ -127,6 +127,14 @@ jobs:
       needs.release.outputs.stable_tag != ''
     env:
       TAG: ${{ needs.release.outputs.stable_tag }}
+      # Bot-PAT presence as a string so step-level `if:` can read it
+      # (GitHub Actions doesn't allow `secrets.X` directly in `if:`
+      # expressions; exposing through env is the supported pattern).
+      # When truthy, the sweep PR is opened with the bot-PAT identity
+      # and auto-merge is enabled — when falsy, the workflow opens
+      # the PR with the default GITHUB_TOKEN and the merge stays a
+      # manual step (current behaviour, no regression).
+      HAS_BOT_TOKEN: ${{ secrets.BUDOJO_BOT_TOKEN != '' && 'true' || 'false' }}
     steps:
       - name: Checkout the release tag
         # Cut the sweep branch from the EXACT tag commit, not from
@@ -142,6 +150,18 @@ jobs:
           fetch-tags: true
           ref: ${{ needs.release.outputs.stable_tag }}
           persist-credentials: true
+          # Use the bot PAT (if configured) so the subsequent
+          # `git push` of the sweep branch fires `pr-checks.yml` on
+          # the resulting PR. The default GITHUB_TOKEN is suppressed
+          # by GitHub's workflow-event recursion guard — pushes
+          # authored by it never trigger downstream workflows, so
+          # the sweep PR currently lands with no CI and can't
+          # auto-merge against branch protection.
+          #
+          # Falls back to GITHUB_TOKEN when the bot PAT secret isn't
+          # configured — in that case the sweep PR opens but stays
+          # manual-merge, exactly the behaviour before this change.
+          token: ${{ secrets.BUDOJO_BOT_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Configure git
         run: |
@@ -178,8 +198,9 @@ jobs:
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Open or update the sweep PR
+        id: pr
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BUDOJO_BOT_TOKEN || secrets.GITHUB_TOKEN }}
           BRANCH: ${{ steps.branch.outputs.branch }}
         run: |
           # PR body passed to gh pr create via --body-file (NOT
@@ -218,6 +239,7 @@ jobs:
 
           ## Manual follow-up
 
+          - **Merge:** if the \`BUDOJO_BOT_TOKEN\` PAT secret is configured, this PR has \`--auto\` merge enabled and will land the moment all required checks pass — no manual click. Without the PAT secret, click "Merge" by hand once CI is green.
           - Add to project board with \`./.claude/scripts/board-set.sh <PR-N> in-progress\` — the workflow does NOT do this today (project-board GraphQL needs hardcoded IDs that live in the helper script, not in the workflow). One-line manual step.
 
           ## References
@@ -234,6 +256,7 @@ jobs:
           if [ -n "$EXISTING" ]; then
             echo "Updating existing PR #${EXISTING}"
             gh pr edit "$EXISTING" --body-file /tmp/sweep-body.md
+            echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
           else
             echo "Creating new sweep PR"
             gh pr create \
@@ -243,4 +266,58 @@ jobs:
               --body-file /tmp/sweep-body.md \
               --label "🔧 maintenance" \
               --assignee m-bonanno
+            # Look up the PR number via a structured JSON query rather
+            # than parsing `gh pr create` stdout — the CLI's output
+            # format isn't stable across versions, and a trailing-digit
+            # grep can silently miss multi-line output (the next
+            # auto-merge step then no-ops without a clear error).
+            PR_NUMBER=$(gh pr list --head "$BRANCH" --base develop --state open --json number --jq '.[0].number // empty')
+            if [ -z "$PR_NUMBER" ]; then
+              echo "::error::Sweep PR was created but could not be looked up via 'gh pr list' — bailing out before auto-merge."
+              exit 1
+            fi
+            echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Enable auto-merge on the sweep PR
+        # Only meaningful when the bot PAT is configured: the
+        # GITHUB_TOKEN-authored PR opens without any pr-checks.yml
+        # run (recursion guard suppresses the trigger), so `--auto`
+        # would sit on a never-merging PR forever. With the PAT,
+        # the create-step above ran as a non-bot user, which fires
+        # pr-checks.yml on the new PR — this step then enables
+        # auto-merge so GitHub merges the moment all required
+        # checks land green.
+        #
+        # **Repo-level prerequisite:** "Allow auto-merge" must be
+        # ENABLED at *Settings → General → Pull Requests*. Without
+        # the toggle, `gh pr merge --auto` returns a GraphQL
+        # `enablePullRequestAutoMerge` error and the workflow turns
+        # red even though the sweep PR opened correctly. The step
+        # is wrapped to surface that as a `::warning::` instead —
+        # we don't want an admin-side toggle missing to fail the
+        # whole release run after a tag is already published.
+        #
+        # Memory `feedback_release_pr_wait_for_copilot` says the
+        # sweep is alignment-only — no Copilot wait, no review
+        # surface — so auto-merging the moment CI is green is the
+        # documented policy.
+        if: env.HAS_BOT_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BUDOJO_BOT_TOKEN }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          if [ -z "$PR" ]; then
+            echo "::warning::No sweep PR number captured — skipping auto-merge."
+            exit 0
+          fi
+          if gh pr merge "$PR" --merge --auto; then
+            echo "✅ Auto-merge enabled on PR #${PR} — will merge when required checks pass."
+          else
+            # Most likely cause: repo's "Allow auto-merge" toggle is off
+            # (Settings → General → Pull Requests). Surface this as a
+            # warning, not a hard failure — the release tag has already
+            # been published at this point and the sweep PR is open;
+            # a maintainer can merge it by hand.
+            echo "::warning::gh pr merge --auto failed for PR #${PR}. Most common cause: repo-level 'Allow auto-merge' is disabled (Settings → General → Pull Requests). Falling back to manual merge."
           fi

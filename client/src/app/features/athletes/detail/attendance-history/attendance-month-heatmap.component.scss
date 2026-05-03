@@ -1,0 +1,48 @@
+// Single-month attendance heatmap — Mon-first 6×7 grid.
+// On/off only (filled = attended, idle = no session recorded).
+// Color via PrimeNG theme tokens only; 8dp baseline grid.
+
+.attendance-month-heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+  }
+
+  &__cell {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--p-border-radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: background var(--budojo-motion-duration-short, 160ms) cubic-bezier(0.4, 0, 0.2, 1);
+
+    &--blank {
+      // Invisible padding cell — takes space but carries no visual weight.
+      background: transparent;
+    }
+
+    &--idle {
+      background: var(--p-surface-100);
+      color: var(--p-text-muted-color);
+    }
+
+    &--filled {
+      background: var(--p-primary-color);
+      color: var(--p-primary-contrast-color);
+    }
+  }
+
+  &__empty {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+    text-align: center;
+  }
+}

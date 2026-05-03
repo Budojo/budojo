@@ -1,9 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { LanguageService } from '../../../core/services/language.service';
 import { AgeBadgeComponent } from './age-badge.component';
 
 function createWith(dateOfBirth: string | null | undefined) {
-  TestBed.configureTestingModule({ imports: [AgeBadgeComponent] });
+  TestBed.configureTestingModule({
+    imports: [AgeBadgeComponent],
+    providers: [...provideI18nTesting()],
+  });
   const fixture = TestBed.createComponent(AgeBadgeComponent);
   fixture.componentRef.setInput('dateOfBirth', dateOfBirth);
   fixture.detectChanges();
@@ -54,6 +59,20 @@ describe('AgeBadgeComponent', () => {
   it('formats the tooltip in en-GB long form', () => {
     const fixture = createWith('1990-05-15');
     expect(fixture.componentInstance['dobLabel']()).toBe('15 May 1990');
+  });
+
+  it('reformats the tooltip in Italian after the language toggles to it', () => {
+    // Regression trip-wire for the locale-aware DOB formatter (#280
+    // PR-D / Copilot review on PR #365). Without the LanguageService
+    // signal dependency on the dobLabel computed, this assertion
+    // would still read "15 May 1990" after the IT switch.
+    const fixture = createWith('1990-05-15');
+    expect(fixture.componentInstance['dobLabel']()).toBe('15 May 1990');
+
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance['dobLabel']()).toBe('15 maggio 1990');
   });
 
   it('does not render the chip when DOB is missing', () => {

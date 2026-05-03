@@ -21,7 +21,9 @@ import { Tooltip } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { AthleteService } from '../../../../core/services/athlete.service';
+import { LanguageService } from '../../../../core/services/language.service';
 import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
+import { localeFor } from '../../../../shared/utils/locale';
 
 /**
  * Per-athlete payments tab on the detail page (#182 Surface 2).
@@ -77,6 +79,7 @@ export class PaymentsListComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly athleteId = signal<number | null>(null);
@@ -256,7 +259,8 @@ export class PaymentsListComponent implements OnInit {
   }
 
   protected formatAmount(cents: number): string {
-    return (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'EUR' });
+    const locale = localeFor(this.languageService.currentLang());
+    return (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
   }
 
   protected formatPaidAt(iso: string): string {

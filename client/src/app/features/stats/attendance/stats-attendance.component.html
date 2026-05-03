@@ -1,0 +1,36 @@
+<section class="stats-attendance" data-cy="stats-attendance">
+  <header class="stats-attendance__header">
+    <h2 class="stats-attendance__title">{{ 'stats.attendance.heatmapTitle' | translate }}</h2>
+    <p-selectbutton
+      [options]="rangeOptions"
+      [ngModel]="range()"
+      (ngModelChange)="range.set($event)"
+      optionLabel="label"
+      optionValue="value"
+      data-cy="stats-attendance-range"
+    />
+  </header>
+
+  @if (errored()) {
+    <p class="stats-attendance__error" data-cy="stats-attendance-error">
+      {{ 'stats.attendance.errored' | translate }}
+    </p>
+  } @else if (loading()) {
+    <p-skeleton
+      height="8rem"
+      data-cy="stats-attendance-loading"
+      [attr.aria-label]="'stats.attendance.loading' | translate"
+    />
+  } @else if (isEmpty()) {
+    <p class="stats-attendance__empty" data-cy="stats-attendance-empty">
+      {{ 'stats.attendance.empty' | translate }}
+    </p>
+  } @else {
+    <app-attendance-heatmap
+      [points]="points()"
+      [windowStart]="windowStart()"
+      [windowEnd]="windowEnd"
+      data-cy="stats-attendance-heatmap"
+    />
+  }
+</section>

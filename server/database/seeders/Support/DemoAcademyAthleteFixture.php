@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace Database\Seeders\Support;
 
+use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 
 /**
- * Single athlete row inside the Eagles BJJ fixture file. Exists so the seeder
+ * Single athlete row inside the Demo Academy fixture file. Exists so the seeder
  * code reads `$athlete->firstName` instead of `$row['first_name']`, and so
  * the fixture loader can validate each row's shape at parse time.
  */
-final readonly class EaglesBjjAthleteFixture
+final readonly class DemoAcademyAthleteFixture
 {
     public function __construct(
         public string $firstName,
@@ -22,6 +23,7 @@ final readonly class EaglesBjjAthleteFixture
         public int $stripes,
         public ?string $joinedAt,
         public ?float $attendanceProbability,
+        public AthleteStatus $status,
     ) {
     }
 
@@ -35,9 +37,29 @@ final readonly class EaglesBjjAthleteFixture
             $belt = Belt::from($beltValue);
         } catch (\ValueError $e) {
             throw new \InvalidArgumentException(
-                "Eagles BJJ athlete fixture has invalid belt value '{$beltValue}'.",
+                "Demo Academy athlete fixture has invalid belt value '{$beltValue}'.",
                 previous: $e,
             );
+        }
+
+        // `status` is optional in the row to keep older fixtures (and tests)
+        // working without churn — defaults to Active when absent. When present
+        // it must be a valid AthleteStatus backed-enum value.
+        $statusValue = $row['status'] ?? null;
+        if ($statusValue === null) {
+            $status = AthleteStatus::Active;
+        } else {
+            if (! \is_string($statusValue)) {
+                throw new \InvalidArgumentException("Demo Academy athlete fixture 'status' must be string|null.");
+            }
+            try {
+                $status = AthleteStatus::from($statusValue);
+            } catch (\ValueError $e) {
+                throw new \InvalidArgumentException(
+                    "Demo Academy athlete fixture has invalid status value '{$statusValue}'.",
+                    previous: $e,
+                );
+            }
         }
 
         return new self(
@@ -49,6 +71,7 @@ final readonly class EaglesBjjAthleteFixture
             stripes: self::requiredInt($row, 'stripes'),
             joinedAt: self::optionalDate($row, 'joined_at'),
             attendanceProbability: self::optionalProbability($row, 'attendance_probability'),
+            status: $status,
         );
     }
 
@@ -57,7 +80,7 @@ final readonly class EaglesBjjAthleteFixture
     {
         $value = $row[$key] ?? null;
         if (! \is_string($value)) {
-            throw new \InvalidArgumentException("Eagles BJJ athlete fixture missing string '{$key}'.");
+            throw new \InvalidArgumentException("Demo Academy athlete fixture missing string '{$key}'.");
         }
 
         return $value;
@@ -71,7 +94,7 @@ final readonly class EaglesBjjAthleteFixture
             return null;
         }
         if (! \is_string($value)) {
-            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be string|null.");
+            throw new \InvalidArgumentException("Demo Academy athlete fixture '{$key}' must be string|null.");
         }
 
         return $value;
@@ -82,7 +105,7 @@ final readonly class EaglesBjjAthleteFixture
     {
         $value = $row[$key] ?? null;
         if (! \is_int($value)) {
-            throw new \InvalidArgumentException("Eagles BJJ athlete fixture missing int '{$key}'.");
+            throw new \InvalidArgumentException("Demo Academy athlete fixture missing int '{$key}'.");
         }
 
         return $value;
@@ -96,11 +119,11 @@ final readonly class EaglesBjjAthleteFixture
             return null;
         }
         if (! \is_int($value) && ! \is_float($value)) {
-            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be numeric|null.");
+            throw new \InvalidArgumentException("Demo Academy athlete fixture '{$key}' must be numeric|null.");
         }
         $float = (float) $value;
         if ($float < 0.0 || $float > 1.0) {
-            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be in [0, 1], got {$float}.");
+            throw new \InvalidArgumentException("Demo Academy athlete fixture '{$key}' must be in [0, 1], got {$float}.");
         }
 
         return $float;
@@ -121,10 +144,10 @@ final readonly class EaglesBjjAthleteFixture
             return null;
         }
         if (! \is_string($value)) {
-            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be string|null.");
+            throw new \InvalidArgumentException("Demo Academy athlete fixture '{$key}' must be string|null.");
         }
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) !== 1) {
-            throw new \InvalidArgumentException("Eagles BJJ athlete fixture '{$key}' must be YYYY-MM-DD, got '{$value}'.");
+            throw new \InvalidArgumentException("Demo Academy athlete fixture '{$key}' must be YYYY-MM-DD, got '{$value}'.");
         }
 
         return $value;
