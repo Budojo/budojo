@@ -849,6 +849,12 @@
     "status": {
       "title": "Roster attivo",
       "hint": "Attivi vs. sospesi vs. inattivi — la fetta su cui ti concentri ogni giorno."
+    },
+    "tabs": {
+      "overview": "Panoramica",
+      "attendance": "Presenze",
+      "payments": "Pagamenti",
+      "athletes": "Atleti"
     }
   }
 }

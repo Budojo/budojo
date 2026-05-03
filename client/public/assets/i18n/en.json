@@ -849,6 +849,12 @@
     "status": {
       "title": "Active roster",
       "hint": "Active vs. suspended vs. inactive — the slice you focus on day to day."
+    },
+    "tabs": {
+      "overview": "Overview",
+      "attendance": "Attendance",
+      "payments": "Payments",
+      "athletes": "Athletes"
     }
   }
 }

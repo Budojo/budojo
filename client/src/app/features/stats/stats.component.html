@@ -1,1 +1,15 @@
-<app-stats-overview />
+<section class="stats-page">
+  <p-tabs [value]="activeTab()" class="stats-page__tabs" data-cy="stats-tabs">
+    <p-tablist>
+      @for (tab of tabs; track tab.value) {
+        <p-tab [value]="tab.value" [routerLink]="tab.value" [attr.data-cy]="tab.dataCy">
+          {{ tab.labelKey | translate }}
+        </p-tab>
+      }
+    </p-tablist>
+  </p-tabs>
+
+  <div class="stats-page__outlet">
+    <router-outlet />
+  </div>
+</section>

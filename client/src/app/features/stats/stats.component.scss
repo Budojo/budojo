@@ -1,1 +1,11 @@
-// shell — populated in Task 6
+.stats-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+
+  &__outlet {
+    min-height: 0;
+  }
+}
