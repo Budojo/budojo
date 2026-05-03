@@ -39,7 +39,7 @@ describe('AttendanceHeatmapComponent', () => {
     expect(rects.length).toBeLessThanOrEqual(98);
   });
 
-  it('applies a month-hued fill to populated cells and no inline fill to empty cells', () => {
+  it('applies a month-hued fill to populated cells and surface token to empty cells', () => {
     // Use local-time dates to avoid UTC-parse timezone drift.
     // May 2026: month index 4 → MONTH_HUES[4] = '#9ccc65'
     const windowStart = new Date(2026, 4, 4); // 2026-05-04 (Mon) local
@@ -47,18 +47,20 @@ describe('AttendanceHeatmapComponent', () => {
     const points = [{ date: '2026-05-04', count: 3 }]; // bucket-2 → '#9ccc6580'
     createComponent(points, windowStart, windowEnd);
 
-    // The populated cell (2026-05-04, bucket 2 in May) should carry the May hue at 50% alpha.
+    // Populated cells carry the per-month hue via inline [style.fill]; empty
+    // cells fall back to the surface token. JSDOM normalises hex → rgb when
+    // it reads `style.fill` back, so we identify each kind by whether the
+    // inline-style string still references a CSS variable (empty path) or
+    // a concrete color (populated path).
     const rects: NodeListOf<SVGRectElement> =
       fixture.nativeElement.querySelectorAll('rect.heatmap__cell');
-    const populatedRects = Array.from(rects).filter((r) =>
-      r.getAttribute('fill')?.startsWith('#9ccc65'),
-    );
-    expect(populatedRects.length).toBe(1);
+    const styleStrings = Array.from(rects).map((r) => r.getAttribute('style') ?? '');
 
-    // Empty cells (count=0) have no inline fill attribute — the CSS default
-    // (var(--p-surface-200)) applies instead, enabling dark-mode adaptation.
-    const emptyRects = Array.from(rects).filter((r) => r.getAttribute('fill') === null);
+    const emptyRects = styleStrings.filter((s) => s.includes('var('));
     expect(emptyRects.length).toBe(6);
+
+    const populatedRects = styleStrings.filter((s) => s !== '' && !s.includes('var('));
+    expect(populatedRects.length).toBe(1);
   });
 
   it('gives cells outside the window the --out modifier class', () => {

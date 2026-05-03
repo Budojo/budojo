@@ -155,7 +155,18 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/stats/stats.component').then((m) => m.StatsComponent),
         children: [
-          { path: '', pathMatch: 'full', redirectTo: 'overview' },
+          // Empty path eagerly loads Overview instead of `redirectTo: 'overview'`
+          // — the redirect form had a race on first lazy-load that landed users
+          // on a blank `<router-outlet>` for one tick. Direct loadComponent
+          // resolves synchronously once the parent chunk is in.
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('./features/stats/overview/stats-overview.component').then(
+                (m) => m.StatsOverviewComponent,
+              ),
+          },
           {
             path: 'overview',
             loadComponent: () =>

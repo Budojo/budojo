@@ -5,23 +5,6 @@ import { ChartModule } from 'primeng/chart';
 import { SkeletonModule } from 'primeng/skeleton';
 import { MonthlyPaymentsBucket, StatsService } from '../../../core/services/stats.service';
 
-// Inline hex literals — Chart.js's options object can't resolve `var(--p-*)` tokens,
-// and these colors are categorical (one per calendar month) rather than theme tokens.
-const MONTH_COLORS: readonly string[] = [
-  '#5b6cff',
-  '#7c4dff',
-  '#26a69a',
-  '#66bb6a',
-  '#9ccc65',
-  '#ffca28',
-  '#ffa726',
-  '#ef5350',
-  '#ec407a',
-  '#ab47bc',
-  '#5c6bc0',
-  '#42a5f5',
-];
-
 @Component({
   selector: 'app-stats-payments',
   standalone: true,
@@ -46,7 +29,11 @@ export class StatsPaymentsComponent {
     datasets: [
       {
         data: this.buckets().map((b) => b.amount_cents / 100),
-        backgroundColor: this.buckets().map((b) => MONTH_COLORS[Number(b.month.split('-')[1]) - 1]),
+        // Primary indigo — uniform with the athletes histogram. Heatmap is
+        // intentionally per-month rainbow because the color encodes
+        // information; this trend chart is monocolor by design.
+        // Literal hex because Chart.js canvas can't resolve var(--*).
+        backgroundColor: '#5b6cff',
       },
     ],
   }));

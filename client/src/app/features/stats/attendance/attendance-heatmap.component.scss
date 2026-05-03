@@ -21,9 +21,12 @@
   }
 
   &__cell {
-    // Default fill for bucket-0 (empty) cells. Bucket-1..4 cells override this
-    // via the inline [attr.fill] attribute, which wins over CSS in SVG.
-    fill: var(--p-surface-200);
+    // Fill comes from inline [style.fill] in the template: bucket-1..4 get a
+    // per-month hue (component returns the hex), bucket-0 gets the literal
+    // `var(--p-surface-200)` token (template fallback when component returns
+    // null). We can't use a CSS class for the empty-fill default — class
+    // rules win over SVG presentation attributes (`fill="..."`), so the
+    // inline-style path is the only way to keep the per-month hues visible.
     transition: opacity var(--budojo-motion-fast, 160ms) ease-out;
 
     &--out {
