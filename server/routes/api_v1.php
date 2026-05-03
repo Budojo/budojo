@@ -121,5 +121,6 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::prefix('stats')->group(function (): void {
         Route::get('attendance/monthly', [StatsController::class, 'attendanceMonthly']);
         Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
+        Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
     });
 });

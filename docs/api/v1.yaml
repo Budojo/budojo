@@ -1352,6 +1352,61 @@ paths:
         '403': { description: Forbidden — user has no academy. }
         '422': { description: Validation error }
 
+  /stats/athletes/age-bands:
+    get:
+      operationId: statsAthleteAgeBands
+      summary: IBJJF age-division histogram of the academy's athletes
+      description: |
+        Returns all 13 canonical IBJJF age divisions in order (Mighty Mite
+        through Master 7), each with the count of athletes whose age today
+        falls in that division. Empty divisions are included with count 0 so
+        the frontend can render the full histogram without gap-filling.
+        Athletes with a NULL date_of_birth are excluded from band counts and
+        reported in the top-level `missing_dob` field.
+      tags: [Stats]
+      responses:
+        '200':
+          description: All 13 IBJJF age divisions in canonical order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [bands, total, missing_dob]
+                    properties:
+                      bands:
+                        type: array
+                        items:
+                          type: object
+                          required: [code, category, min, max, count]
+                          properties:
+                            code:
+                              type: string
+                              enum:
+                                - mighty_mite
+                                - pee_wee
+                                - junior
+                                - teen
+                                - juvenile
+                                - adult
+                                - master_1
+                                - master_2
+                                - master_3
+                                - master_4
+                                - master_5
+                                - master_6
+                                - master_7
+                            category: { type: string, enum: [kids, adults] }
+                            min: { type: integer, minimum: 0 }
+                            max: { type: integer, nullable: true }
+                            count: { type: integer, minimum: 0 }
+                      total: { type: integer, minimum: 0 }
+                      missing_dob: { type: integer, minimum: 0 }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — user has no academy. }
+
 components:
 
   securitySchemes:
