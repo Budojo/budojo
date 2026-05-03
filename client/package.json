@@ -16,6 +16,9 @@
   },
   "private": true,
   "packageManager": "npm@10.9.7",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
     "@angular/animations": "^21.2.11",
     "@angular/cdk": "^21.2.9",
