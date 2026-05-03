@@ -31,7 +31,7 @@ describe('StatsAttendanceComponent', () => {
     fixture.detectChanges();
     http.expectOne('/api/v1/stats/attendance/monthly?months=12').flush({
       data: Array.from({ length: 12 }, (_, i) => ({
-        month: `2026-${i + 1}`,
+        month: `2026-${String(i + 1).padStart(2, '0')}`,
         active: 0,
         paused: 0,
       })),

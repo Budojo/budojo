@@ -71,7 +71,7 @@ export class StatsAttendanceComponent {
       x: { stacked: true },
       y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
     },
-  };
+  } as const;
 
   constructor() {
     this.stats

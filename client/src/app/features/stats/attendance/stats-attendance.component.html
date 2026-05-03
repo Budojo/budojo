@@ -4,12 +4,16 @@
     <p class="stats-attendance__hint">{{ 'stats.attendance.monthlyHint' | translate }}</p>
   </header>
 
-  @if (loading()) {
-    <p-skeleton height="20rem" data-cy="stats-attendance-loading" />
-  } @else if (errored()) {
+  @if (errored()) {
     <p class="stats-attendance__error" data-cy="stats-attendance-error">
       {{ 'stats.attendance.errored' | translate }}
     </p>
+  } @else if (loading()) {
+    <p-skeleton
+      height="20rem"
+      data-cy="stats-attendance-loading"
+      [attr.aria-label]="'stats.attendance.loading' | translate"
+    />
   } @else if (isEmpty()) {
     <p class="stats-attendance__empty" data-cy="stats-attendance-empty">
       {{ 'stats.attendance.empty' | translate }}
