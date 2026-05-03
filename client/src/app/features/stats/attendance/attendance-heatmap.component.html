@@ -39,7 +39,7 @@
             rx="2"
             class="heatmap__cell"
             [class.heatmap__cell--out]="!cell.inWindow"
-            [attr.fill]="cell.fill"
+            [style.fill]="cell.fill ?? 'var(--p-surface-200)'"
           >
             <title>{{ cell.tooltip }}</title>
           </rect>
