@@ -10,12 +10,12 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
-class EaglesBjjAttendanceSeeder extends Seeder
+class DemoAcademyAttendanceSeeder extends Seeder
 {
     public function run(): void
     {
         if (! app()->environment(['local', 'testing'])) {
-            $this->command->warn('EaglesBjjAttendanceSeeder skipped — only runs in local/testing environments.');
+            $this->command->warn('DemoAcademyAttendanceSeeder skipped — only runs in local/testing environments.');
 
             return;
         }
@@ -23,10 +23,10 @@ class EaglesBjjAttendanceSeeder extends Seeder
         $admin = User::where('email', 'admin@example.it')->first();
         $academy = $admin?->academy;
         if ($academy === null) {
-            throw new \RuntimeException('EaglesBjjAttendanceSeeder requires the admin academy — run AdminSeeder + EaglesBjjSeeder first.');
+            throw new \RuntimeException('DemoAcademyAttendanceSeeder requires the admin academy — run AdminSeeder + DemoAcademySeeder first.');
         }
 
-        $fixture = EaglesBjjSeeder::fixture();
+        $fixture = DemoAcademySeeder::fixture();
 
         $probabilities = [];
         foreach ($fixture->athletes as $athlete) {
