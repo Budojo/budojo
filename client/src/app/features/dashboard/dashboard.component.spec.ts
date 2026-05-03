@@ -383,6 +383,22 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('stats nav entry position', () => {
+    it('renders Stats nav entry immediately after Attendance in the main nav', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const navLinks = fixture.nativeElement.querySelectorAll('.sidebar__nav .sidebar__nav-item');
+      const labels = Array.from(navLinks).map((el) => (el as Element).getAttribute('data-cy'));
+
+      const attendanceIdx = labels.indexOf('nav-attendance');
+      const statsIdx = labels.indexOf('nav-stats');
+
+      expect(attendanceIdx).toBeGreaterThanOrEqual(0);
+      expect(statsIdx).toBe(attendanceIdx + 1);
+    });
+  });
+
   describe('email-verification pillola — removed from sidebar (#179)', () => {
     // The pillola lives only on /dashboard/profile now. The dashboard shell
     // shouldn't render <app-email-verification-status> at all — the spot
