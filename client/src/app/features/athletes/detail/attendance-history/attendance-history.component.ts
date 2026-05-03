@@ -9,10 +9,12 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { catchError, finalize, of } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
+import { KnobModule } from 'primeng/knob';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../../core/services/academy.service';
@@ -84,7 +86,7 @@ function currentYearMonth(): YearMonth {
 @Component({
   selector: 'app-attendance-history',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, ButtonModule, PopoverModule, SkeletonModule],
+  imports: [FormsModule, TranslatePipe, ButtonModule, KnobModule, PopoverModule, SkeletonModule],
   templateUrl: './attendance-history.component.html',
   styleUrl: './attendance-history.component.scss',
 })
