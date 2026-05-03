@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LanguageService } from '../../../core/services/language.service';
 import { DailyAttendancePoint } from '../../../core/services/stats.service';
+import { localeFor } from '../../../shared/utils/locale';
 
 interface Cell {
   readonly date: Date;
@@ -52,7 +53,7 @@ export class AttendanceHeatmapComponent {
    */
   protected readonly grid = computed(() => {
     // Register dependency on the active language so the tooltip locale re-evaluates on lang switch.
-    const tooltipLocale = this.languageService.currentLang() === 'it' ? 'it-IT' : 'en-US';
+    const tooltipLocale = localeFor(this.languageService.currentLang());
 
     const start = this.windowStart();
     const end = this.windowEnd();
@@ -111,7 +112,7 @@ export class AttendanceHeatmapComponent {
    */
   protected readonly monthLabels = computed(() => {
     // Register dependency on the active language so labels re-render on locale switch.
-    const labelLocale = this.languageService.currentLang() === 'it' ? 'it-IT' : 'en-US';
+    const labelLocale = localeFor(this.languageService.currentLang());
     const cols = this.grid();
     const labels: { col: number; label: string }[] = [];
     let prevMonth = -1;

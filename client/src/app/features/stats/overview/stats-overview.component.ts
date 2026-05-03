@@ -62,10 +62,10 @@ interface DoughnutData {
  * page on init to reach the full set. For typical academy sizes
  * (< 200 athletes) this is 5-10 round trips of ≤ 20 rows each — fast
  * enough that introducing a dedicated server-side aggregation
- * endpoint would be premature optimisation. When attendance / revenue
- * trends land later (separate PR), we'll add `/api/v1/stats/*`
- * endpoints because those aggregations don't have an existing
- * fetch-all endpoint to reuse.
+ * endpoint would be premature optimisation. The other Stats tabs
+ * (Attendance / Payments / Athletes age-bands) DO use server-side
+ * aggregation under `/api/v1/stats/*` because their inputs aren't
+ * reachable from a fetch-all athletes endpoint without N+1 round-trips.
  *
  * Locale-aware: the chart labels (belt names) flow through the
  * `belts.*` translation keys, so toggling EN ↔ IT re-renders the
