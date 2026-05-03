@@ -17,7 +17,9 @@ import { TableModule } from 'primeng/table';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
+import { LanguageService } from '../../../core/services/language.service';
 import { attendanceRate, countScheduledTrainingDays } from '../../../shared/utils/attendance-rate';
+import { localeFor } from '../../../shared/utils/locale';
 
 interface YearMonth {
   year: number;
@@ -65,6 +67,7 @@ export class MonthlySummaryComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly attendanceService = inject(AttendanceService);
   private readonly academyService = inject(AcademyService);
+  private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Stale-response gate — same canon as DailyAttendanceComponent / AttendanceHistoryComponent. */
@@ -78,7 +81,8 @@ export class MonthlySummaryComponent implements OnInit {
 
   protected readonly monthLabel = computed(() => {
     const ym = this.visible();
-    return new Date(ym.year, ym.month - 1, 1).toLocaleDateString('en-GB', {
+    const locale = localeFor(this.languageService.currentLang());
+    return new Date(ym.year, ym.month - 1, 1).toLocaleDateString(locale, {
       month: 'long',
       year: 'numeric',
     });

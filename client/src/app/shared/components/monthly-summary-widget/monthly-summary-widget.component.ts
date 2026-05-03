@@ -13,7 +13,9 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
+import { LanguageService } from '../../../core/services/language.service';
 import { attendanceRate, countScheduledTrainingDays } from '../../utils/attendance-rate';
+import { localeFor } from '../../utils/locale';
 
 /**
  * YYYY-MM for the current calendar month, derived from local components so the
@@ -43,6 +45,7 @@ function currentYearMonth(): string {
 export class MonthlySummaryWidgetComponent implements OnInit {
   private readonly attendanceService = inject(AttendanceService);
   private readonly academyService = inject(AcademyService);
+  private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly rows = signal<AttendanceSummaryRow[]>([]);
@@ -111,7 +114,8 @@ export class MonthlySummaryWidgetComponent implements OnInit {
 
   protected readonly monthLabel = computed<string>(() => {
     const [y, m] = this.month.split('-').map(Number);
-    return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const locale = localeFor(this.languageService.currentLang());
+    return new Date(y, m - 1, 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
   });
 
   ngOnInit(): void {
