@@ -42,7 +42,6 @@ import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/exp
 import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
 import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpaid-this-month-widget/unpaid-this-month-widget.component';
 import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
-import { localeFor } from '../../../shared/utils/locale';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -122,7 +121,19 @@ export class AthletesListComponent implements OnInit {
    */
   private readonly _now = new Date();
 
-  private readonly locale = computed<string>(() => localeFor(this.languageService.currentLang()));
+  /**
+   * NOTE: pinned to `en-US` (not `en-GB` from `localeFor`) for English
+   * specifically because `month: 'short'` returns the 4-char "Sept"
+   * under en-GB (modern Intl) — the paid-column header design relies
+   * on a 3-char token ("Apr" / "Sep" / "Oct") for column-width stability.
+   * `en-US` returns 3-char tokens for every month, including September.
+   * Long-form month-name screens elsewhere DO use the shared
+   * `localeFor()` helper (en-GB) to get day-first dates; only this
+   * fixed-width 3-char-month spot opts out.
+   */
+  private readonly locale = computed<string>(() =>
+    this.languageService.currentLang() === 'it' ? 'it-IT' : 'en-US',
+  );
 
   readonly currentMonthShort = computed<string>(() =>
     this._now.toLocaleString(this.locale(), {

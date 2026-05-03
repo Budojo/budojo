@@ -47,6 +47,8 @@ Each component injects `LanguageService` and exposes a locale-bound `computed()`
 ## Out of scope (still on #280 / PR-D)
 
 - **`/sub-processors/it`** — the Italian translation of the public sub-processors page. Mirrors the `/privacy` IT/EN pair pattern; needs a new component + route + the markdown source-of-truth file. Separate PR.
+- **`payments-list.formatPaidAt`** — renders the `paid_at` ISO timestamp as a raw `YYYY-MM-DD` calendar date (no `toLocaleDateString` call). Intentionally not locale-formatted because the column is sortable / scannable as numeric and benefits from a stable ISO shape. If we ever convert that column to a localised display, the same `localeFor()` helper plugs in.
+- **athletes-list `currentMonthShort`** stays pinned to `en-US` for English (not unified into `localeFor`) because `month: 'short'` returns the 4-char `"Sept"` under `en-GB` on modern Intl runtimes — the paid-column header design relies on a 3-char token. Documented inline alongside the call site.
 - Replacing the duplicated `beltLabelKeys` map in `athletes-list.component.ts` with the shared `BELT_KEYS` from `i18n-enum-keys.ts` (introduced in #358). Boy-Scout-tempting but scope-creep — the map already works correctly here; consolidation can land independently.
 
 ## References

@@ -383,9 +383,11 @@
       Monthly fee (#267) — gates the v1.7.0 payments features (athletes-list
       inline mark-paid toggle and the per-athlete Payments tab). Stored as
       cents on the server (`monthly_fee_cents`) but surfaced here in euros
-      so the user reads "50,00" / "€ 50,00" rather than "5000". Locale
-      `it-IT` so the decimal separator is a comma to match the rest of the
-      Italian-customer copy. Empty / cleared input → `null` cents → server
+      so the user reads "50,00" / "€ 50,00" rather than "5000". The
+      `[locale]` binding tracks `LanguageService.currentLang()` so the
+      decimal separator flips at runtime — comma in Italian
+      ("€ 50,00"), period in English-GB ("€ 50.00") — without a page
+      reload (#280 PR-D). Empty / cleared input → `null` cents → server
       removes the fee and the payments features hide again.
     -->
     <div class="field">
