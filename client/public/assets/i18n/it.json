@@ -866,6 +866,13 @@
         "less": "Meno",
         "more": "Più"
       }
+    },
+    "payments": {
+      "monthlyTitle": "Incassi mensili",
+      "monthlyHint": "Ultimi 12 mesi · somma pagamenti registrati per mese di competenza",
+      "loading": "Caricamento incassi…",
+      "errored": "Impossibile caricare il trend.",
+      "empty": "Nessun pagamento registrato negli ultimi 12 mesi."
     }
   }
 }

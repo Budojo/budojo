@@ -32,4 +32,18 @@ describe('StatsService', () => {
     service.attendanceDaily(12).subscribe();
     http.expectOne('/api/v1/stats/attendance/daily?months=12').flush({ data: [] });
   });
+
+  it('GETs /api/v1/stats/payments/monthly', () => {
+    let received: unknown;
+    service.paymentsMonthly().subscribe((r) => (received = r));
+    const req = http.expectOne('/api/v1/stats/payments/monthly?months=12');
+    expect(req.request.method).toBe('GET');
+    req.flush({ data: [{ month: '2026-05', currency: 'EUR', amount_cents: 50000 }] });
+    expect(received).toEqual([{ month: '2026-05', currency: 'EUR', amount_cents: 50000 }]);
+  });
+
+  it('honours months param in paymentsMonthly()', () => {
+    service.paymentsMonthly(6).subscribe();
+    http.expectOne('/api/v1/stats/payments/monthly?months=6').flush({ data: [] });
+  });
 });

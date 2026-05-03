@@ -866,6 +866,13 @@
         "less": "Less",
         "more": "More"
       }
+    },
+    "payments": {
+      "monthlyTitle": "Monthly revenue",
+      "monthlyHint": "Last 12 months · sum of recorded payments per business month",
+      "loading": "Loading revenue trend…",
+      "errored": "Couldn't load revenue trend.",
+      "empty": "No payments recorded in the last 12 months."
     }
   }
 }

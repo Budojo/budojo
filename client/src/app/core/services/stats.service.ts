@@ -8,6 +8,12 @@ export interface DailyAttendancePoint {
   readonly count: number;
 }
 
+export interface MonthlyPaymentsBucket {
+  readonly month: string; // 'YYYY-MM'
+  readonly currency: string;
+  readonly amount_cents: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StatsService {
   private readonly http = inject(HttpClient);
@@ -17,6 +23,14 @@ export class StatsService {
       .get<{
         data: DailyAttendancePoint[];
       }>(`${environment.apiBase}/api/v1/stats/attendance/daily?months=${months}`)
+      .pipe(map((r) => r.data));
+  }
+
+  paymentsMonthly(months = 12): Observable<readonly MonthlyPaymentsBucket[]> {
+    return this.http
+      .get<{
+        data: MonthlyPaymentsBucket[];
+      }>(`${environment.apiBase}/api/v1/stats/payments/monthly?months=${months}`)
       .pipe(map((r) => r.data));
   }
 }
