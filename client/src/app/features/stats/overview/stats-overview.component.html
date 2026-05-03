@@ -12,7 +12,6 @@
   } @else if (loading()) {
     <div class="stats-page__skeleton" data-cy="stats-skeleton">
       <p-skeleton width="100%" height="20rem" />
-      <p-skeleton width="100%" height="20rem" />
     </div>
   } @else if (totalAthletes() === 0) {
     <p class="stats-page__empty" data-cy="stats-empty">
@@ -22,22 +21,12 @@
     <div class="stats-page__total" data-cy="stats-total">
       {{ 'stats.total' | translate: { count: totalAthletes() } }}
     </div>
-    <div class="stats-page__grid">
-      <section class="stats-card" data-cy="stats-belt-chart">
-        <h2 class="stats-card__title">{{ 'stats.belt.title' | translate }}</h2>
-        <p class="stats-card__hint">{{ 'stats.belt.hint' | translate }}</p>
-        <div class="stats-card__chart">
-          <p-chart type="doughnut" [data]="beltChartData()" [options]="chartOptions" />
-        </div>
-      </section>
-
-      <section class="stats-card" data-cy="stats-status-chart">
-        <h2 class="stats-card__title">{{ 'stats.status.title' | translate }}</h2>
-        <p class="stats-card__hint">{{ 'stats.status.hint' | translate }}</p>
-        <div class="stats-card__chart">
-          <p-chart type="doughnut" [data]="statusChartData()" [options]="chartOptions" />
-        </div>
-      </section>
-    </div>
+    <section class="stats-card" data-cy="stats-belt-chart">
+      <h2 class="stats-card__title">{{ 'stats.belt.title' | translate }}</h2>
+      <p class="stats-card__hint">{{ 'stats.belt.hint' | translate }}</p>
+      <div class="stats-card__chart">
+        <p-chart type="doughnut" [data]="beltChartData()" [options]="chartOptions" />
+      </div>
+    </section>
   }
 </div>

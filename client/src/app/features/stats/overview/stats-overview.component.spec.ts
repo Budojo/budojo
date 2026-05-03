@@ -62,7 +62,7 @@ describe('StatsOverviewComponent', () => {
     httpMock.verify();
   });
 
-  it('aggregates the athlete list into belt + status doughnut data on a single-page response', () => {
+  it('aggregates the athlete list into belt doughnut data on a single-page response', () => {
     const httpMock = setupTestBed();
     const fixture = TestBed.createComponent(StatsOverviewComponent);
     fixture.detectChanges();
@@ -83,10 +83,6 @@ describe('StatsOverviewComponent', () => {
     // blue, blue precedes black.
     expect(beltChart.labels).toEqual(['White', 'Blue', 'Black']);
     expect(beltChart.datasets[0].data).toEqual([1, 2, 1]);
-
-    const statusChart = fixture.componentInstance['statusChartData']();
-    expect(statusChart.labels).toEqual(['Active', 'Suspended', 'Inactive']);
-    expect(statusChart.datasets[0].data).toEqual([2, 1, 1]);
 
     expect(fixture.componentInstance['totalAthletes']()).toBe(4);
     httpMock.verify();

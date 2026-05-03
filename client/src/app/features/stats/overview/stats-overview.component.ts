@@ -12,19 +12,9 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { mergeMap, range, toArray } from 'rxjs';
 import { ChartModule } from 'primeng/chart';
 import { SkeletonModule } from 'primeng/skeleton';
-import {
-  Athlete,
-  AthleteService,
-  AthleteStatus,
-  Belt,
-} from '../../../core/services/athlete.service';
+import { Athlete, AthleteService, Belt } from '../../../core/services/athlete.service';
 import { LanguageService } from '../../../core/services/language.service';
-import {
-  BELT_KEYS,
-  BELT_ORDER,
-  STATUS_KEYS,
-  STATUS_ORDER,
-} from '../../../shared/utils/i18n-enum-keys';
+import { BELT_KEYS, BELT_ORDER } from '../../../shared/utils/i18n-enum-keys';
 
 /**
  * Belt colour palette — one entry per IBJJF rank. Hex values rather
@@ -53,16 +43,6 @@ const BELT_COLORS: Readonly<Record<Belt, string>> = {
   red: '#b91c1c',
 };
 
-/**
- * Status palette mirrors the in-app severity tokens used by the
- * paid badge / status tag — `success` / `warn` / `secondary`.
- */
-const STATUS_COLORS: Readonly<Record<AthleteStatus, string>> = {
-  active: '#22c55e',
-  suspended: '#f59e0b',
-  inactive: '#6b7280',
-};
-
 interface DoughnutData {
   readonly labels: readonly string[];
   readonly datasets: readonly {
@@ -74,8 +54,8 @@ interface DoughnutData {
 
 /**
  * Stats overview child component (`/dashboard/stats/overview`). Surfaces
- * two client-side aggregations from the athletes list — belt distribution
- * and status breakdown — rendered as PrimeNG `<p-chart>` doughnuts.
+ * the belt distribution from the athletes list as a PrimeNG `<p-chart>`
+ * doughnut.
  *
  * Why client-side aggregation: the existing `GET /api/v1/athletes`
  * endpoint paginates 20 rows per page, so we iterate through every
@@ -87,9 +67,9 @@ interface DoughnutData {
  * endpoints because those aggregations don't have an existing
  * fetch-all endpoint to reuse.
  *
- * Locale-aware: the chart labels (belt names, status names) flow
- * through the `belts.*` / `statuses.*` translation keys, so toggling
- * EN ↔ IT re-renders both charts in the active language.
+ * Locale-aware: the chart labels (belt names) flow through the
+ * `belts.*` translation keys, so toggling EN ↔ IT re-renders the
+ * chart in the active language.
  */
 @Component({
   selector: 'app-stats-overview',
@@ -134,25 +114,6 @@ export class StatsOverviewComponent implements OnInit {
         {
           data: presentBelts.map((b) => counts.get(b) ?? 0),
           backgroundColor: presentBelts.map((b) => BELT_COLORS[b]),
-          borderWidth: 1,
-        },
-      ],
-    };
-  });
-
-  protected readonly statusChartData = computed<DoughnutData>(() => {
-    this.languageService.currentLang();
-    const counts = new Map<AthleteStatus, number>();
-    for (const a of this.athletes()) {
-      counts.set(a.status, (counts.get(a.status) ?? 0) + 1);
-    }
-    const presentStatuses = STATUS_ORDER.filter((s) => counts.has(s));
-    return {
-      labels: presentStatuses.map((s) => this.translate.instant(STATUS_KEYS[s])),
-      datasets: [
-        {
-          data: presentStatuses.map((s) => counts.get(s) ?? 0),
-          backgroundColor: presentStatuses.map((s) => STATUS_COLORS[s]),
           borderWidth: 1,
         },
       ],

@@ -39,24 +39,9 @@
     font-size: 0.9rem;
   }
 
-  &__grid {
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: 1fr;
-
-    @media (min-width: 1024px) {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
   &__skeleton {
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: 1fr;
-
-    @media (min-width: 1024px) {
-      grid-template-columns: 1fr 1fr;
-    }
+    display: flex;
+    flex-direction: column;
   }
 
   &__error,
