@@ -13,21 +13,38 @@
  * module, and the failure surfaces downstream as an obscure runtime
  * error (the stack trace ends in an RxJS `subscribe` with `.url` on
  * undefined). Without this recovery, the page renders blank and only
- * a manual hard refresh fixes it (#376 follow-up).
+ * a manual hard refresh fixes it.
  *
- * The proper fix lives in `worker/index.ts` — that worker scopes the SPA
- * fallback to navigation requests, so a missing chunk surfaces as a
- * real 404. This recovery is the belt-and-braces FE side that catches
- * the same class of failure (e.g. cached SW state) and self-heals
- * without requiring the user to reload manually.
+ * The proper root-cause fix lives at the Cloudflare layer (a custom
+ * worker that scopes the SPA fallback to navigation requests so missing
+ * asset paths surface as real 404s). That work is tracked separately
+ * in issue #382 — it needs wrangler local testing infra and a preview
+ * deploy. This recovery is the belt-and-braces FE side that catches
+ * the same class of failure (cached SW state, edge-cache lag) and
+ * self-heals without requiring the user to reload manually, regardless
+ * of the deploy configuration.
  *
- * Anti-loop guard: a single sessionStorage flag prevents an infinite
- * reload if the post-reload bundle ALSO triggers a stale-chunk error
- * (e.g. genuine deploy gap, network issue). After one failed recovery
- * we surface the original error in the console instead.
+ * Anti-loop guards (two layers, by design):
+ *
+ *  1. **In-memory** (`attemptedThisSession`) — same-JS-session guard.
+ *     Prevents a chatty stale-chunk error from triggering reload more
+ *     than once in the same tab. Doesn't survive the reload itself.
+ *
+ *  2. **`sessionStorage`** (`RELOAD_FLAG_KEY`) — cross-reload guard.
+ *     Survives the reload so a recurring failure on the post-reload
+ *     bundle is logged but doesn't loop. Cleared automatically once
+ *     the SPA has run for `RECOVERY_VERIFIED_AFTER_MS` without
+ *     crashing — so a long-lived session that recovers once still
+ *     auto-heals on the *next* deploy mismatch hours later.
+ *
+ *  If `sessionStorage` is unavailable (private-mode quota, locked
+ *  origin), we deliberately refuse to reload at all — without
+ *  persistent state we can't safely break out of a reload loop, so
+ *  leaving the user on the broken page is the lesser evil.
  */
 
 const RELOAD_FLAG_KEY = 'budojo-stale-chunk-reload-attempted';
+const RECOVERY_VERIFIED_AFTER_MS = 30_000;
 
 const STALE_CHUNK_MESSAGE_PATTERNS: readonly RegExp[] = [
   // Native Chrome / Firefox / Safari error when a dynamic import returns
@@ -55,46 +72,93 @@ function looksLikeStaleChunk(message: string): boolean {
   return STALE_CHUNK_MESSAGE_PATTERNS.some((re) => re.test(message));
 }
 
-function reloadOnce(reason: string): void {
-  try {
-    if (sessionStorage.getItem(RELOAD_FLAG_KEY)) {
-      // Already reloaded once — refusing to loop. The reason is logged
-      // so a developer opening the console can still see the failure
-      // shape and triage from there.
-      console.error(
-        `[stale-chunk-recovery] reload already attempted in this session — not reloading again. Reason: ${reason}`,
-      );
-      return;
-    }
-    sessionStorage.setItem(RELOAD_FLAG_KEY, '1');
-  } catch {
-    // sessionStorage can throw in private mode / quota; degrade gracefully
-    // and reload anyway. Worst case is a single extra reload on a tab
-    // that legitimately can't recover, which is no worse than the bug
-    // itself.
-  }
-  console.warn(
-    `[stale-chunk-recovery] stale-chunk failure detected (${reason}); reloading to pick up the current bundle.`,
-  );
-  window.location.reload();
-}
-
 /**
  * Wires the global `error` and `unhandledrejection` listeners. Call
  * once, before `bootstrapApplication()`, so the recovery is armed for
  * the very first lazy import (preload kicks in immediately after the
  * initial NavigationEnd).
+ *
+ * Returns a teardown function that removes the listeners and clears
+ * the verification timer — useful in tests so each spec starts from a
+ * clean slate. Production callers can ignore the return value.
  */
-export function setupStaleChunkRecovery(): void {
-  if (typeof window === 'undefined') return;
+export function setupStaleChunkRecovery(): () => void {
+  if (typeof window === 'undefined') return () => undefined;
 
-  window.addEventListener('error', (event) => {
+  // In-memory single-shot guard. Survives the same JS session even if
+  // sessionStorage is unavailable; combined with the sessionStorage flag
+  // it gives us two-layer protection (see file docblock).
+  let attemptedThisSession = false;
+
+  function reloadOnce(reason: string): void {
+    if (attemptedThisSession) {
+      console.error(
+        `[stale-chunk-recovery] already attempted this session — not reloading. Reason: ${reason}`,
+      );
+      return;
+    }
+    try {
+      if (sessionStorage.getItem(RELOAD_FLAG_KEY)) {
+        console.error(
+          `[stale-chunk-recovery] reload already attempted in a previous boot — not reloading. Reason: ${reason}`,
+        );
+        attemptedThisSession = true;
+        return;
+      }
+      sessionStorage.setItem(RELOAD_FLAG_KEY, '1');
+    } catch {
+      // sessionStorage threw (private mode / quota / locked origin). With
+      // no persistent state we can't track across the reload boundary, so
+      // a reload could loop if the failure recurs. Refuse to reload —
+      // the user sees the original error and can hard-refresh manually.
+      console.error(
+        `[stale-chunk-recovery] sessionStorage unavailable — not reloading (would risk an infinite reload loop). Reason: ${reason}`,
+      );
+      return;
+    }
+    attemptedThisSession = true;
+    console.warn(
+      `[stale-chunk-recovery] stale-chunk failure detected (${reason}); reloading to pick up the current bundle.`,
+    );
+    window.location.reload();
+  }
+
+  const errorHandler = (event: ErrorEvent) => {
     const message = messageOf(event.error) || event.message || '';
     if (looksLikeStaleChunk(message)) reloadOnce(message);
-  });
+  };
 
-  window.addEventListener('unhandledrejection', (event) => {
+  const rejectionHandler = (event: PromiseRejectionEvent) => {
     const message = messageOf(event.reason);
     if (looksLikeStaleChunk(message)) reloadOnce(message);
-  });
+  };
+
+  // Capture phase: synchronous module/script load errors fire on the
+  // `<script>` element and do NOT bubble to `window`. Capturing
+  // intercepts them on the way down, before they reach the target.
+  // Without `capture: true`, browsers that surface stale-chunk failures
+  // synchronously (rather than as a rejected import promise) would
+  // skip this listener entirely.
+  window.addEventListener('error', errorHandler, { capture: true });
+  window.addEventListener('unhandledrejection', rejectionHandler);
+
+  // After the SPA has run for `RECOVERY_VERIFIED_AFTER_MS` without
+  // crashing, clear the cross-reload flag. Without this, the first
+  // successful recovery in a long-lived session would consume the
+  // single-shot guard, and a *later* deploy mismatch (hours later)
+  // would log "already attempted" and refuse to self-heal.
+  const verifiedTimer = window.setTimeout(() => {
+    try {
+      sessionStorage.removeItem(RELOAD_FLAG_KEY);
+    } catch {
+      // sessionStorage broken — same fallback as in reloadOnce. Nothing
+      // to do; we can't manage a flag we can't write.
+    }
+  }, RECOVERY_VERIFIED_AFTER_MS);
+
+  return () => {
+    window.removeEventListener('error', errorHandler, { capture: true });
+    window.removeEventListener('unhandledrejection', rejectionHandler);
+    window.clearTimeout(verifiedTimer);
+  };
 }

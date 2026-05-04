@@ -5,6 +5,7 @@ import { setupStaleChunkRecovery } from './stale-chunk-recovery';
 describe('setupStaleChunkRecovery', () => {
   let reloadSpy: ReturnType<typeof vi.fn>;
   let originalLocation: Location;
+  let teardown: () => void;
 
   beforeEach(() => {
     sessionStorage.removeItem('budojo-stale-chunk-reload-attempted');
@@ -16,10 +17,16 @@ describe('setupStaleChunkRecovery', () => {
     delete (window as unknown as { location?: Location }).location;
     reloadSpy = vi.fn();
     (window as unknown as { location: object }).location = { reload: reloadSpy };
-    setupStaleChunkRecovery();
+    teardown = setupStaleChunkRecovery();
   });
 
   afterEach(() => {
+    // Tear down listeners + the verification timer registered by setup.
+    // Without this each `setupStaleChunkRecovery()` call from `beforeEach`
+    // would stack listeners across tests, so a later spec's dispatched
+    // event would fire every previous spec's handler too — masking
+    // duplicate-listener bugs and leaking the timer past test isolation.
+    teardown();
     (window as unknown as { location: Location }).location = originalLocation;
     sessionStorage.removeItem('budojo-stale-chunk-reload-attempted');
   });
@@ -67,5 +74,51 @@ describe('setupStaleChunkRecovery', () => {
       new ErrorEvent('error', { message: 'Failed to fetch dynamically imported module' }),
     );
     expect(reloadSpy).toHaveBeenCalledOnce();
+  });
+
+  it('refuses to reload when sessionStorage is unavailable (no persistent guard → loop risk)', () => {
+    // Simulate a private-mode / locked-origin sessionStorage that throws
+    // on every read/write. Without persistent state we can't safely
+    // break out of a reload loop, so the listener must refuse to reload.
+    const broken = {
+      getItem: () => {
+        throw new Error('sessionStorage disabled');
+      },
+      setItem: () => {
+        throw new Error('sessionStorage disabled');
+      },
+      removeItem: () => {
+        throw new Error('sessionStorage disabled');
+      },
+    };
+    const originalSessionStorage = window.sessionStorage;
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      get: () => broken,
+    });
+
+    try {
+      window.dispatchEvent(
+        new ErrorEvent('error', { message: 'Failed to fetch dynamically imported module' }),
+      );
+      expect(reloadSpy).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(window, 'sessionStorage', {
+        configurable: true,
+        value: originalSessionStorage,
+      });
+    }
+  });
+
+  it('teardown removes the listeners so post-teardown events do not trigger reload', () => {
+    teardown();
+    // No-op the second teardown in afterEach — the listeners are already
+    // unregistered. Replace with an empty fn so afterEach doesn't double-
+    // unregister (harmless, but keeps the assertion focused).
+    teardown = () => undefined;
+    window.dispatchEvent(
+      new ErrorEvent('error', { message: 'Failed to fetch dynamically imported module' }),
+    );
+    expect(reloadSpy).not.toHaveBeenCalled();
   });
 });
