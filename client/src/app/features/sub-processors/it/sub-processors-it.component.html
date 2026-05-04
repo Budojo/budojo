@@ -1,0 +1,191 @@
+<article class="legal-page">
+  <header class="legal-page__header">
+    <a
+      class="legal-page__brand"
+      routerLink="/"
+      [attr.aria-label]="'legal.brandAriaLabel' | translate"
+    >
+      <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
+      <span class="legal-page__brand-name">Budojo</span>
+    </a>
+    <p class="legal-page__eyebrow">Legale</p>
+    <h1 class="legal-page__title">Sub-processor</h1>
+    <p class="legal-page__subtitle">
+      Le terze parti che trattano i dati dei clienti per conto di Budojo, ai sensi dell'art. 28 del
+      Regolamento UE 2016/679 (GDPR).
+    </p>
+    <!-- Language toggle (#280). L'italiano è il source of truth legale
+         per i clienti italiani e per il Garante; l'inglese è canonico
+         a livello di URL (default per i visitatori senza preferenza
+         salvata, #271 EN-first). Toggle visibile su entrambe le
+         lingue per consentire lo switch a vista — stesso pattern di
+         /privacy ↔ /privacy/it (#291). -->
+    <p class="legal-page__lang" data-cy="sub-processors-lang-toggle">
+      <strong aria-current="true">Italiano</strong>
+      <span aria-hidden="true">·</span>
+      <a routerLink="/sub-processors" data-cy="sub-processors-lang-en">English</a>
+    </p>
+    <p class="legal-page__updated">Ultimo aggiornamento: {{ lastUpdated }}</p>
+  </header>
+
+  <section class="legal-page__section">
+    <h2>Cosa significa "sub-processor" in questo contesto</h2>
+    <p>
+      Un <strong>sub-processor</strong> è qualsiasi terza parte che, su istruzione di Budojo,
+      conserva, trasmette o altrimenti tratta dati personali dei clienti academy di Budojo e dei
+      loro atleti — provider di hosting, CDN, fornitori di delivery email, servizi di error
+      tracking.
+    </p>
+    <p>
+      Un fornitore che tocca solo i dati aziendali interni di Budojo (il nostro codice sorgente su
+      GitHub, il nostro Slack interno, ecc.) <em>non</em> è un sub-processor secondo questa
+      definizione — i dati dei clienti academy non lo raggiungono mai.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>Sub-processor attuali</h2>
+    <div class="legal-page__table-wrapper">
+      <table class="legal-page__table" data-cy="sub-processors-current">
+        <thead>
+          <tr>
+            <th>Fornitore</th>
+            <th>Ruolo</th>
+            <th>Regione</th>
+            <th>Dati personali trattati</th>
+            <th>DPA</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Cloudflare, Inc.</strong></td>
+            <td>
+              DNS, edge proxy / CDN, terminazione TLS, WAF per <code>budojo.it</code>,
+              <code>www.budojo.it</code>, <code>api.budojo.it</code>. Ospita anche la build dello
+              SPA tramite Cloudflare Pages.
+            </td>
+            <td>Edge globale (PoP UE preferiti + transito)</td>
+            <td>
+              Metadati delle richieste (IP, header), handshake TLS, bundle dello SPA. Nessun accesso
+              al database.
+            </td>
+            <td>
+              <a
+                href="https://www.cloudflare.com/cloudflare-customer-dpa/"
+                target="_blank"
+                rel="noopener noreferrer"
+                >DPA Cloudflare</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td><strong>DigitalOcean, LLC</strong></td>
+            <td>VM (droplet) che ospita l'API Laravel, MySQL, lo storage locale dei documenti.</td>
+            <td>UE (<code>fra1</code>, Francoforte)</td>
+            <td>
+              Tutti i record di academy e atleti (DB), documenti caricati (disco), log applicativi.
+            </td>
+            <td>
+              <a
+                href="https://www.digitalocean.com/legal/data-processing-agreement"
+                target="_blank"
+                rel="noopener noreferrer"
+                >DPA DigitalOcean</a
+              >
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Laravel Forge (Tighten Co.)</strong></td>
+            <td>
+              Provisioning e automazione del deploy del droplet DigitalOcean. Si connette via SSH;
+              non fa proxy del traffico cliente.
+            </td>
+            <td>Control plane gestito negli US; il droplet resta in DigitalOcean UE.</td>
+            <td>
+              Metadati a livello server (log di deploy, contenuti delle env-var di cui l'agente
+              Forge ha bisogno). Nessun dato cliente diretto.
+            </td>
+            <td>
+              <a href="https://tighten.com/legal/dpa" target="_blank" rel="noopener noreferrer"
+                >DPA Forge / Tighten</a
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>Sub-processor pianificati (non ancora attivi)</h2>
+    <p>
+      Ogni aggiunta è preceduta da una notifica ai clienti con almeno 30 giorni di preavviso,
+      secondo il processo di modifica descritto sotto. NON sono attivi finché non è trascorsa questa
+      finestra.
+    </p>
+    <ul class="legal-page__planned">
+      <li>
+        <strong>Fornitore di delivery email</strong> (TBD: Postmark / Resend / Mailgun UE) — email
+        transazionali. Si attiva con le notifiche di M5. Sono preferiti fornitori UE per evitare il
+        carico amministrativo delle SCC.
+      </li>
+      <li>
+        <strong>Sentry</strong> o equivalente — error tracking lato browser e server con stack trace
+        mappati al sorgente. Si attiva se adottiamo un servizio di error tracking.
+      </li>
+      <li>
+        <strong>Stripe, Inc.</strong> — elaborazione pagamenti per la subscription Budojo SaaS in sé
+        (NON per il libro pagamenti academy ↔ atleta, che vive nel nostro DB). Si attiva al momento
+        della monetizzazione.
+      </li>
+    </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>Processo di modifica</h2>
+    <ol>
+      <li>
+        Una modifica al sub-processor viene aperta come PR che aggiorna questa pagina e il sorgente
+        markdown.
+      </li>
+      <li>
+        Ogni cliente academy attivo riceve un'email almeno <strong>30 giorni</strong> prima che il
+        nuovo fornitore entri in produzione, con il link a questa pagina e la data di attivazione.
+      </li>
+      <li>
+        I clienti possono opporsi per iscritto entro questi 30 giorni. Un'opposizione bloccante
+        significa che annulliamo la modifica, oppure terminiamo il contratto del cliente con
+        rimborso pro-rata.
+      </li>
+      <li>
+        Trascorsa la finestra di 30 giorni senza opposizioni bloccanti, il nuovo fornitore va in
+        produzione.
+      </li>
+    </ol>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>Documenti correlati</h2>
+    <ul>
+      <li>Template DPA — vedi la dashboard cliente per la copia firmata.</li>
+      <li>
+        <a routerLink="/privacy/it" data-cy="sub-processors-it-privacy-link"
+          >Informativa sulla Privacy</a
+        >
+        — informativa ai sensi dell'art. 13 GDPR per gli utenti che si registrano a Budojo.
+      </li>
+    </ul>
+  </section>
+
+  <footer class="legal-page__footer">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      label="Torna alla home"
+      icon="pi pi-arrow-left"
+      (onClick)="goHome()"
+      data-cy="sub-processors-it-home"
+    />
+  </footer>
+</article>

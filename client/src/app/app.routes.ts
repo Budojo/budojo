@@ -219,6 +219,16 @@ export const routes: Routes = [
         (m) => m.SubProcessorsComponent,
       ),
   },
+  // Italian translation of /sub-processors (#280). Same lock-step
+  // discipline as /privacy{,/it}: edits to the markdown source, the
+  // English page, or this Italian page MUST land in the same PR.
+  {
+    path: 'sub-processors/it',
+    loadComponent: () =>
+      import('./features/sub-processors/it/sub-processors-it.component').then(
+        (m) => m.SubProcessorsItComponent,
+      ),
+  },
   // /privacy serves the canonical English text (#291). The SPA is
   // English-default for any visitor without a saved language
   // preference; the faithful Italian translation lives at /privacy/it

@@ -1,0 +1,6 @@
+// Layout pulled from the shared `_legal-page` partial — same shape as
+// the canonical `/sub-processors` (English) and `/privacy{,/it}`. No
+// IT-specific overrides; the language toggle uses `.legal-page__lang`
+// rules already defined in the partial.
+
+@use '../../legal-page';

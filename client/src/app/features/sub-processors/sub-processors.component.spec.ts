@@ -49,6 +49,22 @@ describe('SubProcessorsComponent (#225)', () => {
     expect(rows.length).toBe(3);
   });
 
+  it('language toggle points to the Italian /sub-processors/it (#280)', () => {
+    const { fixture } = setup();
+    const root: HTMLElement = fixture.nativeElement;
+
+    const toggle = root.querySelector('[data-cy="sub-processors-lang-toggle"]');
+    expect(toggle).toBeTruthy();
+
+    const itLink = toggle?.querySelector('[data-cy="sub-processors-lang-it"]');
+    expect(itLink?.getAttribute('routerLink')).toBe('/sub-processors/it');
+
+    // Active language ("English") rendered as non-clickable <strong>
+    // with aria-current — mirror of the /privacy page toggle (#291).
+    const activeMarker = toggle?.querySelector('[aria-current="true"]');
+    expect(activeMarker?.textContent?.trim()).toBe('English');
+  });
+
   it('CTA navigates back to the root', () => {
     const { cmp } = setup();
     cmp.goHome();
