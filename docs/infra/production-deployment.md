@@ -165,37 +165,34 @@ Critical ones — full list mirrors `server/.env.example` with prod values:
 
 The static-asset routing for `budojo.it` is driven by a Cloudflare Worker
 that fronts the Pages static-assets binding. Source of truth lives in
-two files at the repo root:
+[`wrangler.jsonc`](../../wrangler.jsonc) at the repo root and
+[`worker/index.js`](../../worker/index.js).
 
-```jsonc
-// wrangler.jsonc
-{
-  "main": "./worker/index.js",
-  "assets": {
-    "directory": "./client/dist/client/browser",
-    "binding": "ASSETS",
-    "not_found_handling": "none",   // worker decides per-path
-    "html_handling": "none"          // worker owns redirect / fallback
-  }
-}
-```
+`wrangler.jsonc` configures the assets binding with two non-default flags
+that are load-bearing — leave them alone unless you fully understand
+the worker's flow:
 
-```js
-// worker/index.js (paraphrased)
-const ASSET_EXT_RE = /\.(?:js|css|map|json|png|...|wasm)$/i;
-function isNavigationRequest(req) {
-  // GET/HEAD with `Accept: text/html` only
-}
-export default {
-  async fetch(request, env) {
-    const response = await env.ASSETS.fetch(request);
-    if (response.status !== 404) return response;
-    if (ASSET_EXT_RE.test(new URL(request.url).pathname)) return response;
-    if (!isNavigationRequest(request)) return response;
-    return env.ASSETS.fetch(new Request(new URL('/index.html', request.url), request));
-  },
-};
-```
+- `not_found_handling: "none"` so missing assets surface to the worker as
+  real 404s instead of being short-circuited by the binding.
+- `html_handling: "none"` so the binding doesn't 307-canonicalize
+  navigation paths (or `/index.html` itself!) before the worker decides.
+
+`worker/index.js` enforces three invariants on every request — see the
+file's docblock for context, and `worker/index.spec.js` for the
+regression-pinned cases. Don't paraphrase the logic in this doc; it
+will drift. Read the file.
+
+1. **Pass-through on success.** Any non-404 response from the binding
+   returns unchanged.
+2. **Asset 404s stay 404s.** Paths matching the
+   `ASSET_EXT_RE` extension allowlist (`.js`, `.css`, `.map`, `.json`,
+   `.webmanifest`, common font / image / media extensions, `.wasm`)
+   surface their real 404 — the v1.14.x bug class was caused by serving
+   HTML on these.
+3. **SPA fallback gated on browser navigation.** Only GET/HEAD requests
+   whose `Accept` header contains `text/html` get rewritten to
+   `/index.html`. Programmatic `fetch()` (default `Accept: */*`),
+   POSTs, and CORS preflights surface their real 404.
 
 Behaviour:
 
