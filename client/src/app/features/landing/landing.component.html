@@ -62,17 +62,17 @@
       </div>
       <p class="landing__hero-fineprint">{{ 'landing.hero.fineprint' | translate }}</p>
     </div>
-    <!--
-      Hero visual placeholder. A real screenshot of the dashboard on
-      a phone goes here once we have the captures. Keeping a soft
-      surface tile with the brand glyph centred is more honest than
-      a stock mockup; it also won't render badly when a real PNG
-      drops in (same dimensions).
-    -->
-    <div class="landing__hero-visual" aria-hidden="true">
-      <div class="landing__hero-visual-card">
-        <app-brand-glyph />
-      </div>
+    <div class="landing__hero-visual">
+      <img
+        class="landing__hero-screenshot"
+        src="assets/landing/stats-attendance-heatmap-iphone.webp"
+        [alt]="'landing.hero.visualAlt' | translate"
+        width="1024"
+        height="2218"
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+      />
     </div>
   </section>
 

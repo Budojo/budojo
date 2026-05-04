@@ -149,9 +149,10 @@
     color: var(--p-text-color-secondary);
   }
 
-  // Hero visual placeholder. A real screenshot drops in here later;
-  // for now a soft surface tile with the brand glyph centred. Square-
-  // ish so the dimensions transfer to a real PNG without rework.
+  // Hero visual — real product screenshot framed by a soft surface
+  // backdrop. Aspect ratio is portrait on mobile (matches a phone-in-
+  // hand mental model) and square at desktop (paired side-by-side
+  // with the hero copy column).
   &__hero-visual {
     aspect-ratio: 4 / 5;
     background: var(--p-surface-100);
@@ -160,24 +161,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: var(--budojo-elevation-floating);
+    padding: 1.5rem;
 
     @media (min-width: 1024px) {
       aspect-ratio: 1 / 1;
     }
   }
 
-  &__hero-visual-card {
-    background: var(--p-content-background);
+  &__hero-screenshot {
+    display: block;
+    max-height: 100%;
+    max-width: 100%;
+    width: auto;
+    height: auto;
     border-radius: var(--p-border-radius-md);
-    padding: 2rem;
-    box-shadow: var(--budojo-elevation-surface);
-
-    app-brand-glyph {
-      width: 4rem;
-      height: 4rem;
-      display: inline-flex;
-    }
+    box-shadow: var(--budojo-elevation-floating);
   }
 
   // ============================================================
