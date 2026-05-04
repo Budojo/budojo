@@ -26,7 +26,10 @@ function makeAcademyForUnpaid(string $email = 'owner@example.com'): Academy
 {
     $user = User::factory()->create(['email' => $email]);
 
-    return Academy::factory()->for($user, 'owner')->create();
+    // monthly_fee_cents must be set — the digest skips academies
+    // with a null fee since the "unpaid this month" concept is
+    // undefined there (#404 follow-up).
+    return Academy::factory()->for($user, 'owner')->create(['monthly_fee_cents' => 5000]);
 }
 
 function makeAthleteForUnpaid(Academy $academy, AthleteStatus $status = AthleteStatus::Active, ?array $paymentsFor = null): Athlete
@@ -100,10 +103,12 @@ it('skips an academy whose digest was already sent today (de-dup via notificatio
     $academy = makeAcademyForUnpaid();
     makeAthleteForUnpaid($academy);
 
+    // Seed the log row at the TARGET month start (#404 follow-up:
+    // sent_for_date is anchored to the digest month, not the run date).
     NotificationLog::query()->create([
         'academy_id' => $academy->id,
         'notification_type' => SendUnpaidAthletesDigest::NOTIFICATION_TYPE,
-        'sent_for_date' => Carbon::today(),
+        'sent_for_date' => Carbon::create(2026, 5, 1),
     ]);
 
     \Artisan::call('budojo:send-unpaid-athletes-digest');
@@ -115,10 +120,12 @@ it('--force re-sends even when notification_log already has a row for today', fu
     $academy = makeAcademyForUnpaid();
     makeAthleteForUnpaid($academy);
 
+    // Seed the log row at the TARGET month start (#404 follow-up:
+    // sent_for_date is anchored to the digest month, not the run date).
     NotificationLog::query()->create([
         'academy_id' => $academy->id,
         'notification_type' => SendUnpaidAthletesDigest::NOTIFICATION_TYPE,
-        'sent_for_date' => Carbon::today(),
+        'sent_for_date' => Carbon::create(2026, 5, 1),
     ]);
 
     \Artisan::call('budojo:send-unpaid-athletes-digest', ['--force' => true]);
@@ -135,7 +142,7 @@ it('records a notification_log row after the queue insert (so the next run skips
     expect(NotificationLog::query()
         ->where('academy_id', $academy->id)
         ->where('notification_type', SendUnpaidAthletesDigest::NOTIFICATION_TYPE)
-        ->whereDate('sent_for_date', Carbon::today())
+        ->whereDate('sent_for_date', '2026-05-01')
         ->exists())->toBeTrue();
 
     \Artisan::call('budojo:send-unpaid-athletes-digest');
@@ -163,12 +170,86 @@ it('iterates multiple academies independently — each gets its own digest', fun
 
 it('--year and --month override the current month for backfill / oncall re-sends', function (): void {
     $academy = makeAcademyForUnpaid();
-    makeAthleteForUnpaid($academy);
 
-    // April 2026 — different from the test's frozen 2026-05-16.
+    // The athlete was paid in MAY (the frozen current month) but NOT
+    // in APRIL. Without the override, the run picks May → athlete is
+    // paid → no mail. With --year=2026 --month=4, the run picks
+    // April → athlete is unpaid → mail with year/month=2026/4. This
+    // proves the override actually changes the WHO of the digest,
+    // not just the metadata on the Mailable. Copilot caught the
+    // weak version of this assertion on PR #404.
+    makeAthleteForUnpaid($academy, AthleteStatus::Active, ['year' => 2026, 'month' => 5]);
+
     \Artisan::call('budojo:send-unpaid-athletes-digest', ['--year' => 2026, '--month' => 4]);
 
-    Mail::assertQueued(UnpaidAthletesDigestMail::class, fn (UnpaidAthletesDigestMail $m): bool => $m->year === 2026 && $m->month === 4);
+    Mail::assertQueued(UnpaidAthletesDigestMail::class, fn (UnpaidAthletesDigestMail $m): bool => $m->year === 2026 && $m->month === 4 && $m->athletes->count() === 1);
+});
+
+it('rejects --month outside 1..12 with INVALID exit code', function (): void {
+    $exitCode = \Artisan::call('budojo:send-unpaid-athletes-digest', ['--month' => 13]);
+
+    expect($exitCode)->toBe(2); // Symfony Console INVALID = 2
+    Mail::assertNothingQueued();
+});
+
+it('rejects --year outside 4-digit YYYY range with INVALID exit code', function (): void {
+    $exitCode = \Artisan::call('budojo:send-unpaid-athletes-digest', ['--year' => 99]);
+
+    expect($exitCode)->toBe(2);
+    Mail::assertNothingQueued();
+});
+
+it('rejects --month with non-digit suffix (eats partially-numeric strings — #405 round 2)', function (): void {
+    // (int) '4foo' === 4 in PHP, so a post-cast bounds check would
+    // happily accept "--month=4foo". ctype_digit on the raw option
+    // string is the actual gate. Copilot caught this on #405.
+    $exitCode = \Artisan::call('budojo:send-unpaid-athletes-digest', ['--month' => '4foo']);
+
+    expect($exitCode)->toBe(2);
+    Mail::assertNothingQueued();
+});
+
+it('rejects --year with non-digit suffix (eats partially-numeric strings — #405 round 2)', function (): void {
+    $exitCode = \Artisan::call('budojo:send-unpaid-athletes-digest', ['--year' => '2026abc']);
+
+    expect($exitCode)->toBe(2);
+    Mail::assertNothingQueued();
+});
+
+it('skips academies with no monthly_fee_cents (#404 follow-up — undefined "unpaid" semantics)', function (): void {
+    $user = User::factory()->create(['email' => 'noFee@example.com']);
+    $academy = Academy::factory()->for($user, 'owner')->create(['monthly_fee_cents' => null]);
+    makeAthleteForUnpaid($academy);
+
+    \Artisan::call('budojo:send-unpaid-athletes-digest');
+
+    Mail::assertNothingQueued();
+});
+
+it('uses the TARGET month as sent_for_date (#404 follow-up — backfill collision-free)', function (): void {
+    // Frozen "today" = 2026-05-16. An April backfill run on May 16
+    // must record sent_for_date = 2026-04-01 (the target month
+    // start), NOT 2026-05-16 (the run date) — otherwise the
+    // same-day May digest would be blocked by the unique index.
+    $academy = makeAcademyForUnpaid();
+    makeAthleteForUnpaid($academy);
+
+    \Artisan::call('budojo:send-unpaid-athletes-digest', ['--year' => 2026, '--month' => 4]);
+
+    expect(NotificationLog::query()
+        ->where('academy_id', $academy->id)
+        ->where('notification_type', SendUnpaidAthletesDigest::NOTIFICATION_TYPE)
+        ->whereDate('sent_for_date', '2026-04-01')
+        ->exists())->toBeTrue();
+
+    // Critically: the row for the May digest is still claimable on
+    // the same day. The May run can therefore proceed without being
+    // blocked by the April backfill.
+    expect(NotificationLog::query()
+        ->where('academy_id', $academy->id)
+        ->where('notification_type', SendUnpaidAthletesDigest::NOTIFICATION_TYPE)
+        ->whereDate('sent_for_date', '2026-05-01')
+        ->exists())->toBeFalse();
 });
 
 it('declares ShouldQueue so the digest dispatch does not block the artisan loop', function (): void {
