@@ -56,6 +56,8 @@ db_data/
 # - `scripts/` (workflow helpers — board, copilot, docker gates) is checked
 #   in. Same for `pr-bodies/` so the per-PR body convention works without a
 #   first-time mkdir step.
+# - `commands/` (project-local slash commands like /prereview, /feedback-digest)
+#   is checked in so the workflow patterns are shared, not per-developer.
 .claude/*
 !.claude/gotchas.md
 !.claude/settings.json
@@ -63,6 +65,8 @@ db_data/
 !.claude/scripts/**
 !.claude/pr-bodies/
 !.claude/pr-bodies/.gitkeep
+!.claude/commands/
+!.claude/commands/**
 
 # Superpowers — local agent plan/notes scratch dir. Same shape as .claude/:
 # personal worker artifacts, not codebase truth.
