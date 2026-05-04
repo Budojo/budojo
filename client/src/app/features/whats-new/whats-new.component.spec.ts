@@ -28,13 +28,13 @@ describe('WhatsNewComponent (#254)', () => {
     // version we've shipped; when we ship a new version and forget
     // to prepend instead of append, this fails.
     const firstRelease = root.querySelector('.whats-new__release');
-    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v1.14.1');
+    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v1.14.3');
   });
 
   it('renders every shipped release in newest-first order', () => {
     const { fixture } = setup();
     const cards = fixture.nativeElement.querySelectorAll('.whats-new__release');
-    expect(cards.length).toBe(13);
+    expect(cards.length).toBe(15);
 
     // Pin every version in the order we ship them so a refactor that
     // accidentally reverses the array (e.g. a sort that reads ids
@@ -43,6 +43,8 @@ describe('WhatsNewComponent (#254)', () => {
       (el as HTMLElement).querySelector('.whats-new__version')?.textContent?.trim(),
     );
     expect(versions).toEqual([
+      'v1.14.3',
+      'v1.14.2',
       'v1.14.1',
       'v1.14.0',
       'v1.13.0',

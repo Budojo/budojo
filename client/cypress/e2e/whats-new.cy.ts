@@ -44,7 +44,7 @@ describe("What's new page (#254)", () => {
 
     // The latest release sits at the top — assert it's actually
     // visible without scrolling (the user sees it on landing).
-    cy.get('[data-cy="whats-new-release-v1.14.1"]').should('be.visible');
+    cy.get('[data-cy="whats-new-release-v1.14.3"]').should('be.visible');
 
     // Older releases are below the fold of the default Cypress
     // viewport (1280×720) — the dashboard shell's `.main` container
@@ -52,6 +52,8 @@ describe("What's new page (#254)", () => {
     // clipped. We assert presence in the DOM, not visibility, since
     // a user has to scroll either way. The newest-first ordering
     // (which IS load-bearing UX) is pinned in the vitest spec.
+    cy.get('[data-cy="whats-new-release-v1.14.2"]').should('exist');
+    cy.get('[data-cy="whats-new-release-v1.14.1"]').should('exist');
     cy.get('[data-cy="whats-new-release-v1.14.0"]').should('exist');
     cy.get('[data-cy="whats-new-release-v1.13.0"]').should('exist');
     cy.get('[data-cy="whats-new-release-v1.12.0"]').should('exist');
