@@ -281,3 +281,29 @@ jobs:
 
       - name: Run Spectral
         run: npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml
+
+  worker-test:
+    # Vitest specs for the Cloudflare worker that fronts the SPA's
+    # static-asset binding (`worker/index.js` — see #382). The
+    # `client/` and `server/` test jobs above don't reach this code,
+    # so without a dedicated job the navigation-vs-asset routing
+    # logic ships untested. Lives at the repo root because the
+    # worker is its own deploy artefact, not part of the Angular app.
+    name: "🧪 Worker Tests (Vitest)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: worker
+
+      - name: Run worker tests
+        run: npm test
+        working-directory: worker
