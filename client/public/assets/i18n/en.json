@@ -35,7 +35,35 @@
       "passwordRequired": "Password is required.",
       "submit": "Sign in",
       "noAccount": "Don't have an account?",
-      "registerLink": "Create one"
+      "registerLink": "Create one",
+      "forgotPassword": "Forgot your password?"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a link to set a new password.",
+      "email": "Email",
+      "emailPlaceholder": "mario@example.com",
+      "emailRequired": "Email is required.",
+      "emailInvalid": "Enter a valid email address.",
+      "submit": "Send reset link",
+      "sentMessage": "If your email is registered, we've sent you a reset link. Check your inbox — and your spam folder, just in case.",
+      "errorGeneric": "Something went wrong. Please try again in a moment.",
+      "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Choose a new password",
+      "subtitle": "Pick a password you haven't used on Budojo before.",
+      "password": "New password",
+      "passwordPlaceholder": "Min. 8 characters",
+      "passwordRequired": "Password is required.",
+      "passwordMinlength": "At least 8 characters.",
+      "passwordConfirmation": "Confirm new password",
+      "passwordConfirmationPlaceholder": "Repeat your new password",
+      "passwordsMismatch": "Passwords do not match.",
+      "submit": "Set new password",
+      "success": "Password updated. Redirecting you to sign in…",
+      "invalidLink": "This password reset link is invalid or has expired. Request a new one and we'll send you a fresh link.",
+      "requestNewLink": "Request a new link"
     },
     "register": {
       "title": "Create your account",

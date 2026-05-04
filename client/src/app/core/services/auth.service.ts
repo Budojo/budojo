@@ -24,6 +24,17 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  token: string;
+  password: string;
+  password_confirmation: string;
+}
+
 export interface AuthResponse {
   data: User;
   token: string;
@@ -101,6 +112,31 @@ export class AuthService {
       tap((res) => this.user.set(res.data)),
       map((res) => res.data),
     );
+  }
+
+  /**
+   * `POST /auth/forgot-password` (M5 PR-A). Always succeeds with 202
+   * regardless of whether the email is registered — the server keeps
+   * the response identical to defeat account enumeration. Throttled
+   * server-side to 6 requests per minute per IP; the form should still
+   * disable submit briefly to avoid double-clicks.
+   */
+  forgotPassword(payload: ForgotPasswordPayload): Observable<void> {
+    return this.http.post<void>(`${this.base}/forgot-password`, payload);
+  }
+
+  /**
+   * `POST /auth/reset-password` (M5 PR-A). The `token` + `email` come
+   * from the email's reset URL (`/auth/reset-password?token=...&email=...`);
+   * `password` + `password_confirmation` come from the form. 200 on
+   * success, 422 on token-invalid / token-expired / mismatched
+   * confirmation — the server collapses every failure mode to a 422
+   * with an `errors.email` payload, so the form should surface a single
+   * "the link is invalid or has expired" message rather than trying to
+   * differentiate.
+   */
+  resetPassword(payload: ResetPasswordPayload): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.base}/reset-password`, payload);
   }
 
   /**

@@ -32,6 +32,22 @@ export const routes: Routes = [
             (m) => m.VerifyErrorComponent,
           ),
       },
+      // Password reset (M5 PR-A). Both routes are public (no guard) —
+      // a logged-out user is the whole point of the flow.
+      {
+        path: 'forgot-password',
+        loadComponent: () =>
+          import('./features/auth/forgot-password/forgot-password.component').then(
+            (m) => m.ForgotPasswordComponent,
+          ),
+      },
+      {
+        path: 'reset-password',
+        loadComponent: () =>
+          import('./features/auth/reset-password/reset-password.component').then(
+            (m) => m.ResetPasswordComponent,
+          ),
+      },
     ],
   },
   {
@@ -217,6 +233,16 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/sub-processors/sub-processors.component').then(
         (m) => m.SubProcessorsComponent,
+      ),
+  },
+  // Italian translation of /sub-processors (#280). Same lock-step
+  // discipline as /privacy{,/it}: edits to the markdown source, the
+  // English page, or this Italian page MUST land in the same PR.
+  {
+    path: 'sub-processors/it',
+    loadComponent: () =>
+      import('./features/sub-processors/it/sub-processors-it.component').then(
+        (m) => m.SubProcessorsItComponent,
       ),
   },
   // /privacy serves the canonical English text (#291). The SPA is

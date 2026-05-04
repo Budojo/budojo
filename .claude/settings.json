@@ -6,7 +6,9 @@
       "Bash(gh run watch *)",
       "Bash(git fetch origin*)",
       "Bash(git fetch --tags origin*)",
-      "Bash(git fetch --all)"
+      "Bash(git fetch --all)",
+      "Bash(git diff *)",
+      "Bash(grep *)"
     ]
   }
 }

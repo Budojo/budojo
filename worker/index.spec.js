@@ -191,4 +191,74 @@ describe('SPA fallback worker', () => {
     const response = await worker.fetch(new Request('https://x.test/some-path'), env);
     expect(response.status).toBe(500);
   });
+
+  // SAFE_MODE recovery (#398). The Angular Service Worker reads
+  // /ngsw.json + /ngsw-worker.js to detect new versions, and the SPA
+  // shell starts from /index.html. ANY of these served from a stale
+  // cache traps users on the old bundle. The worker must stamp
+  // `Cache-Control: no-cache, no-store, must-revalidate` on every
+  // response for these paths (existing or fallback).
+
+  it.each([
+    '/index.html',
+    '/ngsw.json',
+    '/ngsw-worker.js',
+    '/safety-worker.js',
+  ])('stamps no-cache headers on %s when the file exists', async (pathname) => {
+    const env = makeEnv({
+      [pathname]: () =>
+        new Response('content', {
+          status: 200,
+          headers: { 'content-type': 'application/javascript' },
+        }),
+    });
+    const response = await worker.fetch(new Request(`https://x.test${pathname}`), env);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-cache, no-store, must-revalidate');
+    expect(response.headers.get('Pragma')).toBe('no-cache');
+    expect(response.headers.get('Expires')).toBe('0');
+    // Original headers must survive the rewrite.
+    expect(response.headers.get('content-type')).toBe('application/javascript');
+  });
+
+  it('stamps no-cache headers on the /index.html SPA fallback for navigation requests', async () => {
+    // A user pasting /dashboard/stats into a fresh tab gets the SPA
+    // shell — that shell is /index.html in disguise and must bypass
+    // any HTTP cache for the same reason as a direct /index.html hit.
+    const env = makeEnv({
+      '/index.html': () =>
+        new Response('<!doctype html><html>shell</html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        }),
+    });
+    const response = await worker.fetch(
+      new Request('https://x.test/dashboard/stats', { headers: NAV_HEADERS }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Cache-Control')).toBe('no-cache, no-store, must-revalidate');
+  });
+
+  it('preserves the original Cache-Control on hashed asset responses (immutable cacheability stays)', async () => {
+    // chunk-XXX.js is hash-named, so its content is immutable — it
+    // benefits from the existing default cacheability and MUST NOT
+    // get the no-cache stamp. This pins that the worker only
+    // overrides Cache-Control for the SW-critical paths above.
+    const env = makeEnv({
+      '/chunk-AAA.js': () =>
+        new Response('export const x = 1;', {
+          status: 200,
+          headers: {
+            'content-type': 'text/javascript',
+            'cache-control': 'public, max-age=31536000, immutable',
+          },
+        }),
+    });
+    const response = await worker.fetch(new Request('https://x.test/chunk-AAA.js'), env);
+
+    expect(response.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+  });
 });

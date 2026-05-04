@@ -59,6 +59,47 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v1.16.0',
+      date: '2026-05-04',
+      headline:
+        'The biggest release since the original Documents launch. Six new emails wired end-to-end via a real queue worker, a stuck-on-old-bundle bug class closed at the Service Worker layer, plus polish on the legal pages and the date pickers.',
+      sections: [
+        {
+          heading: '📧 Emails everywhere now',
+          bullets: [
+            'Forgot password. A "Forgot your password?" link on the sign-in page sends a recovery link to your inbox; click → set a new password → sign in. Tokens are one-shot and expire after 60 minutes.',
+            'Welcome on sign-up. A friendly welcome email when you create your account, with a link straight to the academy-setup wizard. Goes out alongside the existing email-verification message.',
+            'Account-deletion confirmation. When you click "Delete account" in your profile you now get an email confirming the request, the scheduled execution date (30 days out), and a clear path to cancel by signing back in. Removes the "did Budojo register my deletion?" anxiety.',
+            "Medical-certificate expiry digest. A daily 9:00 AM email per academy listing every athlete whose medical certificate hits the 30 days, 7 days, or 0 days remaining thresholds. The digest only fires when there's actually something to chase — quiet weeks stay quiet.",
+            'Unpaid-athletes monthly digest. On the 16th of each month at 9:00 AM, a digest listing every active athlete still unpaid for the current month. Pre-15 most customers settle in the typical month-start window, so emailing earlier would just be noise. Suspended and inactive athletes never appear in the chase-list.',
+            'Localised dates in the picker. When you switch the SPA to Italian, the calendar pop-over now reads in Italian too — January / February becomes Gennaio / Febbraio, weekday abbreviations follow suit. Previously the picker ignored the language switch.',
+          ],
+        },
+        {
+          heading: '🛡️ Stuck-on-old-bundle: closed at the Service Worker layer',
+          bullets: [
+            'A reported recurring annoyance — "I have to clear browser cache manually to see the new version" — turned out to be the Angular Service Worker entering its SAFE_MODE state during the v1.14.x blank-page hotfix run. Once a worker is in SAFE_MODE, the auto-reload logic shipped in v1.10.0 is silently inert: the version check never resolves, the auto-reload never fires, the user is stranded on the old bundle forever.',
+            "Fix: when the SW signals it's unrecoverable, the SPA now unregisters every active worker and reloads the tab. The next request hits the network directly, picks up the latest deploy, installs a fresh SW, and the user is back on current. No manual cache clear needed.",
+            "The Cloudflare worker also stamps no-cache headers on the SW manifest + the SPA shell — defence in depth so the file the SW polls for new versions can't be served stale by any intermediate cache.",
+          ],
+        },
+        {
+          heading: '🇮🇹 Italian /sub-processors page',
+          bullets: [
+            'The GDPR Art. 28 sub-processor disclosure now has an Italian translation at /sub-processors/it, mirroring the English page at /sub-processors. Both pages carry a language toggle so an Italian customer landing on the English URL can flip without re-navigating. Same pattern as /privacy ↔ /privacy/it from earlier this year.',
+          ],
+        },
+        {
+          heading: '🧹 Behind the scenes',
+          bullets: [
+            "Internal tooling: /prereview and /feedback-digest slash commands for project-local Claude workflows. Pre-push diff review by a fresh sub-agent, plus a customer-feedback batch synthesizer. Doesn't change anything you see.",
+            'Tech-debt sweep run after v1.15.0 — small doc-drift fixes, a few new gotchas captured. No user-visible change.',
+            'M5 milestone PRD checked in alongside M3 / M4 — gives the deploy walkthrough a permanent anchor for future contributors.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v1.15.0',
       date: '2026-05-04',
       headline:

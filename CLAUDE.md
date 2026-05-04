@@ -164,6 +164,8 @@ docker exec budojo_client sh -c "cd /app && npm test -- --watch=false"
 
 **Before the `git push`, also scan [`.claude/gotchas.md`](.claude/gotchas.md)** — a living checklist of mistakes we've made before. 30-second read vs. a 5-minute Copilot round-trip later. When Copilot flags a new non-typo mistake in review, add a `→` entry to the correct category in the SAME PR that fixes it. The file grows naturally and every future PR benefits.
 
+**Optional: run `/prereview` before pushing.** The slash command in [`.claude/commands/prereview.md`](.claude/commands/prereview.md) dispatches a fresh sub-agent to read the diff vs `develop` and surface up to 5 actionable issues — bugs, wrong assumptions, missing test coverage, security holes — before Copilot has to flag them on the PR. One agent dispatch (~30 s) trades for one Copilot CI round-trip (3-5 min). Use it when the diff is non-trivial or touches a load-bearing surface; skip it for one-line typo fixes.
+
 ### Branch Naming
 
 ```
