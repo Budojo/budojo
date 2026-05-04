@@ -18,3 +18,14 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('budojo:purge-expired-pending-deletions')
     ->hourly()
     ->withoutOverlapping(60); // 60-min lock window — protects against a slow run getting double-scheduled.
+
+// Daily digest of medical certificates expiring at T-30 / T-7 / T-0
+// per academy (M5 PR-D). Runs at 09:00 Europe/Rome — early enough
+// that an instructor reading their inbox over morning coffee can
+// chase renewal with a phone call before evening training. The
+// command is per-academy idempotent via the notification_log unique
+// index, so a re-run on the same day is a fast no-op.
+\Illuminate\Support\Facades\Schedule::command('budojo:send-medical-cert-expiry-reminders')
+    ->dailyAt('09:00')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(60);
