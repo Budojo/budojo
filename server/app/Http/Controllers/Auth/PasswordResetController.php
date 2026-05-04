@@ -37,12 +37,20 @@ class PasswordResetController extends Controller
 
     /**
      * `POST /api/v1/auth/reset-password` — consume a token + set a new
-     * password. 200 on success, 422 with a `password` (token) error on
-     * invalid / expired token, mismatched password confirmation, or
-     * unknown email. We deliberately surface the broker's failure modes
-     * as a single 422 shape so the SPA can render one consistent error
-     * message — no signal back to the caller about which specific
-     * branch failed.
+     * password. 200 on success.
+     *
+     * Two distinct 422 shapes the SPA must handle:
+     *   1. **Form-level validation errors** (the FormRequest fires
+     *      first): missing email, malformed email, missing token,
+     *      missing password, `password` < 8 chars, `password` not
+     *      confirmed → `errors` carries the offending field name
+     *      (`email` / `token` / `password` / `password_confirmation`).
+     *   2. **Broker failures** (token invalid / expired / unknown
+     *      email / token already consumed): collapsed to an
+     *      `errors.email` payload by the controller below — the SPA
+     *      treats this as "the link is invalid or has expired" and
+     *      offers a "Request a new link" CTA without trying to
+     *      differentiate which branch failed.
      */
     public function reset(ResetPasswordRequest $request): JsonResponse
     {

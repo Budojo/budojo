@@ -32,6 +32,22 @@ it('queues a password reset email when an existing user requests one', function 
     Notification::assertSentTo($user, ResetPassword::class);
 });
 
+it('builds the reset URL with the SPA path AND the user email in the query string (regression)', function (): void {
+    // Eloquent attributes are accessed via __get magic, so the closure
+    // wired in AppServiceProvider must use the CanResetPassword contract
+    // (not property_exists) to find the email. Without this regression
+    // test we shipped a link with no email param at all — which the SPA
+    // treats as an invalid link.
+    $user = User::factory()->create(['email' => 'mario@example.com']);
+    $token = Password::createToken($user);
+
+    $url = new ResetPassword($token)->toMail($user)->actionUrl;
+
+    expect($url)->toContain('/auth/reset-password')
+        ->and($url)->toContain('token=' . urlencode($token))
+        ->and($url)->toContain('email=' . urlencode('mario@example.com'));
+});
+
 it('returns 202 without queueing a notification when the email is unknown (no enumeration leak)', function (): void {
     // Endpoint must reply identically for known + unknown emails so an
     // attacker can't probe for registered accounts. The PRD calls this

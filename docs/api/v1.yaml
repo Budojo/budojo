@@ -145,11 +145,13 @@ paths:
       tags: [auth]
       summary: Request a password-reset email
       description: |
-        Sends a password-reset email containing a signed link with a
-        single-use token. Always responds with `202 Accepted` regardless
-        of whether the email matches a registered user — the response
-        is identical for known and unknown addresses to defeat account
-        enumeration. Throttled to 6 requests / minute / IP.
+        Sends a password-reset email containing a link with a single-use
+        opaque token (stored in `password_reset_tokens`; not a signed
+        URL — contrast with the email-verification flow which uses
+        `URL::signedRoute()`). Always responds with `202 Accepted`
+        regardless of whether the email matches a registered user — the
+        response is identical for known and unknown addresses to defeat
+        account enumeration. Throttled to 6 requests / minute / IP.
       operationId: authForgotPassword
       security: []
       requestBody:
@@ -176,12 +178,20 @@ paths:
         are one-shot — the matching row is deleted on success, so a
         replay returns 422. Tokens expire 60 minutes after issuance.
 
-        On any failure (invalid token, expired token, unknown email,
-        weak password, mismatched confirmation) the response is a 422
-        with an `errors.email` payload — failure modes are deliberately
-        collapsed so the SPA renders one consistent "the link is
-        invalid or has expired" message rather than leaking which
-        check failed.
+        Two distinct 422 shapes the client must handle:
+
+        1. **Form-level validation** (FormRequest fires first):
+           missing / malformed `email`, missing `token`, missing
+           `password`, password under 8 chars, `password` not
+           confirmed → `errors` carries the offending field name
+           (`email` / `token` / `password` / `password_confirmation`).
+
+        2. **Broker failures** (token invalid, token expired,
+           unknown email, token already consumed): collapsed to an
+           `errors.email` payload by the controller — clients should
+           treat this as "the link is invalid or has expired" and
+           offer a "Request a new link" CTA without trying to
+           differentiate which branch failed.
       operationId: authResetPassword
       security: []
       requestBody:
@@ -192,13 +202,19 @@ paths:
               $ref: '#/components/schemas/ResetPasswordRequest'
       responses:
         '200':
-          description: Password updated; the user can sign in with the new credentials.
+          description: |
+            Password updated; the user can sign in with the new
+            credentials. The `message` field is a localized human
+            string resolved from Laravel's `passwords.reset`
+            translation key — the example below shows the English
+            value; under an active `it` locale it reads
+            "La tua password è stata reimpostata.".
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
               example:
-                message: passwords.reset
+                message: Your password has been reset.
         '422':
           $ref: '#/components/responses/ValidationError'
 

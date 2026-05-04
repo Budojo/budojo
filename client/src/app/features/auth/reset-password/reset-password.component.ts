@@ -7,7 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -64,6 +64,16 @@ export class ResetPasswordComponent {
   private readonly token: string;
   private readonly email: string;
 
+  /**
+   * Handle for the post-success setTimeout that auto-redirects to
+   * `/auth/login`. Stored so the destroy hook can clear it if the
+   * user navigates away (e.g. clicks the privacy link in the footer)
+   * before the 1500 ms elapses — otherwise the late-firing redirect
+   * yanks them off whatever page they landed on. Mirror of the
+   * VerifySuccessComponent's auto-navigate cleanup pattern.
+   */
+  private redirectTimer: ReturnType<typeof setTimeout> | null = null;
+
   readonly form = this.fb.group(
     {
       password: ['', [Validators.required, Validators.minLength(8)]],
@@ -83,6 +93,16 @@ export class ResetPasswordComponent {
     if (this.token === '' || this.email === '') {
       this.tokenInvalid.set(true);
     }
+
+    // Clear the success → /auth/login redirect timer if the user
+    // navigates away before it fires. DestroyRef is the standalone-
+    // component-friendly replacement for ngOnDestroy.
+    inject(DestroyRef).onDestroy(() => {
+      if (this.redirectTimer !== null) {
+        clearTimeout(this.redirectTimer);
+        this.redirectTimer = null;
+      }
+    });
   }
 
   submit(): void {
@@ -107,11 +127,13 @@ export class ResetPasswordComponent {
           // Auto-redirect to login after a short pause so the user
           // can read the success message; navigation lands on the
           // login form pre-filled with their email so they re-auth in
-          // one click.
-          setTimeout(
-            () => this.router.navigate(['/auth/login'], { queryParams: { email: this.email } }),
-            1500,
-          );
+          // one click. Handle stored on `redirectTimer` so the
+          // DestroyRef hook can clear it if the user navigates away
+          // before the 1500 ms elapses.
+          this.redirectTimer = setTimeout(() => {
+            this.redirectTimer = null;
+            this.router.navigate(['/auth/login'], { queryParams: { email: this.email } });
+          }, 1500);
         },
         error: () => {
           // Server collapses every reset-side failure to 422; we don't
