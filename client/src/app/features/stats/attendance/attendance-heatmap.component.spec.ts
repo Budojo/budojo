@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AttendanceHeatmapComponent } from './attendance-heatmap.component';
+import { LanguageService } from '../../../core/services/language.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 
 describe('AttendanceHeatmapComponent', () => {
@@ -78,5 +79,57 @@ describe('AttendanceHeatmapComponent', () => {
     createComponent([], new Date(2026, 1, 16), new Date(2026, 4, 15));
     const legendCells = fixture.nativeElement.querySelectorAll('.heatmap__legend-cell');
     expect(legendCells.length).toBe(5);
+  });
+
+  // Locale regression-guards (#374). The component routes its tooltip date label
+  // and month axis label through `localeFor(currentLang())` — `'en' → 'en-GB'`,
+  // `'it' → 'it-IT'`. These specs pin the user-visible output for each locale so
+  // a future regression (e.g. a stray hardcoded `'en-US'`) is caught here, not
+  // by a beta tester. The choice of date is May 2026 — `Mon 4 May 2026` (en-GB,
+  // day-first) vs. `lun 4 mag 2026` (it-IT) — picked because it differs in
+  // weekday name, separator, day-month order, AND month abbreviation.
+
+  it('renders tooltip + month label in en-GB for the default English locale', () => {
+    createComponent(
+      [{ date: '2026-05-04', count: 3 }],
+      new Date(2026, 4, 4),
+      new Date(2026, 4, 10),
+    );
+
+    const titles: Element[] = Array.from(
+      fixture.nativeElement.querySelectorAll('rect.heatmap__cell title'),
+    );
+    const populatedCellTitle = titles.find((t) => (t.textContent ?? '').includes('3'));
+    // en-GB: day-first ("4 May 2026"), short weekday "Mon", and an
+    // (en-)`'attendances'` plural via the i18n key.
+    expect(populatedCellTitle?.textContent).toContain('Mon');
+    expect(populatedCellTitle?.textContent).toContain('4 May 2026');
+    expect(populatedCellTitle?.textContent).toContain('attendances');
+
+    const monthLabel = fixture.nativeElement.querySelector('.heatmap__month');
+    expect(monthLabel?.textContent?.trim()).toBe('May');
+  });
+
+  it('renders tooltip + month label in it-IT after switching language to it', () => {
+    const lang = TestBed.inject(LanguageService);
+    lang.setLanguage('it');
+
+    createComponent(
+      [{ date: '2026-05-04', count: 3 }],
+      new Date(2026, 4, 4),
+      new Date(2026, 4, 10),
+    );
+
+    const titles: Element[] = Array.from(
+      fixture.nativeElement.querySelectorAll('rect.heatmap__cell title'),
+    );
+    const populatedCellTitle = titles.find((t) => (t.textContent ?? '').includes('3'));
+    // it-IT: day-first lower-case month, short weekday "lun", IT plural.
+    expect(populatedCellTitle?.textContent).toContain('lun');
+    expect(populatedCellTitle?.textContent).toContain('4 mag 2026');
+    expect(populatedCellTitle?.textContent).toContain('presenze');
+
+    const monthLabel = fixture.nativeElement.querySelector('.heatmap__month');
+    expect(monthLabel?.textContent?.trim()).toBe('mag');
   });
 });
