@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
+import { PrimeNG } from 'primeng/config';
 import { LanguageService } from './language.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
@@ -109,6 +110,25 @@ describe('LanguageService', () => {
       service.setLanguage('fr');
       expect(service.currentLang()).toBe('en');
       expect(localStorage.getItem('budojoLang')).toBe('en');
+    });
+
+    it('pushes the matching PrimeNG translation on every switch (#280)', () => {
+      const service = TestBed.inject(LanguageService);
+      const primeng = TestBed.inject(PrimeNG);
+      const setSpy = vi.spyOn(primeng, 'setTranslation');
+
+      service.setLanguage('it');
+      // Italian month names land in PrimeNG's translation map, so the
+      // <p-datepicker> calendar popover renders "Gennaio / Maggio /
+      // dicembre" instead of PrimeNG's English defaults.
+      const itCall = setSpy.mock.calls.at(-1)?.[0];
+      expect(itCall?.monthNames).toContain('Maggio');
+      expect(itCall?.today).toBe('Oggi');
+
+      service.setLanguage('en');
+      const enCall = setSpy.mock.calls.at(-1)?.[0];
+      expect(enCall?.monthNames).toContain('May');
+      expect(enCall?.today).toBe('Today');
     });
   });
 });

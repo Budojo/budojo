@@ -1,5 +1,7 @@
 import { DOCUMENT, Injectable, inject, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { PrimeNG } from 'primeng/config';
+import { primeNgTranslationFor } from '../../shared/utils/primeng-translations';
 
 export type SupportedLanguage = 'en' | 'it';
 
@@ -31,6 +33,7 @@ const STORAGE_KEY = 'budojoLang';
 export class LanguageService {
   private readonly translate = inject(TranslateService);
   private readonly document = inject(DOCUMENT);
+  private readonly primeng = inject(PrimeNG);
 
   readonly currentLang = signal<SupportedLanguage>('en');
 
@@ -74,6 +77,11 @@ export class LanguageService {
     // `<html lang="…">` keeps screen readers + CSS `:lang(it)` selectors
     // aligned with the active language.
     this.document.documentElement.lang = lang;
+    // PrimeNG component-level i18n (calendar month / day names,
+    // confirmpopup buttons, etc. — see #280). The lookup map is
+    // exhaustive against `SupportedLanguage`, so a new locale won't
+    // silently fall back to PrimeNG's English default.
+    this.primeng.setTranslation(primeNgTranslationFor(lang));
   }
 
   private isSupported(value: string): value is SupportedLanguage {
