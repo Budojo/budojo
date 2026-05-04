@@ -115,6 +115,13 @@ Format: `→` separates the symptom from the action.
 
 - Replaced `client/public/favicon.ico` but Chrome kept showing the old Angular default tile → browsers cache favicons aggressively and `<link rel="icon">` alone doesn't bust that cache. **Hard reload is not always enough.** Fix chain: (1) make sure `client/public/favicon.ico` is actually the new file (size should match the new one, not 15 KB Angular default); (2) add explicit `<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />` tags alongside the ICO so modern Chromium picks the high-DPI PNG; (3) Shift + reload, then `chrome://favicon2/?pageUrl=http://localhost:4200&size=32` to verify what Chrome thinks the favicon is. Last resort: clear site data (dev-tools → Application → Clear storage).
 
+## Cloudflare Pages / Workers
+
+- `not_found_handling: "single-page-application"` on the assets binding → returns 200 + `index.html` for **every** unknown path, including missing JS chunks. Browsers parse HTML as a JS module and crash silently (the v1.14.x blank-page chain, fixed in #382). Use `not_found_handling: "none"` + a worker that gates the SPA fallback behind an asset-extension allowlist + a navigation check.
+- `html_handling` left at default (`auto-trailing-slash`) on the assets binding → 307-redirects every navigation path (and `/index.html` itself!) to `/`, leaking through any worker's `/index.html` sub-fetch as a redirect rather than the document body. Set `html_handling: "none"` so the binding serves files exactly as named and the worker owns every fallback decision.
+- SPA fallback in the worker without a navigation gate → POST / OPTIONS / programmatic `fetch()` all get HTML for unknown paths. The canonical gate is GET/HEAD method AND `Accept` containing `text/html`. `fetch()` defaults to `Accept: */*`, which fails the substring check and surfaces the real 404 (the desired behaviour).
+- Pages `_redirects` rewrite rule with status `200` to a different origin (`/api/* https://api.budojo.it/api/:splat 200`) → silently ignored by Cloudflare, falls through to the SPA fallback (which returns 405 because Pages can't serve HTML on non-GET). Use `308` if a cross-origin rewrite is genuinely needed (#147), or — preferred — emit absolute URLs from the client at build time so no rewrite is needed.
+
 ---
 
 ## How to use this file

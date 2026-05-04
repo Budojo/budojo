@@ -166,7 +166,6 @@ budojo/
 │   └── tests/{Unit,Feature}/ # PEST 4 — Feature for HTTP round-trips, Unit for pure helpers
 │
 ├── client/               # Angular 21 SPA
-│   ├── public/_redirects     # Cloudflare Pages: SPA fallback + 308 stale-bundle safety net for /api/*
 │   ├── src/environments/     # apiBase per build configuration (dev = relative, prod = https://api.budojo.it)
 │   └── src/app/
 │       ├── core/
@@ -184,6 +183,11 @@ budojo/
 │           ├── components/   # BeltBadge, ExpiryStatusBadge, PaidBadge, TrainingDaysPicker, MonthlySummaryWidget, …
 │           └── utils/        # attendance-rate, address-form
 │
+├── worker/               # Cloudflare Worker fronting the static-asset binding
+│   ├── index.js              # Navigation-gated SPA fallback (closes #382)
+│   ├── index.spec.js         # Vitest specs covering asset / navigation / non-navigation cases
+│   └── package.json          # Vitest dep; runs in CI via the "🧪 Worker Tests" job
+├── wrangler.jsonc        # Cloudflare config — `assets` binding + worker `main`
 ├── docs/                 # Domain documentation (entities, OpenAPI spec, infra, milestone PRDs)
 ├── docker/               # Dockerfiles + Nginx configs
 ├── postman/              # Postman collection

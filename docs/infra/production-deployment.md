@@ -161,43 +161,49 @@ Critical ones — full list mirrors `server/.env.example` with prod values:
 - `www.budojo.it` — added via Pages → Settings → Custom domains
 - Cloudflare auto-manages the DNS records and SSL certs for both
 
-### `_redirects` rules (`client/public/_redirects`)
+### SPA fallback (`wrangler.jsonc` + `worker/index.js`)
 
-```
-/api/*    https://api.budojo.it/api/:splat    308
-/*        /index.html                          200
-```
+The static-asset routing for `budojo.it` is driven by a Cloudflare Worker
+that fronts the Pages static-assets binding. Source of truth lives in
+[`wrangler.jsonc`](../../wrangler.jsonc) at the repo root and
+[`worker/index.js`](../../worker/index.js).
 
-- **First rule**: 308 Permanent Redirect — preserves method + body across
-  origins. Acts as a safety net for stale clients (already-open browser
-  tabs running a pre-#147 bundle, PWA shells cached before the bundle
-  refresh) that still try to POST to `budojo.it/api/...` instead of the
-  absolute API URL. The browser follows the 308 to `api.budojo.it/api/...`,
-  CORS preflight kicks in (allowed via `CORS_ALLOWED_ORIGINS` on Forge),
-  and the request completes with the original method + body intact. **The
-  fresh client bundle does not rely on this rule** — Angular services emit
-  absolute URLs at build time via `environment.prod.ts` (`apiBase =
-  'https://api.budojo.it'`), so the browser issues a direct cross-origin
-  request and never hits `budojo.it/api/`. The 308 is purely defense-in-
-  depth.
-- **Second rule**: SPA fallback. Any unknown non-`/api/*` path returns
-  `index.html` so the Angular Router can resolve client-side routes
-  (`/auth/login`, `/dashboard/athletes/{id}`, etc.) on direct navigation /
-  refresh.
+`wrangler.jsonc` configures the assets binding with two non-default flags
+that are load-bearing — leave them alone unless you fully understand
+the worker's flow:
 
-The Angular builder's `assets` glob in `client/angular.json` already copies
-`client/public/**/*` into the build output, so `_redirects` lands at the
-right place for Pages to pick up automatically.
+- `not_found_handling: "none"` so missing assets surface to the worker as
+  real 404s instead of being short-circuited by the binding.
+- `html_handling: "none"` so the binding doesn't 307-canonicalize
+  navigation paths (or `/index.html` itself!) before the worker decides.
 
-> **Historical note.** PRs #126 and #136 originally shipped this with status
-> `200` (rewrite / cross-origin proxy). Cloudflare Pages silently ignores
-> 200-status rewrites whose destination is on a different origin, so the
-> rule was effectively a no-op and `/api/*` POSTs fell through to the SPA
-> fallback (returning 405 because Pages can't serve HTML on non-GET
-> methods). Hotfix #147 split the responsibility cleanly: client builds
-> emit absolute URLs to the API origin (Angular `environment.prod.ts`),
-> the `_redirects` rule degrades to a status-`308` safety net for stale
-> clients only.
+`worker/index.js` enforces three invariants on every request — see the
+file's docblock for context, and `worker/index.spec.js` for the
+regression-pinned cases. Don't paraphrase the logic in this doc; it
+will drift. Read the file.
+
+1. **Pass-through on success.** Any non-404 response from the binding
+   returns unchanged.
+2. **Asset 404s stay 404s.** Paths matching the
+   `ASSET_EXT_RE` extension allowlist (`.js`, `.css`, `.map`, `.json`,
+   `.webmanifest`, common font / image / media extensions, `.wasm`)
+   surface their real 404 — the v1.14.x bug class was caused by serving
+   HTML on these.
+3. **SPA fallback gated on browser navigation.** Only GET/HEAD requests
+   whose `Accept` header contains `text/html` get rewritten to
+   `/index.html`. Programmatic `fetch()` (default `Accept: */*`),
+   POSTs, and CORS preflights surface their real 404.
+
+Behaviour:
+
+- `GET /chunk-XXX.js` (missing) → **404** (asset-extension allowlist).
+- `GET /assets/foo.png` (missing) → **404**.
+- `GET /dashboard/stats` (browser navigation, `Accept: text/html`) → 200 + `index.html` (SPA fallback).
+- `POST/OPTIONS /dashboard/stats` → **404** (navigation gate).
+- `GET /dashboard/stats` with `Accept: application/json` (programmatic fetch) → **404** (navigation gate).
+- `GET /chunk-XXX.js` (exists) → 200 JS (unchanged).
+
+> **Historical note.** Pre-#382 the SPA fallback lived in `client/public/_redirects` (`/* /index.html 200`) plus a 308 redirect for `/api/*` that acted as a safety net for stale clients still calling `budojo.it/api/...` (PRs #126 / #136 / #147 — the 200-status rewrite gotcha is recorded in `.claude/gotchas.md`). The simple `/* → /index.html 200` rule served HTML for **every** unknown path, including missing chunk files, which surfaced as the v1.14.1 → v1.14.3 blank-page hotfix chain. The `_redirects` file was removed in favour of the binding-only setup with `not_found_handling: "single-page-application"` (commit `202e284`), then replaced again with the worker-gated fallback above (#382 / #388, v1.15.0). Stale clients calling `budojo.it/api/...` from the pre-#147 bundle now receive a real 404 (the `*` Accept header doesn't trip the navigation gate), which is acceptable: those clients are off-bundle anyway and the frontend self-heal added in #381 reloads them on the next chunk-load failure.
 
 ### Preview deployments — disabled (2026-04-28)
 
@@ -426,9 +432,13 @@ worth carrying forward:
    absolute API URLs into the SPA bundle via Angular `environment.prod.ts`
    (`apiBase = 'https://api.budojo.it'`), let the browser issue real
    cross-origin requests, and rely on the server-side CORS allowlist
-   (#134) to gate them. The `_redirects` `/api/*` rule is kept as a
-   `308` redirect (preserves method + body) for stale-bundle defense in
-   depth; the fresh client never hits it.
+   (#134) to gate them. The `_redirects` file itself was retired in v1.15.0
+   (#382) — both rules (the SPA fallback and the cross-origin 308 safety
+   net) gave way to `wrangler.jsonc` + `worker/index.js`. The bundled SPA
+   already emits absolute API URLs and never hits `budojo.it/api/...`;
+   stale clients that still try receive a real 404 from the worker (their
+   `Accept: */*` header doesn't trip the navigation gate), and the
+   frontend self-heal from #381 reloads them on the next chunk failure.
 
 9. **GitHub auto-close-issue from PR's `Closes #N` is unreliable** in this
    repo (observed across #125, #129, #127, #128, #133). After merging,
