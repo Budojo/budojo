@@ -47,6 +47,42 @@
 // a missing file at the path → real 404, NOT the SPA fallback.
 const ASSET_EXT_RE = /\.(?:js|css|map|json|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|txt|xml|webmanifest|wasm|mp3|mp4|webm)$/i;
 
+// Paths the Angular Service Worker (and the SPA shell itself) must
+// always fetch fresh, never from any HTTP cache. Caching `/ngsw.json`
+// or `/index.html` is the canonical Angular SW failure mode — the SW
+// reads the cached manifest, sees no version change, and never fires
+// `VERSION_READY`, leaving users on the old bundle until they manually
+// clear browser cache. Customer feedback on v1.15.0 reported exactly
+// this symptom (#398). `/safety-worker.js` is Angular's kill-switch
+// worker; if a future deploy ever ships it to deactivate the SW, it
+// must also bypass cache.
+const NO_CACHE_PATHS = new Set([
+  '/index.html',
+  '/ngsw.json',
+  '/ngsw-worker.js',
+  '/safety-worker.js',
+]);
+
+const NO_CACHE_HEADER = 'no-cache, no-store, must-revalidate';
+
+// `env.ASSETS.fetch()` returns a `Response` with immutable headers —
+// `response.headers.set(...)` throws at runtime. Cloning via
+// `new Response(body, { ... })` is the canonical pattern for
+// rewriting headers on a Cloudflare-binding response. Spreading the
+// existing entries preserves Content-Type / Content-Length / ETag
+// etc.; only Cache-Control + Pragma + Expires are overridden.
+function withNoCache(response) {
+  const headers = new Headers(response.headers);
+  headers.set('Cache-Control', NO_CACHE_HEADER);
+  headers.set('Pragma', 'no-cache');
+  headers.set('Expires', '0');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 // True only for top-level browser navigations: the fallback to
 // /index.html exists so users can paste a deep link like
 // /dashboard/stats and get the SPA shell. It must NOT fire for
@@ -70,6 +106,13 @@ export default {
     const response = await env.ASSETS.fetch(request);
 
     if (response.status !== 404) {
+      // Stamp NO_CACHE_PATHS on the way out so the SW manifest, the
+      // SW worker file, and the SPA shell are never served from any
+      // intermediate cache (browser HTTP cache, Cloudflare edge, or a
+      // corporate proxy). See `NO_CACHE_PATHS` block above.
+      if (NO_CACHE_PATHS.has(url.pathname)) {
+        return withNoCache(response);
+      }
       return response;
     }
 
@@ -94,8 +137,11 @@ export default {
     // working when the user pastes it into a fresh tab. Build a
     // Request for /index.html that forwards method + headers + body
     // so the binding's content negotiation (e.g. Accept-Encoding
-    // for the gzipped variant) continues to work.
+    // for the gzipped variant) continues to work. The SPA shell
+    // itself must bypass any HTTP cache (#398) — wrap with the same
+    // no-cache headers as a direct GET /index.html.
     const indexUrl = new URL('/index.html', request.url);
-    return env.ASSETS.fetch(new Request(indexUrl, request));
+    const indexResponse = await env.ASSETS.fetch(new Request(indexUrl, request));
+    return withNoCache(indexResponse);
   },
 };

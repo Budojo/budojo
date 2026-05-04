@@ -94,6 +94,27 @@ export class AppUpdateService {
         );
       });
 
+    // SAFE_MODE recovery (#398). When the SW falls into Angular's
+    // unrecoverable state — typically after a hash mismatch on the
+    // app-shell `prefetch` group, or any time the cached `ngsw.json`
+    // diverges from the network manifest in a way the SW can't
+    // reconcile — `swUpdate.checkForUpdate()` silently returns
+    // without ever resolving and `VERSION_READY` never fires again.
+    // The auto-reload handler above is therefore inert for these
+    // users; the only documented recovery is `unregister()` + reload
+    // (Angular service-worker devops docs § "Hash mismatches").
+    //
+    // Likely entry vector for current production users: the
+    // v1.14.1 → v1.14.3 blank-page hotfix chain (closed at the
+    // Cloudflare layer in #382 / v1.15.0). Any user whose SW
+    // partially failed during one of the broken deploys may be
+    // carrying a SAFE_MODE SW today — they are stuck on the old
+    // bundle until they manually clear browser cache (which is
+    // exactly the customer feedback that prompted #398).
+    this.swUpdate.unrecoverable.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.recoverFromUnrecoverableState();
+    });
+
     this.intervalId = setInterval(() => {
       // checkForUpdate() returns a Promise that resolves to a boolean.
       // We don't read the result — VERSION_READY on the subscription
@@ -108,5 +129,34 @@ export class AppUpdateService {
         this.intervalId = null;
       }
     });
+  }
+
+  /**
+   * Unregister every active Service Worker registration on the origin,
+   * then reload the page so the next request hits the network directly
+   * and a fresh SW gets installed from the latest deploy. Best-effort
+   * throughout — a missing `navigator.serviceWorker` (older browser,
+   * Cypress harness, SSR pass) reduces to a plain reload, which is
+   * still the right thing because at minimum it bypasses any stuck
+   * in-memory state.
+   *
+   * The reload runs even if `unregister()` rejects: a SAFE_MODE user
+   * is already on the broken bundle, so a reload that re-tries the
+   * SW install is the desired worst case.
+   */
+  private recoverFromUnrecoverableState(): void {
+    const navigator = this.document.defaultView?.navigator;
+    const serviceWorker = navigator?.serviceWorker;
+
+    if (serviceWorker === undefined) {
+      this.document.location.reload();
+      return;
+    }
+
+    serviceWorker
+      .getRegistrations()
+      .then((registrations) => Promise.allSettled(registrations.map((r) => r.unregister())))
+      .catch(() => undefined)
+      .finally(() => this.document.location.reload());
   }
 }
