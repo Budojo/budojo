@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions\User;
 
+use App\Mail\AccountDeletionRequestedMail;
 use App\Models\PendingDeletion;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -49,7 +51,7 @@ class RequestAccountDeletionAction
         // a 500.
         $now = Carbon::now();
 
-        return PendingDeletion::query()->firstOrCreate(
+        $row = PendingDeletion::query()->firstOrCreate(
             ['user_id' => $user->id],
             [
                 'requested_at' => $now,
@@ -57,5 +59,26 @@ class RequestAccountDeletionAction
                 'confirmation_token' => Str::random(64),
             ],
         );
+
+        // Confirmation email — queue only when this call actually
+        // CREATED the row, not when it returned an existing one. A
+        // user who clicks "Delete account" three times in a row gets
+        // ONE email, not three (matches the firstOrCreate idempotency
+        // by intent — see WelcomeEmailTest's idempotency spec for the
+        // analogous test on PR-B). Same atomicity discipline as
+        // RegisterUserAction: the queue insert is best-effort, a
+        // failure here must NOT roll back the pending_deletions row
+        // (the user EXPECTS their deletion request to be honored
+        // even if our mailer is hiccuping) so we wrap in try/catch
+        // and route to report().
+        if ($row->wasRecentlyCreated) {
+            try {
+                Mail::to($user)->queue(new AccountDeletionRequestedMail($user, $row->scheduled_for));
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        return $row;
     }
 }
