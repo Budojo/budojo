@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Athlete;
 use App\Models\AthletePayment;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Laravel\Sanctum\Sanctum;
 
@@ -95,4 +96,17 @@ it('rejects months outside [1, 24]', function (): void {
 
 it('rejects unauthenticated callers on payments endpoint', function (): void {
     $this->getJson('/api/v1/stats/payments/monthly')->assertUnauthorized();
+});
+
+it('returns 403 with structured JSON envelope when authed user has no academy', function (): void {
+    // Authenticated but without an academy — MonthsRangeRequest::authorize()
+    // returns false. The override on failedAuthorization() must produce a JSON
+    // envelope (NOT Laravel's default HTML AuthorizationException page) so the
+    // SPA's auth interceptor can key on the same wire shape every other
+    // authenticated endpoint emits.
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->getJson('/api/v1/stats/payments/monthly')
+        ->assertForbidden()
+        ->assertExactJson(['message' => 'Forbidden.']);
 });

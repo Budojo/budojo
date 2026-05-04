@@ -6,6 +6,7 @@ namespace App\Http\Requests\Stats;
 
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
  * Validates the `?months=` query parameter for the daily attendance
@@ -38,5 +39,17 @@ class DailyAttendanceRangeRequest extends FormRequest
     public function months(): int
     {
         return $this->integer('months', 3);
+    }
+
+    /**
+     * Override the default 403-AuthorizationException with a structured
+     * JSON envelope — keeps `/api/v1/stats/*` consistent with every other
+     * authenticated endpoint in this codebase (see e.g. MonthlySummaryRequest).
+     */
+    protected function failedAuthorization(): void
+    {
+        throw new HttpResponseException(
+            response()->json(['message' => 'Forbidden.'], 403),
+        );
     }
 }

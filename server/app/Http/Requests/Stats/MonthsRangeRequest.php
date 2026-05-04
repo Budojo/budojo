@@ -6,6 +6,7 @@ namespace App\Http\Requests\Stats;
 
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
  * Shared FormRequest for `?months=N` query params on the two monthly
@@ -39,5 +40,17 @@ class MonthsRangeRequest extends FormRequest
     public function months(): int
     {
         return $this->has('months') ? $this->integer('months') : 12;
+    }
+
+    /**
+     * Override the default 403-AuthorizationException with a structured
+     * JSON envelope — keeps `/api/v1/stats/*` consistent with every other
+     * authenticated endpoint in this codebase (see e.g. MonthlySummaryRequest).
+     */
+    protected function failedAuthorization(): void
+    {
+        throw new HttpResponseException(
+            response()->json(['message' => 'Forbidden.'], 403),
+        );
     }
 }
