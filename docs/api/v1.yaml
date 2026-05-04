@@ -140,6 +140,84 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Request a password-reset email
+      description: |
+        Sends a password-reset email containing a link with a single-use
+        opaque token (stored in `password_reset_tokens`; not a signed
+        URL — contrast with the email-verification flow which uses
+        `URL::signedRoute()`). Always responds with `202 Accepted`
+        regardless of whether the email matches a registered user — the
+        response is identical for known and unknown addresses to defeat
+        account enumeration. Throttled to 6 requests / minute / IP.
+      operationId: authForgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '202':
+          description: Request accepted; an email is queued only when the address corresponds to a registered user (caller cannot tell either way).
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttled (6 requests / minute / IP).
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Consume a reset token and set a new password
+      description: |
+        Verifies the email + token pair against the `password_reset_tokens`
+        table, then writes the new password hash on the user. Tokens
+        are one-shot — the matching row is deleted on success, so a
+        replay returns 422. Tokens expire 60 minutes after issuance.
+
+        Two distinct 422 shapes the client must handle:
+
+        1. **Form-level validation** (FormRequest fires first):
+           missing / malformed `email`, missing `token`, missing
+           `password`, password under 8 chars, `password` not
+           confirmed → `errors` carries the offending field name
+           (`email` / `token` / `password` / `password_confirmation`).
+
+        2. **Broker failures** (token invalid, token expired,
+           unknown email, token already consumed): collapsed to an
+           `errors.email` payload by the controller — clients should
+           treat this as "the link is invalid or has expired" and
+           offer a "Request a new link" CTA without trying to
+           differentiate which branch failed.
+      operationId: authResetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: |
+            Password updated; the user can sign in with the new
+            credentials. The `message` field is a localized human
+            string resolved from Laravel's `passwords.reset`
+            translation key — the example below shows the English
+            value; under an active `it` locale it reads
+            "La tua password è stata reimpostata.".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Your password has been reset.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /auth/me:
     get:
       tags: [auth]
@@ -1709,6 +1787,40 @@ components:
         password:
           type: string
           format: password
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [email, token, password, password_confirmation]
+      properties:
+        email:
+          type: string
+          format: email
+        token:
+          type: string
+          description: One-shot reset token from the email link.
+        password:
+          type: string
+          format: password
+          minLength: 8
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
 
     AuthResponse:
       type: object

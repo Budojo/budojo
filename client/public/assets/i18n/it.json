@@ -35,7 +35,35 @@
       "passwordRequired": "La password è obbligatoria.",
       "submit": "Accedi",
       "noAccount": "Non hai un account?",
-      "registerLink": "Creane uno"
+      "registerLink": "Creane uno",
+      "forgotPassword": "Password dimenticata?"
+    },
+    "forgotPassword": {
+      "title": "Reimposta la password",
+      "subtitle": "Inserisci la tua email — ti mandiamo un link per impostarne una nuova.",
+      "email": "Email",
+      "emailPlaceholder": "mario@example.com",
+      "emailRequired": "L'email è obbligatoria.",
+      "emailInvalid": "Inserisci un'email valida.",
+      "submit": "Invia il link di recupero",
+      "sentMessage": "Se l'email è registrata, ti abbiamo inviato un link per il recupero. Controlla la posta — e anche lo spam, per sicurezza.",
+      "errorGeneric": "Qualcosa è andato storto. Riprova tra un momento.",
+      "backToLogin": "Torna al login"
+    },
+    "resetPassword": {
+      "title": "Scegli una nuova password",
+      "subtitle": "Scegli una password che non hai mai usato su Budojo.",
+      "password": "Nuova password",
+      "passwordPlaceholder": "Min. 8 caratteri",
+      "passwordRequired": "La password è obbligatoria.",
+      "passwordMinlength": "Almeno 8 caratteri.",
+      "passwordConfirmation": "Conferma la nuova password",
+      "passwordConfirmationPlaceholder": "Ripeti la nuova password",
+      "passwordsMismatch": "Le password non coincidono.",
+      "submit": "Imposta la nuova password",
+      "success": "Password aggiornata. Ti stiamo reindirizzando al login…",
+      "invalidLink": "Il link per reimpostare la password non è valido o è scaduto. Richiedine uno nuovo e te lo rimanderemo via email.",
+      "requestNewLink": "Richiedi un nuovo link"
     },
     "register": {
       "title": "Crea il tuo account",

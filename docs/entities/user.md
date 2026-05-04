@@ -46,5 +46,5 @@ Laravel default structure, unchanged.
 ## Related tables
 
 - `personal_access_tokens` — see [`personal-access-token.md`](./personal-access-token.md)
-- `password_reset_tokens` — Laravel default, reserved for a future "forgot password" flow; the app does not write to it today
+- `password_reset_tokens` — Laravel default, written by `Password::sendResetLink()` from the M5 PR-A forgot-password flow. One row per outstanding reset request; the row is deleted on successful `Password::reset()` consumption (one-shot tokens) or expires 60 minutes after issuance.
 - `sessions` — Laravel default, used only for the web session driver; the API is stateless so this is empty in normal operation
