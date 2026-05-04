@@ -57,6 +57,38 @@ class SendUnpaidAthletesDigest extends Command
         $year = (int) ($this->option('year') ?? $today->year);
         $month = (int) ($this->option('month') ?? $today->month);
 
+        // Validate --year / --month inputs (#404 follow-up). (int) on a
+        // non-numeric string returns 0 which Carbon::create silently
+        // rolls into the previous year's December — operator-error
+        // footgun. Reject upfront so an invalid run errors loudly
+        // instead of writing an off-by-12-months digest.
+        if ($month < 1 || $month > 12) {
+            $this->error("Invalid --month value: must be 1..12, got {$month}.");
+
+            return self::INVALID;
+        }
+        if ($year < 2000 || $year > 9999) {
+            $this->error("Invalid --year value: must be 4-digit YYYY, got {$year}.");
+
+            return self::INVALID;
+        }
+
+        // The de-dup key for this digest is the TARGET MONTH, not the
+        // run date. An April-backfill on May 20 must NOT collide with
+        // (and prevent) the real May digest scheduled for the same
+        // day; conversely, two April-backfills on different dates
+        // must dedup against each other. The sent_for_date row is
+        // therefore the first-of-month for $year/$month.
+        $sentForDate = Carbon::create($year, $month, 1);
+        if ($sentForDate === null) {
+            // Belt-and-suspenders — the validation above guarantees
+            // valid year/month, but PHPStan reads Carbon::create as
+            // returning Carbon|null and the runtime guard narrows it.
+            $this->error('Internal: could not construct sent-for date.');
+
+            return self::FAILURE;
+        }
+
         $sent = 0;
         $skipped = 0;
         $failed = 0;
@@ -64,7 +96,15 @@ class SendUnpaidAthletesDigest extends Command
 
         Academy::query()
             ->with('owner')
-            ->chunkById(50, function ($chunk) use ($year, $month, $today, $force, &$sent, &$skipped, &$failed): void {
+            // Skip academies whose owner hasn't set a monthly fee yet
+            // (#404 follow-up). The "unpaid this month" concept only
+            // makes sense once a fee is configured — a fee-less
+            // academy treats payments as off-platform / cash, and a
+            // monthly chase email there is noise. Mirror of the
+            // dashboard's `unpaid-this-month-widget` which hides
+            // entirely when monthly_fee_cents is null.
+            ->whereNotNull('monthly_fee_cents')
+            ->chunkById(50, function ($chunk) use ($year, $month, $sentForDate, $force, &$sent, &$skipped, &$failed): void {
                 foreach ($chunk as $academy) {
                     try {
                         $athletes = $this->unpaidActiveAthletesFor($academy, $year, $month);
@@ -79,7 +119,7 @@ class SendUnpaidAthletesDigest extends Command
                             NotificationLog::query()
                                 ->where('academy_id', $academy->id)
                                 ->where('notification_type', self::NOTIFICATION_TYPE)
-                                ->whereDate('sent_for_date', $today)
+                                ->whereDate('sent_for_date', $sentForDate)
                                 ->delete();
                         }
 
@@ -87,12 +127,12 @@ class SendUnpaidAthletesDigest extends Command
                         // wrap in DB::transaction so a queue-side
                         // failure rolls back the claim. Mirror of
                         // PR-D's pattern after the Copilot review.
-                        $queued = DB::transaction(function () use ($academy, $athletes, $year, $month, $today): bool {
+                        $queued = DB::transaction(function () use ($academy, $athletes, $year, $month, $sentForDate): bool {
                             try {
                                 NotificationLog::query()->create([
                                     'academy_id' => $academy->id,
                                     'notification_type' => self::NOTIFICATION_TYPE,
-                                    'sent_for_date' => $today,
+                                    'sent_for_date' => $sentForDate,
                                 ]);
                             } catch (\Illuminate\Database\UniqueConstraintViolationException) {
                                 return false;

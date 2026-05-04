@@ -8,9 +8,14 @@
 @component('mail::message')
 # Athletes still unpaid for {{ $monthLabel }} — {{ $academyName }}
 
-Hi {{ $ownerName }} — these {{ $count }} active {{ $count === 1 ? 'athlete is' : 'athletes are' }} still
+@if ($count === 1)
+Hi {{ $ownerName }} — this active athlete is still without a payment
+recorded for **{{ $monthLabel }}**. Worth a chase before the month ends.
+@else
+Hi {{ $ownerName }} — these {{ $count }} active athletes are still
 without a payment recorded for **{{ $monthLabel }}**. Worth a chase
 before the month ends.
+@endif
 
 @component('mail::table')
 | Athlete | Belt | Joined |
@@ -20,9 +25,12 @@ before the month ends.
 @endforeach
 @endcomponent
 
-@component('mail::button', ['url' => $clientUrl . '/dashboard/athletes?paid=no'])
-Open unpaid list
+@component('mail::button', ['url' => $clientUrl . '/dashboard/athletes'])
+Open the athletes list
 @endcomponent
+
+The athletes page has a **Paid / Unpaid** filter at the top — click
+"Unpaid" to scope the roster to the same list shown above.
 
 This is a once-a-month digest sent on the 16th, after the typical
 month-start payment window. Marking an athlete paid (or removing them
