@@ -59,6 +59,69 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v1.14.1',
+      date: '2026-05-04',
+      headline:
+        "A small follow-up release on top of v1.14.0's brand-new Stats section. One visible fix — clicking Stats the first time after signing in no longer flashes a blank page — plus a handful of behind-the-scenes polish-ups so the new endpoints behave consistently with the rest of the API.",
+      sections: [
+        {
+          heading: '🐛 First-click blank page on Stats — fixed',
+          bullets: [
+            'After v1.14.0, the very first click on the Stats sidebar entry occasionally rendered a blank page that disappeared on a refresh. Cause: the Stats page is built from two lazy bundles that had to land back-to-back before the page could paint, and the second one was sometimes still in flight when the router called for it. The app now warms the Stats bundles in the background as soon as the dashboard finishes loading, so by the time you click Stats both pieces are already in the browser cache and the page renders instantly.',
+            "Side benefit: the same fix makes every other section's first click feel a little snappier — Athletes, Attendance, Payments — because their bundles are pre-warmed too.",
+          ],
+        },
+        {
+          heading: '🧹 Behind the scenes',
+          bullets: [
+            'API error envelope consistency. The stats endpoints (/api/v1/stats/attendance/daily, /api/v1/stats/payments/monthly) used to fall back to Laravel\'s default HTML error page in the rare case where an authenticated user had no academy attached. They now return the same {message: "Forbidden."} JSON envelope every other authenticated endpoint emits, so the SPA\'s error handling reads them uniformly.',
+            "Locale helper centralised. The pieces of the heatmap that format dates and short month names now flow through a single localeFor() helper instead of a hand-rolled 'it' ? 'it-IT' : 'en-US' ladder. No visible change today; the cleanup makes adding a third or fourth language (Spanish + German on the roadmap) a one-line edit instead of a hunt-and-update sweep.",
+            "Test coverage on the new locale paths. Two new unit tests pin the heatmap's tooltip + month label output in both English and Italian — so a future regression that re-introduces the wrong locale is caught in CI, not by a beta tester.",
+          ],
+        },
+      ],
+    },
+    {
+      version: 'v1.14.0',
+      date: '2026-05-03',
+      headline:
+        'The headline this month: a brand-new Stats section in the dashboard. See your academy at a glance — belt distribution, the IBJJF age-division histogram, an attendance heatmap that paints the last twelve months at once, and a monthly revenue chart. Plus a small swap on the home dashboard: the "8/9 · 87%" attendance counter becomes a proper progress knob, and the whole app now formats currency and dates according to the language you\'ve chosen, so an Italian user reads "€50,00" / "3 mag 2026" instead of "€50.00" / "May 3, 2026".',
+      sections: [
+        {
+          heading: '📊 New Stats page',
+          bullets: [
+            '/dashboard/stats is live. A new entry in the sidebar opens a four-tab surface: Overview, Athletes, Attendance, Payments. Each tab paints a single chart that answers one question — no dense tables, no exports to wrangle.',
+            'Overview tab — belt distribution. A doughnut chart of every belt on the roster, ordered by the canonical IBJJF rank progression (kids → adults → senior coral / red). Hover any slice to see the absolute count and the percentage of the academy.',
+            'Athletes tab — IBJJF age divisions. A histogram across all 13 IBJJF age-divisions (Mighty Mite through Master 7) with the count of athletes whose age today falls in each band. Empty divisions still show as zero so you read the full distribution at a glance. Athletes with no date of birth on file are surfaced as a separate "missing date of birth" footnote so the histogram numbers stay honest.',
+            'Attendance tab — yearly heatmap. A GitHub-contributions-style heatmap of daily check-ins, with a 3 / 6 / 12 month range selector. Each cell is hued by month so the chart reads as a rhythm of the year, not just intensity. Hover any cell to see the date and the count for that day.',
+            'Payments tab — monthly revenue. A bar chart of revenue per month over the trailing 12 months (extendable to 24). Buckets with no payments still appear at zero so the chart is continuous instead of punctuated by gaps.',
+          ],
+        },
+        {
+          heading: '🥁 Attendance counter — knob instead of "8 / 9"',
+          bullets: [
+            'The home-dashboard attendance widget swapped its "8 / 9 · 87%" text for a proper PrimeNG progress knob. Same data, but a glance at the curve tells you "near full" or "half empty" without doing the percent math in your head. The text count stays inside the knob so anyone wanting the exact ratio can still read it.',
+          ],
+        },
+        {
+          heading: '🌍 Locale-aware formatting',
+          bullets: [
+            'Currency. Italian users see "€50,00" with a comma, English users see "€50.00" with a dot — without ever leaving the page. Toggling the language flips every monetary amount the SPA prints (Payments tab, athletes-list paid badges, monthly summary).',
+            'Dates. Same treatment for dates and short month names — "3 mag 2026" in Italian, "3 May 2026" in English (we use the British format because it\'s day-first, like Italian, while keeping English vocabulary). Day-first ordering is consistent across the whole app instead of mixing US-style "May 3, 2026" into Italian sentences.',
+            'Reactive. The toggle takes effect live — no reload, no second tab refresh.',
+          ],
+        },
+        {
+          heading: '🐛 Stats fixes (same release)',
+          bullets: [
+            'Heatmap fills correctly on first paint. The cell colors now resolve immediately when the page renders, instead of briefly painting as flat grey before the per-month hue lands.',
+            'Charts read with one consistent color. Bars and slices were briefly using a rotating palette; they\'re now monocolor against the academy\'s primary accent, so a glance at the chart tells you "this is one academy" rather than "this is twelve unrelated categories".',
+            'No more redirect race after login. Logging in and landing on the dashboard occasionally raced against an in-flight chart fetch; the redirect path is now serialised so the chart always paints from a known state.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v1.13.0',
       date: '2026-05-03',
       headline:
