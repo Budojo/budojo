@@ -54,21 +54,45 @@ class SendUnpaidAthletesDigest extends Command
     public function handle(): int
     {
         $today = Carbon::today();
-        $year = (int) ($this->option('year') ?? $today->year);
-        $month = (int) ($this->option('month') ?? $today->month);
 
-        // Validate --year / --month inputs (#404 follow-up). (int) on a
-        // non-numeric string returns 0 which Carbon::create silently
-        // rolls into the previous year's December — operator-error
-        // footgun. Reject upfront so an invalid run errors loudly
-        // instead of writing an off-by-12-months digest.
+        // Validate --year / --month BEFORE casting to int (#404 follow-up
+        // round 2). PHP's (int) cast eats non-digit suffixes silently —
+        // `(int) '4foo' === 4`, `(int) '2026abc' === 2026` — so a
+        // post-cast bounds check would let those through. ctype_digit
+        // on the raw option enforces "all digits or nothing".
+        $rawMonth = $this->option('month');
+        $rawYear = $this->option('year');
+
+        // preg_match instead of ctype_digit because Artisan::call from
+        // tests can hand integers (`['--year' => 2026]`) where the
+        // CLI hands strings ('--year=2026'). preg_match coerces to
+        // string and tolerates both. The pattern explicitly anchors
+        // ^...$ so trailing non-digits get rejected (Copilot's
+        // partially-numeric concern).
+        if ($rawMonth !== null && preg_match('/^\d+$/', (string) $rawMonth) !== 1) {
+            $this->error("Invalid --month value: must be a positive integer 1..12, got '{$rawMonth}'.");
+
+            return self::INVALID;
+        }
+        if ($rawYear !== null && preg_match('/^\d+$/', (string) $rawYear) !== 1) {
+            $this->error("Invalid --year value: must be a positive integer year >= 2000, got '{$rawYear}'.");
+
+            return self::INVALID;
+        }
+
+        $year = (int) ($rawYear ?? $today->year);
+        $month = (int) ($rawMonth ?? $today->month);
+
         if ($month < 1 || $month > 12) {
             $this->error("Invalid --month value: must be 1..12, got {$month}.");
 
             return self::INVALID;
         }
+        // Bound is 2000..9999, message names that lower bound explicitly
+        // so an operator who fat-fingers `--year=26` understands the
+        // constraint instead of being told it's "not a 4-digit year".
         if ($year < 2000 || $year > 9999) {
-            $this->error("Invalid --year value: must be 4-digit YYYY, got {$year}.");
+            $this->error("Invalid --year value: must be a year >= 2000 (4-digit), got {$year}.");
 
             return self::INVALID;
         }

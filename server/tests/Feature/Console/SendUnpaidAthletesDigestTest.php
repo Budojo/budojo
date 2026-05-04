@@ -199,6 +199,23 @@ it('rejects --year outside 4-digit YYYY range with INVALID exit code', function 
     Mail::assertNothingQueued();
 });
 
+it('rejects --month with non-digit suffix (eats partially-numeric strings — #405 round 2)', function (): void {
+    // (int) '4foo' === 4 in PHP, so a post-cast bounds check would
+    // happily accept "--month=4foo". ctype_digit on the raw option
+    // string is the actual gate. Copilot caught this on #405.
+    $exitCode = \Artisan::call('budojo:send-unpaid-athletes-digest', ['--month' => '4foo']);
+
+    expect($exitCode)->toBe(2);
+    Mail::assertNothingQueued();
+});
+
+it('rejects --year with non-digit suffix (eats partially-numeric strings — #405 round 2)', function (): void {
+    $exitCode = \Artisan::call('budojo:send-unpaid-athletes-digest', ['--year' => '2026abc']);
+
+    expect($exitCode)->toBe(2);
+    Mail::assertNothingQueued();
+});
+
 it('skips academies with no monthly_fee_cents (#404 follow-up — undefined "unpaid" semantics)', function (): void {
     $user = User::factory()->create(['email' => 'noFee@example.com']);
     $academy = Academy::factory()->for($user, 'owner')->create(['monthly_fee_cents' => null]);
