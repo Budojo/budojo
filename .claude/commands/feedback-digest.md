@@ -16,23 +16,23 @@ Synthesise a batch of customer feedback emails into actionable themes. The use c
 
 2. **Validate.** If the input is < 200 chars, push back: "this is too small to cluster, just read the items directly." Don't run the agent for tiny batches.
 
-3. **Dispatch the `general-purpose` sub-agent** with this brief:
+3. **Pre-fetch correlations from the repo.** Before dispatching, run `grep -irE 'cache|blank|slow|crash|reload|stuck|expir|notif' docs/changelog/user-facing/*.md` and similar passes against `docs/specs/*.md`, plus `gh issue list --search "<obvious-keyword> in:title,body" --json number,title --limit 10` for the dominant themes you spot in the input. Capture the results — they go into the agent prompt as the **only** source of "existing tracking" context the agent is allowed to cite. The agent does NOT have repo-search tools and will hallucinate issue numbers / version references if asked to find them itself.
+
+4. **Dispatch the `general-purpose` sub-agent** with this brief, with the input feedback and the step-3 grep / `gh issue list` results both embedded in the prompt:
 
    > **Customer feedback synthesis. Output is a draft, not a decision.**
    >
-   > Below is a batch of customer feedback (emails / in-app submissions / reviews). Cluster the items into themes — group reports that describe the same underlying problem regardless of how they word it. For each theme, output:
+   > Below is a batch of customer feedback (emails / in-app submissions / reviews) plus a small dossier of repo correlations the dispatcher pre-fetched. Cluster the items into themes — group reports that describe the same underlying problem regardless of how they word it. For each theme, output:
    >
    > - **Title** — a one-line description in the user's voice (not jargon).
    > - **Mentions** — how many distinct items in the batch reference this theme.
    > - **Severity signal** — does the user describe the issue as blocking ("the app is unusable"), painful ("I have to redo X every time"), or annoying ("would be nicer if X")? Cite the exact phrasing.
-   > - **Existing tracking** — search the repo for any `# v1.X.Y` user-facing changelog mention or known related issue. If there is one, surface its number; if not, say "no tracking issue yet."
+   > - **Existing tracking** — only cite issue numbers / changelog versions that appear in the **provided correlation dossier** above. If nothing in the dossier matches the theme, say "no tracking found in provided context." Do NOT search and do NOT guess; do not invent a `#398`-shaped reference unless the dossier listed it.
    > - **Proposed action** — one of: `ship a fix` (concrete bug), `roadmap candidate` (feature gap), `documentation` (user confused but the feature works), `won't fix` (out of scope or already addressed).
    >
    > Order themes by `(severity * mentions)`. Top 3 first; smaller themes after as a single "long tail" line.
    >
    > **Critical**: this is for the maintainer to read in 60 seconds and decide what to act on. Be opinionated about priority, but flag where you're guessing. Don't invent themes from a single isolated mention.
-
-4. **Search for related changelog entries.** Before dispatching the agent, do a quick `grep -i "<keyword>" docs/changelog/user-facing/*.md` for obvious keywords ("cache", "blank page", "slow", etc.) and pass the results to the agent so it can correlate.
 
 5. **Output** the agent's themes back to the user as a tight markdown table. Then ask: "Do you want me to open issues for any of these, or roadmap-track them in a future M{N} PRD?"
 
