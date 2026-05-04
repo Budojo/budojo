@@ -10,6 +10,23 @@ Route::get('/health', fn () => response()->json(['status' => 'ok']));
 Route::post('/auth/register', \App\Http\Controllers\Auth\RegisterController::class);
 Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class);
 
+// Password reset (M5 PR-A). Both endpoints are public — a logged-out
+// user is the whole point of the flow.
+//
+// `/forgot-password` is rate-limited via the `password-reset-request`
+// named limiter (6 / minute / IP — see AppServiceProvider::boot()) so
+// a script can't spray the mail vendor at our expense. The endpoint
+// always returns 202 regardless of whether the email matches a
+// registered user (no enumeration leak).
+//
+// `/reset-password` does not need its own limiter — the `password_reset_tokens`
+// row is consumed on first success and Laravel's default token
+// expiry (60 minutes) caps replay attempts. A flood of bad tokens
+// just produces 422s without state mutation.
+Route::post('/auth/forgot-password', [\App\Http\Controllers\Auth\PasswordResetController::class, 'request'])
+    ->middleware('throttle:password-reset-request');
+Route::post('/auth/reset-password', [\App\Http\Controllers\Auth\PasswordResetController::class, 'reset']);
+
 // Email verification — signed-link callback. Public on purpose: the signed
 // URL is the auth (the user clicks from their inbox, often on a different
 // device than the one they registered on). The hash check inside the

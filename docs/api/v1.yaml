@@ -140,6 +140,68 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Request a password-reset email
+      description: |
+        Sends a password-reset email containing a signed link with a
+        single-use token. Always responds with `202 Accepted` regardless
+        of whether the email matches a registered user — the response
+        is identical for known and unknown addresses to defeat account
+        enumeration. Throttled to 6 requests / minute / IP.
+      operationId: authForgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '202':
+          description: Request accepted; an email is queued only when the address corresponds to a registered user (caller cannot tell either way).
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttled (6 requests / minute / IP).
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Consume a reset token and set a new password
+      description: |
+        Verifies the email + token pair against the `password_reset_tokens`
+        table, then writes the new password hash on the user. Tokens
+        are one-shot — the matching row is deleted on success, so a
+        replay returns 422. Tokens expire 60 minutes after issuance.
+
+        On any failure (invalid token, expired token, unknown email,
+        weak password, mismatched confirmation) the response is a 422
+        with an `errors.email` payload — failure modes are deliberately
+        collapsed so the SPA renders one consistent "the link is
+        invalid or has expired" message rather than leaking which
+        check failed.
+      operationId: authResetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password updated; the user can sign in with the new credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: passwords.reset
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /auth/me:
     get:
       tags: [auth]
@@ -1709,6 +1771,40 @@ components:
         password:
           type: string
           format: password
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [email, token, password, password_confirmation]
+      properties:
+        email:
+          type: string
+          format: email
+        token:
+          type: string
+          description: One-shot reset token from the email link.
+        password:
+          type: string
+          format: password
+          minLength: 8
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
 
     AuthResponse:
       type: object

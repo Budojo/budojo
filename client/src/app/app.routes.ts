@@ -32,6 +32,22 @@ export const routes: Routes = [
             (m) => m.VerifyErrorComponent,
           ),
       },
+      // Password reset (M5 PR-A). Both routes are public (no guard) —
+      // a logged-out user is the whole point of the flow.
+      {
+        path: 'forgot-password',
+        loadComponent: () =>
+          import('./features/auth/forgot-password/forgot-password.component').then(
+            (m) => m.ForgotPasswordComponent,
+          ),
+      },
+      {
+        path: 'reset-password',
+        loadComponent: () =>
+          import('./features/auth/reset-password/reset-password.component').then(
+            (m) => m.ResetPasswordComponent,
+          ),
+      },
     ],
   },
   {
