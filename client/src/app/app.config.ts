@@ -16,6 +16,7 @@ import { Observable, of } from 'rxjs';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { errorInterceptor } from './core/interceptors/error.interceptor';
 
 import EN_TRANSLATIONS from '../../public/assets/i18n/en.json';
 import IT_TRANSLATIONS from '../../public/assets/i18n/it.json';
@@ -68,7 +69,12 @@ export const appConfig: ApplicationConfig = {
       withRouterConfig({ paramsInheritanceStrategy: 'always' }),
       withPreloading(PreloadAllModules),
     ),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    // Auth interceptor first — it adds the bearer token to outgoing
+    // requests. Error interceptor second — it inspects the *response*,
+    // so it must sit downstream of any request mutation. Order matters:
+    // if a 5xx ever bounces us via an auth refresh in the future, that
+    // retry must run before the global error redirect.
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     provideAnimationsAsync(),
     // App-level MessageService so shared components (the email verification
     // pillola, the verify-error landing) fire toasts into the single

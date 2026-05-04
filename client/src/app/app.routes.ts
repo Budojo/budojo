@@ -278,6 +278,23 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/landing/landing.component').then((m) => m.LandingComponent),
   },
+  // Public error landing pages (#425). Reached via the global
+  // `errorInterceptor` when an outgoing API request comes back 5xx
+  // (`/error`) or with `status === 0` ie. no network (`/offline`).
+  // Public — no guard — because the user might land here while logged
+  // out (a 5xx during the public landing or login itself).
+  {
+    path: 'error',
+    loadComponent: () =>
+      import('./features/error/server-error/server-error.component').then(
+        (m) => m.ServerErrorComponent,
+      ),
+  },
+  {
+    path: 'offline',
+    loadComponent: () =>
+      import('./features/error/offline/offline.component').then((m) => m.OfflineComponent),
+  },
   // Wildcard 404 (#226) — must stay last; everything above is matched
   // first. Hit on any URL that no other route resolves, including
   // dead deep-links that used to exist but were removed/renamed.

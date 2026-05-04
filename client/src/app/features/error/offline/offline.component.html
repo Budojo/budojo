@@ -1,0 +1,14 @@
+<div class="offline">
+  <app-brand-glyph class="offline__glyph" aria-hidden="true" />
+  <h1 class="offline__title">{{ 'offlinePage.title' | translate }}</h1>
+  <p class="offline__message">{{ 'offlinePage.message' | translate }}</p>
+  <div class="offline__actions">
+    <p-button
+      type="button"
+      severity="primary"
+      [label]="'offlinePage.tryAgain' | translate"
+      (onClick)="retry()"
+      data-cy="offline-retry"
+    />
+  </div>
+</div>
