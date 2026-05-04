@@ -110,7 +110,7 @@ $FORGE_PHP artisan storage:link       # public storage symlink
 $FORGE_PHP artisan migrate --force    # idempotent; runs new migrations only
 
 $ACTIVATE_RELEASE()                   # atomic symlink swap (current/ → releases/<id>/)
-$RESTART_QUEUES()                     # no-op until M5+ adds queue workers
+$RESTART_QUEUES()                     # restarts the queue:work daemon (M5 PR-B onward)
 ```
 
 ### TLS
@@ -270,6 +270,55 @@ End-to-end: a merge to `main` is live on production in ~90 seconds (Forge
 deploy + Pages build run in parallel).
 
 ## Operations runbook
+
+### Queue worker (`queue:work` daemon)
+
+M5 introduces queued mail dispatch — the welcome email (PR-B), the
+account-deletion confirmation (PR-C), the medical-cert expiry reminder
+(PR-D), and the unpaid-athletes digest (PR-E) all run through the
+queue. Without an active worker process, queued jobs accumulate in the
+`jobs` table and never deliver.
+
+**Forge configuration** (Forge → Server → Daemons → New Daemon):
+
+| Field | Value |
+|-------|-------|
+| Command | `php artisan queue:work --queue=default --tries=3 --backoff=10 --timeout=60` |
+| User | `forge` |
+| Directory | `/home/forge/api.budojo.it/server` (or `/current/server` if Atomic Releases is enabled) |
+| Processes | `1` |
+| Stop wait | `60` |
+| Stop signal | `SIGTERM` |
+
+> **Path note**: Budojo is a monorepo — `composer.json` and `artisan` live under `server/`, NOT at the site root. The Forge nginx vhost has its Web Directory set to `/server/public` for the same reason. Setting Directory to `/home/forge/api.budojo.it` (without `/server`) would have the daemon spinning on a missing `artisan` binary.
+
+> **Timeout note**: `--timeout=60` is deliberately below the
+> `database` queue connection's `retry_after = 90` (`server/config/queue.php`).
+> Laravel requires `timeout < retry_after` — otherwise a slow job can
+> be released back onto the queue (because `retry_after` expired)
+> BEFORE the original worker is killed (because `timeout` hasn't
+> elapsed yet), producing duplicate execution. 60 s is plenty for
+> our jobs (single-mail sends, sub-second normally, sub-30 s even
+> when Resend is slow).
+
+`--tries=3 --backoff=10` retries a job up to 3 times with 10 s between
+attempts, which absorbs Resend brown-outs without dropping the job.
+One process is enough at MVP volume (dozens of mails per day, not
+thousands); revisit when the audience grows.
+
+**Restart on deploy**: the deploy script's `$RESTART_QUEUES()` call
+gracefully signals the daemon to finish the current job + pick up the
+new release's code. **Without this restart, a deployed Mailable change
+is invisible to the running worker** because Laravel's `queue:work`
+caches the bootstrapped Container — it loads the code once at start
+and serves jobs from that snapshot until restart. The macro is wired
+by Forge automatically when at least one Daemon is registered for the
+site; before M5 PR-B the macro was a no-op (no daemon registered).
+
+**Logs**: `tail -f /home/forge/.forge/daemon-<id>.log` (the daemon ID
+is visible in the Forge UI). Failed jobs land in the `failed_jobs`
+table — query via `php artisan queue:failed` and retry with
+`php artisan queue:retry all`.
 
 ### Access the droplet via SSH
 
