@@ -23,8 +23,12 @@
  * Behaviour after this worker:
  *   - GET /chunk-XXX.js when the chunk doesn't exist  →  404
  *   - GET /assets/foo.png when the file doesn't exist →  404
- *   - GET /dashboard/stats (any path without an asset extension,
- *     when no static file matches)                    →  /index.html (HTTP 200)
+ *   - GET /dashboard/stats (any extensionless path with no static
+ *     file behind it AND a browser-navigation Accept header)
+ *                                                     →  /index.html (HTTP 200)
+ *   - POST/OPTIONS /dashboard/stats                   →  404 (not the SPA shell)
+ *   - GET /dashboard/stats with no `text/html` in Accept
+ *     (programmatic fetch / XHR)                      →  404 (not the SPA shell)
  *   - GET /chunk-XXX.js when the chunk DOES exist     →  200 type text/javascript
  *   - GET /index.html                                 →  unchanged
  *
@@ -43,6 +47,23 @@
 // a missing file at the path → real 404, NOT the SPA fallback.
 const ASSET_EXT_RE = /\.(?:js|css|map|json|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|txt|xml|webmanifest|wasm|mp3|mp4|webm)$/i;
 
+// True only for top-level browser navigations: the fallback to
+// /index.html exists so users can paste a deep link like
+// /dashboard/stats and get the SPA shell. It must NOT fire for
+// programmatic requests — POST / OPTIONS preflight, JSON XHR /
+// fetch — those want their original 404 propagated. Detection
+// rule: GET or HEAD method AND `Accept` includes `text/html`
+// (the canonical browser-navigation Accept header). `fetch()`
+// from JS defaults to `Accept: */*`, which fails the substring
+// check and surfaces the real 404 — exactly what we want.
+function isNavigationRequest(request) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return false;
+  }
+  const accept = request.headers.get('Accept') ?? '';
+  return accept.includes('text/html');
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -59,12 +80,21 @@ export default {
       return response;
     }
 
-    // Navigation request (no asset extension) → serve the SPA shell so
-    // a deep link like /dashboard/stats keeps working when the user
-    // pastes it into a fresh tab. Build a Request for /index.html that
-    // forwards method + headers + body so the binding's content
-    // negotiation (e.g. Accept-Encoding for the gzipped variant)
-    // continues to work.
+    if (!isNavigationRequest(request)) {
+      // Extensionless path but NOT a browser navigation — e.g. a
+      // POST, an OPTIONS preflight, or a `fetch()` with
+      // `Accept: application/json`. Serving HTML to these would
+      // confuse the caller (or worse, succeed with status 200 and
+      // a body the JSON parser chokes on). Pass the 404 through.
+      return response;
+    }
+
+    // Navigation request (GET/HEAD, browser-style Accept) → serve
+    // the SPA shell so a deep link like /dashboard/stats keeps
+    // working when the user pastes it into a fresh tab. Build a
+    // Request for /index.html that forwards method + headers + body
+    // so the binding's content negotiation (e.g. Accept-Encoding
+    // for the gzipped variant) continues to work.
     const indexUrl = new URL('/index.html', request.url);
     return env.ASSETS.fetch(new Request(indexUrl, request));
   },
