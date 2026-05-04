@@ -33,12 +33,24 @@ export class StatsComponent {
    * Active tab tracks the current URL — the firstChild of the stats
    * route carries the segment as its `path`. Mirrors the same idiom
    * used by athlete-detail.component (activeTab signal).
+   *
+   * Defensive optional chaining at every level (#382): the `startWith(null)`
+   * branch fires the map synchronously during component construction,
+   * at which point — under in-app navigation with PreloadAllModules
+   * (#376) — `route.firstChild` can be attached to the route tree
+   * BEFORE its `snapshot` has been populated. The original chain
+   * `firstChild?.snapshot.url[0]?.path` only short-circuited on
+   * `firstChild`, so a transient `firstChild` with an undefined
+   * `snapshot` produced a `TypeError: Cannot read properties of
+   * undefined (reading 'url')` — exactly the prod blank-page reported
+   * after v1.14.1. Adding `?.` after every step keeps every transient
+   * shape graceful.
    */
   protected readonly activeTab = toSignal(
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
       startWith(null),
-      map(() => this.route.firstChild?.snapshot.url[0]?.path ?? 'overview'),
+      map(() => this.route.firstChild?.snapshot?.url?.[0]?.path ?? 'overview'),
     ),
     { initialValue: 'overview' },
   );
