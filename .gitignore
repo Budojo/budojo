@@ -31,6 +31,11 @@ client/cypress/videos/
 # Docker volumes
 db_data/
 
+# Wrangler — local dev runtime cache (workerd state, bundle scratch).
+# The committed contract is `wrangler.jsonc` + `worker/`; the `.wrangler/`
+# directory is regenerated on every `wrangler dev` invocation.
+.wrangler/
+
 # Design system drop-zone: unzipped source of truth from Claude Design.
 # The canonical files get copied into client/ and docs/ via PR; the
 # dropzone itself stays local so we don't duplicate megabytes of

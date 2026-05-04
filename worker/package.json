@@ -1,0 +1,13 @@
+{
+  "name": "@budojo/worker",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Cloudflare Worker that fronts the static-asset binding for budojo.it — see worker/index.js docblock + #382.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.8"
+  }
+}
