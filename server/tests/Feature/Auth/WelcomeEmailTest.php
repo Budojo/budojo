@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Mail\WelcomeMail;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 
 beforeEach(function (): void {
     Mail::fake();
@@ -34,6 +35,41 @@ it('does not queue a WelcomeMail when registration validation fails', function (
     ])->assertUnprocessable();
 
     Mail::assertNotQueued(WelcomeMail::class);
+});
+
+it('keeps registration succeeding when the welcome-mail queue insert throws (#401 atomicity)', function (): void {
+    // Simulate a queue-side failure (jobs-table insert error, transient
+    // DB connection blip, Mailable serialization bug post-deploy). The
+    // welcome mail is non-load-bearing onboarding — its failure must
+    // NOT roll back the User row that's already been written, NOR
+    // surface a 500 to the registration request. The try/catch in
+    // RegisterUserAction routes the failure to report() so it shows
+    // up in the error channel without breaking signup. Copilot caught
+    // the previous unwrapped Mail::queue() shape on PR #401.
+
+    // Suppress the verification email so its own Mail::to() pipeline
+    // doesn't compete with the welcome-mail mock below — without
+    // this fake, the first Mail::to() call comes from the
+    // MustVerifyEmail notification (synchronous, fires from
+    // event(Registered)) and trips the mock before
+    // RegisterUserAction's explicit dispatch is even reached.
+    Notification::fake();
+
+    Mail::shouldReceive('to')
+        ->once()
+        ->andThrow(new \RuntimeException('jobs-table insert failed'));
+
+    $this->postJson('/api/v1/auth/register', [
+        'name' => 'Mario Rossi',
+        'email' => 'mario@example.com',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
+    ])->assertCreated()
+        ->assertJsonPath('data.email', 'mario@example.com');
+
+    // The User row exists despite the queue failure — registration is
+    // committed regardless of the welcome-mail outcome.
+    expect(User::where('email', 'mario@example.com')->exists())->toBeTrue();
 });
 
 it('declares ShouldQueue so Mail::send is asynchronous in production', function (): void {

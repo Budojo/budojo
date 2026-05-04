@@ -27,7 +27,21 @@ class RegisterUserAction
         // ride the queue worker (M5 PR-B); a Resend brown-out retries
         // up to 3 times via the daemon's `--tries=3`.
         event(new Registered($user));
-        Mail::to($user)->queue(new WelcomeMail($user));
+
+        // Best-effort queue insert. The welcome mail is non-load-bearing
+        // onboarding — a failure here (jobs-table insert error, transient
+        // DB connection blip, Mailable serialization bug post-deploy)
+        // must NOT throw past this point: the User row is already
+        // committed, the controller is about to mint a Sanctum token,
+        // and surfacing a 500 to the client would leave the account in
+        // a half-created state from the user's POV. We log via report()
+        // so a recurring failure surfaces in the error channel without
+        // breaking the signup flow.
+        try {
+            Mail::to($user)->queue(new WelcomeMail($user));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return $user;
     }

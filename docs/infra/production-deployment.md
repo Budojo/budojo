@@ -283,7 +283,7 @@ queue. Without an active worker process, queued jobs accumulate in the
 
 | Field | Value |
 |-------|-------|
-| Command | `php artisan queue:work --queue=default --tries=3 --backoff=10 --timeout=120` |
+| Command | `php artisan queue:work --queue=default --tries=3 --backoff=10 --timeout=60` |
 | User | `forge` |
 | Directory | `/home/forge/api.budojo.it/server` (or `/current/server` if Atomic Releases is enabled) |
 | Processes | `1` |
@@ -292,11 +292,19 @@ queue. Without an active worker process, queued jobs accumulate in the
 
 > **Path note**: Budojo is a monorepo — `composer.json` and `artisan` live under `server/`, NOT at the site root. The Forge nginx vhost has its Web Directory set to `/server/public` for the same reason. Setting Directory to `/home/forge/api.budojo.it` (without `/server`) would have the daemon spinning on a missing `artisan` binary.
 
+> **Timeout note**: `--timeout=60` is deliberately below the
+> `database` queue connection's `retry_after = 90` (`server/config/queue.php`).
+> Laravel requires `timeout < retry_after` — otherwise a slow job can
+> be released back onto the queue (because `retry_after` expired)
+> BEFORE the original worker is killed (because `timeout` hasn't
+> elapsed yet), producing duplicate execution. 60 s is plenty for
+> our jobs (single-mail sends, sub-second normally, sub-30 s even
+> when Resend is slow).
+
 `--tries=3 --backoff=10` retries a job up to 3 times with 10 s between
 attempts, which absorbs Resend brown-outs without dropping the job.
-`--timeout=120` is generous; current queued jobs are all single-mail
-sends (sub-second). One process is enough at MVP volume (dozens of
-mails per day, not thousands); revisit when the audience grows.
+One process is enough at MVP volume (dozens of mails per day, not
+thousands); revisit when the audience grows.
 
 **Restart on deploy**: the deploy script's `$RESTART_QUEUES()` call
 gracefully signals the daemon to finish the current job + pick up the
