@@ -1,19 +1,31 @@
 import { Translation } from 'primeng/api';
-import { SupportedLanguage } from '../../core/services/language.service';
+// `import type` keeps this a type-only import — erased at runtime, so
+// the language.service ↔ shared/utils dependency stays a one-way value
+// edge (language.service imports primeng-translations) without a cycle
+// back through this module. If `SupportedLanguage` ever grows into a
+// value (e.g. a runtime guard or const tuple promoted to a value
+// import), promote it to a sibling `language.types.ts` module first
+// rather than dropping the `type` keyword here.
+import type { SupportedLanguage } from '../../core/services/language.service';
 
 /**
  * PrimeNG component-level i18n strings indexed by `SupportedLanguage`.
  *
  * Wired from `LanguageService.applyLanguage()` (#280): when the SPA
  * locale flips, we call `primeNG.setTranslation(primeNgTranslationFor(lang))`
- * so PrimeNG's `<p-datepicker>` calendar popover (month / day names,
- * Today / Clear / week-header chrome), confirmpopup buttons, and the
- * filter / paginator labels all follow the active language.
+ * so the PrimeNG components we actually use today (today: just the
+ * `<p-datepicker>` calendar popover — month / day names, Today /
+ * Clear / week-header chrome — plus the generic accept / reject
+ * strings the confirmpopup uses) follow the active language. The
+ * filter / paginator components are NOT covered yet because we don't
+ * render them; their `Translation` keys would need to be added here
+ * before they get adopted.
  *
  * **Coverage rule.** We populate ONLY the fields we visibly use today.
- * Adding a `<p-confirmdialog>` Yes/No or a paginator strings means
- * adding the corresponding key here; the parity check is by hand
- * (PrimeNG's `Translation` interface allows partial maps).
+ * Adding a `<p-confirmdialog>` button label, a paginator strings, or
+ * a `<p-datatable>` filter operator means adding the corresponding
+ * key here; the parity check is by hand (PrimeNG's `Translation`
+ * interface allows partial maps).
  *
  * **First day of week.** EU convention is Monday-first. PrimeNG's
  * default is Sunday-first (US). We pin Monday-first for both EN and
