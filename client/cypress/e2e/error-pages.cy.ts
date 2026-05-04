@@ -11,7 +11,7 @@ describe('Public error pages (#425)', () => {
   it('renders the offline landing at /offline', () => {
     cy.visit('/offline');
 
-    cy.contains("h1", "You're offline").should('be.visible');
+    cy.contains('h1', "You're offline").should('be.visible');
     cy.contains('p', "can't reach the network").should('be.visible');
     cy.get('[data-cy="offline-retry"]').should('be.visible');
   });

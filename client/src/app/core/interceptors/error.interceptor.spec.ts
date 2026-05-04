@@ -34,26 +34,23 @@ function setup(initialUrl = '/dashboard/athletes'): {
 }
 
 describe('errorInterceptor', () => {
-  it.each([500, 501, 502, 503, 504, 599])(
-    'redirects to /error on HTTP %i',
-    (status) => {
-      const { http, httpMock, router } = setup();
-      let received: unknown;
-      http.get('/api/v1/anything').subscribe({
-        next: () => undefined,
-        error: (err) => (received = err),
-      });
+  it.each([500, 501, 502, 503, 504, 599])('redirects to /error on HTTP %i', (status) => {
+    const { http, httpMock, router } = setup();
+    let received: unknown;
+    http.get('/api/v1/anything').subscribe({
+      next: () => undefined,
+      error: (err) => (received = err),
+    });
 
-      httpMock
-        .expectOne('/api/v1/anything')
-        .flush({ message: 'boom' }, { status, statusText: 'Server Error' });
+    httpMock
+      .expectOne('/api/v1/anything')
+      .flush({ message: 'boom' }, { status, statusText: 'Server Error' });
 
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/error');
-      // Error is re-thrown so feature handlers can still respond.
-      expect(received).toBeDefined();
-      httpMock.verify();
-    },
-  );
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/error');
+    // Error is re-thrown so feature handlers can still respond.
+    expect(received).toBeDefined();
+    httpMock.verify();
+  });
 
   it('redirects to /offline on a network error (status 0)', () => {
     const { http, httpMock, router } = setup();

@@ -5,6 +5,24 @@ import { OfflineComponent } from './offline.component';
 import { OnlineStatusService } from '../../../core/services/online-status.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 
+/**
+ * Wrap the real jsdom document in a Proxy so the component can call
+ * `document.location.reload()` against a spy without losing the DOM
+ * methods (`querySelectorAll`, `removeChild`, etc.) that Angular's
+ * TestBed needs to insert the component's root element.
+ */
+function makeDocumentProxy(reload: () => void): Document {
+  return new Proxy(document, {
+    get(target, prop) {
+      if (prop === 'location') {
+        return { reload };
+      }
+      const value = Reflect.get(target, prop);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  }) as Document;
+}
+
 describe('OfflineComponent', () => {
   function setup(initialOnline = false) {
     const reload = vi.fn();
@@ -17,7 +35,7 @@ describe('OfflineComponent', () => {
       imports: [OfflineComponent],
       providers: [
         ...provideI18nTesting(),
-        { provide: DOCUMENT, useValue: { location: { reload } } },
+        { provide: DOCUMENT, useValue: makeDocumentProxy(reload) },
         { provide: OnlineStatusService, useValue: fakeService },
       ],
     });
@@ -31,9 +49,7 @@ describe('OfflineComponent', () => {
     const root: HTMLElement = fixture.nativeElement;
 
     expect(root.querySelector('app-brand-glyph')).not.toBeNull();
-    expect(root.querySelector('.offline__title')?.textContent?.trim()).toBe(
-      "You're offline",
-    );
+    expect(root.querySelector('.offline__title')?.textContent?.trim()).toBe("You're offline");
     expect(root.querySelector('.offline__message')?.textContent).toContain(
       "can't reach the network",
     );

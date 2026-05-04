@@ -5,6 +5,26 @@ import { describe, expect, it, vi } from 'vitest';
 import { ServerErrorComponent } from './server-error.component';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 
+/**
+ * Wrap the real jsdom document in a Proxy so the component can call
+ * `document.location.reload()` against a spy without losing the DOM
+ * methods (`querySelectorAll`, `removeChild`, etc.) that Angular's
+ * TestBed needs to insert the component's root element. A bare
+ * `{ location: { reload } }` fake breaks `TestBed.createComponent`
+ * with `_doc.querySelectorAll is not a function`.
+ */
+function makeDocumentProxy(reload: () => void): Document {
+  return new Proxy(document, {
+    get(target, prop) {
+      if (prop === 'location') {
+        return { reload };
+      }
+      const value = Reflect.get(target, prop);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  }) as Document;
+}
+
 describe('ServerErrorComponent', () => {
   function setup() {
     const reload = vi.fn();
@@ -13,7 +33,7 @@ describe('ServerErrorComponent', () => {
       providers: [
         ...provideI18nTesting(),
         { provide: Router, useValue: { navigateByUrl: vi.fn().mockResolvedValue(true) } },
-        { provide: DOCUMENT, useValue: { location: { reload } } },
+        { provide: DOCUMENT, useValue: makeDocumentProxy(reload) },
       ],
     });
     const fixture = TestBed.createComponent(ServerErrorComponent);
@@ -29,9 +49,7 @@ describe('ServerErrorComponent', () => {
     expect(root.querySelector('.server-error__title')?.textContent?.trim()).toBe(
       'Something went wrong',
     );
-    expect(root.querySelector('.server-error__message')?.textContent).toContain(
-      'unexpected error',
-    );
+    expect(root.querySelector('.server-error__message')?.textContent).toContain('unexpected error');
   });
 
   it('exposes both a retry CTA and a back-home CTA', () => {
