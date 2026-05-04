@@ -13,11 +13,13 @@
     <p class="legal-page__subtitle">
       The third parties that process customer data on Budojo's behalf, per GDPR Art. 28.
     </p>
-    <!-- Language toggle (#280). EN is the canonical default; IT lives at
-         /sub-processors/it. Italian remains the legal source of truth
-         for IT customers and the Garante, but the URL no one shared yet
-         (English-default) keeps lining up with what an arbitrary
-         visitor expects to see first. Same pattern as /privacy ↔
+    <!-- Language toggle (#280). The canonical source for this page is
+         the English `docs/legal/sub-processors.md` markdown — unlike
+         /privacy where Italian is the legal source of truth (Art. 13
+         informativa under Italian law). /sub-processors/it is a
+         faithful translation served at a parallel URL so Italian
+         academy customers and the Garante can read the same Art. 28
+         disclosure in their own language. Same toggle UX as /privacy ↔
          /privacy/it (#291). -->
     <p class="legal-page__lang" data-cy="sub-processors-lang-toggle">
       <a routerLink="/sub-processors/it" data-cy="sub-processors-lang-it">Italiano</a>
