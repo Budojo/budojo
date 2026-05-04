@@ -81,7 +81,11 @@ describe('Password reset (M5 PR-A)', () => {
     // Auto-redirect lands on /auth/login with the email pre-filled in
     // the query string after the 1500ms timeout.
     cy.location('pathname', { timeout: 4000 }).should('eq', '/auth/login');
-    cy.location('search').should('include', 'email=mario%40example.com');
+    // Angular's Router serializer keeps `@` raw in query strings (it's
+    // not a reserved char in the query component per RFC 3986), so the
+    // location.search ends up as `?email=mario@example.com` rather
+    // than the URL-encoded `mario%40example.com`.
+    cy.location('search').should('include', 'email=mario@example.com');
   });
 
   it('flips to the invalid-link panel when the server rejects the token (422)', () => {
