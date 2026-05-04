@@ -62,7 +62,7 @@ export class WhatsNewComponent {
       version: 'v1.14.3',
       date: '2026-05-04',
       headline:
-        'The actual fix for the Stats page blank-on-first-click that v1.14.0\'s preload change tried — and failed — to nail. Clicking "Stats" in the sidebar after navigating around the dashboard now lands on the page first time, every time, with no detour through F5.',
+        'The actual fix for the Stats page blank-on-first-click that v1.14.1\'s preload change tried — and failed — to nail. Clicking "Stats" in the sidebar after navigating around the dashboard now lands on the page first time, every time, with no detour through F5.',
       sections: [
         {
           heading: '🐛 Stats blank page on first in-app navigation — fixed',
