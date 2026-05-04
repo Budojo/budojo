@@ -1,7 +1,10 @@
-{{-- Markdown account-deletion confirmation email (M5 PR-C). All
-     variables ($name, $scheduledFor, $clientUrl) are HTML-escaped by
-     Blade's `{{ }}` default — none of them are user-supplied free
-     text, so no XSS surface. --}}
+{{-- Markdown account-deletion confirmation email (M5 PR-C). Variables:
+     $name (User->name — user-supplied at registration, HTML-escaped by
+     Blade's `{{ }}` default), $scheduledFor (formatted server-side),
+     $clientUrl (config-driven). The Blade default escaping is what
+     makes $name safe to render here; if a future Mailable variant
+     ever uses `{!! !!}` to bypass escaping, $name would become an XSS
+     surface and would need explicit sanitisation. --}}
 @component('mail::message')
 # We've scheduled the deletion of your Budojo account, {{ $name }}.
 
@@ -9,11 +12,9 @@ You requested to delete your Budojo account, and we've started the process.
 
 **What happens next**
 
-- Your account is suspended immediately — you can still sign in, but the
-  app will only show this status; no other features are accessible.
 - On **{{ $scheduledFor }}**, we'll permanently delete your account, your
   academy, every athlete record you've created, every uploaded document,
-  and every attendance and payment row tied to your data. This is
+  every attendance row, and every payment row tied to your data. This is
   irreversible.
 - Until that date, you can change your mind. Sign in at the link below,
   go to your **profile page**, and click **"Cancel deletion"**. The
@@ -23,19 +24,8 @@ You requested to delete your Budojo account, and we've started the process.
 Sign in to cancel
 @endcomponent
 
-**A couple of legal/practical notes**
-
-- **Payment records are anonymised, not deleted.** Italian tax law
-  requires us to keep a 10-year audit trail of payment events
-  (`amount_cents`, `year`, `month`); we strip the athlete name from
-  those rows but the financial entry stays. No personally-identifying
-  data survives.
-- **Backups**: backups of the database keep your data for up to 30 more
-  days after the scheduled deletion, then they rotate out automatically.
-  If you need certified earlier deletion of a backup, reply to this
-  email and we'll do a manual purge.
-- **Why 30 days, not immediate**: the grace period is deliberate.
-  Accidental clicks happen; this window gives you a real way back.
+**Why 30 days, not immediate**: the grace period is deliberate. Accidental
+clicks happen; this window gives you a real way back.
 
 If you didn't request this and someone else has access to your account,
 sign in immediately, cancel the deletion, and rotate your password from

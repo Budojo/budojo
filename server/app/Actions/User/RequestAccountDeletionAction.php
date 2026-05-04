@@ -64,13 +64,13 @@ class RequestAccountDeletionAction
         // CREATED the row, not when it returned an existing one. A
         // user who clicks "Delete account" three times in a row gets
         // ONE email, not three (matches the firstOrCreate idempotency
-        // by intent — see WelcomeEmailTest's idempotency spec for the
-        // analogous test on PR-B). Same atomicity discipline as
-        // RegisterUserAction: the queue insert is best-effort, a
-        // failure here must NOT roll back the pending_deletions row
-        // (the user EXPECTS their deletion request to be honored
-        // even if our mailer is hiccuping) so we wrap in try/catch
-        // and route to report().
+        // by intent — pinned by the "does NOT queue a second mail on
+        // idempotent re-request" spec in AccountDeletionEmailTest).
+        // Same atomicity discipline as RegisterUserAction: the queue
+        // insert is best-effort, a failure here must NOT roll back
+        // the pending_deletions row (the user EXPECTS their deletion
+        // request to be honored even if our mailer is hiccuping) so
+        // we wrap in try/catch and route to report().
         if ($row->wasRecentlyCreated) {
             try {
                 Mail::to($user)->queue(new AccountDeletionRequestedMail($user, $row->scheduled_for));
