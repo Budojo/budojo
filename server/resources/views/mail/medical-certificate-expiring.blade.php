@@ -1,20 +1,21 @@
 {{-- Markdown medical-cert expiry digest (M5 PR-D). Variables:
      $ownerName + $academyName (User->name + Academy->name — both
      user-supplied at registration / setup, HTML-escaped by Blade
-     default), $documents (Eloquent collection of Document with
-     ->athlete eager-loaded; iterated below), $clientUrl (config). --}}
+     default), $rows (collection of pre-rendered per-row data with
+     `name`, `expires_on`, `status` already computed by the Mailable
+     so the template is dumb-render-only), $clientUrl (config). --}}
 @component('mail::message')
 # Medical certificates expiring at {{ $academyName }}
 
 Hi {{ $ownerName }} — these athletes have a medical certificate that's
-about to expire (or already has). Worth chasing them now so they don't
-get locked out of training.
+about to expire (or already has expired). Worth chasing them now so
+they don't get locked out of training.
 
 @component('mail::table')
 | Athlete | Document expiry | Status |
 | --- | :---: | :---: |
-@foreach ($documents as $doc)
-| {{ $doc->athlete->first_name }} {{ $doc->athlete->last_name }} | {{ $doc->expires_at?->format('Y-m-d') ?? '—' }} | @php $today = \Carbon\Carbon::today(); $exp = $doc->expires_at; @endphp @if ($exp === null) — @elseif ($exp->isToday()) **Expires today** @elseif ($exp->isPast()) **Already expired** @else In {{ $today->diffInDays($exp) }} days @endif |
+@foreach ($rows as $row)
+| {{ $row['name'] }} | {{ $row['expires_on'] }} | {!! $row['status'] !!} |
 @endforeach
 @endcomponent
 

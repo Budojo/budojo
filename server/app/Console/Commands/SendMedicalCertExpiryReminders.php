@@ -11,6 +11,7 @@ use App\Models\Document;
 use App\Models\NotificationLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -20,16 +21,23 @@ use Illuminate\Support\Facades\Mail;
  * `routes/console.php`. M5 PR-D.
  *
  * **Per-academy de-dup** via `notification_log`: a `(academy_id,
- * notification_type, sent_for_date)` unique key prevents an oncall
- * re-running the artisan on the same day from sending a duplicate
- * digest. The unique index is the race-safety guarantee — two
- * concurrent invocations both inserting the same row will collide
- * on the index, the loser falls back, and only one email is queued.
+ * notification_type, sent_for_date)` unique key. The race-safety
+ * comes from "claim before send" — we INSERT the log row FIRST, and
+ * only queue the digest if the insert won the race. The unique
+ * index makes the loser of any concurrent insert silently no-op
+ * (insertOrIgnore returns 0). The whole claim-then-queue is wrapped
+ * in DB::transaction so a queue-side failure rolls back the claim
+ * and tomorrow's run picks up the still-unsent academy. Without
+ * this ordering — and the original draft of this command had it
+ * inverted — two concurrent invocations could both pass the
+ * "already sent today?" check and both queue a digest before
+ * either wrote the log row. Copilot caught the regression on PR-D.
  *
  * **Resilience**: per-academy failures are logged and DO NOT stop
  * the loop. A single malformed row, a transient queue insert blip,
  * or a Mailable serialization glitch can't tank the whole digest
- * pass.
+ * pass — the transaction rolls back THAT academy's claim and the
+ * loop moves on.
  *
  * **Idempotency** — `--force` overrides the de-dup row for an
  * exceptional re-send (e.g. the queue was misconfigured during the
@@ -78,27 +86,61 @@ class SendMedicalCertExpiryReminders extends Command
                             continue;
                         }
 
-                        if (! $force && $this->alreadySentToday($academy, $today)) {
+                        // --force bypass: clear today's claim row so the
+                        // claim-then-queue cycle below succeeds. Done in
+                        // its own statement so a malformed --force run
+                        // can be diagnosed via the deletion's row count.
+                        if ($force) {
+                            NotificationLog::query()
+                                ->where('academy_id', $academy->id)
+                                ->where('notification_type', self::NOTIFICATION_TYPE)
+                                ->whereDate('sent_for_date', $today)
+                                ->delete();
+                        }
+
+                        // Race-safe send: claim the log row FIRST, then
+                        // queue. insertOrIgnore relies on the unique
+                        // index — a concurrent invocation that lost the
+                        // race gets `inserted = 0` and we skip without
+                        // queueing. The whole pair runs inside a
+                        // transaction so a queue-side failure rolls back
+                        // the claim and tomorrow's run picks up the
+                        // still-unsent academy.
+                        $queued = DB::transaction(function () use ($academy, $documents, $today): bool {
+                            // Use Eloquent's create() so the date cast on
+                            // sent_for_date applies consistently — the
+                            // unique index on (academy_id,
+                            // notification_type, sent_for_date) only
+                            // fires when both inserts use the same
+                            // string representation. A raw insertOrIgnore
+                            // bypasses the cast and writes a bare
+                            // 'YYYY-MM-DD' while Eloquent writes
+                            // 'YYYY-MM-DD 00:00:00' — different strings,
+                            // unique constraint silently lets both
+                            // through. Catching the
+                            // UniqueConstraintViolationException is
+                            // the race-safe outcome regardless.
+                            try {
+                                NotificationLog::query()->create([
+                                    'academy_id' => $academy->id,
+                                    'notification_type' => self::NOTIFICATION_TYPE,
+                                    'sent_for_date' => $today,
+                                ]);
+                            } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                                return false;
+                            }
+
+                            Mail::to($academy->owner)->queue(new MedicalCertificateExpiringMail($academy, $documents));
+
+                            return true;
+                        });
+
+                        if (! $queued) {
                             ++$skipped;
                             $this->line(\sprintf('skipped academy #%d (already sent today)', $academy->id));
 
                             continue;
                         }
-
-                        Mail::to($academy->owner)->queue(new MedicalCertificateExpiringMail($academy, $documents));
-
-                        // Insert AFTER the queue call so a queue-side
-                        // failure doesn't poison the de-dup table —
-                        // an oncall can re-run without `--force` and
-                        // pick up where we left off.
-                        NotificationLog::query()->updateOrCreate(
-                            [
-                                'academy_id' => $academy->id,
-                                'notification_type' => self::NOTIFICATION_TYPE,
-                                'sent_for_date' => $today->toDateString(),
-                            ],
-                            [],
-                        );
 
                         ++$sent;
                         $this->line(\sprintf(
@@ -150,14 +192,5 @@ class SendMedicalCertExpiryReminders extends Command
             ->with('athlete')
             ->orderBy('expires_at', 'asc')
             ->get();
-    }
-
-    private function alreadySentToday(Academy $academy, Carbon $today): bool
-    {
-        return NotificationLog::query()
-            ->where('academy_id', $academy->id)
-            ->where('notification_type', self::NOTIFICATION_TYPE)
-            ->whereDate('sent_for_date', $today)
-            ->exists();
     }
 }

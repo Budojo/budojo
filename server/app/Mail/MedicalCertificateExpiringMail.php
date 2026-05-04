@@ -66,12 +66,40 @@ class MedicalCertificateExpiringMail extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
+        // Pre-compute per-row labels in PHP land so the blade template
+        // renders simple `{{ $row['status'] }}` instead of inlining
+        // `@php` + Carbon::today() per iteration. Carbon::today() is
+        // captured once for the whole digest; status strings stay
+        // human-readable + locale-friendly when we add IT in a follow-
+        // up. Copilot caught the readability issue on PR-D.
+        $today = \Illuminate\Support\Carbon::today();
+        $rows = $this->documents->map(static function (\App\Models\Document $doc) use ($today): array {
+            $athlete = $doc->athlete;
+            $expiresAt = $doc->expires_at;
+            $name = $athlete !== null
+                ? trim($athlete->first_name . ' ' . $athlete->last_name)
+                : '—';
+
+            $status = match (true) {
+                $expiresAt === null => '—',
+                $expiresAt->isToday() => '**Expires today**',
+                $expiresAt->isPast() => '**Already expired**',
+                default => 'In ' . (int) $today->diffInDays($expiresAt) . ' days',
+            };
+
+            return [
+                'name' => $name,
+                'expires_on' => $expiresAt?->format('Y-m-d') ?? '—',
+                'status' => $status,
+            ];
+        });
+
         return new Content(
             markdown: 'mail.medical-certificate-expiring',
             with: [
                 'ownerName' => $this->owner()->name,
                 'academyName' => $this->academy->name,
-                'documents' => $this->documents,
+                'rows' => $rows,
                 'clientUrl' => $this->resolvedClientUrl(),
             ],
         );
