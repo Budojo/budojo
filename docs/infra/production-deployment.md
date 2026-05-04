@@ -283,12 +283,14 @@ queue. Without an active worker process, queued jobs accumulate in the
 
 | Field | Value |
 |-------|-------|
-| Command | `php /home/forge/api.budojo.it/artisan queue:work --queue=default --tries=3 --backoff=10 --timeout=120` |
+| Command | `php artisan queue:work --queue=default --tries=3 --backoff=10 --timeout=120` |
 | User | `forge` |
-| Directory | `/home/forge/api.budojo.it` |
+| Directory | `/home/forge/api.budojo.it/server` (or `/current/server` if Atomic Releases is enabled) |
 | Processes | `1` |
 | Stop wait | `60` |
 | Stop signal | `SIGTERM` |
+
+> **Path note**: Budojo is a monorepo — `composer.json` and `artisan` live under `server/`, NOT at the site root. The Forge nginx vhost has its Web Directory set to `/server/public` for the same reason. Setting Directory to `/home/forge/api.budojo.it` (without `/server`) would have the daemon spinning on a missing `artisan` binary.
 
 `--tries=3 --backoff=10` retries a job up to 3 times with 10 s between
 attempts, which absorbs Resend brown-outs without dropping the job.
