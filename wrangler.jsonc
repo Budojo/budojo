@@ -1,8 +1,35 @@
 {
   "name": "budojo",
   "compatibility_date": "2026-05-02",
+
+  // Worker fronts the static-asset binding so a missing asset path
+  // (chunk-XXX.js etc.) returns a real 404 instead of the SPA index
+  // shell — see worker/index.js docblock + issue #382. Without the
+  // worker, Cloudflare's built-in `not_found_handling:
+  // "single-page-application"` flag returns HTTP 200 with index.html
+  // for *every* unknown path, which silently corrupts dynamic ES
+  // module imports (HTML parsed as JS) and blanks the dashboard.
+  "main": "./worker/index.js",
+
   "assets": {
     "directory": "./client/dist/client/browser",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+
+    // "none" is required for the worker to see real 404s and decide
+    // per-path whether to surface them or fall back to /index.html.
+    // Setting this to "single-page-application" or "404-page" would
+    // short-circuit the worker's logic — the binding would resolve
+    // every 404 itself and the worker would never see the miss.
+    "not_found_handling": "none",
+
+    // Disable the binding's HTML-path canonicalization so navigation
+    // routes don't 307 to "/" before the worker can decide. With the
+    // default "auto-trailing-slash", a request for /dashboard/stats
+    // and even /index.html itself returns a 307 to /, which leaks
+    // through the worker's fallback (the worker's index.html sub-
+    // request also gets the redirect). "none" makes the binding
+    // serve files exactly as-named and 404 anything missing — the
+    // worker then owns every redirect / fallback decision.
+    "html_handling": "none"
   }
 }

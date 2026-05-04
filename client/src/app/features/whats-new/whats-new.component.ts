@@ -59,6 +59,69 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v1.15.0',
+      date: '2026-05-04',
+      headline:
+        'The marketing surface finally gets a real product shot, and the underlying cause of the v1.14.x blank-page hotfix run is closed at the Cloudflare edge — a structural fix rather than another patch on top.',
+      sections: [
+        {
+          heading: '🖼️ Landing page: real product screenshot in the hero',
+          bullets: [
+            'A real screenshot replaces the placeholder. The home page (/) used to show a soft-coloured tile with the Budojo glyph in the centre as a stand-in until we had real captures. The hero now carries an actual phone-shaped screenshot of the Stats → Attendance heatmap with the Apex Grappling demo data — dense, glanceable, immediately recognisable as a working product.',
+            'One strong shot, not a carousel. We picked the heatmap because it carries the most visual personality of any of the dashboard screens; the rest stays out of the hero so the page reads at a single glance. Multiple-image galleries can come back if conversion data ever justifies them.',
+            '50 KB on the wire. The screenshot ships as a WebP image at quality 82, properly sized for high-DPR phones. No layout shift while it loads — the slot has fixed dimensions so the rest of the page paints first and the image fills in cleanly underneath.',
+          ],
+        },
+        {
+          heading: '🛡️ Stale-chunk blank page — closed at the Cloudflare layer',
+          bullets: [
+            'Recap. The v1.14.1 → v1.14.2 → v1.14.3 hotfix chain chased the same symptom (a blank dashboard after a deploy with a stale browser tab open) from three different angles. v1.14.2 added a frontend self-heal that recovers a stale tab via a one-time reload; v1.14.3 fixed an unrelated null-check on the Stats page. This release closes the actual upstream cause: how the Cloudflare CDN was responding to requests for files that no longer exist on the deploy.',
+            'Direct cause. Cloudflare was configured to return our home page (HTML) with a 200 status code for any unknown path, including missing JavaScript chunk files. A browser asking for a missing chunk would receive an HTML page, fail to parse it as JavaScript, and crash the dashboard to blank. The Cloudflare layer now correctly returns a 404 for missing chunks and only serves the home page as a fallback for actual page-navigation requests (when you paste a deep link into a fresh tab, for example).',
+            "Defence in depth. The frontend self-heal added in v1.14.2 stays in place. With this Cloudflare-level fix the self-heal should no longer ever trip in normal conditions; if it does, it indicates a different cache-mismatch class we haven't anticipated — and the safety net still recovers the page cleanly.",
+            'Invisible if your tab is current. If your browser was running v1.14.3 or later, this release looks identical to before — the upstream fix simply removes the conditions under which the v1.14.x bug could fire again.',
+          ],
+        },
+      ],
+    },
+    {
+      version: 'v1.14.3',
+      date: '2026-05-04',
+      headline:
+        'The actual fix for the Stats page blank-on-first-click that v1.14.1\'s preload change tried — and failed — to nail. Clicking "Stats" in the sidebar after navigating around the dashboard now lands on the page first time, every time, with no detour through F5.',
+      sections: [
+        {
+          heading: '🐛 Stats blank page on first in-app navigation — fixed',
+          bullets: [
+            'Direct cause: a defensive `?` missing in one place. The Stats parent page reads the active tab from the current URL the moment it mounts. Under certain timings — specifically when entering Stats from another dashboard page, with the new "preload everything" behavior from v1.14.1 — the route information the page reads from is briefly in a half-built state. The previous code assumed it was always fully populated and crashed silently on the missing field, leaving the dashboard chrome on screen and the content area blank.',
+            'Three more `?` characters and the chain falls back gracefully. With the fix, every step of the lookup is now optional, so any transient half-state cleanly falls back to the default "Overview" tab and the page renders normally on first try. Hard refresh (F5) is no longer required.',
+            'Regression-pinned. A new test simulates the exact half-built route state that crashed prod and asserts the page still renders cleanly. So if a future change re-introduces the same shape of bug, CI catches it before it reaches you.',
+          ],
+        },
+        {
+          heading: "🧹 Behind the scenes (continuing v1.14.2's work)",
+          bullets: [
+            'v1.14.2 shipped an auto-recovery safety net for stale-bundle navigation failures (see the v1.14.2 entry below). That code is unrelated to this fix and stays as belt-and-braces for a different class of cache-related failure.',
+          ],
+        },
+      ],
+    },
+    {
+      version: 'v1.14.2',
+      date: '2026-05-04',
+      headline:
+        'A behind-the-scenes safety net. No user-visible feature changes; just an extra layer that catches a class of cache-related navigation failures and self-heals automatically with a single page refresh, instead of leaving the app stuck on a blank screen.',
+      sections: [
+        {
+          heading: '🛡️ Auto-recovery from stale-bundle navigation failures',
+          bullets: [
+            "Self-heal on stale chunks. If the app's main bundle in your browser ever ends up out of sync with the deployed code (a rare consequence of the way our hosting serves the SPA shell), a navigation that would previously have crashed silently to a blank page now reloads the tab once and recovers. You'll see a brief flash; afterwards everything works normally.",
+            "Anti-loop guards. Two layers — one in-memory, one persistent across the reload — make sure the page can't get stuck in a refresh loop. If a single recovery attempt doesn't resolve the issue, the app stops reloading and surfaces the original error in the developer console rather than re-trying forever.",
+            '30-second auto-rearm. After 30 seconds without crashing, the persistent guard clears itself, so a long-lived browser session can recover again on a future deploy mismatch.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v1.14.1',
       date: '2026-05-04',
       headline:

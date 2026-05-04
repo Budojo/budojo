@@ -154,7 +154,8 @@
       "headline": "Run your academy from your phone, not from a spreadsheet.",
       "sub": "Built by a BJJ instructor for instructors. Everything you used to keep on sticky notes and Google Sheets, in one place — on the phone you already carry to the mat.",
       "cta": "Start free",
-      "fineprint": "No credit card. 2 minutes to set up."
+      "fineprint": "No credit card. 2 minutes to set up.",
+      "visualAlt": "Budojo on a phone — the attendance heatmap on the Stats page."
     },
     "pain": {
       "heading": "If any of this sounds familiar, we built Budojo for you.",

@@ -104,6 +104,30 @@ describe('LandingComponent (#330)', () => {
     ).toBe('/sub-processors');
   });
 
+  it('renders the hero product screenshot in place of the brand-glyph placeholder (#372)', () => {
+    const { fixture } = setup();
+    const root: HTMLElement = fixture.nativeElement;
+
+    // Placeholder is gone — the hero visual no longer renders the
+    // brand-glyph centred-tile that #330 shipped as a stand-in.
+    expect(root.querySelector('.landing__hero-visual app-brand-glyph')).toBeNull();
+
+    // Real screenshot drops in. Width/height attributes are set so
+    // the browser can reserve layout space before the asset loads
+    // (CLS budget, Doherty Threshold).
+    const img = root.querySelector('.landing__hero-screenshot') as HTMLImageElement | null;
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('src')).toContain(
+      'assets/landing/stats-attendance-heatmap-iphone.webp',
+    );
+    expect(img?.getAttribute('width')).toBe('1024');
+    expect(img?.getAttribute('height')).toBe('2218');
+    // Meaningful alt — the screenshot is content (it shows what
+    // Budojo looks like), not decoration.
+    expect(img?.getAttribute('alt')).toBeTruthy();
+    expect(img?.getAttribute('alt')?.length).toBeGreaterThan(5);
+  });
+
   it('switchLanguage flips between en and it', () => {
     const { cmp } = setup();
     expect(cmp['currentLanguage']()).toBe('en');
