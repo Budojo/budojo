@@ -1,6 +1,11 @@
 import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter, withRouterConfig } from '@angular/router';
+import {
+  PreloadAllModules,
+  provideRouter,
+  withPreloading,
+  withRouterConfig,
+} from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
 import { providePrimeNG } from 'primeng/config';
@@ -51,7 +56,18 @@ export const appConfig: ApplicationConfig = {
     // child routes (documents, attendance, payments, edit) all need
     // the parent `:id`, and the alternative would be `route.parent?.
     // paramMap` reads scattered across each child component.
-    provideRouter(routes, withRouterConfig({ paramsInheritanceStrategy: 'always' })),
+    // PreloadAllModules: every lazy chunk is fetched in the background AFTER
+    // the initial bundle finishes bootstrapping (Angular schedules the
+    // preload work via the router's preloader, not via requestIdleCallback —
+    // it runs on a microtask after bootstrap completes). Eliminates the
+    // "blank-page on first nav" race when a route has chained lazy loads
+    // (e.g. parent route + child route both lazy — Stats has this shape).
+    // The initial bundle stays the same.
+    provideRouter(
+      routes,
+      withRouterConfig({ paramsInheritanceStrategy: 'always' }),
+      withPreloading(PreloadAllModules),
+    ),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
     // App-level MessageService so shared components (the email verification
