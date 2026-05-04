@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Laravel\Sanctum\Sanctum;
 
@@ -119,4 +120,17 @@ it('isolates academies — academy A cannot see academy B daily counts', functio
 
 it('rejects unauthenticated callers', function (): void {
     $this->getJson('/api/v1/stats/attendance/daily')->assertUnauthorized();
+});
+
+it('returns 403 with structured JSON envelope when authed user has no academy', function (): void {
+    // Authenticated but without an academy — DailyAttendanceRangeRequest::authorize()
+    // returns false. The override on failedAuthorization() must produce a JSON
+    // envelope (NOT Laravel's default HTML AuthorizationException page) so the
+    // SPA's auth interceptor can key on the same wire shape every other
+    // authenticated endpoint emits.
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->getJson('/api/v1/stats/attendance/daily')
+        ->assertForbidden()
+        ->assertExactJson(['message' => 'Forbidden.']);
 });

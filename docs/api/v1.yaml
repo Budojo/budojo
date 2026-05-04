@@ -1309,7 +1309,12 @@ paths:
                         date: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$', example: '2026-04-12' }
                         count: { type: integer, minimum: 1 }
         '401': { description: Unauthenticated }
-        '403': { description: Forbidden — user has no academy. }
+        '403':
+          description: Forbidden — authed user has no academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
         '422': { description: 'Validation error — months must be 3, 6, or 12.' }
 
   /stats/payments/monthly:
@@ -1350,7 +1355,12 @@ paths:
                         currency: { type: string, example: EUR }
                         amount_cents: { type: integer, minimum: 0 }
         '401': { description: Unauthenticated }
-        '403': { description: Forbidden — user has no academy. }
+        '403':
+          description: Forbidden — authed user has no academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
         '422': { description: Validation error }
 
   /stats/athletes/age-bands:
@@ -1406,7 +1416,12 @@ paths:
                       total: { type: integer, minimum: 0 }
                       missing_dob: { type: integer, minimum: 0 }
         '401': { description: Unauthenticated }
-        '403': { description: Forbidden — user has no academy. }
+        '403':
+          description: Forbidden — authed user has no academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
 
 components:
 
