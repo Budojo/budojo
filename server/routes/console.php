@@ -29,3 +29,15 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('09:00')
     ->timezone('Europe/Rome')
     ->withoutOverlapping(60);
+
+// Monthly digest of athletes still unpaid for the current month
+// (M5 PR-E). Runs once on the 16th at 09:00 Europe/Rome — the date
+// the dashboard's `unpaid-this-month-widget` starts surfacing the
+// "still owe" signal. Pre-15 most customers settle in the standard
+// month-start window so a digest before then is noise. Per-academy
+// idempotent via the same notification_log unique index used by
+// the cert-expiry digest.
+\Illuminate\Support\Facades\Schedule::command('budojo:send-unpaid-athletes-digest')
+    ->monthlyOn(16, '09:00')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(60);
