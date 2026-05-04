@@ -67,14 +67,14 @@ export class WhatsNewComponent {
         {
           heading: '🐛 First-click blank page on Stats — fixed',
           bullets: [
-            'After v1.14.0, the very first click on the Stats sidebar entry occasionally rendered a blank page that disappeared on a refresh. Cause: the Stats page is built from two lazy bundles that had to land back-to-back before the page could paint, and the second one was sometimes still in flight when the router called for it. The app now warms the Stats bundles in the background as soon as the dashboard finishes loading, so by the time you click Stats both pieces are already in the browser cache and the page renders instantly.',
-            "Side benefit: the same fix makes every other section's first click feel a little snappier — Athletes, Attendance, Payments — because their bundles are pre-warmed too.",
+            'Pre-warmed Stats bundles. After v1.14.0, the very first click on the Stats sidebar entry occasionally rendered a blank page that disappeared on a refresh. Cause: the Stats page is built from two lazy bundles that had to land back-to-back before the page could paint, and the second one was sometimes still in flight when the router called for it. The app now warms the Stats bundles in the background as soon as the dashboard finishes loading, so by the time you click Stats both pieces are already in the browser cache and the page renders instantly.',
+            "Snappier first clicks elsewhere. Side benefit of the same fix: every other section's first click — Athletes, Attendance, Payments — feels a little snappier too, because their bundles are pre-warmed in the background by the same mechanism.",
           ],
         },
         {
           heading: '🧹 Behind the scenes',
           bullets: [
-            'API error envelope consistency. The stats endpoints (/api/v1/stats/attendance/daily, /api/v1/stats/payments/monthly) used to fall back to Laravel\'s default HTML error page in the rare case where an authenticated user had no academy attached. They now return the same {message: "Forbidden."} JSON envelope every other authenticated endpoint emits, so the SPA\'s error handling reads them uniformly.',
+            'API error envelope consistency. The stats endpoints (/api/v1/stats/attendance/daily, /api/v1/stats/payments/monthly) used to fall back to Laravel\'s default HTML error page in the rare case where an authenticated user had no academy attached. They now return the same {"message":"Forbidden."} JSON envelope every other authenticated endpoint emits, so the SPA\'s error handling reads them uniformly.',
             "Locale helper centralised. The pieces of the heatmap that format dates and short month names now flow through a single localeFor() helper instead of a hand-rolled 'it' ? 'it-IT' : 'en-US' ladder. No visible change today; the cleanup makes adding a third or fourth language (Spanish + German on the roadmap) a one-line edit instead of a hunt-and-update sweep.",
             "Test coverage on the new locale paths. Two new unit tests pin the heatmap's tooltip + month label output in both English and Italian — so a future regression that re-introduces the wrong locale is caught in CI, not by a beta tester.",
           ],
@@ -100,7 +100,7 @@ export class WhatsNewComponent {
         {
           heading: '🥁 Attendance counter — knob instead of "8 / 9"',
           bullets: [
-            'The home-dashboard attendance widget swapped its "8 / 9 · 87%" text for a proper PrimeNG progress knob. Same data, but a glance at the curve tells you "near full" or "half empty" without doing the percent math in your head. The text count stays inside the knob so anyone wanting the exact ratio can still read it.',
+            'Knob in place of "8 / 9 · 87%". The home-dashboard attendance widget swapped its text counter for a proper PrimeNG progress knob. Same data, but a glance at the curve tells you "near full" or "half empty" without doing the percent math in your head. The text count stays inside the knob so anyone wanting the exact ratio can still read it.',
           ],
         },
         {
