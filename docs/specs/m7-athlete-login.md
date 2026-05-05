@@ -85,7 +85,7 @@ Eight PRs, sequenced by dependency. Each ships independently and is squash-merge
 - Migration `add_user_id_to_athletes` — `athletes.user_id` nullable bigint FK to `users.id`, `set null` on delete, indexed.
 - Migration `create_athlete_invitations_table` — columns: `id`, `athlete_id` (FK, cascade delete), `academy_id` (FK, cascade delete), `email` (string 255, indexed), `token` (string 64, unique, indexed), `expires_at` (timestamp, default now + 7 days), `accepted_at` (nullable timestamp), `revoked_at` (nullable timestamp), `sent_by_user_id` (FK users.id, indexed), `last_sent_at` (timestamp, defaults `created_at`), timestamps.
 - New `App\Enums\UserRole` backed string enum (`Owner = 'owner'`, `Athlete = 'athlete'`).
-- `User` model: `role` cast to enum, `isOwner()` / `isAthlete()` helpers, `athlete()` belongsTo (the inverse of athletes.user_id).
+- `User` model: `role` cast to enum, `isOwner()` / `isAthlete()` helpers, `athlete()` hasOne (inverse of `athletes.user_id`; an owner has zero, an athlete has one).
 - `Athlete` model: `user()` belongsTo, `invitations()` hasMany.
 - `AthleteInvitation` model: `athlete()`, `academy()`, `sentBy()` belongsTo. Scopes: `pending()`, `expired()`. Helper: `isAccepted()`, `isRevoked()`, `isExpired()`.
 - PHPStan level 9 clean. PEST coverage on the model methods + scopes.
@@ -107,7 +107,7 @@ Eight PRs, sequenced by dependency. Each ships independently and is squash-merge
   - `POST /api/v1/athletes/{athlete}/invite` — calls Action, returns 201 with `AthleteInvitationResource`. Throttled `5,1` per user.
   - `POST /api/v1/athletes/{athlete}/invite/resend` — calls Action with re-use semantics, returns 200. Throttled `1,1` per athlete (so the owner can't spam a single inbox).
   - `DELETE /api/v1/athletes/{athlete}/invitations/{invitation}` — sets `revoked_at`, returns 204.
-- `FormRequest::authorize()` checks `$user->isOwner() && $user->academy_id === $athlete->academy_id`.
+- `FormRequest::authorize()` checks `$user->isOwner() && $user->academy?->id === $athlete->academy_id`. Note: ownership lives on `academies.user_id` (so `User::academy()` is `HasOne`); there is NO `users.academy_id` column. The check is "the owner's owned academy is the same as the athlete's academy".
 - PEST tests: happy path queues mail + persists row; rejects athlete without email; rejects email already a User; rejects non-owner caller; resend re-uses pending row; revoke nullifies token; throttle behaviour.
 
 **Frontend**
@@ -127,8 +127,8 @@ Eight PRs, sequenced by dependency. Each ships independently and is squash-merge
 
 - Public route (no auth required): `GET /athlete-invite/{token}` (web route, signed). Renders an SPA-bound HTML shell that the SPA consumes by reading the token from the URL. Alternatively pure-API: `POST /api/v1/athlete-invite/{token}/preview` returns the invitation (athlete name + email + academy name) for the SPA to pre-fill the form.
 - `POST /api/v1/athlete-invite/{token}/accept` — accepts `password`, `password_confirmation`, `accept_privacy`, `accept_terms`. Calls `App\Actions\Auth\AcceptAthleteInvitationAction::execute(string $token, string $password, ...)`. The action: validates token (signed + not expired + not accepted + not revoked), creates `users` row with `role = athlete` + verified email (skip the M5 verify-email step since the invite token IS the email proof), links `athletes.user_id`, sets `accepted_at`, dispatches a Sanctum token. Returns the auth token + the user envelope.
-- Re-uses the existing privacy / ToS acceptance audit columns (added in v1.17.0 PRs #437) so the trail is identical.
-- PEST: happy path; rejects expired / accepted / revoked; rejects when email already exists as a different User; rejects without privacy + ToS booleans; idempotent under double-click (second request returns 410 not 500).
+- Re-uses the same UX pattern as `/auth/register`: privacy + ToS checkboxes are mandatory at submit. The persisted audit column is `users.terms_accepted_at` (added by #437); privacy acceptance is gated at the form level (the user can't submit without ticking it) but does NOT have a separate column today. If a future legal review demands it, a follow-up adds `users.privacy_accepted_at` — out of scope for V1, mirroring the current owner-register behaviour.
+- PEST: happy path persists `terms_accepted_at`; rejects expired / accepted / revoked; rejects when email already exists as a different User; rejects without privacy + ToS booleans; idempotent under double-click (second request returns 410 not 500).
 
 **Frontend**
 
@@ -158,7 +158,7 @@ Eight PRs, sequenced by dependency. Each ships independently and is squash-merge
 
 **Backend**
 
-- `GET /api/v1/me/athlete` — returns the athlete record linked to the authenticated user (via `users.athlete_id` reverse). 404 if `users.role !== 'athlete'` or no athlete linked.
+- `GET /api/v1/me/athlete` — returns the athlete record linked to the authenticated user via the `User::athlete()` hasOne relation (which reads `athletes.user_id`). 404 if `users.role !== 'athlete'` or no athlete is linked.
 - `GET /api/v1/me/academy` — returns the athlete's academy as `AcademyPublicResource` (a NEW resource that strips owner-only fields like the monthly fee — see also the V2 marketing-public surface that may want this).
 - `GET /api/v1/me/attendance?from=YYYY-MM&to=YYYY-MM` — read-only attendance history, paginated by month, only the athlete's own rows.
 - `GET /api/v1/me/payments?year=YYYY` — read-only payment status for the year, only the athlete's own rows.
@@ -184,7 +184,7 @@ Eight PRs, sequenced by dependency. Each ships independently and is squash-merge
 **Backend**
 
 - New middleware `App\Http\Middleware\EnsureUserHasRole` registered as `role:{owner|athlete}` in `bootstrap/app.php`.
-- Apply to every existing owner-side mutation route group: `/athletes/*` writes, `/attendance/*` writes, `/documents/*` writes, `/academy` writes, `/stats/*`, `/me/avatar` (no — avatar is shared cross-role), `/feedback`, `/support` (no — both roles file support), `/me/export`, `/me/deletion-request`, `/me/password`. Read endpoints stay open to both roles where the URL itself is non-discriminating; the `/me/*` reads added in PR-E are athlete-only via the same middleware applied with `role:athlete`.
+- Apply `role:owner` to every owner-only mutation route: `/athletes/*` writes, `/attendance/*` writes, `/documents/*` writes, `/academy` writes, `/stats/*`. Stay role-agnostic (reachable by both): `/me/avatar`, `/me/password`, `/me/export`, `/me/deletion-request`, `/support` (athletes file tickets too). Apply `role:athlete` to the new `/api/v1/me/{athlete,academy,attendance,payments,documents}` reads added in PR-E. Read endpoints whose URL itself is non-discriminating (e.g. `GET /athletes` index for the owner roster) keep the existing auth gate — the athlete shell never calls them, so no middleware is strictly required, but the reviewer must confirm in PR-F that adding `role:owner` doesn't break any contract today.
 - Audit each route in `routes/api_v1.php` line by line; mark in PR description which route gets which middleware and why.
 - PEST regression: ONE test per gated route asserting an athlete user gets 403 with `{ message: 'role_required' }` envelope. The SPA's auth interceptor keys on that string for redirect.
 - Decision recorded in PR description: owner-side reads (e.g. `GET /athletes`) — do they 403 for athletes too? V1 yes (the athlete shell never calls them, an athlete reaching them is suspicious). V2 may relax for the peer-roster surface, with its own dedicated resource.
@@ -266,7 +266,7 @@ PR-A through PR-D are strictly sequential. PR-E and PR-F can land in parallel. P
 
 - **Athlete uploads documents to their own profile.** V2 — additive; needs `role:athlete` write endpoint + a UI on `MyDocumentsComponent`. The schema doesn't change.
 - **M5 expiry-digest email cc's the athlete.** V2 — extends the existing job to optionally `bcc` the athlete's `User` email when present. Pure mail-template + recipient-list change, no new schema.
-- **Peer roster page (`/dashboard/me/peers`).** V2 — consumes the V1 `is_visible_to_peers` toggle. Renders a card grid of `User` rows where `is_visible_to_peers = true` and same `academy_id`. Public fields only.
+- **Peer roster page (`/dashboard/me/peers`).** V2 — consumes the V1 `is_visible_to_peers` toggle. The query joins through `User::athlete()->academy_id` (NOT a `users.academy_id` column, which doesn't exist) and filters peers in the same academy with `is_visible_to_peers = true`. Public fields only (name, photo, belt + grade, optional social handle).
 - **Class signup ("prenotami per la lezione").** V3 — needs class-as-instance modeling.
 - **Social layer.** V3+ — likes/comments/votes on training sessions.
 - **Pay-per-athlete pricing.** V3 conversation, gated on actual usage data.
