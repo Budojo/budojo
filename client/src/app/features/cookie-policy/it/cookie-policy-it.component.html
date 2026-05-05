@@ -1,0 +1,192 @@
+<article class="legal-page">
+  <header class="legal-page__header">
+    <a
+      class="legal-page__brand"
+      routerLink="/"
+      [attr.aria-label]="'legal.brandAriaLabel' | translate"
+    >
+      <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
+      <span class="legal-page__brand-name">Budojo</span>
+    </a>
+    <p class="legal-page__eyebrow">Legale</p>
+    <h1 class="legal-page__title">Cookie Policy</h1>
+    <p class="legal-page__subtitle">
+      Cosa Budojo memorizza sul tuo dispositivo, perché, e come cambiare idea. In linea con le linee
+      guida del Garante del 10 giugno 2021 e con l'art. 5.3 della Direttiva ePrivacy.
+    </p>
+    <p class="legal-page__lang" data-cy="cookie-lang-toggle">
+      <strong aria-current="true">Italiano</strong>
+      <span aria-hidden="true">·</span>
+      <a routerLink="/cookie-policy" data-cy="cookie-lang-en">English</a>
+    </p>
+  </header>
+
+  <section class="legal-page__section">
+    <h2>1. In breve</h2>
+    <p>
+      Budojo <strong>non</strong> usa cookie di tracciamento, cookie di profilazione né tag
+      pubblicitari di terze parti. Gli unici artefatti che la SPA salva nel tuo browser sono
+      <em>strettamente necessari</em> al funzionamento — per tenerti autenticato, ricordare un paio
+      di preferenze d'interfaccia, e cachare lo shell della web app per il funzionamento offline.
+    </p>
+    <p>
+      Mostriamo comunque un banner di consenso perché nel momento in cui aggiungeremo qualcosa di
+      non essenziale — analytics, un video embed, un pixel marketing — la legge richiede di chiedere
+      prima. Il banner è il gate; le categorie qui sotto sono cosa il gate copre.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>2. Categorie</h2>
+    <p>
+      Il banner di consenso raggruppa cookie e archiviazione lato browser in quattro categorie. Solo
+      la prima è bloccata; le altre tre sono opt-in.
+    </p>
+    <ul>
+      <li>
+        <strong>Essenziali.</strong> Strettamente necessari per erogare il servizio richiesto —
+        autenticazione, cache dello shell della web app, preferenza di lingua. Sempre attive.
+      </li>
+      <li>
+        <strong>Preferenze.</strong> Memorizza piccole scelte d'interfaccia che personalizzano
+        l'esperienza ma non sono richieste per il servizio — ad es. il toggle che mostra i documenti
+        cancellati nel dettaglio atleta.
+      </li>
+      <li>
+        <strong>Analytics.</strong> Telemetria d'uso anonima che potremmo aggiungere in futuro per
+        capire quali funzioni vengono usate. Oggi non è collegata.
+      </li>
+      <li>
+        <strong>Marketing.</strong> Pixel di terze parti per retargeting o conversion tracking. Oggi
+        nessuno e nessun piano nella roadmap immediata; la categoria esiste come gate per consentire
+        l'aggiunta pulita di uno strumento futuro.
+      </li>
+    </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>3. Cosa salviamo davvero oggi</h2>
+    <p>
+      Estratto dall'inventario auditabile <code>docs/legal/cookie-audit.md</code> nel nostro
+      repository.
+    </p>
+
+    <div class="legal-page__table-wrapper">
+      <table class="legal-page__table">
+        <thead>
+          <tr>
+            <th>Chiave</th>
+            <th>Dove</th>
+            <th>Finalità</th>
+            <th>Categoria</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>auth_token</code></td>
+            <td>localStorage</td>
+            <td>Token bearer Sanctum per restare autenticato dopo un refresh.</td>
+            <td>Essenziali</td>
+          </tr>
+          <tr>
+            <td><code>budojoLang</code></td>
+            <td>localStorage</td>
+            <td>La lingua selezionata (Italiano / English).</td>
+            <td>Essenziali</td>
+          </tr>
+          <tr>
+            <td><code>budojoCookieConsent</code></td>
+            <td>localStorage</td>
+            <td>La scelta che fai sul banner di consenso.</td>
+            <td>Essenziali</td>
+          </tr>
+          <tr>
+            <td><code>documents.showCancelled</code></td>
+            <td>localStorage</td>
+            <td>Toggle che ricorda se mostrare i documenti cancellati nel dettaglio atleta.</td>
+            <td>Preferenze</td>
+          </tr>
+          <tr>
+            <td><em>Cache del service worker</em></td>
+            <td>Cache Storage</td>
+            <td>Cache di JS / CSS / icone della PWA installata.</td>
+            <td>Essenziali</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      Non impostiamo cookie HTTP. L'autenticazione usa un token bearer (Sanctum) trasportato
+      nell'header <code>Authorization</code> — non c'è nessun cookie di sessione.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>4. Terze parti</h2>
+    <p>
+      L'elenco corrente dei sub-processor è su
+      <a routerLink="/sub-processors">/sub-processors</a>. Nessuno di loro setta un cookie nel tuo
+      browser sull'origine di Budojo: Cloudflare opera come proxy trasparente senza cookie di bot,
+      DigitalOcean vede solo traffico server-side, e Laravel Forge esegue deploy non richieste.
+      Qualsiasi modifica a questo contratto si traduce in un aggiornamento di questa pagina nello
+      stesso rilascio.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>5. Cambia idea</h2>
+    <p>Puoi riaprire il banner di consenso in qualsiasi momento e modificare le tue scelte.</p>
+    <p>
+      <a
+        href="javascript:void(0)"
+        (click)="managePreferences()"
+        (keydown.enter)="managePreferences(); $event.preventDefault()"
+        (keydown.space)="managePreferences(); $event.preventDefault()"
+        data-cy="cookie-policy-manage"
+        role="button"
+        tabindex="0"
+        >Gestisci le tue preferenze</a
+      >
+      — oppure cancella <code>budojoCookieConsent</code> dai dati del sito nel browser e il banner
+      si ripresenterà alla prossima visita.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>6. Re-consenso al cambio di policy</h2>
+    <p>
+      Il payload di consenso porta un numero di versione. Quando aggiungiamo una nuova categoria o
+      cambiamo in modo sostanziale il significato di una esistente, alziamo la versione e il banner
+      si ripresenta perché tu possa rinnovare la scelta. La decisione precedente non viene ereditata
+      silenziosamente.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>7. Correlate</h2>
+    <ul>
+      <li>
+        <a routerLink="/privacy/it">Informativa sulla privacy</a> — quali dati personali trattiamo e
+        perché.
+      </li>
+      <li><a routerLink="/sub-processors">Sub-processor</a> — ogni terza parte nella catena.</li>
+    </ul>
+  </section>
+
+  <p class="legal-page__updated" data-cy="cookie-version-stamp">
+    Versione {{ version }} · Ultima modifica: {{ lastUpdated }}
+  </p>
+
+  <footer class="legal-page__footer">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      label="Torna alla home"
+      icon="pi pi-arrow-left"
+      (onClick)="goHome()"
+      data-cy="cookie-home"
+    />
+  </footer>
+</article>

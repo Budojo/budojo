@@ -159,19 +159,21 @@
     <ul>
       <li><strong>HTTP cookies:</strong> none.</li>
       <li>
-        <strong>localStorage:</strong> two strictly technical keys —
+        <strong>localStorage:</strong> four strictly technical keys —
         <code>auth_token</code> (Sanctum session token, strictly necessary to keep the user
-        authenticated) and <code>documents.showCancelled</code> (UI preference for the documents
-        filter; does not identify or profile).
+        authenticated), <code>budojoLang</code> (selected interface language — `en` / `it`),
+        <code>budojoCookieConsent</code> (the user's own consent record for non-essential
+        categories, written by the cookie banner), and <code>documents.showCancelled</code>
+        (UI preference for the documents filter). None identify or profile the user.
       </li>
       <li><strong>sessionStorage / IndexedDB:</strong> not used directly by the SPA.</li>
     </ul>
     <p>
-      For this configuration no cookie banner is required under the Italian Garante guidelines of 10
-      June 2021. The full audit, with the verification methodology and the record of checks, is
-      documented in <code>docs/legal/cookie-audit.md</code> within our source repository; a written
-      request to <a href="mailto:privacy@budojo.it">privacy@budojo.it</a> will return the current
-      copy.
+      The user-facing breakdown of categories, current keys, and how to revise consent lives at
+      <a routerLink="/cookie-policy">Cookie Policy</a>. The full technical audit, with the
+      verification methodology and the record of checks, is documented in
+      <code>docs/legal/cookie-audit.md</code> within our source repository; a written request to
+      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a> will return the current copy.
     </p>
   </section>
 

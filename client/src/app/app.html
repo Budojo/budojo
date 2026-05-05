@@ -1,2 +1,7 @@
 <p-toast position="top-right" />
 <router-outlet />
+<!-- Cookie consent banner (#421). Mounted at the app root so it's
+     visible on every public route (landing, /privacy, /cookie-policy,
+     /sub-processors) AND inside the dashboard shell. Renders only
+     while ConsentService.decided() is false. -->
+<app-cookie-banner />
