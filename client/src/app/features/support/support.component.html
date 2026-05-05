@@ -82,6 +82,42 @@
       }
     </label>
 
+    <!--
+      Optional screenshot. Plain <input type="file"> rather than
+      <p-fileupload> for the same reasons feedback used the native
+      input — minimal vibe, no upload-state-machine ceremony. The
+      visible label + hint sit above; the input is rendered "plain"
+      so it picks up Apple-minimal browser styling without extra UI
+      chrome.
+    -->
+    <div class="support-page__field">
+      <span class="support-page__label">{{ 'support.image.label' | translate }}</span>
+      <span class="support-page__hint">{{ 'support.image.hint' | translate }}</span>
+      <input
+        #fileInput
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        (change)="onFileSelected($event)"
+        data-cy="support-image-input"
+      />
+      @if (image(); as selected) {
+        <p class="support-page__image-preview" data-cy="support-image-preview">
+          <span>{{ selected.name }}</span>
+          <button
+            type="button"
+            class="support-page__image-clear"
+            (click)="clearImage()"
+            data-cy="support-image-clear"
+          >
+            {{ 'support.image.remove' | translate }}
+          </button>
+        </p>
+      }
+      @if (imageError(); as err) {
+        <span class="support-page__field-error" data-cy="support-image-error">{{ err }}</span>
+      }
+    </div>
+
     @if (userEmail(); as email) {
       <p class="support-page__reply-hint" data-cy="support-reply-hint">
         {{ 'support.replyHint' | translate: { email: email } }}

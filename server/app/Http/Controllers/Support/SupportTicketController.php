@@ -29,12 +29,18 @@ class SupportTicketController extends Controller
             subjectLine: $request->string('subject')->toString(),
             category: SupportTicketCategory::from($request->string('category')->toString()),
             body: $request->string('body')->toString(),
+            // Server-derived context — never asked from the user. The
+            // SPA sets X-Budojo-Version on every request via an HTTP
+            // interceptor; the User-Agent is the standard browser one.
+            appVersion: (string) $request->header('X-Budojo-Version', ''),
+            userAgent: $request->userAgent() ?? '',
+            // Optional screenshot. The FormRequest already validated
+            // mime type + size; here we just thread it through.
+            image: $request->file('image'),
         );
 
         // 202 Accepted — the row is persisted but the side-effect
-        // (mail delivery) is asynchronous via the queue. Same shape
-        // as the feedback endpoint (#311) so SPA error handling stays
-        // uniform.
+        // (mail delivery) is asynchronous via the queue.
         return SupportTicketResource::make($ticket)
             ->response()
             ->setStatusCode(202);

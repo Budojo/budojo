@@ -8,6 +8,7 @@ use App\Enums\SupportTicketCategory;
 use App\Mail\SupportTicketMail;
 use App\Models\SupportTicket;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -41,14 +42,45 @@ class SubmitSupportTicketAction
         string $subjectLine,
         SupportTicketCategory $category,
         string $body,
+        string $appVersion = '',
+        string $userAgent = '',
+        ?UploadedFile $image = null,
     ): SupportTicket {
+        // Both metadata fields originate from request headers (untrusted
+        // input) and feed string-typed columns of fixed width. Truncate
+        // before persistence so an absurdly long User-Agent or a spoofed
+        // X-Budojo-Version can't 500 the request via a "data too long"
+        // SQL error. mb_substr keeps the truncation multi-byte-safe.
+        $persistedVersion = $appVersion !== '' ? mb_substr($appVersion, 0, 32) : null;
+        $persistedUa = $userAgent !== '' ? mb_substr($userAgent, 0, 512) : null;
+
         /** @var SupportTicket $ticket */
         $ticket = SupportTicket::create([
             'user_id' => $user->id,
             'subject' => $subjectLine,
             'category' => $category,
             'body' => $body,
+            'app_version' => $persistedVersion,
+            'user_agent' => $persistedUa,
         ]);
+
+        // Capture the image bytes synchronously and pass them inline to
+        // the Mailable. The previous shape forwarded the request's temp
+        // upload path; that path is bound to the request lifecycle and
+        // is gone by the time the queue worker processes the job, so
+        // the attachment was unreliable. The validator caps uploads at
+        // 5 MB, well within Laravel's LONGTEXT jobs.payload column, so
+        // serialising the bytes into the queue payload is the simpler
+        // and more durable choice (no tmp-disk + cleanup ceremony).
+        $imageBytes = null;
+        $imageOriginalName = null;
+        if ($image !== null) {
+            $imageBytes = file_get_contents($image->getRealPath() ?: '');
+            if ($imageBytes === false) {
+                $imageBytes = null;
+            }
+            $imageOriginalName = $image->getClientOriginalName();
+        }
 
         try {
             Mail::to(self::SUPPORT_EMAIL)->queue(new SupportTicketMail(
@@ -57,6 +89,10 @@ class SubmitSupportTicketAction
                 body: $body,
                 userEmail: $user->email,
                 userName: $user->name,
+                appVersion: $persistedVersion ?? 'unknown',
+                userAgent: $persistedUa ?? 'unknown',
+                imageBytes: $imageBytes,
+                imageOriginalName: $imageOriginalName,
             ));
         } catch (\Throwable $e) {
             report($e);

@@ -34,13 +34,13 @@ class SubmitSupportTicketRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Same caps as feedback (#311) — keeps the email body
-            // legible and triage-friendly.
+            // Same caps as the legacy feedback flow — keeps the email
+            // body legible and triage-friendly.
             'subject' => ['required', 'string', 'min:3', 'max:100'],
 
             // Validates against the SupportTicketCategory enum, so a
             // payload like `category: marketing` bounces with a 422.
-            // The Angular client mirrors the four cases as a typed
+            // The Angular client mirrors the five cases as a typed
             // union — server is the authoritative gate.
             'category' => ['required', Rule::enum(SupportTicketCategory::class)],
 
@@ -48,6 +48,13 @@ class SubmitSupportTicketRequest extends FormRequest
             // enough for a serious description, short enough to keep
             // the support inbox readable.
             'body' => ['required', 'string', 'min:10', 'max:5000'],
+
+            // Optional screenshot. `mimetypes:` sniffs the file body
+            // (not just the extension) so a renamed `.png.exe` upload
+            // bounces. 5 MB cap matches the rest of the upload contract;
+            // a single attachment per ticket is enough — a richer thread
+            // model is out of scope.
+            'image' => ['nullable', 'file', 'max:5120', 'mimetypes:image/png,image/jpeg,image/webp'],
         ];
     }
 }

@@ -435,35 +435,12 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('feedback link in sidebar footer (#311)', () => {
-    it('renders a routerLink="feedback" entry above What\'s new and Sign out', () => {
-      const fixture = TestBed.createComponent(DashboardComponent);
-      fixture.detectChanges();
-
-      const feedback = fixture.nativeElement.querySelector(
-        '[data-cy="nav-feedback"]',
-      ) as HTMLAnchorElement | null;
-      expect(feedback).not.toBeNull();
-      expect(feedback!.tagName).toBe('A');
-      expect(feedback!.textContent).toContain('Send feedback');
-      expect(feedback!.querySelector('i.pi-comment')).not.toBeNull();
-
-      // Order check — feedback sits ABOVE What's new (an active path
-      // outranks the passive changelog) and ABOVE Sign out.
-      const whatsNew = fixture.nativeElement.querySelector(
-        '[data-cy="nav-whats-new"]',
-      ) as HTMLAnchorElement;
-      const signOut = fixture.nativeElement.querySelector(
-        '[data-cy="nav-sign-out"]',
-      ) as HTMLButtonElement;
-      // DOCUMENT_POSITION_FOLLOWING = 4
-      expect(feedback!.compareDocumentPosition(whatsNew) & 4).toBe(4);
-      expect(feedback!.compareDocumentPosition(signOut) & 4).toBe(4);
-    });
-  });
-
-  describe('support link in sidebar footer (#423)', () => {
-    it('renders a routerLink="support" entry above Send feedback', () => {
+  describe('support link in sidebar footer (post-v1.17 consolidation)', () => {
+    it('renders a routerLink="support" entry with the comment icon, above Whats-new', () => {
+      // Post-v1.17 the legacy "Send feedback" entry was retired and
+      // its role folded into support. Single "talk to us" channel,
+      // single icon (pi-comment, universal "speak up"); pi-life-ring
+      // dropped because it reads as emergency-only.
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
 
@@ -473,16 +450,26 @@ describe('DashboardComponent', () => {
       expect(support).not.toBeNull();
       expect(support!.tagName).toBe('A');
       expect(support!.textContent).toContain('Contact support');
-      // pi-life-ring is the icon associated with "support" in PrimeIcons.
-      expect(support!.querySelector('i.pi-life-ring')).not.toBeNull();
+      expect(support!.querySelector('i.pi-comment')).not.toBeNull();
+      expect(support!.querySelector('i.pi-life-ring')).toBeNull();
 
-      // Order check — support sits ABOVE Send feedback (the
-      // expecting-a-reply channel ranks higher than fire-and-forget).
-      const feedback = fixture.nativeElement.querySelector(
-        '[data-cy="nav-feedback"]',
+      // Order check — support sits ABOVE What's new and Sign out.
+      const whatsNew = fixture.nativeElement.querySelector(
+        '[data-cy="nav-whats-new"]',
       ) as HTMLAnchorElement;
+      const signOut = fixture.nativeElement.querySelector(
+        '[data-cy="nav-sign-out"]',
+      ) as HTMLButtonElement;
       // DOCUMENT_POSITION_FOLLOWING = 4
-      expect(support!.compareDocumentPosition(feedback) & 4).toBe(4);
+      expect(support!.compareDocumentPosition(whatsNew) & 4).toBe(4);
+      expect(support!.compareDocumentPosition(signOut) & 4).toBe(4);
+    });
+
+    it('does NOT render a separate Send feedback entry', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-cy="nav-feedback"]')).toBeNull();
     });
   });
 
