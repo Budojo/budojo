@@ -130,6 +130,42 @@
     },
     "brandAriaLabel": "Budojo home"
   },
+  "cookies": {
+    "banner": {
+      "ariaLabel": "Cookie consent",
+      "title": "We respect your storage.",
+      "body": "Budojo uses only the browser storage strictly necessary to keep you signed in and the app responsive. We will never enable analytics or marketing tracking without asking first.",
+      "learnMore": "Read the cookie policy",
+      "acceptAll": "Accept all",
+      "rejectNonEssential": "Reject non-essential",
+      "customise": "Customise"
+    },
+    "dialog": {
+      "title": "Cookie preferences",
+      "intro": "Choose which categories of storage you allow. Essential storage is always on — without it the app cannot keep you signed in.",
+      "alwaysOn": "Always on",
+      "save": "Save preferences",
+      "cancel": "Cancel"
+    },
+    "categories": {
+      "essential": {
+        "label": "Essential",
+        "description": "Strictly necessary to deliver the service — sign-in token, language preference, app shell cache, and the very record of this consent choice."
+      },
+      "preferences": {
+        "label": "Preferences",
+        "description": "Remembers small UI choices like the toggle that shows cancelled documents on the athlete detail. Not required for the service to work."
+      },
+      "analytics": {
+        "label": "Analytics",
+        "description": "Anonymised usage telemetry we may add later to understand which features get used. None is wired today."
+      },
+      "marketing": {
+        "label": "Marketing",
+        "description": "Third-party pixels for retargeting or conversion tracking. None today; the gate is preventative."
+      }
+    }
+  },
   "whatsNew": {
     "brandAriaLabel": "Budojo dashboard home",
     "eyebrow": "What's new",

@@ -1,0 +1,110 @@
+@if (visible()) {
+  <aside
+    class="cookie-banner"
+    role="dialog"
+    aria-modal="false"
+    [attr.aria-label]="'cookies.banner.ariaLabel' | translate"
+    data-cy="cookie-banner"
+  >
+    <div class="cookie-banner__copy">
+      <p class="cookie-banner__title">{{ 'cookies.banner.title' | translate }}</p>
+      <p class="cookie-banner__body">
+        {{ 'cookies.banner.body' | translate }}
+        <a routerLink="/cookie-policy" data-cy="cookie-banner-policy-link">{{
+          'cookies.banner.learnMore' | translate
+        }}</a
+        >.
+      </p>
+    </div>
+
+    <div class="cookie-banner__actions">
+      <p-button
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [label]="'cookies.banner.customise' | translate"
+        (onClick)="openCustomise()"
+        data-cy="cookie-banner-customise"
+      />
+      <p-button
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        [label]="'cookies.banner.rejectNonEssential' | translate"
+        (onClick)="rejectNonEssential()"
+        data-cy="cookie-banner-reject"
+      />
+      <p-button
+        type="button"
+        severity="primary"
+        [label]="'cookies.banner.acceptAll' | translate"
+        (onClick)="acceptAll()"
+        data-cy="cookie-banner-accept"
+      />
+    </div>
+  </aside>
+}
+
+<p-dialog
+  [visible]="customiseOpen()"
+  (visibleChange)="customiseOpen.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '32rem' }"
+  [breakpoints]="{ '768px': '92vw' }"
+  [header]="'cookies.dialog.title' | translate"
+  data-cy="cookie-banner-dialog"
+>
+  <p class="cookie-banner__dialog-intro">{{ 'cookies.dialog.intro' | translate }}</p>
+
+  <ul class="cookie-banner__categories" data-cy="cookie-banner-categories">
+    @for (cat of categories; track cat.key) {
+      <li class="cookie-banner__category" [attr.data-cy]="'cookie-category-' + cat.key">
+        <label class="cookie-banner__category-row">
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="getDraft(cat.key)"
+            (ngModelChange)="setDraft(cat.key, $event)"
+            [disabled]="cat.locked"
+            [inputId]="'cookie-cat-' + cat.key"
+            [attr.data-cy]="'cookie-category-toggle-' + cat.key"
+          />
+          <span class="cookie-banner__category-text">
+            <strong class="cookie-banner__category-label">
+              {{ cat.labelKey | translate }}
+              @if (cat.locked) {
+                <span class="cookie-banner__category-lock">{{
+                  'cookies.dialog.alwaysOn' | translate
+                }}</span>
+              }
+            </strong>
+            <span class="cookie-banner__category-description">{{
+              cat.descriptionKey | translate
+            }}</span>
+          </span>
+        </label>
+      </li>
+    }
+  </ul>
+
+  <div class="cookie-banner__dialog-actions">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [label]="'cookies.dialog.cancel' | translate"
+      (onClick)="closeCustomise()"
+      data-cy="cookie-banner-dialog-cancel"
+    />
+    <p-button
+      type="button"
+      severity="primary"
+      [label]="'cookies.dialog.save' | translate"
+      (onClick)="saveCustomise()"
+      data-cy="cookie-banner-dialog-save"
+    />
+  </div>
+</p-dialog>

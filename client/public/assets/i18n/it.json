@@ -130,6 +130,42 @@
     },
     "brandAriaLabel": "Home Budojo"
   },
+  "cookies": {
+    "banner": {
+      "ariaLabel": "Consenso cookie",
+      "title": "Rispettiamo lo spazio del tuo browser.",
+      "body": "Budojo usa solo l'archiviazione strettamente necessaria a tenerti autenticato e a far girare l'app. Non attiveremo mai analytics o tracker di marketing senza chiedertelo prima.",
+      "learnMore": "Leggi la cookie policy",
+      "acceptAll": "Accetta tutto",
+      "rejectNonEssential": "Rifiuta i non essenziali",
+      "customise": "Personalizza"
+    },
+    "dialog": {
+      "title": "Preferenze sui cookie",
+      "intro": "Scegli quali categorie di archiviazione consentire. L'archiviazione essenziale è sempre attiva — senza di essa l'app non può mantenerti autenticato.",
+      "alwaysOn": "Sempre attive",
+      "save": "Salva preferenze",
+      "cancel": "Annulla"
+    },
+    "categories": {
+      "essential": {
+        "label": "Essenziali",
+        "description": "Strettamente necessari all'erogazione del servizio — token di autenticazione, preferenza di lingua, cache dello shell della web app, e il record stesso della scelta di consenso."
+      },
+      "preferences": {
+        "label": "Preferenze",
+        "description": "Memorizza piccole scelte d'interfaccia come il toggle che mostra i documenti cancellati nel dettaglio atleta. Non richiesti per il funzionamento del servizio."
+      },
+      "analytics": {
+        "label": "Analytics",
+        "description": "Telemetria d'uso anonima che potremmo aggiungere in futuro per capire quali funzioni vengono usate. Oggi non è collegata."
+      },
+      "marketing": {
+        "label": "Marketing",
+        "description": "Pixel di terze parti per retargeting o conversion tracking. Oggi nessuno; la categoria esiste come gate preventivo."
+      }
+    }
+  },
   "whatsNew": {
     "brandAriaLabel": "Budojo — torna alla dashboard",
     "eyebrow": "Novità",
