@@ -3,10 +3,7 @@ import { Subject, of, throwError } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { signal } from '@angular/core';
 import { SupportComponent } from './support.component';
-import {
-  SubmitSupportTicketPayload,
-  SupportService,
-} from '../../core/services/support.service';
+import { SubmitSupportTicketPayload, SupportService } from '../../core/services/support.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { AuthService } from '../../core/services/auth.service';
 

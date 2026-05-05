@@ -98,10 +98,7 @@ describe('Support page (#423)', () => {
     cy.get('.p-toast-message-error').should('be.visible');
 
     cy.get('[data-cy="support-subject"]').should('have.value', 'Subject I do not want to retype');
-    cy.get('[data-cy="support-body"]').should(
-      'contain.value',
-      'Body I do not want to retype',
-    );
+    cy.get('[data-cy="support-body"]').should('contain.value', 'Body I do not want to retype');
   });
 
   it('the sidebar nav-support link is rendered above Send feedback', () => {
