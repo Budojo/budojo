@@ -280,6 +280,35 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/terms/it/terms-it.component').then((m) => m.TermsItComponent),
   },
+  // Public /cookie-policy (#421) — English-default, mirrors the
+  // /privacy structure. The IT translation is the legally-citable
+  // source of truth for the Garante; both pages cross-link the
+  // matching `cookie-audit.md` markdown source. Edits to any of the
+  // three artefacts MUST land in the same PR.
+  {
+    path: 'cookie-policy',
+    loadComponent: () =>
+      import('./features/cookie-policy/cookie-policy.component').then(
+        (m) => m.CookiePolicyComponent,
+      ),
+  },
+  {
+    path: 'cookie-policy/it',
+    loadComponent: () =>
+      import('./features/cookie-policy/it/cookie-policy-it.component').then(
+        (m) => m.CookiePolicyItComponent,
+      ),
+  },
+  // Public Help / FAQ page (#422). Sits outside the dashboard shell
+  // (no auth guard) so the audience covers signed-out prospects, the
+  // setup-wizard user mid-flow ("how do I create an academy?"), and
+  // existing customers reaching it from the dashboard sidebar
+  // footer. The page is also linked-to from in-app empty states
+  // and tooltips via stable `/help#anchor` URLs.
+  {
+    path: 'help',
+    loadComponent: () => import('./features/help/help.component').then((m) => m.HelpComponent),
+  },
   // Public landing / about page (#330). Replaces the cold redirect to
   // `/auth/login` we used to ship — standard SaaS pattern: marketing
   // surface at the root, login one click away in the header. The
