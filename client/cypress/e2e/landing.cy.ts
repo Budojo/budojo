@@ -52,8 +52,9 @@ describe('Landing page (#330)', () => {
     cy.location('pathname').should('eq', '/auth/register');
   });
 
-  it('the footer carries Privacy + Sub-processors links + GitHub', () => {
+  it('the footer carries Privacy + Terms + Sub-processors links + GitHub', () => {
     cy.get('[data-cy="landing-footer-privacy"]').should('have.attr', 'href', '/privacy');
+    cy.get('[data-cy="landing-footer-terms"]').should('have.attr', 'href', '/terms');
     cy.get('[data-cy="landing-footer-subprocessors"]').should(
       'have.attr',
       'href',

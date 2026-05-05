@@ -264,6 +264,23 @@ export const routes: Routes = [
         (m) => m.PrivacyPolicyItComponent,
       ),
   },
+  // /terms — public Terms-of-Service page (#420). EN canonical at
+  // /terms, IT translation at /terms/it. Same lock-step rule as
+  // /privacy{,/it}: the markdown source, the EN component, and the IT
+  // component MUST be edited in the same PR. The registration form's
+  // "I accept" checkbox links here in a new tab; the page is also
+  // reachable from the landing footer for prospects who want to read
+  // it before signing up.
+  {
+    path: 'terms',
+    loadComponent: () =>
+      import('./features/terms/terms.component').then((m) => m.TermsComponent),
+  },
+  {
+    path: 'terms/it',
+    loadComponent: () =>
+      import('./features/terms/it/terms-it.component').then((m) => m.TermsItComponent),
+  },
   // Public landing / about page (#330). Replaces the cold redirect to
   // `/auth/login` we used to ship — standard SaaS pattern: marketing
   // surface at the root, login one click away in the header. The

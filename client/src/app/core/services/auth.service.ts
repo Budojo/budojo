@@ -17,6 +17,14 @@ export interface RegisterPayload {
   email: string;
   password: string;
   password_confirmation: string;
+  /**
+   * Terms-of-Service acceptance gate (#420). Always sent as `true`;
+   * the SPA's `Validators.requiredTrue` blocks submit while the box
+   * is unticked. The server's `RegisterRequest` enforces the
+   * `accepted` rule independently and stamps `users.terms_accepted_at`
+   * on success.
+   */
+  terms_accepted: true;
 }
 
 export interface LoginPayload {

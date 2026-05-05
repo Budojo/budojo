@@ -21,6 +21,7 @@
   "auth": {
     "shared": {
       "privacy": "Privacy",
+      "terms": "Termini",
       "subProcessors": "Sub-processors"
     },
     "login": {
@@ -87,6 +88,10 @@
       "privacyAcceptLinkText": "informativa sulla privacy",
       "privacyAcceptAfter": ".",
       "privacyRequired": "Devi accettare l'informativa sulla privacy per registrarti.",
+      "termsAcceptBefore": "Accetto i ",
+      "termsAcceptLinkText": "Termini di Servizio",
+      "termsAcceptAfter": ".",
+      "termsRequired": "Devi accettare i Termini di Servizio per registrarti.",
       "submit": "Crea account",
       "haveAccount": "Hai già un account?",
       "loginLink": "Accedi"
@@ -268,6 +273,7 @@
     },
     "footer": {
       "privacy": "Privacy",
+      "terms": "Termini",
       "subProcessors": "Sub-processor",
       "tagline": "Pensato per il tatami. Costruito in Italia."
     }

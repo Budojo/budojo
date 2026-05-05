@@ -13,10 +13,18 @@ class RegisterUserAction
 {
     public function execute(string $name, string $email, string $password): User
     {
+        // Capture the moment of consent on the row itself (#420). The
+        // FormRequest already enforced the boolean was truthy; here we
+        // turn that boolean into the durable timestamp the audit /
+        // legal review will eventually need. Computed inside the
+        // Action (not passed in from the Controller) so a future
+        // CLI/system caller wiring `RegisterUserAction::execute()`
+        // directly still produces a fully-populated row.
         $user = User::create([
             'name' => $name,
             'email' => $email,
             'password' => $password,
+            'terms_accepted_at' => now(),
         ]);
 
         // The Registered event triggers Laravel's verification-email

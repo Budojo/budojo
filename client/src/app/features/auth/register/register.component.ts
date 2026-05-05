@@ -46,6 +46,14 @@ export class RegisterComponent {
       // the API; the implicit consent record is the timestamp of the
       // successful POST /auth/register itself.
       privacy_accepted: [false, Validators.requiredTrue],
+      // Terms-of-Service acceptance gate (#420). Mirrors the privacy
+      // gate above — same `requiredTrue` semantics — but unlike privacy
+      // the value IS sent to the API: the server uses it to stamp the
+      // durable `users.terms_accepted_at` timestamp on the row. The
+      // server's `RegisterRequest` enforces the `accepted` rule
+      // independently, so a malicious client that strips the field
+      // still hits a 422.
+      terms_accepted: [false, Validators.requiredTrue],
     },
     { validators: this.passwordsMatch },
   );
@@ -71,6 +79,12 @@ export class RegisterComponent {
         email: this.form.value.email!,
         password: this.form.value.password!,
         password_confirmation: this.form.value.password_confirmation!,
+        // Pinned to true: Validators.requiredTrue blocks submit while
+        // the form is invalid, so reaching this branch implies the box
+        // is ticked. We pass the literal rather than `this.form.value
+        // .terms_accepted!` so the server sees a strict boolean rather
+        // than the form's possibly-truthy-but-non-boolean value.
+        terms_accepted: true,
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
@@ -95,5 +109,8 @@ export class RegisterComponent {
   }
   get privacyAccepted() {
     return this.form.get('privacy_accepted')!;
+  }
+  get termsAccepted() {
+    return this.form.get('terms_accepted')!;
   }
 }
