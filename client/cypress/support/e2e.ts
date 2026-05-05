@@ -19,6 +19,7 @@ beforeEach(() => {
         name: 'Test User',
         email: 'test@example.com',
         email_verified_at: '2026-01-01T00:00:00Z',
+        avatar_url: null,
       },
     },
   });

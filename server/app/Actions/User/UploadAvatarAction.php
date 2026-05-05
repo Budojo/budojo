@@ -41,7 +41,15 @@ class UploadAvatarAction
         $extension = $extension === 'jpeg' ? 'jpg' : $extension;
         $newPath = "users/avatars/{$user->id}.{$extension}";
 
-        $disk->put($newPath, (string) file_get_contents($file->getRealPath()));
+        // `Storage::put()` returns false on a transient disk error
+        // (e.g. permission, full filesystem). Bail before the model
+        // write so we never persist `avatar_path` pointing at a file
+        // that was never written — the caller's upload would 200 with
+        // a broken `avatar_url` otherwise.
+        $stored = $disk->put($newPath, (string) file_get_contents($file->getRealPath()));
+        if ($stored === false) {
+            throw new \RuntimeException("Failed to write avatar to {$newPath}.");
+        }
 
         $previousPath = $user->avatar_path;
         $user->forceFill(['avatar_path' => $newPath])->save();

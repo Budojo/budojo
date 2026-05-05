@@ -19,8 +19,27 @@ const USER_NO_AVATAR = {
 
 const USER_WITH_AVATAR = {
   ...USER_NO_AVATAR,
-  avatar_url: '/storage/users/avatars/1.jpg',
+  // The `?v=...` query string is the server's cache-buster (see the
+  // `getAvatarUrlAttribute` accessor on the User model). Tests pin the
+  // first version here; the replace test below ships a different `?v=`
+  // to assert the SPA actually re-renders rather than serving the old
+  // bitmap from cache.
+  avatar_url: '/storage/users/avatars/1.png?v=1700000000',
 };
+
+const USER_WITH_REPLACED_AVATAR = {
+  ...USER_NO_AVATAR,
+  avatar_url: '/storage/users/avatars/1.png?v=1700000060',
+};
+
+// 1x1 transparent PNG — used to satisfy <img> requests so the
+// component's (error) → initials-fallback path doesn't trip on test
+// mocks that point at fictional URLs.
+const ONE_PIXEL_PNG = Cypress.Buffer.from(
+  '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c63f8cf' +
+    'c0c0c0c0c0c000000007fc01c2dd1eaf3f0000000049454e44ae426082',
+  'hex',
+);
 
 describe('user avatar — upload + replace + remove (#411)', () => {
   beforeEach(() => {
@@ -31,6 +50,15 @@ describe('user avatar — upload + replace + remove (#411)', () => {
       'me',
     );
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
+    // Stub the storage URL so the <img>'s GET resolves with a real
+    // bitmap. Without this, the browser would 404 the fictional
+    // /storage/... path and the component's (error) handler would
+    // swap to the initials fallback before the test's assertions.
+    cy.intercept('GET', '/storage/users/avatars/**', {
+      statusCode: 200,
+      headers: { 'Content-Type': 'image/png' },
+      body: ONE_PIXEL_PNG,
+    });
   });
 
   it('shows the initials fallback when the user has no avatar', () => {
@@ -78,6 +106,45 @@ describe('user avatar — upload + replace + remove (#411)', () => {
     cy.get('[data-cy="topbar-user-avatar"] [data-cy="user-avatar-image"]')
       .should('exist')
       .and('have.attr', 'src', USER_WITH_AVATAR.avatar_url);
+  });
+
+  it('replaces an existing avatar — same path, new ?v= cache-bust', () => {
+    // Replace is the risky branch: the server keeps `users/avatars/{id}.png`
+    // identical and bumps the URL only via the cache-buster query param.
+    // Without the `?v=...` change, the SPA's <img> would happily keep
+    // serving the old bitmap from cache and the user would see no
+    // visible update. This pins the SPA's contract: it renders whatever
+    // URL the server hands back, so a same-path-different-?v response
+    // really does swap the rendered image.
+    cy.intercept('GET', '/api/v1/auth/me', {
+      statusCode: 200,
+      body: { data: USER_WITH_AVATAR },
+    }).as('meWithAvatar');
+    cy.intercept('POST', '/api/v1/me/avatar', {
+      statusCode: 200,
+      body: { data: USER_WITH_REPLACED_AVATAR },
+    }).as('replace');
+
+    cy.visitAuthenticated('/dashboard/profile');
+    cy.wait('@meWithAvatar');
+
+    cy.get('[data-cy="profile-avatar-preview"] [data-cy="user-avatar-image"]')
+      .should('exist')
+      .and('have.attr', 'src', USER_WITH_AVATAR.avatar_url);
+
+    cy.get('[data-cy="profile-avatar-input"]').selectFile(
+      {
+        contents: Cypress.Buffer.from('REPLACEDPNG'),
+        fileName: 'new.png',
+        mimeType: 'image/png',
+      },
+      { force: true },
+    );
+
+    cy.wait('@replace');
+    cy.get('[data-cy="profile-avatar-preview"] [data-cy="user-avatar-image"]')
+      .should('exist')
+      .and('have.attr', 'src', USER_WITH_REPLACED_AVATAR.avatar_url);
   });
 
   it('removes an avatar via the confirm popup', () => {

@@ -58,8 +58,18 @@ class PurgeAccountAction
             $user->delete();
         });
 
-        foreach ($pathsToWipe as $path) {
+        // Athlete documents live on the `local` disk; academy logos
+        // and user avatars on the `public` disk. Walking each disk
+        // separately so a path is never deleted from the wrong disk
+        // (silent miss with no error). Failures are tolerated — the
+        // user row is already gone, leaving an orphan binary is the
+        // GDPR-acceptable degraded state vs throwing after the row
+        // is committed.
+        foreach ($pathsToWipe['local'] as $path) {
             Storage::disk('local')->delete($path);
+        }
+        foreach ($pathsToWipe['public'] as $path) {
+            Storage::disk('public')->delete($path);
         }
     }
 
@@ -73,11 +83,20 @@ class PurgeAccountAction
      * who was removed from the roster six months ago still has their
      * medical certificate scrubbed from disk on account hard-delete.
      *
-     * @return list<string>
+     * Paths are partitioned by their storage disk so the caller
+     * deletes each from the right place — documents live on `local`
+     * (private medical certificates etc.); logos and avatars live on
+     * `public` (browser-fetchable assets).
+     *
+     * @return array{local: list<string>, public: list<string>}
      */
     private function collectDiskPaths(User $user): array
     {
-        $paths = [];
+        $paths = ['local' => [], 'public' => []];
+
+        if (\is_string($user->avatar_path) && $user->avatar_path !== '') {
+            $paths['public'][] = $user->avatar_path;
+        }
 
         if ($user->academy === null) {
             return $paths;
@@ -86,12 +105,12 @@ class PurgeAccountAction
         $athletes = $user->academy->athletes()->withTrashed()->with('documents')->get();
         foreach ($athletes as $athlete) {
             foreach ($athlete->documents as $doc) {
-                $paths[] = $doc->file_path;
+                $paths['local'][] = $doc->file_path;
             }
         }
 
         if (\is_string($user->academy->logo_path) && $user->academy->logo_path !== '') {
-            $paths[] = $user->academy->logo_path;
+            $paths['public'][] = $user->academy->logo_path;
         }
 
         return $paths;

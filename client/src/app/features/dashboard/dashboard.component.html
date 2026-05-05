@@ -46,6 +46,7 @@
       routerLink="/dashboard/profile"
       class="topbar__user-link"
       [attr.aria-label]="'nav.profileAriaLabel' | translate"
+      (click)="closeSidebar()"
       data-cy="topbar-user-avatar"
     >
       <app-user-avatar [url]="userAvatarUrl()" [name]="userName()" size="chip" />

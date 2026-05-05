@@ -13,12 +13,15 @@ export interface User {
   /**
    * Public URL of the user's uploaded avatar (#411). `null` when none has
    * been uploaded yet — the SPA renders an initials placeholder in that
-   * case. The server resizes every upload to a 256x256 JPEG, so the URL
-   * is safe to render in any slot from a 32px chip up to the profile card.
-   * Optional on this interface for fixture-compat with pre-#411 specs;
-   * the wire shape always carries the field from #411 onward.
+   * case. The server stores the original bytes (no resize) and the SPA
+   * renders the image inside a fixed circular frame via CSS `object-fit`,
+   * so the URL is safe to drop into any slot from a 32px chip up to the
+   * profile card. Required on the wire (the server's `UserResource`
+   * always emits the key, null or string) — typing it required here turns
+   * a future contract regression into a compile-time failure instead of a
+   * silent `undefined → null` fallback.
    */
-  avatar_url?: string | null;
+  avatar_url: string | null;
 }
 
 export interface RegisterPayload {

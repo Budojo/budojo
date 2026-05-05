@@ -64,12 +64,28 @@ class User extends Authenticatable implements MustVerifyEmail
      * ('public')->url(...)`) so the SPA contract stays uniform: the wire
      * always carries the URL, never the raw on-disk path. The Resource
      * layer is the boundary; downstream callers read `avatar_url`.
+     *
+     * **Cache-busting query param.** Same-extension replacements overwrite
+     * the underlying file in place, so the URL string would otherwise stay
+     * identical and the browser would happily serve the old bitmap from
+     * cache. We append `?v={updated_at-timestamp}` so the URL changes the
+     * moment the row is touched (any `forceFill().save()` bumps `updated_at`).
+     * The query string carries no PII and survives copy-paste — the
+     * underlying storage URL is unchanged for a non-cache consumer.
      */
     public function getAvatarUrlAttribute(): ?string
     {
-        return $this->avatar_path !== null
-            ? Storage::disk('public')->url($this->avatar_path)
-            : null;
+        if ($this->avatar_path === null) {
+            return null;
+        }
+
+        $url = Storage::disk('public')->url($this->avatar_path);
+        // `avatar_path` only gets set after `forceFill().save()`, so
+        // `updated_at` is guaranteed populated by the time we land
+        // here — PHPStan's @property-driven non-null view is sound.
+        $version = $this->updated_at->getTimestamp();
+
+        return $url . '?v=' . $version;
     }
 
     /**

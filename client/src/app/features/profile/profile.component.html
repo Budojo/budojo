@@ -52,12 +52,21 @@
             }
           </div>
         </div>
+        <!--
+          Synthetic file input. Visually hidden (the visible affordance
+          is the "Upload"/"Replace" p-button next to the avatar, which
+          calls .click() on this input). Removed from the tab order +
+          aria-hidden so a keyboard / screen-reader user is never
+          presented with an unlabeled focusable control they can't see.
+        -->
         <input
           #avatarInput
           type="file"
           class="avatar-card__file"
           accept="image/png,image/jpeg,image/webp"
           (change)="onAvatarSelected($event)"
+          tabindex="-1"
+          aria-hidden="true"
           data-cy="profile-avatar-input"
         />
       </div>

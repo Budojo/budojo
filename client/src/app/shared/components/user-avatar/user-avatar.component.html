@@ -1,10 +1,11 @@
 <span class="avatar" [class]="'avatar--' + size()" data-cy="user-avatar">
-  @if (url(); as src) {
+  @if (displayedUrl(); as src) {
     <img
       class="avatar__image"
       [src]="src"
       [alt]="alt() ?? ''"
       [attr.aria-hidden]="alt() === null ? true : null"
+      (error)="onImageError()"
       data-cy="user-avatar-image"
     />
   } @else {

@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  input,
+  signal,
+} from '@angular/core';
 
 /**
  * Renders a user's avatar — either the uploaded image OR a deterministic
@@ -50,4 +57,32 @@ export class UserAvatarComponent {
     const second = tokens[1]?.charAt(0) ?? '';
     return (first + second).toUpperCase();
   });
+
+  /**
+   * Set when the `<img>` fires its `error` event — typically a stale or
+   * deleted file, or a transient CDN miss. Once tripped the template
+   * swaps to the initials fallback so the user never sees a broken-image
+   * icon. Resets the moment the URL changes, so a successful replace
+   * (e.g. user uploads a new avatar after a previous broken one) lets
+   * the new image render without forcing a remount.
+   */
+  protected readonly imageFailed = signal(false);
+
+  constructor() {
+    // Reset the failure latch whenever the URL changes — a fresh URL
+    // is a new bitmap that hasn't had a chance to fail yet.
+    effect(() => {
+      this.url();
+      this.imageFailed.set(false);
+    });
+  }
+
+  /** Resolved src — null when there's no URL OR the image previously failed. */
+  protected readonly displayedUrl = computed<string | null>(() =>
+    !this.imageFailed() ? (this.url() ?? null) : null,
+  );
+
+  protected onImageError(): void {
+    this.imageFailed.set(true);
+  }
 }
