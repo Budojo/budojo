@@ -1,0 +1,6 @@
+// Cookie policy reuses the same shared layout partial as /privacy
+// and /sub-processors. The page-specific override layer is empty —
+// no draft banner, no extra accents — but we keep this file so the
+// component import is consistent with the other legal pages.
+
+@use '../legal-page';

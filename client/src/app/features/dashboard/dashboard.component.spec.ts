@@ -16,7 +16,9 @@ import { provideI18nTesting } from '../../../test-utils/i18n-test';
 // concern — we only assert that `logout()` is called, not how it persists.
 class FakeAuthService {
   readonly logout = vi.fn();
-  readonly user = signal<null>(null);
+  // Loose typing so individual specs can `user.set(...)` a User-shaped object
+  // without re-declaring the full interface in every assertion.
+  readonly user = signal<unknown>(null);
   readonly isEmailVerified = signal(false);
   readonly getToken = vi.fn(() => null as string | null);
   readonly loadCurrentUser = vi.fn(() =>
@@ -147,6 +149,57 @@ describe('DashboardComponent', () => {
       expect(component.sidebarOpen()).toBe(false);
       expect(authService.logout).toHaveBeenCalledTimes(1);
       expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
+    });
+  });
+
+  describe('topbar user avatar chip (#411)', () => {
+    it('renders a topbar avatar chip linking to /dashboard/profile with initials fallback', () => {
+      authService.user.set({
+        id: 1,
+        name: 'Mario Rossi',
+        email: 'mario@example.com',
+        email_verified_at: null,
+        avatar_url: null,
+      } as never);
+
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="topbar-user-avatar"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.tagName).toBe('A');
+      expect(link!.getAttribute('href')).toBe('/dashboard/profile');
+      // Initials fallback when avatar_url is null.
+      const initials = link!.querySelector('[data-cy="user-avatar-initials"]');
+      expect(initials).not.toBeNull();
+      expect(initials!.textContent?.trim()).toBe('MR');
+    });
+
+    it('renders the uploaded avatar image when avatar_url is set', () => {
+      authService.user.set({
+        id: 1,
+        name: 'Mario Rossi',
+        email: 'mario@example.com',
+        email_verified_at: null,
+        avatar_url: '/storage/users/avatars/1.jpg',
+      } as never);
+
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const img = fixture.nativeElement.querySelector(
+        '[data-cy="topbar-user-avatar"] [data-cy="user-avatar-image"]',
+      ) as HTMLImageElement | null;
+      expect(img).not.toBeNull();
+      expect(img!.getAttribute('src')).toBe('/storage/users/avatars/1.jpg');
+      // Initials fallback should not render when the image is present.
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-cy="topbar-user-avatar"] [data-cy="user-avatar-initials"]',
+        ),
+      ).toBeNull();
     });
   });
 
@@ -331,6 +384,32 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('help link in sidebar footer (#422)', () => {
+    it('renders a /help link beside the version tag, before Privacy', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="sidebar-help-link"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.textContent?.trim()).toBe('Help');
+      // Lives inside the version paragraph alongside the Privacy
+      // link (one chrome line, three atoms: Help · Privacy · vTag).
+      expect(link!.closest('[data-cy="sidebar-version"]')).not.toBeNull();
+
+      // Help renders BEFORE Privacy — help-seeking is higher
+      // frequency than reading the policy, so it leads the row.
+      const privacy = fixture.nativeElement.querySelector(
+        '[data-cy="sidebar-privacy-link"]',
+      ) as HTMLAnchorElement | null;
+      expect(privacy).not.toBeNull();
+      const order = link!.compareDocumentPosition(privacy!);
+      // DOCUMENT_POSITION_FOLLOWING = 4 — privacy follows help.
+      expect(order & 4, 'privacy follows help in DOM').toBe(4);
+    });
+  });
+
   describe("what's new link in sidebar footer (#254)", () => {
     it('renders a routerLink="whats-new" entry above the Sign out button', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
@@ -380,6 +459,30 @@ describe('DashboardComponent', () => {
       // DOCUMENT_POSITION_FOLLOWING = 4
       expect(feedback!.compareDocumentPosition(whatsNew) & 4).toBe(4);
       expect(feedback!.compareDocumentPosition(signOut) & 4).toBe(4);
+    });
+  });
+
+  describe('support link in sidebar footer (#423)', () => {
+    it('renders a routerLink="support" entry above Send feedback', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const support = fixture.nativeElement.querySelector(
+        '[data-cy="nav-support"]',
+      ) as HTMLAnchorElement | null;
+      expect(support).not.toBeNull();
+      expect(support!.tagName).toBe('A');
+      expect(support!.textContent).toContain('Contact support');
+      // pi-life-ring is the icon associated with "support" in PrimeIcons.
+      expect(support!.querySelector('i.pi-life-ring')).not.toBeNull();
+
+      // Order check — support sits ABOVE Send feedback (the
+      // expecting-a-reply channel ranks higher than fire-and-forget).
+      const feedback = fixture.nativeElement.querySelector(
+        '[data-cy="nav-feedback"]',
+      ) as HTMLAnchorElement;
+      // DOCUMENT_POSITION_FOLLOWING = 4
+      expect(support!.compareDocumentPosition(feedback) & 4).toBe(4);
     });
   });
 

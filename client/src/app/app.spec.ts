@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { MessageService } from 'primeng/api';
 import { SwUpdate } from '@angular/service-worker';
+import { provideRouter } from '@angular/router';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { NEVER } from 'rxjs';
 import { App } from './app';
 import { provideI18nTesting } from '../test-utils/i18n-test';
@@ -21,6 +23,8 @@ describe('App', () => {
       // (component creation + router-outlet rendering).
       providers: [
         MessageService,
+        provideRouter([]),
+        provideAnimationsAsync(),
         ...provideI18nTesting(),
         { provide: SwUpdate, useValue: { isEnabled: false, versionUpdates: NEVER } },
       ],

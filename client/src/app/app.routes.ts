@@ -223,6 +223,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/feedback/feedback.component').then((m) => m.FeedbackComponent),
       },
+      {
+        // Dedicated support / contact form (#423). Distinct from
+        // /dashboard/feedback — feedback is fire-and-forget product
+        // feedback, support is the "I want a reply" channel. Same
+        // dashboard-shell placement so the sidebar context stays
+        // visible while the user composes.
+        path: 'support',
+        loadComponent: () =>
+          import('./features/support/support.component').then((m) => m.SupportComponent),
+      },
     ],
   },
   // Public legal pages (#225). No auth — prospects, the Garante, and
@@ -264,6 +274,51 @@ export const routes: Routes = [
         (m) => m.PrivacyPolicyItComponent,
       ),
   },
+  // /terms — public Terms-of-Service page (#420). EN canonical at
+  // /terms, IT translation at /terms/it. Same lock-step rule as
+  // /privacy{,/it}: the markdown source, the EN component, and the IT
+  // component MUST be edited in the same PR. The registration form's
+  // "I accept" checkbox links here in a new tab; the page is also
+  // reachable from the landing footer for prospects who want to read
+  // it before signing up.
+  {
+    path: 'terms',
+    loadComponent: () => import('./features/terms/terms.component').then((m) => m.TermsComponent),
+  },
+  {
+    path: 'terms/it',
+    loadComponent: () =>
+      import('./features/terms/it/terms-it.component').then((m) => m.TermsItComponent),
+  },
+  // Public /cookie-policy (#421) — English-default, mirrors the
+  // /privacy structure. The IT translation is the legally-citable
+  // source of truth for the Garante; both pages cross-link the
+  // matching `cookie-audit.md` markdown source. Edits to any of the
+  // three artefacts MUST land in the same PR.
+  {
+    path: 'cookie-policy',
+    loadComponent: () =>
+      import('./features/cookie-policy/cookie-policy.component').then(
+        (m) => m.CookiePolicyComponent,
+      ),
+  },
+  {
+    path: 'cookie-policy/it',
+    loadComponent: () =>
+      import('./features/cookie-policy/it/cookie-policy-it.component').then(
+        (m) => m.CookiePolicyItComponent,
+      ),
+  },
+  // Public Help / FAQ page (#422). Sits outside the dashboard shell
+  // (no auth guard) so the audience covers signed-out prospects, the
+  // setup-wizard user mid-flow ("how do I create an academy?"), and
+  // existing customers reaching it from the dashboard sidebar
+  // footer. The page is also linked-to from in-app empty states
+  // and tooltips via stable `/help#anchor` URLs.
+  {
+    path: 'help',
+    loadComponent: () => import('./features/help/help.component').then((m) => m.HelpComponent),
+  },
   // Public landing / about page (#330). Replaces the cold redirect to
   // `/auth/login` we used to ship — standard SaaS pattern: marketing
   // surface at the root, login one click away in the header. The
@@ -277,6 +332,26 @@ export const routes: Routes = [
     canActivate: [publicGuard],
     loadComponent: () =>
       import('./features/landing/landing.component').then((m) => m.LandingComponent),
+  },
+  // Public error landing pages (#425). `/offline` is reached via the
+  // global `errorInterceptor` when an outgoing API request fails with
+  // `status === 0` (no network — the only auto-redirect class today).
+  // `/error` is direct-nav only — 5xx responses stay component-level
+  // (toasts, empty states), so this page exists for typed-URL,
+  // bookmark, or future deep-link from an empty state. Public on both
+  // — no guard — so the user can land here while logged out (a 0 on
+  // the public landing, or a manual nav for /error).
+  {
+    path: 'error',
+    loadComponent: () =>
+      import('./features/error/server-error/server-error.component').then(
+        (m) => m.ServerErrorComponent,
+      ),
+  },
+  {
+    path: 'offline',
+    loadComponent: () =>
+      import('./features/error/offline/offline.component').then((m) => m.OfflineComponent),
   },
   // Wildcard 404 (#226) — must stay last; everything above is matched
   // first. Hit on any URL that no other route resolves, including

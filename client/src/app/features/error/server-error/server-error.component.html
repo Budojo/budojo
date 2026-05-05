@@ -1,0 +1,22 @@
+<div class="server-error">
+  <app-brand-glyph class="server-error__glyph" aria-hidden="true" />
+  <h1 class="server-error__title">{{ 'errorPage.title' | translate }}</h1>
+  <p class="server-error__message">{{ 'errorPage.message' | translate }}</p>
+  <div class="server-error__actions">
+    <p-button
+      type="button"
+      severity="primary"
+      [label]="'errorPage.tryAgain' | translate"
+      (onClick)="retry()"
+      data-cy="server-error-retry"
+    />
+    <p-button
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [label]="'errorPage.backHome' | translate"
+      (onClick)="goHome()"
+      data-cy="server-error-home"
+    />
+  </div>
+</div>

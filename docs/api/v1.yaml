@@ -52,6 +52,14 @@ tags:
       product owner with the user's text, the SPA build version, and
       the request User-Agent. Single endpoint, single recipient
       (hardcoded), throttled to 5 req/min per user.
+  - name: support
+    description: |
+      Dedicated support / contact form submissions (#423). Distinct
+      from `feedback` — this channel is intended for the user to GET
+      A REPLY: the server persists a `support_tickets` row as a
+      paper trail and queues an email with Reply-To set to the
+      user, so the support inbox can hit Reply directly. Single
+      recipient (hardcoded), throttled to 5 req/min per user.
   - name: Stats
     description: |
       Server-side aggregations for the /dashboard/stats charts.
@@ -87,6 +95,11 @@ paths:
       description: |
         Creates a new user and issues a Sanctum Bearer token. The user is created without
         an academy; the SPA routes newly-registered users to `/setup` via `noAcademyGuard`.
+
+        **Terms-of-Service gate (#420).** The request MUST carry `terms_accepted: true`.
+        Missing or falsy values fail validation with `errors.terms_accepted` and the user
+        row is NOT created. On success the server stamps `users.terms_accepted_at = now()`
+        as the durable record of consent.
       operationId: authRegister
       security: []
       requestBody:
@@ -114,6 +127,13 @@ paths:
         on success, issues a new Sanctum personal access token. The plain-text
         token is returned in the response and must be stored by the client — it
         cannot be retrieved again.
+
+        Rate-limited to 5 attempts per minute per IP via Laravel's standard
+        throttle middleware (#414). On the 6th attempt within the window the
+        endpoint returns 429 with a `Retry-After` header so the SPA can render
+        a countdown before re-enabling the submit button. Successful logins
+        count toward the cap as well — the limiter is keyed on the request
+        signature, not on response status.
       operationId: authLogin
       security: []
       requestBody:
@@ -139,6 +159,20 @@ paths:
                 message: Invalid credentials.
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttled (5 attempts / minute / IP). Retry after the `Retry-After` header.
+          headers:
+            Retry-After:
+              description: Seconds the client should wait before retrying.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Too Many Attempts.
 
   /auth/forgot-password:
     post:
@@ -240,6 +274,56 @@ paths:
                     $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+
+  /me/password:
+    post:
+      tags: [auth]
+      summary: Change the authenticated user's password
+      description: |
+        Re-authenticates with the current password and rotates it to a new
+        one in a single round-trip. The user is already authenticated via
+        Sanctum to even reach the route; the second password check is a
+        re-auth gate so a hijacked token alone cannot rotate the credential.
+
+        **Side effects on success.** Every Sanctum personal-access-token
+        row belonging to the user is deleted — EXCEPT the one the request
+        was authenticated with. Defence-in-depth (a hijacked session is
+        invalidated when the legitimate owner rotates the credential)
+        without logging the user out of the tab they're using.
+
+        **Validation.**
+
+        - `current_password` must Hash::check against the stored password.
+        - `password` policy mirrors registration: `min:8` + `confirmed`
+          (matching `password_confirmation`).
+        - `password` must differ from `current_password` — a no-op rotation
+          is rejected with a 422 on the `password` field rather than
+          silently succeeding.
+
+        Throttled to 5 requests / minute (Laravel's default IP-based key)
+        to defeat brute-force on the current-password gate.
+      operationId: meChangePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password updated; the surviving Sanctum token continues to authenticate the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Password updated.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttle limit exceeded — retry after the `Retry-After` header.
 
   /me/export:
     get:
@@ -382,6 +466,79 @@ paths:
                       cancelled:
                         type: boolean
                         description: True when a pending row existed and was removed.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/avatar:
+    post:
+      tags: [auth]
+      summary: Upload or replace the authenticated user's avatar
+      description: |
+        Multipart `avatar` upload (#411). The server stores the original
+        bytes under `users/avatars/{user-id}.{ext}` on the public disk
+        (extension tracks the upload — `.png`, `.jpg`, `.webp`). The SPA
+        renders the image inside a fixed circular frame via CSS
+        `object-fit: cover`, so server-side resize is intentionally not
+        applied. Replacing an avatar with the same extension overwrites
+        in place; replacing with a different extension unlinks the
+        orphan from the previous upload.
+
+        Accepts `image/jpeg`, `image/png`, `image/webp`. SVG is intentionally
+        rejected on this surface — the academy-logo flow has its own
+        hand-rolled SVG sanitiser, and a head-shot doesn't justify that
+        surface area. Max size 2 MB.
+
+        The response is the full `User` envelope (mirroring the `/auth/me`
+        shape) so the SPA can swap its cached user without a follow-up
+        `GET /auth/me`.
+      operationId: meUploadAvatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [auth]
+      summary: Remove the authenticated user's avatar
+      description: |
+        Deletes the stored file and clears `avatar_path`. Returns the user
+        envelope with `avatar_url: null`. Idempotent — calling it when no
+        avatar is set is a no-op success (still 200), so a refresh-after-toast
+        pattern in the SPA can't paper over a stale 404.
+      operationId: meDeleteAvatar
+      responses:
+        '200':
+          description: Avatar removed (or no-op when none was set)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
@@ -1314,6 +1471,69 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
 
+  /support:
+    post:
+      tags: [support]
+      summary: File a support ticket — persists a row and emails the support inbox
+      description: |
+        Authenticated users can file a support ticket (subject +
+        category + body). The server persists a `support_tickets`
+        row (paper trail) AND queues an email to the support inbox
+        with `Reply-To` set to the user, so the inbox owner can hit
+        Reply directly and the response lands in the user's mailbox.
+        Throttled to 5 req/min per user.
+
+        Distinct from `/feedback` — feedback is fire-and-forget for
+        product feedback / bug reports; this endpoint is the
+        "I want a reply" channel.
+
+        Mail dispatch is best-effort: a queue insert failure does
+        NOT fail the request, the row is still persisted and the
+        client receives a 202.
+      operationId: submitSupportTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, category, body]
+              properties:
+                subject:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                category:
+                  type: string
+                  enum: [account, billing, bug, other]
+                  description: |
+                    Coarse routing label. The four cases reflect the
+                    most common reasons a user reaches out — the
+                    SupportTicketCategory PHP enum mirrors them.
+                body:
+                  type: string
+                  minLength: 10
+                  maxLength: 5000
+      responses:
+        '202':
+          description: Ticket persisted and email queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/SupportTicket' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttle limit hit (5 req/min per user).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+
   /athletes/{athlete}/attendance:
     get:
       tags: [attendance]
@@ -1757,7 +1977,7 @@ components:
 
     RegisterRequest:
       type: object
-      required: [name, email, password, password_confirmation]
+      required: [name, email, password, password_confirmation, terms_accepted]
       properties:
         name:
           type: string
@@ -1776,6 +1996,16 @@ components:
           type: string
           format: password
           description: Must match `password`
+        terms_accepted:
+          type: boolean
+          enum: [true]
+          description: |
+            Terms-of-Service acceptance gate (#420). The literal `true`
+            is the only valid value — Laravel's `accepted` rule rejects
+            `false`, missing field, and non-truthy strings, so generated
+            clients should refuse to send anything else. The server
+            stamps `users.terms_accepted_at = now()` on success.
+          example: true
 
     LoginRequest:
       type: object
@@ -1815,6 +2045,24 @@ components:
           format: password
           minLength: 8
 
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, password, password_confirmation]
+      properties:
+        current_password:
+          type: string
+          format: password
+          description: The user's CURRENT password — re-auth gate.
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: The NEW password. Must differ from `current_password`.
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+
     MessageResponse:
       type: object
       required: [message]
@@ -1835,7 +2083,7 @@ components:
 
     User:
       type: object
-      required: [id, name, email, email_verified_at, deletion_pending]
+      required: [id, name, email, email_verified_at, avatar_url, deletion_pending]
       properties:
         id:
           type: integer
@@ -1854,6 +2102,18 @@ components:
             `null` until verified. Surfaced to the SPA so it can render the
             verification pillola without an extra round-trip.
           example: "2026-04-28T15:30:00+00:00"
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+          description: |
+            Public URL of the user's avatar image (#411). `null` until the
+            user uploads one — the SPA renders an initials fallback in that
+            case. Stored as the original uploaded image (jpeg/png/webp);
+            the SPA renders the avatar inside a fixed circular frame via
+            CSS `object-fit: cover`, so the URL is safe to drop into any
+            slot from a 32px chip up to the full profile-page card.
+          example: "https://app.budojo.it/storage/users/avatars/42.png"
         deletion_pending:
           nullable: true
           description: |
@@ -2695,6 +2955,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AttendanceSummaryRow'
+
+    SupportTicket:
+      type: object
+      required: [id, created_at]
+      description: |
+        Lean response shape for the /support endpoint. Only the row
+        id and the persisted timestamp are surfaced — the SPA renders
+        a confirmation toast and never re-reads the ticket back. The
+        id is stable for an eventual "copy ticket reference" UX.
+      properties:
+        id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
 
 security:
   - bearerAuth: []

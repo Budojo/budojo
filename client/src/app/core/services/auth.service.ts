@@ -10,6 +10,18 @@ export interface User {
   email: string;
   /** ISO-8601 timestamp; null until the user clicks the verify link. */
   email_verified_at: string | null;
+  /**
+   * Public URL of the user's uploaded avatar (#411). `null` when none has
+   * been uploaded yet — the SPA renders an initials placeholder in that
+   * case. The server stores the original bytes (no resize) and the SPA
+   * renders the image inside a fixed circular frame via CSS `object-fit`,
+   * so the URL is safe to drop into any slot from a 32px chip up to the
+   * profile card. Required on the wire (the server's `UserResource`
+   * always emits the key, null or string) — typing it required here turns
+   * a future contract regression into a compile-time failure instead of a
+   * silent `undefined → null` fallback.
+   */
+  avatar_url: string | null;
 }
 
 export interface RegisterPayload {
@@ -17,6 +29,14 @@ export interface RegisterPayload {
   email: string;
   password: string;
   password_confirmation: string;
+  /**
+   * Terms-of-Service acceptance gate (#420). Always sent as `true`;
+   * the SPA's `Validators.requiredTrue` blocks submit while the box
+   * is unticked. The server's `RegisterRequest` enforces the
+   * `accepted` rule independently and stamps `users.terms_accepted_at`
+   * on success.
+   */
+  terms_accepted: true;
 }
 
 export interface LoginPayload {
@@ -31,6 +51,12 @@ export interface ForgotPasswordPayload {
 export interface ResetPasswordPayload {
   email: string;
   token: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export interface ChangePasswordPayload {
+  current_password: string;
   password: string;
   password_confirmation: string;
 }
@@ -137,6 +163,53 @@ export class AuthService {
    */
   resetPassword(payload: ResetPasswordPayload): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.base}/reset-password`, payload);
+  }
+
+  /**
+   * `POST /api/v1/me/avatar` (multipart, #411). Stores the original
+   * uploaded image (no server-side resize — the SPA renders inside a
+   * fixed circular frame via CSS `object-fit`). Same-extension replace
+   * overwrites in place; different-extension replace unlinks the
+   * previous file. The response is the full `User` envelope, so we
+   * swap the cached `user` signal in `tap()` — every consumer (header
+   * chip, profile page, dashboard sidebar's future avatar slot) sees
+   * the new URL on the next tick. The `avatar_url` carries a `?v=...`
+   * cache-buster so a same-path replace forces the browser to re-fetch.
+   */
+  uploadAvatar(file: File): Observable<User> {
+    const form = new FormData();
+    form.append('avatar', file);
+    return this.http.post<MeResponse>(`${environment.apiBase}/api/v1/me/avatar`, form).pipe(
+      tap((res) => this.user.set(res.data)),
+      map((res) => res.data),
+    );
+  }
+
+  /**
+   * `DELETE /api/v1/me/avatar`. Server is idempotent — calling it when no
+   * avatar exists still returns 200 with `avatar_url: null`, so the SPA
+   * doesn't have to gate the call on `avatar_url` being set client-side.
+   */
+  removeAvatar(): Observable<User> {
+    return this.http.delete<MeResponse>(`${environment.apiBase}/api/v1/me/avatar`).pipe(
+      tap((res) => this.user.set(res.data)),
+      map((res) => res.data),
+    );
+  }
+
+  /**
+   * `POST /api/v1/me/password` (#409) — rotates the password from inside
+   * the app. The server re-authenticates with `current_password` before
+   * applying the change; on success it revokes every other Sanctum
+   * token belonging to the user but preserves THIS token, so the SPA
+   * stays logged in. 422 on wrong current password (`errors.current_password`)
+   * or same-as-old / weak / mismatched new (`errors.password`).
+   */
+  changePassword(payload: ChangePasswordPayload): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${environment.apiBase}/api/v1/me/password`,
+      payload,
+    );
   }
 
   /**

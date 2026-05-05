@@ -3,6 +3,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   PreloadAllModules,
   provideRouter,
+  withInMemoryScrolling,
   withPreloading,
   withRouterConfig,
 } from '@angular/router';
@@ -16,6 +17,7 @@ import { Observable, of } from 'rxjs';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { errorInterceptor } from './core/interceptors/error.interceptor';
 
 import EN_TRANSLATIONS from '../../public/assets/i18n/en.json';
 import IT_TRANSLATIONS from '../../public/assets/i18n/it.json';
@@ -67,8 +69,20 @@ export const appConfig: ApplicationConfig = {
       routes,
       withRouterConfig({ paramsInheritanceStrategy: 'always' }),
       withPreloading(PreloadAllModules),
+      // Enable native fragment anchor scrolling so a `routerLink="/help"`
+      // with `[fragment]="'add-athlete'"` scrolls the matching
+      // `<section id="add-athlete">` into view (#422). Deliberately do
+      // NOT set `scrollPositionRestoration` — that flag is app-wide and
+      // would change back/forward / route-switch scroll behavior across
+      // every existing route, which is out of scope for this PR.
+      withInMemoryScrolling({ anchorScrolling: 'enabled' }),
     ),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    // Auth interceptor first — it adds the bearer token to outgoing
+    // requests. Error interceptor second — it inspects the *response*,
+    // so it must sit downstream of any request mutation. Order matters:
+    // if a 5xx ever bounces us via an auth refresh in the future, that
+    // retry must run before the global error redirect.
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     provideAnimationsAsync(),
     // App-level MessageService so shared components (the email verification
     // pillola, the verify-error landing) fire toasts into the single

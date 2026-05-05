@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
@@ -20,12 +21,15 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string       $name
  * @property string       $email
  * @property Carbon|null  $email_verified_at  Set when the user clicks the signed verification link; null until then.
+ * @property Carbon|null  $terms_accepted_at  Set on /auth/register when the user ticks the ToS gate (#420); null for pre-#420 / system-seeded accounts.
+ * @property string|null  $avatar_path        Relative path on the `public` disk of the user's uploaded avatar (#411). Null until the first upload.
+ * @property-read string|null $avatar_url     Public URL accessor for `avatar_path` — null when no avatar is set.
  * @property string       $password
  * @property string|null  $remember_token
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'terms_accepted_at', 'avatar_path'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -55,12 +59,43 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Public URL of the avatar — `null` when none is set (#411). Mirrors the
+     * shape of `AcademyResource::logo_url` (resolves through `Storage::disk
+     * ('public')->url(...)`) so the SPA contract stays uniform: the wire
+     * always carries the URL, never the raw on-disk path. The Resource
+     * layer is the boundary; downstream callers read `avatar_url`.
+     *
+     * **Cache-busting query param.** Same-extension replacements overwrite
+     * the underlying file in place, so the URL string would otherwise stay
+     * identical and the browser would happily serve the old bitmap from
+     * cache. We append `?v={updated_at-timestamp}` so the URL changes the
+     * moment the row is touched (any `forceFill().save()` bumps `updated_at`).
+     * The query string carries no PII and survives copy-paste — the
+     * underlying storage URL is unchanged for a non-cache consumer.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if ($this->avatar_path === null) {
+            return null;
+        }
+
+        $url = Storage::disk('public')->url($this->avatar_path);
+        // `avatar_path` only gets set after `forceFill().save()`, so
+        // `updated_at` is guaranteed populated by the time we land
+        // here — PHPStan's @property-driven non-null view is sound.
+        $version = $this->updated_at->getTimestamp();
+
+        return $url . '?v=' . $version;
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

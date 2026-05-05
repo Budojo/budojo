@@ -8,7 +8,18 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
 Route::post('/auth/register', \App\Http\Controllers\Auth\RegisterController::class);
-Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class);
+
+// Login is rate-limited to 5 attempts / minute / IP via Laravel's standard
+// throttle middleware (#414). Without a limiter the password field is
+// brute-forceable at network speed against any known email — the controller
+// returns 401 in O(ms) and there is no inherent backoff. The cap is loose
+// enough that an honest user fat-fingering their password 3-4 times still
+// gets through, but a script grinding passwords hits 429 quickly. Keyed on
+// IP (Laravel's default for unnamed throttle) — keeping the key strategy
+// idiomatic avoids the email-keyed trade-off where an attacker can lock
+// out a known account by spamming its email from a botnet.
+Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class)
+    ->middleware('throttle:5,1');
 
 // Password reset (M5 PR-A). Both endpoints are public — a logged-out
 // user is the whole point of the flow.
@@ -46,6 +57,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // the user state (incl. `email_verified_at`) after a page reload.
     Route::get('/auth/me', \App\Http\Controllers\Auth\MeController::class);
 
+    // In-app password change (#409). Throttled to 5 requests per minute
+    // (Laravel's default IP-based key) — same shape as `/auth/login` and
+    // `/me/deletion-request`, defeats brute-force on the current-password
+    // re-auth gate while leaving an honest user with several retries to
+    // recover from a typo. The current Sanctum token used for this
+    // request is preserved; every other token on the user is revoked
+    // inside the Action (defence-in-depth without yanking the active tab).
+    Route::post('/me/password', \App\Http\Controllers\Auth\ChangePasswordController::class)
+        ->middleware('throttle:5,1');
+
     // GDPR Art. 20 (data portability) — export every byte we hold about
     // the user. JSON by default; `?format=zip` returns the JSON plus
     // bundled document binaries. Throttled to 1 req/min per user (#222)
@@ -63,6 +84,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'store'])
         ->middleware('throttle:5,1');
     Route::delete('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'destroy']);
+
+    // Avatar — multipart upload + delete (#411). Mirrors the
+    // /academy/logo precedent: stores the original bytes (no
+    // server-side resize — the API container ships GD without JPEG
+    // / WebP encoders; the SPA renders inside a circular CSS frame).
+    // Same-extension replace overwrites in place; different-extension
+    // replace unlinks the previous file. The response is the full
+    // UserResource so the SPA can swap its cached envelope without
+    // re-fetching /me.
+    Route::post('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'upload']);
+    Route::delete('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'delete']);
 
     // Resend verification email — auth required, rate-limited via
     // `email-verification-resend` (one request per minute per user;
@@ -130,6 +162,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // owner's inbox; the shape lets a frustrated user fire several reports
     // in quick succession but stops abuse.
     Route::post('/feedback', [\App\Http\Controllers\Feedback\FeedbackController::class, 'store'])
+        ->middleware('throttle:5,1');
+
+    // Support contact form (#423). Authenticated user → persists a
+    // ticket row + queues an email to the support inbox with Reply-To
+    // set to the user. Same throttle shape as feedback above (5/min)
+    // so a script can't flood the support inbox.
+    Route::post('/support', [\App\Http\Controllers\Support\SupportTicketController::class, 'store'])
         ->middleware('throttle:5,1');
 
     // Stats — server-side aggregations for the /dashboard/stats charts.

@@ -20,6 +20,7 @@ function userFactory(overrides: Partial<User> = {}): User {
     name: 'Mario Rossi',
     email: 'mario@example.com',
     email_verified_at: null,
+    avatar_url: null,
     ...overrides,
   };
 }

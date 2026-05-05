@@ -211,8 +211,23 @@
       <a routerLink="/privacy" data-cy="landing-footer-privacy">
         {{ 'landing.footer.privacy' | translate }}
       </a>
+      <a routerLink="/terms" data-cy="landing-footer-terms">
+        {{ 'landing.footer.terms' | translate }}
+      </a>
       <a routerLink="/sub-processors" data-cy="landing-footer-subprocessors">
         {{ 'landing.footer.subProcessors' | translate }}
+      </a>
+      <!-- Logged-out support fallback (#423). The signed-in surface
+           is /dashboard/support; for prospects who haven't created an
+           account, a mailto: with a sensible subject prefix is the
+           lowest-friction way to reach us. The Reply-To story doesn't
+           apply (the user IS the From: address from their own client),
+           so the simpler artefact is correct here. -->
+      <a
+        href="mailto:matteo.bonanno@budojo.it?subject=Budojo%20support"
+        data-cy="landing-footer-support"
+      >
+        {{ 'landing.footer.support' | translate }}
       </a>
       <a href="https://github.com/Budojo/budojo" rel="noopener noreferrer" target="_blank">
         GitHub

@@ -12,6 +12,67 @@
       </div>
     }
 
+    <!--
+      Avatar card (#411). Mirrors the academy-logo card on
+      AcademyDetailComponent — left: avatar disc, right: title + hint
+      + actions. Upload button label flips between "Upload" and
+      "Replace" based on whether `avatar_url` is set; remove only
+      surfaces when there's something to remove (Norman § constraints).
+    -->
+    <p-card styleClass="profile-page__card">
+      <div class="avatar-card" data-cy="profile-avatar-card">
+        <div class="avatar-card__preview" data-cy="profile-avatar-preview">
+          <app-user-avatar
+            [url]="avatarUrl()"
+            [name]="u.name"
+            size="card"
+            [alt]="'profile.avatarAlt' | translate"
+          />
+        </div>
+        <div class="avatar-card__body">
+          <p class="avatar-card__title">{{ 'profile.avatarTitle' | translate }}</p>
+          <p class="avatar-card__hint">{{ 'profile.avatarHint' | translate }}</p>
+          <div class="avatar-card__actions">
+            <p-button
+              [label]="(avatarUrl() ? 'profile.avatarReplace' : 'profile.avatarUpload') | translate"
+              icon="pi pi-upload"
+              [loading]="avatarUploading()"
+              (onClick)="onAvatarBrowse()"
+              data-cy="profile-avatar-upload"
+            />
+            @if (avatarUrl()) {
+              <p-button
+                [label]="'profile.avatarRemove' | translate"
+                icon="pi pi-trash"
+                severity="secondary"
+                [text]="true"
+                (onClick)="confirmRemoveAvatar($event)"
+                data-cy="profile-avatar-remove"
+              />
+            }
+          </div>
+        </div>
+        <!--
+          Synthetic file input. Visually hidden (the visible affordance
+          is the "Upload"/"Replace" p-button next to the avatar, which
+          calls .click() on this input). Removed from the tab order +
+          aria-hidden so a keyboard / screen-reader user is never
+          presented with an unlabeled focusable control they can't see.
+        -->
+        <input
+          #avatarInput
+          type="file"
+          class="avatar-card__file"
+          accept="image/png,image/jpeg,image/webp"
+          (change)="onAvatarSelected($event)"
+          tabindex="-1"
+          aria-hidden="true"
+          data-cy="profile-avatar-input"
+        />
+      </div>
+    </p-card>
+    <p-confirmpopup />
+
     <p-card styleClass="profile-page__card">
       <div class="profile-page__row">
         <span class="profile-page__label">{{ 'profile.name' | translate }}</span>
@@ -27,6 +88,141 @@
         <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>
         <app-email-verification-status />
       </div>
+    </p-card>
+
+    <!--
+      Change-password card (#409). Inline form on the profile page so a
+      logged-in user can rotate credentials without going through the
+      public forgot-password email round-trip. Server enforces the
+      re-auth gate via `current_password` and revokes every other Sanctum
+      token on success — the user stays logged in on this tab. Inline
+      errors under the offending field follow Norman § feedback (the user
+      is staring at the form, a toast in a corner is the wrong channel)
+      while a success toast confirms the operation since the form is
+      reset on success and would otherwise look like nothing happened.
+    -->
+    <p-card styleClass="profile-page__card">
+      <section class="profile-page__change-password" data-cy="profile-change-password">
+        <span class="profile-page__label">{{ 'profile.changePassword.title' | translate }}</span>
+        <p class="profile-page__change-password-hint">
+          {{ 'profile.changePassword.hint' | translate }}
+        </p>
+
+        <form
+          [formGroup]="changePasswordForm"
+          (ngSubmit)="submitChangePassword()"
+          novalidate
+          class="profile-page__change-password-form"
+        >
+          <div class="field">
+            <label for="currentPassword">
+              {{ 'profile.changePassword.currentPassword' | translate }}
+            </label>
+            <p-password
+              inputId="currentPassword"
+              formControlName="currentPassword"
+              [feedback]="false"
+              [toggleMask]="true"
+              autocomplete="current-password"
+              styleClass="w-full"
+              [inputStyleClass]="
+                'w-full' +
+                (currentPassword.invalid && currentPassword.touched ? ' ng-invalid ng-dirty' : '')
+              "
+            />
+            @if (currentPassword.touched && currentPassword.errors?.['required']) {
+              <small class="field-error" data-cy="change-password-current-required">
+                {{ 'profile.changePassword.currentPasswordRequired' | translate }}
+              </small>
+            }
+            @if (changePasswordServerError() === 'current') {
+              <small class="field-error" data-cy="change-password-current-wrong">
+                {{ 'profile.changePassword.currentPasswordWrong' | translate }}
+              </small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="newPassword">
+              {{ 'profile.changePassword.newPassword' | translate }}
+            </label>
+            <p-password
+              inputId="newPassword"
+              formControlName="newPassword"
+              [feedback]="false"
+              [toggleMask]="true"
+              autocomplete="new-password"
+              styleClass="w-full"
+              [inputStyleClass]="
+                'w-full' +
+                (newPassword.invalid && newPassword.touched ? ' ng-invalid ng-dirty' : '')
+              "
+            />
+            @if (newPassword.touched && newPassword.errors?.['required']) {
+              <small class="field-error">
+                {{ 'profile.changePassword.newPasswordRequired' | translate }}
+              </small>
+            } @else if (newPassword.touched && newPassword.errors?.['minlength']) {
+              <small class="field-error" data-cy="change-password-new-minlength">
+                {{ 'profile.changePassword.newPasswordMinlength' | translate }}
+              </small>
+            }
+            @if (changePasswordServerError() === 'password') {
+              <small class="field-error" data-cy="change-password-new-server-error">
+                {{ 'profile.changePassword.newPasswordServerError' | translate }}
+              </small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="newPasswordConfirmation">
+              {{ 'profile.changePassword.newPasswordConfirmation' | translate }}
+            </label>
+            <p-password
+              inputId="newPasswordConfirmation"
+              formControlName="newPasswordConfirmation"
+              [feedback]="false"
+              [toggleMask]="true"
+              autocomplete="new-password"
+              styleClass="w-full"
+              [inputStyleClass]="
+                'w-full' +
+                ((newPasswordConfirmation.invalid && newPasswordConfirmation.touched) ||
+                ((newPasswordConfirmation.touched || changePasswordForm.touched) &&
+                  changePasswordForm.errors?.['passwordsMismatch'])
+                  ? ' ng-invalid ng-dirty'
+                  : '')
+              "
+            />
+            @if (
+              (newPasswordConfirmation.touched || changePasswordForm.touched) &&
+              changePasswordForm.errors?.['passwordsMismatch']
+            ) {
+              <small class="field-error" data-cy="change-password-mismatch">
+                {{ 'profile.changePassword.mismatch' | translate }}
+              </small>
+            }
+          </div>
+
+          @if (changePasswordServerError() === 'generic') {
+            <small class="field-error" data-cy="change-password-generic-error">
+              {{ 'profile.changePassword.genericError' | translate }}
+            </small>
+          }
+
+          <p-button
+            type="submit"
+            [label]="'profile.changePassword.submit' | translate"
+            severity="secondary"
+            [outlined]="true"
+            size="small"
+            [loading]="changingPassword()"
+            [disabled]="changingPassword()"
+            styleClass="profile-page__change-password-submit"
+            data-cy="change-password-submit"
+          />
+        </form>
+      </section>
     </p-card>
 
     <!--

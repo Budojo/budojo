@@ -16,6 +16,7 @@ it('queues a verification email when a new user registers', function (): void {
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
+        'terms_accepted' => true,
     ])->assertCreated();
 
     $user = User::where('email', 'mario@example.com')->firstOrFail();
@@ -30,6 +31,7 @@ it('exposes email_verified_at on the registered user resource', function (): voi
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
+        'terms_accepted' => true,
     ]);
 
     $response->assertCreated()->assertJsonPath('data.email_verified_at', null);
