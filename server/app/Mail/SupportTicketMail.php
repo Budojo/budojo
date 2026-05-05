@@ -9,6 +9,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -39,10 +40,14 @@ class SupportTicketMail extends Mailable implements ShouldQueue
 
     /**
      * @param  string  $subjectLine  user-supplied subject (3..100 chars, validated upstream)
-     * @param  SupportTicketCategory  $category  one of Account / Billing / Bug / Other
+     * @param  SupportTicketCategory  $category  one of Account / Billing / Bug / Feedback / Other
      * @param  string  $body  user-supplied free-text body (10..5000 chars, validated upstream)
      * @param  string  $userEmail  authenticated user's email — also the Reply-To target
      * @param  string  $userName  authenticated user's display name — surfaces in the body for triage
+     * @param  string  $appVersion  SPA build tag at time of submission (X-Budojo-Version header) — "unknown" when missing
+     * @param  string  $userAgent  browser User-Agent verbatim — "unknown" when missing
+     * @param  string|null  $imagePath  absolute path to the temporary uploaded screenshot, or null
+     * @param  string|null  $imageOriginalName  client-provided filename for the attachment, or null
      */
     public function __construct(
         public readonly string $subjectLine,
@@ -50,6 +55,10 @@ class SupportTicketMail extends Mailable implements ShouldQueue
         public readonly string $body,
         public readonly string $userEmail,
         public readonly string $userName,
+        public readonly string $appVersion = 'unknown',
+        public readonly string $userAgent = 'unknown',
+        public readonly ?string $imagePath = null,
+        public readonly ?string $imageOriginalName = null,
     ) {
     }
 
@@ -82,7 +91,25 @@ class SupportTicketMail extends Mailable implements ShouldQueue
                 'body' => $this->body,
                 'userName' => $this->userName,
                 'userEmail' => $this->userEmail,
+                'appVersion' => $this->appVersion,
+                'userAgent' => $this->userAgent,
+                'hasImage' => $this->imagePath !== null,
             ],
         );
+    }
+
+    /**
+     * @return list<\Illuminate\Mail\Mailables\Attachment>
+     */
+    public function attachments(): array
+    {
+        if ($this->imagePath === null) {
+            return [];
+        }
+
+        return [
+            Attachment::fromPath($this->imagePath)
+                ->as($this->imageOriginalName ?? 'support-image'),
+        ];
     }
 }

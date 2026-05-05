@@ -46,20 +46,16 @@ tags:
       **Email-verification gate.** Same shape as athletes: writes (`POST` /
       `PUT` / `DELETE`) are gated on `verified.api`; reads stay open. See the
       `VerificationRequired` response component.
-  - name: feedback
-    description: |
-      In-app feedback submitted by authenticated users — emails the
-      product owner with the user's text, the SPA build version, and
-      the request User-Agent. Single endpoint, single recipient
-      (hardcoded), throttled to 5 req/min per user.
   - name: support
     description: |
-      Dedicated support / contact form submissions (#423). Distinct
-      from `feedback` — this channel is intended for the user to GET
-      A REPLY: the server persists a `support_tickets` row as a
-      paper trail and queues an email with Reply-To set to the
-      user, so the support inbox can hit Reply directly. Single
-      recipient (hardcoded), throttled to 5 req/min per user.
+      Single contact / support channel. Authenticated users file a
+      ticket (subject + category + body + optional screenshot); the
+      server persists a `support_tickets` row as paper trail and
+      queues an email to the support inbox with Reply-To set to the
+      user. The legacy `/feedback` endpoint was retired post-v1.17.0
+      and folded into this channel via a `feedback` category; tickets
+      tagged that way still get a row + email but signal "I'm sharing
+      input, no reply expected" to the support inbox.
   - name: Stats
     description: |
       Server-side aggregations for the /dashboard/stats charts.
@@ -1409,68 +1405,6 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
-  /feedback:
-    post:
-      tags: [feedback]
-      summary: Submit in-app feedback (subject + description + optional image) — emails the product owner
-      description: |
-        Authenticated users can submit a feedback message; the server
-        composes an email to the product owner carrying the user's text,
-        the optional attached image, the SPA build version, and the
-        request User-Agent. The mail is sent synchronously during request
-        handling — fire-and-forget from the client's perspective: the
-        202 confirms acceptance, NOT delivery (bounces / mailbox-side
-        issues are out of band). Throttled to 5 req/min per user.
-
-        The image (when present) is sent as an attachment and is NOT
-        persisted server-side; once the mail leaves the temp upload file
-        is discarded with the request lifecycle.
-      operationId: submitFeedback
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [subject, description]
-              properties:
-                subject:
-                  type: string
-                  minLength: 3
-                  maxLength: 100
-                description:
-                  type: string
-                  minLength: 10
-                  maxLength: 2000
-                app_version:
-                  type: string
-                  maxLength: 50
-                  description: SPA build tag (e.g. v1.9.0, dev). Optional — server falls back to "unknown".
-                image:
-                  type: string
-                  format: binary
-                  description: Optional single attachment, max 5 MB, png / jpeg / webp only.
-      responses:
-        '202':
-          description: Feedback accepted — mail sent synchronously, delivery not guaranteed.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [message]
-                properties:
-                  message: { type: string }
-              example: { message: Feedback received. }
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          description: Throttle limit hit (5 req/min per user).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorMessage' }
-
   /support:
     post:
       tags: [support]
@@ -1494,7 +1428,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               required: [subject, category, body]
@@ -1505,15 +1439,34 @@ paths:
                   maxLength: 100
                 category:
                   type: string
-                  enum: [account, billing, bug, other]
+                  enum: [account, billing, bug, feedback, other]
                   description: |
-                    Coarse routing label. The four cases reflect the
+                    Coarse routing label. The five cases reflect the
                     most common reasons a user reaches out — the
-                    SupportTicketCategory PHP enum mirrors them.
+                    SupportTicketCategory PHP enum mirrors them. The
+                    `feedback` case was added when the legacy
+                    /dashboard/feedback page was retired and folded
+                    into support; it tags messages where the user is
+                    sharing input rather than expecting a reply, but
+                    Reply-To is still set to the user so a follow-up
+                    is always possible.
                 body:
                   type: string
                   minLength: 10
                   maxLength: 5000
+                image:
+                  type: string
+                  format: binary
+                  description: |
+                    Optional screenshot. Max 5 MB, png/jpeg/webp only.
+                    NOT persisted server-side — sent only as an email
+                    attachment and discarded with the request lifecycle.
+              description: |
+                The X-Budojo-Version request header (when sent by the
+                SPA) and the User-Agent header are auto-attached to the
+                ticket row + the support email. They are NEVER asked
+                from the user; they are server-derived context for the
+                support inbox.
       responses:
         '202':
           description: Ticket persisted and email queued.

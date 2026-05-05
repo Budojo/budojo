@@ -60,7 +60,7 @@ it('persists a support ticket row and queues the email', function (): void {
     });
 });
 
-it('accepts each of the four categories', function (string $value, SupportTicketCategory $expected): void {
+it('accepts each of the five categories', function (string $value, SupportTicketCategory $expected): void {
     $user = userWithAcademy();
 
     $this->actingAs($user)
@@ -78,6 +78,7 @@ it('accepts each of the four categories', function (string $value, SupportTicket
     ['account', SupportTicketCategory::Account],
     ['billing', SupportTicketCategory::Billing],
     ['bug', SupportTicketCategory::Bug],
+    ['feedback', SupportTicketCategory::Feedback],
     ['other', SupportTicketCategory::Other],
 ]);
 
@@ -245,4 +246,136 @@ it('handles a user without an academy gracefully (user_id is the only link)', fu
     $ticket = SupportTicket::query()->first();
     expect($ticket)->not->toBeNull();
     expect($ticket->user_id)->toBe($user->id);
+});
+
+it('captures the X-Budojo-Version header + User-Agent into the ticket row', function (): void {
+    $user = userWithAcademy();
+
+    $this->actingAs($user)
+        ->withHeaders([
+            'X-Budojo-Version' => 'v1.17.0',
+            'User-Agent' => 'Mozilla/5.0 (TestRunner) Cypress/15.14',
+        ])
+        ->postJson('/api/v1/support', [
+            'subject' => 'Server-derived metadata test',
+            'category' => 'bug',
+            'body' => 'The version + UA must land on the row, not be asked from the user.',
+        ])
+        ->assertStatus(202);
+
+    /** @var SupportTicket $ticket */
+    $ticket = SupportTicket::query()->latest('id')->first();
+    expect($ticket->app_version)->toBe('v1.17.0');
+    expect($ticket->user_agent)->toContain('Cypress/15.14');
+
+    Mail::assertQueued(SupportTicketMail::class, function (SupportTicketMail $mail): bool {
+        expect($mail->appVersion)->toBe('v1.17.0');
+        expect($mail->userAgent)->toContain('Cypress/15.14');
+
+        return true;
+    });
+});
+
+it('falls back to "unknown" on the Mailable when the headers are missing', function (): void {
+    // The DB columns stay null when the headers aren't sent — the
+    // Mailable substitutes "unknown" so the support inbox doesn't
+    // render a literal blank line.
+    $user = userWithAcademy();
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/support', [
+            'subject' => 'Missing headers',
+            'category' => 'bug',
+            'body' => 'A reasonably long body that satisfies the validator threshold.',
+        ])
+        ->assertStatus(202);
+
+    /** @var SupportTicket $ticket */
+    $ticket = SupportTicket::query()->latest('id')->first();
+    expect($ticket->app_version)->toBeNull();
+    // PHPUnit's HTTP client always sends a User-Agent ("Symfony BrowserKit"),
+    // so the row column is never empty in the test harness — but the
+    // Mailable's behaviour when both are missing is the contract we
+    // care about; assert via direct Mail::queue inspection.
+
+    Mail::assertQueued(SupportTicketMail::class, function (SupportTicketMail $mail): bool {
+        expect($mail->appVersion)->toBe('unknown');
+
+        return true;
+    });
+});
+
+it('truncates an absurdly long User-Agent to fit the 512-char column', function (): void {
+    $user = userWithAcademy();
+
+    $longUa = str_repeat('A', 800);
+
+    $this->actingAs($user)
+        ->withHeaders(['User-Agent' => $longUa])
+        ->postJson('/api/v1/support', [
+            'subject' => 'UA truncation guard',
+            'category' => 'bug',
+            'body' => 'Some testing tools emit very long UA strings that would otherwise blow the schema.',
+        ])
+        ->assertStatus(202);
+
+    /** @var SupportTicket $ticket */
+    $ticket = SupportTicket::query()->latest('id')->first();
+    expect(mb_strlen((string) $ticket->user_agent))->toBe(512);
+});
+
+it('attaches the optional screenshot to the queued mail without persisting it', function (): void {
+    $user = userWithAcademy();
+
+    $screenshot = \Illuminate\Http\UploadedFile::fake()->image('bug.png', 200, 200);
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/support', [
+            'subject' => 'Bug with screenshot',
+            'category' => 'bug',
+            'body' => 'See the attached screenshot — the button is mis-aligned.',
+            'image' => $screenshot,
+        ])
+        ->assertStatus(202);
+
+    Mail::assertQueued(SupportTicketMail::class, function (SupportTicketMail $mail): bool {
+        expect($mail->imagePath)->not->toBeNull();
+        expect($mail->imageOriginalName)->toBe('bug.png');
+
+        return true;
+    });
+});
+
+it('rejects a non-image upload with 422', function (): void {
+    $user = userWithAcademy();
+
+    $pdf = \Illuminate\Http\UploadedFile::fake()->create('report.pdf', 100, 'application/pdf');
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/support', [
+            'subject' => 'Wrong attachment type',
+            'category' => 'bug',
+            'body' => 'A reasonably long body that satisfies the validator threshold.',
+            'image' => $pdf,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['image']);
+
+    Mail::assertNothingQueued();
+});
+
+it('rejects an oversized screenshot (> 5 MB) with 422', function (): void {
+    $user = userWithAcademy();
+
+    $tooBig = \Illuminate\Http\UploadedFile::fake()->image('huge.png')->size(5121);
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/support', [
+            'subject' => 'Oversized screenshot',
+            'category' => 'bug',
+            'body' => 'A reasonably long body that satisfies the validator threshold.',
+            'image' => $tooBig,
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['image']);
 });

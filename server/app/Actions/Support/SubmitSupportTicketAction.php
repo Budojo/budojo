@@ -8,6 +8,7 @@ use App\Enums\SupportTicketCategory;
 use App\Mail\SupportTicketMail;
 use App\Models\SupportTicket;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -41,14 +42,33 @@ class SubmitSupportTicketAction
         string $subjectLine,
         SupportTicketCategory $category,
         string $body,
+        string $appVersion = '',
+        string $userAgent = '',
+        ?UploadedFile $image = null,
     ): SupportTicket {
+        // Truncate user-agent to the column width — some testing /
+        // automation tools emit absurdly long UA strings that would
+        // otherwise blow the schema.
+        $persistedUa = $userAgent !== '' ? mb_substr($userAgent, 0, 512) : null;
+
         /** @var SupportTicket $ticket */
         $ticket = SupportTicket::create([
             'user_id' => $user->id,
             'subject' => $subjectLine,
             'category' => $category,
             'body' => $body,
+            'app_version' => $appVersion !== '' ? $appVersion : null,
+            'user_agent' => $persistedUa,
         ]);
+
+        // The optional image is forwarded to the Mailable as an
+        // attachment but never persisted on disk: ticket rows are the
+        // audit trail, the image is a transient triage hint. Same shape
+        // as the legacy feedback flow.
+        $imagePath = $image?->getRealPath();
+        if ($imagePath === false) {
+            $imagePath = null;
+        }
 
         try {
             Mail::to(self::SUPPORT_EMAIL)->queue(new SupportTicketMail(
@@ -57,6 +77,10 @@ class SubmitSupportTicketAction
                 body: $body,
                 userEmail: $user->email,
                 userName: $user->name,
+                appVersion: $appVersion !== '' ? $appVersion : 'unknown',
+                userAgent: $userAgent !== '' ? $userAgent : 'unknown',
+                imagePath: $imagePath,
+                imageOriginalName: $image?->getClientOriginalName(),
             ));
         } catch (\Throwable $e) {
             report($e);

@@ -60,6 +60,37 @@
     color: var(--p-text-color-secondary);
   }
 
+  &__hint {
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
+  }
+
+  &__image-preview {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--p-text-color);
+  }
+
+  &__image-clear {
+    appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    color: var(--p-primary-color);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: none;
+    }
+  }
+
   &__actions {
     display: flex;
     justify-content: flex-end;
