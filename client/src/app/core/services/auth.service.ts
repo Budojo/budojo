@@ -4,10 +4,26 @@ import { Observable, map, tap } from 'rxjs';
 import { AcademyService } from './academy.service';
 import { environment } from '../../../environments/environment';
 
+/**
+ * Persona discriminator on the SPA side (#445, M7). Mirrors the
+ * `App\Enums\UserRole` backing values verbatim. `owner` is the
+ * default for every public-register user; `athlete` is set only via
+ * the M7 invite-accept flow.
+ */
+export type UserRole = 'owner' | 'athlete';
+
 export interface User {
   id: number;
   name: string;
   email: string;
+  /**
+   * Persona discriminator (#445). The SPA reads this to branch the
+   * post-login destination + the route guards. Optional in the
+   * type only for backward compatibility with cached / fixture
+   * envelopes that predate the field; the server's `UserResource`
+   * always emits it.
+   */
+  role?: UserRole;
   /** ISO-8601 timestamp; null until the user clicks the verify link. */
   email_verified_at: string | null;
   /**

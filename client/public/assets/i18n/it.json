@@ -117,6 +117,13 @@
       }
     }
   },
+  "athletePortal": {
+    "welcome": {
+      "title": "Benvenuto in Budojo",
+      "body": "Il tuo account atleta è pronto. Le pagine dove vedrai la tua presenza, i tuoi pagamenti e i tuoi documenti arrivano nella prossima release — per ora aspetta, la tua academy ti farà sapere quando ci sarà di più qui.",
+      "signOut": "Esci"
+    }
+  },
   "setup": {
     "title": "Configura la tua academy",
     "subtitle": "Ci siamo quasi — raccontaci della tua palestra",

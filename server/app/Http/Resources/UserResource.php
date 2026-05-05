@@ -39,6 +39,7 @@ class UserResource extends JsonResource
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'role' => $user->role->value,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             // Avatar (#411). Always emit the FULL URL, never the on-disk
             // path — the Resource is the API boundary, downstream consumers

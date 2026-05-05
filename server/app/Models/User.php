@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -24,12 +25,13 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon|null  $terms_accepted_at  Set on /auth/register when the user ticks the ToS gate (#420); null for pre-#420 / system-seeded accounts.
  * @property string|null  $avatar_path        Relative path on the `public` disk of the user's uploaded avatar (#411). Null until the first upload.
  * @property-read string|null $avatar_url     Public URL accessor for `avatar_path` — null when no avatar is set.
+ * @property UserRole     $role               Persona discriminator (#445). `owner` for every public-register row; `athlete` only via the M7 invite flow.
  * @property string       $password
  * @property string|null  $remember_token
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'terms_accepted_at', 'avatar_path'])]
+#[Fillable(['name', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -44,6 +46,29 @@ class User extends Authenticatable implements MustVerifyEmail
     public function academy(): HasOne
     {
         return $this->hasOne(Academy::class);
+    }
+
+    /**
+     * The athlete row this user is linked to — populated only for
+     * users with `role = athlete` (#445). For owners this is always
+     * null. Reads `athletes.user_id` (FK on athletes); the inverse
+     * is `Athlete::user()`.
+     *
+     * @return HasOne<Athlete, $this>
+     */
+    public function athlete(): HasOne
+    {
+        return $this->hasOne(Athlete::class);
+    }
+
+    public function isOwner(): bool
+    {
+        return $this->role === UserRole::Owner;
+    }
+
+    public function isAthlete(): bool
+    {
+        return $this->role === UserRole::Athlete;
     }
 
     /**
@@ -97,6 +122,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
     }
 }
