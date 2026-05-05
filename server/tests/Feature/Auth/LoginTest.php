@@ -5,7 +5,16 @@ declare(strict_types=1);
 use App\Models\PendingDeletion;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+
+beforeEach(function (): void {
+    // The /auth/login route is throttled at 5 req/min/IP. This file fires
+    // 6+ login calls across its tests, so without an explicit clear the
+    // limiter saturates partway through and later tests get spurious 429s
+    // (mirrors LoginThrottleTest / PasswordResetTest beforeEach patterns).
+    RateLimiter::clear('throttle:5,1');
+});
 
 it('logs in an existing user and returns a token', function (): void {
     $user = User::factory()->create(['password' => 'Password1!']);
