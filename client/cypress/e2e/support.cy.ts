@@ -101,15 +101,10 @@ describe('Support page (#423)', () => {
     cy.get('[data-cy="support-body"]').should('contain.value', 'Body I do not want to retype');
   });
 
-  it('the sidebar nav-support link is rendered above Send feedback', () => {
+  it('the sidebar nav-support link is the only "talk to us" entry', () => {
+    // Post-consolidation: the legacy nav-feedback entry was folded
+    // into nav-support (#446). Support is now the sole channel.
     cy.get('[data-cy="nav-support"]').should('be.visible').and('contain.text', 'Contact support');
-
-    cy.get('[data-cy="nav-support"]').then(($support) => {
-      cy.get('[data-cy="nav-feedback"]').then(($feedback) => {
-        const cmp = $support[0].compareDocumentPosition($feedback[0]);
-        // DOCUMENT_POSITION_FOLLOWING = 4 — feedback follows support.
-        expect(cmp & 4, 'feedback follows support').to.equal(4);
-      });
-    });
+    cy.get('[data-cy="nav-feedback"]').should('not.exist');
   });
 });

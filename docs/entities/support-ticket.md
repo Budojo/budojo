@@ -50,7 +50,7 @@ The five cases reflect the most common reasons a user reaches out. Backed string
 
 ## Optional screenshot attachment
 
-The form accepts a single optional image upload (PNG / JPEG / WEBP, max 5 MB). The image is **not** persisted server-side: it rides as an attachment on the support email and is discarded with the request lifecycle once the queue worker has serialised the Mailable. Same shape the legacy `/feedback` flow used.
+The form accepts a single optional image upload (PNG / JPEG / WEBP, max 5 MB). The bytes are **read inline at request time** and carried on the queued `SupportTicketMail` as an `Attachment::fromData(...)` payload — the queue serialiser captures them inside `jobs.payload`, so the worker still has the screenshot when it sends the email. The image is **never persisted to disk** as its own server-side artefact; once the email leaves the queue, only the database row remains. An earlier draft of this page described the upload riding by reference to its request-temp path and being "discarded with the request lifecycle"; that shape was unreliable (the request's tmp dir is unlinked before the queue worker runs) and was replaced with the inline-bytes design in PR #446.
 
 ## Business rules
 

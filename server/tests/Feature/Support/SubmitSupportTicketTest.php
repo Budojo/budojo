@@ -305,6 +305,29 @@ it('falls back to "unknown" on the Mailable when the headers are missing', funct
     });
 });
 
+it('truncates an absurdly long X-Budojo-Version to fit the 32-char column', function (): void {
+    // X-Budojo-Version is request-supplied (untrusted). Without a
+    // server-side cap a spoofed-or-malformed value would break the
+    // submit with a "data too long" SQL error against the string(32)
+    // column. Same treatment as the User-Agent guard below.
+    $user = userWithAcademy();
+
+    $longVersion = str_repeat('v', 200);
+
+    $this->actingAs($user)
+        ->withHeaders(['X-Budojo-Version' => $longVersion])
+        ->postJson('/api/v1/support', [
+            'subject' => 'Version truncation guard',
+            'category' => 'bug',
+            'body' => 'A reasonably long body that satisfies the validator threshold.',
+        ])
+        ->assertStatus(202);
+
+    /** @var SupportTicket $ticket */
+    $ticket = SupportTicket::query()->latest('id')->first();
+    expect(mb_strlen((string) $ticket->app_version))->toBe(32);
+});
+
 it('truncates an absurdly long User-Agent to fit the 512-char column', function (): void {
     $user = userWithAcademy();
 
@@ -339,7 +362,12 @@ it('attaches the optional screenshot to the queued mail without persisting it', 
         ->assertStatus(202);
 
     Mail::assertQueued(SupportTicketMail::class, function (SupportTicketMail $mail): bool {
-        expect($mail->imagePath)->not->toBeNull();
+        // Bytes are carried inline on the queued Mailable so they
+        // survive serialisation; the request-lifetime temp upload path
+        // would have been unlinked by the time the worker runs (#446
+        // copilot review).
+        expect($mail->imageBytes)->not->toBeNull();
+        expect($mail->imageBytes)->not->toBe('');
         expect($mail->imageOriginalName)->toBe('bug.png');
 
         return true;

@@ -46,9 +46,12 @@ class SubmitSupportTicketAction
         string $userAgent = '',
         ?UploadedFile $image = null,
     ): SupportTicket {
-        // Truncate user-agent to the column width — some testing /
-        // automation tools emit absurdly long UA strings that would
-        // otherwise blow the schema.
+        // Both metadata fields originate from request headers (untrusted
+        // input) and feed string-typed columns of fixed width. Truncate
+        // before persistence so an absurdly long User-Agent or a spoofed
+        // X-Budojo-Version can't 500 the request via a "data too long"
+        // SQL error. mb_substr keeps the truncation multi-byte-safe.
+        $persistedVersion = $appVersion !== '' ? mb_substr($appVersion, 0, 32) : null;
         $persistedUa = $userAgent !== '' ? mb_substr($userAgent, 0, 512) : null;
 
         /** @var SupportTicket $ticket */
@@ -57,17 +60,26 @@ class SubmitSupportTicketAction
             'subject' => $subjectLine,
             'category' => $category,
             'body' => $body,
-            'app_version' => $appVersion !== '' ? $appVersion : null,
+            'app_version' => $persistedVersion,
             'user_agent' => $persistedUa,
         ]);
 
-        // The optional image is forwarded to the Mailable as an
-        // attachment but never persisted on disk: ticket rows are the
-        // audit trail, the image is a transient triage hint. Same shape
-        // as the legacy feedback flow.
-        $imagePath = $image?->getRealPath();
-        if ($imagePath === false) {
-            $imagePath = null;
+        // Capture the image bytes synchronously and pass them inline to
+        // the Mailable. The previous shape forwarded the request's temp
+        // upload path; that path is bound to the request lifecycle and
+        // is gone by the time the queue worker processes the job, so
+        // the attachment was unreliable. The validator caps uploads at
+        // 5 MB, well within Laravel's LONGTEXT jobs.payload column, so
+        // serialising the bytes into the queue payload is the simpler
+        // and more durable choice (no tmp-disk + cleanup ceremony).
+        $imageBytes = null;
+        $imageOriginalName = null;
+        if ($image !== null) {
+            $imageBytes = file_get_contents($image->getRealPath() ?: '');
+            if ($imageBytes === false) {
+                $imageBytes = null;
+            }
+            $imageOriginalName = $image->getClientOriginalName();
         }
 
         try {
@@ -77,10 +89,10 @@ class SubmitSupportTicketAction
                 body: $body,
                 userEmail: $user->email,
                 userName: $user->name,
-                appVersion: $appVersion !== '' ? $appVersion : 'unknown',
-                userAgent: $userAgent !== '' ? $userAgent : 'unknown',
-                imagePath: $imagePath,
-                imageOriginalName: $image?->getClientOriginalName(),
+                appVersion: $persistedVersion ?? 'unknown',
+                userAgent: $persistedUa ?? 'unknown',
+                imageBytes: $imageBytes,
+                imageOriginalName: $imageOriginalName,
             ));
         } catch (\Throwable $e) {
             report($e);
