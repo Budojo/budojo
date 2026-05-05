@@ -267,6 +267,56 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/password:
+    post:
+      tags: [auth]
+      summary: Change the authenticated user's password
+      description: |
+        Re-authenticates with the current password and rotates it to a new
+        one in a single round-trip. The user is already authenticated via
+        Sanctum to even reach the route; the second password check is a
+        re-auth gate so a hijacked token alone cannot rotate the credential.
+
+        **Side effects on success.** Every Sanctum personal-access-token
+        row belonging to the user is deleted — EXCEPT the one the request
+        was authenticated with. Defence-in-depth (a hijacked session is
+        invalidated when the legitimate owner rotates the credential)
+        without logging the user out of the tab they're using.
+
+        **Validation.**
+
+        - `current_password` must Hash::check against the stored password.
+        - `password` policy mirrors registration: `min:8` + `confirmed`
+          (matching `password_confirmation`).
+        - `password` must differ from `current_password` — a no-op rotation
+          is rejected with a 422 on the `password` field rather than
+          silently succeeding.
+
+        Throttled to 5 requests / minute (Laravel's default IP-based key)
+        to defeat brute-force on the current-password gate.
+      operationId: meChangePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password updated; the surviving Sanctum token continues to authenticate the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Password updated.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttle limit exceeded — retry after the `Retry-After` header.
+
   /me/export:
     get:
       tags: [auth]
@@ -1846,6 +1896,24 @@ components:
           type: string
           format: password
           minLength: 8
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, password, password_confirmation]
+      properties:
+        current_password:
+          type: string
+          format: password
+          description: The user's CURRENT password — re-auth gate.
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: The NEW password. Must differ from `current_password`.
         password_confirmation:
           type: string
           format: password

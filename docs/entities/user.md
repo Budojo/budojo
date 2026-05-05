@@ -38,11 +38,13 @@ Laravel default structure, unchanged.
 - **No soft-delete** on users. Deleting a user cascades to their academy (which cascades to athletes) via FK cascade.
 - **Sanctum tokens** issued at login do not expire by default — `expires_at` in `personal_access_tokens` is null. There is no `/api/v1/auth/logout` endpoint today; "logout" in the SPA is client-side only (drops the token from `localStorage`) and does **not** revoke the row in `personal_access_tokens`. Adding a server-side revoke endpoint is queued for a future PR.
 - **Terms of Service acceptance** (#420). The registration form carries a `Validators.requiredTrue` checkbox; the server's `RegisterRequest` enforces it via Laravel's `accepted` rule. On success `RegisterUserAction` writes `terms_accepted_at = now()` on the user row. The acceptance is recorded once, at signup; versioned ToS with re-acceptance is explicitly out of scope for this milestone. The full ToS text lives at the public `/terms` SPA route. Mirrors the privacy-policy gate (#219) but stays a separate column so legal review can audit each consent independently.
+- **In-app password rotation** (#409). `POST /api/v1/me/password` rotates the password while keeping the user logged in. The request requires `current_password` (Hash::check re-auth gate), `password`, and `password_confirmation`; the new password must satisfy the registration policy (`min:8` + `confirmed`) AND differ from the current one. On success every Sanctum personal-access-token row belonging to the user is deleted EXCEPT the one used for the request — defence-in-depth against a hijacked session without yanking the legitimate user's active tab. Mirrors `RegisterRequest` / `ResetPasswordRequest` rules so a rotation cannot weaken the registration policy.
 
 ## Related endpoints
 
 - `POST /api/v1/auth/register` — creates a user
 - `POST /api/v1/auth/login` — returns a bearer token for this user
+- `POST /api/v1/me/password` — rotates the password in-app; revokes other Sanctum tokens
 - `GET /api/v1/health` — public, no user involved
 
 ## Related tables
