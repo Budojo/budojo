@@ -16,7 +16,8 @@
     "feedback": "Invia feedback",
     "signOut": "Esci",
     "privacy": "Privacy",
-    "stats": "Statistiche"
+    "stats": "Statistiche",
+    "help": "Aiuto"
   },
   "auth": {
     "shared": {
@@ -136,6 +137,95 @@
     "title": "Aggiornamenti recenti",
     "subtitle": "Le novità di Budojo in parole semplici. La più recente in cima.",
     "back": "Torna alla dashboard"
+  },
+  "help": {
+    "brandAriaLabel": "Home Budojo",
+    "eyebrow": "Centro assistenza",
+    "title": "Guida e domande frequenti",
+    "subtitle": "Risposte rapide alle domande più comuni. Scrivi una parola chiave per filtrare, oppure scorri le categorie qui sotto.",
+    "searchPlaceholder": "Cerca nelle FAQ…",
+    "searchAriaLabel": "Cerca negli articoli della guida",
+    "anchorAriaLabel": "Copia il link diretto a questa domanda",
+    "empty": "Nessun risultato. Prova un'altra parola chiave o scorri le categorie qui sotto.",
+    "back": "Torna alla home",
+    "categories": {
+      "getting-started": "Per iniziare",
+      "athletes": "Atleti",
+      "attendance": "Presenze",
+      "payments": "Pagamenti",
+      "documents": "Documenti",
+      "account": "Account"
+    },
+    "entries": {
+      "what-is-budojo": {
+        "question": "Cos'è Budojo?",
+        "answer": "Budojo è un'app gestionale leggera per accademie di jiu-jitsu e arti marziali. Permette di gestire l'elenco degli atleti, le presenze quotidiane, i pagamenti mensili e i documenti dei certificati in un unico posto, pensata per gli istruttori che vivono il tatami, non per il personale di back-office."
+      },
+      "create-academy": {
+        "question": "Come creo la mia accademia?",
+        "answer": "Dopo aver creato l'account e confermato l'email, l'app ti porta in una breve procedura di setup: scegli un nome, indica i giorni di allenamento e hai finito. La procedura compare in automatico al primo accesso finché non la completi."
+      },
+      "invite-coach": {
+        "question": "Posso invitare un istruttore aggiunto?",
+        "answer": "Le accademie multi-utente sono nella roadmap ma non sono ancora disponibili. Per ora ogni account Budojo gestisce una sola accademia. Se ti serve un flusso con co-istruttore, scrivi una nota da Invia feedback nella sidebar — la coda di richieste viene ordinata per domanda effettiva."
+      },
+      "add-athlete": {
+        "question": "Come aggiungo un atleta?",
+        "answer": "Dalla sidebar della dashboard apri Atleti e tocca il pulsante Aggiungi atleta (la CTA primaria color indaco in alto alla lista). Inserisci il nome, gli eventuali contatti, la cintura e la data di iscrizione — solo il nome è strettamente obbligatorio. Salva, e l'atleta compare in elenco."
+      },
+      "import-athletes": {
+        "question": "Come importo gli atleti da un foglio di calcolo?",
+        "answer": "L'importazione massiva da CSV o foglio di calcolo non è ancora rilasciata. Per il momento gli atleti si creano uno alla volta da Atleti → Aggiungi atleta. Se hai un elenco lungo da migrare, scrivici da Invia feedback — preferiamo accelerare l'importazione piuttosto che farti copiare 80 nomi a mano."
+      },
+      "belt-not-listed": {
+        "question": "La mia cintura non è nel menu. Cosa faccio?",
+        "answer": "Budojo supporta l'intera scala IBJJF: bambini (grigia, gialla, arancione, verde), adulti (bianca, blu, viola, marrone, nera con fino a 6 graus), e senior (rossa-nera, rossa-bianca, rossa). Se pratichi un'arte marziale diversa con un sistema di colori proprio, scrivi una nota da Invia feedback così possiamo valutare una scala configurabile."
+      },
+      "suspend-athlete": {
+        "question": "Come sospendo temporaneamente un atleta?",
+        "answer": "Apri la pagina dell'atleta, cambia il campo Stato da Attivo a Sospeso e salva. Gli atleti sospesi restano nel tuo elenco (così la storia di presenze e pagamenti viene preservata) ma non compaiono più nel check-in giornaliero né nella lista di chi va sollecitato per i pagamenti. Riportalo ad Attivo quando torna."
+      },
+      "mark-attendance": {
+        "question": "Come segno le presenze?",
+        "answer": "Apri Presenze dalla sidebar. La schermata si posiziona sull'ultimo giorno di allenamento del tuo calendario settimanale con l'elenco degli atleti attivi pre-caricato. Tocca ogni atleta presente sul tatami per impostarlo come Presente; tocca di nuovo per annullare. Le modifiche si salvano al tocco — nessun pulsante di invio."
+      },
+      "edit-attendance": {
+        "question": "Posso modificare le presenze di un giorno passato?",
+        "answer": "Sì. Da Presenze, cambia la data nel picker scegliendo il giorno da correggere e tocca Presente / non sull'atleta. Le presenze sono modificabili retroattivamente — non c'è una finestra di blocco — quindi un check-in dimenticato o un tocco sbagliato di domenica può essere sistemato la mattina dopo."
+      },
+      "set-monthly-fee": {
+        "question": "Come imposto la quota mensile?",
+        "answer": "Apri Accademia → Modifica e compila il campo Quota mensile. Una volta impostata, la tab Pagamenti su ogni profilo atleta si attiva e il toggle inline per segnare il pagamento sull'elenco atleti diventa cliccabile. Lascia il campo vuoto se non vuoi gestire i pagamenti tramite Budojo — il toggle e la tab semplicemente non compaiono."
+      },
+      "mark-paid": {
+        "question": "Come segno qualcuno come pagato per il mese?",
+        "answer": "Due percorsi. Dall'elenco atleti, tocca il toggle Pagato · <mese> sulla riga dell'atleta per impostarlo come pagato per il mese in corso. Dal profilo atleta, apri la tab Pagamenti e tocca una riga di mese per cambiarne lo stato — è anche così che si registrano i mesi passati a posteriori."
+      },
+      "unpaid-badge": {
+        "question": "Cosa significa il badge Non pagato?",
+        "answer": "Il badge Non pagato compare sugli atleti che non hanno ancora versato la quota del mese in corso. Dal 16 in poi, anche la home della dashboard mostra un riquadro Da pagare questo mese con tutti gli atleti da sollecitare — fino al 15 la maggior parte dei clienti paga nella consueta finestra di inizio mese, quindi sollecitare prima sarebbe rumore. Gli atleti sospesi o inattivi non compaiono mai nella lista da sollecitare."
+      },
+      "upload-medical-cert": {
+        "question": "Come carico un certificato medico?",
+        "answer": "Apri la pagina dell'atleta e passa alla tab Documenti. Tocca Aggiungi documento, scegli il tipo (in genere Certificato medico), imposta le date di emissione e scadenza e allega il PDF o la foto. Budojo usa la data di scadenza per ricordare a te e all'atleta — tramite il digest delle scadenze del certificato medico — che la deadline si avvicina."
+      },
+      "expiring-documents": {
+        "question": "Dove vedo tutti i documenti in scadenza in un colpo d'occhio?",
+        "answer": "La home della dashboard ha un riquadro Documenti in scadenza che elenca i prossimi certificati da rinnovare nei 30 giorni successivi. Tocca Vedi tutti per atterrare sull'elenco completo dei documenti in scadenza, ordinato per scadenza più vicina. Gli stessi dati alimentano il digest email quotidiano delle 9:00 inviato solo quando c'è davvero qualcosa da sollecitare."
+      },
+      "change-language": {
+        "question": "Come cambio la lingua?",
+        "answer": "La sidebar della dashboard ha un piccolo toggle EN ⇄ IT subito sopra il footer della versione. Scegli la lingua e tutta l'app — pagine, form, menu a tendina, messaggi di errore — passa subito. La scelta viene memorizzata sul dispositivo, quindi chiudendo il browser e riaprendolo domani trovi la stessa lingua."
+      },
+      "export-data": {
+        "question": "Come scarico una copia dei miei dati?",
+        "answer": "Apri Profilo → I tuoi dati e tocca Scarica i miei dati. Riceverai un archivio ZIP con i dettagli dell'accademia, gli atleti, i pagamenti, le presenze e i documenti caricati — l'export ai sensi dell'Art. 15 GDPR. Il file viene generato su richiesta, quindi un'accademia grande può richiedere qualche istante per essere preparata."
+      },
+      "delete-account": {
+        "question": "Come elimino il mio account?",
+        "answer": "Apri Profilo e tocca Elimina account. Riceverai un'email di conferma ed entrerai in una finestra di tolleranza di 30 giorni durante la quale basta riaccedere per annullare la cancellazione. Dopo i 30 giorni i tuoi dati vengono eliminati definitivamente — accademia, atleti, presenze, pagamenti, documenti — senza alcuna possibilità di recupero."
+      }
+    }
   },
   "notFound": {
     "title": "Pagina non trovata",

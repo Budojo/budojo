@@ -181,6 +181,18 @@
         </button>
       </div>
       <p class="sidebar__version" data-cy="sidebar-version">
+        <!-- Help link (#422). Public route — same `sidebar__legal-link`
+             treatment as Privacy below: muted, footer-of-every-page
+             chrome, separated by a middle dot. Sits BEFORE Privacy
+             because help-seeking is a higher-frequency action than
+             reading the policy. -->
+        <a
+          class="sidebar__legal-link"
+          routerLink="/help"
+          data-cy="sidebar-help-link"
+          >{{ 'nav.help' | translate }}</a
+        >
+        <span aria-hidden="true">·</span>
         <!-- Privacy link adapts to the active language (#291). EN users
              land on the canonical /privacy; IT users go straight to
              /privacy/it without bouncing through the English page +
