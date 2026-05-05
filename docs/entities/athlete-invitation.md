@@ -23,7 +23,7 @@ Laravel's `URL::temporarySignedRoute()` could in principle stamp the entire invi
 | `academy_id` | bigint unsigned | FK `academies.id`, cascade on delete, **indexed** | Tenant scoping. Cascade for the same reason. |
 | `sent_by_user_id` | bigint unsigned | FK `users.id`, cascade on delete | The owner that pressed "Invita". Cascade so a hard-deleted owner doesn't leave dangling FKs. |
 | `email` | string(255) | not null | Snapshot of the athlete's email at invite time. Persisted alongside the dereferenced `athletes.email` because the athlete row's email can change after the invite is sent — and we want the "we emailed THIS address on THAT date" trail intact. |
-| `token` | string(64) | not null, **unique** | URL-safe random token. The `/athlete-invite/{token}/accept` endpoint reads it. |
+| `token` | string(64) | not null, **unique** | SHA-256 hex digest of a 64-char URL-safe random raw token. The raw token is emitted in the invite URL exactly ONCE (the email body) and never persisted. The `/athlete-invite/{token}/accept` endpoint hashes the URL-presented value and looks up by hash, so a DB read leak does not yield live bearer credentials. See `AthleteInvitation::hashToken()` for the helper used on both sides. |
 | `expires_at` | timestamp | not null | Default 7 days from insert. The action sets the actual value so a future config-driven window is one edit away. |
 | `accepted_at` | timestamp | nullable | Set in `AcceptAthleteInvitationAction` when the athlete clicks + sets a password + ticks ToS. |
 | `revoked_at` | timestamp | nullable | Set by the owner before the athlete accepts. |

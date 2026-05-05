@@ -35,6 +35,24 @@ it('an owner user has no linked athlete (HasOne returns null)', function (): voi
     expect($owner->athlete)->toBeNull();
 });
 
+it('enforces unique athletes.user_id (HasOne invariant — one user → at most one athlete)', function (): void {
+    // Two athletes pointing at the same user_id would silently
+    // break `User::athlete()` — the HasOne could return either row.
+    // The UNIQUE index on athletes.user_id is the schema-level
+    // guard, asserted here so a future migration accidentally
+    // dropping it trips this test.
+    $owner = User::factory()->create();
+    /** @var Academy $academy */
+    $academy = Academy::factory()->for($owner, 'owner')->create();
+    /** @var User $athleteUser */
+    $athleteUser = User::factory()->athlete()->create();
+
+    Athlete::factory()->for($academy)->create(['user_id' => $athleteUser->id]);
+
+    expect(fn () => Athlete::factory()->for($academy)->create(['user_id' => $athleteUser->id]))
+        ->toThrow(\Illuminate\Database\UniqueConstraintViolationException::class);
+});
+
 it('null-sets athletes.user_id when the linked user is deleted (no cascade)', function (): void {
     // The FK is configured `nullOnDelete()` so a user being deleted
     // (e.g. GDPR Art. 17 hard-delete) does NOT take the athlete row

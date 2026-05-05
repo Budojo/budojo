@@ -78,17 +78,50 @@ class AthleteInvitation extends Model
         return $this->revoked_at !== null;
     }
 
+    /**
+     * Mutually exclusive with `isAccepted()` and `isRevoked()`. A row
+     * past its `expires_at` that was already accepted or revoked
+     * stays in its terminal state — "expired" describes the
+     * "ran out of time before anyone touched it" branch only.
+     */
     public function isExpired(): bool
     {
-        return $this->expires_at->isPast();
+        return ! $this->isAccepted()
+            && ! $this->isRevoked()
+            && $this->expires_at->isPast();
     }
 
     /**
-     * Pending = not accepted, not revoked, not expired.
+     * Pending = not accepted, not revoked, expiry in the future.
+     * The four lifecycle helpers (`isPending`, `isAccepted`,
+     * `isRevoked`, `isExpired`) are pairwise mutually exclusive —
+     * every row is in exactly one state at all times.
      */
     public function isPending(): bool
     {
-        return ! $this->isAccepted() && ! $this->isRevoked() && ! $this->isExpired();
+        return ! $this->isAccepted()
+            && ! $this->isRevoked()
+            && $this->expires_at->isFuture();
+    }
+
+    /**
+     * Hash a raw invitation token before storing or comparing.
+     *
+     * The DB column carries the SHA-256 hex digest, NOT the raw
+     * token: the token is a single-use bearer credential (clicking
+     * the link IS the auth on the accept endpoint), so a DB read
+     * leak that exposed plaintext would let an attacker redeem
+     * every pending invite immediately. Hashing makes the table
+     * harmless on its own — the action hashes the URL-presented
+     * raw token and looks up by hash.
+     *
+     * SHA-256 (rather than bcrypt) is sufficient here: the raw
+     * token is 64 chars of CSPRNG output, so brute-force resistance
+     * comes from the input entropy, not from a slow KDF.
+     */
+    public static function hashToken(string $rawToken): string
+    {
+        return hash('sha256', $rawToken);
     }
 
     /**

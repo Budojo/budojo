@@ -10,7 +10,7 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 |---|---|---|---|
 | `id` | bigint unsigned | PK, auto-increment | |
 | `academy_id` | bigint unsigned | FK `academies.id`, cascade on delete, **indexed** | Tenant scoping |
-| `user_id` | bigint unsigned | FK `users.id`, **nullable**, null on delete, **indexed** | M7 athlete-login link (#445). Null until the athlete accepts the owner's invite via `AcceptAthleteInvitationAction`; non-null afterwards. Null-on-delete so a user being hard-deleted (GDPR Art. 17) does NOT remove the roster row — the link clears, the row stays, the owner can re-invite. |
+| `user_id` | bigint unsigned | FK `users.id`, **nullable**, **unique**, null on delete | M7 athlete-login link (#445). Null until the athlete accepts the owner's invite via `AcceptAthleteInvitationAction`; non-null afterwards. UNIQUE because `User::athlete()` is `HasOne` — two athletes pointing at the same user_id would silently break the relation invariant. Null-on-delete so a user being hard-deleted (GDPR Art. 17) does NOT remove the roster row — the link clears, the row stays, the owner can re-invite. |
 | `first_name` | string(255) | not null | |
 | `last_name` | string(255) | not null | |
 | `email` | string(255) | nullable | Optional contact email — uniqueness is scoped per academy (two academies can have a Mario Rossi with the same email, one academy cannot) |

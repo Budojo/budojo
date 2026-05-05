@@ -44,6 +44,55 @@ it('flags accepted / revoked / expired states correctly via helpers', function (
     expect($expired->isPending())->toBeFalse();
 });
 
+it('keeps the four lifecycle helpers pairwise mutually exclusive', function (): void {
+    // A row that was accepted before its expires_at must still
+    // report accepted, not also expired — downstream business
+    // logic that branches on these helpers (e.g. "accept this
+    // pending invite") would mis-route otherwise. Same for revoked.
+    $acceptedThenExpired = AthleteInvitation::factory()
+        ->accepted()
+        ->expired()
+        ->create();
+    $revokedThenExpired = AthleteInvitation::factory()
+        ->revoked()
+        ->expired()
+        ->create();
+
+    expect($acceptedThenExpired->isAccepted())->toBeTrue();
+    expect($acceptedThenExpired->isExpired())->toBeFalse();
+    expect($acceptedThenExpired->isPending())->toBeFalse();
+
+    expect($revokedThenExpired->isRevoked())->toBeTrue();
+    expect($revokedThenExpired->isExpired())->toBeFalse();
+    expect($revokedThenExpired->isPending())->toBeFalse();
+});
+
+it('hashes the raw token deterministically via the static helper', function (): void {
+    $raw = 'a-known-raw-token-with-enough-entropy-for-this-test';
+
+    $hash1 = AthleteInvitation::hashToken($raw);
+    $hash2 = AthleteInvitation::hashToken($raw);
+
+    // Deterministic — same input, same output, so the accept-flow
+    // action can hash the URL-presented raw token and look up the
+    // row by hash without storing plaintext.
+    expect($hash1)->toBe($hash2);
+    // SHA-256 hex digest is 64 hex chars.
+    expect($hash1)->toMatch('/^[a-f0-9]{64}$/');
+    expect($hash1)->not->toBe($raw);
+});
+
+it('persists the token as a hash, never as the raw bearer credential', function (): void {
+    // The factory generates a hashed token in the column. Asserting
+    // the stored value matches the SHA-256 hex format catches a
+    // future refactor that accidentally stores the raw token.
+    $invitation = AthleteInvitation::factory()->create();
+
+    $row = \DB::table('athlete_invitations')->where('id', $invitation->id)->first();
+    expect($row)->not->toBeNull();
+    expect($row->token)->toMatch('/^[a-f0-9]{64}$/');
+});
+
 it('the pending() scope returns only un-accepted, un-revoked, un-expired rows', function (): void {
     AthleteInvitation::factory()->create();              // pending
     AthleteInvitation::factory()->create();              // pending

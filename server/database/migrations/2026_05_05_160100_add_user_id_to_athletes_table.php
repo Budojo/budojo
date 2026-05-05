@@ -32,7 +32,14 @@ return new class () extends Migration {
                 ->constrained('users')
                 ->nullOnDelete();
 
-            $table->index('user_id');
+            // UNIQUE not merely indexed: `User::athlete()` is a HasOne
+            // (an athlete user maps to exactly one athlete row), so two
+            // athletes pointing at the same user_id would silently
+            // break the relation invariant — `$user->athlete` would
+            // return an arbitrary row. Nullable + UNIQUE allows
+            // multiple NULLs (both MySQL and SQLite agree on this) so
+            // every existing roster row stays legal until linked.
+            $table->unique('user_id');
         });
     }
 
@@ -40,7 +47,7 @@ return new class () extends Migration {
     {
         Schema::table('athletes', function (Blueprint $table): void {
             $table->dropForeign(['user_id']);
-            $table->dropIndex(['user_id']);
+            $table->dropUnique(['user_id']);
             $table->dropColumn('user_id');
         });
     }
