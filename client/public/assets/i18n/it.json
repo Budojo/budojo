@@ -145,7 +145,7 @@
     "subtitle": "Risposte rapide alle domande più comuni. Scrivi una parola chiave per filtrare, oppure scorri le categorie qui sotto.",
     "searchPlaceholder": "Cerca nelle FAQ…",
     "searchAriaLabel": "Cerca negli articoli della guida",
-    "anchorAriaLabel": "Copia il link diretto a questa domanda",
+    "anchorAriaLabel": "Copia il link diretto a: {{question}}",
     "empty": "Nessun risultato. Prova un'altra parola chiave o scorri le categorie qui sotto.",
     "back": "Torna alla home",
     "categories": {

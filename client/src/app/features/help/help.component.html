@@ -62,7 +62,11 @@
                   class="help-page__anchor"
                   routerLink="/help"
                   [fragment]="entry.id"
-                  [attr.aria-label]="'help.anchorAriaLabel' | translate"
+                  [attr.aria-label]="
+                    'help.anchorAriaLabel'
+                      | translate
+                        : { question: 'help.entries.' + entry.id + '.question' | translate }
+                  "
                   data-cy="help-entry-anchor"
                 >
                   <i class="pi pi-link" aria-hidden="true"></i>

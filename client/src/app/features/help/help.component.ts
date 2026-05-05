@@ -48,12 +48,42 @@ import { LanguageService } from '../../core/services/language.service';
  * `withInMemoryScrolling({ anchorScrolling: 'enabled' })` so a
  * `[fragment]="id"` link scrolls the matching `<section id="...">`
  * into view. The `routerLink` itself stays on `/help` so anchors
- * survive a `LanguageService.use()` re-render.
+ * survive a `LanguageService.setLanguage()` re-render.
  */
 
+/**
+ * The closed set of allowed FAQ entry ids. Authoritative — every
+ * `help.entries.<id>.{question,answer}` translation key is derived
+ * from this list and the `i18n-keys.spec.ts` parity check + the
+ * spec's "every id resolves to a non-empty translation" assertion
+ * lock the contract. Adding an entry = add the id here AND the two
+ * keys in EN + IT.
+ */
+const FAQ_ENTRY_IDS = [
+  'what-is-budojo',
+  'create-academy',
+  'invite-coach',
+  'add-athlete',
+  'import-athletes',
+  'belt-not-listed',
+  'suspend-athlete',
+  'mark-attendance',
+  'edit-attendance',
+  'set-monthly-fee',
+  'mark-paid',
+  'unpaid-badge',
+  'upload-medical-cert',
+  'expiring-documents',
+  'change-language',
+  'export-data',
+  'delete-account',
+] as const;
+
+type FaqEntryId = (typeof FAQ_ENTRY_IDS)[number];
+
 interface FaqEntry {
-  /** Stable URL anchor (`/help#<id>`). DO NOT rename without a redirect. */
-  readonly id: string;
+  /** Stable URL anchor (`/help#<id>`). Compile-time-checked against the closed set above. */
+  readonly id: FaqEntryId;
 }
 
 interface FaqCategory {
@@ -185,3 +215,6 @@ export class HelpComponent implements OnInit {
     return q.includes(lowercaseNeedle) || a.includes(lowercaseNeedle);
   }
 }
+
+export { FAQ_ENTRY_IDS };
+export type { FaqEntryId };

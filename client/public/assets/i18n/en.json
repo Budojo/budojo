@@ -145,7 +145,7 @@
     "subtitle": "Quick answers to the questions we hear most. Type a keyword to filter, or scroll the categories below.",
     "searchPlaceholder": "Search the FAQ…",
     "searchAriaLabel": "Search the help articles",
-    "anchorAriaLabel": "Copy direct link to this question",
+    "anchorAriaLabel": "Copy direct link to: {{question}}",
     "empty": "No matches. Try a different keyword, or browse the categories below.",
     "back": "Back to home",
     "categories": {
