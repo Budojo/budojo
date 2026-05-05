@@ -21,7 +21,9 @@ function setup(authOverrides: Partial<AuthService> = {}, userOverride?: User | n
     user: userSignal,
     isEmailVerified: signal<boolean>(true) as never,
     exportMyData: vi.fn(() => of({ blob: new Blob(['ok']), filename: 'budojo-export.zip' })),
-    uploadAvatar: vi.fn(() => of({ ...FAKE_USER, avatar_url: '/storage/users/avatars/1.png?v=1700000000' })),
+    uploadAvatar: vi.fn(() =>
+      of({ ...FAKE_USER, avatar_url: '/storage/users/avatars/1.png?v=1700000000' }),
+    ),
     removeAvatar: vi.fn(() => of({ ...FAKE_USER, avatar_url: null })),
     changePassword: vi.fn(() => of({ message: 'Password updated.' })),
     ...authOverrides,
