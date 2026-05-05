@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-  OnInit,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -69,9 +62,6 @@ export class AthleteInviteComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
 
   readonly token = signal<string | null>(null);
-  readonly isReady = computed(
-    () => this.state() === 'ready' || this.state() === 'submitting' || this.state() === 'error',
-  );
 
   readonly form = this.fb.group(
     {

@@ -121,7 +121,7 @@
     "loading": "Loading your invitation…",
     "title": "Accept your invitation",
     "subtitle": "Set a password to finish creating your athlete account.",
-    "subtitleWithAcademy": "<strong>{academy}</strong> has invited you to log in. Set a password to finish creating your athlete account.",
+    "subtitleWithAcademy": "{{academy}} has invited you to log in. Set a password to finish creating your athlete account.",
     "name": "Full name",
     "email": "Email",
     "password": "Password",
@@ -152,6 +152,13 @@
       "invite_expired": "This invitation has expired. Ask your academy owner to send you a new one.",
       "email_already_registered": "An account already exists for this email. Please sign in instead.",
       "unknown_error": "Something went wrong. Please try again in a moment."
+    }
+  },
+  "athletePortal": {
+    "welcome": {
+      "title": "Welcome to Budojo",
+      "body": "Your athlete account is ready. The pages where you'll see your own attendance history, payments, and documents are coming in the next release — for now, sit tight, your academy will let you know when there's more here.",
+      "signOut": "Sign out"
     }
   },
   "setup": {
