@@ -138,8 +138,22 @@
          spots the changelog before the finality of signing out.
          "Send feedback" (#311) sits ABOVE What's new — an active path
          (the user has something to say) outranks the passive changelog
-         in the footer's read order. -->
+         in the footer's read order.
+         "Contact support" (#423) sits ABOVE Send feedback — the
+         expecting-a-reply channel ranks higher than the fire-and-forget
+         one. A user with a problem reaches for support first; feedback
+         is the secondary affordance below it. -->
     <div class="sidebar__footer">
+      <a
+        routerLink="support"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item sidebar__nav-item--support"
+        (click)="closeSidebar()"
+        data-cy="nav-support"
+      >
+        <i class="pi pi-life-ring" aria-hidden="true"></i>
+        <span>{{ 'nav.support' | translate }}</span>
+      </a>
       <a
         routerLink="feedback"
         routerLinkActive="sidebar__nav-item--active"
