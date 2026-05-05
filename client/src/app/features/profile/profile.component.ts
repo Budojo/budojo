@@ -151,12 +151,18 @@ export class ProfileComponent {
   submitChangePassword(): void {
     if (this.changingPassword()) return;
 
+    // Always clear the server-error banner on a fresh submit attempt —
+    // BEFORE the form-validity guard. Otherwise a previous 422 (e.g.
+    // wrong current password) lingers visibly while the user fixes a
+    // client-side error like an empty new-password field, mixing the
+    // two error sources in the same render and confusing the user.
+    this.changePasswordServerError.set(null);
+
     if (this.changePasswordForm.invalid) {
       this.changePasswordForm.markAllAsTouched();
       return;
     }
 
-    this.changePasswordServerError.set(null);
     this.changingPassword.set(true);
 
     const { currentPassword, newPassword, newPasswordConfirmation } =

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Auth;
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -31,35 +32,40 @@ class ChangePasswordAction
 {
     public function execute(User $user, string $newPassword): void
     {
-        $user->forceFill([
-            'password' => Hash::make($newPassword),
-        ])->save();
+        // Save + token revocation are two halves of one security
+        // operation. Wrap in a transaction so a failure on the delete
+        // can't leave a state where the password is rotated but the
+        // pre-existing sessions are still valid (which would silently
+        // defeat the defence-in-depth promise of the feature).
+        DB::transaction(function () use ($user, $newPassword): void {
+            $user->forceFill([
+                'password' => Hash::make($newPassword),
+            ])->save();
 
-        // `currentAccessToken()` returns a `PersonalAccessToken` model when
-        // the user authenticated via a real Sanctum bearer (the production
-        // path), a `TransientToken` placeholder under cookie-based session
-        // auth, or null when invoked outside an HTTP request. Only the
-        // first carries a real `id` we can preserve — the other two cases
-        // mean we don't have a "current row" to keep, and the safest
-        // fallback is to revoke everything (no token survives, the user
-        // re-authenticates next request — that's the defence-in-depth
-        // shape, slightly stricter than the happy path).
-        $currentToken = $user->currentAccessToken();
-        // Sanctum's `@template TToken = PersonalAccessToken` docblock makes
-        // PHPStan see this instanceof as always-true. At runtime the value
-        // can also be `TransientToken` (cookie-session auth) or `null`
-        // (non-HTTP context); neither exposes the `getKey()` we need to
-        // preserve, so the explicit check is genuine despite the static
-        // analyzer's view of the world.
-        /** @phpstan-ignore-next-line instanceof.alwaysTrue */
-        $currentTokenId = $currentToken instanceof PersonalAccessToken
-            ? $currentToken->getKey()
-            : null;
+            // `currentAccessToken()` returns a `PersonalAccessToken`
+            // model when the user authenticated via a real Sanctum
+            // bearer (production path), a `TransientToken` placeholder
+            // under cookie-based session auth, or null when invoked
+            // outside an HTTP request. Only the first carries a real
+            // `id` we can preserve — the other two cases mean we don't
+            // have a "current row" to keep, and the safest fallback is
+            // to revoke everything.
+            $currentToken = $user->currentAccessToken();
+            // Sanctum's `@template TToken = PersonalAccessToken`
+            // docblock makes PHPStan see this instanceof as always-true.
+            // At runtime the value can also be `TransientToken` or
+            // `null`; neither exposes `getKey()`, so the explicit check
+            // is genuine despite the static analyzer's view of the world.
+            /** @phpstan-ignore-next-line instanceof.alwaysTrue */
+            $currentTokenId = $currentToken instanceof PersonalAccessToken
+                ? $currentToken->getKey()
+                : null;
 
-        $query = $user->tokens();
-        if ($currentTokenId !== null) {
-            $query->where('id', '!=', $currentTokenId);
-        }
-        $query->delete();
+            $query = $user->tokens();
+            if ($currentTokenId !== null) {
+                $query->where('id', '!=', $currentTokenId);
+            }
+            $query->delete();
+        });
     }
 }

@@ -428,7 +428,7 @@
       "newPassword": "Nuova password",
       "newPasswordRequired": "Inserisci una nuova password.",
       "newPasswordMinlength": "Usa almeno 8 caratteri.",
-      "newPasswordServerError": "La nuova password non è valida. Deve avere almeno 8 caratteri ed essere diversa da quella attuale.",
+      "newPasswordServerError": "La nuova password è stata rifiutata dal server. Verifica che abbia almeno 8 caratteri, sia diversa dalla password attuale e che la conferma corrisponda.",
       "newPasswordConfirmation": "Conferma nuova password",
       "mismatch": "Le password non coincidono.",
       "submit": "Aggiorna password",
