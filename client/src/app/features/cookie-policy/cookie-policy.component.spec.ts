@@ -59,6 +59,20 @@ describe('CookiePolicyComponent — canonical English /cookie-policy (#421)', ()
     expect(consent.decided()).toBe(false);
   });
 
+  it('renders manage-preferences as a real <button>, not a javascript: anchor', () => {
+    // Locks the keyboard-accessible control in place: a future refactor
+    // back to `<a href="javascript:void(0)">` would silently break
+    // assistive-tech semantics + strict-CSP environments. The component-
+    // level managePreferences() spy above passes either way; this DOM
+    // assertion is the regression trip-wire.
+    const { fixture } = setup();
+    const root: HTMLElement = fixture.nativeElement;
+    const manage = root.querySelector('[data-cy="cookie-policy-manage"]') as HTMLElement | null;
+    expect(manage).not.toBeNull();
+    expect(manage!.tagName).toBe('BUTTON');
+    expect(manage!.getAttribute('type')).toBe('button');
+  });
+
   it('CTA navigates back to the root', () => {
     const { cmp } = setup();
     cmp.goHome();

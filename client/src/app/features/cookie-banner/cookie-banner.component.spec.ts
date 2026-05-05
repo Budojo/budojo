@@ -43,6 +43,20 @@ describe('CookieBannerComponent (#421)', () => {
     expect(banner).toBeTruthy();
   });
 
+  it('exposes the banner as a named region landmark (no role="dialog")', () => {
+    // The banner is non-modal — no focus trap, no escape handling — so
+    // it MUST NOT claim dialog semantics. role="region" + aria-label is
+    // the honest landmark; this assertion locks the contract so a future
+    // refactor can't silently regress to role="dialog".
+    const { fixture } = setup();
+    const banner = fixture.nativeElement.querySelector(
+      '[data-cy="cookie-banner"]',
+    ) as HTMLElement;
+    expect(banner.getAttribute('role')).toBe('region');
+    expect(banner.getAttribute('aria-label')).toBeTruthy();
+    expect(banner.getAttribute('aria-modal')).toBeNull();
+  });
+
   it('hides the banner once a decision exists in storage', () => {
     // Arrange: a current-version payload so hydrate() flips decided=true
     localStorage.setItem(
