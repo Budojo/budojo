@@ -117,6 +117,13 @@
       }
     }
   },
+  "athletePortal": {
+    "welcome": {
+      "title": "Welcome to Budojo",
+      "body": "Your athlete account is ready. The pages where you'll see your own attendance history, payments, and documents are coming in the next release — for now, sit tight, your academy will let you know when there's more here.",
+      "signOut": "Sign out"
+    }
+  },
   "setup": {
     "title": "Set up your academy",
     "subtitle": "You're almost there — tell us about your gym",

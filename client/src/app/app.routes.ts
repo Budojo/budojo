@@ -3,6 +3,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { hasAcademyGuard } from './core/guards/has-academy.guard';
 import { noAcademyGuard } from './core/guards/no-academy.guard';
 import { publicGuard } from './core/guards/public.guard';
+import { roleAthleteGuard, roleOwnerGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   {
@@ -52,13 +53,34 @@ export const routes: Routes = [
   },
   {
     path: 'setup',
-    canActivate: [authGuard, noAcademyGuard],
+    canActivate: [authGuard, roleOwnerGuard, noAcademyGuard],
     loadComponent: () =>
       import('./features/academy/setup/setup.component').then((m) => m.SetupComponent),
   },
   {
+    // Athlete-side landing surface (#445, M7 PR-D minimal). The full
+    // athlete dashboard with own attendance / payments / documents
+    // ships in PR-E next milestone; this route + the welcome
+    // placeholder keep an athlete who's just accepted their invite
+    // from bouncing through owner-only guards. roleAthleteGuard
+    // bounces an owner who manually navigates here back to
+    // /dashboard so the URL space stays segmented per persona.
+    path: 'athlete-portal',
+    canActivate: [authGuard, roleAthleteGuard],
+    children: [
+      { path: '', redirectTo: 'welcome', pathMatch: 'full' },
+      {
+        path: 'welcome',
+        loadComponent: () =>
+          import('./features/athlete-portal/welcome/athlete-portal-welcome.component').then(
+            (m) => m.AthletePortalWelcomeComponent,
+          ),
+      },
+    ],
+  },
+  {
     path: 'dashboard',
-    canActivate: [authGuard, hasAcademyGuard],
+    canActivate: [authGuard, roleOwnerGuard, hasAcademyGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
     children: [
