@@ -16,7 +16,9 @@ import { provideI18nTesting } from '../../../test-utils/i18n-test';
 // concern — we only assert that `logout()` is called, not how it persists.
 class FakeAuthService {
   readonly logout = vi.fn();
-  readonly user = signal<null>(null);
+  // Loose typing so individual specs can `user.set(...)` a User-shaped object
+  // without re-declaring the full interface in every assertion.
+  readonly user = signal<unknown>(null);
   readonly isEmailVerified = signal(false);
   readonly getToken = vi.fn(() => null as string | null);
   readonly loadCurrentUser = vi.fn(() =>
@@ -147,6 +149,57 @@ describe('DashboardComponent', () => {
       expect(component.sidebarOpen()).toBe(false);
       expect(authService.logout).toHaveBeenCalledTimes(1);
       expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
+    });
+  });
+
+  describe('topbar user avatar chip (#411)', () => {
+    it('renders a topbar avatar chip linking to /dashboard/profile with initials fallback', () => {
+      authService.user.set({
+        id: 1,
+        name: 'Mario Rossi',
+        email: 'mario@example.com',
+        email_verified_at: null,
+        avatar_url: null,
+      } as never);
+
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="topbar-user-avatar"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.tagName).toBe('A');
+      expect(link!.getAttribute('href')).toBe('/dashboard/profile');
+      // Initials fallback when avatar_url is null.
+      const initials = link!.querySelector('[data-cy="user-avatar-initials"]');
+      expect(initials).not.toBeNull();
+      expect(initials!.textContent?.trim()).toBe('MR');
+    });
+
+    it('renders the uploaded avatar image when avatar_url is set', () => {
+      authService.user.set({
+        id: 1,
+        name: 'Mario Rossi',
+        email: 'mario@example.com',
+        email_verified_at: null,
+        avatar_url: '/storage/users/avatars/1.jpg',
+      } as never);
+
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const img = fixture.nativeElement.querySelector(
+        '[data-cy="topbar-user-avatar"] [data-cy="user-avatar-image"]',
+      ) as HTMLImageElement | null;
+      expect(img).not.toBeNull();
+      expect(img!.getAttribute('src')).toBe('/storage/users/avatars/1.jpg');
+      // Initials fallback should not render when the image is present.
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-cy="topbar-user-avatar"] [data-cy="user-avatar-initials"]',
+        ),
+      ).toBeNull();
     });
   });
 

@@ -12,6 +12,67 @@
       </div>
     }
 
+    <!--
+      Avatar card (#411). Mirrors the academy-logo card on
+      AcademyDetailComponent — left: avatar disc, right: title + hint
+      + actions. Upload button label flips between "Upload" and
+      "Replace" based on whether `avatar_url` is set; remove only
+      surfaces when there's something to remove (Norman § constraints).
+    -->
+    <p-card styleClass="profile-page__card">
+      <div class="avatar-card" data-cy="profile-avatar-card">
+        <div class="avatar-card__preview" data-cy="profile-avatar-preview">
+          <app-user-avatar
+            [url]="avatarUrl()"
+            [name]="u.name"
+            size="card"
+            [alt]="'profile.avatarAlt' | translate"
+          />
+        </div>
+        <div class="avatar-card__body">
+          <p class="avatar-card__title">{{ 'profile.avatarTitle' | translate }}</p>
+          <p class="avatar-card__hint">{{ 'profile.avatarHint' | translate }}</p>
+          <div class="avatar-card__actions">
+            <p-button
+              [label]="(avatarUrl() ? 'profile.avatarReplace' : 'profile.avatarUpload') | translate"
+              icon="pi pi-upload"
+              [loading]="avatarUploading()"
+              (onClick)="onAvatarBrowse()"
+              data-cy="profile-avatar-upload"
+            />
+            @if (avatarUrl()) {
+              <p-button
+                [label]="'profile.avatarRemove' | translate"
+                icon="pi pi-trash"
+                severity="secondary"
+                [text]="true"
+                (onClick)="confirmRemoveAvatar($event)"
+                data-cy="profile-avatar-remove"
+              />
+            }
+          </div>
+        </div>
+        <!--
+          Synthetic file input. Visually hidden (the visible affordance
+          is the "Upload"/"Replace" p-button next to the avatar, which
+          calls .click() on this input). Removed from the tab order +
+          aria-hidden so a keyboard / screen-reader user is never
+          presented with an unlabeled focusable control they can't see.
+        -->
+        <input
+          #avatarInput
+          type="file"
+          class="avatar-card__file"
+          accept="image/png,image/jpeg,image/webp"
+          (change)="onAvatarSelected($event)"
+          tabindex="-1"
+          aria-hidden="true"
+          data-cy="profile-avatar-input"
+        />
+      </div>
+    </p-card>
+    <p-confirmpopup />
+
     <p-card styleClass="profile-page__card">
       <div class="profile-page__row">
         <span class="profile-page__label">{{ 'profile.name' | translate }}</span>

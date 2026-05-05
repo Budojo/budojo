@@ -8,6 +8,7 @@
     "open": "Open navigation",
     "close": "Close navigation",
     "homeAriaLabel": "Budojo — go to dashboard home",
+    "profileAriaLabel": "Open your profile",
     "academy": "Academy",
     "athletes": "Athletes",
     "attendance": "Attendance",
@@ -453,6 +454,29 @@
       "errorSummary": "Error",
       "throttledDetail": "You already exported your data recently. Try again in a minute.",
       "genericErrorDetail": "Couldn't download your data. Please try again."
+    },
+    "avatarTitle": "Profile photo",
+    "avatarHint": "PNG, JPG or WebP, max 2 MB.",
+    "avatarAlt": "Your profile photo",
+    "avatarUpload": "Upload",
+    "avatarReplace": "Replace",
+    "avatarRemove": "Remove",
+    "avatarToast": {
+      "unsupportedSummary": "Unsupported file",
+      "unsupportedDetail": "Use PNG, JPG or WebP.",
+      "tooLargeSummary": "File too large",
+      "tooLargeDetail": "Maximum 2 MB.",
+      "uploadSuccess": "Profile photo updated",
+      "uploadErrorSummary": "Upload failed",
+      "uploadErrorDetail": "Could not save the new photo. Please try again.",
+      "removeSuccess": "Profile photo removed",
+      "removeErrorSummary": "Remove failed",
+      "removeErrorDetail": "Could not remove the photo. Please try again."
+    },
+    "avatarConfirm": {
+      "removeMessage": "Remove your profile photo?",
+      "removeAccept": "Remove",
+      "removeReject": "Cancel"
     },
     "changePassword": {
       "title": "Password",

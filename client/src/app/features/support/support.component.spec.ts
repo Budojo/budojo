@@ -21,6 +21,7 @@ function setup(overrides: { submit?: SupportService['submit']; email?: string } 
             name: 'Test User',
             email: overrides.email,
             email_verified_at: '2026-01-01T00:00:00Z',
+            avatar_url: null,
           },
     ),
   };

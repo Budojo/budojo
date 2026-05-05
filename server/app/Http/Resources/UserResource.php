@@ -40,6 +40,13 @@ class UserResource extends JsonResource
             'name' => $user->name,
             'email' => $user->email,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
+            // Avatar (#411). Always emit the FULL URL, never the on-disk
+            // path — the Resource is the API boundary, downstream consumers
+            // never reconstruct paths. The accessor on the User model
+            // resolves through `Storage::disk('public')->url(...)`; null
+            // when the user hasn't uploaded one yet (initials fallback in
+            // the SPA).
+            'avatar_url' => $user->avatar_url,
             'deletion_pending' => $pending === null ? null : [
                 'requested_at' => $pending->requested_at->toIso8601String(),
                 'scheduled_for' => $pending->scheduled_for->toIso8601String(),

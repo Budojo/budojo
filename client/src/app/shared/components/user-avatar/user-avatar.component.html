@@ -1,0 +1,16 @@
+<span class="avatar" [class]="'avatar--' + size()" data-cy="user-avatar">
+  @if (displayedUrl(); as src) {
+    <img
+      class="avatar__image"
+      [src]="src"
+      [alt]="alt() ?? ''"
+      [attr.aria-hidden]="alt() === null ? true : null"
+      (error)="onImageError()"
+      data-cy="user-avatar-image"
+    />
+  } @else {
+    <span class="avatar__initials" aria-hidden="true" data-cy="user-avatar-initials">
+      {{ initials() }}
+    </span>
+  }
+</span>

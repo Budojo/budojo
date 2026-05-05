@@ -15,6 +15,7 @@ Laravel default structure, unchanged.
 | `email` | string | not null, **unique** | Login credential and contact email |
 | `email_verified_at` | timestamp | nullable | Reserved for future email verification flow; currently never set by the app |
 | `terms_accepted_at` | timestamp | nullable | Set on `POST /auth/register` when the user ticks the Terms-of-Service gate (#420). Null for pre-#420 accounts and any future system-only user creation path. |
+| `avatar_path` | string | nullable | Relative path on the `public` disk of the uploaded avatar (#411). Null until the first `POST /me/avatar`. The wire layer emits `avatar_url` (full URL) via `UserResource`, never the raw path. |
 | `password` | string | not null | Bcrypt hash (cost 12, configured via `BCRYPT_ROUNDS`) |
 | `remember_token` | string(100) | nullable | Laravel "remember me" token — unused by the SPA auth flow but kept for compatibility |
 | `created_at` | timestamp | nullable | |
@@ -38,13 +39,16 @@ Laravel default structure, unchanged.
 - **No soft-delete** on users. Deleting a user cascades to their academy (which cascades to athletes) via FK cascade.
 - **Sanctum tokens** issued at login do not expire by default — `expires_at` in `personal_access_tokens` is null. There is no `/api/v1/auth/logout` endpoint today; "logout" in the SPA is client-side only (drops the token from `localStorage`) and does **not** revoke the row in `personal_access_tokens`. Adding a server-side revoke endpoint is queued for a future PR.
 - **Terms of Service acceptance** (#420). The registration form carries a `Validators.requiredTrue` checkbox; the server's `RegisterRequest` enforces it via Laravel's `accepted` rule. On success `RegisterUserAction` writes `terms_accepted_at = now()` on the user row. The acceptance is recorded once, at signup; versioned ToS with re-acceptance is explicitly out of scope for this milestone. The full ToS text lives at the public `/terms` SPA route. Mirrors the privacy-policy gate (#219) but stays a separate column so legal review can audit each consent independently.
+- **Avatar lifecycle** (#411). Uploaded via `POST /api/v1/me/avatar` (multipart, `image` rule + `mimes:jpeg,jpg,png,webp`, max 2 MB). `UploadAvatarAction` stores the original bytes at `users/avatars/{user-id}.{ext}` on the `public` disk (no server-side resize — the SPA renders the avatar inside a fixed circular frame via CSS `object-fit`, which is honest about what's on disk and avoids depending on GD encoders that aren't compiled into the API container). Same-extension replacements overwrite in place; different-extension replacements unlink the orphan from the previous upload. `DELETE /api/v1/me/avatar` unlinks the file and clears `avatar_path`; idempotent (deleting a missing avatar still returns 200 with `avatar_url: null`). The `avatar_url` exposed via `UserResource` carries a `?v={updated_at-timestamp}` cache-buster so a same-path replace forces the browser to fetch the new bitmap. SVG is intentionally rejected on this surface — the academy-logo flow needed a hand-rolled sanitiser, and head-shots don't justify that surface area. The GDPR-purge path (`PurgeAccountAction`) deletes the avatar from the `public` disk before unlinking the user row.
 - **In-app password rotation** (#409). `POST /api/v1/me/password` rotates the password while keeping the user logged in. The request requires `current_password` (Hash::check re-auth gate), `password`, and `password_confirmation`; the new password must satisfy the registration policy (`min:8` + `confirmed`) AND differ from the current one. On success every Sanctum personal-access-token row belonging to the user is deleted EXCEPT the one used for the request — defence-in-depth against a hijacked session without yanking the legitimate user's active tab. Mirrors `RegisterRequest` / `ResetPasswordRequest` rules so a rotation cannot weaken the registration policy.
 
 ## Related endpoints
 
 - `POST /api/v1/auth/register` — creates a user
 - `POST /api/v1/auth/login` — returns a bearer token for this user
-- `POST /api/v1/me/password` — rotates the password in-app; revokes other Sanctum tokens
+- `POST /api/v1/me/avatar` — upload or replace the user's avatar (#411)
+- `DELETE /api/v1/me/avatar` — remove the user's avatar (#411)
+- `POST /api/v1/me/password` — rotates the password in-app; revokes other Sanctum tokens (#409)
 - `GET /api/v1/health` — public, no user involved
 
 ## Related tables
