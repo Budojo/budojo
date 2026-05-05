@@ -5,27 +5,26 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/brand-glyph.component';
 
 /**
- * Generic server-error / unhandled-error landing page (#425).
+ * Generic server-error landing page (#425).
  *
- * Reached via `errorInterceptor` whenever an outgoing API request comes back
- * with a 5xx response. The interceptor uses `skipLocationChange: true`, so
- * the browser URL bar stays on the originally failing route while Angular
- * renders this component — which is what makes the retry button below
- * actually work. Mirrors `NotFoundComponent` in shape: brand glyph +
- * sentence-case title + supporting copy + one primary CTA.
+ * Reachable by **direct navigation only** — typed URL, bookmark, future
+ * deep-link from an empty state. The global `errorInterceptor` does NOT
+ * auto-redirect here on 5xx; component-level handlers (toasts, empty
+ * states) own the per-endpoint failure UX. This page is the fallback
+ * destination when a feature explicitly chooses to escalate to a
+ * full-page error rather than render in-place.
+ *
+ * Mirrors `NotFoundComponent` in shape: brand glyph + sentence-case
+ * title + supporting copy + two CTAs.
  *
  * Two CTAs:
- *   - **Try again** reloads the document. Because the URL bar still points at
- *     the originally requested route (see `skipLocationChange` above), the
- *     reload re-fires that route — not `/error` — so the user lands back on
- *     the page they were trying to reach as soon as the API recovers (Norman
- *     § forgiveness — easier than navigating manually from a half-broken
- *     state).
- *   - **Back to home** is a safety net for cases where the underlying
- *     route is the source of the error (e.g. a stats page repeatedly
- *     500ing). Routes to `/dashboard/athletes`; the dashboard guards then
- *     route anonymous visitors to `/auth/login` — same pattern as the
- *     wildcard 404.
+ *   - **Try again** reloads the document. Useful when the user reached
+ *     `/error` by direct nav after a hard failure and just wants to re-
+ *     fetch this page; without an "original URL to go back to" in scope
+ *     here, reload is the safest retry the page can offer.
+ *   - **Back to home** routes to `/dashboard/athletes`; the dashboard
+ *     guards then route anonymous visitors to `/auth/login` — same
+ *     pattern as the wildcard 404.
  */
 @Component({
   selector: 'app-server-error',
@@ -40,13 +39,11 @@ export class ServerErrorComponent {
   private readonly document = inject(DOCUMENT);
 
   retry(): void {
-    // Hard reload — re-runs the bootstrap, re-fires the failing call.
-    // The interceptor used `skipLocationChange: true` when it routed
-    // here, so `document.location.href` is still the originally failing
-    // URL; reloading it is exactly the retry the user expects. If the
-    // backend is still down, the interceptor catches the next 5xx and
-    // we end up here again — self-cancelling until the API recovers,
-    // which is the intended UX.
+    // Hard reload of the current document. The page is direct-nav only
+    // (the global interceptor does not redirect 5xx here), so the URL
+    // is /error itself; reload re-renders this same page. The button
+    // exists for parity with NotFoundComponent + as a manual escape
+    // hatch when the user genuinely wants to re-bootstrap the SPA.
     this.document.location.reload();
   }
 

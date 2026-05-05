@@ -34,26 +34,26 @@ function setup(initialUrl = '/dashboard/athletes'): {
 }
 
 describe('errorInterceptor', () => {
-  it.each([500, 501, 502, 503, 504, 599])('redirects to /error on HTTP %i', (status) => {
-    const { http, httpMock, router } = setup();
-    let received: unknown;
-    http.get('/api/v1/anything').subscribe({
-      next: () => undefined,
-      error: (err) => (received = err),
-    });
+  it.each([500, 501, 502, 503, 504, 599])(
+    'does NOT redirect on HTTP %i — feature handlers (toasts, empty states) own 5xx',
+    (status) => {
+      const { http, httpMock, router } = setup();
+      let received: unknown;
+      http.get('/api/v1/anything').subscribe({
+        next: () => undefined,
+        error: (err) => (received = err),
+      });
 
-    httpMock
-      .expectOne('/api/v1/anything')
-      .flush({ message: 'boom' }, { status, statusText: 'Server Error' });
+      httpMock
+        .expectOne('/api/v1/anything')
+        .flush({ message: 'boom' }, { status, statusText: 'Server Error' });
 
-    // `skipLocationChange: true` keeps the browser URL bar on the originally
-    // failing route so the retry button's `location.reload()` actually re-fires
-    // the request the user wanted, not the error page itself.
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/error', { skipLocationChange: true });
-    // Error is re-thrown so feature handlers can still respond.
-    expect(received).toBeDefined();
-    httpMock.verify();
-  });
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+      // Error is re-thrown so feature handlers can still respond.
+      expect(received).toBeDefined();
+      httpMock.verify();
+    },
+  );
 
   it('redirects to /offline on a network error (status 0)', () => {
     const { http, httpMock, router } = setup();
@@ -88,21 +88,6 @@ describe('errorInterceptor', () => {
     },
   );
 
-  it('does not bounce when already on /error (avoids redirect loops on a 5xx during /error itself)', () => {
-    const { http, httpMock, router } = setup('/error');
-    http.get('/api/v1/anything').subscribe({
-      next: () => undefined,
-      error: () => undefined,
-    });
-
-    httpMock
-      .expectOne('/api/v1/anything')
-      .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
-
-    expect(router.navigateByUrl).not.toHaveBeenCalled();
-    httpMock.verify();
-  });
-
   it('does not bounce when already on /offline (avoids redirect loops on a network-fail retry)', () => {
     const { http, httpMock, router } = setup('/offline');
     http.get('/api/v1/anything').subscribe({
@@ -128,7 +113,7 @@ describe('errorInterceptor', () => {
 
     httpMock
       .expectOne('/api/v1/anything')
-      .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+      .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
 
     expect(received).toBeDefined();
     httpMock.verify();
