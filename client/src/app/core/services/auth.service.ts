@@ -55,6 +55,12 @@ export interface ResetPasswordPayload {
   password_confirmation: string;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+}
+
 export interface AuthResponse {
   data: User;
   token: string;
@@ -160,11 +166,15 @@ export class AuthService {
   }
 
   /**
-   * `POST /api/v1/me/avatar` (multipart). The server resizes every upload to
-   * a 256x256 JPEG and overwrites the previous file in place (#411). The
-   * response is the full `User` envelope, so we swap the cached `user`
-   * signal in `tap()` — every consumer (header chip, profile page, dashboard
-   * sidebar's future avatar slot) sees the new URL on the next tick.
+   * `POST /api/v1/me/avatar` (multipart, #411). Stores the original
+   * uploaded image (no server-side resize — the SPA renders inside a
+   * fixed circular frame via CSS `object-fit`). Same-extension replace
+   * overwrites in place; different-extension replace unlinks the
+   * previous file. The response is the full `User` envelope, so we
+   * swap the cached `user` signal in `tap()` — every consumer (header
+   * chip, profile page, dashboard sidebar's future avatar slot) sees
+   * the new URL on the next tick. The `avatar_url` carries a `?v=...`
+   * cache-buster so a same-path replace forces the browser to re-fetch.
    */
   uploadAvatar(file: File): Observable<User> {
     const form = new FormData();
@@ -184,6 +194,21 @@ export class AuthService {
     return this.http.delete<MeResponse>(`${environment.apiBase}/api/v1/me/avatar`).pipe(
       tap((res) => this.user.set(res.data)),
       map((res) => res.data),
+    );
+  }
+
+  /**
+   * `POST /api/v1/me/password` (#409) — rotates the password from inside
+   * the app. The server re-authenticates with `current_password` before
+   * applying the change; on success it revokes every other Sanctum
+   * token belonging to the user but preserves THIS token, so the SPA
+   * stays logged in. 422 on wrong current password (`errors.current_password`)
+   * or same-as-old / weak / mismatched new (`errors.password`).
+   */
+  changePassword(payload: ChangePasswordPayload): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${environment.apiBase}/api/v1/me/password`,
+      payload,
     );
   }
 

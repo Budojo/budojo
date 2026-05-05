@@ -132,6 +132,80 @@
     max-width: 36rem;
   }
 
+  // Change-password sub-section (#409). Same vertical-stack rhythm as
+  // the data-export card above — eyebrow label + descriptive hint +
+  // form fields + compact submit. Reactive Forms with three p-password
+  // controls; inline error messages under each field follow the same
+  // `field` / `field-error` pattern as the auth pages so the SPA stays
+  // visually consistent across credential flows.
+  &__change-password {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+
+    // Reset the 8rem flex-basis from `&__label` (the row layout above
+    // 768px reserves an 8rem left column there). In a column-flex
+    // parent that rule reads as 8rem of HEIGHT and adds a stale gap
+    // between the eyebrow and the hint — same trap #245 / #290 caught
+    // for the data-export section.
+    .profile-page__label {
+      flex: initial;
+    }
+  }
+
+  &__change-password-hint {
+    margin: 0 0 0.5rem 0;
+    color: var(--p-text-color-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    max-width: 36rem;
+  }
+
+  &__change-password-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+
+      label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--p-text-color);
+      }
+    }
+
+    .field-error {
+      font-size: 0.8125rem;
+      color: var(--p-red-600, #dc2626);
+    }
+
+    // `<p-password>` renders the actual `<input>` inside its own host
+    // wrapper outside this component's view encapsulation; the only
+    // safe width hook is host-piercing. Stretches the input to fill
+    // the card column, same trick as the auth pages.
+    :host ::ng-deep .p-password {
+      width: 100%;
+
+      .p-password-input,
+      input {
+        width: 100%;
+      }
+    }
+  }
+
+  // Top margin separates the submit from the last field, mirroring
+  // the export-button rule below — same canon § "small breathing room
+  // before an action" beat.
+  :host ::ng-deep .profile-page__change-password-submit {
+    margin-top: 0.25rem;
+    align-self: flex-start;
+  }
+
   // Top margin separates the button from the description above without
   // widening the parent `gap` (which would also push the eyebrow apart
   // from the body text — wrong rhythm). 0.25rem is the canon's "small

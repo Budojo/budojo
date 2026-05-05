@@ -456,7 +456,7 @@
       "genericErrorDetail": "Non è stato possibile scaricare i tuoi dati. Riprova."
     },
     "avatarTitle": "Foto profilo",
-    "avatarHint": "PNG, JPG o WebP, massimo 2 MB. La ridimensioniamo a una miniatura quadrata.",
+    "avatarHint": "PNG, JPG o WebP, massimo 2 MB.",
     "avatarAlt": "La tua foto profilo",
     "avatarUpload": "Carica",
     "avatarReplace": "Sostituisci",
@@ -477,6 +477,23 @@
       "removeMessage": "Rimuovere la tua foto profilo?",
       "removeAccept": "Rimuovi",
       "removeReject": "Annulla"
+    },
+    "changePassword": {
+      "title": "Password",
+      "hint": "Scegli una nuova password e confermala. Resterai connesso qui, ma per sicurezza gli altri dispositivi verranno disconnessi.",
+      "currentPassword": "Password attuale",
+      "currentPasswordRequired": "Inserisci la password attuale.",
+      "currentPasswordWrong": "La password attuale non è corretta.",
+      "newPassword": "Nuova password",
+      "newPasswordRequired": "Inserisci una nuova password.",
+      "newPasswordMinlength": "Usa almeno 8 caratteri.",
+      "newPasswordServerError": "La nuova password è stata rifiutata dal server. Verifica che abbia almeno 8 caratteri, sia diversa dalla password attuale e che la conferma corrisponda.",
+      "newPasswordConfirmation": "Conferma nuova password",
+      "mismatch": "Le password non coincidono.",
+      "submit": "Aggiorna password",
+      "successSummary": "Password aggiornata",
+      "successDetail": "La tua password è stata cambiata. Gli altri dispositivi sono stati disconnessi.",
+      "genericError": "Non è stato possibile aggiornare la password. Riprova."
     }
   },
   "emailVerification": {
