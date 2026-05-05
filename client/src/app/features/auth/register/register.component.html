@@ -186,7 +186,7 @@
         [label]="'auth.register.submit' | translate"
         styleClass="submit-btn"
         [loading]="loading()"
-        [disabled]="loading()"
+        [disabled]="loading() || form.invalid"
       />
     </form>
 

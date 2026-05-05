@@ -11,8 +11,8 @@
     <p class="legal-page__eyebrow">Legale</p>
     <h1 class="legal-page__title">Termini di Servizio</h1>
     <p class="legal-page__subtitle">
-      Condizioni che regolano l'uso del servizio Budojo da parte dei titolari di academy e del loro
-      personale.
+      Condizioni che regolano l'uso del servizio Budojo da parte dei titolari di academy
+      registrati.
     </p>
     <!-- Language toggle (#420). Italiano pinned active; il canonico
          inglese è su /terms. Stessa shape di /privacy{,/it}. -->
@@ -57,8 +57,7 @@
       La creazione di un account su Budojo richiede l'accettazione esplicita dei presenti Termini
       tramite la casella "Accetto i Termini di Servizio" nel form di registrazione. L'accettazione è
       registrata lato server come timestamp sulla riga utente (<code>users.terms_accepted_at</code>)
-      e costituisce il record durevole del consenso. L'uso continuativo del Servizio implica
-      accettazione continua.
+      e costituisce il record durevole del consenso.
     </p>
     <p>
       L'Utente è responsabile delle credenziali del proprio account, delle azioni compiute tramite
@@ -151,15 +150,17 @@
     <h2>8. Modifiche ai presenti Termini</h2>
     <p>
       Budojo può aggiornare i presenti Termini nel tempo. Le modifiche sostanziali sono annunciate
-      con almeno 30 giorni di preavviso via email e tramite la pagina in-app "Novità". L'uso
-      continuativo del Servizio dopo la data di efficacia annunciata costituisce accettazione dei
-      Termini aggiornati; il rifiuto si esercita chiudendo l'account tramite il flusso standard di
-      cancellazione.
+      con almeno 30 giorni di preavviso via email e tramite la pagina in-app "Novità". L'Utente che
+      non concorda con i Termini aggiornati può esercitare il rifiuto chiudendo l'account tramite
+      il flusso standard di cancellazione prima della data di efficacia.
     </p>
     <p>
-      La ri-accettazione versionata — vale a dire la richiesta a un Utente esistente di spuntare
-      nuovamente la casella di accettazione quando i presenti Termini cambiano — non è ancora
-      implementata ed è esplicitamente fuori scope nella versione corrente.
+      Il Servizio non traccia attualmente l'accettazione per versione: viene registrata solo
+      l'accettazione originale al momento della registrazione, come
+      <code>users.terms_accepted_at</code>. La conferma dell'accettazione su future revisioni —
+      tramite un prompt in-app e un nuovo timestamp — è prevista, ma non è parte di questo
+      release. Finché tale meccanismo non sarà rilasciato, nessuna logica automatica del Servizio
+      considera l'uso continuato come rinnovo dell'accettazione.
     </p>
   </section>
 

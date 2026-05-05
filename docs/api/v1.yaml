@@ -1804,11 +1804,13 @@ components:
           description: Must match `password`
         terms_accepted:
           type: boolean
+          enum: [true]
           description: |
-            Terms-of-Service acceptance gate (#420). MUST be `true` —
-            Laravel's `accepted` rule rejects falsy values, missing
-            field, and non-truthy strings. The server stamps
-            `users.terms_accepted_at = now()` on success.
+            Terms-of-Service acceptance gate (#420). The literal `true`
+            is the only valid value — Laravel's `accepted` rule rejects
+            `false`, missing field, and non-truthy strings, so generated
+            clients should refuse to send anything else. The server
+            stamps `users.terms_accepted_at = now()` on success.
           example: true
 
     LoginRequest:

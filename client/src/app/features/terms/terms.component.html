@@ -11,7 +11,7 @@
     <p class="legal-page__eyebrow">Legal</p>
     <h1 class="legal-page__title">Terms of Service</h1>
     <p class="legal-page__subtitle">
-      Conditions governing the use of the Budojo service by academy owners and their staff.
+      Conditions governing the use of the Budojo service by registered academy owners.
     </p>
     <!-- Language toggle (#420). EN canonical; IT at /terms/it. Same
          shape as /privacy{,/it}. -->
@@ -54,7 +54,7 @@
       Creating an account on Budojo requires explicit acceptance of these Terms via the "I accept
       the Terms of Service" checkbox on the registration form. The acceptance is recorded
       server-side as a timestamp on the user row (<code>users.terms_accepted_at</code>) and is the
-      durable record of consent. Continued use of the Service constitutes ongoing acceptance.
+      durable record of consent.
     </p>
     <p>
       The User is responsible for the credentials of their account, for the actions taken through
@@ -142,14 +142,16 @@
     <h2>8. Changes to these Terms</h2>
     <p>
       Budojo may update these Terms over time. Material changes will be announced with at least 30
-      days' notice via email and the in-app "What's new" page. The User's continued use of the
-      Service after the announced effective date constitutes acceptance of the updated Terms;
-      rejection is exercised by closing the account through the standard deletion flow.
+      days' notice via email and the in-app "What's new" page. A User who does not agree with the
+      revised Terms can exercise rejection by closing the account through the standard deletion
+      flow before the effective date.
     </p>
     <p>
-      Versioned re-acceptance — i.e. requiring an existing User to tick a fresh acceptance box when
-      these Terms change — is not implemented yet and is explicitly out of scope for the current
-      version.
+      The Service does not currently track per-version acceptance: only the original acceptance at
+      registration is recorded as <code>users.terms_accepted_at</code>. Re-confirming acceptance on
+      future revisions — by surfacing an in-app prompt and stamping a fresh timestamp — is planned
+      but not part of this release. Until that is shipped, no automated mechanism in the Service
+      treats continued use as renewed acceptance.
     </p>
   </section>
 
