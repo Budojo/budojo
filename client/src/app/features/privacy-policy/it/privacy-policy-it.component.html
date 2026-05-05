@@ -169,10 +169,12 @@
     <ul>
       <li><strong>Cookie HTTP:</strong> nessuno.</li>
       <li>
-        <strong>localStorage:</strong> due chiavi tecniche — <code>auth_token</code> (token di
-        sessione Sanctum, strettamente necessario per mantenere l'autenticazione) e
-        <code>documents.showCancelled</code> (preferenza UI sul filtro documenti, non identifica e
-        non profila).
+        <strong>localStorage:</strong> quattro chiavi tecniche — <code>auth_token</code> (token di
+        sessione Sanctum, strettamente necessario per mantenere l'autenticazione),
+        <code>budojoLang</code> (lingua di interfaccia selezionata — `en` / `it`),
+        <code>budojoCookieConsent</code> (registrazione del consenso dell'utente per le categorie
+        non essenziali, scritta dal cookie banner) e <code>documents.showCancelled</code>
+        (preferenza UI sul filtro documenti). Nessuna identifica o profila l'utente.
       </li>
       <li><strong>sessionStorage / IndexedDB:</strong> nessuno usato direttamente dalla SPA.</li>
     </ul>

@@ -141,8 +141,11 @@
       <a
         href="javascript:void(0)"
         (click)="managePreferences()"
+        (keydown.enter)="managePreferences(); $event.preventDefault()"
+        (keydown.space)="managePreferences(); $event.preventDefault()"
         data-cy="cookie-policy-manage"
         role="button"
+        tabindex="0"
         >Gestisci le tue preferenze</a
       >
       — oppure cancella <code>budojoCookieConsent</code> dai dati del sito nel browser e il banner

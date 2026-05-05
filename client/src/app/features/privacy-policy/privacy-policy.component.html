@@ -159,10 +159,12 @@
     <ul>
       <li><strong>HTTP cookies:</strong> none.</li>
       <li>
-        <strong>localStorage:</strong> two strictly technical keys —
+        <strong>localStorage:</strong> four strictly technical keys —
         <code>auth_token</code> (Sanctum session token, strictly necessary to keep the user
-        authenticated) and <code>documents.showCancelled</code> (UI preference for the documents
-        filter; does not identify or profile).
+        authenticated), <code>budojoLang</code> (selected interface language — `en` / `it`),
+        <code>budojoCookieConsent</code> (the user's own consent record for non-essential
+        categories, written by the cookie banner), and <code>documents.showCancelled</code>
+        (UI preference for the documents filter). None identify or profile the user.
       </li>
       <li><strong>sessionStorage / IndexedDB:</strong> not used directly by the SPA.</li>
     </ul>

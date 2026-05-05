@@ -140,8 +140,11 @@
       <a
         href="javascript:void(0)"
         (click)="managePreferences()"
+        (keydown.enter)="managePreferences(); $event.preventDefault()"
+        (keydown.space)="managePreferences(); $event.preventDefault()"
         data-cy="cookie-policy-manage"
         role="button"
+        tabindex="0"
         >Manage your preferences</a
       >
       — or clear <code>budojoCookieConsent</code> from your browser's site data and the banner will

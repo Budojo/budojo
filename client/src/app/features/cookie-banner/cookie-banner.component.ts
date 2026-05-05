@@ -7,6 +7,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 
 import { ConsentCategory, ConsentService } from '../../core/services/consent.service';
+import { LanguageService } from '../../core/services/language.service';
 
 interface CategoryRow {
   readonly key: ConsentCategory;
@@ -46,9 +47,20 @@ interface CategoryRow {
 })
 export class CookieBannerComponent {
   private readonly consent = inject(ConsentService);
+  private readonly language = inject(LanguageService);
 
   /** Visible only while undecided. The CSS pin layer applies on top. */
   readonly visible = computed(() => !this.consent.decided());
+
+  /**
+   * Locale-aware route to the cookie policy. Mirrors the privacy
+   * sidebar pattern (`dashboard.component.html:191`) so an Italian
+   * user reading the Italian banner doesn't get bounced to the
+   * English page when they tap "Learn more".
+   */
+  readonly policyLink = computed(() =>
+    this.language.currentLang() === 'it' ? '/cookie-policy/it' : '/cookie-policy',
+  );
 
   /** Customise dialog open/closed. Not persisted — local UI state only. */
   protected readonly customiseOpen = signal(false);

@@ -22,7 +22,7 @@ grep -rn "document\.cookie" client/src      # → 0 risultati
 | --- | --- | --- | --- | --- | --- |
 | `auth_token` | stringa Sanctum opaca | Persiste il token Bearer fra reload così l'utente non deve riautenticarsi a ogni F5 | Finché l'utente non fa logout o non revoca il token | Essenziali | **Sì** — strettamente necessario per fornire il servizio richiesto (l'utente ha esplicitamente chiesto di "essere autenticato") |
 | `budojoLang` | `'en'` \| `'it'` | Lingua selezionata dall'utente (#273) | Finché l'utente non cambia lingua o svuota i dati del sito | Essenziali | **Sì** — preferenza UI, non identifica e non profila l'utente |
-| `budojoCookieConsent` | JSON `{ version, choices, savedAt }` | Memorizza la scelta dell'utente sul cookie banner (#421) | 12 mesi tipici (re-prompt al cambio di `CONSENT_VERSION`) | Essenziali | **Sì** — strettamente necessario per registrare la scelta espressa dall'utente sull'articolo 5.3 ePrivacy |
+| `budojoCookieConsent` | JSON `{ version, choices, savedAt }` | Memorizza la scelta dell'utente sul cookie banner (#421) | Persiste finché l'utente non svuota i dati del sito o non cambia `CONSENT_VERSION` lato app (re-prompt forzato). Nessuna scadenza per età oggi implementata: una scadenza periodica (es. 12 mesi) è prevista come iterazione futura. | Essenziali | **Sì** — strettamente necessario per registrare la scelta espressa dall'utente sull'articolo 5.3 ePrivacy |
 | `documents.showCancelled` | `'1'` o assente | Ricorda se l'utente vuole vedere i documenti cancellati nella lista per atleta | Finché l'utente non ridisattiva il toggle (la chiave viene rimossa), oppure finché non svuota i dati del sito dal browser | Preferenze | **Sì** — preferenza UI, non identifica e non profila l'utente |
 
 Riferimenti codice:

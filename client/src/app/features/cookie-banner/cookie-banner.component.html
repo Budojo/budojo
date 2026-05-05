@@ -10,7 +10,7 @@
       <p class="cookie-banner__title">{{ 'cookies.banner.title' | translate }}</p>
       <p class="cookie-banner__body">
         {{ 'cookies.banner.body' | translate }}
-        <a routerLink="/cookie-policy" data-cy="cookie-banner-policy-link">{{
+        <a [routerLink]="policyLink()" data-cy="cookie-banner-policy-link">{{
           'cookies.banner.learnMore' | translate
         }}</a
         >.
