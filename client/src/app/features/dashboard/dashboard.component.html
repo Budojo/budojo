@@ -33,6 +33,23 @@
       }
       Budojo
     </a>
+    <!--
+      User avatar chip (#411). Surfaces the uploaded image OR an initials
+      fallback. Tapping the chip lands the user on /dashboard/profile,
+      matching Jakob's Law (top-right user chip is the universal "manage
+      my account" affordance). Hidden on viewports where the sidebar is
+      always visible — the static sidebar's profile link plus its own
+      future avatar slot makes the topbar chip redundant there. Below the
+      sidebar breakpoint it's the only non-hamburger control in the topbar.
+    -->
+    <a
+      routerLink="profile"
+      class="topbar__user-link"
+      [attr.aria-label]="'nav.profileAriaLabel' | translate"
+      data-cy="topbar-user-avatar"
+    >
+      <app-user-avatar [url]="userAvatarUrl()" [name]="userName()" size="chip" />
+    </a>
   </header>
 
   <!-- The sidebar is hidden from assistive tech via CSS (`visibility: hidden`)

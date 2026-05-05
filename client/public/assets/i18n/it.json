@@ -8,6 +8,7 @@
     "open": "Apri navigazione",
     "close": "Chiudi navigazione",
     "homeAriaLabel": "Budojo — torna alla dashboard",
+    "profileAriaLabel": "Apri il tuo profilo",
     "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
@@ -418,6 +419,29 @@
       "errorSummary": "Errore",
       "throttledDetail": "Hai già esportato i tuoi dati di recente. Riprova tra un minuto.",
       "genericErrorDetail": "Non è stato possibile scaricare i tuoi dati. Riprova."
+    },
+    "avatarTitle": "Foto profilo",
+    "avatarHint": "PNG, JPG o WebP, massimo 2 MB. La ridimensioniamo a una miniatura quadrata.",
+    "avatarAlt": "La tua foto profilo",
+    "avatarUpload": "Carica",
+    "avatarReplace": "Sostituisci",
+    "avatarRemove": "Rimuovi",
+    "avatarToast": {
+      "unsupportedSummary": "File non supportato",
+      "unsupportedDetail": "Usa PNG, JPG o WebP.",
+      "tooLargeSummary": "File troppo grande",
+      "tooLargeDetail": "Massimo 2 MB.",
+      "uploadSuccess": "Foto profilo aggiornata",
+      "uploadErrorSummary": "Caricamento non riuscito",
+      "uploadErrorDetail": "Non è stato possibile salvare la nuova foto. Riprova.",
+      "removeSuccess": "Foto profilo rimossa",
+      "removeErrorSummary": "Rimozione non riuscita",
+      "removeErrorDetail": "Non è stato possibile rimuovere la foto. Riprova."
+    },
+    "avatarConfirm": {
+      "removeMessage": "Rimuovere la tua foto profilo?",
+      "removeAccept": "Rimuovi",
+      "removeReject": "Annulla"
     }
   },
   "emailVerification": {

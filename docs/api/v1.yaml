@@ -411,6 +411,76 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/avatar:
+    post:
+      tags: [auth]
+      summary: Upload or replace the authenticated user's avatar
+      description: |
+        Multipart `avatar` upload (#411). The server resizes every upload to
+        a 256x256 center-cropped JPEG and stores it under
+        `users/avatars/{user-id}.jpg` on the public disk. Replacing an existing
+        avatar overwrites in place — the path is deterministic per user, so
+        no orphan file remains from the previous upload.
+
+        Accepts `image/jpeg`, `image/png`, `image/webp`. SVG is intentionally
+        rejected on this surface — the academy-logo flow has its own
+        hand-rolled SVG sanitiser, and a head-shot doesn't justify that
+        surface area. Max size 2 MB.
+
+        The response is the full `User` envelope (mirroring the `/auth/me`
+        shape) so the SPA can swap its cached user without a follow-up
+        `GET /auth/me`.
+      operationId: meUploadAvatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [avatar]
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [auth]
+      summary: Remove the authenticated user's avatar
+      description: |
+        Deletes the stored file and clears `avatar_path`. Returns the user
+        envelope with `avatar_url: null`. Idempotent — calling it when no
+        avatar is set is a no-op success (still 200), so a refresh-after-toast
+        pattern in the SPA can't paper over a stale 404.
+      operationId: meDeleteAvatar
+      responses:
+        '200':
+          description: Avatar removed (or no-op when none was set)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
   /email/verification-notification:
     post:
       tags: [auth]
@@ -1871,7 +1941,7 @@ components:
 
     User:
       type: object
-      required: [id, name, email, email_verified_at, deletion_pending]
+      required: [id, name, email, email_verified_at, avatar_url, deletion_pending]
       properties:
         id:
           type: integer
@@ -1890,6 +1960,17 @@ components:
             `null` until verified. Surfaced to the SPA so it can render the
             verification pillola without an extra round-trip.
           example: "2026-04-28T15:30:00+00:00"
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+          description: |
+            Public URL of the user's avatar image (#411). `null` until the
+            user uploads one — the SPA renders an initials fallback in that
+            case. The server resizes every upload to a 256x256 JPEG, so the
+            URL is safe to render in any size slot from a 32px chip up to
+            the full profile-page card.
+          example: "/storage/users/avatars/42.jpg"
         deletion_pending:
           nullable: true
           description: |

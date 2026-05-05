@@ -10,6 +10,15 @@ export interface User {
   email: string;
   /** ISO-8601 timestamp; null until the user clicks the verify link. */
   email_verified_at: string | null;
+  /**
+   * Public URL of the user's uploaded avatar (#411). `null` when none has
+   * been uploaded yet — the SPA renders an initials placeholder in that
+   * case. The server resizes every upload to a 256x256 JPEG, so the URL
+   * is safe to render in any slot from a 32px chip up to the profile card.
+   * Optional on this interface for fixture-compat with pre-#411 specs;
+   * the wire shape always carries the field from #411 onward.
+   */
+  avatar_url?: string | null;
 }
 
 export interface RegisterPayload {
@@ -145,6 +154,34 @@ export class AuthService {
    */
   resetPassword(payload: ResetPasswordPayload): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.base}/reset-password`, payload);
+  }
+
+  /**
+   * `POST /api/v1/me/avatar` (multipart). The server resizes every upload to
+   * a 256x256 JPEG and overwrites the previous file in place (#411). The
+   * response is the full `User` envelope, so we swap the cached `user`
+   * signal in `tap()` — every consumer (header chip, profile page, dashboard
+   * sidebar's future avatar slot) sees the new URL on the next tick.
+   */
+  uploadAvatar(file: File): Observable<User> {
+    const form = new FormData();
+    form.append('avatar', file);
+    return this.http.post<MeResponse>(`${environment.apiBase}/api/v1/me/avatar`, form).pipe(
+      tap((res) => this.user.set(res.data)),
+      map((res) => res.data),
+    );
+  }
+
+  /**
+   * `DELETE /api/v1/me/avatar`. Server is idempotent — calling it when no
+   * avatar exists still returns 200 with `avatar_url: null`, so the SPA
+   * doesn't have to gate the call on `avatar_url` being set client-side.
+   */
+  removeAvatar(): Observable<User> {
+    return this.http.delete<MeResponse>(`${environment.apiBase}/api/v1/me/avatar`).pipe(
+      tap((res) => this.user.set(res.data)),
+      map((res) => res.data),
+    );
   }
 
   /**

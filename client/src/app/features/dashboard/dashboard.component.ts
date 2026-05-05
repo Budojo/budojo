@@ -12,12 +12,20 @@ import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService, SupportedLanguage } from '../../core/services/language.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
+import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { VERSION } from '../../../environments/version';
 
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, BrandGlyphComponent, TranslatePipe],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    BrandGlyphComponent,
+    UserAvatarComponent,
+    TranslatePipe,
+  ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -69,6 +77,14 @@ export class DashboardComponent implements OnInit {
   protected readonly academyLogoUrl = computed(
     () => this.academyService.academy()?.logo_url ?? null,
   );
+
+  /**
+   * User avatar URL + name for the topbar chip (#411). Reading both off the
+   * cached `user` signal so the chip re-renders the moment an avatar
+   * upload / removal swaps the value in `AuthService`.
+   */
+  protected readonly userAvatarUrl = computed(() => this.authService.user()?.avatar_url ?? null);
+  protected readonly userName = computed(() => this.authService.user()?.name ?? null);
 
   /**
    * Mobile sidebar drawer state. On viewports below the sidebar breakpoint

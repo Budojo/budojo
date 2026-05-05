@@ -140,3 +140,72 @@
     margin-top: 0.25rem;
   }
 }
+
+// Avatar card (#411). Matches the academy-logo card geometry on
+// AcademyDetailComponent — the two surfaces share the same upload /
+// replace / remove rhythm so a user who learned one page already
+// knows the other (Jakob's Law). Layout: round preview disc on the
+// left, title + hint + button row on the right, hidden file input
+// at the end so the SCSS doesn't have to care about its position.
+.avatar-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  &__preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1 1 auto;
+  }
+
+  &__title {
+    margin: 0;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  // Hidden file input — the visible affordance is the upload button.
+  // `display: none` would prevent programmatic .click() from working
+  // in some browsers when paired with focus restoration; clip-path is
+  // the canonical visually-hidden pattern that keeps the element
+  // in the accessibility tree without rendering it.
+  &__file {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+}
+

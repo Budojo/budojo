@@ -1,13 +1,26 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  ViewChild,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
-import { MessageService } from 'primeng/api';
+import { ConfirmPopup } from 'primeng/confirmpopup';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
+import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
 
 /**
  * `/dashboard/profile` — minimal user-account surface. MVP scope is just
@@ -26,7 +39,19 @@ import { EmailVerificationStatusComponent } from '../../shared/components/email-
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [ButtonModule, CardModule, EmailVerificationStatusComponent, TranslatePipe],
+  imports: [
+    ButtonModule,
+    CardModule,
+    ConfirmPopup,
+    EmailVerificationStatusComponent,
+    UserAvatarComponent,
+    TranslatePipe,
+  ],
+  // ConfirmationService is a per-component dependency for the avatar-remove
+  // confirm popup; mounting it here avoids leaking the dependency into every
+  // route in the dashboard shell. MessageService stays the app-level toast
+  // host (see the comment block in the original template / spec).
+  providers: [ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
@@ -35,10 +60,15 @@ export class ProfileComponent {
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly translate = inject(TranslateService);
+
+  @ViewChild('avatarInput') private avatarInput?: ElementRef<HTMLInputElement>;
 
   protected readonly user = this.authService.user;
   protected readonly exporting = signal<boolean>(false);
+  protected readonly avatarUploading = signal<boolean>(false);
+  protected readonly avatarUrl = computed<string | null>(() => this.user()?.avatar_url ?? null);
 
   private readonly queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -90,5 +120,104 @@ export class ProfileComponent {
           });
         },
       });
+  }
+
+  /**
+   * Avatar upload (#411). Mirrors the academy-logo flow on
+   * `AcademyDetailComponent`: hidden file input + browse button, MIME +
+   * size guards before the request, toast on success / failure. The
+   * server overwrites the previous file in place (deterministic
+   * `users/avatars/{id}.jpg` path), so a replace doesn't need a separate
+   * cleanup hop.
+   */
+  protected onAvatarBrowse(): void {
+    this.avatarInput?.nativeElement.click();
+  }
+
+  protected onAvatarSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_AVATAR_MIME.includes(file.type)) {
+      this.messageService.add({
+        severity: 'error',
+        summary: this.translate.instant('profile.avatarToast.unsupportedSummary'),
+        detail: this.translate.instant('profile.avatarToast.unsupportedDetail'),
+        life: 4000,
+      });
+      input.value = '';
+      return;
+    }
+
+    if (file.size > MAX_AVATAR_BYTES) {
+      this.messageService.add({
+        severity: 'error',
+        summary: this.translate.instant('profile.avatarToast.tooLargeSummary'),
+        detail: this.translate.instant('profile.avatarToast.tooLargeDetail'),
+        life: 4000,
+      });
+      input.value = '';
+      return;
+    }
+
+    this.avatarUploading.set(true);
+    this.authService.uploadAvatar(file).subscribe({
+      next: () => {
+        this.avatarUploading.set(false);
+        input.value = '';
+        this.messageService.add({
+          severity: 'success',
+          summary: this.translate.instant('profile.avatarToast.uploadSuccess'),
+          life: 2500,
+        });
+      },
+      error: () => {
+        this.avatarUploading.set(false);
+        input.value = '';
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('profile.avatarToast.uploadErrorSummary'),
+          detail: this.translate.instant('profile.avatarToast.uploadErrorDetail'),
+          life: 4000,
+        });
+      },
+    });
+  }
+
+  /**
+   * Confirm-then-remove for the avatar (#411). The destructive-action canon
+   * (Krug § "forgiveness for mistakes") demands a confirm step — the user
+   * could be one fat-finger away from clearing a head-shot they took five
+   * minutes to get right. Same `p-confirmpopup` pattern as the academy-logo
+   * remove flow.
+   */
+  protected confirmRemoveAvatar(event: Event): void {
+    this.confirmationService.confirm({
+      target: event.currentTarget as HTMLElement,
+      message: this.translate.instant('profile.avatarConfirm.removeMessage'),
+      acceptLabel: this.translate.instant('profile.avatarConfirm.removeAccept'),
+      rejectLabel: this.translate.instant('profile.avatarConfirm.removeReject'),
+      acceptButtonProps: { severity: 'danger' },
+      accept: () => this.removeAvatar(),
+    });
+  }
+
+  private removeAvatar(): void {
+    this.authService.removeAvatar().subscribe({
+      next: () =>
+        this.messageService.add({
+          severity: 'success',
+          summary: this.translate.instant('profile.avatarToast.removeSuccess'),
+          life: 2500,
+        }),
+      error: () =>
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('profile.avatarToast.removeErrorSummary'),
+          detail: this.translate.instant('profile.avatarToast.removeErrorDetail'),
+          life: 4000,
+        }),
+    });
   }
 }
