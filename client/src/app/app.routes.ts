@@ -333,11 +333,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/landing/landing.component').then((m) => m.LandingComponent),
   },
-  // Public error landing pages (#425). Reached via the global
-  // `errorInterceptor` when an outgoing API request comes back 5xx
-  // (`/error`) or with `status === 0` ie. no network (`/offline`).
-  // Public — no guard — because the user might land here while logged
-  // out (a 5xx during the public landing or login itself).
+  // Public error landing pages (#425). `/offline` is reached via the
+  // global `errorInterceptor` when an outgoing API request fails with
+  // `status === 0` (no network — the only auto-redirect class today).
+  // `/error` is direct-nav only — 5xx responses stay component-level
+  // (toasts, empty states), so this page exists for typed-URL,
+  // bookmark, or future deep-link from an empty state. Public on both
+  // — no guard — so the user can land here while logged out (a 0 on
+  // the public landing, or a manual nav for /error).
   {
     path: 'error',
     loadComponent: () =>
