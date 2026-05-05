@@ -8,10 +8,7 @@ import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { AuthService } from '../../core/services/auth.service';
-import {
-  SupportService,
-  SupportTicketCategory,
-} from '../../core/services/support.service';
+import { SupportService, SupportTicketCategory } from '../../core/services/support.service';
 
 /**
  * Dedicated support / contact form (#423). Distinct from the in-app
@@ -62,10 +59,11 @@ export class SupportComponent {
    * order in the dropdown is stable across renders and the unit test
    * pinning the option order has something to assert against.
    */
-  protected readonly categoryOptions: ReadonlyArray<{
-    readonly value: SupportTicketCategory;
-    readonly labelKey: string;
-  }> = [
+  // PrimeNG's `p-select` types `[options]` as `any[]` (mutable). The
+  // array literal is therefore declared without `readonly` modifiers so
+  // Angular's strict template type-check accepts the binding without a
+  // cast at every reference site.
+  protected readonly categoryOptions: { value: SupportTicketCategory; labelKey: string }[] = [
     { value: 'account', labelKey: 'support.category.options.account' },
     { value: 'billing', labelKey: 'support.category.options.billing' },
     { value: 'bug', labelKey: 'support.category.options.bug' },
@@ -100,28 +98,26 @@ export class SupportComponent {
 
     this.submitting.set(true);
 
-    this.supportService
-      .submit({ subject, category, body })
-      .subscribe({
-        next: () => {
-          this.submitting.set(false);
-          this.form.reset({ subject: '', category: null, body: '' });
-          this.messageService.add({
-            severity: 'success',
-            summary: this.translate.instant('support.toast.successSummary'),
-            detail: this.translate.instant('support.toast.successDetail'),
-            life: 4000,
-          });
-        },
-        error: () => {
-          this.submitting.set(false);
-          this.messageService.add({
-            severity: 'error',
-            summary: this.translate.instant('support.toast.errorSummary'),
-            detail: this.translate.instant('support.toast.errorDetail'),
-            life: 5000,
-          });
-        },
-      });
+    this.supportService.submit({ subject, category, body }).subscribe({
+      next: () => {
+        this.submitting.set(false);
+        this.form.reset({ subject: '', category: null, body: '' });
+        this.messageService.add({
+          severity: 'success',
+          summary: this.translate.instant('support.toast.successSummary'),
+          detail: this.translate.instant('support.toast.successDetail'),
+          life: 4000,
+        });
+      },
+      error: () => {
+        this.submitting.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('support.toast.errorSummary'),
+          detail: this.translate.instant('support.toast.errorDetail'),
+          life: 5000,
+        });
+      },
+    });
   }
 }
