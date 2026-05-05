@@ -33,7 +33,12 @@ it('registers a new user and returns a token', function (): void {
 });
 
 it('records the terms-of-service acceptance timestamp on the user row (#420)', function (): void {
-    $before = now();
+    // Snap to the start of the current second — `users.terms_accepted_at`
+    // is a `timestamp` column (default 0 fractional seconds), so on read-
+    // back the microseconds are dropped. Without this floor, a `$before`
+    // captured at HH:MM:SS.700 would be considered LATER than a stored
+    // value of HH:MM:SS.000 and the >= assertion would flake.
+    $before = now()->startOfSecond();
 
     $this->postJson('/api/v1/auth/register', [
         'name' => 'Mario Rossi',

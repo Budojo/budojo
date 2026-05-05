@@ -273,8 +273,7 @@ export const routes: Routes = [
   // it before signing up.
   {
     path: 'terms',
-    loadComponent: () =>
-      import('./features/terms/terms.component').then((m) => m.TermsComponent),
+    loadComponent: () => import('./features/terms/terms.component').then((m) => m.TermsComponent),
   },
   {
     path: 'terms/it',
