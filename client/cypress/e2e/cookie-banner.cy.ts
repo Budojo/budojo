@@ -118,9 +118,7 @@ describe('Cookie banner — analytics gate (#421)', () => {
         'hotjar.com',
         'clarity.ms',
       ];
-      const matched = scripts.filter((s) =>
-        analyticsHosts.some((h) => (s.src ?? '').includes(h)),
-      );
+      const matched = scripts.filter((s) => analyticsHosts.some((h) => (s.src ?? '').includes(h)));
       expect(matched, 'no analytics tags after reject').to.have.lengthOf(0);
     });
   });

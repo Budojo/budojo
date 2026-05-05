@@ -63,7 +63,7 @@
   <ul class="cookie-banner__categories" data-cy="cookie-banner-categories">
     @for (cat of categories; track cat.key) {
       <li class="cookie-banner__category" [attr.data-cy]="'cookie-category-' + cat.key">
-        <label class="cookie-banner__category-row">
+        <label class="cookie-banner__category-row" [attr.for]="'cookie-cat-' + cat.key">
           <p-checkbox
             [binary]="true"
             [ngModel]="getDraft(cat.key)"
