@@ -41,12 +41,28 @@ class UploadAvatarAction
         $extension = $extension === 'jpeg' ? 'jpg' : $extension;
         $newPath = "users/avatars/{$user->id}.{$extension}";
 
+        // Read the upload bytes ourselves rather than handing the
+        // UploadedFile to `Storage::putFile()` so the storage path
+        // stays deterministic ({id}.{ext}) instead of getting a hash.
+        // Both `getRealPath()` and `file_get_contents()` can return
+        // false on a hostile / corrupt UploadedFile — casting false to
+        // string would silently store an empty file while reporting
+        // 200, so we check explicitly and 422-equivalent the request.
+        $realPath = $file->getRealPath();
+        if ($realPath === false) {
+            throw new \RuntimeException('Uploaded avatar file is unreadable (no real path).');
+        }
+        $bytes = file_get_contents($realPath);
+        if ($bytes === false) {
+            throw new \RuntimeException("Failed to read uploaded avatar bytes from {$realPath}.");
+        }
+
         // `Storage::put()` returns false on a transient disk error
         // (e.g. permission, full filesystem). Bail before the model
         // write so we never persist `avatar_path` pointing at a file
         // that was never written — the caller's upload would 200 with
         // a broken `avatar_url` otherwise.
-        $stored = $disk->put($newPath, (string) file_get_contents($file->getRealPath()));
+        $stored = $disk->put($newPath, $bytes);
         if ($stored === false) {
             throw new \RuntimeException("Failed to write avatar to {$newPath}.");
         }

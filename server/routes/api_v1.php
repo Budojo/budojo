@@ -86,9 +86,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'destroy']);
 
     // Avatar — multipart upload + delete (#411). Mirrors the
-    // /academy/logo precedent: server-side resize to 256x256, replace
-    // unlinks the previous file, the response is the full UserResource
-    // so the SPA can swap its cached envelope without re-fetching /me.
+    // /academy/logo precedent: stores the original bytes (no
+    // server-side resize — the API container ships GD without JPEG
+    // / WebP encoders; the SPA renders inside a circular CSS frame).
+    // Same-extension replace overwrites in place; different-extension
+    // replace unlinks the previous file. The response is the full
+    // UserResource so the SPA can swap its cached envelope without
+    // re-fetching /me.
     Route::post('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'upload']);
     Route::delete('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'delete']);
 

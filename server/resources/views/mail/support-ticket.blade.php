@@ -1,11 +1,13 @@
 {{-- Markdown support-ticket email (#423). Variables flow through
      Blade's `{{ }}` HTML-escape, which prevents raw HTML injection.
      Blade's HTML escape does NOT, however, prevent markdown syntax
-     in `$body` from being interpreted by the markdown-to-HTML pass —
-     a user typing `**bold**` or `[link](evil)` in their support
-     message would still be re-rendered. Wrapping the body in a fenced
-     code block opts out of markdown parsing entirely so the support
-     inbox sees what the user typed, character for character. --}}
+     in `$body` from being interpreted by the markdown-to-HTML pass.
+     A previous version wrapped the body in a fenced code block, but
+     that's escapable: a user typing triple-backticks on a line of
+     their own would close the fence and let later content render as
+     markdown. Rendering the body inside a `<pre><code>` HTML element
+     is robust — markdown's pre-HTML pass leaves raw HTML alone, so
+     the body is shown verbatim, character for character. --}}
 @component('mail::message')
 # New support request
 
@@ -17,9 +19,7 @@ A user has filed a support ticket through the in-app form.
 
 ---
 
-```
-{{ $body }}
-```
+<pre><code>{{ $body }}</code></pre>
 
 ---
 
