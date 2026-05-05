@@ -264,6 +264,22 @@ export const routes: Routes = [
         (m) => m.PrivacyPolicyItComponent,
       ),
   },
+  // /terms — public Terms-of-Service page (#420). EN canonical at
+  // /terms, IT translation at /terms/it. Same lock-step rule as
+  // /privacy{,/it}: the markdown source, the EN component, and the IT
+  // component MUST be edited in the same PR. The registration form's
+  // "I accept" checkbox links here in a new tab; the page is also
+  // reachable from the landing footer for prospects who want to read
+  // it before signing up.
+  {
+    path: 'terms',
+    loadComponent: () => import('./features/terms/terms.component').then((m) => m.TermsComponent),
+  },
+  {
+    path: 'terms/it',
+    loadComponent: () =>
+      import('./features/terms/it/terms-it.component').then((m) => m.TermsItComponent),
+  },
   // Public /cookie-policy (#421) — English-default, mirrors the
   // /privacy structure. The IT translation is the legally-citable
   // source of truth for the Garante; both pages cross-link the

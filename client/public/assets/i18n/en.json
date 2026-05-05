@@ -22,6 +22,7 @@
   "auth": {
     "shared": {
       "privacy": "Privacy",
+      "terms": "Terms",
       "subProcessors": "Sub-processors"
     },
     "login": {
@@ -88,6 +89,10 @@
       "privacyAcceptLinkText": "privacy policy",
       "privacyAcceptAfter": ".",
       "privacyRequired": "You must accept the privacy policy to register.",
+      "termsAcceptBefore": "I accept the ",
+      "termsAcceptLinkText": "Terms of Service",
+      "termsAcceptAfter": ".",
+      "termsRequired": "You must accept the Terms of Service to register.",
       "submit": "Create account",
       "haveAccount": "Already have an account?",
       "loginLink": "Sign in"
@@ -394,6 +399,7 @@
     },
     "footer": {
       "privacy": "Privacy",
+      "terms": "Terms",
       "subProcessors": "Sub-processors",
       "tagline": "Made for the mat. Built in Italy."
     }

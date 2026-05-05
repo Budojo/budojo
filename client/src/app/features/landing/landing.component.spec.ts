@@ -89,7 +89,7 @@ describe('LandingComponent (#330)', () => {
     expect(card?.textContent).toContain('Free during MVP');
   });
 
-  it('footer carries privacy + sub-processors links + GitHub + lang toggle', () => {
+  it('footer carries privacy + terms + sub-processors links + GitHub + lang toggle', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
     expect(
@@ -97,6 +97,11 @@ describe('LandingComponent (#330)', () => {
         'href',
       ),
     ).toBe('/privacy');
+    expect(
+      (root.querySelector('[data-cy="landing-footer-terms"]') as HTMLAnchorElement)?.getAttribute(
+        'href',
+      ),
+    ).toBe('/terms');
     expect(
       (
         root.querySelector('[data-cy="landing-footer-subprocessors"]') as HTMLAnchorElement

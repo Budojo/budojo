@@ -11,6 +11,7 @@ it('registers a new user and returns a token', function (): void {
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
+        'terms_accepted' => true,
     ]);
 
     $response->assertCreated()->assertJsonStructure([
@@ -31,6 +32,55 @@ it('registers a new user and returns a token', function (): void {
     ]);
 });
 
+it('records the terms-of-service acceptance timestamp on the user row (#420)', function (): void {
+    // Snap to the start of the current second — `users.terms_accepted_at`
+    // is a `timestamp` column (default 0 fractional seconds), so on read-
+    // back the microseconds are dropped. Without this floor, a `$before`
+    // captured at HH:MM:SS.700 would be considered LATER than a stored
+    // value of HH:MM:SS.000 and the >= assertion would flake.
+    $before = now()->startOfSecond();
+
+    $this->postJson('/api/v1/auth/register', [
+        'name' => 'Mario Rossi',
+        'email' => 'mario@example.com',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
+        'terms_accepted' => true,
+    ])->assertCreated();
+
+    $user = User::where('email', 'mario@example.com')->firstOrFail();
+
+    // The Action stamps the column with `now()` inside the same request;
+    // anything older than ~5 seconds means we're not actually persisting
+    // it (or the cast is wrong).
+    expect($user->terms_accepted_at)->not->toBeNull();
+    expect($user->terms_accepted_at->greaterThanOrEqualTo($before))->toBeTrue();
+    expect($user->terms_accepted_at->diffInSeconds(now()))->toBeLessThan(5);
+});
+
+it('fails registration when terms_accepted is missing (#420)', function (): void {
+    $this->postJson('/api/v1/auth/register', [
+        'name' => 'Mario Rossi',
+        'email' => 'mario@example.com',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
+    ])->assertUnprocessable()->assertJsonValidationErrors(['terms_accepted']);
+
+    $this->assertDatabaseMissing('users', ['email' => 'mario@example.com']);
+});
+
+it('fails registration when terms_accepted is false (#420)', function (): void {
+    $this->postJson('/api/v1/auth/register', [
+        'name' => 'Mario Rossi',
+        'email' => 'mario@example.com',
+        'password' => 'Password1!',
+        'password_confirmation' => 'Password1!',
+        'terms_accepted' => false,
+    ])->assertUnprocessable()->assertJsonValidationErrors(['terms_accepted']);
+
+    $this->assertDatabaseMissing('users', ['email' => 'mario@example.com']);
+});
+
 it('fails registration when email is already taken', function (): void {
     User::factory()->create(['email' => 'mario@example.com']);
 
@@ -39,13 +89,14 @@ it('fails registration when email is already taken', function (): void {
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
+        'terms_accepted' => true,
     ])->assertUnprocessable()->assertJsonValidationErrors(['email']);
 });
 
 it('fails registration when required fields are missing', function (): void {
     $this->postJson('/api/v1/auth/register', [])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['name', 'email', 'password']);
+        ->assertJsonValidationErrors(['name', 'email', 'password', 'terms_accepted']);
 });
 
 it('fails registration when password confirmation does not match', function (): void {
@@ -54,5 +105,6 @@ it('fails registration when password confirmation does not match', function (): 
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'wrong',
+        'terms_accepted' => true,
     ])->assertUnprocessable()->assertJsonValidationErrors(['password']);
 });

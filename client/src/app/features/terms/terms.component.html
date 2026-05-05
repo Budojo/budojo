@@ -1,0 +1,182 @@
+<article class="legal-page">
+  <header class="legal-page__header">
+    <a
+      class="legal-page__brand"
+      routerLink="/"
+      [attr.aria-label]="'legal.brandAriaLabel' | translate"
+    >
+      <app-brand-glyph class="legal-page__glyph" aria-hidden="true" />
+      <span class="legal-page__brand-name">Budojo</span>
+    </a>
+    <p class="legal-page__eyebrow">Legal</p>
+    <h1 class="legal-page__title">Terms of Service</h1>
+    <p class="legal-page__subtitle">
+      Conditions governing the use of the Budojo service by registered academy owners.
+    </p>
+    <!-- Language toggle (#420). EN canonical; IT at /terms/it. Same
+         shape as /privacy{,/it}. -->
+    <p class="legal-page__lang" data-cy="terms-lang-toggle">
+      <a routerLink="/terms/it" data-cy="terms-lang-it">Italiano</a>
+      <span aria-hidden="true">·</span>
+      <strong aria-current="true">English</strong>
+    </p>
+  </header>
+
+  <aside class="legal-page__notice" data-cy="terms-placeholder-banner">
+    <p>
+      <strong>Placeholder copy — pending legal review.</strong>
+      The text below is a structural scaffold. The technical facts (service description, account
+      ownership, suspension grounds, governing law) reflect what the production system actually does
+      today, but the exact wording must be reviewed and approved by counsel before this page is
+      relied on as a binding contract.
+    </p>
+  </aside>
+
+  <section class="legal-page__section">
+    <h2>1. The service</h2>
+    <p>
+      <strong>Budojo</strong> ("the Service") is a web application operated by the entity identified
+      at <a href="https://budojo.it" target="_blank" rel="noopener noreferrer">budojo.it</a>
+      that lets a martial-arts academy ("the Academy") manage its athletes, attendance, payments,
+      documents, and related operational data. These Terms govern the relationship between Budojo
+      and the natural person who creates and owns an account ("the User") — typically the Academy's
+      owner, head instructor, or designated administrator.
+    </p>
+    <p>
+      Personal data handling is governed separately by the
+      <a routerLink="/privacy">Privacy Policy</a>, which forms part of these Terms by reference.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>2. Account and acceptance</h2>
+    <p>
+      Creating an account on Budojo requires explicit acceptance of these Terms via the "I accept
+      the Terms of Service" checkbox on the registration form. The acceptance is recorded
+      server-side as a timestamp on the user row (<code>users.terms_accepted_at</code>) and is the
+      durable record of consent.
+    </p>
+    <p>
+      The User is responsible for the credentials of their account, for the actions taken through
+      it, and for the data the Academy uploads (athlete records, documents, attendance entries,
+      payment notes). The User warrants having the legal basis required to upload that data — for
+      example, the consent of athletes (or guardians of minors) to be enrolled in the Academy's
+      management software.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>3. Acceptable use</h2>
+    <p>The User agrees not to:</p>
+    <ul>
+      <li>
+        Use the Service for any purpose unrelated to the management of a martial-arts academy or
+        comparable training organisation.
+      </li>
+      <li>
+        Upload material that is unlawful, defamatory, infringing on third-party rights, or contrary
+        to the protection of minors.
+      </li>
+      <li>
+        Attempt to access data belonging to other Academies, probe the Service for vulnerabilities
+        outside a coordinated disclosure channel, or interfere with the Service's operation.
+      </li>
+      <li>
+        Resell, sublicense, or otherwise redistribute access to the Service to third parties without
+        prior written authorisation.
+      </li>
+    </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>4. Suspension and termination</h2>
+    <p>
+      Budojo may suspend or close an account that violates these Terms, that exhibits patterns of
+      abuse (e.g. repeated unauthorised login attempts, automated scraping, content prohibited under
+      section 3 above), or that is required to be suspended by a lawful order from a competent
+      authority. Whenever feasible the User will be notified by email and given a reasonable window
+      to remedy the violation.
+    </p>
+    <p>
+      The User can close their account at any time through the "Delete account" flow in the Profile
+      section, which initiates the 30-day grace window described in the Privacy Policy. After the
+      grace window expires the account is irreversibly deleted.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>5. Service availability and changes</h2>
+    <p>
+      Budojo is provided on a best-effort basis, without a contractual SLA during the MVP phase.
+      Planned maintenance windows are announced in advance whenever possible. The Service may evolve
+      over time; significant changes that affect the User's data or workflow are announced at least
+      30 days in advance via the in-app "What's new" page and, where applicable, by email.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>6. Liability</h2>
+    <p>
+      The Service is provided "as is". To the maximum extent permitted by applicable law, Budojo's
+      total liability arising out of or in connection with these Terms is limited to the fees paid
+      by the User in the twelve months preceding the event giving rise to the claim, or — during any
+      period in which the Service is offered free of charge — to the direct, documented damages
+      strictly attributable to Budojo's gross negligence or wilful misconduct.
+    </p>
+    <p>
+      Budojo is not liable for indirect or consequential damages, loss of profit, loss of business
+      opportunity, or third-party claims that do not arise from a breach attributable to Budojo.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>7. Governing law and venue</h2>
+    <p>
+      These Terms are governed by Italian law. For any dispute arising out of or in connection with
+      these Terms, the competent court is the one having jurisdiction over the registered office of
+      Budojo, save where mandatory consumer-protection law identifies a different competent court.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>8. Changes to these Terms</h2>
+    <p>
+      Budojo may update these Terms over time. Material changes will be announced with at least 30
+      days' notice via email and the in-app "What's new" page. A User who does not agree with the
+      revised Terms can exercise rejection by closing the account through the standard deletion flow
+      before the effective date.
+    </p>
+    <p>
+      The Service does not currently track per-version acceptance: only the original acceptance at
+      registration is recorded as <code>users.terms_accepted_at</code>. Re-confirming acceptance on
+      future revisions — by surfacing an in-app prompt and stamping a fresh timestamp — is planned
+      but not part of this release. Until that is shipped, no automated mechanism in the Service
+      treats continued use as renewed acceptance.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>9. Contact</h2>
+    <p>
+      Questions or notices regarding these Terms can be addressed to
+      <a href="mailto:legal@budojo.it">legal@budojo.it</a>
+      <em>(to be confirmed during legal review)</em>.
+    </p>
+  </section>
+
+  <p class="legal-page__updated" data-cy="terms-version-stamp">
+    Version {{ version }} · Last updated: {{ lastUpdated }}
+  </p>
+
+  <footer class="legal-page__footer">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      label="Back to home"
+      icon="pi pi-arrow-left"
+      (onClick)="goHome()"
+      data-cy="terms-home"
+    />
+  </footer>
+</article>

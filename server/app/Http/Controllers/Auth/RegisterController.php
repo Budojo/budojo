@@ -22,6 +22,10 @@ class RegisterController extends Controller
             name: $request->string('name')->toString(),
             email: $request->string('email')->toString(),
             password: $request->string('password')->toString(),
+            // The FormRequest's `accepted` rule has already confirmed
+            // `terms_accepted` is truthy; the Action wants the moment
+            // of consent as a typed timestamp, not the boolean.
+            termsAcceptedAt: now(),
         );
 
         $token = $user->createToken('auth')->plainTextToken;

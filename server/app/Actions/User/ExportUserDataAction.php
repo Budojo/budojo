@@ -78,6 +78,7 @@ class ExportUserDataAction
             'name' => $user->name,
             'email' => $user->email,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
+            'terms_accepted_at' => $user->terms_accepted_at?->toIso8601String(),
             'created_at' => $user->created_at->toIso8601String(),
         ];
     }

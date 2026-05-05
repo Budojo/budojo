@@ -14,6 +14,7 @@ Laravel default structure, unchanged.
 | `name` | string | not null | Display name of the owner (e.g. "Mario Rossi") |
 | `email` | string | not null, **unique** | Login credential and contact email |
 | `email_verified_at` | timestamp | nullable | Reserved for future email verification flow; currently never set by the app |
+| `terms_accepted_at` | timestamp | nullable | Set on `POST /auth/register` when the user ticks the Terms-of-Service gate (#420). Null for pre-#420 accounts and any future system-only user creation path. |
 | `password` | string | not null | Bcrypt hash (cost 12, configured via `BCRYPT_ROUNDS`) |
 | `remember_token` | string(100) | nullable | Laravel "remember me" token — unused by the SPA auth flow but kept for compatibility |
 | `created_at` | timestamp | nullable | |
@@ -36,6 +37,7 @@ Laravel default structure, unchanged.
 - **Password hashing** is handled by Laravel's `hashed` cast — callers pass plaintext and the framework hashes before insert.
 - **No soft-delete** on users. Deleting a user cascades to their academy (which cascades to athletes) via FK cascade.
 - **Sanctum tokens** issued at login do not expire by default — `expires_at` in `personal_access_tokens` is null. There is no `/api/v1/auth/logout` endpoint today; "logout" in the SPA is client-side only (drops the token from `localStorage`) and does **not** revoke the row in `personal_access_tokens`. Adding a server-side revoke endpoint is queued for a future PR.
+- **Terms of Service acceptance** (#420). The registration form carries a `Validators.requiredTrue` checkbox; the server's `RegisterRequest` enforces it via Laravel's `accepted` rule. On success `RegisterUserAction` writes `terms_accepted_at = now()` on the user row. The acceptance is recorded once, at signup; versioned ToS with re-acceptance is explicitly out of scope for this milestone. The full ToS text lives at the public `/terms` SPA route. Mirrors the privacy-policy gate (#219) but stays a separate column so legal review can audit each consent independently.
 
 ## Related endpoints
 

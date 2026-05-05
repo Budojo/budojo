@@ -20,12 +20,13 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string       $name
  * @property string       $email
  * @property Carbon|null  $email_verified_at  Set when the user clicks the signed verification link; null until then.
+ * @property Carbon|null  $terms_accepted_at  Set on /auth/register when the user ticks the ToS gate (#420); null for pre-#420 / system-seeded accounts.
  * @property string       $password
  * @property string|null  $remember_token
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'terms_accepted_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -61,6 +62,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

@@ -6,17 +6,30 @@ namespace App\Actions\Auth;
 
 use App\Mail\WelcomeMail;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Mail;
 
 class RegisterUserAction
 {
-    public function execute(string $name, string $email, string $password): User
-    {
+    public function execute(
+        string $name,
+        string $email,
+        string $password,
+        CarbonInterface $termsAcceptedAt,
+    ): User {
+        // The caller passes the moment of consent as a typed argument
+        // (#420). The HTTP path threads `now()` through after the
+        // FormRequest's `accepted` rule has confirmed the checkbox;
+        // a future CLI / system caller MUST supply its own attested
+        // timestamp (a back-office migration, an SSO bootstrap, etc.) —
+        // we deliberately don't default to `now()` so that path can't
+        // silently fabricate consent that never happened.
         $user = User::create([
             'name' => $name,
             'email' => $email,
             'password' => $password,
+            'terms_accepted_at' => $termsAcceptedAt,
         ]);
 
         // The Registered event triggers Laravel's verification-email

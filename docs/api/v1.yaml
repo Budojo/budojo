@@ -87,6 +87,11 @@ paths:
       description: |
         Creates a new user and issues a Sanctum Bearer token. The user is created without
         an academy; the SPA routes newly-registered users to `/setup` via `noAcademyGuard`.
+
+        **Terms-of-Service gate (#420).** The request MUST carry `terms_accepted: true`.
+        Missing or falsy values fail validation with `errors.terms_accepted` and the user
+        row is NOT created. On success the server stamps `users.terms_accepted_at = now()`
+        as the durable record of consent.
       operationId: authRegister
       security: []
       requestBody:
@@ -1778,7 +1783,7 @@ components:
 
     RegisterRequest:
       type: object
-      required: [name, email, password, password_confirmation]
+      required: [name, email, password, password_confirmation, terms_accepted]
       properties:
         name:
           type: string
@@ -1797,6 +1802,16 @@ components:
           type: string
           format: password
           description: Must match `password`
+        terms_accepted:
+          type: boolean
+          enum: [true]
+          description: |
+            Terms-of-Service acceptance gate (#420). The literal `true`
+            is the only valid value — Laravel's `accepted` rule rejects
+            `false`, missing field, and non-truthy strings, so generated
+            clients should refuse to send anything else. The server
+            stamps `users.terms_accepted_at = now()` on success.
+          example: true
 
     LoginRequest:
       type: object

@@ -54,8 +54,16 @@ describe('RegisterComponent — privacy consent gate (#219)', () => {
     expect(component.form.invalid).toBe(true);
   });
 
+  it('starts with terms_accepted = false and an invalid form (#420)', () => {
+    expect(component.termsAccepted.value).toBe(false);
+    expect(component.termsAccepted.invalid).toBe(true);
+    expect(component.form.invalid).toBe(true);
+  });
+
   it('blocks submit when the privacy checkbox is unchecked', () => {
     fillFormExceptConsent();
+    // Tick ToS so privacy is the only failing gate — pins the assertion.
+    component.termsAccepted.setValue(true);
     expect(component.form.invalid).toBe(true);
 
     component.submit();
@@ -66,20 +74,38 @@ describe('RegisterComponent — privacy consent gate (#219)', () => {
     expect(component.privacyAccepted.touched).toBe(true);
   });
 
-  it('lets the form submit once the privacy checkbox is checked', () => {
+  it('blocks submit when the Terms-of-Service checkbox is unchecked (#420)', () => {
+    fillFormExceptConsent();
+    // Tick privacy so terms is the only failing gate.
+    component.privacyAccepted.setValue(true);
+    expect(component.form.invalid).toBe(true);
+
+    component.submit();
+
+    expect(authRegisterSpy).not.toHaveBeenCalled();
+    expect(component.termsAccepted.touched).toBe(true);
+  });
+
+  it('lets the form submit once both consent checkboxes are checked', () => {
     fillFormExceptConsent();
     component.privacyAccepted.setValue(true);
+    component.termsAccepted.setValue(true);
     expect(component.form.valid).toBe(true);
 
     component.submit();
 
     expect(authRegisterSpy).toHaveBeenCalledTimes(1);
-    // Consent is NOT sent to the API today — the implicit record is
-    // the timestamp of the successful POST itself. If/when the spec
-    // grows an explicit `privacy_accepted_at` server-side field, this
-    // assertion is the trip-wire that says "now wire it up".
     const payload = authRegisterSpy.mock.calls[0][0] as Record<string, unknown>;
+
+    // Privacy consent is NOT sent to the API — the implicit record is
+    // the timestamp of the successful POST itself.
     expect(payload).not.toHaveProperty('privacy_accepted');
+
+    // Terms acceptance IS sent to the API (#420). The server uses it
+    // to stamp `users.terms_accepted_at`. Pinned to literal `true`
+    // rather than the form's value so the wire format stays a strict
+    // boolean.
+    expect(payload).toHaveProperty('terms_accepted', true);
   });
 
   it('renders the consent checkbox + the link to /privacy', () => {
@@ -96,11 +122,31 @@ describe('RegisterComponent — privacy consent gate (#219)', () => {
     expect(link!.getAttribute('rel')).toContain('noopener');
   });
 
-  it('renders the discreet privacy + sub-processors footer link', () => {
+  it('renders the Terms-of-Service checkbox + the link to /terms (#420)', () => {
+    const root: HTMLElement = fixture.nativeElement;
+
+    const checkbox = root.querySelector('[data-cy="terms-consent-checkbox"]');
+    expect(checkbox).toBeTruthy();
+
+    const link = root.querySelector('[data-cy="terms-consent-link"]') as HTMLAnchorElement | null;
+    expect(link).toBeTruthy();
+    // The routerLink stays a relative path; we assert via the
+    // `routerLink` attribute (the `href` is computed by the router
+    // at render time but stays equivalent).
+    expect(link!.getAttribute('routerLink')).toBe('/terms');
+    expect(link!.getAttribute('target')).toBe('_blank');
+    expect(link!.getAttribute('rel')).toContain('noopener');
+  });
+
+  it('renders the discreet privacy + terms + sub-processors footer links', () => {
     const root: HTMLElement = fixture.nativeElement;
     const footPrivacy = root.querySelector('[data-cy="auth-foot-privacy-link"]');
     expect(footPrivacy).toBeTruthy();
     expect(footPrivacy?.textContent?.trim()).toBe('Privacy');
+
+    const footTerms = root.querySelector('[data-cy="auth-foot-terms-link"]');
+    expect(footTerms).toBeTruthy();
+    expect(footTerms?.textContent?.trim()).toBe('Terms');
   });
 
   it('isolates the consent toggle from the policy link click (#249 copilot review)', () => {

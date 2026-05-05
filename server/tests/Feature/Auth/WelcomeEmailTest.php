@@ -17,6 +17,7 @@ it('queues a WelcomeMail to the new user when registration succeeds', function (
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
+        'terms_accepted' => true,
     ])->assertCreated();
 
     Mail::assertQueued(WelcomeMail::class, fn (WelcomeMail $mail): bool => $mail->hasTo('mario@example.com')
@@ -32,6 +33,7 @@ it('does not queue a WelcomeMail when registration validation fails', function (
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
+        'terms_accepted' => true,
     ])->assertUnprocessable();
 
     Mail::assertNotQueued(WelcomeMail::class);
@@ -64,6 +66,7 @@ it('keeps registration succeeding when the welcome-mail queue insert throws (#40
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
+        'terms_accepted' => true,
     ])->assertCreated()
         ->assertJsonPath('data.email', 'mario@example.com');
 
