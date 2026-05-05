@@ -114,6 +114,13 @@ paths:
         on success, issues a new Sanctum personal access token. The plain-text
         token is returned in the response and must be stored by the client — it
         cannot be retrieved again.
+
+        Rate-limited to 5 attempts per minute per IP via Laravel's standard
+        throttle middleware (#414). On the 6th attempt within the window the
+        endpoint returns 429 with a `Retry-After` header so the SPA can render
+        a countdown before re-enabling the submit button. Successful logins
+        count toward the cap as well — the limiter is keyed on the request
+        signature, not on response status.
       operationId: authLogin
       security: []
       requestBody:
@@ -139,6 +146,20 @@ paths:
                 message: Invalid credentials.
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttled (5 attempts / minute / IP). Retry after the `Retry-After` header.
+          headers:
+            Retry-After:
+              description: Seconds the client should wait before retrying.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Too Many Attempts.
 
   /auth/forgot-password:
     post:

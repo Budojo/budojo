@@ -8,7 +8,18 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
 Route::post('/auth/register', \App\Http\Controllers\Auth\RegisterController::class);
-Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class);
+
+// Login is rate-limited to 5 attempts / minute / IP via Laravel's standard
+// throttle middleware (#414). Without a limiter the password field is
+// brute-forceable at network speed against any known email — the controller
+// returns 401 in O(ms) and there is no inherent backoff. The cap is loose
+// enough that an honest user fat-fingering their password 3-4 times still
+// gets through, but a script grinding passwords hits 429 quickly. Keyed on
+// IP (Laravel's default for unnamed throttle) — keeping the key strategy
+// idiomatic avoids the email-keyed trade-off where an attacker can lock
+// out a known account by spamming its email from a botnet.
+Route::post('/auth/login', \App\Http\Controllers\Auth\LoginController::class)
+    ->middleware('throttle:5,1');
 
 // Password reset (M5 PR-A). Both endpoints are public — a logged-out
 // user is the whole point of the flow.
