@@ -24,25 +24,6 @@ declare global {
 Cypress.Commands.add(
   'visitAuthenticated',
   (url: string, token = 'fake-token', extra?: Partial<Cypress.VisitOptions>) => {
-    // Default `/auth/me` mock — the dashboard shell calls `loadCurrentUser()`
-    // on init and a 5xx / network failure on that side-effect now triggers
-    // the global `errorInterceptor` (#425) which would render `<app-error>`
-    // / `<app-offline>` in place of the page under test. Specs that want to
-    // exercise the failure path register their own `cy.intercept('GET',
-    // '/api/v1/auth/me*', …)` AFTER this — Cypress matches the most-recently
-    // registered intercept first.
-    cy.intercept('GET', '/api/v1/auth/me*', {
-      statusCode: 200,
-      body: {
-        data: {
-          id: 1,
-          name: 'Test User',
-          email: 'test@example.com',
-          email_verified_at: '2026-01-01T00:00:00Z',
-        },
-      },
-    });
-
     cy.visit(url, {
       ...extra,
       onBeforeLoad(win) {
