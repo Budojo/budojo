@@ -57,6 +57,17 @@ export const routes: Routes = [
       import('./features/academy/setup/setup.component').then((m) => m.SetupComponent),
   },
   {
+    // Public athlete invite landing page (#445, M7 PR-C). Outside the
+    // dashboard shell on purpose — the user is unauthenticated when
+    // they land here (the token in the URL is the auth) and the page
+    // wants a single-task focused layout, not the owner sidebar.
+    path: 'athlete-invite/:token',
+    loadComponent: () =>
+      import('./features/athlete-invite/athlete-invite.component').then(
+        (m) => m.AthleteInviteComponent,
+      ),
+  },
+  {
     path: 'dashboard',
     canActivate: [authGuard, hasAcademyGuard],
     loadComponent: () =>

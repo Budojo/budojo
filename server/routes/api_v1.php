@@ -51,6 +51,25 @@ Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Auth\EmailVerific
     ->middleware('signed')
     ->name('verification.verify');
 
+// Athlete invitation accept flow (#445, M7 PR-C). Public on purpose:
+// the raw token in the URL is the auth. The token format is
+// 64 url-safe random chars; we constrain the route to that pattern
+// so a malformed value 404s before the controller is hit.
+//
+// `/preview` is rate-limited gently — a stranger probing the
+// endpoint with random tokens learns nothing (all unknown / non-
+// pending tokens 404), but we cap the firehose anyway.
+//
+// `/accept` is rate-limited to 5 req/min/IP because a bad-actor
+// flood of accept attempts on guessed tokens would otherwise
+// brute-force the bearer-credential search space.
+Route::get('/athlete-invite/{token}/preview', [\App\Http\Controllers\Auth\AthleteInvitationAcceptController::class, 'preview'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware('throttle:30,1');
+Route::post('/athlete-invite/{token}/accept', [\App\Http\Controllers\Auth\AthleteInvitationAcceptController::class, 'accept'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware('throttle:5,1');
+
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {
     // Currently authenticated user. Used by the SPA on bootstrap to hydrate

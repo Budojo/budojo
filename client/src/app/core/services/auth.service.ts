@@ -103,6 +103,19 @@ export class AuthService {
     this.isLoggedIn.set(true);
   }
 
+  /**
+   * Drop a Sanctum bearer token issued by a flow that lives outside
+   * the standard register/login pipeline (#445, M7 PR-C — the
+   * athlete-invite accept flow). Public wrapper around `storeToken`
+   * so the calling component can hydrate the SPA's auth state without
+   * the service needing knowledge of every alternate auth path.
+   * After call, the next `loadCurrentUser()` populates the user
+   * envelope identically to a normal login.
+   */
+  adoptIssuedToken(token: string): void {
+    this.storeToken(token);
+  }
+
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
     this.isLoggedIn.set(false);

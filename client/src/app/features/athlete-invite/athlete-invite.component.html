@@ -1,0 +1,172 @@
+<div class="auth-page">
+  <div class="auth-card">
+    @switch (state()) {
+      @case ('loading') {
+        <div class="invite-state" data-cy="invite-loading">
+          <p>{{ 'athleteInvite.loading' | translate }}</p>
+        </div>
+      }
+      @case ('invalid') {
+        <div class="invite-state" data-cy="invite-invalid">
+          <h1>{{ 'athleteInvite.invalid.title' | translate }}</h1>
+          <p>{{ 'athleteInvite.invalid.body' | translate }}</p>
+          <a [routerLink]="['/auth/login']" class="invite-link">
+            {{ 'athleteInvite.invalid.signinCta' | translate }}
+          </a>
+        </div>
+      }
+      @default {
+        <div class="auth-header">
+          <img src="/logo-glyph.svg" alt="" class="logo-mark" aria-hidden="true" />
+          <h1>{{ 'athleteInvite.title' | translate }}</h1>
+          @if (preview()?.academy_name) {
+            <p [innerHTML]="
+                ('athleteInvite.subtitleWithAcademy' | translate)
+                  .replace('{academy}', preview()!.academy_name)
+              "></p>
+          } @else {
+            <p>{{ 'athleteInvite.subtitle' | translate }}</p>
+          }
+        </div>
+
+        @if (errorMessage()) {
+          <p-message
+            severity="error"
+            [text]="'athleteInvite.errors.' + errorMessage() | translate"
+            styleClass="w-full"
+            data-cy="invite-error"
+          />
+        }
+
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="field">
+            <label for="invite-name">{{ 'athleteInvite.name' | translate }}</label>
+            <input
+              pInputText
+              id="invite-name"
+              type="text"
+              [value]="(preview()?.first_name ?? '') + ' ' + (preview()?.last_name ?? '')"
+              readonly
+              data-cy="invite-name"
+            />
+          </div>
+
+          <div class="field">
+            <label for="invite-email">{{ 'athleteInvite.email' | translate }}</label>
+            <input
+              pInputText
+              id="invite-email"
+              type="email"
+              [value]="preview()?.email ?? ''"
+              readonly
+              data-cy="invite-email"
+            />
+          </div>
+
+          <div class="field">
+            <label for="password">{{ 'athleteInvite.password' | translate }}</label>
+            <p-password
+              inputId="password"
+              formControlName="password"
+              [placeholder]="'athleteInvite.passwordPlaceholder' | translate"
+              autocomplete="new-password"
+              [feedback]="false"
+              [toggleMask]="true"
+              styleClass="w-full"
+              [inputStyleClass]="
+                'w-full' + (password.invalid && password.touched ? ' ng-invalid ng-dirty' : '')
+              "
+            />
+            @if (password.invalid && password.touched) {
+              <small class="field-error">
+                @if (password.errors?.['required']) {
+                  {{ 'athleteInvite.passwordRequired' | translate }}
+                } @else if (password.errors?.['minlength']) {
+                  {{ 'athleteInvite.passwordMinlength' | translate }}
+                }
+              </small>
+            }
+          </div>
+
+          <div class="field">
+            <label for="passwordConfirmation">
+              {{ 'athleteInvite.passwordConfirmation' | translate }}
+            </label>
+            <p-password
+              inputId="passwordConfirmation"
+              formControlName="password_confirmation"
+              [placeholder]="'athleteInvite.passwordConfirmationPlaceholder' | translate"
+              autocomplete="new-password"
+              [feedback]="false"
+              [toggleMask]="true"
+              styleClass="w-full"
+              [inputStyleClass]="
+                'w-full' +
+                (passwordConfirmation.invalid && passwordConfirmation.touched
+                  ? ' ng-invalid ng-dirty'
+                  : '')
+              "
+            />
+            @if (form.errors?.['mismatch'] && passwordConfirmation.touched) {
+              <small class="field-error">
+                {{ 'athleteInvite.passwordsMismatch' | translate }}
+              </small>
+            }
+          </div>
+
+          <div class="field-checkbox">
+            <p-checkbox
+              inputId="privacy_accepted"
+              formControlName="privacy_accepted"
+              [binary]="true"
+              data-cy="invite-privacy"
+            />
+            <label for="privacy_accepted">
+              {{ 'athleteInvite.privacyBefore' | translate }}
+              <a [routerLink]="['/privacy']" target="_blank" rel="noopener">
+                {{ 'athleteInvite.privacyLink' | translate }}
+              </a>
+              {{ 'athleteInvite.privacyAfter' | translate }}
+            </label>
+          </div>
+          @if (privacyAccepted.invalid && privacyAccepted.touched) {
+            <small class="field-error">
+              {{ 'athleteInvite.privacyRequired' | translate }}
+            </small>
+          }
+
+          <div class="field-checkbox">
+            <p-checkbox
+              inputId="terms_accepted"
+              formControlName="terms_accepted"
+              [binary]="true"
+              data-cy="invite-terms"
+            />
+            <label for="terms_accepted">
+              {{ 'athleteInvite.termsBefore' | translate }}
+              <a [routerLink]="['/terms']" target="_blank" rel="noopener">
+                {{ 'athleteInvite.termsLink' | translate }}
+              </a>
+              {{ 'athleteInvite.termsAfter' | translate }}
+            </label>
+          </div>
+          @if (termsAccepted.invalid && termsAccepted.touched) {
+            <small class="field-error">
+              {{ 'athleteInvite.termsRequired' | translate }}
+            </small>
+          }
+
+          <p-button
+            type="submit"
+            [label]="'athleteInvite.submit' | translate"
+            [disabled]="form.invalid || state() === 'submitting'"
+            [loading]="state() === 'submitting'"
+            severity="primary"
+            styleClass="w-full"
+            data-cy="invite-submit"
+          />
+        </form>
+      }
+    }
+  </div>
+</div>
