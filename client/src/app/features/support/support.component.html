@@ -1,0 +1,94 @@
+<section class="support-page">
+  <p-toast />
+
+  <header class="support-page__header">
+    <h1 class="support-page__title">{{ 'support.title' | translate }}</h1>
+    <p class="support-page__subtitle">{{ 'support.subtitle' | translate }}</p>
+  </header>
+
+  <form
+    class="support-page__form"
+    [formGroup]="form"
+    (ngSubmit)="submit()"
+    novalidate
+    data-cy="support-form"
+  >
+    <label class="support-page__field">
+      <span class="support-page__label">{{ 'support.subject.label' | translate }}</span>
+      <input
+        type="text"
+        pInputText
+        formControlName="subject"
+        [maxlength]="100"
+        [placeholder]="'support.subject.placeholder' | translate"
+        data-cy="support-subject"
+      />
+      @if (form.controls.subject.invalid && form.controls.subject.touched) {
+        <span class="support-page__field-error" data-cy="support-subject-error">
+          {{ 'support.subject.error' | translate }}
+        </span>
+      }
+    </label>
+
+    <div class="support-page__field">
+      <span class="support-page__label">{{ 'support.category.label' | translate }}</span>
+      <p-select
+        inputId="support-category"
+        [options]="categoryOptions"
+        formControlName="category"
+        optionValue="value"
+        [placeholder]="'support.category.placeholder' | translate"
+        [class.ng-invalid]="form.controls.category.invalid && form.controls.category.touched"
+        appendTo="body"
+        data-cy="support-category"
+      >
+        <ng-template pTemplate="selectedItem" let-selected>
+          @if (selected) {
+            {{ selected.labelKey | translate }}
+          }
+        </ng-template>
+        <ng-template pTemplate="item" let-option>
+          {{ option.labelKey | translate }}
+        </ng-template>
+      </p-select>
+      @if (form.controls.category.invalid && form.controls.category.touched) {
+        <span class="support-page__field-error" data-cy="support-category-error">
+          {{ 'support.category.error' | translate }}
+        </span>
+      }
+    </div>
+
+    <label class="support-page__field">
+      <span class="support-page__label">{{ 'support.body.label' | translate }}</span>
+      <textarea
+        pTextarea
+        formControlName="body"
+        rows="8"
+        [maxlength]="5000"
+        [placeholder]="'support.body.placeholder' | translate"
+        data-cy="support-body"
+      ></textarea>
+      @if (form.controls.body.invalid && form.controls.body.touched) {
+        <span class="support-page__field-error" data-cy="support-body-error">
+          {{ 'support.body.error' | translate }}
+        </span>
+      }
+    </label>
+
+    @if (userEmail(); as email) {
+      <p class="support-page__reply-hint" data-cy="support-reply-hint">
+        {{ 'support.replyHint' | translate: { email: email } }}
+      </p>
+    }
+
+    <div class="support-page__actions">
+      <p-button
+        type="submit"
+        [label]="'support.submit' | translate"
+        [loading]="submitting()"
+        [disabled]="form.invalid || submitting()"
+        data-cy="support-submit"
+      />
+    </div>
+  </form>
+</section>

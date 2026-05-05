@@ -14,7 +14,8 @@ docs/
 │   ├── athlete.md
 │   ├── athlete-payment.md
 │   ├── address.md                     # polymorphic, owned by Academy + Athlete (#72)
-│   └── document.md
+│   ├── document.md
+│   └── support-ticket.md              # support form submission (#423)
 ├── api/
 │   ├── README.md                      # how to view the spec locally (Swagger UI, Redocly)
 │   └── v1.yaml                        # OpenAPI 3.0.3 — complete contract for /api/v1
