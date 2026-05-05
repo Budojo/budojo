@@ -142,6 +142,17 @@
     "message": "The address you tried doesn't match any page on the site. It may have been moved, or the link is incomplete.",
     "backHome": "Back to home"
   },
+  "errorPage": {
+    "title": "Something went wrong",
+    "message": "The server hit an unexpected error while handling your request. Please try again in a moment, or come back to the home page.",
+    "tryAgain": "Try again",
+    "backHome": "Back to home"
+  },
+  "offlinePage": {
+    "title": "You're offline",
+    "message": "Budojo can't reach the network right now. Check your connection — we'll bring you back to where you were as soon as the network returns.",
+    "tryAgain": "Try again"
+  },
   "feedback": {
     "title": "Send feedback",
     "subtitle": "Spotted something off, broken, or missing? Drop a note here — it goes straight to the team. The current app version and your device info are attached automatically so we can reproduce the issue.",

@@ -142,6 +142,17 @@
     "message": "L'indirizzo non corrisponde a nessuna pagina del sito. Forse è stato spostato o il link è incompleto.",
     "backHome": "Torna alla home"
   },
+  "errorPage": {
+    "title": "Qualcosa è andato storto",
+    "message": "Il server ha incontrato un errore imprevisto durante la richiesta. Riprova tra un momento, oppure torna alla home.",
+    "tryAgain": "Riprova",
+    "backHome": "Torna alla home"
+  },
+  "offlinePage": {
+    "title": "Sei offline",
+    "message": "Budojo non riesce a raggiungere la rete in questo momento. Controlla la connessione — ti riportiamo dov'eri appena la rete torna disponibile.",
+    "tryAgain": "Riprova"
+  },
   "feedback": {
     "title": "Invia feedback",
     "subtitle": "Hai notato qualcosa che non va, di rotto o che manca? Scrivi qui — il messaggio arriva direttamente al team. La versione attuale dell'app e le info del tuo dispositivo vengono allegate in automatico, così possiamo riprodurre il problema.",
