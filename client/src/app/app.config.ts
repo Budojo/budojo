@@ -3,6 +3,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   PreloadAllModules,
   provideRouter,
+  withInMemoryScrolling,
   withPreloading,
   withRouterConfig,
 } from '@angular/router';
@@ -68,6 +69,13 @@ export const appConfig: ApplicationConfig = {
       routes,
       withRouterConfig({ paramsInheritanceStrategy: 'always' }),
       withPreloading(PreloadAllModules),
+      // Enable native fragment anchor scrolling so a `routerLink="/help"`
+      // with `[fragment]="'add-athlete'"` scrolls the matching
+      // `<section id="add-athlete">` into view (#422). Deliberately do
+      // NOT set `scrollPositionRestoration` — that flag is app-wide and
+      // would change back/forward / route-switch scroll behavior across
+      // every existing route, which is out of scope for this PR.
+      withInMemoryScrolling({ anchorScrolling: 'enabled' }),
     ),
     // Auth interceptor first — it adds the bearer token to outgoing
     // requests. Error interceptor second — it inspects the *response*,
