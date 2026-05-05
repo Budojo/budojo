@@ -148,6 +148,18 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '429':
           description: Throttled (5 attempts / minute / IP). Retry after the `Retry-After` header.
+          headers:
+            Retry-After:
+              description: Seconds the client should wait before retrying.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Too Many Attempts.
 
   /auth/forgot-password:
     post:

@@ -14,6 +14,13 @@ beforeEach(function (): void {
     RateLimiter::clear('throttle:5,1');
 });
 
+afterEach(function (): void {
+    // This file deliberately exhausts the limiter; without an afterEach
+    // the next test file calling /auth/login (LoginTest, PasswordResetTest)
+    // would inherit a saturated counter and flake on the first request.
+    RateLimiter::clear('throttle:5,1');
+});
+
 // =====================================================================
 // POST /api/v1/auth/login - rate limiting (#414)
 // =====================================================================
