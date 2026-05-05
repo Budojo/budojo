@@ -1,4 +1,9 @@
-<span class="avatar" [class]="'avatar--' + size()" data-cy="user-avatar">
+<span
+  class="avatar"
+  [class.avatar--chip]="size() === 'chip'"
+  [class.avatar--card]="size() === 'card'"
+  data-cy="user-avatar"
+>
   @if (displayedUrl(); as src) {
     <img
       class="avatar__image"
