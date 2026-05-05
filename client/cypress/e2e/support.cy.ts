@@ -62,14 +62,24 @@ describe('Support page (#423)', () => {
 
     cy.get('[data-cy="support-submit"] button').should('not.be.disabled').click();
 
+    // Post-#446 the support endpoint accepts multipart/form-data so
+    // an optional screenshot can ride alongside the text fields. The
+    // request body in Cypress is the raw multipart envelope, not a
+    // JSON object — assert against the textual form-part headers
+    // instead. We don't pin the boundary token (it's randomised by
+    // the browser) — the field names + values are what matter.
     cy.wait('@submitSupport')
       .its('request.body')
-      .should((body) => {
-        expect(body).to.deep.equal({
-          subject: 'Cannot reset my password',
-          category: 'account',
-          body: 'I clicked the reset link in my inbox and it returns a 404. Tested on Chrome 132.',
-        });
+      .should((body: string) => {
+        expect(body).to.be.a('string');
+        expect(body).to.contain('name="subject"');
+        expect(body).to.contain('Cannot reset my password');
+        expect(body).to.contain('name="category"');
+        expect(body).to.contain('account');
+        expect(body).to.contain('name="body"');
+        expect(body).to.contain(
+          'I clicked the reset link in my inbox and it returns a 404. Tested on Chrome 132.',
+        );
       });
 
     cy.get('.p-toast-message-success').should('be.visible');
