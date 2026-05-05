@@ -67,8 +67,9 @@
   <section class="legal-page__section">
     <h2>3. What we actually store today</h2>
     <p>
-      Pulled live from <code>docs/legal/cookie-audit.md</code> — the auditor-readable inventory in
-      our repository.
+      Mirrored from <code>docs/legal/cookie-audit.md</code> — the auditor-readable inventory in our
+      repository. The two artefacts are kept in lock-step manually; the markdown is the canonical
+      source.
     </p>
 
     <div class="legal-page__table-wrapper">
@@ -137,16 +138,14 @@
     <h2>5. Change your mind</h2>
     <p>You can reopen the consent banner at any time and revise your choices.</p>
     <p>
-      <a
-        href="javascript:void(0)"
+      <button
+        type="button"
+        class="legal-page__inline-button"
         (click)="managePreferences()"
-        (keydown.enter)="managePreferences(); $event.preventDefault()"
-        (keydown.space)="managePreferences(); $event.preventDefault()"
         data-cy="cookie-policy-manage"
-        role="button"
-        tabindex="0"
-        >Manage your preferences</a
       >
+        Manage your preferences
+      </button>
       — or clear <code>budojoCookieConsent</code> from your browser's site data and the banner will
       show again on the next visit.
     </p>
