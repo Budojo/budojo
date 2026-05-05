@@ -1,0 +1,97 @@
+<article class="help-page">
+  <header class="help-page__header">
+    <a
+      class="help-page__brand"
+      routerLink="/"
+      [attr.aria-label]="'help.brandAriaLabel' | translate"
+    >
+      <app-brand-glyph class="help-page__glyph" aria-hidden="true" />
+      <span class="help-page__brand-name">Budojo</span>
+    </a>
+    <p class="help-page__eyebrow">{{ 'help.eyebrow' | translate }}</p>
+    <h1 class="help-page__title">{{ 'help.title' | translate }}</h1>
+    <p class="help-page__subtitle">{{ 'help.subtitle' | translate }}</p>
+  </header>
+
+  <!--
+    Search bar — client-side, OnPush via signal. `p-iconfield` +
+    `p-inputtext` per design canon. The `aria-controls` ties the
+    input to the results region so screen readers announce the
+    list reflowing as the user types.
+  -->
+  <div class="help-page__search">
+    <p-iconfield iconPosition="left">
+      <p-inputicon><i class="pi pi-search" aria-hidden="true"></i></p-inputicon>
+      <input
+        pInputText
+        type="search"
+        [ngModel]="query()"
+        (ngModelChange)="onQueryInput($event)"
+        [placeholder]="'help.searchPlaceholder' | translate"
+        [attr.aria-label]="'help.searchAriaLabel' | translate"
+        autocomplete="off"
+        aria-controls="help-results"
+        data-cy="help-search-input"
+      />
+    </p-iconfield>
+  </div>
+
+  <div id="help-results" class="help-page__results" aria-live="polite">
+    @if (hasNoMatches()) {
+      <p class="help-page__empty" data-cy="help-empty">{{ 'help.empty' | translate }}</p>
+    }
+
+    @for (category of filtered(); track category.id) {
+      <section
+        class="help-page__category"
+        [attr.id]="'cat-' + category.id"
+        [attr.data-cy]="'help-category-' + category.id"
+      >
+        <h2 class="help-page__category-heading">
+          {{ 'help.categories.' + category.id | translate }}
+        </h2>
+        <div class="help-page__entries">
+          @for (entry of category.entries; track entry.id) {
+            <section
+              class="help-page__entry"
+              [attr.id]="entry.id"
+              [attr.data-cy]="'help-entry-' + entry.id"
+            >
+              <h3 class="help-page__entry-question">
+                <a
+                  class="help-page__anchor"
+                  routerLink="/help"
+                  [fragment]="entry.id"
+                  [attr.aria-label]="
+                    'help.anchorAriaLabel'
+                      | translate
+                        : { question: 'help.entries.' + entry.id + '.question' | translate }
+                  "
+                  data-cy="help-entry-anchor"
+                >
+                  <i class="pi pi-link" aria-hidden="true"></i>
+                </a>
+                {{ 'help.entries.' + entry.id + '.question' | translate }}
+              </h3>
+              <p class="help-page__entry-answer">
+                {{ 'help.entries.' + entry.id + '.answer' | translate }}
+              </p>
+            </section>
+          }
+        </div>
+      </section>
+    }
+  </div>
+
+  <footer class="help-page__footer">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      [label]="'help.back' | translate"
+      icon="pi pi-arrow-left"
+      (onClick)="goHome()"
+      data-cy="help-back"
+    />
+  </footer>
+</article>

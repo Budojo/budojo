@@ -3,10 +3,11 @@ import { RouterOutlet } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
 import { AppUpdateService } from './core/services/app-update.service';
 import { LanguageService } from './core/services/language.service';
+import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastModule],
+  imports: [RouterOutlet, ToastModule, CookieBannerComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

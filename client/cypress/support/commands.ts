@@ -37,6 +37,22 @@ Cypress.Commands.add(
         if (win.localStorage.getItem('budojoLang') === null) {
           win.localStorage.setItem('budojoLang', 'en');
         }
+        // Suppress the cookie banner (#421) in authenticated specs —
+        // it's a sticky-bottom overlay that covers form CTAs and
+        // breaks `cy.click()` on elements at the bottom of the viewport.
+        // Specs that need the banner visible (cookie-banner.cy.ts) call
+        // `cy.clearLocalStorage()` in their own beforeEach. Schema
+        // mirrors `ConsentService` (version + choices + savedAt).
+        if (win.localStorage.getItem('budojoCookieConsent') === null) {
+          win.localStorage.setItem(
+            'budojoCookieConsent',
+            JSON.stringify({
+              version: 1,
+              choices: { essential: true, preferences: true, analytics: true, marketing: true },
+              savedAt: new Date().toISOString(),
+            }),
+          );
+        }
         extra?.onBeforeLoad?.(win);
       },
     });
