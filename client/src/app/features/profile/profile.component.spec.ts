@@ -20,6 +20,7 @@ function setup(authOverrides: Partial<AuthService> = {}) {
     user: userSignal,
     isEmailVerified: signal<boolean>(true) as never,
     exportMyData: vi.fn(() => of({ blob: new Blob(['ok']), filename: 'budojo-export.zip' })),
+    changePassword: vi.fn(() => of({ message: 'Password updated.' })),
     ...authOverrides,
   };
 
@@ -117,5 +118,181 @@ describe('ProfileComponent — data export (#222)', () => {
       }),
     );
     expect(cmp['exporting']()).toBe(false);
+  });
+});
+
+describe('ProfileComponent — change password (#409)', () => {
+  it('renders the change-password form when the user is loaded', () => {
+    const { fixture } = setup();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-change-password"]'),
+    ).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="change-password-submit"]'),
+    ).not.toBeNull();
+  });
+
+  it("blocks submit and doesn't call the service when the form is empty", () => {
+    const changeSpy = vi.fn(() => of({ message: 'ok' }));
+    const { cmp } = setup({ changePassword: changeSpy } as never);
+
+    cmp.submitChangePassword();
+
+    expect(changeSpy).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit when new password is shorter than 8 characters', () => {
+    const changeSpy = vi.fn(() => of({ message: 'ok' }));
+    const { cmp } = setup({ changePassword: changeSpy } as never);
+    cmp['changePasswordForm'].patchValue({
+      currentPassword: 'OldPassword1!',
+      newPassword: 'short',
+      newPasswordConfirmation: 'short',
+    });
+
+    cmp.submitChangePassword();
+
+    expect(changeSpy).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit when the new password and confirmation do not match', () => {
+    const changeSpy = vi.fn(() => of({ message: 'ok' }));
+    const { cmp } = setup({ changePassword: changeSpy } as never);
+    cmp['changePasswordForm'].patchValue({
+      currentPassword: 'OldPassword1!',
+      newPassword: 'NewPassword1!',
+      newPasswordConfirmation: 'Mismatch1!',
+    });
+
+    cmp.submitChangePassword();
+
+    expect(changeSpy).not.toHaveBeenCalled();
+  });
+
+  it('on success: calls the service with the form payload, resets the form, and shows a success toast', () => {
+    const changeSpy = vi.fn(() => of({ message: 'Password updated.' }));
+    const messageSpy = vi.fn();
+    const { cmp, fixture } = setup({ changePassword: changeSpy } as never);
+    TestBed.inject(MessageService).add = messageSpy;
+
+    cmp['changePasswordForm'].patchValue({
+      currentPassword: 'OldPassword1!',
+      newPassword: 'NewPassword1!',
+      newPasswordConfirmation: 'NewPassword1!',
+    });
+
+    cmp.submitChangePassword();
+
+    expect(changeSpy).toHaveBeenCalledWith({
+      current_password: 'OldPassword1!',
+      password: 'NewPassword1!',
+      password_confirmation: 'NewPassword1!',
+    });
+    expect(messageSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+    // Form is cleared after success.
+    fixture.detectChanges();
+    expect(cmp['changePasswordForm'].value.newPassword).toBeFalsy();
+    expect(cmp['changingPassword']()).toBe(false);
+  });
+
+  it('on 422 with errors.current_password: surfaces an inline "current" error', () => {
+    const error = {
+      status: 422,
+      error: { errors: { current_password: ['The current password is incorrect.'] } },
+    };
+    const changeSpy = vi.fn(() => throwError(() => error));
+    const { cmp, fixture } = setup({ changePassword: changeSpy } as never);
+
+    cmp['changePasswordForm'].patchValue({
+      currentPassword: 'wrong',
+      newPassword: 'NewPassword1!',
+      newPasswordConfirmation: 'NewPassword1!',
+    });
+
+    cmp.submitChangePassword();
+    fixture.detectChanges();
+
+    expect(cmp['changePasswordServerError']()).toBe('current');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="change-password-current-wrong"]'),
+    ).not.toBeNull();
+    expect(cmp['changingPassword']()).toBe(false);
+  });
+
+  it('on 422 with errors.password: surfaces an inline "password" error (e.g. same-as-old)', () => {
+    const error = {
+      status: 422,
+      error: { errors: { password: ['The new password must be different from the current one.'] } },
+    };
+    const changeSpy = vi.fn(() => throwError(() => error));
+    const { cmp, fixture } = setup({ changePassword: changeSpy } as never);
+
+    cmp['changePasswordForm'].patchValue({
+      currentPassword: 'OldPassword1!',
+      newPassword: 'OldPassword1!',
+      newPasswordConfirmation: 'OldPassword1!',
+    });
+
+    cmp.submitChangePassword();
+    fixture.detectChanges();
+
+    expect(cmp['changePasswordServerError']()).toBe('password');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="change-password-new-server-error"]'),
+    ).not.toBeNull();
+  });
+
+  it('on a non-422 / unmapped error: shows a generic inline error', () => {
+    const changeSpy = vi.fn(() => throwError(() => ({ status: 500 })));
+    const { cmp, fixture } = setup({ changePassword: changeSpy } as never);
+
+    cmp['changePasswordForm'].patchValue({
+      currentPassword: 'OldPassword1!',
+      newPassword: 'NewPassword1!',
+      newPasswordConfirmation: 'NewPassword1!',
+    });
+
+    cmp.submitChangePassword();
+    fixture.detectChanges();
+
+    expect(cmp['changePasswordServerError']()).toBe('generic');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="change-password-generic-error"]'),
+    ).not.toBeNull();
+  });
+
+  it('toggles `changingPassword` while the request is in flight', () => {
+    const subject = new Subject<{ message: string }>();
+    const { cmp } = setup({ changePassword: vi.fn(() => subject.asObservable()) } as never);
+    cmp['changePasswordForm'].patchValue({
+      currentPassword: 'OldPassword1!',
+      newPassword: 'NewPassword1!',
+      newPasswordConfirmation: 'NewPassword1!',
+    });
+
+    expect(cmp['changingPassword']()).toBe(false);
+    cmp.submitChangePassword();
+    expect(cmp['changingPassword']()).toBe(true);
+
+    subject.next({ message: 'ok' });
+    subject.complete();
+    expect(cmp['changingPassword']()).toBe(false);
+  });
+
+  it('ignores subsequent clicks while a change-password request is in flight', () => {
+    const subject = new Subject<{ message: string }>();
+    const changeSpy = vi.fn(() => subject.asObservable());
+    const { cmp } = setup({ changePassword: changeSpy } as never);
+    cmp['changePasswordForm'].patchValue({
+      currentPassword: 'OldPassword1!',
+      newPassword: 'NewPassword1!',
+      newPasswordConfirmation: 'NewPassword1!',
+    });
+
+    cmp.submitChangePassword();
+    cmp.submitChangePassword();
+    cmp.submitChangePassword();
+
+    expect(changeSpy).toHaveBeenCalledTimes(1);
   });
 });

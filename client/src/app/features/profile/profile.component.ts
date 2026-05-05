@@ -1,3 +1,11 @@
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
@@ -5,6 +13,7 @@ import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { MessageService } from 'primeng/api';
+import { PasswordModule } from 'primeng/password';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
@@ -26,7 +35,14 @@ import { EmailVerificationStatusComponent } from '../../shared/components/email-
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [ButtonModule, CardModule, EmailVerificationStatusComponent, TranslatePipe],
+  imports: [
+    ButtonModule,
+    CardModule,
+    EmailVerificationStatusComponent,
+    PasswordModule,
+    ReactiveFormsModule,
+    TranslatePipe,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
@@ -36,9 +52,39 @@ export class ProfileComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly fb = inject(FormBuilder);
 
   protected readonly user = this.authService.user;
   protected readonly exporting = signal<boolean>(false);
+
+  /** True while POST /me/password is in flight. */
+  protected readonly changingPassword = signal<boolean>(false);
+
+  /**
+   * Server-mapped error for the change-password form. `current` flips on
+   * a 422 with `errors.current_password` (wrong re-auth) so we can
+   * render an inline error under the current-password field. `password`
+   * flips on a 422 with `errors.password` (covers same-as-old, weak,
+   * mismatched confirmation in the rare case the SPA's own validators
+   * miss it). Cleared on every new submit attempt.
+   */
+  protected readonly changePasswordServerError = signal<'current' | 'password' | 'generic' | null>(
+    null,
+  );
+
+  /**
+   * Reactive form for the change-password sub-section (#409). Three
+   * fields; the cross-field validator `passwordsMatchValidator` mirrors
+   * the reset-password page so the SPA UX stays consistent.
+   */
+  protected readonly changePasswordForm = this.fb.group(
+    {
+      currentPassword: ['', Validators.required],
+      newPassword: ['', [Validators.required, Validators.minLength(8)]],
+      newPasswordConfirmation: ['', Validators.required],
+    },
+    { validators: passwordsMatchValidator() },
+  );
 
   private readonly queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -91,4 +137,93 @@ export class ProfileComponent {
         },
       });
   }
+
+  /**
+   * In-app password change (#409). Submits the form to `POST
+   * /api/v1/me/password`; on success the SPA stays logged in (the server
+   * preserves the current Sanctum token while revoking every other token
+   * on the user). Wrong current password / same-as-old / weak / mismatched
+   * are surfaced inline rather than as a toast — the user is staring at
+   * the form, an inline error reads naturally; toasts are reserved for
+   * the success path so the user knows the operation completed without
+   * having to inspect a now-empty form.
+   */
+  submitChangePassword(): void {
+    if (this.changingPassword()) return;
+
+    // Always clear the server-error banner on a fresh submit attempt —
+    // BEFORE the form-validity guard. Otherwise a previous 422 (e.g.
+    // wrong current password) lingers visibly while the user fixes a
+    // client-side error like an empty new-password field, mixing the
+    // two error sources in the same render and confusing the user.
+    this.changePasswordServerError.set(null);
+
+    if (this.changePasswordForm.invalid) {
+      this.changePasswordForm.markAllAsTouched();
+      return;
+    }
+
+    this.changingPassword.set(true);
+
+    const { currentPassword, newPassword, newPasswordConfirmation } =
+      this.changePasswordForm.getRawValue();
+
+    this.authService
+      .changePassword({
+        current_password: currentPassword ?? '',
+        password: newPassword ?? '',
+        password_confirmation: newPasswordConfirmation ?? '',
+      })
+      .pipe(finalize(() => this.changingPassword.set(false)))
+      .subscribe({
+        next: () => {
+          this.changePasswordForm.reset();
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translate.instant('profile.changePassword.successSummary'),
+            detail: this.translate.instant('profile.changePassword.successDetail'),
+          });
+        },
+        error: (err: { status?: number; error?: { errors?: Record<string, unknown> } }) => {
+          const errors = err.error?.errors ?? {};
+          if ('current_password' in errors) {
+            this.changePasswordServerError.set('current');
+          } else if ('password' in errors) {
+            this.changePasswordServerError.set('password');
+          } else {
+            this.changePasswordServerError.set('generic');
+          }
+        },
+      });
+  }
+
+  protected get currentPassword(): AbstractControl {
+    return this.changePasswordForm.get('currentPassword')!;
+  }
+
+  protected get newPassword(): AbstractControl {
+    return this.changePasswordForm.get('newPassword')!;
+  }
+
+  protected get newPasswordConfirmation(): AbstractControl {
+    return this.changePasswordForm.get('newPasswordConfirmation')!;
+  }
+}
+
+/**
+ * Cross-field validator: newPasswordConfirmation must match newPassword.
+ * Same shape as the reset-password page's validator; the error key
+ * `passwordsMismatch` is read off the FORM, not the confirmation
+ * control, so the template can render the message without coupling
+ * the confirmation control's `errors` to the other field's value.
+ */
+function passwordsMatchValidator(): ValidatorFn {
+  return (group: AbstractControl): ValidationErrors | null => {
+    const pw = group.get('newPassword')?.value;
+    const conf = group.get('newPasswordConfirmation')?.value;
+    if (pw && conf && pw !== conf) {
+      return { passwordsMismatch: true };
+    }
+    return null;
+  };
 }

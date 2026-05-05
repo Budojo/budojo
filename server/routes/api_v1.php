@@ -57,6 +57,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // the user state (incl. `email_verified_at`) after a page reload.
     Route::get('/auth/me', \App\Http\Controllers\Auth\MeController::class);
 
+    // In-app password change (#409). Throttled to 5 requests per minute
+    // (Laravel's default IP-based key) — same shape as `/auth/login` and
+    // `/me/deletion-request`, defeats brute-force on the current-password
+    // re-auth gate while leaving an honest user with several retries to
+    // recover from a typo. The current Sanctum token used for this
+    // request is preserved; every other token on the user is revoked
+    // inside the Action (defence-in-depth without yanking the active tab).
+    Route::post('/me/password', \App\Http\Controllers\Auth\ChangePasswordController::class)
+        ->middleware('throttle:5,1');
+
     // GDPR Art. 20 (data portability) — export every byte we hold about
     // the user. JSON by default; `?format=zip` returns the JSON plus
     // bundled document binaries. Throttled to 1 req/min per user (#222)

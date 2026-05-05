@@ -453,6 +453,23 @@
       "errorSummary": "Error",
       "throttledDetail": "You already exported your data recently. Try again in a minute.",
       "genericErrorDetail": "Couldn't download your data. Please try again."
+    },
+    "changePassword": {
+      "title": "Password",
+      "hint": "Choose a new password and confirm it. We'll keep you signed in here, but other devices will be signed out for security.",
+      "currentPassword": "Current password",
+      "currentPasswordRequired": "Enter your current password.",
+      "currentPasswordWrong": "The current password is incorrect.",
+      "newPassword": "New password",
+      "newPasswordRequired": "Enter a new password.",
+      "newPasswordMinlength": "Use at least 8 characters.",
+      "newPasswordServerError": "The new password was rejected by the server. Make sure it's at least 8 characters, different from your current password, and that the confirmation matches.",
+      "newPasswordConfirmation": "Confirm new password",
+      "mismatch": "The passwords don't match.",
+      "submit": "Update password",
+      "successSummary": "Password updated",
+      "successDetail": "Your password has been changed. Other devices have been signed out.",
+      "genericError": "Couldn't update your password. Please try again."
     }
   },
   "emailVerification": {
