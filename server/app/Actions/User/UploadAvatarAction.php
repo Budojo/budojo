@@ -7,6 +7,7 @@ namespace App\Actions\User;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Stores an uploaded avatar on the `public` disk under
@@ -47,21 +48,27 @@ class UploadAvatarAction
         // Both `getRealPath()` and `file_get_contents()` can return
         // false on a hostile / corrupt UploadedFile — casting false to
         // string would silently store an empty file while reporting
-        // 200, so we check explicitly and 422-equivalent the request.
+        // 200. Surface those as 422 ValidationException on the
+        // `avatar` field rather than a 500 RuntimeException, because
+        // the failure is a client-payload problem (corrupt or
+        // unreadable upload), not a server bug.
         $realPath = $file->getRealPath();
         if ($realPath === false) {
-            throw new \RuntimeException('Uploaded avatar file is unreadable (no real path).');
+            throw ValidationException::withMessages([
+                'avatar' => 'The uploaded file is unreadable. Please try again.',
+            ]);
         }
         $bytes = file_get_contents($realPath);
         if ($bytes === false) {
-            throw new \RuntimeException("Failed to read uploaded avatar bytes from {$realPath}.");
+            throw ValidationException::withMessages([
+                'avatar' => 'Failed to read the uploaded file. Please try again.',
+            ]);
         }
 
-        // `Storage::put()` returns false on a transient disk error
-        // (e.g. permission, full filesystem). Bail before the model
-        // write so we never persist `avatar_path` pointing at a file
-        // that was never written — the caller's upload would 200 with
-        // a broken `avatar_url` otherwise.
+        // `Storage::put()` returning false IS a server-side problem
+        // (disk permission, full filesystem). Stays a RuntimeException
+        // — surfaces as 500, which is correct: the client's payload
+        // was fine.
         $stored = $disk->put($newPath, $bytes);
         if ($stored === false) {
             throw new \RuntimeException("Failed to write avatar to {$newPath}.");
