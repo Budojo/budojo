@@ -20,10 +20,14 @@
           <img src="/logo-glyph.svg" alt="" class="logo-mark" aria-hidden="true" />
           <h1>{{ 'athleteInvite.title' | translate }}</h1>
           @if (preview()?.academy_name) {
-            <p [innerHTML]="
-                ('athleteInvite.subtitleWithAcademy' | translate)
-                  .replace('{academy}', preview()!.academy_name)
-              "></p>
+            <p
+              [innerHTML]="
+                ('athleteInvite.subtitleWithAcademy' | translate).replace(
+                  '{academy}',
+                  preview()!.academy_name
+                )
+              "
+            ></p>
           } @else {
             <p>{{ 'athleteInvite.subtitle' | translate }}</p>
           }
