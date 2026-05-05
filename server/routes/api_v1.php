@@ -157,17 +157,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy']);
     Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
 
-    // In-app feedback (#311). Authenticated user → email to product owner.
-    // Throttled lightly (5 req/min per user) so a script can't blast the
-    // owner's inbox; the shape lets a frustrated user fire several reports
-    // in quick succession but stops abuse.
-    Route::post('/feedback', [\App\Http\Controllers\Feedback\FeedbackController::class, 'store'])
-        ->middleware('throttle:5,1');
-
-    // Support contact form (#423). Authenticated user → persists a
-    // ticket row + queues an email to the support inbox with Reply-To
-    // set to the user. Same throttle shape as feedback above (5/min)
-    // so a script can't flood the support inbox.
+    // Support contact form (#423 + post-v1.17 consolidation that
+    // retired the legacy /dashboard/feedback page). Authenticated user
+    // → persists a ticket row + queues an email to the support inbox
+    // with Reply-To set to the user. The optional screenshot attachment
+    // and the auto-attached app version + User-Agent inherit from the
+    // legacy feedback flow. Throttled to 5 req/min per user so a script
+    // can't flood the support inbox.
     Route::post('/support', [\App\Http\Controllers\Support\SupportTicketController::class, 'store'])
         ->middleware('throttle:5,1');
 

@@ -132,10 +132,10 @@ describe('SupportComponent (#423)', () => {
       expect(messageSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
     });
 
-    it('exposes the four category options as a typed array', () => {
+    it('exposes the five category options as a typed array', () => {
       const { cmp } = setup();
       const values = cmp['categoryOptions'].map((o) => o.value);
-      expect(values).toEqual(['account', 'billing', 'bug', 'other']);
+      expect(values).toEqual(['account', 'billing', 'bug', 'feedback', 'other']);
     });
   });
 

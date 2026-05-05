@@ -14,7 +14,6 @@
     "attendance": "Presenze",
     "profile": "Profilo",
     "whatsNew": "Novità",
-    "feedback": "Invia feedback",
     "support": "Contatta il supporto",
     "signOut": "Esci",
     "privacy": "Privacy",
@@ -286,37 +285,9 @@
     "message": "Budojo non riesce a raggiungere la rete in questo momento. Controlla la connessione — ti riportiamo dov'eri appena la rete torna disponibile.",
     "tryAgain": "Riprova"
   },
-  "feedback": {
-    "title": "Invia feedback",
-    "subtitle": "Hai notato qualcosa che non va, di rotto o che manca? Scrivi qui — il messaggio arriva direttamente al team. La versione attuale dell'app e le info del tuo dispositivo vengono allegate in automatico, così possiamo riprodurre il problema.",
-    "subject": {
-      "label": "Oggetto",
-      "placeholder": "Riassunto breve — es. \"La lista atleti non si ordina\"",
-      "error": "L'oggetto è obbligatorio (da 3 a 100 caratteri)."
-    },
-    "description": {
-      "label": "Descrizione",
-      "placeholder": "Cosa stavi facendo, cos'è successo, e cosa ti aspettavi che succedesse?",
-      "error": "La descrizione è obbligatoria (da 10 a 2000 caratteri)."
-    },
-    "image": {
-      "label": "Allega uno screenshot (opzionale)",
-      "hint": "PNG, JPEG o WEBP. Massimo 5 MB. Una sola immagine per invio.",
-      "remove": "Rimuovi",
-      "errorMime": "Sono accettate solo immagini PNG, JPEG e WEBP.",
-      "errorSize": "Immagine troppo grande. Dimensione massima 5 MB."
-    },
-    "submit": "Invia feedback",
-    "toast": {
-      "successSummary": "Feedback inviato",
-      "successDetail": "Grazie — il tuo messaggio è in viaggio.",
-      "errorSummary": "Invio non riuscito",
-      "errorDetail": "Qualcosa è andato storto durante l'invio del feedback. Riprova."
-    }
-  },
   "support": {
     "title": "Contatta il supporto",
-    "subtitle": "Hai bisogno di aiuto con il tuo account, la fatturazione, un bug o altro? Scrivici — una persona ti risponderà all'indirizzo email del tuo account.",
+    "subtitle": "Hai bisogno di aiuto con il tuo account, la fatturazione, un bug, o vuoi mandarci un feedback? Scrivici — una persona ti risponderà all'indirizzo email del tuo account.",
     "subject": {
       "label": "Oggetto",
       "placeholder": "Riassunto breve — es. \"Non riesco a reimpostare la password\"",
@@ -329,6 +300,7 @@
         "account": "Account",
         "billing": "Fatturazione",
         "bug": "Bug",
+        "feedback": "Feedback / suggerimento",
         "other": "Altro"
       },
       "error": "Scegli una categoria."
@@ -337,6 +309,13 @@
       "label": "Messaggio",
       "placeholder": "Raccontaci cosa sta succedendo — più dettagli ci dai, più in fretta possiamo aiutarti.",
       "error": "Il messaggio è obbligatorio (da 10 a 5000 caratteri)."
+    },
+    "image": {
+      "label": "Allega uno screenshot (opzionale)",
+      "hint": "PNG, JPEG o WEBP. Massimo 5 MB. Una sola immagine per invio.",
+      "remove": "Rimuovi",
+      "errorMime": "Sono accettate solo immagini PNG, JPEG e WEBP.",
+      "errorSize": "Immagine troppo grande. Dimensione massima 5 MB."
     },
     "submit": "Invia messaggio",
     "replyHint": "Ti risponderemo a {{email}}.",
@@ -391,9 +370,9 @@
         "title": "La tua palestra, in tasca.",
         "body": "Installabile come app su iOS e Android. Si aggiorna da sola quando rilasciamo nuove versioni. Funziona uguale sul telefono e sul portatile."
       },
-      "feedback": {
+      "support": {
         "title": "Mandaci un messaggio quando qualcosa si rompe.",
-        "body": "Hai visto un bug o vorresti una funzione? Il form di feedback dentro l'app ce lo manda direttamente, con la versione e le info del tuo dispositivo già allegate."
+        "body": "Hai visto un bug o vorresti una funzione? Il form di contatto dentro l'app ce lo manda direttamente, con la versione e le info del tuo dispositivo già allegate, e rispondiamo all'email del tuo account."
       }
     },
     "trust": {
