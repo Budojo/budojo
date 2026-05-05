@@ -409,6 +409,30 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('support link in sidebar footer (#423)', () => {
+    it('renders a routerLink="support" entry above Send feedback', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const support = fixture.nativeElement.querySelector(
+        '[data-cy="nav-support"]',
+      ) as HTMLAnchorElement | null;
+      expect(support).not.toBeNull();
+      expect(support!.tagName).toBe('A');
+      expect(support!.textContent).toContain('Contact support');
+      // pi-life-ring is the icon associated with "support" in PrimeIcons.
+      expect(support!.querySelector('i.pi-life-ring')).not.toBeNull();
+
+      // Order check — support sits ABOVE Send feedback (the
+      // expecting-a-reply channel ranks higher than fire-and-forget).
+      const feedback = fixture.nativeElement.querySelector(
+        '[data-cy="nav-feedback"]',
+      ) as HTMLAnchorElement;
+      // DOCUMENT_POSITION_FOLLOWING = 4
+      expect(support!.compareDocumentPosition(feedback) & 4).toBe(4);
+    });
+  });
+
   describe('stats nav entry position', () => {
     it('renders Stats nav entry immediately after Attendance in the main nav', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
