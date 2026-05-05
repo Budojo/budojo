@@ -74,7 +74,7 @@ export class WhatsNewComponent {
         {
           heading: '👤 Account',
           bullets: [
-            "Change your password. A \"Change password\" entry on the Profile page lets you rotate your password without the forgot-password email round-trip. Asks for your current password as a re-auth gate, then for a new one twice. Every other active session on your account (other browsers, other devices) is signed out as a precaution; the tab you're using stays signed in.",
+            'Change your password. A "Change password" entry on the Profile page lets you rotate your password without the forgot-password email round-trip. Asks for your current password as a re-auth gate, then for a new one twice. Every other active session on your account (other browsers, other devices) is signed out as a precaution; the tab you\'re using stays signed in.',
             'Upload your own avatar. The circular avatar in the top-right corner used to be your initials. You can now upload a real photo from Profile → Edit avatar — drag-and-drop or browse, replace it any time, or remove it to fall back to initials. Renders in the topbar and on the profile page.',
           ],
         },
@@ -92,7 +92,7 @@ export class WhatsNewComponent {
           bullets: [
             'Login rate limit. The sign-in form is now capped at 5 password attempts per minute from the same network — past that you wait a minute before trying again. Closes the door on automated password-guessing without being noticeable to a real user fat-fingering their password a few times.',
             'Friendly server-error page. If the API ever returns a 500, the SPA used to surface an opaque error toast or, worse, a blank page. It now shows a dedicated error page with a clear "Try again" button and a link back to the dashboard. Still the rare path; nicer when it fires.',
-            "Friendly offline page. If you lose connection mid-navigation the SPA now shows an offline page with a \"Retry\" button and a heads-up that the rest of the app needs the network. Replaces the browser's native offline screen.",
+            'Friendly offline page. If you lose connection mid-navigation the SPA now shows an offline page with a "Retry" button and a heads-up that the rest of the app needs the network. Replaces the browser\'s native offline screen.',
           ],
         },
         {
