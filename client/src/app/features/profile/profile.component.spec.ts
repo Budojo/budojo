@@ -127,7 +127,9 @@ describe('ProfileComponent — change password (#409)', () => {
     expect(
       fixture.nativeElement.querySelector('[data-cy="profile-change-password"]'),
     ).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-cy="change-password-submit"]')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="change-password-submit"]'),
+    ).not.toBeNull();
   });
 
   it("blocks submit and doesn't call the service when the form is empty", () => {
@@ -186,9 +188,7 @@ describe('ProfileComponent — change password (#409)', () => {
       password: 'NewPassword1!',
       password_confirmation: 'NewPassword1!',
     });
-    expect(messageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ severity: 'success' }),
-    );
+    expect(messageSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
     // Form is cleared after success.
     fixture.detectChanges();
     expect(cmp['changePasswordForm'].value.newPassword).toBeFalsy();

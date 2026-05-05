@@ -162,7 +162,10 @@ export class AuthService {
    * or same-as-old / weak / mismatched new (`errors.password`).
    */
   changePassword(payload: ChangePasswordPayload): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${environment.apiBase}/api/v1/me/password`, payload);
+    return this.http.post<{ message: string }>(
+      `${environment.apiBase}/api/v1/me/password`,
+      payload,
+    );
   }
 
   /**

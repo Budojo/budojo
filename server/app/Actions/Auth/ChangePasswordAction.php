@@ -45,6 +45,13 @@ class ChangePasswordAction
         // re-authenticates next request — that's the defence-in-depth
         // shape, slightly stricter than the happy path).
         $currentToken = $user->currentAccessToken();
+        // Sanctum's `@template TToken = PersonalAccessToken` docblock makes
+        // PHPStan see this instanceof as always-true. At runtime the value
+        // can also be `TransientToken` (cookie-session auth) or `null`
+        // (non-HTTP context); neither exposes the `getKey()` we need to
+        // preserve, so the explicit check is genuine despite the static
+        // analyzer's view of the world.
+        /** @phpstan-ignore-next-line instanceof.alwaysTrue */
         $currentTokenId = $currentToken instanceof PersonalAccessToken
             ? $currentToken->getKey()
             : null;
