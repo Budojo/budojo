@@ -14,6 +14,7 @@
     "profile": "Profile",
     "whatsNew": "What's new",
     "feedback": "Send feedback",
+    "support": "Contact support",
     "signOut": "Sign out",
     "privacy": "Privacy",
     "stats": "Stats",
@@ -312,6 +313,39 @@
       "errorDetail": "Something went wrong sending your feedback. Please try again."
     }
   },
+  "support": {
+    "title": "Contact support",
+    "subtitle": "Need a hand with your account, billing, a bug, or anything else? Send us a message — a human will reply to the email address on your account.",
+    "subject": {
+      "label": "Subject",
+      "placeholder": "Short summary — e.g. \"Can't reset my password\"",
+      "error": "Subject is required (3 to 100 characters)."
+    },
+    "category": {
+      "label": "Category",
+      "placeholder": "Pick a category",
+      "options": {
+        "account": "Account",
+        "billing": "Billing",
+        "bug": "Bug",
+        "other": "Other"
+      },
+      "error": "Pick a category."
+    },
+    "body": {
+      "label": "Message",
+      "placeholder": "Tell us what's going on — the more detail you share, the faster we can help.",
+      "error": "Message is required (10 to 5000 characters)."
+    },
+    "submit": "Send message",
+    "replyHint": "We'll reply to {{email}}.",
+    "toast": {
+      "successSummary": "Message sent",
+      "successDetail": "Thanks — we've got it. You'll hear back by email shortly.",
+      "errorSummary": "Couldn't send",
+      "errorDetail": "Something went wrong sending your message. Please try again in a moment."
+    }
+  },
   "landing": {
     "nav": {
       "login": "Log in",
@@ -401,6 +435,7 @@
       "privacy": "Privacy",
       "terms": "Terms",
       "subProcessors": "Sub-processors",
+      "support": "Contact us",
       "tagline": "Made for the mat. Built in Italy."
     }
   },

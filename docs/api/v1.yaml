@@ -52,6 +52,14 @@ tags:
       product owner with the user's text, the SPA build version, and
       the request User-Agent. Single endpoint, single recipient
       (hardcoded), throttled to 5 req/min per user.
+  - name: support
+    description: |
+      Dedicated support / contact form submissions (#423). Distinct
+      from `feedback` — this channel is intended for the user to GET
+      A REPLY: the server persists a `support_tickets` row as a
+      paper trail and queues an email with Reply-To set to the
+      user, so the support inbox can hit Reply directly. Single
+      recipient (hardcoded), throttled to 5 req/min per user.
   - name: Stats
     description: |
       Server-side aggregations for the /dashboard/stats charts.
@@ -1380,6 +1388,69 @@ paths:
                 properties:
                   message: { type: string }
               example: { message: Feedback received. }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: Throttle limit hit (5 req/min per user).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+
+  /support:
+    post:
+      tags: [support]
+      summary: File a support ticket — persists a row and emails the support inbox
+      description: |
+        Authenticated users can file a support ticket (subject +
+        category + body). The server persists a `support_tickets`
+        row (paper trail) AND queues an email to the support inbox
+        with `Reply-To` set to the user, so the inbox owner can hit
+        Reply directly and the response lands in the user's mailbox.
+        Throttled to 5 req/min per user.
+
+        Distinct from `/feedback` — feedback is fire-and-forget for
+        product feedback / bug reports; this endpoint is the
+        "I want a reply" channel.
+
+        Mail dispatch is best-effort: a queue insert failure does
+        NOT fail the request, the row is still persisted and the
+        client receives a 202.
+      operationId: submitSupportTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, category, body]
+              properties:
+                subject:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                category:
+                  type: string
+                  enum: [account, billing, bug, other]
+                  description: |
+                    Coarse routing label. The four cases reflect the
+                    most common reasons a user reaches out — the
+                    SupportTicketCategory PHP enum mirrors them.
+                body:
+                  type: string
+                  minLength: 10
+                  maxLength: 5000
+      responses:
+        '202':
+          description: Ticket persisted and email queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/SupportTicket' }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '422':
@@ -2799,6 +2870,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AttendanceSummaryRow'
+
+    SupportTicket:
+      type: object
+      required: [id, created_at]
+      description: |
+        Lean response shape for the /support endpoint. Only the row
+        id and the persisted timestamp are surfaced — the SPA renders
+        a confirmation toast and never re-reads the ticket back. The
+        id is stable for an eventual "copy ticket reference" UX.
+      properties:
+        id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
 
 security:
   - bearerAuth: []

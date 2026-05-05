@@ -153,6 +153,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/feedback', [\App\Http\Controllers\Feedback\FeedbackController::class, 'store'])
         ->middleware('throttle:5,1');
 
+    // Support contact form (#423). Authenticated user → persists a
+    // ticket row + queues an email to the support inbox with Reply-To
+    // set to the user. Same throttle shape as feedback above (5/min)
+    // so a script can't flood the support inbox.
+    Route::post('/support', [\App\Http\Controllers\Support\SupportTicketController::class, 'store'])
+        ->middleware('throttle:5,1');
+
     // Stats — server-side aggregations for the /dashboard/stats charts.
     // Grouped under /stats so T3 (payments) and T4 (age bands) can extend
     // this block without touching other route sections.

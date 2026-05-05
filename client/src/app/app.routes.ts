@@ -223,6 +223,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/feedback/feedback.component').then((m) => m.FeedbackComponent),
       },
+      {
+        // Dedicated support / contact form (#423). Distinct from
+        // /dashboard/feedback — feedback is fire-and-forget product
+        // feedback, support is the "I want a reply" channel. Same
+        // dashboard-shell placement so the sidebar context stays
+        // visible while the user composes.
+        path: 'support',
+        loadComponent: () =>
+          import('./features/support/support.component').then((m) => m.SupportComponent),
+      },
     ],
   },
   // Public legal pages (#225). No auth — prospects, the Garante, and
