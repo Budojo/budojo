@@ -43,6 +43,12 @@ export interface ResetPasswordPayload {
   password_confirmation: string;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+}
+
 export interface AuthResponse {
   data: User;
   token: string;
@@ -145,6 +151,21 @@ export class AuthService {
    */
   resetPassword(payload: ResetPasswordPayload): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.base}/reset-password`, payload);
+  }
+
+  /**
+   * `POST /api/v1/me/password` (#409) — rotates the password from inside
+   * the app. The server re-authenticates with `current_password` before
+   * applying the change; on success it revokes every other Sanctum
+   * token belonging to the user but preserves THIS token, so the SPA
+   * stays logged in. 422 on wrong current password (`errors.current_password`)
+   * or same-as-old / weak / mismatched new (`errors.password`).
+   */
+  changePassword(payload: ChangePasswordPayload): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${environment.apiBase}/api/v1/me/password`,
+      payload,
+    );
   }
 
   /**
