@@ -14,6 +14,7 @@
     "profile": "Profilo",
     "whatsNew": "Novità",
     "feedback": "Invia feedback",
+    "support": "Contatta il supporto",
     "signOut": "Esci",
     "privacy": "Privacy",
     "stats": "Statistiche",
@@ -312,6 +313,39 @@
       "errorDetail": "Qualcosa è andato storto durante l'invio del feedback. Riprova."
     }
   },
+  "support": {
+    "title": "Contatta il supporto",
+    "subtitle": "Hai bisogno di aiuto con il tuo account, la fatturazione, un bug o altro? Scrivici — una persona ti risponderà all'indirizzo email del tuo account.",
+    "subject": {
+      "label": "Oggetto",
+      "placeholder": "Riassunto breve — es. \"Non riesco a reimpostare la password\"",
+      "error": "L'oggetto è obbligatorio (da 3 a 100 caratteri)."
+    },
+    "category": {
+      "label": "Categoria",
+      "placeholder": "Scegli una categoria",
+      "options": {
+        "account": "Account",
+        "billing": "Fatturazione",
+        "bug": "Bug",
+        "other": "Altro"
+      },
+      "error": "Scegli una categoria."
+    },
+    "body": {
+      "label": "Messaggio",
+      "placeholder": "Raccontaci cosa sta succedendo — più dettagli ci dai, più in fretta possiamo aiutarti.",
+      "error": "Il messaggio è obbligatorio (da 10 a 5000 caratteri)."
+    },
+    "submit": "Invia messaggio",
+    "replyHint": "Ti risponderemo a {{email}}.",
+    "toast": {
+      "successSummary": "Messaggio inviato",
+      "successDetail": "Grazie — l'abbiamo ricevuto. Ti rispondiamo via email a breve.",
+      "errorSummary": "Invio non riuscito",
+      "errorDetail": "Qualcosa è andato storto durante l'invio del messaggio. Riprova tra un momento."
+    }
+  },
   "landing": {
     "nav": {
       "login": "Accedi",
@@ -401,6 +435,7 @@
       "privacy": "Privacy",
       "terms": "Termini",
       "subProcessors": "Sub-processor",
+      "support": "Contattaci",
       "tagline": "Pensato per il tatami. Costruito in Italia."
     }
   },
