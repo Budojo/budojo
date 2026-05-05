@@ -8,6 +8,7 @@ use App\Mail\AthleteInvitationMail;
 use App\Models\Athlete;
 use App\Models\AthleteInvitation;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -17,9 +18,13 @@ use Illuminate\Validation\ValidationException;
  * (#445, M7 PR-B). Distinct from `AcceptAthleteInvitationAction` (PR-C)
  * which consumes the invite. This action ALWAYS produces a side-effect:
  * either creates a new pending row + queues the mail, or — when a
- * pending row already exists for the athlete — bumps `last_sent_at`
- * and re-queues the mail with the SAME token (so a previously-sent
- * URL keeps working).
+ * pending row already exists for the athlete — refreshes its expiry +
+ * mints a fresh raw token (replacing the stored hash) and queues the
+ * mail again. Resending invalidates any URL emitted on a prior send;
+ * the latest email is always the one that works. We pick this trade-
+ * off deliberately: it removes a footgun where a token leaked from an
+ * old email keeps working forever, and it's the same shape Laravel's
+ * built-in password-reset flow uses.
  *
  * The action enforces the three V1 hard rules from the PRD:
  *
@@ -76,33 +81,48 @@ class SendAthleteInvitationAction
 
         // Re-use a pending invite if one exists. The owner clicking
         // "Invita" twice on the same athlete must NOT spawn two live
-        // tokens — that doubles the bearer-credential surface. We
-        // bump `last_sent_at` and re-queue the mail with the SAME
-        // raw token (which we never persisted, so we have to mint a
-        // fresh raw + replace the hash on the row).
-        /** @var AthleteInvitation|null $existing */
-        $existing = $athlete->invitations()->pending()->first();
-
+        // tokens — that doubles the bearer-credential surface. The
+        // read+write pair is wrapped in a transaction with a row lock
+        // on the parent athlete so two concurrent requests serialise
+        // through the same `pending()->first()` lookup; without the
+        // lock the de-dupe is a TOCTOU window where both threads can
+        // see "no pending row" and both create one.
         $rawToken = Str::random(64);
         $hash = AthleteInvitation::hashToken($rawToken);
         $now = now();
 
-        if ($existing !== null) {
-            $existing->forceFill([
-                'token' => $hash,
-                'expires_at' => $now->copy()->addDays(self::EXPIRY_DAYS),
-                'last_sent_at' => $now,
-                // Snapshot email again — the athlete may have changed
-                // their email on the roster between the first send
-                // and the resend; we always email the current address.
-                'email' => $email,
-                'sent_by_user_id' => $sender->id,
-            ])->save();
+        /** @var AthleteInvitation $invitation */
+        $invitation = DB::transaction(function () use ($athlete, $email, $hash, $now, $sender) {
+            // The lock is on the athlete row — concurrent invite
+            // requests for the SAME athlete serialise here. Different
+            // athletes proceed in parallel because the lock scope is
+            // a single row.
+            Athlete::query()->whereKey($athlete->id)->lockForUpdate()->first();
 
-            $invitation = $existing;
-        } else {
-            /** @var AthleteInvitation $invitation */
-            $invitation = AthleteInvitation::query()->create([
+            /** @var AthleteInvitation|null $existing */
+            $existing = AthleteInvitation::query()
+                ->where('athlete_id', $athlete->id)
+                ->pending()
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing !== null) {
+                $existing->forceFill([
+                    'token' => $hash,
+                    'expires_at' => $now->copy()->addDays(self::EXPIRY_DAYS),
+                    'last_sent_at' => $now,
+                    // Snapshot email again — the athlete may have
+                    // changed their email on the roster between the
+                    // first send and the resend; we always email the
+                    // current address.
+                    'email' => $email,
+                    'sent_by_user_id' => $sender->id,
+                ])->save();
+
+                return $existing;
+            }
+
+            return AthleteInvitation::query()->create([
                 'athlete_id' => $athlete->id,
                 'academy_id' => $athlete->academy_id,
                 'sent_by_user_id' => $sender->id,
@@ -111,7 +131,7 @@ class SendAthleteInvitationAction
                 'expires_at' => $now->copy()->addDays(self::EXPIRY_DAYS),
                 'last_sent_at' => $now,
             ]);
-        }
+        });
 
         // Eager-fetch the academy name through the relation. The FK
         // (athletes.academy_id) is non-nullable, so the relation

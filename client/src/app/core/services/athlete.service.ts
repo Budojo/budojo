@@ -267,8 +267,6 @@ export class AthleteService {
    * terminal invite is a no-op.
    */
   revokeInvite(athleteId: number, invitationId: number): Observable<void> {
-    return this.http.delete<void>(
-      `${this.base}/${athleteId}/invitations/${invitationId}`,
-    );
+    return this.http.delete<void>(`${this.base}/${athleteId}/invitations/${invitationId}`);
   }
 }

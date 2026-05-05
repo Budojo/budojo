@@ -10,6 +10,7 @@ use App\Http\Requests\Athlete\InviteAthleteRequest;
 use App\Http\Resources\AthleteInvitationResource;
 use App\Models\Athlete;
 use App\Models\AthleteInvitation;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -59,13 +60,16 @@ class AthleteInvitationController extends Controller
         return new AthleteInvitationResource($result['invitation']);
     }
 
-    public function destroy(InviteAthleteRequest $request, Athlete $athlete, AthleteInvitation $invitation): JsonResponse|Response
+    public function destroy(InviteAthleteRequest $request, Athlete $athlete, AthleteInvitation $invitation): Response
     {
         // Defensive: route binding doesn't enforce that the invitation
-        // belongs to the path athlete. Reject mismatch with 404 so a
-        // crafted URL can't reveal information about other invites.
+        // belongs to the path athlete. Mismatch raises Laravel's
+        // standard ModelNotFoundException → 404 with the same response
+        // body shape the framework returns for any other unknown route
+        // model — so a caller can't distinguish "exists but belongs to
+        // a different athlete" from "doesn't exist at all".
         if ($invitation->athlete_id !== $athlete->id) {
-            return response()->json(['message' => 'Not found.'], 404);
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException()->setModel(AthleteInvitation::class);
         }
 
         $this->sender->revoke($invitation);
