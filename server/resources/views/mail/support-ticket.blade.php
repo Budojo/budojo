@@ -1,8 +1,11 @@
-{{-- Markdown support-ticket email (#423). Rendered through Laravel's
-     stock `mail::message` layout. Variables flow through Blade's
-     `{{ }}` HTML-escape, which is correct here — the message is
-     delivered as text/html and the user-supplied $subjectLine + $body
-     must NOT be interpreted as markup. --}}
+{{-- Markdown support-ticket email (#423). Variables flow through
+     Blade's `{{ }}` HTML-escape, which prevents raw HTML injection.
+     Blade's HTML escape does NOT, however, prevent markdown syntax
+     in `$body` from being interpreted by the markdown-to-HTML pass —
+     a user typing `**bold**` or `[link](evil)` in their support
+     message would still be re-rendered. Wrapping the body in a fenced
+     code block opts out of markdown parsing entirely so the support
+     inbox sees what the user typed, character for character. --}}
 @component('mail::message')
 # New support request
 
@@ -14,7 +17,9 @@ A user has filed a support ticket through the in-app form.
 
 ---
 
+```
 {{ $body }}
+```
 
 ---
 

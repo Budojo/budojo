@@ -31,7 +31,14 @@
     </label>
 
     <div class="support-page__field">
-      <span class="support-page__label">{{ 'support.category.label' | translate }}</span>
+      <!-- Programmatic association so screen readers announce the
+           category select with its label. The other two fields wrap
+           their input in <label>, but p-select is a custom element that
+           can't be safely nested inside a <label>; explicit `for`/id
+           coupling is the standard fix. -->
+      <label class="support-page__label" for="support-category">
+        {{ 'support.category.label' | translate }}
+      </label>
       <p-select
         inputId="support-category"
         [options]="categoryOptions"
