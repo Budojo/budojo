@@ -10,20 +10,28 @@ import { catchError, throwError } from 'rxjs';
  * An `ErrorHandler` catches *every* uncaught Angular runtime error — null
  * dereferences in templates, RxJS `throw` from feature code, change-detection
  * exceptions. Routing those to `/error` would over-trigger the page on bugs
- * the user can recover from in-place (e.g. a stats chart that fails to render
- * but where the rest of the dashboard is fine). API failures are a different
- * class of problem: the server is unreachable or broken, the user CANNOT
- * recover here, and the only correct UX is "leave this page". The interceptor
+ * the user can recover from in-place. API failures are a different class of
+ * problem: the server is unreachable or broken, the user CANNOT recover
+ * in-place, and the only correct UX is "leave this page". The interceptor
  * scopes the redirect to that exact case.
  *
- * **Status filter.** We redirect on:
- *   - 5xx (500–599) — server-side failures.
+ * **Status filter.**
+ *   - 5xx (500–599) — server-side failures → render `/error`.
  *   - 0 — `HttpErrorResponse.status === 0` means the request never reached the
- *     server (CORS, DNS, network drop, browser refused). Routed to the offline
- *     page instead, since the most common cause is "user is offline".
+ *     server (CORS, DNS, network drop, browser refused) → render `/offline`.
  *
  * 4xx errors propagate untouched (component-level handlers — login, form
  * validation, 403 verify_required in the auth interceptor — own them).
+ *
+ * **`skipLocationChange: true` is load-bearing.** Without it the browser URL
+ * bar flips to `/error` (or `/offline`), so the retry button's
+ * `document.location.reload()` would only ever reload the error page itself
+ * — never the URL the user was actually trying to reach. With the flag, the
+ * URL bar stays on the originally requested route while Angular renders the
+ * error/offline component; reload returns the user to where they wanted to
+ * go and re-fires the failing request, which is the intended retry semantics.
+ * `Router.url` still resolves to the rendered route, so the loop guards below
+ * keep working unchanged.
  */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
@@ -38,11 +46,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           // Avoid bouncing if we're already there (a refresh on /offline
           // that fails again would otherwise loop).
           if (!router.url.startsWith('/offline')) {
-            void router.navigateByUrl('/offline');
+            void router.navigateByUrl('/offline', { skipLocationChange: true });
           }
         } else if (err.status >= 500 && err.status < 600) {
           if (!router.url.startsWith('/error')) {
-            void router.navigateByUrl('/error');
+            void router.navigateByUrl('/error', { skipLocationChange: true });
           }
         }
       }

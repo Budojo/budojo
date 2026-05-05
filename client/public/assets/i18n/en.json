@@ -144,13 +144,13 @@
   },
   "errorPage": {
     "title": "Something went wrong",
-    "message": "The server hit an unexpected error while handling your request. The team has been notified — please try again in a moment.",
+    "message": "The server hit an unexpected error while handling your request. Please try again in a moment, or come back to the home page.",
     "tryAgain": "Try again",
     "backHome": "Back to home"
   },
   "offlinePage": {
     "title": "You're offline",
-    "message": "Budojo can't reach the network right now. Check your connection — this page will reload automatically when you're back online.",
+    "message": "Budojo can't reach the network right now. Check your connection — we'll bring you back to where you were as soon as the network returns.",
     "tryAgain": "Try again"
   },
   "feedback": {

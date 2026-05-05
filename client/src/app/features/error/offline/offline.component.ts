@@ -9,9 +9,11 @@ import { OnlineStatusService } from '../../../core/services/online-status.servic
  *
  * Reached via `errorInterceptor` when an outgoing API request fails with
  * `HttpErrorResponse.status === 0` — i.e. the request never reached the
- * server (network drop, DNS failure, browser refused). Mirrors
- * `NotFoundComponent` in shape: brand glyph + title + supporting copy +
- * one primary CTA.
+ * server (network drop, DNS failure, browser refused). The interceptor
+ * uses `skipLocationChange: true`, so the browser URL bar stays on the
+ * originally requested route — which is what makes both recovery paths
+ * below land the user back on the page they were trying to reach,
+ * instead of just reloading `/offline` itself.
  *
  * Two recovery paths:
  *   - **Manual** — the "Try again" button reloads the document. The user
@@ -20,10 +22,8 @@ import { OnlineStatusService } from '../../../core/services/online-status.servic
  *     surface the event after a real reconnect).
  *   - **Automatic** — an `effect` watching `OnlineStatusService.isOnline`
  *     reloads the page the moment the browser reports the network is up.
- *     This matches the issue's "auto-dismiss when connectivity returns"
- *     requirement without needing a separate banner: arriving here
- *     already means the user wanted /something/, and giving them back
- *     that /something/ on reconnect is the right default.
+ *     Arriving here already means the user wanted /something/; giving
+ *     them back that /something/ on reconnect is the right default.
  *
  * The `effect` skips the initial run if the user landed here while
  * `isOnline` is already true (a stale redirect, e.g. after a one-shot 5xx

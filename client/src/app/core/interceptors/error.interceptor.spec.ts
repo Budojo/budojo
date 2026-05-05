@@ -46,7 +46,10 @@ describe('errorInterceptor', () => {
       .expectOne('/api/v1/anything')
       .flush({ message: 'boom' }, { status, statusText: 'Server Error' });
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/error');
+    // `skipLocationChange: true` keeps the browser URL bar on the originally
+    // failing route so the retry button's `location.reload()` actually re-fires
+    // the request the user wanted, not the error page itself.
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/error', { skipLocationChange: true });
     // Error is re-thrown so feature handlers can still respond.
     expect(received).toBeDefined();
     httpMock.verify();
@@ -63,7 +66,7 @@ describe('errorInterceptor', () => {
       .expectOne('/api/v1/anything')
       .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/offline');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/offline', { skipLocationChange: true });
     httpMock.verify();
   });
 
