@@ -49,13 +49,19 @@ describe('Change password (#409)', () => {
 
     cy.get('[data-cy="profile-change-password"]').should('be.visible');
 
-    // `<p-password>` renders the actual <input> inside the host, target
-    // it via the inputId. Same trick as the password-reset E2E.
-    cy.get('#currentPassword').type('OldPassword1!');
-    cy.get('#newPassword').type('NewPassword1!');
-    cy.get('#newPasswordConfirmation').type('NewPassword1!');
+    // `<p-password>` renders the actual <input> inside the host. Match
+    // the existing auth-page selector pattern (`input[id="..."]`) so we
+    // can't accidentally pick a non-input element that happens to share
+    // the inputId; the previous `#id`-only selector was too loose under
+    // the toggle-mask DOM.
+    cy.get('input[id="currentPassword"]').type('OldPassword1!');
+    cy.get('input[id="newPassword"]').type('NewPassword1!');
+    cy.get('input[id="newPasswordConfirmation"]').type('NewPassword1!');
 
-    cy.get('[data-cy="change-password-submit"]').click();
+    // Explicit not-disabled gate so a future "disable on invalid" change
+    // would surface as a clear failure here instead of the hard-to-
+    // diagnose "no request was made" timeout we hit on the first push.
+    cy.get('[data-cy="change-password-submit"]').should('not.be.disabled').click();
 
     cy.wait('@changePassword').its('request.body').should('deep.equal', {
       current_password: 'OldPassword1!',
