@@ -34,9 +34,7 @@
           <p class="avatar-card__hint">{{ 'profile.avatarHint' | translate }}</p>
           <div class="avatar-card__actions">
             <p-button
-              [label]="
-                (avatarUrl() ? 'profile.avatarReplace' : 'profile.avatarUpload') | translate
-              "
+              [label]="(avatarUrl() ? 'profile.avatarReplace' : 'profile.avatarUpload') | translate"
               icon="pi pi-upload"
               [loading]="avatarUploading()"
               (onClick)="onAvatarBrowse()"

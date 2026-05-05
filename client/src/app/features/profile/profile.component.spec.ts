@@ -155,10 +155,10 @@ describe('ProfileComponent — avatar upload (#411)', () => {
   });
 
   it('renders Replace + Remove when avatar_url is set on the cached user', () => {
-    const { fixture } = setup(
-      {},
-      { ...FAKE_USER, avatar_url: '/storage/users/avatars/1.jpg' } as User,
-    );
+    const { fixture } = setup({}, {
+      ...FAKE_USER,
+      avatar_url: '/storage/users/avatars/1.jpg',
+    } as User);
     const upload = fixture.nativeElement.querySelector(
       '[data-cy="profile-avatar-upload"]',
     ) as HTMLButtonElement;
@@ -250,4 +250,3 @@ describe('ProfileComponent — avatar upload (#411)', () => {
     expect(cmp['avatarUploading']()).toBe(false);
   });
 });
-
