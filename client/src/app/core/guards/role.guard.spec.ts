@@ -23,10 +23,7 @@ describe('role guards (#445, M7 PR-D)', () => {
     });
   }
 
-  async function runGuard(
-    fn: typeof roleOwnerGuard,
-    stub: AuthStub,
-  ): Promise<boolean | UrlTree> {
+  async function runGuard(fn: typeof roleOwnerGuard, stub: AuthStub): Promise<boolean | UrlTree> {
     setup(stub);
     const result = TestBed.runInInjectionContext(() =>
       fn({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
