@@ -179,6 +179,28 @@ interface AthleteResponse {
   data: Athlete;
 }
 
+/**
+ * Lifecycle state of an athlete invitation row (#445, M7 PR-B). The
+ * server derives this from the (accepted_at, revoked_at, expires_at)
+ * triplet — the four states are pairwise mutually exclusive.
+ */
+export type AthleteInvitationState = 'pending' | 'accepted' | 'revoked' | 'expired';
+
+export interface AthleteInvitation {
+  id: number;
+  athlete_id: number;
+  email: string;
+  expires_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  last_sent_at: string | null;
+  state: AthleteInvitationState;
+}
+
+interface AthleteInvitationResponse {
+  data: AthleteInvitation;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AthleteService {
   private readonly http = inject(HttpClient);
@@ -212,5 +234,41 @@ export class AthleteService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  /**
+   * Send (or refresh) an invitation for the athlete to log into the
+   * SPA (#445, M7 PR-B). The server creates the row on first call;
+   * subsequent calls re-use the same pending row (bumping
+   * `last_sent_at` + replacing the token hash) so the owner clicking
+   * twice doesn't spawn parallel invites.
+   */
+  invite(athleteId: number): Observable<AthleteInvitation> {
+    return this.http
+      .post<AthleteInvitationResponse>(`${this.base}/${athleteId}/invite`, {})
+      .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Resend a pending invitation. Wire-shape identical to `invite()`
+   * but the dedicated `/resend` URL gives the SPA UI an unambiguous
+   * second button + lets a future audit hook tell first-send from
+   * resend at the routing layer.
+   */
+  resendInvite(athleteId: number): Observable<AthleteInvitation> {
+    return this.http
+      .post<AthleteInvitationResponse>(`${this.base}/${athleteId}/invite/resend`, {})
+      .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Revoke a pending invitation (sets `revoked_at`; the row stays as
+   * audit trail). Idempotent server-side — calling on an already-
+   * terminal invite is a no-op.
+   */
+  revokeInvite(athleteId: number, invitationId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${this.base}/${athleteId}/invitations/${invitationId}`,
+    );
   }
 }

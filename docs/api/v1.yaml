@@ -954,6 +954,105 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /athletes/{id}/invite:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+
+    post:
+      tags: [athletes]
+      summary: Send a login invitation to the athlete
+      description: |
+        Owner-side endpoint (#445, M7 PR-B). Creates or refreshes a pending
+        `AthleteInvitation` row for the athlete and queues a signed-link email
+        to their address on file. Re-clicking on an already-pending invite
+        re-uses the same row (bumps `last_sent_at`, replaces the token hash) —
+        the owner cannot spawn parallel live tokens by clicking twice. Throttled
+        at 5 requests per minute per user. Body is empty (no user-supplied
+        fields; everything is derived from the route-bound athlete).
+      operationId: athleteInvite
+      responses:
+        '201':
+          description: Invitation created (or refreshed if pending one existed).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AthleteInvitation'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Caller is not the owner of the athlete's academy.
+        '422':
+          description: |
+            Either the athlete has no email on file (`email: email_missing`) or
+            the athlete's email is already a Budojo user (`email:
+            email_already_registered`). Both block invite creation.
+        '429':
+          description: Throttled.
+
+  /athletes/{id}/invite/resend:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+
+    post:
+      tags: [athletes]
+      summary: Resend a pending invitation
+      description: |
+        Wire-shape identical to `/athletes/{id}/invite` but always returns 200
+        (vs 201 on first send) so the SPA can branch on the URL + status. Same
+        action under the hood — re-uses the pending row + replaces the token
+        hash so the previous email's link is invalidated.
+      operationId: athleteInviteResend
+      responses:
+        '200':
+          description: Invitation refreshed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AthleteInvitation'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Caller is not the owner of the athlete's academy.
+        '422':
+          description: Same shape as `/invite` — `email_missing` / `email_already_registered`.
+        '429':
+          description: Throttled.
+
+  /athletes/{id}/invitations/{invitationId}:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: ID of the invitation row (`AthleteInvitation.id`).
+
+    delete:
+      tags: [athletes]
+      summary: Revoke a pending invitation
+      description: |
+        Sets `revoked_at`; the row is preserved as audit trail. Idempotent on
+        already-terminal invites (accepted / revoked / expired): returns 204
+        regardless. Returns 404 when the invitation does not belong to the
+        path-bound athlete (defence-in-depth against crafted URLs).
+      operationId: athleteInviteRevoke
+      responses:
+        '204':
+          description: Revoked (or no-op).
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Caller is not the owner of the athlete's academy.
+        '404':
+          description: Invitation not found, or does not belong to the path athlete.
+
   /athletes/{id}/documents:
     parameters:
       - $ref: '#/components/parameters/AthleteId'
@@ -2908,6 +3007,48 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AttendanceSummaryRow'
+
+    AthleteInvitation:
+      type: object
+      required: [id, athlete_id, email, expires_at, state, last_sent_at]
+      description: |
+        Lifecycle row for an athlete-side login invitation (#445, M7 PR-B).
+        `state` is derived server-side from the (`accepted_at`, `revoked_at`,
+        `expires_at`) triplet — the four states are pairwise mutually
+        exclusive. The row's `token` column is intentionally NOT on the wire:
+        the column stores a SHA-256 hash and emitting it would give a leaked
+        envelope nothing actionable.
+      properties:
+        id:
+          type: integer
+        athlete_id:
+          type: integer
+        email:
+          type: string
+          format: email
+          description: Snapshot of the athlete's email at invite time.
+        expires_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        state:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+          description: |
+            Derived server-side. `pending` = un-accepted, un-revoked, expiry
+            in the future. The other three are terminal and pairwise mutually
+            exclusive with each other and with `pending`.
 
     SupportTicket:
       type: object
