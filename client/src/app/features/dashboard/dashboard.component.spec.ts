@@ -331,6 +331,32 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('help link in sidebar footer (#422)', () => {
+    it('renders a /help link beside the version tag, before Privacy', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="sidebar-help-link"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.textContent?.trim()).toBe('Help');
+      // Lives inside the version paragraph alongside the Privacy
+      // link (one chrome line, three atoms: Help · Privacy · vTag).
+      expect(link!.closest('[data-cy="sidebar-version"]')).not.toBeNull();
+
+      // Help renders BEFORE Privacy — help-seeking is higher
+      // frequency than reading the policy, so it leads the row.
+      const privacy = fixture.nativeElement.querySelector(
+        '[data-cy="sidebar-privacy-link"]',
+      ) as HTMLAnchorElement | null;
+      expect(privacy).not.toBeNull();
+      const order = link!.compareDocumentPosition(privacy!);
+      // DOCUMENT_POSITION_FOLLOWING = 4 — privacy follows help.
+      expect(order & 4, 'privacy follows help in DOM').toBe(4);
+    });
+  });
+
   describe("what's new link in sidebar footer (#254)", () => {
     it('renders a routerLink="whats-new" entry above the Sign out button', () => {
       const fixture = TestBed.createComponent(DashboardComponent);

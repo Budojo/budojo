@@ -1,0 +1,196 @@
+// Public `/help` page (#422). Standalone (no dashboard shell), so
+// the wrapper carries its own padding — same shape as the legal
+// pages, but the content is FAQ-density (cards + bulleted entries),
+// not legal-prose-density. Token: `--budojo-container-prose` (56rem)
+// because text-heavy reading. Border-box keeps padding inside the
+// container width per #261.
+
+.help-page {
+  max-width: var(--budojo-container-prose);
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  color: var(--p-text-color);
+
+  @media (min-width: 768px) {
+    padding: 3rem 2rem 6rem;
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--p-text-color);
+    text-decoration: none;
+    font-weight: 600;
+    width: fit-content;
+    padding: 0.25rem 0.5rem;
+    margin-left: -0.5rem;
+    border-radius: var(--p-border-radius-sm);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+  }
+
+  &__glyph {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  &__brand-name {
+    font-size: 0.9375rem;
+  }
+
+  &__eyebrow {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.018em;
+  }
+
+  &__subtitle {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 1rem;
+    line-height: 1.5;
+    max-width: 44rem;
+  }
+
+  &__search {
+    width: 100%;
+
+    p-iconfield {
+      display: block;
+      width: 100%;
+    }
+
+    input {
+      width: 100%;
+    }
+  }
+
+  &__results {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 1.5rem;
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+    color: var(--p-text-color-secondary);
+    text-align: center;
+  }
+
+  &__category {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    // `scroll-margin-top` lets `anchorScrolling: 'enabled'` land the
+    // category heading at a comfortable distance from the viewport
+    // top (rather than glued to the very edge). Matches the entry
+    // anchor below.
+    scroll-margin-top: 1.5rem;
+  }
+
+  &__category-heading {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__entries {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__entry {
+    padding: 1.25rem 1.25rem;
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    // Anchor offset — same rationale as `__category`. The `:target`
+    // pseudo-selector gives the deep-linked entry a faint flash so
+    // the user sees what they landed on (Norman § feedback).
+    scroll-margin-top: 1.5rem;
+
+    &:target {
+      border-color: var(--p-primary-color);
+    }
+  }
+
+  &__entry-question {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  // Per-entry anchor link — small chain icon next to the question
+  // for "copy this anchor". Sits inline so the question text reads
+  // first; muted by default, tints to primary on hover.
+  &__anchor {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--p-text-muted-color);
+    text-decoration: none;
+    flex-shrink: 0;
+    border-radius: var(--p-border-radius-sm);
+
+    i {
+      font-size: 0.75rem;
+    }
+
+    &:hover,
+    &:focus-visible {
+      color: var(--p-primary-color);
+      background: var(--p-content-hover-background);
+    }
+  }
+
+  &__entry-answer {
+    margin: 0;
+    line-height: 1.55;
+    color: var(--p-text-color-secondary);
+    font-size: 0.9375rem;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 1rem;
+  }
+}
