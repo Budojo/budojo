@@ -120,6 +120,21 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::middleware('verified.api')->group(function (): void {
         Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
             ->only(['store', 'update', 'destroy']);
+
+        // Athlete invitations — owner-side (#445, M7 PR-B). The owner of
+        // an academy invites a roster athlete to log into the SPA. The
+        // FormRequest's authorize() carries both the role:owner check
+        // and the academy-ownership check; the action handles
+        // re-use-pending-row + anti-squatting + best-effort mail.
+        // Throttled lightly — the action already de-dupes pending rows
+        // so two clicks bump last_sent_at instead of spawning two
+        // tokens, but we still cap to defeat scripted spamming of the
+        // mail vendor.
+        Route::post('/athletes/{athlete}/invite', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'store'])
+            ->middleware('throttle:5,1');
+        Route::post('/athletes/{athlete}/invite/resend', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'resend'])
+            ->middleware('throttle:5,1');
+        Route::delete('/athletes/{athlete}/invitations/{invitation}', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'destroy']);
     });
 
     // Documents — read access stays open (browsing + downloading); writes are

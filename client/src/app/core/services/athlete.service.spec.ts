@@ -1,7 +1,13 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Athlete, AthletePayload, AthleteService, AthleteUpdatePayload } from './athlete.service';
+import {
+  Athlete,
+  AthleteInvitation,
+  AthletePayload,
+  AthleteService,
+  AthleteUpdatePayload,
+} from './athlete.service';
 
 function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
   return {
@@ -121,6 +127,56 @@ describe('AthleteService', () => {
     it('DELETEs /api/v1/athletes/:id', () => {
       service.delete(5).subscribe();
       const req = httpMock.expectOne('/api/v1/athletes/5');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+    });
+  });
+
+  describe('athlete invitations (#445, M7 PR-B)', () => {
+    function makeInvitation(overrides: Partial<AthleteInvitation> = {}): AthleteInvitation {
+      return {
+        id: 1,
+        athlete_id: 7,
+        email: 'mario@example.com',
+        expires_at: '2026-05-12T10:00:00+00:00',
+        accepted_at: null,
+        revoked_at: null,
+        last_sent_at: '2026-05-05T10:00:00+00:00',
+        state: 'pending',
+        ...overrides,
+      };
+    }
+
+    it('POSTs to /api/v1/athletes/:id/invite and returns the invitation envelope', () => {
+      const invitation = makeInvitation();
+      let result: AthleteInvitation | null = null;
+      service.invite(7).subscribe((i) => (result = i));
+
+      const req = httpMock.expectOne('/api/v1/athletes/7/invite');
+      expect(req.request.method).toBe('POST');
+      // Empty body — the request carries no user-supplied fields;
+      // the invite is fully derived from the route-bound athlete.
+      expect(req.request.body).toEqual({});
+      req.flush({ data: invitation });
+
+      expect(result).toEqual(invitation);
+    });
+
+    it('POSTs to /api/v1/athletes/:id/invite/resend and returns the refreshed invitation', () => {
+      const invitation = makeInvitation({ last_sent_at: '2026-05-05T11:00:00+00:00' });
+      let result: AthleteInvitation | null = null;
+      service.resendInvite(7).subscribe((i) => (result = i));
+
+      const req = httpMock.expectOne('/api/v1/athletes/7/invite/resend');
+      expect(req.request.method).toBe('POST');
+      req.flush({ data: invitation });
+
+      expect(result).toEqual(invitation);
+    });
+
+    it('DELETEs /api/v1/athletes/:athleteId/invitations/:invitationId to revoke', () => {
+      service.revokeInvite(7, 99).subscribe();
+      const req = httpMock.expectOne('/api/v1/athletes/7/invitations/99');
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
     });
