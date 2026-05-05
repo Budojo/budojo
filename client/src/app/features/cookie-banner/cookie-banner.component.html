@@ -1,8 +1,14 @@
 @if (visible()) {
+  <!--
+    `<aside role="region">` rather than `role="dialog"` — the banner is
+    non-modal (no focus trap, no escape handling), so claiming dialog
+    semantics would mislead assistive tech about focus + dismissal
+    behaviour. `region` + an aria-label gives screen readers a named
+    landmark they can navigate to and away from naturally.
+  -->
   <aside
     class="cookie-banner"
-    role="dialog"
-    aria-modal="false"
+    role="region"
     [attr.aria-label]="'cookies.banner.ariaLabel' | translate"
     data-cy="cookie-banner"
   >

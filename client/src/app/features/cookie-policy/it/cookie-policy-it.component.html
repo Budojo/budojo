@@ -138,16 +138,14 @@
     <h2>5. Cambia idea</h2>
     <p>Puoi riaprire il banner di consenso in qualsiasi momento e modificare le tue scelte.</p>
     <p>
-      <a
-        href="javascript:void(0)"
+      <button
+        type="button"
+        class="legal-page__inline-button"
         (click)="managePreferences()"
-        (keydown.enter)="managePreferences(); $event.preventDefault()"
-        (keydown.space)="managePreferences(); $event.preventDefault()"
         data-cy="cookie-policy-manage"
-        role="button"
-        tabindex="0"
-        >Gestisci le tue preferenze</a
       >
+        Gestisci le tue preferenze
+      </button>
       — oppure cancella <code>budojoCookieConsent</code> dai dati del sito nel browser e il banner
       si ripresenterà alla prossima visita.
     </p>
