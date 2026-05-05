@@ -1,0 +1,22 @@
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <img src="/logo-glyph.svg" alt="" class="logo-mark" aria-hidden="true" />
+      <h1 data-cy="athlete-welcome-title">
+        {{ 'athletePortal.welcome.title' | translate }}{{ userName() ? ', ' + userName() : '' }}
+      </h1>
+      <p>{{ 'athletePortal.welcome.body' | translate }}</p>
+    </div>
+
+    <div class="welcome-actions">
+      <p-button
+        type="button"
+        [label]="'athletePortal.welcome.signOut' | translate"
+        severity="secondary"
+        styleClass="w-full"
+        data-cy="athlete-welcome-signout"
+        (onClick)="signOut()"
+      />
+    </div>
+  </div>
+</div>

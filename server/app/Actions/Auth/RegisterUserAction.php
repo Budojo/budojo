@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Auth;
 
+use App\Enums\UserRole;
 use App\Mail\WelcomeMail;
 use App\Models\User;
 use Carbon\CarbonInterface;
@@ -30,6 +31,14 @@ class RegisterUserAction
             'email' => $email,
             'password' => $password,
             'terms_accepted_at' => $termsAcceptedAt,
+            // Public registration ALWAYS produces an owner. The
+            // column has a DB default of 'owner' but we set the
+            // attribute explicitly so the in-memory model carries
+            // the cast enum value immediately (without it the freshly-
+            // created model has $role === null and downstream
+            // serialisation via UserResource trips on
+            // `$user->role->value`). M7 hard rule (#445).
+            'role' => UserRole::Owner,
         ]);
 
         // The Registered event triggers Laravel's verification-email
