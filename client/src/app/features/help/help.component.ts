@@ -95,11 +95,7 @@ export class HelpComponent implements OnInit {
   protected readonly categories: readonly FaqCategory[] = [
     {
       id: 'getting-started',
-      entries: [
-        { id: 'what-is-budojo' },
-        { id: 'create-academy' },
-        { id: 'invite-coach' },
-      ],
+      entries: [{ id: 'what-is-budojo' }, { id: 'create-academy' }, { id: 'invite-coach' }],
     },
     {
       id: 'athletes',
@@ -112,33 +108,19 @@ export class HelpComponent implements OnInit {
     },
     {
       id: 'attendance',
-      entries: [
-        { id: 'mark-attendance' },
-        { id: 'edit-attendance' },
-      ],
+      entries: [{ id: 'mark-attendance' }, { id: 'edit-attendance' }],
     },
     {
       id: 'payments',
-      entries: [
-        { id: 'set-monthly-fee' },
-        { id: 'mark-paid' },
-        { id: 'unpaid-badge' },
-      ],
+      entries: [{ id: 'set-monthly-fee' }, { id: 'mark-paid' }, { id: 'unpaid-badge' }],
     },
     {
       id: 'documents',
-      entries: [
-        { id: 'upload-medical-cert' },
-        { id: 'expiring-documents' },
-      ],
+      entries: [{ id: 'upload-medical-cert' }, { id: 'expiring-documents' }],
     },
     {
       id: 'account',
-      entries: [
-        { id: 'change-language' },
-        { id: 'export-data' },
-        { id: 'delete-account' },
-      ],
+      entries: [{ id: 'change-language' }, { id: 'export-data' }, { id: 'delete-account' }],
     },
   ];
 
