@@ -58,10 +58,16 @@ describe('Change password (#409)', () => {
     cy.get('input[id="newPassword"]').type('NewPassword1!');
     cy.get('input[id="newPasswordConfirmation"]').type('NewPassword1!');
 
-    // Explicit not-disabled gate so a future "disable on invalid" change
-    // would surface as a clear failure here instead of the hard-to-
-    // diagnose "no request was made" timeout we hit on the first push.
-    cy.get('[data-cy="change-password-submit"]').should('not.be.disabled').click();
+    // PrimeNG's `<p-button>` is a custom element host; the actual
+    // `<button type="submit">` lives inside it, and only clicking the
+    // inner element triggers the parent form's `(ngSubmit)` handler.
+    // Clicking the host (matched by the `data-cy`) leaves the form
+    // untouched and the API call never fires (caught locally via
+    // cypress/included:15 — the screenshot showed all three fields
+    // filled but no request).
+    cy.get('[data-cy="change-password-submit"] button')
+      .should('not.be.disabled')
+      .click();
 
     cy.wait('@changePassword').its('request.body').should('deep.equal', {
       current_password: 'OldPassword1!',
