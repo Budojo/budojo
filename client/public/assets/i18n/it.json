@@ -418,6 +418,23 @@
       "errorSummary": "Errore",
       "throttledDetail": "Hai già esportato i tuoi dati di recente. Riprova tra un minuto.",
       "genericErrorDetail": "Non è stato possibile scaricare i tuoi dati. Riprova."
+    },
+    "changePassword": {
+      "title": "Password",
+      "hint": "Scegli una nuova password e confermala. Resterai connesso qui, ma per sicurezza gli altri dispositivi verranno disconnessi.",
+      "currentPassword": "Password attuale",
+      "currentPasswordRequired": "Inserisci la password attuale.",
+      "currentPasswordWrong": "La password attuale non è corretta.",
+      "newPassword": "Nuova password",
+      "newPasswordRequired": "Inserisci una nuova password.",
+      "newPasswordMinlength": "Usa almeno 8 caratteri.",
+      "newPasswordServerError": "La nuova password non è valida. Deve avere almeno 8 caratteri ed essere diversa da quella attuale.",
+      "newPasswordConfirmation": "Conferma nuova password",
+      "mismatch": "Le password non coincidono.",
+      "submit": "Aggiorna password",
+      "successSummary": "Password aggiornata",
+      "successDetail": "La tua password è stata cambiata. Gli altri dispositivi sono stati disconnessi.",
+      "genericError": "Non è stato possibile aggiornare la password. Riprova."
     }
   },
   "emailVerification": {
