@@ -12,10 +12,31 @@ import { MOCK_ACADEMY } from '../support/fixtures';
  */
 
 const ACADEMY_OK = { statusCode: 200, body: { data: MOCK_ACADEMY } };
+const ATHLETES_EMPTY = {
+  statusCode: 200,
+  body: {
+    data: [],
+    links: { first: null, last: null, prev: null, next: null },
+    meta: {
+      current_page: 1,
+      from: null,
+      last_page: 1,
+      path: '',
+      per_page: 20,
+      to: null,
+      total: 0,
+    },
+  },
+};
+const EXPIRING_EMPTY = { statusCode: 200, body: { data: [] } };
 
 describe('Change password (#409)', () => {
   beforeEach(() => {
+    // Dashboard shell side-effects — mocked so the page renders cleanly
+    // without a backend (mirrors the profile-mobile spec).
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
+    cy.intercept('GET', '/api/v1/documents/expiring*', EXPIRING_EMPTY);
   });
 
   it('updates the password and shows a success toast (happy path)', () => {
