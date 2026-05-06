@@ -33,6 +33,7 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 - `belongsTo(Academy::class)` — inverse of `Academy::athletes()`
 - `belongsTo(User::class)` — the M7 athlete-login link (#445). Reads `athletes.user_id`. Null until the athlete accepts an invite. Inverse: `User::athlete()` (HasOne).
 - `hasMany(AthleteInvitation::class)` — every invitation row ever generated for this athlete. The pending one (if any) is `->invitations()->pending()->first()`; revoked / expired / accepted rows stay around as audit trail. See [`athlete-invitation.md`](./athlete-invitation.md).
+- `hasOne(AthleteInvitation::class)` via `latestActiveInvitation()` — the single row the SPA's athlete-detail card (#467, M7 PR-B-UI) renders. Returns the most recent **pending or accepted** invitation; revoked + expired audit rows are deliberately filtered out (the owner re-invites by sending a new invite, not by reading terminal history). Eager-loaded by `AthleteController::show` so `AthleteResource` can emit the `invitation` block without an extra query.
 - `hasMany(Document::class)` — athlete's uploaded documents (ID, medical cert, etc.). See [`document.md`](./document.md).
 - `morphOne(Address::class, 'addressable')` — structured address (#72b), see [`address.md`](./address.md).
 

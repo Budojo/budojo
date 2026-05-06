@@ -18,6 +18,7 @@ import { Athlete, AthleteService, AthleteStatus } from '../../../core/services/a
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
+import { InvitationCardComponent } from './invitation-card/invitation-card.component';
 
 @Component({
   selector: 'app-athlete-detail',
@@ -31,6 +32,7 @@ import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
     TagModule,
     AgeBadgeComponent,
     BeltBadgeComponent,
+    InvitationCardComponent,
   ],
   templateUrl: './athlete-detail.component.html',
   styleUrl: './athlete-detail.component.scss',
