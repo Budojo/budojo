@@ -102,10 +102,23 @@ export class ProfileComponent {
 
   /**
    * Reactive form for the inline name edit (#463). Constraints mirror the
-   * server's `UpdateProfileRequest`: `required | min:2 | max:255`.
+   * server's `UpdateProfileRequest`: `required | min:2 | max:255`. The
+   * `nonWhitespaceMinLength` validator runs the trimmed length through the
+   * same min check — without it the raw `Validators.minLength(2)` accepts
+   * `"   "` (3 chars of whitespace), the `submitEditName()` trim sends
+   * `""` to the server, and the user sees a server 422 instead of the
+   * inline `required` error that should have fired locally (#471).
    */
   protected readonly nameForm = this.fb.group({
-    name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(255)]],
+    name: [
+      '',
+      [
+        Validators.required,
+        Validators.minLength(2),
+        Validators.maxLength(255),
+        nonWhitespaceMinLengthValidator(2),
+      ],
+    ],
   });
 
   /** True while POST /me/password is in flight. */
@@ -477,5 +490,22 @@ function passwordsMatchValidator(): ValidatorFn {
       return { passwordsMismatch: true };
     }
     return null;
+  };
+}
+
+/**
+ * Validator that requires the TRIMMED value's length to meet the
+ * given minimum. Surfaces as `{ required: true }` (not `minLength`)
+ * because a whitespace-only string is semantically empty — the user
+ * intent is the same as leaving the field blank, and the existing
+ * `required`-keyed error message reads correctly. Pairs with the
+ * raw `Validators.minLength(N)` to also catch short non-whitespace
+ * input (`"X"`).
+ */
+function nonWhitespaceMinLengthValidator(min: number): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const value: unknown = control.value;
+    if (typeof value !== 'string') return null;
+    return value.trim().length >= min ? null : { required: true };
   };
 }

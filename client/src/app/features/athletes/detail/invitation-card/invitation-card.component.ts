@@ -161,7 +161,7 @@ export class InvitationCardComponent implements OnInit {
             life: 2500,
           });
         },
-        error: (err: { error?: { errors?: Record<string, unknown> } }) => {
+        error: (err: { error?: { errors?: { email?: string[] } } }) => {
           this.surfaceError(err);
         },
       });
@@ -195,7 +195,7 @@ export class InvitationCardComponent implements OnInit {
             life: 2500,
           });
         },
-        error: (err: { error?: { errors?: Record<string, unknown> } }) => {
+        error: (err: { error?: { errors?: { email?: string[] } } }) => {
           this.surfaceError(err);
         },
       });
@@ -257,14 +257,20 @@ export class InvitationCardComponent implements OnInit {
    * - `email_already_registered` — the athlete's email already
    *   belongs to a Budojo user. Anti-squatting; cannot be invited.
    *
+   * The action throws `ValidationException::withMessages(['email' =>
+   * 'email_missing'])` — Laravel keys validation errors by FIELD, not
+   * by message. The wire shape is therefore `errors.email[0] ===
+   * 'email_missing'`. Reading the message off the `email` array
+   * mirrors `AthleteInviteComponent`'s pattern.
+   *
    * Anything else collapses to a generic error toast.
    */
-  private surfaceError(err: { error?: { errors?: Record<string, unknown> } }): void {
-    const errors = err.error?.errors ?? {};
+  private surfaceError(err: { error?: { errors?: { email?: string[] } } }): void {
+    const code = err.error?.errors?.email?.[0];
     let detailKey: string | null = null;
-    if ('email_missing' in errors) {
+    if (code === 'email_missing') {
       detailKey = 'athletes.invitation.toast.errorEmailMissing';
-    } else if ('email_already_registered' in errors) {
+    } else if (code === 'email_already_registered') {
       detailKey = 'athletes.invitation.toast.errorEmailRegistered';
     }
     this.messageService.add({
