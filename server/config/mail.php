@@ -126,8 +126,10 @@ return [
     | driver in a dev / staging env cannot accidentally ship real mail to
     | real customers. Production is excluded from the redirect.
     |
-    | Set MAIL_TEST_REDIRECT to an empty string (or leave the key out) to
-    | opt out — useful when smoke-testing the real deliverability path.
+    | To opt out (e.g. when smoke-testing real deliverability), set
+    | `MAIL_TEST_REDIRECT=` (empty string) in your `.env`. Leaving the env
+    | var unset falls back to the default below — the inbox is the support
+    | address so a dev still sees the email rendering end-to-end.
     |
     */
 

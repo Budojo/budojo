@@ -39,11 +39,13 @@ it('redirects every Mailable recipient to MAIL_TEST_REDIRECT in non-production (
     expect($recipients)->not->toContain('real-user@example.com');
 });
 
-it('AppServiceProvider::boot() wires alwaysTo when not in production', function (): void {
-    // The boot hook is environment-gated. We assert the wiring
-    // indirectly: in `testing` env (non-production), the
-    // `mail.test_redirect` config is read and applied. The default
-    // value matches the support inbox.
+it('exposes the redirect target via the mail.test_redirect config key in non-production', function (): void {
+    // PEST runs in `testing` env, which is non-production. We assert
+    // the two preconditions for the boot() hook to fire: the env
+    // gate evaluates correctly, AND the config key resolves to the
+    // expected default (the support inbox). The end-to-end behaviour
+    // — that the boot hook actually rewrites recipients — is covered
+    // by the integration test above via the `array` mailer transport.
     expect(app()->environment('production'))->toBeFalse();
     expect(config('mail.test_redirect'))->toBe('matteo.bonanno@budojo.it');
 });
