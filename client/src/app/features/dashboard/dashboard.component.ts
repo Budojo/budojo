@@ -13,6 +13,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { LanguageService, SupportedLanguage } from '../../core/services/language.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
+import { SearchPaletteComponent } from '../search/search-palette.component';
 import { VERSION } from '../../../environments/version';
 
 @Component({
@@ -24,6 +25,7 @@ import { VERSION } from '../../../environments/version';
     RouterLinkActive,
     BrandGlyphComponent,
     UserAvatarComponent,
+    SearchPaletteComponent,
     TranslatePipe,
   ],
   templateUrl: './dashboard.component.html',
