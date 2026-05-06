@@ -846,6 +846,32 @@
         "cancel": "Annulla"
       }
     },
+    "invitation": {
+      "title": "Account & invito",
+      "noEmail": "Aggiungi un'email all'atleta per poter inviare un invito al sistema. Modifica l'atleta e inserisci l'indirizzo email, poi torna qui per inviare l'invito.",
+      "emptyHint": "Manda all'atleta un link via email per impostare la password e accedere al suo dashboard.",
+      "invite": "Invita al sistema",
+      "resend": "Invia di nuovo",
+      "revoke": "Revoca",
+      "pendingChip": "Invito inviato il {{sentAt}}, scade il {{expiresAt}}",
+      "acceptedChip": "Atleta registrato il {{acceptedAt}}",
+      "confirm": {
+        "revokeMessage": "Revocare l'invito? L'atleta non potrà più usare il link.",
+        "revokeAccept": "Revoca",
+        "revokeReject": "Annulla"
+      },
+      "toast": {
+        "invitedSummary": "Invito inviato",
+        "resentSummary": "Invito re-inviato",
+        "revokedSummary": "Invito revocato",
+        "errorSummary": "Impossibile inviare l'invito",
+        "errorGeneric": "Qualcosa è andato storto. Riprova.",
+        "errorEmailMissing": "L'atleta non ha un'email registrata. Modifica l'atleta per aggiungerla, poi riprova.",
+        "errorEmailRegistered": "Questa email è già di un utente Budojo. Chiedi all'atleta di accedere direttamente.",
+        "revokeErrorSummary": "Impossibile revocare l'invito",
+        "revokeErrorDetail": "Riprova."
+      }
+    },
     "detail": {
       "contactLinksAriaLabel": "Link di contatto dell'atleta",
       "payments": {

@@ -73,6 +73,16 @@
       }
     </header>
 
+    <!--
+      "Account & invito" card (#467, M7 PR-B-UI). Visible across all
+      detail tabs because invitation state is athlete-level, not
+      tab-scoped — the owner sees the same status whether they're on
+      Documents, Attendance, Payments, or Edit. Renders nothing
+      destructive; the sub-component owns its three states (no
+      invitation / pending / accepted) and the no-email empty-state.
+    -->
+    <app-athlete-invitation-card [athlete]="a" />
+
     <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">
       <p-tablist>
         <p-tab value="documents" routerLink="documents" data-cy="athlete-tab-documents">

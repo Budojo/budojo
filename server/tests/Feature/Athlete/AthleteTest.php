@@ -217,6 +217,116 @@ it('returns 404 when athlete does not exist', function (): void {
         ->assertNotFound();
 });
 
+it('show: invitation block is null when the athlete has no invitations (#467)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+
+    $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}")
+        ->assertOk()
+        ->assertJsonPath('data.invitation', null);
+});
+
+it('show: invitation block surfaces a pending row with state=pending (#467)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $invitation = \App\Models\AthleteInvitation::factory()
+        ->for($athlete)
+        ->for($user->academy)
+        ->create(['last_sent_at' => now()->subMinute()]);
+
+    $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}")
+        ->assertOk()
+        ->assertJsonPath('data.invitation.id', $invitation->id)
+        ->assertJsonPath('data.invitation.state', 'pending')
+        ->assertJsonPath('data.invitation.accepted_at', null)
+        ->assertJsonStructure([
+            'data' => [
+                'invitation' => ['id', 'state', 'sent_at', 'expires_at', 'accepted_at'],
+            ],
+        ]);
+});
+
+it('show: invitation block surfaces an accepted row with state=accepted (#467)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    \App\Models\AthleteInvitation::factory()
+        ->for($athlete)
+        ->for($user->academy)
+        ->accepted()
+        ->create();
+
+    $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}")
+        ->assertOk()
+        ->assertJsonPath('data.invitation.state', 'accepted')
+        ->assertJsonMissing(['data' => ['invitation' => ['accepted_at' => null]]]);
+});
+
+it('show: revoked + expired rows do not surface (#467)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    \App\Models\AthleteInvitation::factory()
+        ->for($athlete)
+        ->for($user->academy)
+        ->revoked()
+        ->create();
+    \App\Models\AthleteInvitation::factory()
+        ->for($athlete)
+        ->for($user->academy)
+        ->expired()
+        ->create();
+
+    $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}")
+        ->assertOk()
+        ->assertJsonPath('data.invitation', null);
+});
+
+it('show: picks the most recent active row when both pending and accepted exist (#467)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    // Older accepted row (the historical happy-path row).
+    \App\Models\AthleteInvitation::factory()
+        ->for($athlete)
+        ->for($user->academy)
+        ->accepted()
+        ->create(['created_at' => now()->subDays(30)]);
+    // A newer pending row would be a regression in production (the
+    // accept-flow doesn't loop back) but the resource still has to
+    // pick deterministically. `latestOfMany()` keys off `id` desc by
+    // default — the most recently inserted row wins.
+    $newer = \App\Models\AthleteInvitation::factory()
+        ->for($athlete)
+        ->for($user->academy)
+        ->create();
+
+    $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}")
+        ->assertOk()
+        ->assertJsonPath('data.invitation.id', $newer->id)
+        ->assertJsonPath('data.invitation.state', 'pending');
+});
+
+it('show: invitation block does NOT carry the token or its hash (#467)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    \App\Models\AthleteInvitation::factory()
+        ->for($athlete)
+        ->for($user->academy)
+        ->create();
+
+    $response = $this->actingAs($user)
+        ->getJson("/api/v1/athletes/{$athlete->id}")
+        ->assertOk();
+
+    /** @var array<string, mixed> $invitation */
+    $invitation = data_get($response->json(), 'data.invitation');
+    expect($invitation)->not->toHaveKey('token');
+    expect($invitation)->not->toHaveKey('token_hash');
+});
+
 // ─── UPDATE ───────────────────────────────────────────────────────────────────
 
 it('updates an athlete', function (): void {

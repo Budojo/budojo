@@ -846,6 +846,32 @@
         "cancel": "Cancel"
       }
     },
+    "invitation": {
+      "title": "Account & invitation",
+      "noEmail": "Add an email to this athlete to enable a system invitation. Edit the athlete and add the email address, then come back to send the invite.",
+      "emptyHint": "Send the athlete a one-click email link so they can set a password and sign in to their own dashboard.",
+      "invite": "Invite to the system",
+      "resend": "Send again",
+      "revoke": "Revoke",
+      "pendingChip": "Invitation sent on {{sentAt}}, expires {{expiresAt}}",
+      "acceptedChip": "Athlete registered on {{acceptedAt}}",
+      "confirm": {
+        "revokeMessage": "Revoke this invitation? The athlete won't be able to use the link anymore.",
+        "revokeAccept": "Revoke",
+        "revokeReject": "Cancel"
+      },
+      "toast": {
+        "invitedSummary": "Invitation sent",
+        "resentSummary": "Invitation re-sent",
+        "revokedSummary": "Invitation revoked",
+        "errorSummary": "Couldn't send the invitation",
+        "errorGeneric": "Something went wrong. Please try again.",
+        "errorEmailMissing": "This athlete has no email on file. Edit the athlete to add one, then try again.",
+        "errorEmailRegistered": "That email already belongs to a Budojo user. Ask the athlete to sign in instead.",
+        "revokeErrorSummary": "Couldn't revoke the invitation",
+        "revokeErrorDetail": "Please try again."
+      }
+    },
     "detail": {
       "contactLinksAriaLabel": "Athlete contact links",
       "payments": {
