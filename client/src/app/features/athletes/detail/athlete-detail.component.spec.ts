@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { Subject, of } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthleteDetailComponent } from './athlete-detail.component';
 import { Athlete } from '../../../core/services/athlete.service';
@@ -64,6 +65,12 @@ function setupTestBed(
         },
       },
       ...provideI18nTesting(),
+      // The detail page now embeds <app-athlete-invitation-card> (#467),
+      // whose constructor injects MessageService from the app-level
+      // provider in production. The spec must mirror that root
+      // provider — without it the child throws NG0201 at render time
+      // and every detail spec that calls `detectChanges()` fails.
+      MessageService,
     ],
   });
   return { http: TestBed.inject(HttpTestingController), routerEvents };

@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmPopup } from 'primeng/confirmpopup';
@@ -39,7 +47,7 @@ import {
   templateUrl: './invitation-card.component.html',
   styleUrl: './invitation-card.component.scss',
 })
-export class InvitationCardComponent {
+export class InvitationCardComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -49,10 +57,13 @@ export class InvitationCardComponent {
   readonly athlete = input.required<Athlete>();
 
   /**
-   * The card's own copy of the invitation summary. Seeded by a
-   * `computed` that re-evaluates when the input athlete changes,
-   * but mutated locally on action success so the UI flips
-   * immediately. `null` ⇒ no active invitation (the "send" state).
+   * The card's own copy of the invitation summary, seeded from the
+   * input in `ngOnInit` and mutated locally on every action success
+   * so the UI reflects the change without a full detail refetch
+   * (Doherty Threshold + Norman § feedback). The parent's `Athlete`
+   * signal stays as it was; the next page load reads fresh.
+   *
+   * `null` ⇒ no active invitation (the "send" state).
    */
   protected readonly invitation = signal<AthleteInvitationSummary | null>(null);
 
@@ -66,19 +77,11 @@ export class InvitationCardComponent {
   /** Athlete has no email — the "send invite" prerequisite is unmet. */
   protected readonly hasEmail = computed(() => (this.athlete().email ?? '').trim() !== '');
 
-  /** True when the input athlete changes (re-seed local invitation copy). */
-  private readonly seed = computed(() => {
-    const a = this.athlete();
-    this.invitation.set(a.invitation ?? null);
-    return a.id;
-  });
-
-  constructor() {
-    // Force the seed computed to evaluate on every input change. Reading
-    // it inside an effect would be cleaner, but a constructor read in an
-    // injection context establishes the same reactive subscription
-    // without an extra import — keeps the card lean.
-    this.seed();
+  ngOnInit(): void {
+    // The required input is bound by the time `ngOnInit` runs — reading
+    // `athlete()` in the constructor would throw NG0950 because Angular
+    // sets inputs AFTER the constructor returns.
+    this.invitation.set(this.athlete().invitation ?? null);
   }
 
   /**

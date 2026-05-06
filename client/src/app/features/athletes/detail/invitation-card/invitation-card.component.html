@@ -1,7 +1,14 @@
-<p-card styleClass="invitation-card" data-cy="athlete-invitation-card">
-  <div class="invitation-card__header">
-    <span class="invitation-card__eyebrow">{{ 'athletes.invitation.title' | translate }}</span>
-  </div>
+<p-card styleClass="invitation-card">
+  <!--
+    `data-cy` lives on the inner wrapper, not the `<p-card>` host.
+    PrimeNG's <p-card> doesn't forward arbitrary HTML attributes to
+    the rendered host element, so a Cypress selector on the host
+    would never resolve.
+  -->
+  <div class="invitation-card__inner" data-cy="athlete-invitation-card">
+    <div class="invitation-card__header">
+      <span class="invitation-card__eyebrow">{{ 'athletes.invitation.title' | translate }}</span>
+    </div>
 
   @if (!hasEmail()) {
     <p class="invitation-card__hint" data-cy="athlete-invitation-no-email">
@@ -72,5 +79,6 @@
     />
   }
 
-  <p-confirmpopup />
+    <p-confirmpopup />
+  </div>
 </p-card>

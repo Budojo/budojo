@@ -100,12 +100,15 @@ class AthleteResource extends JsonResource
             return null;
         }
 
+        // `created_at` is the non-null fallback when `last_sent_at` is
+        // missing on a legacy row, so the `??` chain narrows to a
+        // non-nullable Carbon — no nullsafe operator needed.
         $sentAt = $invitation->last_sent_at ?? $invitation->created_at;
 
         return [
             'id' => $invitation->id,
             'state' => $invitation->isAccepted() ? 'accepted' : 'pending',
-            'sent_at' => $sentAt?->toIso8601String(),
+            'sent_at' => $sentAt->toIso8601String(),
             'expires_at' => $invitation->expires_at->toIso8601String(),
             'accepted_at' => $invitation->accepted_at?->toIso8601String(),
         ];
