@@ -160,7 +160,9 @@ describe('Athlete invitation card on athlete detail (#467)', () => {
       statusCode: 422,
       body: {
         message: 'The given data was invalid.',
-        errors: { email_already_registered: ['That email is already a Budojo user.'] },
+        // Real wire shape — Laravel keys validation errors by field
+        // name: errors.email[0] === 'email_already_registered'.
+        errors: { email: ['email_already_registered'] },
       },
     }).as('invite');
 

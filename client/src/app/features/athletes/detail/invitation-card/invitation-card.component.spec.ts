@@ -133,7 +133,10 @@ describe('InvitationCardComponent — invite action (#467)', () => {
     const messageSpy = vi.fn();
     const error = {
       status: 422,
-      error: { errors: { email_already_registered: ['That email is already a user.'] } },
+      // Real wire shape: Laravel keys validation errors by field name.
+      // The action throws ValidationException::withMessages(['email' =>
+      // 'email_already_registered']) so the envelope is errors.email[0].
+      error: { errors: { email: ['email_already_registered'] } },
     };
     const { cmp } = setup({}, { invite: vi.fn(() => throwError(() => error)) as never });
     TestBed.inject(MessageService).add = messageSpy;

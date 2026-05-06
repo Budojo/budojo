@@ -2951,8 +2951,7 @@ components:
             sent_at:
               type: string
               format: date-time
-              nullable: true
-              description: Most recent send timestamp (`last_sent_at`); falls back to `created_at` on legacy rows.
+              description: Most recent send timestamp (`last_sent_at`), falling back to `created_at` on legacy rows. Always non-null when the `invitation` block itself is non-null — `created_at` is a Laravel-managed timestamp column, never absent.
             expires_at:
               type: string
               format: date-time

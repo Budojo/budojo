@@ -298,6 +298,22 @@ describe('ProfileComponent — inline name edit (#463)', () => {
     expect(updateSpy).not.toHaveBeenCalled();
   });
 
+  it('blocks submit when the name is whitespace-only (#471)', () => {
+    // Without the trimmed-length validator, "   " (3 spaces) passes
+    // raw `Validators.minLength(2)` and the trim in `submitEditName`
+    // sends an empty string to the server — bad UX. The local
+    // validator must reject whitespace-only input as `required`.
+    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+    const { cmp } = setup({ updateProfile: updateSpy } as never);
+
+    cmp.startEditName();
+    cmp['nameForm'].patchValue({ name: '   ' });
+    cmp.submitEditName();
+
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(cmp['nameControl'].errors?.['required']).toBe(true);
+  });
+
   it('skips the network round-trip when the name is unchanged', () => {
     const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
     const { cmp } = setup({ updateProfile: updateSpy } as never);
