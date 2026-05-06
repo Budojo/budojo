@@ -22,7 +22,8 @@
           @if (preview()?.academy_name) {
             <p>
               {{
-                'athleteInvite.subtitleWithAcademy' | translate: { academy: preview()!.academy_name }
+                'athleteInvite.subtitleWithAcademy'
+                  | translate: { academy: preview()!.academy_name }
               }}
             </p>
           } @else {
