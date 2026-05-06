@@ -103,20 +103,22 @@ export class ProfileComponent {
   /**
    * Reactive form for the inline name edit (#463). Constraints mirror the
    * server's `UpdateProfileRequest`: `required | min:2 | max:255`. The
-   * `nonWhitespaceMinLength` validator runs the trimmed length through the
-   * same min check — without it the raw `Validators.minLength(2)` accepts
-   * `"   "` (3 chars of whitespace), the `submitEditName()` trim sends
-   * `""` to the server, and the user sees a server 422 instead of the
-   * inline `required` error that should have fired locally (#471).
+   * `nonWhitespaceRequired` validator catches the whitespace-only case
+   * the raw `Validators.required` blind-spots (`"   "` passes the raw
+   * required check) — without it `submitEditName()` would trim to `""`
+   * and the user would see a server 422 instead of the inline error
+   * (#471). Scoped so short non-whitespace input (`"X"`) still falls
+   * through to `Validators.minLength` — otherwise both errors compete
+   * and the getter priority chain shows the wrong copy.
    */
   protected readonly nameForm = this.fb.group({
     name: [
       '',
       [
         Validators.required,
+        nonWhitespaceRequiredValidator(),
         Validators.minLength(2),
         Validators.maxLength(255),
-        nonWhitespaceMinLengthValidator(2),
       ],
     ],
   });
@@ -494,18 +496,22 @@ function passwordsMatchValidator(): ValidatorFn {
 }
 
 /**
- * Validator that requires the TRIMMED value's length to meet the
- * given minimum. Surfaces as `{ required: true }` (not `minLength`)
- * because a whitespace-only string is semantically empty — the user
- * intent is the same as leaving the field blank, and the existing
- * `required`-keyed error message reads correctly. Pairs with the
- * raw `Validators.minLength(N)` to also catch short non-whitespace
- * input (`"X"`).
+ * Validator that flags **whitespace-only** input as `{ required:
+ * true }`. Specifically scoped to the empty-after-trim case so that
+ * short non-whitespace input like `"X"` falls through to the raw
+ * `Validators.minLength` (which surfaces as `{ minlength: ... }`) —
+ * otherwise both errors fire on the same control and the getter
+ * priority chain would show the "Enter your name" copy for `"X"`
+ * instead of the more informative "Use at least 2 characters" copy.
+ *
+ * Raw `Validators.required` only checks `value === '' | null | undefined`
+ * — it accepts any whitespace string. Trim-then-check fixes that
+ * blind spot without competing with the existing minLength rule.
  */
-function nonWhitespaceMinLengthValidator(min: number): ValidatorFn {
+function nonWhitespaceRequiredValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const value: unknown = control.value;
     if (typeof value !== 'string') return null;
-    return value.trim().length >= min ? null : { required: true };
+    return value.length > 0 && value.trim().length === 0 ? { required: true } : null;
   };
 }
