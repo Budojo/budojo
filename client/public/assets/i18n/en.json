@@ -530,6 +530,72 @@
       "genericError": "Couldn't update your password. Please try again."
     }
   },
+  "account": {
+    "emailChange": {
+      "profile": {
+        "edit": "Change email",
+        "newEmailLabel": "New email",
+        "newEmailPlaceholder": "you@example.com",
+        "save": "Send confirmation",
+        "cancel": "Cancel",
+        "confirmTitle": "Confirm email change",
+        "confirmMessage": "We'll send a confirmation link to {{newEmail}}. Until you click that link, your login email stays {{currentEmail}}.",
+        "confirmAccept": "Send link",
+        "confirmReject": "Cancel",
+        "required": "Enter the new email address.",
+        "invalid": "That doesn't look like a valid email address.",
+        "maxLength": "Email must be at most 255 characters.",
+        "serverInvalid": "The server rejected that email. Try a different one.",
+        "serverEmailTaken": "That email is already linked to another Budojo account.",
+        "serverEmailUnchanged": "That's already your current email.",
+        "serverThrottled": "Too many email-change requests. Try again in an hour.",
+        "serverGeneric": "Couldn't request the email change. Please try again."
+      },
+      "pendingPillola": {
+        "label": "Email change pending — waiting on confirmation",
+        "detail": "Click the link we sent to {{newEmail}} to apply the change. The link expires soon.",
+        "cancel": "Cancel pending"
+      },
+      "toast": {
+        "linkSentSummary": "Confirmation link sent",
+        "linkSentDetail": "Click the link in {{newEmail}} to apply the change.",
+        "cancelledSummary": "Pending email change cancelled"
+      },
+      "athleteDetail": {
+        "edit": "Change email",
+        "newEmailLabel": "New email",
+        "save": "Save",
+        "cancel": "Cancel",
+        "confirmStateBTitle": "Resend invitation to new email",
+        "confirmStateBMessage": "Changing the email will revoke the current invitation and send a new one to {{newEmail}}.",
+        "confirmStateCTitle": "Confirmation link",
+        "confirmStateCMessage": "The athlete will need to confirm the new email by clicking a link. Until they do, their login email stays {{currentEmail}}.",
+        "confirmAccept": "Continue",
+        "confirmReject": "Cancel",
+        "toast": {
+          "directSummary": "Email updated",
+          "inviteSwapSummary": "Invitation re-sent",
+          "inviteSwapDetail": "A fresh invitation went out to {{newEmail}}.",
+          "pendingSummary": "Confirmation link sent",
+          "pendingDetail": "The athlete needs to click the link in {{newEmail}} to apply the change."
+        }
+      },
+      "verify": {
+        "loadingTitle": "Verifying your new email…",
+        "successTitle": "Email confirmed",
+        "successMessage": "Your new email address has been applied. Sign in with the new address to continue.",
+        "successRedirectHint": "Redirecting you to sign in…",
+        "errorTitle": "Link expired or already used",
+        "errorMessage": "This confirmation link is no longer valid. You can request a new one from your profile.",
+        "errorRequestNewProfile": "Back to profile",
+        "errorRequestNewLogin": "Back to sign in",
+        "loginToast": {
+          "summary": "Email confirmed",
+          "detail": "Sign in with your new email address."
+        }
+      }
+    }
+  },
   "emailVerification": {
     "verified": "Email verified",
     "notVerified": "Email not verified",

@@ -530,6 +530,72 @@
       "genericError": "Non è stato possibile aggiornare la password. Riprova."
     }
   },
+  "account": {
+    "emailChange": {
+      "profile": {
+        "edit": "Cambia email",
+        "newEmailLabel": "Nuova email",
+        "newEmailPlaceholder": "tu@esempio.com",
+        "save": "Invia conferma",
+        "cancel": "Annulla",
+        "confirmTitle": "Conferma il cambio email",
+        "confirmMessage": "Invieremo un link di conferma a {{newEmail}}. Fino al click su quel link, la tua email di accesso resta {{currentEmail}}.",
+        "confirmAccept": "Invia link",
+        "confirmReject": "Annulla",
+        "required": "Inserisci il nuovo indirizzo email.",
+        "invalid": "Non sembra un indirizzo email valido.",
+        "maxLength": "L'email non può superare 255 caratteri.",
+        "serverInvalid": "Il server ha rifiutato questo indirizzo. Provane un altro.",
+        "serverEmailTaken": "Questo indirizzo è già associato a un altro account Budojo.",
+        "serverEmailUnchanged": "È già la tua email attuale.",
+        "serverThrottled": "Troppe richieste di cambio email. Riprova fra un'ora.",
+        "serverGeneric": "Non è stato possibile richiedere il cambio email. Riprova."
+      },
+      "pendingPillola": {
+        "label": "Cambio email in attesa di conferma",
+        "detail": "Clicca il link che abbiamo inviato a {{newEmail}} per applicare il cambio. Il link scade a breve.",
+        "cancel": "Annulla cambio"
+      },
+      "toast": {
+        "linkSentSummary": "Link di conferma inviato",
+        "linkSentDetail": "Clicca il link inviato a {{newEmail}} per applicare il cambio.",
+        "cancelledSummary": "Cambio email annullato"
+      },
+      "athleteDetail": {
+        "edit": "Cambia email",
+        "newEmailLabel": "Nuova email",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "confirmStateBTitle": "Reinvia l'invito alla nuova email",
+        "confirmStateBMessage": "Cambiando l'email l'invito attuale verrà revocato e ne verrà inviato uno nuovo a {{newEmail}}.",
+        "confirmStateCTitle": "Link di conferma",
+        "confirmStateCMessage": "L'atleta dovrà confermare la nuova email cliccando un link. Fino ad allora la sua email di accesso resta {{currentEmail}}.",
+        "confirmAccept": "Continua",
+        "confirmReject": "Annulla",
+        "toast": {
+          "directSummary": "Email aggiornata",
+          "inviteSwapSummary": "Invito reinviato",
+          "inviteSwapDetail": "Un nuovo invito è stato inviato a {{newEmail}}.",
+          "pendingSummary": "Link di conferma inviato",
+          "pendingDetail": "L'atleta deve cliccare il link inviato a {{newEmail}} per applicare il cambio."
+        }
+      },
+      "verify": {
+        "loadingTitle": "Stiamo verificando la nuova email…",
+        "successTitle": "Email confermata",
+        "successMessage": "Il nuovo indirizzo email è stato applicato. Accedi con il nuovo indirizzo per continuare.",
+        "successRedirectHint": "Ti reindirizziamo all'accesso…",
+        "errorTitle": "Link scaduto o già usato",
+        "errorMessage": "Questo link di conferma non è più valido. Puoi richiederne uno nuovo dal tuo profilo.",
+        "errorRequestNewProfile": "Torna al profilo",
+        "errorRequestNewLogin": "Torna all'accesso",
+        "loginToast": {
+          "summary": "Email confermata",
+          "detail": "Accedi con il tuo nuovo indirizzo email."
+        }
+      }
+    }
+  },
   "emailVerification": {
     "verified": "Email verificata",
     "notVerified": "Email non verificata",

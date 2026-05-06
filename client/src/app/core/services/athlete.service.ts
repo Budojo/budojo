@@ -293,4 +293,34 @@ export class AthleteService {
   revokeInvite(athleteId: number, invitationId: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${athleteId}/invitations/${invitationId}`);
   }
+
+  /**
+   * Change an athlete's email — owner-side (#476). The server branches
+   * on the athlete's lifecycle state:
+   *
+   * - `direct`      → no invitation and no linked user — `athletes.email`
+   *                   mutated immediately, no mail.
+   * - `invite_swap` → active invitation existed for the OLD email;
+   *                   it's been revoked, the athletes row updated, and
+   *                   a fresh invitation queued to the NEW email.
+   * - `pending`     → the athlete is a logged-in user; a pending
+   *                   email-change row was created and a verification
+   *                   link queued. `athletes.email` stays as-is until
+   *                   the athlete clicks the link.
+   *
+   * The caller branches the toast copy on `mode`.
+   */
+  changeEmail(athleteId: number, newEmail: string): Observable<{ mode: AthleteEmailChangeMode }> {
+    return this.http
+      .post<{ data: { mode: AthleteEmailChangeMode } }>(`${this.base}/${athleteId}/email`, {
+        email: newEmail,
+      })
+      .pipe(map((res) => res.data));
+  }
 }
+
+/**
+ * State discriminator returned from `POST /athletes/{id}/email` (#476).
+ * Mirrors the `mode` key on the server's response envelope.
+ */
+export type AthleteEmailChangeMode = 'direct' | 'invite_swap' | 'pending';

@@ -123,6 +123,47 @@ export class ProfileComponent {
     ],
   });
 
+  /** True while POST /me/email-change is in flight (#476). */
+  protected readonly requestingEmail = signal<boolean>(false);
+
+  /** True while DELETE /me/email-change is in flight (#476). */
+  protected readonly cancellingEmail = signal<boolean>(false);
+
+  /** True when the user has clicked the inline pencil to change their email (#476). */
+  protected readonly editingEmail = signal<boolean>(false);
+
+  /**
+   * Server-mapped error for the email-change row (#476). Five named
+   * branches cover the wire shapes the server emits:
+   *
+   * - `invalid` — 422 `errors.email` with no recognized code
+   * - `taken` — 422 `email_taken` (already a different user's email)
+   * - `unchanged` — 422 `email_unchanged` (same as current)
+   * - `throttled` — 429 (too many requests within the hourly window)
+   * - `generic` — 5xx / network / unknown
+   *
+   * Cleared on every fresh submit attempt before the validity guard
+   * so a stale 422 doesn't linger while the user fixes a client-side
+   * error (mirrors the change-password pattern below).
+   */
+  protected readonly emailServerError = signal<
+    'invalid' | 'taken' | 'unchanged' | 'throttled' | 'generic' | null
+  >(null);
+
+  /**
+   * Reactive form for the inline email edit (#476). The validators
+   * mirror the server's `RequestEmailChangeRequest`: `required` +
+   * `email` + `max:255`. Error rendering follows the same priority
+   * chain as the name edit (touched-and-invalid client validators
+   * first, then a server-mapped error).
+   */
+  protected readonly emailForm = this.fb.group({
+    email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
+  });
+
+  /** Pending email-change block from the cached user, when any. */
+  protected readonly pendingEmailChange = computed(() => this.user()?.pending_email_change ?? null);
+
   /** True while POST /me/password is in flight. */
   protected readonly changingPassword = signal<boolean>(false);
 
@@ -304,6 +345,137 @@ export class ProfileComponent {
   }
 
   /**
+   * Open the inline email-edit row (#476). The form is pre-cleared
+   * rather than pre-filled — typing a fresh address from scratch is
+   * the user's whole intent here, unlike the name edit where the
+   * current value is the obvious starting point.
+   */
+  startEditEmail(): void {
+    this.emailForm.reset({ email: '' });
+    this.emailServerError.set(null);
+    this.editingEmail.set(true);
+  }
+
+  /** Drop the in-progress email edit; the cached user.email stays unchanged. */
+  cancelEditEmail(): void {
+    this.editingEmail.set(false);
+    this.emailServerError.set(null);
+  }
+
+  /**
+   * Submit the email change request (#476). On success the SPA does
+   * NOT mutate the cached user signal — the live email won't change
+   * until the verification link is clicked. We refetch via
+   * `loadCurrentUser()` so the `pending_email_change` block on the
+   * envelope hydrates the pillola immediately. Then we toast.
+   *
+   * Confirm-popup pattern (Krug § "forgiveness for mistakes"): the
+   * dialog spells out "we'll send a link to {newEmail}; until you
+   * click it your login email stays {currentEmail}". This is the
+   * critical-action moment — getting the new address right matters
+   * because a typo locks the legitimate inbox out of the new address
+   * round-trip.
+   */
+  submitEditEmail(event: Event): void {
+    if (this.requestingEmail()) return;
+
+    this.emailServerError.set(null);
+
+    if (this.emailForm.invalid) {
+      this.emailForm.markAllAsTouched();
+      return;
+    }
+
+    const newEmail = (this.emailForm.getRawValue().email ?? '').trim();
+    const currentEmail = this.user()?.email ?? '';
+
+    this.confirmationService.confirm({
+      target: event.currentTarget as HTMLElement,
+      header: this.translate.instant('account.emailChange.profile.confirmTitle'),
+      message: this.translate.instant('account.emailChange.profile.confirmMessage', {
+        newEmail,
+        currentEmail,
+      }),
+      acceptLabel: this.translate.instant('account.emailChange.profile.confirmAccept'),
+      rejectLabel: this.translate.instant('account.emailChange.profile.confirmReject'),
+      accept: () => this.dispatchEmailRequest(newEmail),
+    });
+  }
+
+  private dispatchEmailRequest(newEmail: string): void {
+    this.requestingEmail.set(true);
+    this.authService
+      .requestEmailChange(newEmail)
+      .pipe(finalize(() => this.requestingEmail.set(false)))
+      .subscribe({
+        next: () => {
+          this.editingEmail.set(false);
+          // Refresh the cached user so the pending pillola lights up
+          // in this tab without the user having to refresh.
+          this.authService.loadCurrentUser().subscribe({ error: () => undefined });
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translate.instant('account.emailChange.toast.linkSentSummary'),
+            detail: this.translate.instant('account.emailChange.toast.linkSentDetail', {
+              newEmail,
+            }),
+            life: 4000,
+          });
+        },
+        error: (err: { status?: number; error?: { errors?: Record<string, unknown> } }) => {
+          const errors = err.error?.errors ?? {};
+          if (err.status === 429) {
+            this.emailServerError.set('throttled');
+            return;
+          }
+          // Laravel keys validation errors by FIELD; the message
+          // string ("email_taken" / "email_unchanged") sits in the
+          // values array.
+          const emailErrors = errors['email'];
+          const code =
+            Array.isArray(emailErrors) && typeof emailErrors[0] === 'string'
+              ? emailErrors[0]
+              : null;
+          if (code === 'email_taken') {
+            this.emailServerError.set('taken');
+          } else if (code === 'email_unchanged') {
+            this.emailServerError.set('unchanged');
+          } else if ('email' in errors) {
+            this.emailServerError.set('invalid');
+          } else {
+            this.emailServerError.set('generic');
+          }
+        },
+      });
+  }
+
+  /**
+   * Cancel an outstanding email-change pending row (#476). Server-side
+   * is idempotent (a no-op when no row exists), so we don't gate on
+   * `pendingEmailChange()` being non-null — defensive against a stale
+   * cached user signal. Toast on success; the auth service refreshes
+   * the cached user afterwards so the pillola disappears in the same
+   * tick.
+   */
+  cancelPendingEmailChange(): void {
+    if (this.cancellingEmail()) return;
+    this.cancellingEmail.set(true);
+    this.authService
+      .cancelPendingEmailChange()
+      .pipe(finalize(() => this.cancellingEmail.set(false)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translate.instant('account.emailChange.toast.cancelledSummary'),
+            life: 2500,
+          });
+        },
+        error: () => undefined,
+      });
+  }
+
+  /**
    * In-app password change (#409). Submits the form to `POST
    * /api/v1/me/password`; on success the SPA stays logged in (the server
    * preserves the current Sanctum token while revoking every other token
@@ -460,6 +632,62 @@ export class ProfileComponent {
     }
     if (server === 'generic') {
       return { dataCy: 'profile-name-server-generic', key: 'profile.editName.serverGeneric' };
+    }
+    return null;
+  }
+
+  /** Form control accessor for the inline email-edit row (#476). */
+  protected get emailControl(): AbstractControl {
+    return this.emailForm.get('email')!;
+  }
+
+  /**
+   * Single source of truth for the inline email-edit error row (#476).
+   * Mirrors the `nameError` getter pattern: touched-and-invalid client
+   * validators first, then a server-mapped error.
+   */
+  protected get emailError(): { dataCy: string; key: string } | null {
+    if (this.emailControl.touched) {
+      if (this.emailControl.errors?.['required']) {
+        return { dataCy: 'profile-email-required', key: 'account.emailChange.profile.required' };
+      }
+      if (this.emailControl.errors?.['email']) {
+        return { dataCy: 'profile-email-invalid', key: 'account.emailChange.profile.invalid' };
+      }
+      if (this.emailControl.errors?.['maxlength']) {
+        return { dataCy: 'profile-email-maxlength', key: 'account.emailChange.profile.maxLength' };
+      }
+    }
+    const server = this.emailServerError();
+    if (server === 'taken') {
+      return {
+        dataCy: 'profile-email-server-taken',
+        key: 'account.emailChange.profile.serverEmailTaken',
+      };
+    }
+    if (server === 'unchanged') {
+      return {
+        dataCy: 'profile-email-server-unchanged',
+        key: 'account.emailChange.profile.serverEmailUnchanged',
+      };
+    }
+    if (server === 'throttled') {
+      return {
+        dataCy: 'profile-email-server-throttled',
+        key: 'account.emailChange.profile.serverThrottled',
+      };
+    }
+    if (server === 'invalid') {
+      return {
+        dataCy: 'profile-email-server-invalid',
+        key: 'account.emailChange.profile.serverInvalid',
+      };
+    }
+    if (server === 'generic') {
+      return {
+        dataCy: 'profile-email-server-generic',
+        key: 'account.emailChange.profile.serverGeneric',
+      };
     }
     return null;
   }
