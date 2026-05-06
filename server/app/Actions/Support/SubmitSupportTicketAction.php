@@ -75,8 +75,19 @@ class SubmitSupportTicketAction
         $imageBytes = null;
         $imageOriginalName = null;
         if ($image !== null) {
-            $imageBytes = file_get_contents($image->getRealPath() ?: '');
-            if ($imageBytes === false) {
+            // `$image->get()` reads the upload's contents in one call.
+            // The previous shape called file_get_contents on a
+            // possibly-empty real path which emits a PHP warning
+            // when the temp file is gone. We catch any failure
+            // (missing temp file, permissions, etc.), report() it
+            // for visibility, and continue with $imageBytes = null
+            // so the support ticket row + email still land — the
+            // attachment is a triage hint, NOT load-bearing.
+            try {
+                $contents = $image->get();
+                $imageBytes = $contents === false ? null : $contents;
+            } catch (\Throwable $e) {
+                report($e);
                 $imageBytes = null;
             }
             $imageOriginalName = $image->getClientOriginalName();

@@ -11,7 +11,7 @@ The row is **the auditable trail of the invitation**, distinct from the email it
 Laravel's `URL::temporarySignedRoute()` could in principle stamp the entire invite into the URL itself (athlete id + expiry + signature) without persisting anything. Three things make the row mandatory:
 
 - **Revocation.** A pure-signed URL cannot be invalidated before its expiry without rotating `APP_KEY` (which would invalidate every other signed URL too). The row gives us `revoked_at`.
-- **Resend without breaking old links.** Bumping `last_sent_at` and re-emailing the SAME token keeps the same URL valid; an out-of-band signed URL would need a new signature each time.
+- **Resend without spawning parallel live tokens.** Bumping `last_sent_at` AND replacing the stored token hash on the same row keeps a single bearer credential alive at any moment — the URL emitted on the previous send is invalidated, the new email always carries the only working URL. Same shape as Laravel's password-reset flow. Without the row we'd need either a fresh signed URL each time (and orphan the previous one anyway) or a parallel-row design that doubles the bearer-credential surface.
 - **Audit trail.** "When did Luigi invite Mario? Did Mario ever accept?" — answerable in O(1) without rummaging through Resend's outbound logs.
 
 ## Schema — `athlete_invitations`
@@ -71,7 +71,7 @@ These rules will be enforced in M7 PR-B's `SendAthleteInvitationAction` and PR-C
 - `POST /api/v1/athletes/{athlete}/invite` — creates an invitation (or bumps `last_sent_at` if pending exists). Owner only.
 - `POST /api/v1/athletes/{athlete}/invite/resend` — bumps `last_sent_at` and re-queues the mail. Owner only.
 - `DELETE /api/v1/athletes/{athlete}/invitations/{invitation}` — sets `revoked_at`. Owner only.
-- `POST /api/v1/athlete-invite/{token}/preview` — returns athlete + academy info for the SPA pre-fill (no auth required).
+- `GET /api/v1/athlete-invite/{token}/preview` — returns athlete + academy info for the SPA pre-fill (no auth required).
 - `POST /api/v1/athlete-invite/{token}/accept` — creates the `User` row, links `athletes.user_id`, sets `accepted_at`, returns a Sanctum token.
 
 ## Out of scope (future milestones)

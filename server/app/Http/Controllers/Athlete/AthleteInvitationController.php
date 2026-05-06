@@ -69,7 +69,7 @@ class AthleteInvitationController extends Controller
         // model — so a caller can't distinguish "exists but belongs to
         // a different athlete" from "doesn't exist at all".
         if ($invitation->athlete_id !== $athlete->id) {
-            throw new \Illuminate\Database\Eloquent\ModelNotFoundException()->setModel(AthleteInvitation::class);
+            throw new ModelNotFoundException()->setModel(AthleteInvitation::class);
         }
 
         $this->sender->revoke($invitation);
