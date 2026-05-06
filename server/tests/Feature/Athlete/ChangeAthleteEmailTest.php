@@ -76,9 +76,7 @@ it('state B: pending invitation — old invite revoked, athletes.email swapped, 
         ->first();
     expect($fresh)->not->toBeNull();
 
-    Mail::assertQueued(AthleteInvitationMail::class, function (AthleteInvitationMail $mail): bool {
-        return $mail->hasTo('fresh@example.com');
-    });
+    Mail::assertQueued(AthleteInvitationMail::class, fn (AthleteInvitationMail $mail): bool => $mail->hasTo('fresh@example.com'));
 });
 
 it('state C: linked user — pending row created, athletes.email NOT mutated, both mails queued', function (): void {

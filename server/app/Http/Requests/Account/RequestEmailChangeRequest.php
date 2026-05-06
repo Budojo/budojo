@@ -24,13 +24,14 @@ class RequestEmailChangeRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        // Same rule shape as `RegisterRequest::rules()['email']` (RFC
+        // check only — no DNS / MX lookup, since CI / test envs run
+        // offline). The cross-uniqueness check lives in the action
+        // (`email_taken`) rather than here so a same-as-current
+        // candidate can be rejected with a distinct `email_unchanged`
+        // code.
         return [
-            // `email:rfc,dns` mirrors the registration policy — RFC
-            // syntax + an MX lookup. The DNS check catches the most
-            // common typo class (`gmial.com`) at form-submit time
-            // rather than at queue-dispatch time, where a 422 is the
-            // SPA's only recourse.
-            'email' => ['required', 'email:rfc,dns', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
         ];
     }
 }

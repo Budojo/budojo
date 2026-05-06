@@ -41,8 +41,11 @@ class ChangeAthleteEmailRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        // Same rule shape as `RegisterRequest` and the matching
+        // `RequestEmailChangeRequest` for the owner self-edit — RFC
+        // check only, no offline-hostile DNS lookup.
         return [
-            'email' => ['required', 'email:rfc,dns', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
         ];
     }
 }

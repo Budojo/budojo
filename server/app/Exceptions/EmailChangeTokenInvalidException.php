@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Exceptions;
 
-use RuntimeException;
-
 /**
  * Thrown by `ConfirmEmailChangeAction::execute()` (#476) when the
  * URL-presented verification token does not match an active row.
@@ -23,6 +21,6 @@ use RuntimeException;
  * between the three cases — the user-facing remedy is the same in all
  * three: request a fresh link.
  */
-class EmailChangeTokenInvalidException extends RuntimeException
+class EmailChangeTokenInvalidException extends \RuntimeException
 {
 }

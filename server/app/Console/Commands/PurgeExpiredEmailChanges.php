@@ -72,10 +72,15 @@ class PurgeExpiredEmailChanges extends Command
         }
 
         try {
-            $deleted = PendingEmailChange::query()
+            // Builder::delete() returns int (the affected-row count),
+            // but PHPStan's stub types it as `mixed` — coerce via
+            // `intval()` and a defensive default rather than a raw
+            // cast (level 9 rejects `(int) mixed`).
+            $deletedRaw = PendingEmailChange::query()
                 ->where('expires_at', '<=', $now)
                 ->limit(self::DELETE_CAP)
                 ->delete();
+            $deleted = \is_int($deletedRaw) ? $deletedRaw : 0;
 
             $this->info("Done. Purged: {$deleted}.");
 

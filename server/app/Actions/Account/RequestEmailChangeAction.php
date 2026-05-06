@@ -77,9 +77,12 @@ class RequestEmailChangeAction
 
         // Anti-collision: the candidate cannot already belong to a
         // different user. Same shape `SendAthleteInvitationAction`
-        // uses for its anti-squatting check.
+        // uses for its anti-squatting check. Uses a NOT-equals on the
+        // user's own id so a self-pointed candidate doesn't trip the
+        // check (the `email_unchanged` branch above handles the same-
+        // value case explicitly).
         $alreadyTaken = User::query()
-            ->whereKey($user->id, '!=')
+            ->where('id', '!=', $user->id)
             ->whereRaw('LOWER(email) = ?', [$normalized])
             ->exists();
         if ($alreadyTaken) {

@@ -50,33 +50,51 @@ class ConfirmEmailChangeAction
     {
         $hash = PendingEmailChange::hashToken($rawToken);
 
-        return DB::transaction(function () use ($hash): User {
-            /** @var PendingEmailChange|null $pending */
-            $pending = PendingEmailChange::query()
-                ->where('token', $hash)
+        // Pre-check OUTSIDE the transaction. We split the lookup +
+        // expired-row cleanup from the apply pass because the
+        // expired-row deletion needs to commit even though the
+        // overall request is a failure (we want a probe replaying a
+        // stale link to find no row on the next attempt). Wrapping
+        // the whole flow in DB::transaction(fn) and throwing inside
+        // would roll the cleanup back along with the apply.
+        /** @var PendingEmailChange|null $pending */
+        $pending = PendingEmailChange::query()
+            ->where('token', $hash)
+            ->first();
+
+        if ($pending === null) {
+            throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
+        }
+
+        if ($pending->isExpired()) {
+            $pending->delete();
+
+            throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
+        }
+
+        return DB::transaction(function () use ($pending): User {
+            // Re-fetch under lock to serialise concurrent verify
+            // attempts on the same token (a double-click would
+            // otherwise race the apply + delete pair).
+            /** @var PendingEmailChange|null $locked */
+            $locked = PendingEmailChange::query()
+                ->whereKey($pending->id)
                 ->lockForUpdate()
                 ->first();
-
-            if ($pending === null) {
-                throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
-            }
-
-            if ($pending->isExpired()) {
-                // Drop the stale row eagerly; the scheduled cleanup
-                // would have eventually got it, but the lock is in our
-                // hand right now and the row can never be useful.
-                $pending->delete();
+            if ($locked === null) {
+                // Another concurrent click already consumed it.
                 throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
             }
 
             /** @var User|null $user */
-            $user = User::query()->whereKey($pending->user_id)->lockForUpdate()->first();
+            $user = User::query()->whereKey($locked->user_id)->lockForUpdate()->first();
             if ($user === null) {
-                $pending->delete();
+                $locked->delete();
+
                 throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
             }
 
-            $newEmail = $pending->new_email;
+            $newEmail = $locked->new_email;
 
             $user->forceFill([
                 'email' => $newEmail,
@@ -99,7 +117,7 @@ class ConfirmEmailChangeAction
 
             // Single-use token: drop the row so a refresh / browser-
             // back / shared-link replay 410s on the next attempt.
-            $pending->delete();
+            $locked->delete();
 
             return $user->fresh() ?? $user;
         });
