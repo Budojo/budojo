@@ -65,12 +65,28 @@ describe('Email change — owner profile (#476)', () => {
     cy.get('[data-cy="profile-email-save"]').click();
 
     // Confirm-popup spelled out the consequences; click "Send link".
-    cy.contains('button', /send link|invia link/i).click();
+    // `should('be.visible')` before `.click()` waits for the popup
+    // mount animation — without it the click can race the popup's
+    // own enter transition and miss the bound handler.
+    cy.contains('button', /send link|invia link/i)
+      .should('be.visible')
+      .click();
 
     cy.wait('@request').its('request.body').should('deep.equal', { email: 'new@example.com' });
 
+    // The component calls loadCurrentUser() after a successful POST so
+    // the pending block hydrates without a manual refresh — explicitly
+    // wait for that second /auth/me call before asserting on the
+    // pillola, otherwise the assertion races the in-flight request.
+    cy.wait('@me');
+
     // After loadCurrentUser refetches, the pillola is in DOM.
-    cy.get('[data-cy="profile-email-pending-pillola"]', { timeout: 5000 }).should('be.visible');
+    // `.scrollIntoView()` is defensive against the dashboard shell's
+    // overflow:auto container clipping the pillola when the profile
+    // page gains height (gotchas § Cypress / overflow:auto).
+    cy.get('[data-cy="profile-email-pending-pillola"]', { timeout: 5000 })
+      .scrollIntoView()
+      .should('be.visible');
   });
 });
 

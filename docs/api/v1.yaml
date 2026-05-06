@@ -2273,6 +2273,33 @@ components:
           example:
             message: verification_required
 
+    Forbidden:
+      description: |
+        Forbidden — generic 403 envelope for endpoints that gate on ownership
+        or role. Used when the caller doesn't satisfy the FormRequest's
+        `authorize()` (typically `role:owner` + academy ownership of the
+        bound resource). The wire shape mirrors `ForbiddenAthlete*` but is
+        scoped wider so endpoints not bound to an athlete can reuse it.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: Forbidden.
+
+    Throttled:
+      description: |
+        Rate-limit hit. The `Retry-After` response header carries the seconds
+        the caller should wait before retrying. Endpoints that share this
+        response (`/me/email-change`, `/athletes/{athlete}/email`, `/me/password`,
+        ...) document their per-route limiter cap in their own description.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: Too Many Attempts.
+
     ForbiddenAthleteWrite:
       description: |
         Forbidden — gated athlete-write endpoint refused. Two reasons can
@@ -2563,6 +2590,49 @@ components:
           type: string
           format: password
           minLength: 8
+
+    RequestEmailChangeRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: |
+            Candidate new email. Validated as RFC + DNS shape. Rejected with
+            422 `email_taken` when already a different `users.email`, or
+            with 422 `email_unchanged` when equal to the requesting user's
+            current email.
+
+    ChangeAthleteEmailRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: |
+            Candidate new email for the bound athlete. Backend branches on
+            athlete state — see the endpoint description for the three
+            modes (`direct`, `invite_swap`, `pending`).
+
+    EmailChangeMode:
+      type: string
+      enum: [direct, invite_swap, pending]
+      description: |
+        Which sub-flow the backend executed for an athlete email change:
+
+        - `direct` — state A: athlete had no invitation and no linked
+          user; the email was patched directly on `athletes.email`.
+        - `invite_swap` — state B: athlete had a pending invitation;
+          the old invitation row was revoked, `athletes.email` updated,
+          and a fresh invitation was queued to the new address.
+        - `pending` — state C: athlete had an accepted invitation
+          (linked `users` row); a `pending_email_changes` row was
+          created and the verification mail was queued. `athletes.email`
+          stays in sync with `users.email` and only flips on confirm.
 
     MessageResponse:
       type: object
