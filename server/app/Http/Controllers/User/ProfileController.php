@@ -12,10 +12,7 @@ use App\Models\User;
 
 /**
  * Self-edit controller for the authenticated user's profile (#463).
- *
- * Lives under `/api/v1/me` and is auth:sanctum gated at the route
- * level — `UpdateProfileRequest::authorize()` keeps the additional
- * "must be a logged-in user" gate as a defence-in-depth check.
+ * Lives under `/api/v1/me` and is auth:sanctum gated at the route level.
  */
 class ProfileController extends Controller
 {

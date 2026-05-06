@@ -79,7 +79,11 @@ describe('profile — inline name edit (#463)', () => {
     cy.get('[data-cy="profile-name-save"]').click();
 
     cy.wait('@updateProfile');
-    cy.get('[data-cy="profile-name-server-invalid"]').should('be.visible');
+    // Profile sits inside `.main { overflow-y: auto }` (the dashboard
+    // shell scroll container). Without scrollIntoView, Cypress flags the
+    // server-error <small> as clipped by the overflow:auto parent —
+    // gotcha § Cypress / overflow:auto.
+    cy.get('[data-cy="profile-name-server-invalid"]').scrollIntoView().should('be.visible');
     cy.get('[data-cy="profile-name-edit-form"]').should('exist');
   });
 

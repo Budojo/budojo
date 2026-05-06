@@ -98,37 +98,16 @@
             type="text"
             pInputText
             formControlName="name"
-            [attr.aria-invalid]="nameControl.invalid && nameControl.touched ? true : null"
-            [attr.aria-describedby]="
-              (nameControl.touched && nameControl.invalid) || nameServerError() !== null
-                ? 'profileNameError'
-                : null
-            "
+            [attr.aria-invalid]="nameError !== null ? true : null"
+            [attr.aria-describedby]="nameError !== null ? 'profileNameError' : null"
             autocomplete="name"
             maxlength="255"
             class="profile-page__input"
             data-cy="profile-name-input"
           />
-          @if (nameControl.touched && nameControl.errors?.['required']) {
-            <small id="profileNameError" class="field-error" data-cy="profile-name-required">
-              {{ 'profile.editName.required' | translate }}
-            </small>
-          } @else if (nameControl.touched && nameControl.errors?.['minlength']) {
-            <small id="profileNameError" class="field-error" data-cy="profile-name-minlength">
-              {{ 'profile.editName.minLength' | translate }}
-            </small>
-          } @else if (nameControl.touched && nameControl.errors?.['maxlength']) {
-            <small id="profileNameError" class="field-error" data-cy="profile-name-maxlength">
-              {{ 'profile.editName.maxLength' | translate }}
-            </small>
-          }
-          @if (nameServerError() === 'invalid') {
-            <small id="profileNameError" class="field-error" data-cy="profile-name-server-invalid">
-              {{ 'profile.editName.serverInvalid' | translate }}
-            </small>
-          } @else if (nameServerError() === 'generic') {
-            <small id="profileNameError" class="field-error" data-cy="profile-name-server-generic">
-              {{ 'profile.editName.serverGeneric' | translate }}
+          @if (nameError; as err) {
+            <small id="profileNameError" class="field-error" [attr.data-cy]="err.dataCy">
+              {{ err.key | translate }}
             </small>
           }
           <div class="profile-page__row-actions">

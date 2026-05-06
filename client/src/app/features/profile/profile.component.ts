@@ -419,6 +419,36 @@ export class ProfileComponent {
     return this.nameForm.get('name')!;
   }
 
+  /**
+   * Single source of truth for the inline name-edit error row (#463).
+   * Picks the highest-priority message — touched-and-invalid client
+   * validators first, then a server-mapped error — so the template can
+   * render exactly one `<small id="profileNameError">` element. Avoids
+   * the duplicate-id + ambiguous-aria-describedby a11y trap that
+   * surfaces when each branch ships its own `<small>` with the same id.
+   */
+  protected get nameError(): { dataCy: string; key: string } | null {
+    if (this.nameControl.touched) {
+      if (this.nameControl.errors?.['required']) {
+        return { dataCy: 'profile-name-required', key: 'profile.editName.required' };
+      }
+      if (this.nameControl.errors?.['minlength']) {
+        return { dataCy: 'profile-name-minlength', key: 'profile.editName.minLength' };
+      }
+      if (this.nameControl.errors?.['maxlength']) {
+        return { dataCy: 'profile-name-maxlength', key: 'profile.editName.maxLength' };
+      }
+    }
+    const server = this.nameServerError();
+    if (server === 'invalid') {
+      return { dataCy: 'profile-name-server-invalid', key: 'profile.editName.serverInvalid' };
+    }
+    if (server === 'generic') {
+      return { dataCy: 'profile-name-server-generic', key: 'profile.editName.serverGeneric' };
+    }
+    return null;
+  }
+
   protected get currentPassword(): AbstractControl {
     return this.changePasswordForm.get('currentPassword')!;
   }
