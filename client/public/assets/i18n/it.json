@@ -468,6 +468,17 @@
     "subtitle": "Dettagli account e stato di verifica.",
     "verifyRequiredBanner": "Devi verificare la tua email prima di aggiungere atleti o documenti. Controlla la casella di posta per il link di verifica, oppure usa il pulsante Reinvia qui sotto.",
     "name": "Nome",
+    "editName": {
+      "edit": "Modifica nome",
+      "save": "Salva",
+      "cancel": "Annulla",
+      "required": "Inserisci il tuo nome.",
+      "minLength": "Il nome deve avere almeno 2 caratteri.",
+      "maxLength": "Il nome può avere al massimo 255 caratteri.",
+      "serverInvalid": "Il nome è stato rifiutato. Usa da 2 a 255 caratteri.",
+      "serverGeneric": "Impossibile aggiornare il nome. Riprova.",
+      "successSummary": "Nome aggiornato"
+    },
     "email": "Email",
     "verification": "Verifica",
     "yourData": "I tuoi dati",

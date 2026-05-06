@@ -26,6 +26,7 @@ function setup(authOverrides: Partial<AuthService> = {}, userOverride?: User | n
     ),
     removeAvatar: vi.fn(() => of({ ...FAKE_USER, avatar_url: null })),
     changePassword: vi.fn(() => of({ message: 'Password updated.' })),
+    updateProfile: vi.fn((name: string) => of({ ...FAKE_USER, name })),
     ...authOverrides,
   };
 
@@ -251,6 +252,159 @@ describe('ProfileComponent — avatar upload (#411)', () => {
     subject.next({ ...FAKE_USER, avatar_url: '/storage/users/avatars/1.jpg' });
     subject.complete();
     expect(cmp['avatarUploading']()).toBe(false);
+  });
+});
+
+describe('ProfileComponent — inline name edit (#463)', () => {
+  it('renders the read-only name + pencil affordance by default', () => {
+    const { fixture } = setup();
+    expect(fixture.nativeElement.querySelector('[data-cy="profile-name"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="profile-name-edit"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="profile-name-edit-form"]')).toBeNull();
+  });
+
+  it('startEditName: pre-fills the form with the cached user name and opens the edit row', () => {
+    const { cmp, fixture } = setup();
+
+    cmp.startEditName();
+    fixture.detectChanges();
+
+    expect(cmp['editingName']()).toBe(true);
+    expect(cmp['nameForm'].value.name).toBe('Tester');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-name-edit-form"]'),
+    ).not.toBeNull();
+  });
+
+  it('blocks submit when the form is invalid (empty name)', () => {
+    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+    const { cmp } = setup({ updateProfile: updateSpy } as never);
+
+    cmp.startEditName();
+    cmp['nameForm'].patchValue({ name: '' });
+    cmp.submitEditName();
+
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit when the name is shorter than 2 characters', () => {
+    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+    const { cmp } = setup({ updateProfile: updateSpy } as never);
+
+    cmp.startEditName();
+    cmp['nameForm'].patchValue({ name: 'X' });
+    cmp.submitEditName();
+
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('skips the network round-trip when the name is unchanged', () => {
+    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+    const { cmp } = setup({ updateProfile: updateSpy } as never);
+
+    cmp.startEditName();
+    cmp.submitEditName();
+
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(cmp['editingName']()).toBe(false);
+  });
+
+  it('on success: calls updateProfile with the trimmed name, closes the edit row, and toasts', () => {
+    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+    const messageSpy = vi.fn();
+    const { cmp, fixture } = setup({ updateProfile: updateSpy } as never);
+    TestBed.inject(MessageService).add = messageSpy;
+
+    cmp.startEditName();
+    cmp['nameForm'].patchValue({ name: '  Mario R.  ' });
+    cmp.submitEditName();
+    fixture.detectChanges();
+
+    expect(updateSpy).toHaveBeenCalledWith('Mario R.');
+    expect(cmp['editingName']()).toBe(false);
+    expect(messageSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+    expect(cmp['savingName']()).toBe(false);
+  });
+
+  it('on 422 with errors.name: surfaces an inline "invalid" server error and stays in edit mode', () => {
+    const error = {
+      status: 422,
+      error: { errors: { name: ['The name must be between 2 and 255 characters.'] } },
+    };
+    const updateSpy = vi.fn(() => throwError(() => error));
+    const { cmp, fixture } = setup({ updateProfile: updateSpy } as never);
+
+    cmp.startEditName();
+    cmp['nameForm'].patchValue({ name: 'New Name' });
+    cmp.submitEditName();
+    fixture.detectChanges();
+
+    expect(cmp['nameServerError']()).toBe('invalid');
+    expect(cmp['editingName']()).toBe(true);
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-name-server-invalid"]'),
+    ).not.toBeNull();
+  });
+
+  it('on a non-422 / unmapped error: shows a generic inline error', () => {
+    const updateSpy = vi.fn(() => throwError(() => ({ status: 500 })));
+    const { cmp, fixture } = setup({ updateProfile: updateSpy } as never);
+
+    cmp.startEditName();
+    cmp['nameForm'].patchValue({ name: 'New Name' });
+    cmp.submitEditName();
+    fixture.detectChanges();
+
+    expect(cmp['nameServerError']()).toBe('generic');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-name-server-generic"]'),
+    ).not.toBeNull();
+  });
+
+  it('cancelEditName: closes the row and clears any server error without touching the name', () => {
+    const { cmp, fixture, userSignal } = setup();
+
+    cmp.startEditName();
+    cmp['nameForm'].patchValue({ name: 'Other' });
+    cmp['nameServerError'].set('generic');
+
+    cmp.cancelEditName();
+    fixture.detectChanges();
+
+    expect(cmp['editingName']()).toBe(false);
+    expect(cmp['nameServerError']()).toBeNull();
+    expect(userSignal()?.name).toBe('Tester');
+  });
+
+  it('toggles `savingName` while the request is in flight', () => {
+    const subject = new Subject<User>();
+    const { cmp } = setup({ updateProfile: vi.fn(() => subject.asObservable()) } as never);
+
+    cmp.startEditName();
+    cmp['nameForm'].patchValue({ name: 'New Name' });
+
+    expect(cmp['savingName']()).toBe(false);
+    cmp.submitEditName();
+    expect(cmp['savingName']()).toBe(true);
+
+    subject.next({ ...FAKE_USER, name: 'New Name' });
+    subject.complete();
+    expect(cmp['savingName']()).toBe(false);
+  });
+
+  it('ignores subsequent submit clicks while a request is in flight', () => {
+    const subject = new Subject<User>();
+    const updateSpy = vi.fn(() => subject.asObservable());
+    const { cmp } = setup({ updateProfile: updateSpy } as never);
+
+    cmp.startEditName();
+    cmp['nameForm'].patchValue({ name: 'New Name' });
+
+    cmp.submitEditName();
+    cmp.submitEditName();
+    cmp.submitEditName();
+
+    expect(updateSpy).toHaveBeenCalledTimes(1);
   });
 });
 

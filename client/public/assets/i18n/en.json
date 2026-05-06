@@ -468,6 +468,17 @@
     "subtitle": "Account details and verification status.",
     "verifyRequiredBanner": "You need to verify your email before adding athletes or documents. Check your inbox for the verification link, or use the Resend button below.",
     "name": "Name",
+    "editName": {
+      "edit": "Edit name",
+      "save": "Save",
+      "cancel": "Cancel",
+      "required": "Enter your name.",
+      "minLength": "Name must be at least 2 characters.",
+      "maxLength": "Name must be at most 255 characters.",
+      "serverInvalid": "That name was rejected. Use 2 to 255 characters.",
+      "serverGeneric": "Couldn't update your name. Please try again.",
+      "successSummary": "Name updated"
+    },
     "email": "Email",
     "verification": "Verification",
     "yourData": "Your data",
