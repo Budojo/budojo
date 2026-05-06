@@ -19,6 +19,8 @@ import {
   AthleteInvitationSummary,
   AthleteService,
 } from '../../../../core/services/athlete.service';
+import { LanguageService } from '../../../../core/services/language.service';
+import { localeFor } from '../../../../shared/utils/locale';
 
 /**
  * "Account & invito" card on the athlete detail page (#467, M7 PR-B-UI).
@@ -52,6 +54,7 @@ export class InvitationCardComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
 
   /** The athlete whose invitation card we render. */
   readonly athlete = input.required<Athlete>();
@@ -76,6 +79,51 @@ export class InvitationCardComponent implements OnInit {
 
   /** Athlete has no email — the "send invite" prerequisite is unmet. */
   protected readonly hasEmail = computed(() => (this.athlete().email ?? '').trim() !== '');
+
+  /**
+   * Translation params for the pending-state chip. The chip copy is
+   * `"Invitation sent on {{sentAt}}, expires on {{expiresAt}}"` —
+   * `sentAt` and `expiresAt` need to be locale-formatted day-first
+   * strings (`05/05/2026`), NOT raw ISO-8601, otherwise the SPA
+   * surfaces `2026-05-05T10:00:00Z` to the owner. Reads
+   * `LanguageService.currentLang` so the formatting follows the
+   * sidebar locale toggle in real time.
+   */
+  protected readonly pendingChipParams = computed<{ sentAt: string; expiresAt: string } | null>(
+    () => {
+      const inv = this.invitation();
+      if (inv === null || inv.state !== 'pending') return null;
+      const lang = this.languageService.currentLang();
+      return {
+        sentAt: this.formatDate(inv.sent_at, lang),
+        expiresAt: this.formatDate(inv.expires_at, lang),
+      };
+    },
+  );
+
+  /** Translation params for the accepted-state chip. */
+  protected readonly acceptedChipParams = computed<{ acceptedAt: string } | null>(() => {
+    const inv = this.invitation();
+    if (inv === null || inv.state !== 'accepted') return null;
+    const lang = this.languageService.currentLang();
+    return { acceptedAt: this.formatDate(inv.accepted_at, lang) };
+  });
+
+  /**
+   * Locale-aware DD/MM/YYYY render of an ISO-8601 timestamp. Returns
+   * the empty string when the input is null — every state that needs
+   * a date carries a non-null source server-side, so a non-empty
+   * fallback would mask a real bug rather than gracefully degrade.
+   */
+  private formatDate(iso: string | null, lang: 'en' | 'it'): string {
+    if (iso === null) return '';
+    const date = new Date(iso);
+    return new Intl.DateTimeFormat(localeFor(lang), {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date);
+  }
 
   ngOnInit(): void {
     // The required input is bound by the time `ngOnInit` runs — reading

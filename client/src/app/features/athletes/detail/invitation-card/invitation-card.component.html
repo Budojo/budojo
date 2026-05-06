@@ -10,74 +10,68 @@
       <span class="invitation-card__eyebrow">{{ 'athletes.invitation.title' | translate }}</span>
     </div>
 
-  @if (!hasEmail()) {
-    <p class="invitation-card__hint" data-cy="athlete-invitation-no-email">
-      {{ 'athletes.invitation.noEmail' | translate }}
-    </p>
-  } @else if (invitation(); as inv) {
-    @if (inv.state === 'pending') {
-      <div class="invitation-card__row" data-cy="athlete-invitation-pending">
-        <p-tag
-          severity="info"
-          [rounded]="true"
-          [value]="
-            'athletes.invitation.pendingChip'
-              | translate: { sentAt: inv.sent_at ?? inv.expires_at, expiresAt: inv.expires_at }
-          "
-          data-cy="athlete-invitation-pending-chip"
-        />
-        <div class="invitation-card__actions">
-          <p-button
-            [label]="'athletes.invitation.resend' | translate"
-            icon="pi pi-send"
-            severity="secondary"
-            [outlined]="true"
-            size="small"
-            [loading]="resending()"
-            [disabled]="resending() || revoking()"
-            (onClick)="resend()"
-            data-cy="athlete-invitation-resend"
+    @if (!hasEmail()) {
+      <p class="invitation-card__hint" data-cy="athlete-invitation-no-email">
+        {{ 'athletes.invitation.noEmail' | translate }}
+      </p>
+    } @else if (invitation(); as inv) {
+      @if (inv.state === 'pending') {
+        <div class="invitation-card__row" data-cy="athlete-invitation-pending">
+          <p-tag
+            severity="info"
+            [rounded]="true"
+            [value]="'athletes.invitation.pendingChip' | translate: pendingChipParams() ?? {}"
+            data-cy="athlete-invitation-pending-chip"
           />
-          <p-button
-            [label]="'athletes.invitation.revoke' | translate"
-            severity="secondary"
-            [text]="true"
-            size="small"
-            [disabled]="resending() || revoking()"
-            (onClick)="confirmRevoke($event)"
-            data-cy="athlete-invitation-revoke"
+          <div class="invitation-card__actions">
+            <p-button
+              [label]="'athletes.invitation.resend' | translate"
+              icon="pi pi-send"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              [loading]="resending()"
+              [disabled]="resending() || revoking()"
+              (onClick)="resend()"
+              data-cy="athlete-invitation-resend"
+            />
+            <p-button
+              [label]="'athletes.invitation.revoke' | translate"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [disabled]="resending() || revoking()"
+              (onClick)="confirmRevoke($event)"
+              data-cy="athlete-invitation-revoke"
+            />
+          </div>
+        </div>
+      } @else {
+        <div class="invitation-card__row" data-cy="athlete-invitation-accepted">
+          <p-tag
+            severity="success"
+            [rounded]="true"
+            icon="pi pi-check"
+            [value]="'athletes.invitation.acceptedChip' | translate: acceptedChipParams() ?? {}"
+            data-cy="athlete-invitation-accepted-chip"
           />
         </div>
-      </div>
+      }
     } @else {
-      <div class="invitation-card__row" data-cy="athlete-invitation-accepted">
-        <p-tag
-          severity="success"
-          [rounded]="true"
-          icon="pi pi-check"
-          [value]="
-            'athletes.invitation.acceptedChip'
-              | translate: { acceptedAt: inv.accepted_at ?? inv.expires_at }
-          "
-          data-cy="athlete-invitation-accepted-chip"
-        />
-      </div>
+      <p class="invitation-card__hint">
+        {{ 'athletes.invitation.emptyHint' | translate }}
+      </p>
+      <p-button
+        [label]="'athletes.invitation.invite' | translate"
+        icon="pi pi-user-plus"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        [loading]="sending()"
+        (onClick)="invite()"
+        data-cy="athlete-invitation-invite"
+      />
     }
-  } @else {
-    <p class="invitation-card__hint">
-      {{ 'athletes.invitation.emptyHint' | translate }}
-    </p>
-    <p-button
-      [label]="'athletes.invitation.invite' | translate"
-      icon="pi pi-user-plus"
-      severity="secondary"
-      [outlined]="true"
-      size="small"
-      [loading]="sending()"
-      (onClick)="invite()"
-      data-cy="athlete-invitation-invite"
-    />
-  }
 
     <p-confirmpopup />
   </div>

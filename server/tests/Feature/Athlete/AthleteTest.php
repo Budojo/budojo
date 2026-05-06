@@ -257,11 +257,20 @@ it('show: invitation block surfaces an accepted row with state=accepted (#467)',
         ->accepted()
         ->create();
 
-    $this->actingAs($user)
+    $response = $this->actingAs($user)
         ->getJson("/api/v1/athletes/{$athlete->id}")
         ->assertOk()
         ->assertJsonPath('data.invitation.state', 'accepted')
-        ->assertJsonMissing(['data' => ['invitation' => ['accepted_at' => null]]]);
+        ->assertJsonStructure([
+            'data' => [
+                'invitation' => ['id', 'state', 'sent_at', 'expires_at', 'accepted_at'],
+            ],
+        ]);
+
+    // Direct non-null assertion on `accepted_at` — `assertJsonMissing`
+    // with a `null` fragment is brittle (it passes when the key is
+    // absent and when the fragment-matching semantics drift).
+    expect(data_get($response->json(), 'data.invitation.accepted_at'))->not->toBeNull();
 });
 
 it('show: revoked + expired rows do not surface (#467)', function (): void {
