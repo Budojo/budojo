@@ -227,6 +227,25 @@ export class AuthService {
   }
 
   /**
+   * `PATCH /api/v1/me` (#463) — self-edit on the authenticated user's
+   * profile. Currently scoped to `name` only — the email-change flow
+   * lands separately because it needs the pending-email-changes schema
+   * + signed-link verification + banner UX.
+   *
+   * Response is the full `User` envelope (mirroring `/auth/me`), so we
+   * swap the cached `user` signal in `tap()` — every consumer (header
+   * chip via initials fallback, profile card, future surfaces) sees the
+   * new name on the next change-detection tick without a follow-up
+   * `loadCurrentUser()` round-trip.
+   */
+  updateProfile(name: string): Observable<User> {
+    return this.http.patch<MeResponse>(`${environment.apiBase}/api/v1/me`, { name }).pipe(
+      tap((res) => this.user.set(res.data)),
+      map((res) => res.data),
+    );
+  }
+
+  /**
    * `POST /api/v1/me/password` (#409) — rotates the password from inside
    * the app. The server re-authenticates with `current_password` before
    * applying the change; on success it revokes every other Sanctum

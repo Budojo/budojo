@@ -468,6 +468,17 @@
     "subtitle": "Dettagli account e stato di verifica.",
     "verifyRequiredBanner": "Devi verificare la tua email prima di aggiungere atleti o documenti. Controlla la casella di posta per il link di verifica, oppure usa il pulsante Reinvia qui sotto.",
     "name": "Nome",
+    "editName": {
+      "edit": "Modifica nome",
+      "save": "Salva",
+      "cancel": "Annulla",
+      "required": "Inserisci il tuo nome.",
+      "minLength": "Il nome deve avere almeno 2 caratteri.",
+      "maxLength": "Il nome può avere al massimo 255 caratteri.",
+      "serverInvalid": "Il nome è stato rifiutato. Usa da 2 a 255 caratteri.",
+      "serverGeneric": "Impossibile aggiornare il nome. Riprova.",
+      "successSummary": "Nome aggiornato"
+    },
     "email": "Email",
     "verification": "Verifica",
     "yourData": "I tuoi dati",
@@ -844,6 +855,32 @@
         "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
         "markUnpaidAccept": "Segna non pagato",
         "cancel": "Annulla"
+      }
+    },
+    "invitation": {
+      "title": "Account & invito",
+      "noEmail": "Aggiungi un'email all'atleta per poter inviare un invito al sistema. Modifica l'atleta e inserisci l'indirizzo email, poi torna qui per inviare l'invito.",
+      "emptyHint": "Manda all'atleta un link via email per impostare la password e accedere al suo dashboard.",
+      "invite": "Invita al sistema",
+      "resend": "Invia di nuovo",
+      "revoke": "Revoca",
+      "pendingChip": "Invito inviato il {{sentAt}}, scade il {{expiresAt}}",
+      "acceptedChip": "Atleta registrato il {{acceptedAt}}",
+      "confirm": {
+        "revokeMessage": "Revocare l'invito? L'atleta non potrà più usare il link.",
+        "revokeAccept": "Revoca",
+        "revokeReject": "Annulla"
+      },
+      "toast": {
+        "invitedSummary": "Invito inviato",
+        "resentSummary": "Invito re-inviato",
+        "revokedSummary": "Invito revocato",
+        "errorSummary": "Impossibile inviare l'invito",
+        "errorGeneric": "Qualcosa è andato storto. Riprova.",
+        "errorEmailMissing": "L'atleta non ha un'email registrata. Modifica l'atleta per aggiungerla, poi riprova.",
+        "errorEmailRegistered": "Questa email è già di un utente Budojo. Chiedi all'atleta di accedere direttamente.",
+        "revokeErrorSummary": "Impossibile revocare l'invito",
+        "revokeErrorDetail": "Riprova."
       }
     },
     "detail": {

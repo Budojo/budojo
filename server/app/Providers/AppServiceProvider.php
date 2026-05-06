@@ -8,6 +8,7 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -19,6 +20,26 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Non-production safety net (#458). Hijacks every Mailable's
+        // recipient list and redirects them to the configured test
+        // address, so a misconfigured `MAIL_MAILER=resend` (or any
+        // other live driver) in a dev / staging env can't accidentally
+        // ship real mail to real customers. Production is excluded
+        // — `app()->environment('production')` is the only place
+        // where recipients land verbatim.
+        //
+        // The redirect target defaults to the support inbox so a dev
+        // can still see what their changes look like end-to-end. Set
+        // `MAIL_TEST_REDIRECT=null` (or empty) in `.env` to opt out
+        // and let the configured driver send to the real recipient
+        // — useful when smoke-testing the actual deliverability path.
+        if (! $this->app->environment('production')) {
+            $redirect = config('mail.test_redirect');
+            if (\is_string($redirect) && $redirect !== '') {
+                Mail::alwaysTo($redirect);
+            }
+        }
+
         // One verification-email resend per minute per authenticated user.
         // Falls back to IP for unauthenticated callers (defensive — the
         // route is auth-gated, but the limiter works either way).

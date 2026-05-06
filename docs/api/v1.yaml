@@ -271,6 +271,41 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me:
+    patch:
+      tags: [auth]
+      summary: Update the authenticated user's profile (name)
+      description: |
+        Self-edit on the authenticated user's profile (#463). Currently
+        scoped to `name` only — the email-change flow lands separately
+        because it needs a pending-email-changes schema + signed-link
+        verification + banner UX.
+
+        The response mirrors `GET /auth/me` so the SPA can swap its
+        cached user envelope without an extra round-trip.
+      operationId: meUpdateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: The updated user envelope (same shape as `/auth/me`).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /me/password:
     post:
       tags: [auth]
@@ -2257,6 +2292,19 @@ components:
           format: password
           minLength: 8
 
+    UpdateProfileRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          description: |
+            The new display name. The global `TrimStrings` middleware
+            trims leading/trailing whitespace before validation, so
+            `"   "` is rejected as empty.
+
     ChangePasswordRequest:
       type: object
       required: [current_password, password, password_confirmation]
@@ -2876,6 +2924,41 @@ components:
             athlete with `(year, month) = (NOW()->year, NOW()->month)`. The
             `/athletes` index endpoint eager-loads only the current-month
             payments slice to keep this derivation O(1) per row (no N+1).
+        invitation:
+          nullable: true
+          description: |
+            Read-side projection of the single invitation row the SPA's
+            athlete-detail card renders (#467, M7 PR-B-UI). Eager-loaded
+            on `GET /athletes/{id}` only — index responses always
+            carry `null`.
+
+            Lifecycle: `pending` rows are consumable links awaiting the
+            athlete; `accepted` rows are post-redemption history (the
+            athlete now has a Budojo user). Revoked + expired rows
+            stay in the database for audit but are never surfaced
+            here — the owner re-invites by sending a new invite, not
+            by reading terminal history. Never carries the raw token
+            or its sha-256 hash.
+          type: object
+          required: [id, state, sent_at, expires_at, accepted_at]
+          properties:
+            id:
+              type: integer
+              format: int64
+            state:
+              type: string
+              enum: [pending, accepted]
+            sent_at:
+              type: string
+              format: date-time
+              description: Most recent send timestamp (`last_sent_at`), falling back to `created_at` on legacy rows. Always non-null when the `invitation` block itself is non-null — `created_at` is a Laravel-managed timestamp column, never absent.
+            expires_at:
+              type: string
+              format: date-time
+            accepted_at:
+              type: string
+              format: date-time
+              nullable: true
 
     AthletePayment:
       type: object

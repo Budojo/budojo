@@ -115,4 +115,24 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Test Redirect Address (#458)
+    |--------------------------------------------------------------------------
+    |
+    | In every non-production environment, AppServiceProvider::boot() calls
+    | Mail::alwaysTo($value) with this address. Every Mailable's recipient
+    | list is rewritten to this single address before send, so a live mail
+    | driver in a dev / staging env cannot accidentally ship real mail to
+    | real customers. Production is excluded from the redirect.
+    |
+    | To opt out (e.g. when smoke-testing real deliverability), set
+    | `MAIL_TEST_REDIRECT=` (empty string) in your `.env`. Leaving the env
+    | var unset falls back to the default below — the inbox is the support
+    | address so a dev still sees the email rendering end-to-end.
+    |
+    */
+
+    'test_redirect' => env('MAIL_TEST_REDIRECT', 'matteo.bonanno@budojo.it'),
+
 ];

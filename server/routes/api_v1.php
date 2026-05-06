@@ -76,6 +76,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // the user state (incl. `email_verified_at`) after a page reload.
     Route::get('/auth/me', \App\Http\Controllers\Auth\MeController::class);
 
+    // Self-edit on the authenticated user's profile (#463). Currently
+    // scoped to `name` only — the email-change flow lands separately
+    // because it needs a pending-email-changes schema + signed-link
+    // verification + banner UX.
+    Route::patch('/me', [\App\Http\Controllers\User\ProfileController::class, 'update']);
+
     // In-app password change (#409). Throttled to 5 requests per minute
     // (Laravel's default IP-based key) — same shape as `/auth/login` and
     // `/me/deletion-request`, defeats brute-force on the current-password

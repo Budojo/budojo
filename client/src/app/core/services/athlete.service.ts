@@ -94,6 +94,14 @@ export interface Athlete {
    * it from #104 onward; #105 (paid badge + filter) tightens to required.
    */
   paid_current_month?: boolean;
+  /**
+   * The single invitation row the SPA renders on the athlete-detail
+   * card (#467, M7 PR-B-UI). Read-only projection — never carries the
+   * raw token / hash. `null` when there's no active row OR on the
+   * index endpoint (the server only loads the relation on `show`).
+   * Optional to keep pre-#467 fixtures and Cypress mocks compiling.
+   */
+  invitation?: AthleteInvitationSummary | null;
 }
 
 export interface AthleteMeta {
@@ -199,6 +207,22 @@ export interface AthleteInvitation {
 
 interface AthleteInvitationResponse {
   data: AthleteInvitation;
+}
+
+/**
+ * Wire-shape of the read-side projection embedded in `AthleteResource`
+ * (#467, M7 PR-B-UI). Lighter than `AthleteInvitation` — only the
+ * fields the athlete-detail card needs to render the three states
+ * ("no invite", "pending", "accepted"). Never carries the token or
+ * its hash. `null` when there's no active row (revoked / expired
+ * audit history is filtered server-side).
+ */
+export interface AthleteInvitationSummary {
+  id: number;
+  state: 'pending' | 'accepted';
+  sent_at: string | null;
+  expires_at: string;
+  accepted_at: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

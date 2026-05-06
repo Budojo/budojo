@@ -59,6 +59,37 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v1.19.0',
+      date: '2026-05-06',
+      headline:
+        'Two follow-ups to the v1.18 athlete-login first-slice land in this release. The owner-side button to invite an athlete from the detail page — flagged as "queued for the next release" in v1.18\'s release notes — is now wired and live. And on the personal-account side, you can finally edit your own display name without contacting support.',
+      sections: [
+        {
+          heading: '🥋 Athlete invitation — owner-side button',
+          bullets: [
+            'Invite an athlete from the detail page. Open any athlete in your roster who has an email on file and you\'ll see a new "Account & invitation" card under the header. One click sends the invite email; the card flips to an "Invitation sent on … expires …" chip with "Send again" and "Revoke" buttons next to it. When the athlete eventually accepts the invite, the same card switches to "Athlete registered on …" so you know the round-trip closed.',
+            'No-email empty state. When the athlete has no email on file, the card shows a short explanation pointing you at the email field on the edit form — rather than a disabled button with no context. Add the email, come back, and the Invite button shows up.',
+            'Anti-mistake guards. The "Revoke" button asks you to confirm before pulling the link, so a slipped click doesn\'t lock the athlete out. Sending the invite to an email that\'s already a Budojo user returns a friendly "ask them to sign in instead" message instead of a generic error.',
+            'Localized. Every label, chip, toast and confirm copy ships in English and Italian, switching live with the sidebar locale toggle. The expiry / sent dates render in DD/MM/YYYY format keyed off your active language.',
+          ],
+        },
+        {
+          heading: '👤 Account — edit your own name',
+          bullets: [
+            "Inline edit on /dashboard/profile. Your display name now has a small pencil icon next to it. Click it, type the new name, hit Save — that's it. The new name shows up immediately on the topbar avatar fallback and anywhere else the SPA reads your name from. Cancel restores the previous value without a network round-trip.",
+            'Email change deferred. Changing the email address is the heavier half of the same flow — it needs a verify-the-new-address email round-trip and a "pending change" banner so we can be sure you actually own the new address. That part lands in a future release; for now, the email row stays read-only.',
+          ],
+        },
+        {
+          heading: '🛠 Behind the scenes',
+          bullets: [
+            'Two Italian phrases that leaked into v1.18\'s English release notes (this same page) are fixed — "Invita al sistema" → "Invite to the system", "Contatta il supporto" → "Contact support".',
+            "A non-production safety net for outbound mail: in any environment that isn't production, every email is redirected to a single test address rather than the real recipient. Means a misconfigured staging deploy can't accidentally ship real onboarding mail to real customers. Fully invisible in production — no behavior change on the real app.",
+          ],
+        },
+      ],
+    },
+    {
       version: 'v1.18.0',
       date: '2026-05-05',
       headline:
@@ -67,7 +98,7 @@ export class WhatsNewComponent {
         {
           heading: '🥋 Athlete login — first slice',
           bullets: [
-            'Invite an athlete from the system. On any athlete in your roster who has an email on file, the API now accepts an "Invita al sistema" call that emails them a one-click link to set a password and land in Budojo as themselves. The link is valid 7 days; clicking it twice returns a friendly "already accepted, sign in instead" page. The owner-side button that wires this into the athlete detail UI is queued for the next release — for now the API + the athlete-side flow are live.',
+            'Invite an athlete from the system. On any athlete in your roster who has an email on file, the API now accepts an "Invite to the system" call that emails them a one-click link to set a password and land in Budojo as themselves. The link is valid 7 days; clicking it twice returns a friendly "already accepted, sign in instead" page. The owner-side button that wires this into the athlete detail UI is queued for the next release — for now the API + the athlete-side flow are live.',
             "Athlete-side accept page. The link in the invite email opens at /athlete-invite/{token} — a focused, single-task page that shows the athlete's name + email pre-filled (read-only), asks for a password and the same privacy + ToS checkboxes as registration, and on submit auto-logs them into Budojo. If the link is expired / revoked / already accepted, a friendly error page suggests signing in or asking the academy for a new invite.",
             'Welcome page. After accepting the invite the athlete lands on /athlete-portal/welcome — a simple "your account is ready, the rest of the athlete dashboard ships next milestone" placeholder. The full athlete-side pages (Profile / My academy / My attendance / My payments / My documents) are intentionally deferred so we can ship the schema + onboarding flow safely first.',
             "Owner experience: unchanged. The dashboard, the sidebar, every existing screen — all identical. The new athlete users are kept in their own URL space and behind their own role gate, so an owner that doesn't use the invite feature notices nothing.",
@@ -77,7 +108,7 @@ export class WhatsNewComponent {
         {
           heading: '💬 One contact channel instead of two',
           bullets: [
-            '"Send feedback" is gone. The dedicated /dashboard/feedback page has been retired and folded into /dashboard/support. Same destination inbox, same private routing — but a single sidebar entry under "Contatta il supporto" instead of two near-identical ones. The icon in the sidebar changes from a life-ring to a speech-bubble to match the friendlier tone.',
+            '"Send feedback" is gone. The dedicated /dashboard/feedback page has been retired and folded into /dashboard/support. Same destination inbox, same private routing — but a single sidebar entry under "Contact support" instead of two near-identical ones. The icon in the sidebar changes from a life-ring to a speech-bubble to match the friendlier tone.',
             'A new "Feedback" category. When you\'d rather share input than ask for help, pick the Feedback category — same form, same place, but the support team filters by category so they can prioritise. Five categories now: Account / Billing / Bug / Feedback / Other.',
             'Screenshot attachment migrated. The screenshot upload that lived only on the old feedback form is now part of the support form. Drop in a PNG / JPEG / WEBP up to 5 MB and it lands attached to the email we receive — same as before, just in the new place.',
             'App version + browser info auto-attach. Your current Budojo build tag and your browser / OS info are now stamped onto every support submission automatically. You no longer have to type "v1.16.4 on Chrome 120 / Android 14" into the body — it\'s in the email metadata when we receive it.',

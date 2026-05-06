@@ -160,6 +160,13 @@ class AthleteController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        // Eager-load the single invitation row the SPA renders on the
+        // athlete-detail card (#467) so AthleteResource doesn't issue a
+        // lazy follow-up query. Returns null when there's no active
+        // (pending or accepted) row — terminal history stays in
+        // `invitations()` but isn't surfaced to the wire.
+        $athlete->load('latestActiveInvitation');
+
         return response()->json(['data' => new AthleteResource($athlete)]);
     }
 

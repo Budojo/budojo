@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -76,6 +77,36 @@ class Athlete extends Model implements HasAddress
     public function invitations(): HasMany
     {
         return $this->hasMany(AthleteInvitation::class);
+    }
+
+    /**
+     * The single invitation row the SPA renders on athlete detail (#467
+     * / M7 PR-B-UI). Picks the most recent **pending or accepted** row;
+     * revoked + expired audit rows stay in `invitations()` but are
+     * deliberately invisible to the SPA — the owner re-invites by
+     * sending a new invite, not by reviewing terminal history.
+     *
+     * Implemented as a `HasOne` so the controller can `->load('latestActiveInvitation')`
+     * and the resource can read the relation without issuing its own
+     * query — keeps the show endpoint at one round-trip even when the
+     * relation is evaluated.
+     *
+     * @return HasOne<AthleteInvitation, $this>
+     */
+    public function latestActiveInvitation(): HasOne
+    {
+        return $this->hasOne(AthleteInvitation::class)
+            ->where(function ($query): void {
+                // Accepted rows live forever (status: "registered athlete").
+                $query->whereNotNull('accepted_at')
+                    // OR a non-terminal pending row (mirrors AthleteInvitation::scopePending).
+                    ->orWhere(function ($pending): void {
+                        $pending->whereNull('accepted_at')
+                            ->whereNull('revoked_at')
+                            ->where('expires_at', '>', now());
+                    });
+            })
+            ->latestOfMany();
     }
 
     /** @return HasMany<Document, $this> */
