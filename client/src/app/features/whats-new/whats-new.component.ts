@@ -59,6 +59,37 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v1.19.0',
+      date: '2026-05-06',
+      headline:
+        'Two follow-ups to the v1.18 athlete-login first-slice land in this release. The owner-side button to invite an athlete from the detail page — flagged as "queued for the next release" in v1.18\'s release notes — is now wired and live. And on the personal-account side, you can finally edit your own display name without contacting support.',
+      sections: [
+        {
+          heading: '🥋 Athlete invitation — owner-side button',
+          bullets: [
+            'Invite an athlete from the detail page. Open any athlete in your roster who has an email on file and you\'ll see a new "Account & invitation" card under the header. One click sends the invite email; the card flips to a "Invitation sent on … expires …" chip with "Send again" and "Revoke" buttons next to it. When the athlete eventually accepts the invite, the same card switches to "Athlete registered on …" so you know the round-trip closed.',
+            'No-email empty state. When the athlete has no email on file, the card shows a short explanation pointing you at the email field on the edit form — rather than a disabled button with no context. Add the email, come back, and the Invite button shows up.',
+            'Anti-mistake guards. The "Revoke" button asks you to confirm before pulling the link, so a slipped click doesn\'t lock the athlete out. Sending the invite to an email that\'s already a Budojo user returns a friendly "ask them to sign in instead" message instead of a generic error.',
+            'Localized. Every label, chip, toast and confirm copy ships in English and Italian, switching live with the sidebar locale toggle. The expiry / sent dates render in DD/MM/YYYY format keyed off your active language.',
+          ],
+        },
+        {
+          heading: '👤 Account — edit your own name',
+          bullets: [
+            "Inline edit on /dashboard/profile. Your display name now has a small pencil icon next to it. Click it, type the new name, hit Save — that's it. The new name shows up immediately on the topbar avatar fallback and anywhere else the SPA reads your name from. Cancel restores the previous value without a network round-trip.",
+            'Email change deferred. Changing the email address is the heavier half of the same flow — it needs a verify-the-new-address email round-trip and a "pending change" banner so we can be sure you actually own the new address. That part lands in a future release; for now, the email row stays read-only.',
+          ],
+        },
+        {
+          heading: '🛠 Behind the scenes',
+          bullets: [
+            'Two Italian phrases that leaked into v1.18\'s English release notes (this same page) are fixed — "Invita al sistema" → "Invite to the system", "Contatta il supporto" → "Contact support".',
+            "A non-production safety net for outbound mail: in any environment that isn't production, every email is redirected to a single test address rather than the real recipient. Means a misconfigured staging deploy can't accidentally ship real onboarding mail to real customers. Fully invisible in production — no behavior change on the real app.",
+          ],
+        },
+      ],
+    },
+    {
       version: 'v1.18.0',
       date: '2026-05-05',
       headline:
