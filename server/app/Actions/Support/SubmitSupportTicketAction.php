@@ -75,8 +75,17 @@ class SubmitSupportTicketAction
         $imageBytes = null;
         $imageOriginalName = null;
         if ($image !== null) {
-            $imageBytes = file_get_contents($image->getRealPath() ?: '');
-            if ($imageBytes === false) {
+            // `$image->get()` reads the upload's contents in one call
+            // and returns a string (or throws on a missing temp file
+            // — we let that surface via the action's outer exception
+            // handling). The previous shape called file_get_contents
+            // on a possibly-empty real path which emits a PHP warning
+            // when the temp file is gone before the read.
+            try {
+                $contents = $image->get();
+                $imageBytes = $contents === false ? null : $contents;
+            } catch (\Throwable $e) {
+                report($e);
                 $imageBytes = null;
             }
             $imageOriginalName = $image->getClientOriginalName();
