@@ -1,0 +1,35 @@
+@use '../auth/auth-page' as *;
+
+.invite-state {
+  text-align: center;
+  padding: 1.5rem 0.5rem;
+
+  h1 {
+    font-size: 1.5rem;
+    margin: 0 0 0.75rem 0;
+  }
+
+  p {
+    margin: 0 0 1rem 0;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.invite-link {
+  display: inline-block;
+  color: var(--p-primary-color);
+  text-decoration: underline;
+}
+
+.field-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+
+  label {
+    line-height: 1.4;
+    color: var(--p-text-color);
+    cursor: pointer;
+  }
+}

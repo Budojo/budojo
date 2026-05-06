@@ -600,6 +600,142 @@ paths:
             Location:
               schema: { type: string }
 
+  /athlete-invite/{token}/preview:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[A-Za-z0-9]{64}$'
+        description: |
+          Raw 64-char URL-safe athlete invite token. The DB column stores its
+          SHA-256 hash; the action hashes the URL-presented value and looks
+          up the row by hash. Malformed tokens fail the route constraint and
+          404 before the controller is hit.
+
+    get:
+      tags: [auth]
+      summary: Pre-fill snapshot for the athlete invite landing page
+      description: |
+        Public endpoint (#445, M7 PR-C). Returns the athlete name + email +
+        academy name for a PENDING invitation; 404 on any other state
+        (unknown / accepted / revoked / expired). Throttled at 30/min to
+        cap firehose probing — the response leaks nothing in the unknown-
+        token path so brute-force is uninteresting.
+      operationId: athleteInvitePreview
+      responses:
+        '200':
+          description: Pending invite — fields ready for the SPA pre-fill.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [first_name, last_name, email, academy_name, expires_at]
+                    properties:
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+                      academy_name:
+                        type: string
+                      expires_at:
+                        type: string
+                        format: date-time
+        '404':
+          description: Invitation not found, or no longer in pending state.
+        '429':
+          description: Throttled.
+
+  /athlete-invite/{token}/accept:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[A-Za-z0-9]{64}$'
+
+    post:
+      tags: [auth]
+      summary: Accept an athlete invitation and create the linked user
+      description: |
+        Public endpoint (#445, M7 PR-C). Consumes a pending invitation:
+        validates the token (must hash to a row that is pending), creates
+        a `User` row with `role=athlete`, links `athletes.user_id`, marks
+        the invitation `accepted_at`, and returns a Sanctum bearer token
+        that the SPA drops into its auth state. The token IS the email
+        proof — `email_verified_at` is set immediately, no second-step
+        verification email. Throttled at 5/min/IP to cap brute-force on
+        the token search space (64 chars URL-safe = ~10^115 keyspace,
+        but defence in depth is cheap).
+      operationId: athleteInviteAccept
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, password_confirmation, accept_privacy, accept_terms]
+              properties:
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+                accept_privacy:
+                  type: boolean
+                accept_terms:
+                  type: boolean
+      responses:
+        '201':
+          description: |
+            Account created and linked. The `token` is the Sanctum bearer
+            for subsequent authenticated calls.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [token, user]
+                    properties:
+                      token:
+                        type: string
+                      user:
+                        type: object
+                        required: [id, name, email, role]
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                          email:
+                            type: string
+                            format: email
+                          role:
+                            type: string
+                            enum: [owner, athlete]
+        '422':
+          description: |
+            Validation failed. `errors.token[0]` carries one of:
+            `invite_invalid` (unknown token), `invite_already_accepted`,
+            `invite_revoked`, `invite_expired`. `errors.email[0]` may be
+            `email_already_registered` (race-window guard against a public
+            register hitting the same email between invite-send and
+            invite-accept). `errors.password` / `errors.accept_privacy` /
+            `errors.accept_terms` carry the standard Laravel validation
+            messages.
+        '429':
+          description: Throttled.
+
   /academy:
     post:
       tags: [academy]
