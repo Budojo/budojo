@@ -251,6 +251,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/support', [\App\Http\Controllers\Support\SupportTicketController::class, 'store'])
         ->middleware('throttle:5,1');
 
+    // Global search (#426) — backs the Cmd/Ctrl-K command palette in the
+    // SPA. Single invokable controller; academy-scoped; capped at 20 rows
+    // (no pagination envelope — palette is a quick-jump, not a list page).
+    // V1 indexes only athletes by name; future V2 expansion (academy,
+    // payments) lands here without a SPA URL bump.
+    Route::get('/search', \App\Http\Controllers\Search\SearchController::class);
+
     // Stats — server-side aggregations for the /dashboard/stats charts.
     // Grouped under /stats so T3 (payments) and T4 (age bands) can extend
     // this block without touching other route sections.

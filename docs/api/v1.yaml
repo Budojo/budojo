@@ -929,6 +929,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
 
+  /search:
+    get:
+      tags: [auth]
+      summary: Global search backing the Cmd/Ctrl-K command palette
+      description: |
+        Free-text search across the authenticated academy's roster (#426).
+        Returns up to 20 `Athlete` rows that match `?q=` — same shape as
+        the athlete envelope used elsewhere, just unwrapped (no
+        pagination links / meta) since the palette is a quick-jump and
+        the SPA does not paginate the popover.
+
+        Match semantics mirror `GET /athletes?q=` exactly: the query is
+        tokenised on whitespace and applied as AND — every token must
+        match (case-insensitive `LIKE %token%`) either `first_name` or
+        `last_name`. Empty / whitespace-only `q` returns an empty array
+        without touching the DB. Soft-deleted athletes are never
+        returned, and the result is implicitly scoped to the
+        authenticated user's academy.
+
+        V1 indexes only athletes; future V2 expansion (academy +
+        payments) is intentionally left out of scope per the issue.
+      operationId: searchAcademy
+      parameters:
+        - name: q
+          in: query
+          description: |
+            Free-text name search. Tokens are AND-matched across
+            `first_name` + `last_name`. Empty / whitespace-only values
+            short-circuit to an empty `data` array.
+          required: false
+          schema:
+            type: string
+            example: mario
+      responses:
+        '200':
+          description: |
+            Up to 20 matching athletes. The array is empty when `q` is
+            missing or whitespace-only.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Athlete'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NoAcademy'
+
   /athletes:
     get:
       tags: [athletes]

@@ -4,6 +4,18 @@
     "english": "English",
     "italian": "Italiano"
   },
+  "search": {
+    "openHint": "Search",
+    "openShortcutMac": "⌘K",
+    "openShortcutWin": "Ctrl K",
+    "ariaOpen": "Open search",
+    "dialogTitle": "Search",
+    "placeholder": "Search athletes by name…",
+    "ariaInput": "Search athletes",
+    "emptyHint": "Start typing to find athletes by name.",
+    "noResults": "No athletes match this search.",
+    "resultsAriaLabel": "Search results"
+  },
   "nav": {
     "open": "Open navigation",
     "close": "Close navigation",
