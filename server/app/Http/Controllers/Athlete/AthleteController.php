@@ -229,6 +229,7 @@ class AthleteController extends Controller
      * requires `literal-string` and constant-built strings don't qualify.
      *
      * @param  Builder<Athlete>|HasMany<Athlete, Academy>  $query
+     * @param  'asc'|'desc'  $direction
      */
     private function applyBeltSort(Builder|HasMany $query, string $direction): void
     {
@@ -264,6 +265,8 @@ class AthleteController extends Controller
      * any list with a name collision.
      *
      * @param  Builder<Athlete>|HasMany<Athlete, Academy>  $query
+     * @param  'first_name'|'last_name'  $primary
+     * @param  'asc'|'desc'  $direction
      */
     private function applyNameSort(Builder|HasMany $query, string $primary, string $direction): void
     {
