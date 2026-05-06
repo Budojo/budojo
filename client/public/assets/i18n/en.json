@@ -117,6 +117,43 @@
       }
     }
   },
+  "athleteInvite": {
+    "loading": "Loading your invitation…",
+    "title": "Accept your invitation",
+    "subtitle": "Set a password to finish creating your athlete account.",
+    "subtitleWithAcademy": "{{academy}} has invited you to log in. Set a password to finish creating your athlete account.",
+    "name": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "passwordRequired": "Password is required.",
+    "passwordMinlength": "At least 8 characters.",
+    "passwordConfirmation": "Confirm password",
+    "passwordConfirmationPlaceholder": "Repeat your password",
+    "passwordsMismatch": "Passwords do not match.",
+    "privacyBefore": "I have read and accept the",
+    "privacyLink": "privacy policy",
+    "privacyAfter": ".",
+    "privacyRequired": "You must accept the privacy policy to continue.",
+    "termsBefore": "I accept the",
+    "termsLink": "Terms of Service",
+    "termsAfter": ".",
+    "termsRequired": "You must accept the Terms of Service to continue.",
+    "submit": "Accept invitation",
+    "invalid": {
+      "title": "This invitation isn't valid",
+      "body": "The link may have expired, been revoked, or already been used. Ask your academy owner to send you a new one — or sign in if you already have an account.",
+      "signinCta": "Sign in instead"
+    },
+    "errors": {
+      "invite_invalid": "This invitation link isn't valid.",
+      "invite_already_accepted": "This invitation has already been accepted. Please sign in instead.",
+      "invite_revoked": "This invitation has been revoked. Ask your academy owner to send you a new one.",
+      "invite_expired": "This invitation has expired. Ask your academy owner to send you a new one.",
+      "email_already_registered": "An account already exists for this email. Please sign in instead.",
+      "unknown_error": "Something went wrong. Please try again in a moment."
+    }
+  },
   "athletePortal": {
     "welcome": {
       "title": "Welcome to Budojo",
