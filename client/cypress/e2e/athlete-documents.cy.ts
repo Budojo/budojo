@@ -63,7 +63,11 @@ describe('Athlete documents page', () => {
 
     cy.get('h1').should('contain', 'Mario Rossi');
     cy.contains('Documents').should('be.visible');
-    cy.contains('No documents yet').should('be.visible');
+    // `.scrollIntoView()` defends against the dashboard shell's
+    // overflow:auto container clipping the empty-state copy now that
+    // the page is taller post-#467 (athlete-detail invitation card)
+    // — gotchas § Cypress / overflow:auto.
+    cy.contains('No documents yet').scrollIntoView().should('be.visible');
     // Post-M3.3: the Add button is enabled when the athlete id is known.
     // p-button wraps an inner <button>; the disabled pseudo-class lives there,
     // not on the custom element.
