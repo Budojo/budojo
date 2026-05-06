@@ -9,12 +9,17 @@ import { VERSION } from '../../../environments/version';
  * error reports) can lean on the same signal without changing the
  * client contract.
  *
- * Scoped to relative `/api/...` URLs so cross-origin requests
- * (e.g. assets pulled from `/storage/...` via an absolute URL) don't
- * pick up an unexpected custom header — no preflight cost there.
+ * Scoped to API URLs only (relative `/api/...` and absolute
+ * `https://api.budojo.app/...` shapes both match) so cross-origin
+ * requests for static assets (`/storage/...`) don't pick up an
+ * unexpected custom header that would force a CORS preflight.
  */
 export const versionInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!req.url.startsWith('/api/') && !req.url.includes('/api/v1/')) {
+  // Match either relative (`/api/`) or absolute URLs that include
+  // `/api/v1/` somewhere in the path. Anchoring on the version
+  // segment avoids false-positives on any URL that happens to have
+  // an `api` substring.
+  if (!req.url.startsWith('/api/') && !/\/api\/v1\//.test(req.url)) {
     return next(req);
   }
   return next(req.clone({ setHeaders: { 'X-Budojo-Version': VERSION.tag } }));
