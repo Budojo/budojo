@@ -65,9 +65,7 @@ describe('Change password (#409)', () => {
     // untouched and the API call never fires (caught locally via
     // cypress/included:15 — the screenshot showed all three fields
     // filled but no request).
-    cy.get('[data-cy="change-password-submit"] button')
-      .should('not.be.disabled')
-      .click();
+    cy.get('[data-cy="change-password-submit"] button').should('not.be.disabled').click();
 
     cy.wait('@changePassword').its('request.body').should('deep.equal', {
       current_password: 'OldPassword1!',

@@ -96,6 +96,55 @@
     }
   }
 
+  // Inline name edit (#463). The edit row collapses to a single
+  // column on mobile (label → input → buttons stacked) and lays the
+  // form-controls out side-by-side at >=768px under the same 8rem
+  // left-label column the read-only rows use, so the visual rhythm
+  // is preserved when the user toggles between view and edit.
+  &__row--edit {
+    align-items: stretch;
+
+    @media (min-width: 768px) {
+      flex-wrap: wrap;
+    }
+
+    .profile-page__input {
+      width: 100%;
+
+      @media (min-width: 768px) {
+        flex: 1 1 auto;
+        width: auto;
+      }
+    }
+
+    .field-error {
+      font-size: 0.8125rem;
+      color: var(--p-red-600, #dc2626);
+
+      @media (min-width: 768px) {
+        flex-basis: 100%;
+        margin-left: 9.5rem;
+      }
+    }
+  }
+
+  &__row-actions {
+    display: flex;
+    gap: 0.5rem;
+
+    @media (min-width: 768px) {
+      flex-basis: 100%;
+      justify-content: flex-end;
+    }
+  }
+
+  // The pencil affordance on the read-only name row sits at the right
+  // edge of the row at >=768px (Fitts — large reach target on the
+  // outer corner) and below the value on mobile.
+  :host ::ng-deep .profile-page__row-edit-button {
+    margin-left: auto;
+  }
+
   // Your-data export section (#284). Vertical stack — eyebrow label,
   // descriptive text, compact button below. Replaces the previous
   // horizontal "title left / oversized floating button right" layout
