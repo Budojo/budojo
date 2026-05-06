@@ -75,12 +75,14 @@ class SubmitSupportTicketAction
         $imageBytes = null;
         $imageOriginalName = null;
         if ($image !== null) {
-            // `$image->get()` reads the upload's contents in one call
-            // and returns a string (or throws on a missing temp file
-            // — we let that surface via the action's outer exception
-            // handling). The previous shape called file_get_contents
-            // on a possibly-empty real path which emits a PHP warning
-            // when the temp file is gone before the read.
+            // `$image->get()` reads the upload's contents in one call.
+            // The previous shape called file_get_contents on a
+            // possibly-empty real path which emits a PHP warning
+            // when the temp file is gone. We catch any failure
+            // (missing temp file, permissions, etc.), report() it
+            // for visibility, and continue with $imageBytes = null
+            // so the support ticket row + email still land — the
+            // attachment is a triage hint, NOT load-bearing.
             try {
                 $contents = $image->get();
                 $imageBytes = $contents === false ? null : $contents;

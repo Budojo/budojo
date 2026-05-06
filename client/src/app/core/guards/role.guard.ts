@@ -26,13 +26,15 @@ import { AuthService, User } from '../services/auth.service';
  * when the cached signal is null — the same pattern `hasAcademyGuard`
  * uses for its `academyService.get()` warm-up call.
  *
- * **Error semantics on the warm-up call.** A 401 response means the
- * token is stale: surface that as a `null` user and let the caller
- * redirect to `/auth/login`. Any OTHER error (network glitch, 500,
- * timeout) is signalled by a synthesised `HttpErrorResponse` so the
- * caller can choose to block navigation rather than treat the user
- * as logged-out — a 5xx on /me shouldn't bounce a logged-in user to
- * the login form.
+ * **Error semantics on the warm-up call.** `resolveUser()` returns a
+ * three-arm discriminated union: `{ kind: 'user', user }` for a
+ * resolved envelope, `{ kind: 'unauthenticated' }` when /me responds
+ * with 401 (stale token — caller redirects to /auth/login), and
+ * `{ kind: 'error' }` for any OTHER failure (network glitch, 5xx,
+ * timeout). The two error arms differ on purpose: a 5xx on /me
+ * shouldn't bounce a logged-in user to the login form, so the
+ * "unknown error" arm makes the caller block navigation (return
+ * false) instead of redirecting.
  */
 type ResolveResult = { kind: 'user'; user: User } | { kind: 'unauthenticated' } | { kind: 'error' };
 
