@@ -22,7 +22,9 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
+import { TooltipModule } from 'primeng/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
@@ -53,8 +55,10 @@ const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
     CardModule,
     ConfirmPopup,
     EmailVerificationStatusComponent,
+    InputTextModule,
     PasswordModule,
     ReactiveFormsModule,
+    TooltipModule,
     TranslatePipe,
     UserAvatarComponent,
   ],
@@ -81,6 +85,28 @@ export class ProfileComponent {
   protected readonly exporting = signal<boolean>(false);
   protected readonly avatarUploading = signal<boolean>(false);
   protected readonly avatarUrl = computed<string | null>(() => this.user()?.avatar_url ?? null);
+
+  /** True while PATCH /me is in flight (#463). */
+  protected readonly savingName = signal<boolean>(false);
+
+  /** True when the user has clicked the inline pencil to edit their name (#463). */
+  protected readonly editingName = signal<boolean>(false);
+
+  /**
+   * Server-mapped error for the name-edit row (#463). `invalid` flips on a
+   * 422 with `errors.name` (server's `min:2` / `max:255` boundary, in case
+   * the SPA's matching validators ever drift); `generic` covers everything
+   * else (5xx / network). Cleared on every fresh submit attempt.
+   */
+  protected readonly nameServerError = signal<'invalid' | 'generic' | null>(null);
+
+  /**
+   * Reactive form for the inline name edit (#463). Constraints mirror the
+   * server's `UpdateProfileRequest`: `required | min:2 | max:255`.
+   */
+  protected readonly nameForm = this.fb.group({
+    name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(255)]],
+  });
 
   /** True while POST /me/password is in flight. */
   protected readonly changingPassword = signal<boolean>(false);
@@ -319,6 +345,78 @@ export class ProfileComponent {
           }
         },
       });
+  }
+
+  /**
+   * Open the inline name-edit form (#463). Pre-fills with the cached
+   * user.name so the user starts from the current value rather than an
+   * empty input — Krug § "self-evident UI" (the user sees what's there
+   * and edits in place, the destination is the edit, not "type your
+   * whole name from scratch").
+   */
+  startEditName(): void {
+    const current = this.user()?.name ?? '';
+    this.nameForm.reset({ name: current });
+    this.nameServerError.set(null);
+    this.editingName.set(true);
+  }
+
+  /** Drop the in-progress edit; the cached user.name stays untouched. */
+  cancelEditName(): void {
+    this.editingName.set(false);
+    this.nameServerError.set(null);
+  }
+
+  /**
+   * Submit the name change (#463). On success we close the edit row +
+   * toast; the cached `user` signal is updated inside `AuthService.
+   * updateProfile` so the static value re-renders without an extra
+   * round-trip. Inline error on 422 (Norman § feedback — the user is
+   * staring at the form, the toast is the wrong channel for a validation
+   * issue).
+   */
+  submitEditName(): void {
+    if (this.savingName()) return;
+
+    this.nameServerError.set(null);
+
+    if (this.nameForm.invalid) {
+      this.nameForm.markAllAsTouched();
+      return;
+    }
+
+    const name = (this.nameForm.getRawValue().name ?? '').trim();
+    // No-op short-circuit: if the user opened the edit, didn't change
+    // anything, and clicked save, we'd otherwise round-trip to the
+    // server for nothing. Treat it like a cancel.
+    if (name === (this.user()?.name ?? '')) {
+      this.editingName.set(false);
+      return;
+    }
+
+    this.savingName.set(true);
+
+    this.authService
+      .updateProfile(name)
+      .pipe(finalize(() => this.savingName.set(false)))
+      .subscribe({
+        next: () => {
+          this.editingName.set(false);
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translate.instant('profile.editName.successSummary'),
+            life: 2500,
+          });
+        },
+        error: (err: { error?: { errors?: Record<string, unknown> } }) => {
+          const errors = err.error?.errors ?? {};
+          this.nameServerError.set('name' in errors ? 'invalid' : 'generic');
+        },
+      });
+  }
+
+  protected get nameControl(): AbstractControl {
+    return this.nameForm.get('name')!;
   }
 
   protected get currentPassword(): AbstractControl {

@@ -74,10 +74,105 @@
     <p-confirmpopup />
 
     <p-card styleClass="profile-page__card">
-      <div class="profile-page__row">
-        <span class="profile-page__label">{{ 'profile.name' | translate }}</span>
-        <span class="profile-page__value" data-cy="profile-name">{{ u.name }}</span>
-      </div>
+      <!--
+        Inline name edit (#463). Display mode shows the current name + a
+        small pencil affordance (Norman § signifier — the icon+tooltip
+        tells the user this row is editable). Edit mode swaps to a text
+        field with Save / Cancel buttons. Email and verification stay
+        read-only here; the email-change flow lands separately because
+        it needs a pending-email-changes schema + signed-link round-trip.
+      -->
+      @if (editingName()) {
+        <form
+          [formGroup]="nameForm"
+          (ngSubmit)="submitEditName()"
+          novalidate
+          class="profile-page__row profile-page__row--edit"
+          data-cy="profile-name-edit-form"
+        >
+          <label for="profileName" class="profile-page__label">
+            {{ 'profile.name' | translate }}
+          </label>
+          <input
+            id="profileName"
+            type="text"
+            pInputText
+            formControlName="name"
+            [attr.aria-invalid]="nameControl.invalid && nameControl.touched ? true : null"
+            [attr.aria-describedby]="
+              (nameControl.touched && nameControl.invalid) || nameServerError() !== null
+                ? 'profileNameError'
+                : null
+            "
+            autocomplete="name"
+            maxlength="255"
+            class="profile-page__input"
+            data-cy="profile-name-input"
+          />
+          @if (nameControl.touched && nameControl.errors?.['required']) {
+            <small id="profileNameError" class="field-error" data-cy="profile-name-required">
+              {{ 'profile.editName.required' | translate }}
+            </small>
+          } @else if (nameControl.touched && nameControl.errors?.['minlength']) {
+            <small id="profileNameError" class="field-error" data-cy="profile-name-minlength">
+              {{ 'profile.editName.minLength' | translate }}
+            </small>
+          } @else if (nameControl.touched && nameControl.errors?.['maxlength']) {
+            <small id="profileNameError" class="field-error" data-cy="profile-name-maxlength">
+              {{ 'profile.editName.maxLength' | translate }}
+            </small>
+          }
+          @if (nameServerError() === 'invalid') {
+            <small id="profileNameError" class="field-error" data-cy="profile-name-server-invalid">
+              {{ 'profile.editName.serverInvalid' | translate }}
+            </small>
+          } @else if (nameServerError() === 'generic') {
+            <small id="profileNameError" class="field-error" data-cy="profile-name-server-generic">
+              {{ 'profile.editName.serverGeneric' | translate }}
+            </small>
+          }
+          <div class="profile-page__row-actions">
+            <p-button
+              type="submit"
+              [label]="'profile.editName.save' | translate"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              [loading]="savingName()"
+              [disabled]="savingName()"
+              data-cy="profile-name-save"
+            />
+            <p-button
+              type="button"
+              [label]="'profile.editName.cancel' | translate"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [disabled]="savingName()"
+              (onClick)="cancelEditName()"
+              data-cy="profile-name-cancel"
+            />
+          </div>
+        </form>
+      } @else {
+        <div class="profile-page__row">
+          <span class="profile-page__label">{{ 'profile.name' | translate }}</span>
+          <span class="profile-page__value" data-cy="profile-name">{{ u.name }}</span>
+          <p-button
+            type="button"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [pTooltip]="'profile.editName.edit' | translate"
+            tooltipPosition="left"
+            [ariaLabel]="'profile.editName.edit' | translate"
+            (onClick)="startEditName()"
+            styleClass="profile-page__row-edit-button"
+            data-cy="profile-name-edit"
+          />
+        </div>
+      }
 
       <div class="profile-page__row">
         <span class="profile-page__label">{{ 'profile.email' | translate }}</span>

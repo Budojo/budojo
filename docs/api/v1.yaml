@@ -271,6 +271,41 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me:
+    patch:
+      tags: [auth]
+      summary: Update the authenticated user's profile (name)
+      description: |
+        Self-edit on the authenticated user's profile (#463). Currently
+        scoped to `name` only — the email-change flow lands separately
+        because it needs a pending-email-changes schema + signed-link
+        verification + banner UX.
+
+        The response mirrors `GET /auth/me` so the SPA can swap its
+        cached user envelope without an extra round-trip.
+      operationId: meUpdateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: The updated user envelope (same shape as `/auth/me`).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /me/password:
     post:
       tags: [auth]
@@ -2256,6 +2291,19 @@ components:
           type: string
           format: password
           minLength: 8
+
+    UpdateProfileRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          description: |
+            The new display name. The global `TrimStrings` middleware
+            trims leading/trailing whitespace before validation, so
+            `"   "` is rejected as empty.
 
     ChangePasswordRequest:
       type: object
