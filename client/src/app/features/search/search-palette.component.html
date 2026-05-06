@@ -10,9 +10,16 @@
   [breakpoints]="{ '768px': '92vw' }"
   [showHeader]="false"
   styleClass="search-palette"
-  data-cy="search-palette-dialog"
 >
-  <div class="search-palette__shell">
+  <!--
+    `data-cy` lives on the inner shell — the `<p-dialog>` host element
+    stays mounted in the DOM regardless of `[visible]` (PrimeNG only
+    toggles visibility on the inner container), so a Cypress
+    `should('not.exist')` against the host always fails. Putting the
+    locator on the conditionally-rendered shell makes the closed-state
+    assertion semantic. See `.claude/gotchas.md` § Cypress.
+  -->
+  <div class="search-palette__shell" data-cy="search-palette-dialog">
     <p-iconfield iconPosition="left" styleClass="search-palette__field">
       <p-inputicon><i class="pi pi-search" aria-hidden="true"></i></p-inputicon>
       <input
@@ -31,12 +38,17 @@
       />
     </p-iconfield>
 
-    <div
-      class="search-palette__body"
-      role="listbox"
-      [attr.aria-label]="'search.resultsAriaLabel' | translate"
-      data-cy="search-palette-body"
-    >
+    <!--
+      Plain `<ul>` semantic list — NOT a listbox role. The
+      role="listbox" + role="option" pattern requires focus management
+      (roving tabindex / aria-activedescendant + a focusable container)
+      that this palette doesn't carry. Rather than half-implement a
+      pseudo-listbox, we keep the markup honest: the `<input>` owns
+      focus, ArrowUp/Down/Enter on the input drive `handleListKeydown`,
+      and the active-row visual is a CSS class — not an a11y promise we
+      can't keep. Mouse users click a row directly.
+    -->
+    <div class="search-palette__body" data-cy="search-palette-body">
       @if (!hasQuery()) {
         <p class="search-palette__hint" data-cy="search-palette-empty">
           {{ 'search.emptyHint' | translate }}
@@ -48,26 +60,35 @@
       } @else {
         <ul class="search-palette__list">
           @for (athlete of results(); track athlete.id; let i = $index) {
-            <li
-              class="search-palette__row"
-              [class.search-palette__row--active]="i === activeIndex()"
-              role="option"
-              tabindex="-1"
-              [attr.aria-selected]="i === activeIndex()"
-              [attr.data-cy]="'search-palette-row-' + athlete.id"
-              (mouseenter)="activeIndex.set(i)"
-              (click)="selectAthlete(athlete)"
-              (keydown.enter)="selectAthlete(athlete)"
-            >
-              <span class="search-palette__row-name">
-                {{ athlete.first_name }} {{ athlete.last_name }}
-              </span>
-              <span class="search-palette__row-meta">
-                <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
-                <span class="search-palette__row-status" [attr.data-status]="athlete.status">
-                  {{ statusKeys[athlete.status] | translate }}
+            <!--
+              Each row is a `<button>` inside a list item, not a clickable
+              `<li>`. A `<button>` is focusable + keyboard-activated by
+              default (Enter / Space), so the click handler satisfies the
+              ESLint a11y rules without a hand-rolled tabindex / keydown
+              dance. Mouse users click; keyboard users navigate via the
+              input's ArrowUp/Down/Enter (handleListKeydown) and never
+              need to leave the input — Tab also lands on the buttons in
+              order if the user prefers tab navigation.
+            -->
+            <li class="search-palette__row-item">
+              <button
+                type="button"
+                class="search-palette__row"
+                [class.search-palette__row--active]="i === activeIndex()"
+                [attr.data-cy]="'search-palette-row-' + athlete.id"
+                (mouseenter)="activeIndex.set(i)"
+                (click)="selectAthlete(athlete)"
+              >
+                <span class="search-palette__row-name">
+                  {{ athlete.first_name }} {{ athlete.last_name }}
                 </span>
-              </span>
+                <span class="search-palette__row-meta">
+                  <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
+                  <span class="search-palette__row-status" [attr.data-status]="athlete.status">
+                    {{ statusKeys[athlete.status] | translate }}
+                  </span>
+                </span>
+              </button>
             </li>
           }
         </ul>

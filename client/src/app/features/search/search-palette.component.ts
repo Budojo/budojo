@@ -11,7 +11,17 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Subject, debounceTime, distinctUntilChanged, map } from 'rxjs';
+import {
+  Subject,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  finalize,
+  map,
+  merge,
+  of,
+  switchMap,
+} from 'rxjs';
 import { DialogModule } from 'primeng/dialog';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -124,7 +134,15 @@ export class SearchPaletteComponent {
    */
   static readonly DEBOUNCE_MS = 200;
 
+  /** User-typed input — debounced before hitting the wire. */
   private readonly inputSubject = new Subject<string>();
+  /**
+   * Test affordance — bypasses the rxjs debounce so specs can drive a
+   * search synchronously. Production typing flows through `inputSubject`
+   * exclusively. Both feed the same `switchMap` so cancellation
+   * semantics are identical regardless of source.
+   */
+  private readonly immediateSubject = new Subject<string>();
 
   constructor() {
     // Reset activeIndex any time the result set changes — without this,
@@ -136,16 +154,36 @@ export class SearchPaletteComponent {
       this.activeIndex.set(0);
     });
 
-    this.inputSubject
+    // Single rxjs pipeline merging debounced input + immediate test
+    // triggers. `switchMap` ensures only the LATEST query's response
+    // can update state — older in-flight requests are unsubscribed,
+    // protecting against the stale-overwrite race Copilot flagged on
+    // PR #477. `catchError` keeps the stream alive across transient
+    // failures (the palette is a non-critical surface — a flaky search
+    // call shouldn't tear down the whole subscription).
+    merge(
+      this.inputSubject.pipe(debounceTime(SearchPaletteComponent.DEBOUNCE_MS)),
+      this.immediateSubject,
+    )
       .pipe(
-        debounceTime(SearchPaletteComponent.DEBOUNCE_MS),
         map((q) => q.trim()),
         distinctUntilChanged(),
+        switchMap((q) => {
+          if (q === '') {
+            this.loading.set(false);
+            return of([] as Athlete[]);
+          }
+          this.loading.set(true);
+          return this.searchService.searchAthletes(q).pipe(
+            catchError(() => of([] as Athlete[])),
+            finalize(() => this.loading.set(false)),
+          );
+        }),
         takeUntilDestroyed(),
       )
-      .subscribe((q) => this.fireSearch(q));
+      .subscribe((rows) => this.results.set(rows));
 
-    // Push every signal write into the debouncer. Using an effect rather
+    // Push every query write into the debouncer. Using an effect rather
     // than a template-side `(ngModelChange)` keeps the contract
     // testable: a unit test can `cmp.query.set('mario')` and trigger the
     // pipeline without rendering.
@@ -162,10 +200,11 @@ export class SearchPaletteComponent {
    * bypassing the rxjs debounce. Vitest's environment doesn't ship
    * `zone.js/testing`, so we expose this affordance instead of forcing
    * a `fakeAsync` setup. Production code goes through the debounced
-   * subject; specs can call this directly to assert the wire shape.
+   * subject; specs call this directly to assert the wire shape. Goes
+   * through the SAME `switchMap` so cancel-stale-on-new still applies.
    */
   triggerSearchNow(q: string): void {
-    this.fireSearch(q.trim());
+    this.immediateSubject.next(q);
   }
 
   /**
@@ -195,8 +234,10 @@ export class SearchPaletteComponent {
    * boundaries (Slack / Linear behaviour) so the user can never get
    * "stuck" at row 0 or row N-1. Enter selects the active result.
    *
-   * Wired from the input + the list container so a user who never
-   * leaves the input keyboard-focus still gets full navigation.
+   * Wired from the input keyboard-focus only — the result list is a
+   * plain `<ul>` (semantic list, not a listbox) so Enter on the input
+   * is the canonical "select current row" path. Mouse users click
+   * a row directly.
    */
   handleListKeydown(event: KeyboardEvent): void {
     const count = this.results().length;
@@ -229,34 +270,18 @@ export class SearchPaletteComponent {
    * reset is intentional: opening the palette should always start from
    * a blank slate, never from the previous query (Krug — every open is
    * a new question; the previous answer would mis-prime the user).
+   *
+   * `loading` is reset alongside the other transient state so a request
+   * in flight at close time can't leave the spinner stuck on the next
+   * open (the in-flight result is dropped on the floor by the next
+   * `switchMap` cycle anyway, but the visible state needs an explicit
+   * reset).
    */
   handleClose(): void {
     this.open.set(false);
     this.query.set('');
     this.results.set([]);
     this.activeIndex.set(0);
-  }
-
-  private fireSearch(q: string): void {
-    if (q === '') {
-      this.results.set([]);
-      this.loading.set(false);
-      return;
-    }
-    this.loading.set(true);
-    this.searchService.searchAthletes(q).subscribe({
-      next: (rows) => {
-        this.results.set(rows);
-        this.loading.set(false);
-      },
-      error: () => {
-        // Swallow errors silently for V1 — the palette is a non-
-        // critical surface, and a noisy toast on a flaky network
-        // would be more annoying than helpful. The empty-state
-        // branch covers the visible UX.
-        this.results.set([]);
-        this.loading.set(false);
-      },
-    });
+    this.loading.set(false);
   }
 }

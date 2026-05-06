@@ -49,20 +49,39 @@
   flex-direction: column;
 }
 
+.search-palette__row-item {
+  list-style: none;
+}
+
 .search-palette__row {
+  // Reset the native <button> chrome — borders, native bg, padding —
+  // so the button reads as a clickable row, not a UI button. Inherits
+  // the row's typography from the parent context.
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  width: 100%;
   padding: 0.625rem 0.75rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
   border-radius: var(--budojo-radius-sm, 0.5rem);
   cursor: pointer;
   // Match the rest of the design system — short, decelerate, MD3-shaped.
   transition: background-color var(--budojo-motion-fast, 160ms) ease-out;
 
   &:hover,
-  &--active {
+  &--active,
+  &:focus-visible {
     background-color: var(--p-content-hover-background, var(--p-surface-100));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: -2px;
   }
 }
 

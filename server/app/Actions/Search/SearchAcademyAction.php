@@ -70,6 +70,22 @@ class SearchAcademyAction
             });
         }
 
+        // Eager-load the relations `AthleteResource::toArray` reads for the
+        // current-month-paid derivation + the address block. Without these,
+        // serializing N rows triggers ~1 + 2N queries per keystroke (a
+        // `payments()->exists()` check + a lazy `address` access per row).
+        // The current-month payments slice is filtered to keep the eager
+        // load proportional — all-time payments would balloon the response
+        // for athletes with long histories.
+        $year = (int) now()->year;
+        $month = (int) now()->month;
+        $builder->with([
+            'address',
+            'payments' => fn ($query) => $query
+                ->where('year', $year)
+                ->where('month', $month),
+        ]);
+
         // Stable ordering for deterministic results. last_name asc + id asc
         // keeps two athletes who share both fields in insertion order; the
         // SPA's keyboard navigation depends on a stable order so "first
