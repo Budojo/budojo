@@ -4,10 +4,26 @@ import { Observable, map, tap } from 'rxjs';
 import { AcademyService } from './academy.service';
 import { environment } from '../../../environments/environment';
 
+/**
+ * Persona discriminator on the SPA side (#445, M7). Mirrors the
+ * `App\Enums\UserRole` backing values verbatim. `owner` is the
+ * default for every public-register user; `athlete` is set only via
+ * the M7 invite-accept flow.
+ */
+export type UserRole = 'owner' | 'athlete';
+
 export interface User {
   id: number;
   name: string;
   email: string;
+  /**
+   * Persona discriminator (#445). The SPA reads this to branch the
+   * post-login destination + the route guards. Optional in the
+   * type only for backward compatibility with cached / fixture
+   * envelopes that predate the field; the server's `UserResource`
+   * always emits it.
+   */
+  role?: UserRole;
   /** ISO-8601 timestamp; null until the user clicks the verify link. */
   email_verified_at: string | null;
   /**
@@ -101,6 +117,19 @@ export class AuthService {
   private storeToken(token: string): void {
     localStorage.setItem(TOKEN_KEY, token);
     this.isLoggedIn.set(true);
+  }
+
+  /**
+   * Drop a Sanctum bearer token issued by a flow that lives outside
+   * the standard register/login pipeline (#445, M7 PR-C — the
+   * athlete-invite accept flow). Public wrapper around `storeToken`
+   * so the calling component can hydrate the SPA's auth state without
+   * the service needing knowledge of every alternate auth path.
+   * After call, the next `loadCurrentUser()` populates the user
+   * envelope identically to a normal login.
+   */
+  adoptIssuedToken(token: string): void {
+    this.storeToken(token);
   }
 
   logout(): void {

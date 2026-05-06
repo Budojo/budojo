@@ -14,7 +14,6 @@
     "attendance": "Presenze",
     "profile": "Profilo",
     "whatsNew": "Novità",
-    "feedback": "Invia feedback",
     "support": "Contatta il supporto",
     "signOut": "Esci",
     "privacy": "Privacy",
@@ -116,6 +115,50 @@
         "errorSummary": "Impossibile inviare l'email",
         "errorDetail": "Riprova — se persiste, contatta il supporto."
       }
+    }
+  },
+  "athleteInvite": {
+    "loading": "Caricamento del tuo invito…",
+    "title": "Accetta il tuo invito",
+    "subtitle": "Imposta una password per completare la creazione del tuo account atleta.",
+    "subtitleWithAcademy": "{{academy}} ti ha invitato ad accedere. Imposta una password per completare la creazione del tuo account atleta.",
+    "name": "Nome e cognome",
+    "email": "Email",
+    "password": "Password",
+    "passwordPlaceholder": "Min. 8 caratteri",
+    "passwordRequired": "La password è obbligatoria.",
+    "passwordMinlength": "Almeno 8 caratteri.",
+    "passwordConfirmation": "Conferma password",
+    "passwordConfirmationPlaceholder": "Ripeti la tua password",
+    "passwordsMismatch": "Le password non coincidono.",
+    "privacyBefore": "Ho letto e accetto l'",
+    "privacyLink": "informativa sulla privacy",
+    "privacyAfter": ".",
+    "privacyRequired": "Devi accettare l'informativa sulla privacy per continuare.",
+    "termsBefore": "Accetto i",
+    "termsLink": "Termini di Servizio",
+    "termsAfter": ".",
+    "termsRequired": "Devi accettare i Termini di Servizio per continuare.",
+    "submit": "Accetta invito",
+    "invalid": {
+      "title": "Questo invito non è valido",
+      "body": "Il link potrebbe essere scaduto, revocato, o già usato. Chiedi al titolare della tua academy di inviartene uno nuovo — oppure accedi se hai già un account.",
+      "signinCta": "Accedi"
+    },
+    "errors": {
+      "invite_invalid": "Questo link di invito non è valido.",
+      "invite_already_accepted": "Questo invito è già stato accettato. Prova ad accedere.",
+      "invite_revoked": "Questo invito è stato revocato. Chiedi al titolare della tua academy di inviartene uno nuovo.",
+      "invite_expired": "Questo invito è scaduto. Chiedi al titolare della tua academy di inviartene uno nuovo.",
+      "email_already_registered": "Esiste già un account con questa email. Prova ad accedere.",
+      "unknown_error": "Qualcosa è andato storto. Riprova tra un momento."
+    }
+  },
+  "athletePortal": {
+    "welcome": {
+      "title": "Benvenuto in Budojo",
+      "body": "Il tuo account atleta è pronto. Le pagine dove vedrai la tua presenza, i tuoi pagamenti e i tuoi documenti arrivano nella prossima release — per ora aspetta, la tua academy ti farà sapere quando ci sarà di più qui.",
+      "signOut": "Esci"
     }
   },
   "setup": {
@@ -286,37 +329,9 @@
     "message": "Budojo non riesce a raggiungere la rete in questo momento. Controlla la connessione — ti riportiamo dov'eri appena la rete torna disponibile.",
     "tryAgain": "Riprova"
   },
-  "feedback": {
-    "title": "Invia feedback",
-    "subtitle": "Hai notato qualcosa che non va, di rotto o che manca? Scrivi qui — il messaggio arriva direttamente al team. La versione attuale dell'app e le info del tuo dispositivo vengono allegate in automatico, così possiamo riprodurre il problema.",
-    "subject": {
-      "label": "Oggetto",
-      "placeholder": "Riassunto breve — es. \"La lista atleti non si ordina\"",
-      "error": "L'oggetto è obbligatorio (da 3 a 100 caratteri)."
-    },
-    "description": {
-      "label": "Descrizione",
-      "placeholder": "Cosa stavi facendo, cos'è successo, e cosa ti aspettavi che succedesse?",
-      "error": "La descrizione è obbligatoria (da 10 a 2000 caratteri)."
-    },
-    "image": {
-      "label": "Allega uno screenshot (opzionale)",
-      "hint": "PNG, JPEG o WEBP. Massimo 5 MB. Una sola immagine per invio.",
-      "remove": "Rimuovi",
-      "errorMime": "Sono accettate solo immagini PNG, JPEG e WEBP.",
-      "errorSize": "Immagine troppo grande. Dimensione massima 5 MB."
-    },
-    "submit": "Invia feedback",
-    "toast": {
-      "successSummary": "Feedback inviato",
-      "successDetail": "Grazie — il tuo messaggio è in viaggio.",
-      "errorSummary": "Invio non riuscito",
-      "errorDetail": "Qualcosa è andato storto durante l'invio del feedback. Riprova."
-    }
-  },
   "support": {
     "title": "Contatta il supporto",
-    "subtitle": "Hai bisogno di aiuto con il tuo account, la fatturazione, un bug o altro? Scrivici — una persona ti risponderà all'indirizzo email del tuo account.",
+    "subtitle": "Hai bisogno di aiuto con il tuo account, la fatturazione, un bug, o vuoi mandarci un feedback? Scrivici — una persona ti risponderà all'indirizzo email del tuo account.",
     "subject": {
       "label": "Oggetto",
       "placeholder": "Riassunto breve — es. \"Non riesco a reimpostare la password\"",
@@ -329,6 +344,7 @@
         "account": "Account",
         "billing": "Fatturazione",
         "bug": "Bug",
+        "feedback": "Feedback / suggerimento",
         "other": "Altro"
       },
       "error": "Scegli una categoria."
@@ -337,6 +353,13 @@
       "label": "Messaggio",
       "placeholder": "Raccontaci cosa sta succedendo — più dettagli ci dai, più in fretta possiamo aiutarti.",
       "error": "Il messaggio è obbligatorio (da 10 a 5000 caratteri)."
+    },
+    "image": {
+      "label": "Allega uno screenshot (opzionale)",
+      "hint": "PNG, JPEG o WEBP. Massimo 5 MB. Una sola immagine per invio.",
+      "remove": "Rimuovi",
+      "errorMime": "Sono accettate solo immagini PNG, JPEG e WEBP.",
+      "errorSize": "Immagine troppo grande. Dimensione massima 5 MB."
     },
     "submit": "Invia messaggio",
     "replyHint": "Ti risponderemo a {{email}}.",
@@ -391,9 +414,9 @@
         "title": "La tua palestra, in tasca.",
         "body": "Installabile come app su iOS e Android. Si aggiorna da sola quando rilasciamo nuove versioni. Funziona uguale sul telefono e sul portatile."
       },
-      "feedback": {
+      "support": {
         "title": "Mandaci un messaggio quando qualcosa si rompe.",
-        "body": "Hai visto un bug o vorresti una funzione? Il form di feedback dentro l'app ce lo manda direttamente, con la versione e le info del tuo dispositivo già allegate."
+        "body": "Hai visto un bug o vorresti una funzione? Il form di contatto dentro l'app ce lo manda direttamente, con la versione e le info del tuo dispositivo già allegate, e rispondiamo all'email del tuo account."
       }
     },
     "trust": {

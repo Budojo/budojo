@@ -113,8 +113,8 @@ export class LandingComponent {
     },
     {
       iconClass: 'pi-comment',
-      titleKey: 'landing.features.feedback.title',
-      bodyKey: 'landing.features.feedback.body',
+      titleKey: 'landing.features.support.title',
+      bodyKey: 'landing.features.support.body',
     },
   ];
 

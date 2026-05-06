@@ -59,6 +59,80 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v1.18.0',
+      date: '2026-05-05',
+      headline:
+        'Two themes in one release. The two "talk to us" pages folded into a single support channel — fewer choices, screenshot attachment in the right place, app version + browser info attached automatically. And the first slice of the athlete-side login lands: an academy owner can now invite a roster athlete by email, the athlete clicks, sets a password, and shows up in Budojo as themselves. The full athlete dashboard pages (own attendance / payments / documents) come next milestone.',
+      sections: [
+        {
+          heading: '🥋 Athlete login — first slice',
+          bullets: [
+            'Invite an athlete from the system. On any athlete in your roster who has an email on file, the API now accepts an "Invita al sistema" call that emails them a one-click link to set a password and land in Budojo as themselves. The link is valid 7 days; clicking it twice returns a friendly "already accepted, sign in instead" page. The owner-side button that wires this into the athlete detail UI is queued for the next release — for now the API + the athlete-side flow are live.',
+            "Athlete-side accept page. The link in the invite email opens at /athlete-invite/{token} — a focused, single-task page that shows the athlete's name + email pre-filled (read-only), asks for a password and the same privacy + ToS checkboxes as registration, and on submit auto-logs them into Budojo. If the link is expired / revoked / already accepted, a friendly error page suggests signing in or asking the academy for a new invite.",
+            'Welcome page. After accepting the invite the athlete lands on /athlete-portal/welcome — a simple "your account is ready, the rest of the athlete dashboard ships next milestone" placeholder. The full athlete-side pages (Profile / My academy / My attendance / My payments / My documents) are intentionally deferred so we can ship the schema + onboarding flow safely first.',
+            "Owner experience: unchanged. The dashboard, the sidebar, every existing screen — all identical. The new athlete users are kept in their own URL space and behind their own role gate, so an owner that doesn't use the invite feature notices nothing.",
+            "Public registration stays owner-only. Athletes can NEVER self-register through the public sign-up form — the only way into Budojo as an athlete is through an academy owner's invite. Hard rule, deliberately not negotiable in this release.",
+          ],
+        },
+        {
+          heading: '💬 One contact channel instead of two',
+          bullets: [
+            '"Send feedback" is gone. The dedicated /dashboard/feedback page has been retired and folded into /dashboard/support. Same destination inbox, same private routing — but a single sidebar entry under "Contatta il supporto" instead of two near-identical ones. The icon in the sidebar changes from a life-ring to a speech-bubble to match the friendlier tone.',
+            'A new "Feedback" category. When you\'d rather share input than ask for help, pick the Feedback category — same form, same place, but the support team filters by category so they can prioritise. Five categories now: Account / Billing / Bug / Feedback / Other.',
+            'Screenshot attachment migrated. The screenshot upload that lived only on the old feedback form is now part of the support form. Drop in a PNG / JPEG / WEBP up to 5 MB and it lands attached to the email we receive — same as before, just in the new place.',
+            'App version + browser info auto-attach. Your current Budojo build tag and your browser / OS info are now stamped onto every support submission automatically. You no longer have to type "v1.16.4 on Chrome 120 / Android 14" into the body — it\'s in the email metadata when we receive it.',
+          ],
+        },
+        {
+          heading: '🛠 Behind the scenes',
+          bullets: [
+            'The API endpoint /api/v1/feedback is gone. The single /api/v1/support endpoint now accepts the optional screenshot via multipart/form-data and reads the X-Budojo-Version header that the SPA stamps on every API call. Public OpenAPI spec updated accordingly.',
+            "New users.role enum (owner | athlete) + an athlete_invitations table. The discriminator gates every existing dashboard route — owners go to /dashboard, athletes go to /athlete-portal — so the two personas can't accidentally trip over each other's screens.",
+            'The invite token never leaves the database in plaintext. We store a SHA-256 hash; the raw URL-safe token only exists in the email body and the request URL. The accept endpoint hashes the URL-presented token and looks up by hash, so a database read leak does not yield live invitations.',
+          ],
+        },
+      ],
+    },
+    {
+      version: 'v1.17.0',
+      date: '2026-05-05',
+      headline:
+        'A heavy account-and-trust release. Eight features land together: a brand-new help / FAQ page, a dedicated support contact form, change-your-password from the profile, upload your own avatar, plus the legal scaffolding (Terms of Service + cookie banner + cookie policy) Budojo needs before serving customers in the EU. On the resilience side: a friendly server-error page, an offline page, and the login form now rate-limits brute-force attempts.',
+      sections: [
+        {
+          heading: '🆘 Help & support',
+          bullets: [
+            'In-product help & FAQ. A new public /help page collects every common question — "how do I add an athlete", "what does the medical-certificate digest do", "how do I export my data" — into a single searchable list. Type any keyword (English or Italian) and the matching answers surface as you type. Lives in the sidebar under "Help".',
+            'Dedicated support form. A new /dashboard/support page lets you file a request directly with the team. Pick a category (account / billing / bug / other), write a subject + a description, and it lands in our support inbox. Replies come back to the email on your account, so you can keep the conversation in your usual mailbox.',
+          ],
+        },
+        {
+          heading: '👤 Account',
+          bullets: [
+            'Change your password. A "Change password" entry on the Profile page lets you rotate your password without the forgot-password email round-trip. Asks for your current password as a re-auth gate, then for a new one twice. Every other active session on your account (other browsers, other devices) is signed out as a precaution; the tab you\'re using stays signed in.',
+            'Upload your own avatar. The circular avatar in the top-right corner used to be your initials. You can now upload a real photo from Profile → Edit avatar — browse-and-upload, replace it any time, or remove it to fall back to initials. Renders in the topbar and on the profile page.',
+          ],
+        },
+        {
+          heading: '⚖️ Legal & compliance',
+          bullets: [
+            'Terms of Service page. A new public page at /terms carries the Service Agreement, with an Italian version at /terms/it. Both pages link to each other and follow the same layout as /privacy and /sub-processors.',
+            'Acceptance gate on registration. The sign-up form now asks you to tick a checkbox accepting the Terms of Service alongside the existing privacy-policy checkbox. Existing accounts are unaffected.',
+            'Cookie consent banner. A first-visit banner explains what storage Budojo writes to your browser and lets you accept all, reject non-essential, or open a "Customise" dialog with per-category toggles (essentials always on, preferences / analytics / marketing opt-in). Your choice is remembered so the banner does not keep popping up.',
+            'Cookie policy page. A new public /cookie-policy page (Italian at /cookie-policy/it) documents every category in detail — what we store, why, how long, and how to change your mind. Same chrome as the other legal pages.',
+          ],
+        },
+        {
+          heading: '🛡️ Resilience',
+          bullets: [
+            'Login rate limit. The sign-in form is now capped at 5 password attempts per minute from the same network — past that you wait a minute before trying again. Closes the door on automated password-guessing without being noticeable to a real user fat-fingering their password a few times.',
+            'Server-error landing page. A new /error route renders a clear "something went wrong" page with a "Try again" button and a link back to the dashboard, in place of the browser\'s stack-trace screen for hand-typed deep-links or link-outs from monitoring.',
+            'Offline page. A new /offline route shows a friendly "you\'re offline" message with a "Retry" button. The SPA\'s network interceptor sends you here when a request fails with no network at all, and the page lives outside the dashboard shell so it works even before the dashboard chunk has loaded.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v1.16.0',
       date: '2026-05-04',
       headline:

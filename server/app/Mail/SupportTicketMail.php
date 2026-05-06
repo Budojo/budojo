@@ -9,6 +9,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -39,10 +40,14 @@ class SupportTicketMail extends Mailable implements ShouldQueue
 
     /**
      * @param  string  $subjectLine  user-supplied subject (3..100 chars, validated upstream)
-     * @param  SupportTicketCategory  $category  one of Account / Billing / Bug / Other
+     * @param  SupportTicketCategory  $category  one of Account / Billing / Bug / Feedback / Other
      * @param  string  $body  user-supplied free-text body (10..5000 chars, validated upstream)
      * @param  string  $userEmail  authenticated user's email — also the Reply-To target
      * @param  string  $userName  authenticated user's display name — surfaces in the body for triage
+     * @param  string  $appVersion  SPA build tag at time of submission (X-Budojo-Version header, capped at 32 chars upstream) — "unknown" when missing
+     * @param  string  $userAgent  browser User-Agent verbatim (capped at 512 chars upstream) — "unknown" when missing
+     * @param  string|null  $imageBytes  raw screenshot bytes captured at request time, or null. Carried inline through the queue payload — see the rationale on `attachments()` below.
+     * @param  string|null  $imageOriginalName  client-provided filename for the attachment, or null
      */
     public function __construct(
         public readonly string $subjectLine,
@@ -50,6 +55,10 @@ class SupportTicketMail extends Mailable implements ShouldQueue
         public readonly string $body,
         public readonly string $userEmail,
         public readonly string $userName,
+        public readonly string $appVersion = 'unknown',
+        public readonly string $userAgent = 'unknown',
+        public readonly ?string $imageBytes = null,
+        public readonly ?string $imageOriginalName = null,
     ) {
     }
 
@@ -82,7 +91,36 @@ class SupportTicketMail extends Mailable implements ShouldQueue
                 'body' => $this->body,
                 'userName' => $this->userName,
                 'userEmail' => $this->userEmail,
+                'appVersion' => $this->appVersion,
+                'userAgent' => $this->userAgent,
+                'hasImage' => $this->imageBytes !== null,
             ],
         );
+    }
+
+    /**
+     * @return list<\Illuminate\Mail\Mailables\Attachment>
+     *
+     * The screenshot bytes are carried inline on the Mailable so the
+     * queue serialiser captures them in `jobs.payload`. Attaching from
+     * `Attachment::fromPath($request->file(...)->getRealPath())` would
+     * NOT survive — that path lives in the request-lifecycle temp dir
+     * and is unlinked by the time the queue worker processes the job,
+     * yielding "missing attachment" sends in production. Validation
+     * caps uploads at 5 MB, comfortably below the LONGTEXT payload
+     * column ceiling, so inlining keeps the design simple (no tmp-disk
+     * write + cleanup hook + orphan-prune cron).
+     */
+    public function attachments(): array
+    {
+        if ($this->imageBytes === null) {
+            return [];
+        }
+
+        $bytes = $this->imageBytes;
+
+        return [
+            Attachment::fromData(fn (): string => $bytes, $this->imageOriginalName ?? 'support-image'),
+        ];
     }
 }

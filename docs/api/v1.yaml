@@ -46,20 +46,16 @@ tags:
       **Email-verification gate.** Same shape as athletes: writes (`POST` /
       `PUT` / `DELETE`) are gated on `verified.api`; reads stay open. See the
       `VerificationRequired` response component.
-  - name: feedback
-    description: |
-      In-app feedback submitted by authenticated users — emails the
-      product owner with the user's text, the SPA build version, and
-      the request User-Agent. Single endpoint, single recipient
-      (hardcoded), throttled to 5 req/min per user.
   - name: support
     description: |
-      Dedicated support / contact form submissions (#423). Distinct
-      from `feedback` — this channel is intended for the user to GET
-      A REPLY: the server persists a `support_tickets` row as a
-      paper trail and queues an email with Reply-To set to the
-      user, so the support inbox can hit Reply directly. Single
-      recipient (hardcoded), throttled to 5 req/min per user.
+      Single contact / support channel. Authenticated users file a
+      ticket (subject + category + body + optional screenshot); the
+      server persists a `support_tickets` row as paper trail and
+      queues an email to the support inbox with Reply-To set to the
+      user. The legacy `/feedback` endpoint was retired post-v1.17.0
+      and folded into this channel via a `feedback` category; tickets
+      tagged that way still get a row + email but signal "I'm sharing
+      input, no reply expected" to the support inbox.
   - name: Stats
     description: |
       Server-side aggregations for the /dashboard/stats charts.
@@ -604,6 +600,142 @@ paths:
             Location:
               schema: { type: string }
 
+  /athlete-invite/{token}/preview:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[A-Za-z0-9]{64}$'
+        description: |
+          Raw 64-char URL-safe athlete invite token. The DB column stores its
+          SHA-256 hash; the action hashes the URL-presented value and looks
+          up the row by hash. Malformed tokens fail the route constraint and
+          404 before the controller is hit.
+
+    get:
+      tags: [auth]
+      summary: Pre-fill snapshot for the athlete invite landing page
+      description: |
+        Public endpoint (#445, M7 PR-C). Returns the athlete name + email +
+        academy name for a PENDING invitation; 404 on any other state
+        (unknown / accepted / revoked / expired). Throttled at 30/min to
+        cap firehose probing — the response leaks nothing in the unknown-
+        token path so brute-force is uninteresting.
+      operationId: athleteInvitePreview
+      responses:
+        '200':
+          description: Pending invite — fields ready for the SPA pre-fill.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [first_name, last_name, email, academy_name, expires_at]
+                    properties:
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+                      academy_name:
+                        type: string
+                      expires_at:
+                        type: string
+                        format: date-time
+        '404':
+          description: Invitation not found, or no longer in pending state.
+        '429':
+          description: Throttled.
+
+  /athlete-invite/{token}/accept:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[A-Za-z0-9]{64}$'
+
+    post:
+      tags: [auth]
+      summary: Accept an athlete invitation and create the linked user
+      description: |
+        Public endpoint (#445, M7 PR-C). Consumes a pending invitation:
+        validates the token (must hash to a row that is pending), creates
+        a `User` row with `role=athlete`, links `athletes.user_id`, marks
+        the invitation `accepted_at`, and returns a Sanctum bearer token
+        that the SPA drops into its auth state. The token IS the email
+        proof — `email_verified_at` is set immediately, no second-step
+        verification email. Throttled at 5/min/IP to cap brute-force on
+        the token search space (64 chars URL-safe = ~10^115 keyspace,
+        but defence in depth is cheap).
+      operationId: athleteInviteAccept
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, password_confirmation, accept_privacy, accept_terms]
+              properties:
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+                accept_privacy:
+                  type: boolean
+                accept_terms:
+                  type: boolean
+      responses:
+        '201':
+          description: |
+            Account created and linked. The `token` is the Sanctum bearer
+            for subsequent authenticated calls.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [token, user]
+                    properties:
+                      token:
+                        type: string
+                      user:
+                        type: object
+                        required: [id, name, email, role]
+                        properties:
+                          id:
+                            type: integer
+                          name:
+                            type: string
+                          email:
+                            type: string
+                            format: email
+                          role:
+                            type: string
+                            enum: [owner, athlete]
+        '422':
+          description: |
+            Validation failed. `errors.token[0]` carries one of:
+            `invite_invalid` (unknown token), `invite_already_accepted`,
+            `invite_revoked`, `invite_expired`. `errors.email[0]` may be
+            `email_already_registered` (race-window guard against a public
+            register hitting the same email between invite-send and
+            invite-accept). `errors.password` / `errors.accept_privacy` /
+            `errors.accept_terms` carry the standard Laravel validation
+            messages.
+        '429':
+          description: Throttled.
+
   /academy:
     post:
       tags: [academy]
@@ -957,6 +1089,129 @@ paths:
           $ref: '#/components/responses/ForbiddenAthleteWrite'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /athletes/{id}/invite:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+
+    post:
+      tags: [athletes]
+      summary: Send a login invitation to the athlete
+      description: |
+        Owner-side endpoint (#445, M7 PR-B). Creates or refreshes a pending
+        `AthleteInvitation` row for the athlete and queues a tokenized-link
+        email to their address on file. The link carries a 64-char URL-safe
+        random bearer token; the DB column stores its SHA-256 hash. Re-clicking
+        on an already-pending invite re-uses the same row but replaces the
+        token hash, so the URL emitted on a previous send is invalidated. The
+        read+write is wrapped in a transaction with a row-level lock on the
+        athlete to serialise concurrent calls — without the lock the de-dupe
+        would have a TOCTOU window where two threads each create a pending
+        row.
+        Throttled at 5 requests per minute per user. Body is empty (no user-
+        supplied fields; everything is derived from the route-bound athlete).
+      operationId: athleteInvite
+      responses:
+        '201':
+          description: Invitation created (or refreshed if pending one existed).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AthleteInvitation'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: |
+            Either the caller is not the owner of the athlete's academy, or
+            the caller is an authenticated owner who hasn't yet verified
+            their email. The route lives inside the `verified.api` group, so
+            an unverified owner gets `403 { message: "verification_required" }`
+            — the SPA's auth interceptor keys on that exact string to redirect
+            to the profile page. The non-verification 403 carries the standard
+            "This action is unauthorized." body.
+        '422':
+          description: |
+            Either the athlete has no email on file (`email: email_missing`) or
+            the athlete's email is already a Budojo user (`email:
+            email_already_registered`). Both block invite creation.
+        '429':
+          description: Throttled.
+
+  /athletes/{id}/invite/resend:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+
+    post:
+      tags: [athletes]
+      summary: Resend a pending invitation
+      description: |
+        Wire-shape identical to `/athletes/{id}/invite` but always returns 200
+        (vs 201 on first send) so the SPA can branch on the URL + status. Same
+        action under the hood — re-uses the pending row + replaces the token
+        hash so the previous email's link is invalidated.
+      operationId: athleteInviteResend
+      responses:
+        '200':
+          description: Invitation refreshed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AthleteInvitation'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: |
+            Same shape as `/invite`. Either the caller is not the owner of
+            the athlete's academy, or the caller is an unverified owner
+            (`{ message: "verification_required" }`) — route is inside the
+            `verified.api` group.
+        '422':
+          description: Same shape as `/invite` — `email_missing` / `email_already_registered`.
+        '429':
+          description: Throttled.
+
+  /athletes/{id}/invitations/{invitationId}:
+    parameters:
+      - $ref: '#/components/parameters/AthleteId'
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: ID of the invitation row (`AthleteInvitation.id`).
+
+    delete:
+      tags: [athletes]
+      summary: Revoke a pending invitation
+      description: |
+        Sets `revoked_at`; the row is preserved as audit trail. Idempotent on
+        already-terminal invites (accepted / revoked / expired): returns 204
+        regardless. Returns 404 when the invitation does not belong to the
+        path-bound athlete (defence-in-depth against crafted URLs).
+      operationId: athleteInviteRevoke
+      responses:
+        '204':
+          description: Revoked (or no-op).
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: |
+            Same shape as `/invite`. Either the caller is not the owner of
+            the athlete's academy, or the caller is an unverified owner
+            (`{ message: "verification_required" }`) — route is inside the
+            `verified.api` group.
+        '404':
+          description: |
+            Invitation not found, or the bound invitation does not belong
+            to the path-bound athlete. The two cases share the same Laravel
+            `ModelNotFoundException` body so a caller cannot distinguish
+            "doesn't exist" from "exists for a different athlete".
 
   /athletes/{id}/documents:
     parameters:
@@ -1409,68 +1664,6 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
-  /feedback:
-    post:
-      tags: [feedback]
-      summary: Submit in-app feedback (subject + description + optional image) — emails the product owner
-      description: |
-        Authenticated users can submit a feedback message; the server
-        composes an email to the product owner carrying the user's text,
-        the optional attached image, the SPA build version, and the
-        request User-Agent. The mail is sent synchronously during request
-        handling — fire-and-forget from the client's perspective: the
-        202 confirms acceptance, NOT delivery (bounces / mailbox-side
-        issues are out of band). Throttled to 5 req/min per user.
-
-        The image (when present) is sent as an attachment and is NOT
-        persisted server-side; once the mail leaves the temp upload file
-        is discarded with the request lifecycle.
-      operationId: submitFeedback
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [subject, description]
-              properties:
-                subject:
-                  type: string
-                  minLength: 3
-                  maxLength: 100
-                description:
-                  type: string
-                  minLength: 10
-                  maxLength: 2000
-                app_version:
-                  type: string
-                  maxLength: 50
-                  description: SPA build tag (e.g. v1.9.0, dev). Optional — server falls back to "unknown".
-                image:
-                  type: string
-                  format: binary
-                  description: Optional single attachment, max 5 MB, png / jpeg / webp only.
-      responses:
-        '202':
-          description: Feedback accepted — mail sent synchronously, delivery not guaranteed.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [message]
-                properties:
-                  message: { type: string }
-              example: { message: Feedback received. }
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '429':
-          description: Throttle limit hit (5 req/min per user).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorMessage' }
-
   /support:
     post:
       tags: [support]
@@ -1494,7 +1687,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               required: [subject, category, body]
@@ -1505,15 +1698,34 @@ paths:
                   maxLength: 100
                 category:
                   type: string
-                  enum: [account, billing, bug, other]
+                  enum: [account, billing, bug, feedback, other]
                   description: |
-                    Coarse routing label. The four cases reflect the
+                    Coarse routing label. The five cases reflect the
                     most common reasons a user reaches out — the
-                    SupportTicketCategory PHP enum mirrors them.
+                    SupportTicketCategory PHP enum mirrors them. The
+                    `feedback` case was added when the legacy
+                    /dashboard/feedback page was retired and folded
+                    into support; it tags messages where the user is
+                    sharing input rather than expecting a reply, but
+                    Reply-To is still set to the user so a follow-up
+                    is always possible.
                 body:
                   type: string
                   minLength: 10
                   maxLength: 5000
+                image:
+                  type: string
+                  format: binary
+                  description: |
+                    Optional screenshot. Max 5 MB, png/jpeg/webp only.
+                    NOT persisted server-side — sent only as an email
+                    attachment and discarded with the request lifecycle.
+              description: |
+                The X-Budojo-Version request header (when sent by the
+                SPA) and the User-Agent header are auto-attached to the
+                ticket row + the support email. They are NEVER asked
+                from the user; they are server-derived context for the
+                support inbox.
       responses:
         '202':
           description: Ticket persisted and email queued.
@@ -2955,6 +3167,48 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AttendanceSummaryRow'
+
+    AthleteInvitation:
+      type: object
+      required: [id, athlete_id, email, expires_at, state, last_sent_at]
+      description: |
+        Lifecycle row for an athlete-side login invitation (#445, M7 PR-B).
+        `state` is derived server-side from the (`accepted_at`, `revoked_at`,
+        `expires_at`) triplet — the four states are pairwise mutually
+        exclusive. The row's `token` column is intentionally NOT on the wire:
+        the column stores a SHA-256 hash and emitting it would give a leaked
+        envelope nothing actionable.
+      properties:
+        id:
+          type: integer
+        athlete_id:
+          type: integer
+        email:
+          type: string
+          format: email
+          description: Snapshot of the athlete's email at invite time.
+        expires_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        state:
+          type: string
+          enum: [pending, accepted, revoked, expired]
+          description: |
+            Derived server-side. `pending` = un-accepted, un-revoked, expiry
+            in the future. The other three are terminal and pairwise mutually
+            exclusive with each other and with `pending`.
 
     SupportTicket:
       type: object

@@ -20,15 +20,17 @@ use Illuminate\Support\Carbon;
  * migration's column list).
  *
  * @property int                          $id
- * @property int|null                     $user_id  Nullable to support the planned logged-out fallback path.
+ * @property int|null                     $user_id     Nullable to support the planned logged-out fallback path.
  * @property string                       $subject
  * @property SupportTicketCategory        $category
  * @property string                       $body
+ * @property string|null                  $app_version SPA build tag at the moment of submission (X-Budojo-Version header).
+ * @property string|null                  $user_agent  Browser User-Agent verbatim, capped at 512 chars.
  * @property Carbon                       $created_at
  *
  * @property-read User|null $user
  */
-#[Fillable(['user_id', 'subject', 'category', 'body'])]
+#[Fillable(['user_id', 'subject', 'category', 'body', 'app_version', 'user_agent'])]
 class SupportTicket extends Model
 {
     /**

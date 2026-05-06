@@ -51,6 +51,25 @@ Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Auth\EmailVerific
     ->middleware('signed')
     ->name('verification.verify');
 
+// Athlete invitation accept flow (#445, M7 PR-C). Public on purpose:
+// the raw token in the URL is the auth. The token format is
+// 64 url-safe random chars; we constrain the route to that pattern
+// so a malformed value 404s before the controller is hit.
+//
+// `/preview` is rate-limited gently — a stranger probing the
+// endpoint with random tokens learns nothing (all unknown / non-
+// pending tokens 404), but we cap the firehose anyway.
+//
+// `/accept` is rate-limited to 5 req/min/IP because a bad-actor
+// flood of accept attempts on guessed tokens would otherwise
+// brute-force the bearer-credential search space.
+Route::get('/athlete-invite/{token}/preview', [\App\Http\Controllers\Auth\AthleteInvitationAcceptController::class, 'preview'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware('throttle:30,1');
+Route::post('/athlete-invite/{token}/accept', [\App\Http\Controllers\Auth\AthleteInvitationAcceptController::class, 'accept'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware('throttle:5,1');
+
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {
     // Currently authenticated user. Used by the SPA on bootstrap to hydrate
@@ -120,6 +139,21 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::middleware('verified.api')->group(function (): void {
         Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
             ->only(['store', 'update', 'destroy']);
+
+        // Athlete invitations — owner-side (#445, M7 PR-B). The owner of
+        // an academy invites a roster athlete to log into the SPA. The
+        // FormRequest's authorize() carries both the role:owner check
+        // and the academy-ownership check; the action handles
+        // re-use-pending-row + anti-squatting + best-effort mail.
+        // Throttled lightly — the action already de-dupes pending rows
+        // so two clicks bump last_sent_at instead of spawning two
+        // tokens, but we still cap to defeat scripted spamming of the
+        // mail vendor.
+        Route::post('/athletes/{athlete}/invite', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'store'])
+            ->middleware('throttle:5,1');
+        Route::post('/athletes/{athlete}/invite/resend', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'resend'])
+            ->middleware('throttle:5,1');
+        Route::delete('/athletes/{athlete}/invitations/{invitation}', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'destroy']);
     });
 
     // Documents — read access stays open (browsing + downloading); writes are
@@ -157,17 +191,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy']);
     Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
 
-    // In-app feedback (#311). Authenticated user → email to product owner.
-    // Throttled lightly (5 req/min per user) so a script can't blast the
-    // owner's inbox; the shape lets a frustrated user fire several reports
-    // in quick succession but stops abuse.
-    Route::post('/feedback', [\App\Http\Controllers\Feedback\FeedbackController::class, 'store'])
-        ->middleware('throttle:5,1');
-
-    // Support contact form (#423). Authenticated user → persists a
-    // ticket row + queues an email to the support inbox with Reply-To
-    // set to the user. Same throttle shape as feedback above (5/min)
-    // so a script can't flood the support inbox.
+    // Support contact form (#423 + post-v1.17 consolidation that
+    // retired the legacy /dashboard/feedback page). Authenticated user
+    // → persists a ticket row + queues an email to the support inbox
+    // with Reply-To set to the user. The optional screenshot attachment
+    // and the auto-attached app version + User-Agent inherit from the
+    // legacy feedback flow. Throttled to 5 req/min per user so a script
+    // can't flood the support inbox.
     Route::post('/support', [\App\Http\Controllers\Support\SupportTicketController::class, 'store'])
         ->middleware('throttle:5,1');
 

@@ -52,7 +52,15 @@ export class LoginComponent {
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: () => this.router.navigate(['/dashboard']),
+        next: (res) => {
+          // Persona-aware redirect (#445, M7 PR-D). Owner stays on
+          // the existing landing; athletes land on the welcome shell
+          // (the real athlete dashboard ships in a future PR-E).
+          // Default-to-owner keeps backwards compat for cached
+          // envelopes from before the role field shipped.
+          const role = res?.data?.role ?? 'owner';
+          this.router.navigate([role === 'athlete' ? '/athlete-portal/welcome' : '/dashboard']);
+        },
         error: (err) => {
           this.error.set(err?.error?.message ?? 'Invalid credentials. Please try again.');
         },

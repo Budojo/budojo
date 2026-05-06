@@ -2,7 +2,12 @@
 
 ## Purpose
 
-A `User` is the **owner** of a Budojo account and, transitively, of an `Academy`. Every authenticated request in the system is made on behalf of a single user. In the current v1, one user owns at most one academy (see the `academies.user_id` unique constraint). The concept of multi-academy owner, staff, or athlete login does not exist yet — it is explicitly deferred to future milestones.
+A `User` is an authenticated identity in Budojo. Two personas exist, distinguished by the `role` enum (#445):
+
+- **`owner`** — the academy owner / manager. Created via the public `POST /api/v1/auth/register` endpoint. Owns at most one academy (see the `academies.user_id` unique constraint).
+- **`athlete`** — an athlete linked to a roster row through the M7 invite flow. Created exclusively via `POST /api/v1/athlete-invite/{token}/accept`; there is NO public path to becoming an athlete. The link to the roster row lives on `athletes.user_id` and is consumed via `User::athlete()` (HasOne).
+
+Every authenticated request in the system is made on behalf of a single user. The concept of staff (a user that is neither owner nor athlete, e.g. a coach) is explicitly deferred to future milestones — the enum is intentionally a string column, not native MySQL `ENUM(...)`, so a future case lands without an `ALTER TABLE`.
 
 ## Schema — `users`
 
@@ -17,13 +22,15 @@ Laravel default structure, unchanged.
 | `terms_accepted_at` | timestamp | nullable | Set on `POST /auth/register` when the user ticks the Terms-of-Service gate (#420). Null for pre-#420 accounts and any future system-only user creation path. |
 | `avatar_path` | string | nullable | Relative path on the `public` disk of the uploaded avatar (#411). Null until the first `POST /me/avatar`. The wire layer emits `avatar_url` (full URL) via `UserResource`, never the raw path. |
 | `password` | string | not null | Bcrypt hash (cost 12, configured via `BCRYPT_ROUNDS`) |
+| `role` | string(32) | not null, default `'owner'` | Persona discriminator (#445). One of `owner` / `athlete` (the `App\Enums\UserRole` PHP enum). Cast as enum on the model. Backfilled to `owner` for every pre-M7 row. Public `/auth/register` ALWAYS produces `owner`; `athlete` is only set through `AcceptAthleteInvitationAction` (M7 PR-C). |
 | `remember_token` | string(100) | nullable | Laravel "remember me" token — unused by the SPA auth flow but kept for compatibility |
 | `created_at` | timestamp | nullable | |
 | `updated_at` | timestamp | nullable | |
 
 ## Relations
 
-- `hasOne(Academy::class)` — the academy owned by this user. Nullable (a user may exist without an academy in the first-login window, which triggers the `/setup` SPA flow via `noAcademyGuard`).
+- `hasOne(Academy::class)` — the academy owned by this user. Nullable (a user may exist without an academy in the first-login window, which triggers the `/setup` SPA flow via `noAcademyGuard`). For `role=athlete` users this is always null.
+- `hasOne(Athlete::class)` — the athlete row this user is linked to (M7, #445). Reads `athletes.user_id`; non-null only for `role=athlete` users that have completed the invite-accept flow. For owners this is always null.
 - `hasMany(PersonalAccessToken::class)` — issued via `Laravel\Sanctum\HasApiTokens`. Tokens are stored in `personal_access_tokens` as a polymorphic relation.
 
 ## Indexes

@@ -14,7 +14,6 @@
     "attendance": "Attendance",
     "profile": "Profile",
     "whatsNew": "What's new",
-    "feedback": "Send feedback",
     "support": "Contact support",
     "signOut": "Sign out",
     "privacy": "Privacy",
@@ -116,6 +115,50 @@
         "errorSummary": "Couldn't send email",
         "errorDetail": "Please try again — if it persists, contact support."
       }
+    }
+  },
+  "athleteInvite": {
+    "loading": "Loading your invitation…",
+    "title": "Accept your invitation",
+    "subtitle": "Set a password to finish creating your athlete account.",
+    "subtitleWithAcademy": "{{academy}} has invited you to log in. Set a password to finish creating your athlete account.",
+    "name": "Full name",
+    "email": "Email",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "passwordRequired": "Password is required.",
+    "passwordMinlength": "At least 8 characters.",
+    "passwordConfirmation": "Confirm password",
+    "passwordConfirmationPlaceholder": "Repeat your password",
+    "passwordsMismatch": "Passwords do not match.",
+    "privacyBefore": "I have read and accept the",
+    "privacyLink": "privacy policy",
+    "privacyAfter": ".",
+    "privacyRequired": "You must accept the privacy policy to continue.",
+    "termsBefore": "I accept the",
+    "termsLink": "Terms of Service",
+    "termsAfter": ".",
+    "termsRequired": "You must accept the Terms of Service to continue.",
+    "submit": "Accept invitation",
+    "invalid": {
+      "title": "This invitation isn't valid",
+      "body": "The link may have expired, been revoked, or already been used. Ask your academy owner to send you a new one — or sign in if you already have an account.",
+      "signinCta": "Sign in instead"
+    },
+    "errors": {
+      "invite_invalid": "This invitation link isn't valid.",
+      "invite_already_accepted": "This invitation has already been accepted. Please sign in instead.",
+      "invite_revoked": "This invitation has been revoked. Ask your academy owner to send you a new one.",
+      "invite_expired": "This invitation has expired. Ask your academy owner to send you a new one.",
+      "email_already_registered": "An account already exists for this email. Please sign in instead.",
+      "unknown_error": "Something went wrong. Please try again in a moment."
+    }
+  },
+  "athletePortal": {
+    "welcome": {
+      "title": "Welcome to Budojo",
+      "body": "Your athlete account is ready. The pages where you'll see your own attendance history, payments, and documents are coming in the next release — for now, sit tight, your academy will let you know when there's more here.",
+      "signOut": "Sign out"
     }
   },
   "setup": {
@@ -286,37 +329,9 @@
     "message": "Budojo can't reach the network right now. Check your connection — we'll bring you back to where you were as soon as the network returns.",
     "tryAgain": "Try again"
   },
-  "feedback": {
-    "title": "Send feedback",
-    "subtitle": "Spotted something off, broken, or missing? Drop a note here — it goes straight to the team. The current app version and your device info are attached automatically so we can reproduce the issue.",
-    "subject": {
-      "label": "Subject",
-      "placeholder": "Short summary — e.g. \"Athletes list won't sort\"",
-      "error": "Subject is required (3 to 100 characters)."
-    },
-    "description": {
-      "label": "Description",
-      "placeholder": "What were you trying to do, what happened, and what did you expect to happen?",
-      "error": "Description is required (10 to 2000 characters)."
-    },
-    "image": {
-      "label": "Attach a screenshot (optional)",
-      "hint": "PNG, JPEG or WEBP. Max 5 MB. One image per submission.",
-      "remove": "Remove",
-      "errorMime": "Only PNG, JPEG and WEBP images are accepted.",
-      "errorSize": "Image is too large. Max size is 5 MB."
-    },
-    "submit": "Send feedback",
-    "toast": {
-      "successSummary": "Feedback sent",
-      "successDetail": "Thanks — your message is on its way.",
-      "errorSummary": "Couldn't send",
-      "errorDetail": "Something went wrong sending your feedback. Please try again."
-    }
-  },
   "support": {
     "title": "Contact support",
-    "subtitle": "Need a hand with your account, billing, a bug, or anything else? Send us a message — a human will reply to the email address on your account.",
+    "subtitle": "Need a hand with your account, billing, a bug, or just want to share feedback? Send us a message — a human will reply to the email address on your account.",
     "subject": {
       "label": "Subject",
       "placeholder": "Short summary — e.g. \"Can't reset my password\"",
@@ -329,6 +344,7 @@
         "account": "Account",
         "billing": "Billing",
         "bug": "Bug",
+        "feedback": "Feedback / suggestion",
         "other": "Other"
       },
       "error": "Pick a category."
@@ -337,6 +353,13 @@
       "label": "Message",
       "placeholder": "Tell us what's going on — the more detail you share, the faster we can help.",
       "error": "Message is required (10 to 5000 characters)."
+    },
+    "image": {
+      "label": "Attach a screenshot (optional)",
+      "hint": "PNG, JPEG or WEBP. Max 5 MB. One image per submission.",
+      "remove": "Remove",
+      "errorMime": "Only PNG, JPEG and WEBP images are accepted.",
+      "errorSize": "Image is too large. Max size is 5 MB."
     },
     "submit": "Send message",
     "replyHint": "We'll reply to {{email}}.",
@@ -391,9 +414,9 @@
         "title": "Your academy, in your pocket.",
         "body": "Installable as an app on iOS and Android. Updates itself automatically when we ship. Works as well on a phone as it does on a laptop."
       },
-      "feedback": {
+      "support": {
         "title": "Send us a note when something breaks.",
-        "body": "Spotted a bug or wishing for a feature? The in-app feedback form sends a message straight to us with the version + device info already attached."
+        "body": "Spotted a bug or wishing for a feature? The in-app contact form sends a message straight to us with the version + device info already attached, and we reply to the email on your account."
       }
     },
     "trust": {

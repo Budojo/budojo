@@ -3,6 +3,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { hasAcademyGuard } from './core/guards/has-academy.guard';
 import { noAcademyGuard } from './core/guards/no-academy.guard';
 import { publicGuard } from './core/guards/public.guard';
+import { roleAthleteGuard, roleOwnerGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   {
@@ -52,13 +53,45 @@ export const routes: Routes = [
   },
   {
     path: 'setup',
-    canActivate: [authGuard, noAcademyGuard],
+    canActivate: [authGuard, roleOwnerGuard, noAcademyGuard],
     loadComponent: () =>
       import('./features/academy/setup/setup.component').then((m) => m.SetupComponent),
   },
   {
+    // Public athlete invite landing page (#445, M7 PR-C). Outside the
+    // dashboard shell on purpose — the user is unauthenticated when
+    // they land here (the token in the URL is the auth) and the page
+    // wants a single-task focused layout, not the owner sidebar.
+    path: 'athlete-invite/:token',
+    loadComponent: () =>
+      import('./features/athlete-invite/athlete-invite.component').then(
+        (m) => m.AthleteInviteComponent,
+      ),
+  },
+  {
+    // Athlete-side landing surface (#445, M7 PR-D minimal). The full
+    // athlete dashboard with own attendance / payments / documents
+    // ships in PR-E next milestone; this route + the welcome
+    // placeholder keep an athlete who's just accepted their invite
+    // from bouncing through owner-only guards. roleAthleteGuard
+    // bounces an owner who manually navigates here back to
+    // /dashboard so the URL space stays segmented per persona.
+    path: 'athlete-portal',
+    canActivate: [authGuard, roleAthleteGuard],
+    children: [
+      { path: '', redirectTo: 'welcome', pathMatch: 'full' },
+      {
+        path: 'welcome',
+        loadComponent: () =>
+          import('./features/athlete-portal/welcome/athlete-portal-welcome.component').then(
+            (m) => m.AthletePortalWelcomeComponent,
+          ),
+      },
+    ],
+  },
+  {
     path: 'dashboard',
-    canActivate: [authGuard, hasAcademyGuard],
+    canActivate: [authGuard, roleOwnerGuard, hasAcademyGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
     children: [
@@ -214,21 +247,14 @@ export const routes: Routes = [
         ],
       },
       {
-        // In-app feedback (#311). Sits inside the dashboard shell so
-        // the sidebar context (academy name, version footer) is
-        // visible while the user composes — useful when the feedback
-        // refers to "I was on this academy when..."; also keeps the
-        // route behind the auth + has-academy guards by default.
-        path: 'feedback',
-        loadComponent: () =>
-          import('./features/feedback/feedback.component').then((m) => m.FeedbackComponent),
-      },
-      {
-        // Dedicated support / contact form (#423). Distinct from
-        // /dashboard/feedback — feedback is fire-and-forget product
-        // feedback, support is the "I want a reply" channel. Same
-        // dashboard-shell placement so the sidebar context stays
-        // visible while the user composes.
+        // Single support / contact form (#423). The legacy
+        // /dashboard/feedback page was retired post-v1.17.0 — its
+        // role (fire-and-forget product feedback, screenshot upload,
+        // version + UA auto-attach) was folded into support, with a
+        // `feedback` category for messages that don't expect a
+        // reply. Sits inside the dashboard shell so the sidebar
+        // context (academy name, version footer) is visible while
+        // the user composes.
         path: 'support',
         loadComponent: () =>
           import('./features/support/support.component').then((m) => m.SupportComponent),

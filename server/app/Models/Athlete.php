@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * @property int                     $id
  * @property int                     $academy_id
+ * @property int|null                $user_id                M7 athlete-login link (#445). Null until the athlete accepts the invite; non-null afterwards.
  * @property string                  $first_name
  * @property string                  $last_name
  * @property string|null             $email
@@ -38,7 +39,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Carbon\Carbon|null     $updated_at
  * @property \Carbon\Carbon|null     $deleted_at
  */
-#[Fillable(['academy_id', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
+#[Fillable(['academy_id', 'user_id', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class])]
 class Athlete extends Model implements HasAddress
 {
@@ -51,6 +52,30 @@ class Athlete extends Model implements HasAddress
     public function academy(): BelongsTo
     {
         return $this->belongsTo(Academy::class);
+    }
+
+    /**
+     * The User account this athlete is logged in as (#445). Null
+     * until the athlete accepts the owner's invite (M7 PR-C).
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Every invitation row ever generated for this athlete. The
+     * pending one (if any) is `->invitations()->pending()->first()`
+     * via the scope on AthleteInvitation. History rows
+     * (revoked / expired / accepted) stay around as audit trail.
+     *
+     * @return HasMany<AthleteInvitation, $this>
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(AthleteInvitation::class);
     }
 
     /** @return HasMany<Document, $this> */

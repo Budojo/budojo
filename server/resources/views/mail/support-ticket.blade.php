@@ -16,6 +16,11 @@ A user has filed a support ticket through the in-app form.
 **From:** {{ $userName }} &lt;{{ $userEmail }}&gt;
 **Category:** {{ $category }}
 **Subject:** {{ $subjectLine }}
+**App version:** {{ $appVersion }}
+**User-Agent:** {{ $userAgent }}
+@if ($hasImage)
+**Screenshot:** attached.
+@endif
 
 ---
 
