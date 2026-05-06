@@ -27,6 +27,9 @@ function setup(authOverrides: Partial<AuthService> = {}, userOverride?: User | n
     removeAvatar: vi.fn(() => of({ ...FAKE_USER, avatar_url: null })),
     changePassword: vi.fn(() => of({ message: 'Password updated.' })),
     updateProfile: vi.fn((name: string) => of({ ...FAKE_USER, name })),
+    requestEmailChange: vi.fn(() => of({ message: 'verification_link_sent' })),
+    cancelPendingEmailChange: vi.fn(() => of(undefined as void)),
+    loadCurrentUser: vi.fn(() => of(FAKE_USER)),
     ...authOverrides,
   };
 
@@ -597,5 +600,143 @@ describe('ProfileComponent — change password (#409)', () => {
     cmp.submitChangePassword();
 
     expect(changeSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ProfileComponent — inline email change (#476)', () => {
+  /**
+   * The confirm-popup hands control to the user via `accept` / `reject`
+   * callbacks; calling the component method directly never reaches the
+   * service. This helper short-circuits the confirmation by patching
+   * the component's own `ConfirmationService.confirm` to invoke the
+   * `accept` callback synchronously.
+   */
+  function autoAcceptConfirm(cmp: ProfileComponent): void {
+    const confirm = (
+      cmp as unknown as {
+        confirmationService: { confirm: (opts: { accept?: () => void }) => void };
+      }
+    ).confirmationService;
+    confirm.confirm = vi.fn((opts: { accept?: () => void }) => opts.accept?.());
+  }
+
+  it('renders the email row with a pencil affordance', () => {
+    const { fixture } = setup();
+    expect(fixture.nativeElement.querySelector('[data-cy="profile-email-edit"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="profile-email-edit-form"]')).toBeNull();
+  });
+
+  it('opens the inline form when the pencil is clicked', () => {
+    const { fixture, cmp } = setup();
+    cmp.startEditEmail();
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-email-edit-form"]'),
+    ).not.toBeNull();
+  });
+
+  it('on submit (after confirm-accept) calls authService.requestEmailChange + closes form + toasts', () => {
+    const messageSpy = vi.fn();
+    const { cmp, authStub } = setup();
+    autoAcceptConfirm(cmp);
+    const messageService = TestBed.inject(MessageService);
+    messageService.add = messageSpy;
+
+    cmp.startEditEmail();
+    cmp['emailForm'].patchValue({ email: 'new@example.com' });
+    cmp.submitEditEmail({ currentTarget: document.createElement('button') } as unknown as Event);
+
+    expect(authStub.requestEmailChange).toHaveBeenCalledWith('new@example.com');
+    expect(cmp['editingEmail']()).toBe(false);
+    expect(messageSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+    // Cached user is refetched so the pillola can light up.
+    expect(authStub.loadCurrentUser).toHaveBeenCalled();
+  });
+
+  it('surfaces email_taken inline on a 422 response', () => {
+    const { cmp } = setup({
+      requestEmailChange: vi.fn(() =>
+        throwError(() => ({
+          status: 422,
+          error: { errors: { email: ['email_taken'] } },
+        })),
+      ),
+    } as never);
+    autoAcceptConfirm(cmp);
+    cmp.startEditEmail();
+    cmp['emailForm'].patchValue({ email: 'taken@example.com' });
+    cmp.submitEditEmail({ currentTarget: document.createElement('button') } as unknown as Event);
+
+    expect(cmp['emailServerError']()).toBe('taken');
+  });
+
+  it('surfaces email_unchanged inline on a 422 response', () => {
+    const { cmp } = setup({
+      requestEmailChange: vi.fn(() =>
+        throwError(() => ({
+          status: 422,
+          error: { errors: { email: ['email_unchanged'] } },
+        })),
+      ),
+    } as never);
+    autoAcceptConfirm(cmp);
+    cmp.startEditEmail();
+    cmp['emailForm'].patchValue({ email: 'tester@example.com' });
+    cmp.submitEditEmail({ currentTarget: document.createElement('button') } as unknown as Event);
+
+    expect(cmp['emailServerError']()).toBe('unchanged');
+  });
+
+  it('surfaces throttled inline on a 429 response', () => {
+    const { cmp } = setup({
+      requestEmailChange: vi.fn(() => throwError(() => ({ status: 429 }))),
+    } as never);
+    autoAcceptConfirm(cmp);
+    cmp.startEditEmail();
+    cmp['emailForm'].patchValue({ email: 'new@example.com' });
+    cmp.submitEditEmail({ currentTarget: document.createElement('button') } as unknown as Event);
+
+    expect(cmp['emailServerError']()).toBe('throttled');
+  });
+
+  it('renders the pending pillola when the cached user has a pending_email_change block', () => {
+    const { fixture } = setup({}, {
+      ...FAKE_USER,
+      pending_email_change: {
+        new_email_partial: 'j***@e***.com',
+        expires_at: '2026-05-07T00:00:00Z',
+      },
+    } as User);
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-email-pending-pillola"]'),
+    ).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-email-pending-cancel"]'),
+    ).not.toBeNull();
+  });
+
+  it('cancelPendingEmailChange calls the auth service and toasts', () => {
+    const messageSpy = vi.fn();
+    const { cmp, authStub } = setup();
+    const messageService = TestBed.inject(MessageService);
+    messageService.add = messageSpy;
+
+    cmp.cancelPendingEmailChange();
+
+    expect(authStub.cancelPendingEmailChange).toHaveBeenCalled();
+    expect(messageSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+  });
+
+  it('ignores duplicate cancel clicks while a request is in flight', () => {
+    const subject = new Subject<void>();
+    const cancelSpy = vi.fn(() => subject.asObservable());
+    const { cmp } = setup({ cancelPendingEmailChange: cancelSpy } as never);
+
+    cmp.cancelPendingEmailChange();
+    cmp.cancelPendingEmailChange();
+    cmp.cancelPendingEmailChange();
+
+    expect(cancelSpy).toHaveBeenCalledTimes(1);
   });
 });

@@ -153,10 +153,113 @@
         </div>
       }
 
-      <div class="profile-page__row">
-        <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
-        <span class="profile-page__value" data-cy="profile-email">{{ u.email }}</span>
-      </div>
+      <!--
+        Inline email change (#476). When a pending row is outstanding,
+        a pillola sits ABOVE the row to make the "waiting on
+        confirmation" state self-evident (Norman § feedback) and
+        offers a "Cancel pending" CTA so the user can revoke without
+        waiting out the 24h expiry. The live `u.email` row stays
+        read-only with a pencil — the pencil opens the inline form;
+        on submit the confirm-popup spells out the consequence
+        ("we'll send a link to {new}; until you click it your login
+        email stays {old}") before the request fires.
+      -->
+      @if (pendingEmailChange(); as pending) {
+        <div class="profile-page__pending-pillola" data-cy="profile-email-pending-pillola">
+          <i class="pi pi-clock" aria-hidden="true"></i>
+          <div class="profile-page__pending-text">
+            <strong>{{ 'account.emailChange.pendingPillola.label' | translate }}</strong>
+            <p class="profile-page__pending-detail">
+              {{
+                'account.emailChange.pendingPillola.detail'
+                  | translate: { newEmail: pending.new_email_partial }
+              }}
+            </p>
+          </div>
+          <p-button
+            type="button"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [label]="'account.emailChange.pendingPillola.cancel' | translate"
+            [loading]="cancellingEmail()"
+            (onClick)="cancelPendingEmailChange()"
+            data-cy="profile-email-pending-cancel"
+          />
+        </div>
+      }
+
+      @if (editingEmail()) {
+        <form
+          [formGroup]="emailForm"
+          (ngSubmit)="submitEditEmail($event)"
+          novalidate
+          class="profile-page__row profile-page__row--edit"
+          data-cy="profile-email-edit-form"
+        >
+          <label for="profileEmail" class="profile-page__label">
+            {{ 'account.emailChange.profile.newEmailLabel' | translate }}
+          </label>
+          <input
+            id="profileEmail"
+            type="email"
+            pInputText
+            formControlName="email"
+            [attr.aria-invalid]="emailError !== null ? true : null"
+            [attr.aria-describedby]="emailError !== null ? 'profileEmailError' : null"
+            autocomplete="email"
+            maxlength="255"
+            [placeholder]="'account.emailChange.profile.newEmailPlaceholder' | translate"
+            class="profile-page__input"
+            data-cy="profile-email-input"
+          />
+          @if (emailError; as err) {
+            <small id="profileEmailError" class="field-error" [attr.data-cy]="err.dataCy">
+              {{ err.key | translate }}
+            </small>
+          }
+          <div class="profile-page__row-actions">
+            <p-button
+              type="submit"
+              [label]="'account.emailChange.profile.save' | translate"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              [loading]="requestingEmail()"
+              [disabled]="requestingEmail()"
+              data-cy="profile-email-save"
+            />
+            <p-button
+              type="button"
+              [label]="'account.emailChange.profile.cancel' | translate"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [disabled]="requestingEmail()"
+              (onClick)="cancelEditEmail()"
+              data-cy="profile-email-cancel"
+            />
+          </div>
+        </form>
+      } @else {
+        <div class="profile-page__row">
+          <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
+          <span class="profile-page__value" data-cy="profile-email">{{ u.email }}</span>
+          <p-button
+            type="button"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [pTooltip]="'account.emailChange.profile.edit' | translate"
+            tooltipPosition="left"
+            [ariaLabel]="'account.emailChange.profile.edit' | translate"
+            (onClick)="startEditEmail()"
+            styleClass="profile-page__row-edit-button"
+            data-cy="profile-email-edit"
+          />
+        </div>
+      }
 
       <div class="profile-page__row profile-page__row--status">
         <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>

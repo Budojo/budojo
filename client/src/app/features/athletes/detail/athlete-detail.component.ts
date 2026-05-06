@@ -19,6 +19,7 @@ import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badg
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
 import { InvitationCardComponent } from './invitation-card/invitation-card.component';
+import { EmailChangeCardComponent } from './email-change-card/email-change-card.component';
 
 @Component({
   selector: 'app-athlete-detail',
@@ -33,6 +34,7 @@ import { InvitationCardComponent } from './invitation-card/invitation-card.compo
     AgeBadgeComponent,
     BeltBadgeComponent,
     InvitationCardComponent,
+    EmailChangeCardComponent,
   ],
   templateUrl: './athlete-detail.component.html',
   styleUrl: './athlete-detail.component.scss',
@@ -135,6 +137,17 @@ export class AthleteDetailComponent implements OnInit {
 
   statusLabelKey(status: AthleteStatus): string {
     return STATUS_KEYS[status];
+  }
+
+  /**
+   * Refetch the athlete envelope. Public so child cards (e.g. the
+   * email-change card after a state-A direct edit or a state-B invite
+   * swap) can ask the parent to re-pull the row so the header email
+   * + invitation summary stay in lock-step with the server.
+   */
+  reloadAthlete(): void {
+    const a = this.athlete();
+    if (a) this.loadAthlete(a.id);
   }
 
   private loadAthlete(id: number): void {
