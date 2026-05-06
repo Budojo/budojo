@@ -4,6 +4,18 @@
     "english": "English",
     "italian": "Italiano"
   },
+  "search": {
+    "openHint": "Cerca",
+    "openShortcutMac": "⌘K",
+    "openShortcutWin": "Ctrl K",
+    "ariaOpen": "Apri ricerca",
+    "dialogTitle": "Cerca",
+    "placeholder": "Cerca atleti per nome…",
+    "ariaInput": "Cerca atleti",
+    "emptyHint": "Inizia a digitare per trovare atleti per nome.",
+    "noResults": "Nessun atleta corrisponde alla ricerca.",
+    "resultsAriaLabel": "Risultati della ricerca"
+  },
   "nav": {
     "open": "Apri navigazione",
     "close": "Chiudi navigazione",

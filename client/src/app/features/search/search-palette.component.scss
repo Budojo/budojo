@@ -1,0 +1,106 @@
+// Search palette (#426). The dialog itself is a stock <p-dialog> with
+// `showHeader=false` so the input row reads as the chrome — same
+// pattern Linear / Slack / VS Code use; the user sees a single tall
+// pill, not a header band + content. The shell below sits directly
+// inside `.p-dialog-content`.
+
+.search-palette__shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.search-palette__field {
+  width: 100%;
+}
+
+.search-palette__input {
+  width: 100%;
+  // Roomy hit-target — 48 px CSS minimum (Fitts) plus the search-icon
+  // affordance on the left. A palette input is the SECOND control the
+  // user touches after the hotkey; it deserves a generous click area.
+  height: 3rem;
+  font-size: 1rem;
+}
+
+.search-palette__body {
+  // Cap the result list so an extreme 20-row search doesn't push the
+  // dialog past the viewport on short laptops. 26 rem is ~3 atom
+  // heights past the visible default — scroll surfaces inside the
+  // popover, not the page.
+  max-height: 26rem;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+
+.search-palette__hint {
+  margin: 0;
+  padding: 1rem 0.5rem;
+  color: var(--p-text-muted-color);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.search-palette__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-palette__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--budojo-radius-sm, 0.5rem);
+  cursor: pointer;
+  // Match the rest of the design system — short, decelerate, MD3-shaped.
+  transition: background-color var(--budojo-motion-fast, 160ms) ease-out;
+
+  &:hover,
+  &--active {
+    background-color: var(--p-content-hover-background, var(--p-surface-100));
+  }
+}
+
+.search-palette__row-name {
+  font-weight: 500;
+  color: var(--p-text-color);
+  // A long name should never push the meta column off-screen — the
+  // belt + status pills are small enough that the name wins the
+  // remaining space, but ellipsis keeps a 60-character athlete name
+  // honest on mobile.
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.search-palette__row-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.search-palette__row-status {
+  font-size: 0.8rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background-color: var(--p-surface-200);
+  color: var(--p-text-muted-color);
+  text-transform: capitalize;
+
+  &[data-status='suspended'] {
+    background-color: var(--p-yellow-100, #fef3c7);
+    color: var(--p-yellow-700, #92400e);
+  }
+  &[data-status='inactive'] {
+    background-color: var(--p-surface-200);
+    color: var(--p-text-muted-color);
+  }
+}

@@ -1,0 +1,77 @@
+<p-dialog
+  [visible]="open()"
+  (visibleChange)="handleClose()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '36rem' }"
+  [breakpoints]="{ '768px': '92vw' }"
+  [showHeader]="false"
+  styleClass="search-palette"
+  data-cy="search-palette-dialog"
+>
+  <div class="search-palette__shell">
+    <p-iconfield iconPosition="left" styleClass="search-palette__field">
+      <p-inputicon><i class="pi pi-search" aria-hidden="true"></i></p-inputicon>
+      <input
+        pInputText
+        type="text"
+        class="search-palette__input"
+        [placeholder]="'search.placeholder' | translate"
+        [attr.aria-label]="'search.ariaInput' | translate"
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+        (keydown)="handleListKeydown($event)"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        data-cy="search-palette-input"
+      />
+    </p-iconfield>
+
+    <div
+      class="search-palette__body"
+      role="listbox"
+      [attr.aria-label]="'search.resultsAriaLabel' | translate"
+      data-cy="search-palette-body"
+    >
+      @if (!hasQuery()) {
+        <p class="search-palette__hint" data-cy="search-palette-empty">
+          {{ 'search.emptyHint' | translate }}
+        </p>
+      } @else if (results().length === 0 && !loading()) {
+        <p class="search-palette__hint" data-cy="search-palette-no-results">
+          {{ 'search.noResults' | translate }}
+        </p>
+      } @else {
+        <ul class="search-palette__list">
+          @for (athlete of results(); track athlete.id; let i = $index) {
+            <li
+              class="search-palette__row"
+              [class.search-palette__row--active]="i === activeIndex()"
+              role="option"
+              tabindex="-1"
+              [attr.aria-selected]="i === activeIndex()"
+              [attr.data-cy]="'search-palette-row-' + athlete.id"
+              (mouseenter)="activeIndex.set(i)"
+              (click)="selectAthlete(athlete)"
+              (keydown.enter)="selectAthlete(athlete)"
+            >
+              <span class="search-palette__row-name">
+                {{ athlete.first_name }} {{ athlete.last_name }}
+              </span>
+              <span class="search-palette__row-meta">
+                <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
+                <span class="search-palette__row-status" [attr.data-status]="athlete.status">
+                  {{ statusKeys[athlete.status] | translate }}
+                </span>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+</p-dialog>
