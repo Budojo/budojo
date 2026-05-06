@@ -306,6 +306,194 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /me/email-change:
+    post:
+      tags: [auth]
+      summary: Request an email change with verification
+      description: |
+        Pending-then-verify email change for the authenticated user
+        (#476). Creates a `pending_email_changes` row and queues two
+        mails:
+
+        - **Verification mail to the NEW address** — the click on the
+          link in the body is the proof the candidate is reachable +
+          the auth on the verify endpoint below.
+        - **Audit notification to the OLD address** — text-only "if
+          this wasn't you, contact support immediately" notice.
+
+        The live `users.email` is NOT mutated here; only on a successful
+        click on `POST /email-change/{token}/verify` does the email
+        actually flip. Two anti-pattern mitigations drive the pending-
+        then-verify split (see entity doc):
+
+        - **Typo lockout** — a typo in the new address would lock the
+          user out of their own account if applied immediately.
+        - **Hijack vector** — a compromised account could redirect the
+          login email to one the attacker controls and harvest
+          password-reset tokens; the audit mail to OLD gives the
+          legitimate owner a chance to react.
+
+        **Throttle:** 5 requests / hour PER USER (the
+        `email-change-request` named limiter, shared with
+        `POST /athletes/{id}/email`).
+
+        **Validation rejections (422):**
+        - `email_taken` — the candidate is already a different user's email.
+        - `email_unchanged` — the candidate equals the user's current email.
+      operationId: meRequestEmailChange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestEmailChangeRequest'
+      responses:
+        '202':
+          description: |
+            The change has been logged; the verification mail is on its
+            way to the new address. The live `users.email` is unchanged
+            until the click confirms.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: verification_link_sent
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/Throttled'
+    delete:
+      tags: [auth]
+      summary: Cancel an outstanding pending email-change
+      description: |
+        Drop the `pending_email_changes` row for the authenticated
+        user (#476). Idempotent — calling when no row exists still
+        returns 204. Useful when the user notices a typo immediately
+        after submitting the request and wants to revert without
+        waiting out the 24h expiry.
+      operationId: meCancelEmailChange
+      responses:
+        '204':
+          description: Pending row dropped (or no row existed — both report 204).
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /email-change/{token}/verify:
+    post:
+      tags: [auth]
+      summary: Confirm a pending email change via the signed-link token
+      description: |
+        Public endpoint hit by the user clicking the link in the
+        verification mail (#476). The 64-char raw token in the path
+        IS the auth — no Sanctum bearer required. The server hashes
+        the token, looks up the matching `pending_email_changes` row,
+        applies the change to `users.email` (and `athletes.email` when
+        the user is linked to a roster row — state C), stamps
+        `email_verified_at = now()`, and deletes the pending row in a
+        single transaction.
+
+        **Deliberately does NOT auto-login** the user — the conservative
+        anti-leak choice. The SPA's verify page renders a confirmed
+        panel and bounces to `/auth/login` so the user signs in with
+        the new address.
+
+        Three failure modes collapse into the same 410 response (no
+        signal leak between them): unknown token, expired row,
+        already-consumed token.
+      operationId: verifyEmailChange
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{64}$'
+      responses:
+        '200':
+          description: The change has been applied; the SPA bounces the user to /auth/login.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: email_change_confirmed
+        '410':
+          description: The token is unknown, expired, or has already been consumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: invalid_or_expired_link
+
+  /athletes/{id}/email:
+    post:
+      tags: [athletes]
+      summary: Owner-side email change on an athlete (state-aware)
+      description: |
+        Change an athlete's email — owner only, academy-scoped (#476).
+        The action branches on the athlete's lifecycle state and the
+        SPA reads the returned `mode` to pick the toast copy:
+
+        - `direct` — no invitation, no `user_id` — `athletes.email` is
+          mutated immediately, no mail goes out.
+        - `invite_swap` — pending invitation, `user_id === null` —
+          the active invitation is revoked, `athletes.email` is
+          updated, and a fresh invitation is queued to the new address
+          (atomic on the server).
+        - `pending` — `user_id !== null` (athlete logged in at least
+          once) — the action delegates to `RequestEmailChangeAction`
+          against the linked user. `athletes.email` is NOT mutated
+          until the athlete confirms via the verification link;
+          `ConfirmEmailChangeAction` syncs both columns atomically.
+
+        **Throttle:** 5 requests / hour PER OWNER user (shared
+        `email-change-request` budget with `POST /me/email-change`).
+      operationId: athleteChangeEmail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeAthleteEmailRequest'
+      responses:
+        '200':
+          description: |
+            The action ran. The `mode` discriminator tells the SPA
+            which side-effects landed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [mode]
+                    properties:
+                      mode:
+                        $ref: '#/components/schemas/EmailChangeMode'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/Throttled'
+
   /me/password:
     post:
       tags: [auth]
