@@ -70,6 +70,16 @@ Route::post('/athlete-invite/{token}/accept', [\App\Http\Controllers\Auth\Athlet
     ->where('token', '[A-Za-z0-9]{64}')
     ->middleware('throttle:5,1');
 
+// Email-change verification (#476) — public endpoint, the click in
+// the verification mail IS the auth. The 64-char token format is
+// constrained at the route layer so a malformed value 404s before
+// reaching the controller. The controller catches the action's
+// `EmailChangeTokenInvalidException` and renders 410 Gone with a
+// stable string body — same shape on unknown / consumed / expired
+// tokens (no signal leak between the three).
+Route::post('/email-change/{token}/verify', [\App\Http\Controllers\Account\EmailChangeController::class, 'verify'])
+    ->where('token', '[A-Za-z0-9]{64}');
+
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {
     // Currently authenticated user. Used by the SPA on bootstrap to hydrate
@@ -77,10 +87,26 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/auth/me', \App\Http\Controllers\Auth\MeController::class);
 
     // Self-edit on the authenticated user's profile (#463). Currently
-    // scoped to `name` only — the email-change flow lands separately
+    // scoped to `name` only — the email-change flow has its own
+    // dedicated POST /me/email-change endpoint immediately below
     // because it needs a pending-email-changes schema + signed-link
     // verification + banner UX.
     Route::patch('/me', [\App\Http\Controllers\User\ProfileController::class, 'update']);
+
+    // Email-change-with-verification (#476). The owner / athlete user
+    // requests an email change here; the live `users.email` is NOT
+    // mutated — only a `pending_email_changes` row is created and a
+    // verification mail goes to the new address (audit notification
+    // to the old address). The actual change applies on the public
+    // `POST /email-change/{token}/verify` click. DELETE drops an
+    // outstanding pending row so the user can revert without waiting
+    // out the 24h expiry.
+    //
+    // Throttle 5/hour PER USER — see `email-change-request` limiter
+    // in `AppServiceProvider::boot()`.
+    Route::post('/me/email-change', [\App\Http\Controllers\Account\EmailChangeController::class, 'requestChange'])
+        ->middleware('throttle:email-change-request');
+    Route::delete('/me/email-change', [\App\Http\Controllers\Account\EmailChangeController::class, 'cancel']);
 
     // In-app password change (#409). Throttled to 5 requests per minute
     // (Laravel's default IP-based key) — same shape as `/auth/login` and
@@ -160,6 +186,24 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/athletes/{athlete}/invite/resend', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'resend'])
             ->middleware('throttle:5,1');
         Route::delete('/athletes/{athlete}/invitations/{invitation}', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'destroy']);
+
+        // Athlete email change (#476). State-aware on the action side:
+        //
+        // - state A (no invitation, no `user_id`) → the action mutates
+        //   `athletes.email` directly; no mail.
+        // - state B (pending invitation, no `user_id`) → the action
+        //   revokes the live invitation, swaps `athletes.email`, sends
+        //   a fresh invite to the new address.
+        // - state C (`user_id` is set) → the action delegates to the
+        //   pending-then-verify flow used by `/me/email-change`.
+        //
+        // Throttle 5/hour PER OWNER user — same `email-change-request`
+        // limiter as `/me/email-change`. The pair shares a budget on
+        // purpose: an owner mass-changing emails on athletes should
+        // hit the same ceiling as the same owner spamming their own
+        // address change, since the mail-vendor cost class is the same.
+        Route::post('/athletes/{athlete}/email', [\App\Http\Controllers\Athlete\AthleteEmailController::class, 'update'])
+            ->middleware('throttle:email-change-request');
     });
 
     // Documents — read access stays open (browsing + downloading); writes are
