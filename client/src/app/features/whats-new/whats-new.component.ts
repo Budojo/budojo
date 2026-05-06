@@ -62,8 +62,18 @@ export class WhatsNewComponent {
       version: 'v1.18.0',
       date: '2026-05-05',
       headline:
-        'A small, focused release. The two "talk to us" pages — Send feedback and Contact support — were near-identical and people kept asking which one to use. We folded them into one channel, brought the screenshot-attachment feature over, and made the form auto-attach the version + browser info so you don\'t have to type "Chrome 120 on Android" into every report.',
+        'Two themes in one release. The two "talk to us" pages folded into a single support channel — fewer choices, screenshot attachment in the right place, app version + browser info attached automatically. And the first slice of the athlete-side login lands: an academy owner can now invite a roster athlete by email, the athlete clicks, sets a password, and shows up in Budojo as themselves. The full athlete dashboard pages (own attendance / payments / documents) come next milestone.',
       sections: [
+        {
+          heading: '🥋 Athlete login — first slice',
+          bullets: [
+            'Invite an athlete from the system. On any athlete in your roster who has an email on file, the API now accepts an "Invita al sistema" call that emails them a one-click link to set a password and land in Budojo as themselves. The link is valid 7 days; clicking it twice returns a friendly "already accepted, sign in instead" page. The owner-side button that wires this into the athlete detail UI is queued for the next release — for now the API + the athlete-side flow are live.',
+            'Athlete-side accept page. The link in the invite email opens at /athlete-invite/{token} — a focused, single-task page that shows the athlete\'s name + email pre-filled (read-only), asks for a password and the same privacy + ToS checkboxes as registration, and on submit auto-logs them into Budojo. If the link is expired / revoked / already accepted, a friendly error page suggests signing in or asking the academy for a new invite.',
+            'Welcome page. After accepting the invite the athlete lands on /athlete-portal/welcome — a simple "your account is ready, the rest of the athlete dashboard ships next milestone" placeholder. The full athlete-side pages (Profile / My academy / My attendance / My payments / My documents) are intentionally deferred so we can ship the schema + onboarding flow safely first.',
+            'Owner experience: unchanged. The dashboard, the sidebar, every existing screen — all identical. The new athlete users are kept in their own URL space and behind their own role gate, so an owner that doesn\'t use the invite feature notices nothing.',
+            "Public registration stays owner-only. Athletes can NEVER self-register through the public sign-up form — the only way into Budojo as an athlete is through an academy owner's invite. Hard rule, deliberately not negotiable in this release.",
+          ],
+        },
         {
           heading: '💬 One contact channel instead of two',
           bullets: [
@@ -77,7 +87,8 @@ export class WhatsNewComponent {
           heading: '🛠 Behind the scenes',
           bullets: [
             'The API endpoint /api/v1/feedback is gone. The single /api/v1/support endpoint now accepts the optional screenshot via multipart/form-data and reads the X-Budojo-Version header that the SPA stamps on every API call. Public OpenAPI spec updated accordingly.',
-            'Foundation work for athlete-side login. The internal users.role discriminator landed alongside an athlete_invitations table and the schema link between athletes and user accounts. Nothing user-visible yet — this is the schema that lets us start building the athlete-side login flow next milestone. The owner experience is unchanged.',
+            'New users.role enum (owner | athlete) + an athlete_invitations table. The discriminator gates every existing dashboard route — owners go to /dashboard, athletes go to /athlete-portal — so the two personas can\'t accidentally trip over each other\'s screens.',
+            'The invite token never leaves the database in plaintext. We store a SHA-256 hash; the raw URL-safe token only exists in the email body and the request URL. The accept endpoint hashes the URL-presented token and looks up by hash, so a database read leak does not yield live invitations.',
           ],
         },
       ],
