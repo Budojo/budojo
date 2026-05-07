@@ -33,7 +33,8 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     });
 
     it('renders the register form without horizontal overflow', () => {
-      cy.get('input[id="name"]').should('be.visible');
+      cy.get('input[id="first_name"]').should('be.visible');
+      cy.get('input[id="last_name"]').should('be.visible');
       cy.get('input[id="email"]').should('be.visible');
       cy.get('button[type="submit"]').should('be.visible');
 

@@ -11,7 +11,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 
 /**
- * Self-edit controller for the authenticated user's profile (#463).
+ * Self-edit controller for the authenticated user's profile (#463 + #479).
  * Lives under `/api/v1/me` and is auth:sanctum gated at the route level.
  */
 class ProfileController extends Controller
@@ -25,7 +25,19 @@ class ProfileController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $updated = $this->action->execute($user, $request->string('name')->toString());
+        // PATCH semantics: distinguish "key missing" (don't touch) from
+        // "key present but null/empty" (clear). Without this, a name-only
+        // PATCH from any non-SPA caller would silently wipe the handle.
+        // The SPA itself always sends all three, so the missing-key
+        // branch is the safety net for partial updates.
+        $handle = $request->has('handle') ? $this->normalizeHandle($request->input('handle')) : $user->handle;
+
+        $updated = $this->action->execute(
+            $user,
+            $request->string('first_name')->toString(),
+            $request->string('last_name')->toString(),
+            $handle,
+        );
 
         // Eager-load every relation the UserResource projects so the
         // PATCH-/me response carries the same envelope shape /auth/me
@@ -34,5 +46,19 @@ class ProfileController extends Controller
         $updated->load(['pendingDeletion', 'pendingEmailChange']);
 
         return new UserResource($updated);
+    }
+
+    /**
+     * Normalize the validated handle payload. Empty string + null both
+     * map to a clear (`null`); a real string is passed through verbatim
+     * (the action lowercases on save).
+     */
+    private function normalizeHandle(mixed $value): ?string
+    {
+        if (\is_string($value) && $value !== '') {
+            return $value;
+        }
+
+        return null;
     }
 }

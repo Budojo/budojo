@@ -21,7 +21,7 @@ it('redirects every Mailable recipient to MAIL_TEST_REDIRECT in non-production (
     ]);
 
     /** @var User $user */
-    $user = User::factory()->create(['email' => 'real-user@example.com', 'name' => 'Mario Rossi']);
+    $user = User::factory()->create(['email' => 'real-user@example.com', 'first_name' => 'Mario', 'last_name' => 'Rossi']);
 
     Mail::to($user->email)->send(new WelcomeMail($user));
 

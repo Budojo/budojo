@@ -19,7 +19,11 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            // Legal name split into structured fields (#479). Handle is
+            // NOT collected at registration — it's a post-signup
+            // self-service step on the profile page.
+            'first_name' => ['required', 'string', 'min:2', 'max:100'],
+            'last_name' => ['required', 'string', 'min:2', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             // Terms of Service acceptance gate (#420). Laravel's

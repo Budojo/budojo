@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Hash;
 
 it('registers a new user and returns a token', function (): void {
     $response = $this->postJson('/api/v1/auth/register', [
-        'name' => 'Mario Rossi',
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
@@ -15,7 +16,7 @@ it('registers a new user and returns a token', function (): void {
     ]);
 
     $response->assertCreated()->assertJsonStructure([
-        'data' => ['id', 'name', 'email'],
+        'data' => ['id', 'first_name', 'last_name', 'full_name', 'handle', 'email'],
         'token',
     ]);
 
@@ -41,7 +42,8 @@ it('records the terms-of-service acceptance timestamp on the user row (#420)', f
     $before = now()->startOfSecond();
 
     $this->postJson('/api/v1/auth/register', [
-        'name' => 'Mario Rossi',
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
@@ -60,7 +62,8 @@ it('records the terms-of-service acceptance timestamp on the user row (#420)', f
 
 it('fails registration when terms_accepted is missing (#420)', function (): void {
     $this->postJson('/api/v1/auth/register', [
-        'name' => 'Mario Rossi',
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
@@ -71,7 +74,8 @@ it('fails registration when terms_accepted is missing (#420)', function (): void
 
 it('fails registration when terms_accepted is false (#420)', function (): void {
     $this->postJson('/api/v1/auth/register', [
-        'name' => 'Mario Rossi',
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
@@ -85,7 +89,8 @@ it('fails registration when email is already taken', function (): void {
     User::factory()->create(['email' => 'mario@example.com']);
 
     $this->postJson('/api/v1/auth/register', [
-        'name' => 'Mario Rossi',
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
@@ -96,12 +101,13 @@ it('fails registration when email is already taken', function (): void {
 it('fails registration when required fields are missing', function (): void {
     $this->postJson('/api/v1/auth/register', [])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['name', 'email', 'password', 'terms_accepted']);
+        ->assertJsonValidationErrors(['first_name', 'last_name', 'email', 'password', 'terms_accepted']);
 });
 
 it('fails registration when password confirmation does not match', function (): void {
     $this->postJson('/api/v1/auth/register', [
-        'name' => 'Mario Rossi',
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'wrong',

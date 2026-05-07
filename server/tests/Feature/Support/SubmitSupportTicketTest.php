@@ -52,7 +52,7 @@ it('persists a support ticket row and queues the email', function (): void {
         expect($mail->category)->toBe(SupportTicketCategory::Account);
         expect($mail->body)->toContain('reset link');
         expect($mail->userEmail)->toBe($user->email);
-        expect($mail->userName)->toBe($user->name);
+        expect($mail->userName)->toBe($user->full_name);
         expect($mail->hasTo(SubmitSupportTicketAction::SUPPORT_EMAIL))->toBeTrue();
         expect($mail->hasReplyTo($user->email))->toBeTrue();
 

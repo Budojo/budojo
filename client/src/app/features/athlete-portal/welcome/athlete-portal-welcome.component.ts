@@ -33,7 +33,7 @@ export class AthletePortalWelcomeComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  readonly userName = computed(() => this.auth.user()?.name ?? '');
+  readonly userName = computed(() => this.auth.user()?.full_name ?? '');
 
   signOut(): void {
     this.auth.logout();

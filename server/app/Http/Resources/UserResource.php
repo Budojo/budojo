@@ -53,7 +53,14 @@ class UserResource extends JsonResource
 
         return [
             'id' => $user->id,
-            'name' => $user->name,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            // Derived convenience field for clients that genuinely
+            // want one string (audit lines, page titles, fallback
+            // greetings before the SPA splits the parts). Read-only
+            // here; mutation flows write `first_name` / `last_name`.
+            'full_name' => $user->full_name,
+            'handle' => $user->handle,
             'email' => $user->email,
             'role' => $user->role->value,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),

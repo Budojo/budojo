@@ -145,7 +145,7 @@ class SendAthleteInvitationAction
                 rawToken: $rawToken,
                 athleteName: trim($athlete->first_name . ' ' . $athlete->last_name),
                 academyName: $academyName,
-                ownerName: $sender->name,
+                ownerName: $sender->full_name,
                 expiresAt: $invitation->expires_at,
             ));
         } catch (\Throwable $e) {

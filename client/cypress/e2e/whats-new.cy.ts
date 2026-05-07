@@ -29,7 +29,10 @@ describe("What's new page (#254)", () => {
       body: {
         data: {
           id: 1,
-          name: 'Test User',
+          first_name: 'Test',
+          last_name: 'User',
+          full_name: 'Test User',
+          handle: null,
           email: 'test@example.com',
           email_verified_at: '2026-01-01T00:00:00Z',
           deletion_pending: null,
@@ -106,7 +109,10 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
         body: {
           data: {
             id: 1,
-            name: 'Test User',
+            first_name: 'Test',
+            last_name: 'User',
+            full_name: 'Test User',
+            handle: null,
             email: 'test@example.com',
             email_verified_at: '2026-01-01T00:00:00Z',
             deletion_pending: null,

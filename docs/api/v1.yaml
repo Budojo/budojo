@@ -2492,12 +2492,20 @@ components:
 
     RegisterRequest:
       type: object
-      required: [name, email, password, password_confirmation, terms_accepted]
+      required: [first_name, last_name, email, password, password_confirmation, terms_accepted]
       properties:
-        name:
+        first_name:
           type: string
-          maxLength: 255
-          example: Mario Rossi
+          minLength: 2
+          maxLength: 100
+          description: Given name (#479).
+          example: Mario
+        last_name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Family name (#479).
+          example: Rossi
         email:
           type: string
           format: email
@@ -2562,16 +2570,36 @@ components:
 
     UpdateProfileRequest:
       type: object
-      required: [name]
+      required: [first_name, last_name]
       properties:
-        name:
+        first_name:
           type: string
           minLength: 2
-          maxLength: 255
+          maxLength: 100
           description: |
-            The new display name. The global `TrimStrings` middleware
+            Given name (#479). The global `TrimStrings` middleware
             trims leading/trailing whitespace before validation, so
             `"   "` is rejected as empty.
+          example: Mario
+        last_name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Family name (#479).
+          example: Rossi
+        handle:
+          type: string
+          nullable: true
+          minLength: 3
+          maxLength: 30
+          pattern: "^[a-z][a-z0-9._]{2,29}$"
+          description: |
+            Instagram-style user-chosen handle (#479). Globally unique;
+            422 with `errors.handle: ["handle_taken"]` if another user
+            already has it. Format violations surface as
+            `errors.handle: ["handle_invalid_format"]`. Pass `null` to
+            clear an existing handle. Lowercased on save.
+          example: matteo
 
     ChangePasswordRequest:
       type: object
@@ -2654,13 +2682,53 @@ components:
 
     User:
       type: object
-      required: [id, name, email, email_verified_at, avatar_url, deletion_pending]
+      required: [id, first_name, last_name, full_name, handle, email, email_verified_at, avatar_url, deletion_pending]
       properties:
         id:
           type: integer
           format: int64
-        name:
+        first_name:
           type: string
+          description: |
+            Given name (#479). Required server-side (NOT NULL, default '').
+            May be empty for the few seconds between the migration column-add
+            and backfill steps; never lands from a validated request.
+          example: "Mario"
+        last_name:
+          type: string
+          description: |
+            Family name (#479). Required server-side. May legitimately be
+            empty for a single-token migrated row that hasn't been edited
+            yet (e.g. a pre-#479 account whose `name` was just `"Cher"`).
+          example: "Rossi"
+        full_name:
+          type: string
+          description: |
+            Server-derived `trim(first_name . ' ' . last_name)` (#479).
+            Read-only convenience for clients that want one string —
+            mailables (legal/audit body lines), audit logs, sidebar
+            greetings. Mutating this field has no server-side effect; the
+            two structured fields are the source of truth.
+          example: "Mario Rossi"
+        handle:
+          type: string
+          nullable: true
+          minLength: 3
+          maxLength: 30
+          pattern: "^[a-z][a-z0-9._]{2,29}$"
+          description: |
+            Instagram-style user-chosen identifier (#479). Globally unique,
+            lowercase, 3-30 chars, `[a-z0-9_.]`. Must start with a letter.
+            No consecutive dots. No leading/trailing dot. Lowercased on
+            save (the unique index is therefore effectively case-insensitive).
+            Null until the user opts in via the profile page; never
+            auto-generated. Substrate for future mention / public-profile /
+            fighter-card surfaces.
+
+            The regex above expresses the charset + length + start-char
+            rule; the "no consecutive dots" and "no trailing dot" checks
+            are programmatic (a regex that captures all three is brittle).
+          example: "matteo"
         email:
           type: string
           format: email

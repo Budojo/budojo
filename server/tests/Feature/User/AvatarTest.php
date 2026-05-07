@@ -20,7 +20,7 @@ it('uploads an avatar and returns a populated avatar_url', function (): void {
     $response = $this->postJson('/api/v1/me/avatar', ['avatar' => $file]);
 
     $response->assertOk()
-        ->assertJsonStructure(['data' => ['id', 'name', 'email', 'avatar_url']])
+        ->assertJsonStructure(['data' => ['id', 'first_name', 'last_name', 'full_name', 'handle', 'email', 'avatar_url']])
         ->assertJsonPath('data.id', $user->id);
 
     $payload = $response->json('data');

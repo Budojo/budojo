@@ -35,7 +35,8 @@ export class RegisterComponent {
 
   readonly form = this.fb.group(
     {
-      name: ['', [Validators.required, Validators.minLength(2)]],
+      first_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+      last_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
       password_confirmation: ['', Validators.required],
@@ -75,7 +76,8 @@ export class RegisterComponent {
 
     this.auth
       .register({
-        name: this.form.value.name!,
+        first_name: this.form.value.first_name!,
+        last_name: this.form.value.last_name!,
         email: this.form.value.email!,
         password: this.form.value.password!,
         password_confirmation: this.form.value.password_confirmation!,
@@ -95,8 +97,11 @@ export class RegisterComponent {
       });
   }
 
-  get name() {
-    return this.form.get('name')!;
+  get firstName() {
+    return this.form.get('first_name')!;
+  }
+  get lastName() {
+    return this.form.get('last_name')!;
   }
   get email() {
     return this.form.get('email')!;

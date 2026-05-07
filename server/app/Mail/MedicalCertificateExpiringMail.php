@@ -56,7 +56,7 @@ class MedicalCertificateExpiringMail extends Mailable implements ShouldQueue
         $owner = $this->owner();
 
         return new Envelope(
-            to: [new Address($owner->email, $owner->name)],
+            to: [new Address($owner->email, $owner->full_name)],
             subject: \sprintf(
                 'Medical certificates expiring soon — %s',
                 $this->academy->name,
@@ -97,7 +97,7 @@ class MedicalCertificateExpiringMail extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'mail.medical-certificate-expiring',
             with: [
-                'ownerName' => $this->owner()->name,
+                'ownerName' => $this->owner()->first_name,
                 'academyName' => $this->academy->name,
                 'rows' => $rows,
                 'clientUrl' => $this->resolvedClientUrl(),

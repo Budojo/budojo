@@ -122,9 +122,16 @@ class AcceptAthleteInvitationAction
                 // assignment). For the invite-accept flow, the token in
                 // the URL IS the email proof, so we set it directly via
                 // forceFill in a separate save.
+                //
+                // After #479 the User schema mirrors the athlete shape,
+                // so we copy `first_name` / `last_name` straight across
+                // instead of concatenating + re-splitting. Handle stays
+                // NULL — the invited athlete picks one post-signup from
+                // their profile page if they want it.
                 $user = new User();
                 $user->forceFill([
-                    'name' => trim($athlete->first_name . ' ' . $athlete->last_name),
+                    'first_name' => $athlete->first_name,
+                    'last_name' => $athlete->last_name,
                     'email' => $lockedInvitation->email,
                     'password' => $password,
                     'email_verified_at' => now(),

@@ -10,7 +10,10 @@ const ACADEMY = {
 
 const USER_NO_AVATAR = {
   id: 1,
-  name: 'Mario Rossi',
+  first_name: 'Mario',
+  last_name: 'Rossi',
+  full_name: 'Mario Rossi',
+  handle: null,
   email: 'mario@example.com',
   email_verified_at: '2026-01-01T00:00:00Z',
   avatar_url: null,

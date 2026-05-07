@@ -99,7 +99,10 @@ class SubmitSupportTicketAction
                 category: $category,
                 body: $body,
                 userEmail: $user->email,
-                userName: $user->name,
+                // Support tickets are routed to a human reviewer; the
+                // full legal name reads more naturally in an internal
+                // ops context than the first name alone.
+                userName: $user->full_name,
                 appVersion: $persistedVersion ?? 'unknown',
                 userAgent: $persistedUa ?? 'unknown',
                 imageBytes: $imageBytes,

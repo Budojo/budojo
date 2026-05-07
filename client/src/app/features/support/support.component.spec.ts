@@ -18,7 +18,10 @@ function setup(overrides: { submit?: SupportService['submit']; email?: string } 
         ? null
         : {
             id: 1,
-            name: 'Test User',
+            first_name: 'Test',
+            last_name: 'User',
+            full_name: 'Test User',
+            handle: null,
             email: overrides.email,
             email_verified_at: '2026-01-01T00:00:00Z',
             avatar_url: null,
