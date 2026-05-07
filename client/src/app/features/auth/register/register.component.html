@@ -20,6 +20,7 @@
           formControlName="first_name"
           [placeholder]="'auth.register.firstNamePlaceholder' | translate"
           autocomplete="given-name"
+          maxlength="100"
           [class.ng-invalid]="firstName.invalid && firstName.touched"
           [class.ng-dirty]="firstName.touched"
         />
@@ -29,6 +30,8 @@
               {{ 'auth.register.firstNameRequired' | translate }}
             } @else if (firstName.errors?.['minlength']) {
               {{ 'auth.register.firstNameMinlength' | translate }}
+            } @else if (firstName.errors?.['maxlength']) {
+              {{ 'auth.register.firstNameMaxlength' | translate }}
             }
           </small>
         }
@@ -43,6 +46,7 @@
           formControlName="last_name"
           [placeholder]="'auth.register.lastNamePlaceholder' | translate"
           autocomplete="family-name"
+          maxlength="100"
           [class.ng-invalid]="lastName.invalid && lastName.touched"
           [class.ng-dirty]="lastName.touched"
         />
@@ -52,6 +56,8 @@
               {{ 'auth.register.lastNameRequired' | translate }}
             } @else if (lastName.errors?.['minlength']) {
               {{ 'auth.register.lastNameMinlength' | translate }}
+            } @else if (lastName.errors?.['maxlength']) {
+              {{ 'auth.register.lastNameMaxlength' | translate }}
             }
           </small>
         }

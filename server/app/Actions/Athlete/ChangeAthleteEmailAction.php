@@ -98,7 +98,15 @@ class ChangeAthleteEmailAction
             // the failure path mutation-free; the post-commit re-issue
             // path is then guaranteed to succeed (modulo a microsecond
             // TOCTOU window the unique index would still backstop).
-            if (User::query()->where('email', $normalized)->exists()) {
+            // Case-insensitive existence check (mirrors the shape used
+            // by `RequestEmailChangeAction`): MySQL collations are
+            // typically `utf8mb4_*_ci` so a plain `where('email', X)`
+            // matches case-insensitively in production, but SQLite (the
+            // PEST in-memory DB) and PostgreSQL with a binary collation
+            // would skip a `Mario@Example.com` row when `$normalized`
+            // is `mario@example.com`. `LOWER(email) = ?` makes the
+            // check explicit and consistent across drivers.
+            if (User::query()->whereRaw('LOWER(email) = ?', [$normalized])->exists()) {
                 throw ValidationException::withMessages([
                     'email' => 'email_already_registered',
                 ]);

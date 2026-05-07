@@ -19,7 +19,7 @@ beforeEach(function (): void {
  * specs read like sentences and the field set we care about (name +
  * belt + status) is the only knob each test touches.
  */
-function seedSearchAthlete(Academy $academy, string $first, string $last): Athlete
+function seedPaletteSearchAthlete(Academy $academy, string $first, string $last): Athlete
 {
     return Athlete::factory()->create([
         'academy_id' => $academy->id,
@@ -41,8 +41,8 @@ it('returns 401 when the request is unauthenticated', function (): void {
 
 it('returns an empty array when the query is empty', function (): void {
     Sanctum::actingAs($this->user);
-    seedSearchAthlete($this->academy, 'Mario', 'Rossi');
-    seedSearchAthlete($this->academy, 'Luigi', 'Verdi');
+    seedPaletteSearchAthlete($this->academy, 'Mario', 'Rossi');
+    seedPaletteSearchAthlete($this->academy, 'Luigi', 'Verdi');
 
     // Empty / missing q means "do not load all athletes". Loading the full
     // roster on every keystroke would defeat the whole point of a quick-jump
@@ -62,9 +62,9 @@ it('returns an empty array when the query is empty', function (): void {
 
 it('matches athletes by partial first_name or last_name', function (): void {
     Sanctum::actingAs($this->user);
-    seedSearchAthlete($this->academy, 'Mario', 'Rossi');
-    seedSearchAthlete($this->academy, 'Luigi', 'Verdi');
-    seedSearchAthlete($this->academy, 'Anna', 'Rosaria');
+    seedPaletteSearchAthlete($this->academy, 'Mario', 'Rossi');
+    seedPaletteSearchAthlete($this->academy, 'Luigi', 'Verdi');
+    seedPaletteSearchAthlete($this->academy, 'Anna', 'Rosaria');
 
     // 'ros' should hit Rossi (last_name) AND Rosaria (last_name); not Verdi.
     $rows = collect($this->getJson('/api/v1/search?q=ros')
@@ -79,8 +79,8 @@ it('matches athletes by partial first_name or last_name', function (): void {
 
 it('supports token-AND search across first_name and last_name', function (): void {
     Sanctum::actingAs($this->user);
-    seedSearchAthlete($this->academy, 'Mario', 'Rossi');
-    seedSearchAthlete($this->academy, 'Marco', 'Rossini');
+    seedPaletteSearchAthlete($this->academy, 'Mario', 'Rossi');
+    seedPaletteSearchAthlete($this->academy, 'Marco', 'Rossini');
 
     // q='Mario Ros' splits into ['Mario','Ros']; each token must match one
     // of (first_name, last_name). 'Mario Rossi' qualifies; 'Marco Rossini'
@@ -96,14 +96,14 @@ it('supports token-AND search across first_name and last_name', function (): voi
 it('does not return athletes from other academies (academy-scoping)', function (): void {
     Sanctum::actingAs($this->user);
     // Athlete in MY academy.
-    seedSearchAthlete($this->academy, 'Mario', 'Rossi');
+    seedPaletteSearchAthlete($this->academy, 'Mario', 'Rossi');
 
     // Athlete with the SAME name on a DIFFERENT academy. The search must
     // never cross the academy boundary even though the LIKE match would
     // qualify globally — this is the central tenancy invariant.
     $otherUser = User::factory()->create();
     $otherAcademy = Academy::factory()->create(['user_id' => $otherUser->id]);
-    seedSearchAthlete($otherAcademy, 'Mario', 'Foreigner');
+    seedPaletteSearchAthlete($otherAcademy, 'Mario', 'Foreigner');
 
     $rows = collect($this->getJson('/api/v1/search?q=mario')
         ->json('data'))
@@ -122,7 +122,7 @@ it('caps results at 20 even if more match', function (): void {
     // memory (Miller's law) and the design assumes the typical user
     // narrows further by typing more characters.
     for ($i = 1; $i <= 25; $i++) {
-        seedSearchAthlete($this->academy, "Palette{$i}", "Tester{$i}");
+        seedPaletteSearchAthlete($this->academy, "Palette{$i}", "Tester{$i}");
     }
 
     $rows = $this->getJson('/api/v1/search?q=palette')->json('data');
@@ -132,7 +132,7 @@ it('caps results at 20 even if more match', function (): void {
 
 it('does not return soft-deleted athletes', function (): void {
     Sanctum::actingAs($this->user);
-    seedSearchAthlete($this->academy, 'Mario', 'Rossi');
+    seedPaletteSearchAthlete($this->academy, 'Mario', 'Rossi');
     Athlete::factory()->create([
         'academy_id' => $this->academy->id,
         'first_name' => 'Mario',
