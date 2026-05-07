@@ -15,6 +15,7 @@ import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import { PasswordStrengthMeterComponent } from '../../../shared/components/password-strength-meter/password-strength-meter.component';
 
 /**
  * `/auth/reset-password?token=…&email=…` (M5 PR-A). The `token` + `email`
@@ -45,6 +46,7 @@ import { AuthService } from '../../../core/services/auth.service';
     InputTextModule,
     MessageModule,
     PasswordModule,
+    PasswordStrengthMeterComponent,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,6 +62,13 @@ export class ResetPasswordComponent {
   readonly loading = signal(false);
   readonly success = signal(false);
   readonly tokenInvalid = signal(false);
+  /**
+   * Server-mapped error for the password field (#415). `breached` flips
+   * on a 422 with `errors.password: ['password_breached']`. Distinct
+   * from `tokenInvalid` so the user knows it's the password they need
+   * to change, not the link they need to re-request.
+   */
+  readonly passwordServerError = signal<'breached' | null>(null);
 
   private readonly token: string;
   private readonly email: string;
@@ -112,6 +121,7 @@ export class ResetPasswordComponent {
     }
 
     this.loading.set(true);
+    this.passwordServerError.set(null);
 
     this.auth
       .resetPassword({
@@ -135,9 +145,17 @@ export class ResetPasswordComponent {
             this.router.navigate(['/auth/login'], { queryParams: { email: this.email } });
           }, 1500);
         },
-        error: () => {
-          // Server collapses every reset-side failure to 422; we don't
-          // try to differentiate the cause here.
+        error: (err: { error?: { errors?: Record<string, string[]> } }) => {
+          // `password_breached` (#415) is the only failure mode we
+          // surface specifically — the user can fix it by picking a
+          // different password without re-requesting a link. Every
+          // other 422 collapses to "link invalid" per the existing
+          // failure-UX policy.
+          const passwordErrs = err?.error?.errors?.['password'] ?? [];
+          if (passwordErrs.includes('password_breached')) {
+            this.passwordServerError.set('breached');
+            return;
+          }
           this.tokenInvalid.set(true);
         },
       });
