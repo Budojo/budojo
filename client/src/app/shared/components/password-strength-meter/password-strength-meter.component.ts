@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { zxcvbn, zxcvbnOptions } from '@zxcvbn-ts/core';
 import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common';
@@ -47,7 +48,7 @@ type Score = 0 | 1 | 2 | 3 | 4;
 @Component({
   selector: 'app-password-strength-meter',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [NgClass, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './password-strength-meter.component.html',
   styleUrl: './password-strength-meter.component.scss',
@@ -66,8 +67,14 @@ export class PasswordStrengthMeterComponent {
    * re-run the analysis.
    */
   protected readonly score = computed<Score | null>(() => {
-    const value = (this.password() ?? '').trim();
-    if (value.length === 0) {
+    // Don't trim — leading/trailing whitespace is part of the
+    // password the user will actually submit, and the server hashes
+    // the raw value too. Trimming here would understate / overstate
+    // the entropy of a "  hunter2  " input. We still treat empty /
+    // null / whitespace-only as "nothing typed yet" for the
+    // affordance — that's a UX choice, not a measurement choice.
+    const value = this.password() ?? '';
+    if (value.length === 0 || value.trim().length === 0) {
       return null;
     }
     const result = zxcvbn(value);

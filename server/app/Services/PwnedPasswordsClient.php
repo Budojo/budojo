@@ -34,9 +34,11 @@ use Illuminate\Support\Facades\Cache;
  *   is non-blocking; the server-side rule only fires on submit, so
  *   3s is a humane upper bound before we soft-fail.
  *
- * Wired as a singleton via the framework container (auto-resolved
- * thanks to the `HttpClientFactory` constructor type-hint). No
- * binding registration needed.
+ * Bound as a singleton in `AppServiceProvider::register()` so the
+ * client instance is shared for the process lifetime. The cache
+ * itself (`Cache::*`) is already process-external, but the singleton
+ * also saves the `HttpClientFactory` wire-up on every password-
+ * validation hit.
  */
 class PwnedPasswordsClient
 {

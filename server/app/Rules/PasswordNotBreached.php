@@ -20,9 +20,13 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * returns false (clean OR API down), this rule passes.
  *
  * Constructor-injected via the framework container — call sites use
- * `app(PasswordNotBreached::class)` inside `rules()`. The same
- * instance is reused across the three entry points (Register,
- * Reset, Change) so the cache layer behind the client gets shared.
+ * `app(PasswordNotBreached::class)` inside `rules()`. The rule itself
+ * is resolved fresh per FormRequest (Laravel's validator infra
+ * expects each rule instance to be transient), but the underlying
+ * `PwnedPasswordsClient` IS bound as a singleton in
+ * `AppServiceProvider::register()`, so its in-memory state + the
+ * shared `Cache::*` layer ARE reused across all four entry points
+ * (Register, Reset, ChangePassword, AcceptAthleteInvitation).
  */
 class PasswordNotBreached implements ValidationRule
 {
