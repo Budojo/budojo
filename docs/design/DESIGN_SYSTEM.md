@@ -106,8 +106,8 @@ No bounce, no elastic. PWAs in standalone mode read bounce as "this app is broke
 | Token | Value | Use |
 |---|---|---|
 | `--budojo-icon-xs` | 12px | Eyebrow / inline metadata icons. Compact UI metadata. |
-| `--budojo-icon-sm` | 14px | Inline-button glyphs in form chrome — the canonical PrimeNG `<svg>` icon size (BaseIcon hosts at `width="14"`). |
-| `--budojo-icon-md` | 16px | Body / row-action icons (pencil, trash, social-link icons in academy / athlete list). Default for inline body icons. |
+| `--budojo-icon-sm` | 14px | Inline-button glyphs in form chrome (PrimeNG `<svg>` icons at `width="14"` per BaseIcon's host attrs). Compact list-cell social icons (athletes-list rows). |
+| `--budojo-icon-md` | 16px | Body / row-action icons (pencil, trash). Default for inline body icons. |
 | `--budojo-icon-lg` | 20px | Section-header icons, primary CTA button glyphs, status pills with a leading icon. |
 | `--budojo-icon-xl` | 24px | Page-hero / empty-state illustrations, big-number cards. |
 

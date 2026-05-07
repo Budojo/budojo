@@ -113,7 +113,12 @@
     }
 
     i.pi {
-      font-size: 0.875rem; // 14px — canon icon "sm" step (audit § 5)
+      // Canonical icon "sm" step (audit § 5, shipped via #498 design
+      // tokens). Was hardcoded to `0.875rem` when the social icons
+      // first landed because the tokens didn't exist yet on the same
+      // PR; consumed properly via the token now that #498 has
+      // shipped to develop.
+      font-size: var(--budojo-icon-sm);
       line-height: 1;
     }
   }
