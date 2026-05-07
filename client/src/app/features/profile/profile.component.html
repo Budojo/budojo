@@ -406,7 +406,26 @@
       } @else {
         <div class="profile-page__row">
           <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
-          <span class="profile-page__value" data-cy="profile-email">{{ u.email }}</span>
+          <span class="profile-page__value" data-cy="profile-email">
+            {{ u.email }}
+            @if (u.email_verified_at) {
+              <!-- Inline verified marker — replaces the dedicated
+                   "Verification" row that used to render a green pill
+                   even when the user hadn't asked. The verified state
+                   is the boring case (most accounts most of the time);
+                   collapsing it to a small green tick keeps the card
+                   quiet. The full Verification row stays for the
+                   pending case below, where it carries the "Resend
+                   verification email" CTA. -->
+              <i
+                class="pi pi-check-circle profile-page__email-verified-mark"
+                aria-hidden="true"
+                [pTooltip]="'emailVerification.verified' | translate"
+                tooltipPosition="top"
+                data-cy="profile-email-verified-mark"
+              ></i>
+            }
+          </span>
           <p-button
             type="button"
             icon="pi pi-pencil"
@@ -423,10 +442,19 @@
         </div>
       }
 
-      <div class="profile-page__row profile-page__row--status">
-        <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>
-        <app-email-verification-status />
-      </div>
+      @if (u.email_verified_at === null) {
+        <!-- Verification row only renders when the email is NOT
+             yet verified — at that point the row is doing real work
+             (label + Resend CTA + pending hint). Once verified, the
+             green tick inline on the email row above is sufficient,
+             and a dedicated row repeating "Email verified" for the
+             rest of the user's life is visual noise — user feedback
+             2026-05-07: "ma che gusti abbiamo?". -->
+        <div class="profile-page__row profile-page__row--status">
+          <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>
+          <app-email-verification-status />
+        </div>
+      }
     </p-card>
 
     <!--

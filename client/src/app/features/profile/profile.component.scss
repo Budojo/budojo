@@ -126,6 +126,18 @@
     color: var(--p-text-color);
   }
 
+  // Inline verified-mark on the email row (replaces the dedicated
+  // Verification row for the verified case — see template comment).
+  // Apple-style green tick; sized at 1em so it scales with the value
+  // text. `vertical-align: middle` keeps it visually anchored to the
+  // x-height of the surrounding email body text.
+  &__email-verified-mark {
+    margin-inline-start: 0.375rem;
+    color: var(--p-green-600, #16a34a);
+    font-size: 1em;
+    vertical-align: middle;
+  }
+
   &__row--status {
     align-items: flex-start;
 
