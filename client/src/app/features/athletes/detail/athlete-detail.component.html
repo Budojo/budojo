@@ -83,6 +83,16 @@
     -->
     <app-athlete-invitation-card [athlete]="a" />
 
+    <!--
+      Email-change card (#476). Sibling to the invitation card; the
+      action branches server-side on athlete state (no invitation /
+      pending invitation / linked user) and emits a `mode`
+      discriminator the card uses to pick the correct toast copy. On
+      a state-A direct edit or state-B invite swap the parent refetches
+      the athlete so the header email + invitation card stay in sync.
+    -->
+    <app-athlete-email-change-card [athlete]="a" (athleteChanged)="reloadAthlete()" />
+
     <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">
       <p-tablist>
         <p-tab value="documents" routerLink="documents" data-cy="athlete-tab-documents">

@@ -49,6 +49,18 @@ export const routes: Routes = [
             (m) => m.ResetPasswordComponent,
           ),
       },
+      // Email-change verification (#476). Public — the user clicking
+      // the link in the verification mail isn't necessarily on the
+      // device they were signed in on, and the dashboard guards would
+      // otherwise bounce them. The 64-char raw token in the path is
+      // the auth, which the server validates server-side.
+      {
+        path: 'verify-email-change/:token',
+        loadComponent: () =>
+          import('./features/auth/verify-email-change/verify-email-change.component').then(
+            (m) => m.VerifyEmailChangeComponent,
+          ),
+      },
     ],
   },
   {

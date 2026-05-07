@@ -1,0 +1,78 @@
+@if (athlete(); as a) {
+  <p-card styleClass="email-change-card" data-cy="athlete-email-change-card">
+    <p-confirmdialog />
+    @if (editing()) {
+      <form
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+        novalidate
+        class="email-change-card__row email-change-card__row--edit"
+        data-cy="athlete-email-edit-form"
+      >
+        <label for="athleteEmail" class="email-change-card__label">
+          {{ 'account.emailChange.athleteDetail.newEmailLabel' | translate }}
+        </label>
+        <input
+          id="athleteEmail"
+          type="email"
+          pInputText
+          formControlName="email"
+          [attr.aria-invalid]="fieldError !== null ? true : null"
+          [attr.aria-describedby]="fieldError !== null ? 'athleteEmailError' : null"
+          autocomplete="email"
+          maxlength="255"
+          [placeholder]="'account.emailChange.profile.newEmailPlaceholder' | translate"
+          class="email-change-card__input"
+          data-cy="athlete-email-input"
+        />
+        @if (fieldError; as err) {
+          <small id="athleteEmailError" class="field-error" [attr.data-cy]="err.dataCy">
+            {{ err.key | translate }}
+          </small>
+        }
+        <div class="email-change-card__actions">
+          <p-button
+            type="submit"
+            [label]="'account.emailChange.athleteDetail.save' | translate"
+            severity="secondary"
+            [outlined]="true"
+            size="small"
+            [loading]="submitting()"
+            [disabled]="submitting()"
+            data-cy="athlete-email-save"
+          />
+          <p-button
+            type="button"
+            [label]="'account.emailChange.athleteDetail.cancel' | translate"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [disabled]="submitting()"
+            (onClick)="cancelEdit()"
+            data-cy="athlete-email-cancel"
+          />
+        </div>
+      </form>
+    } @else {
+      <div class="email-change-card__row">
+        <span class="email-change-card__label">{{ 'profile.email' | translate }}</span>
+        <span class="email-change-card__value" data-cy="athlete-email">
+          {{ a.email ?? '—' }}
+        </span>
+        <p-button
+          type="button"
+          icon="pi pi-pencil"
+          severity="secondary"
+          [text]="true"
+          size="small"
+          [pTooltip]="'account.emailChange.athleteDetail.edit' | translate"
+          tooltipPosition="left"
+          [ariaLabel]="'account.emailChange.athleteDetail.edit' | translate"
+          (onClick)="startEdit()"
+          styleClass="email-change-card__edit-button"
+          data-cy="athlete-email-edit"
+        />
+      </div>
+    }
+  </p-card>
+}

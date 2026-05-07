@@ -84,6 +84,20 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Email-change-with-verification pending row (#476). At most one
+     * row exists at a time per user (DB UNIQUE on `user_id`). Presence
+     * ⇒ the user has requested an email change but hasn't clicked the
+     * verification link yet — `users.email` stays the OLD address until
+     * confirmation, the candidate lives on the pending row.
+     *
+     * @return HasOne<PendingEmailChange, $this>
+     */
+    public function pendingEmailChange(): HasOne
+    {
+        return $this->hasOne(PendingEmailChange::class);
+    }
+
+    /**
      * Public URL of the avatar — `null` when none is set (#411). Mirrors the
      * shape of `AcademyResource::logo_url` (resolves through `Storage::disk
      * ('public')->url(...)`) so the SPA contract stays uniform: the wire

@@ -1,0 +1,51 @@
+.verify-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 100dvh;
+  padding: 2rem 1rem;
+  text-align: center;
+
+  &__icon {
+    font-size: 3rem;
+
+    i {
+      font-size: inherit;
+    }
+
+    &--success {
+      color: var(--p-green-600, #16a34a);
+    }
+
+    &--error {
+      color: var(--p-red-500, #ef4444);
+    }
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__message {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 1rem;
+    max-width: 28rem;
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+  }
+
+  &__spinner {
+    width: 3rem;
+    height: 3rem;
+  }
+}

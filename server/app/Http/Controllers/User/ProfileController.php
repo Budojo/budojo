@@ -27,10 +27,11 @@ class ProfileController extends Controller
 
         $updated = $this->action->execute($user, $request->string('name')->toString());
 
-        // Eager-load the deletion-pending relation so UserResource
-        // emits the same envelope shape /me does — keeps the SPA's
-        // cached user signal consistent across read + write paths.
-        $updated->load('pendingDeletion');
+        // Eager-load every relation the UserResource projects so the
+        // PATCH-/me response carries the same envelope shape /auth/me
+        // does — keeps the SPA's cached user signal consistent across
+        // read + write paths.
+        $updated->load(['pendingDeletion', 'pendingEmailChange']);
 
         return new UserResource($updated);
     }
