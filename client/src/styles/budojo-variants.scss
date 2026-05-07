@@ -476,30 +476,38 @@
   }
 
   // Mask / unmask / clear icons — borderless flat right cap sharing
-  // the wrapper bg. PrimeNG 21's actual class names verified in
-  // `node_modules/primeng/fesm2022/primeng-password.mjs`
-  // (`PasswordClasses.maskIcon` / `unmaskIcon` / `clearIcon`). The
-  // earlier `.p-password-toggle-mask-icon` selector was a guess and
-  // matched nothing — the icon was unstyled, dropped out of the flex
-  // flow, and read as missing on the change-password section. Catch
-  // the three verified class names + a defensive `> i.pi` direct-
-  // child fallback for any future PrimeNG rename that ships a generic
-  // `<i>` instead.
+  // the wrapper bg. Two layers of verification (canon
+  // `feedback_verify_primeng_classnames_in_source`):
+  //
+  // 1. **Class names** — verified in
+  //    `node_modules/primeng/fesm2022/primeng-password.mjs` § `PasswordClasses`:
+  //    `maskIcon = "p-password-mask-icon"`, `unmaskIcon = "p-password-unmask-icon"`,
+  //    `clearIcon = "p-password-clear-icon"`. (PrimeNG also stamps the
+  //    legacy `p-password-toggle-mask-icon` alongside as a transitional
+  //    alias — covered for free by our targeted selectors.)
+  // 2. **Element shape** — PrimeNG 21 renders these as bare `<svg>`
+  //    elements (verified in `primeng-icons-baseicon.mjs` § `BaseIcon`
+  //    host attributes: `width="14" height="14" viewBox="0 0 14 14"`),
+  //    NOT `<i class="pi">`. The earlier rule (#491) used
+  //    `display: inline-flex; padding: 0 12px` — which on `<svg>`
+  //    creates a 38×14 CSS box around a 14×14 painted viewBox, and
+  //    different browsers clip the glyph or render it off-center
+  //    enough to read as "missing". Reported on v2.1.0 ("non sembrano
+  //    esserci gli occhi sulle password").
+  //
+  // The right shape for SVG icons in a flex composite: keep the
+  // default `.p-icon { display: inline-block }` from BaseIcon, set
+  // `width`/`height` explicitly to lock the rendered box equal to the
+  // viewBox, and use `margin` (not padding) for the cap whitespace.
   .p-password-mask-icon,
   .p-password-unmask-icon,
-  .p-password-clear-icon,
-  > i.pi {
-    display: inline-flex;
+  .p-password-clear-icon {
     flex: 0 0 auto;
     align-self: center;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
+    width: 14px;
+    height: 14px;
+    margin: 0 12px;
     color: var(--p-text-color-secondary);
-    padding: 0 12px;
     cursor: pointer;
     transition: color 160ms var(--budojo-motion-decelerate);
 
@@ -649,21 +657,29 @@
   align-items: stretch;
   width: 100%;
 
+  // Cap stretches to the wrapper's full height (which is the input's
+  // 48px min-height) instead of being a 40px box positioned via
+  // `top: 50% / translateY(-50%)`. The earlier shape centered the cap
+  // mathematically but the `pi` icon font has asymmetric intrinsic
+  // line-height, so the GLYPH inside the cap drifted 2-3px below
+  // optical center even with `align-items: center`. `place-items: center`
+  // on a grid cap + `line-height: 1` on the `<i>` strips the font's
+  // baseline contribution and produces a glyph that's optically centered
+  // regardless of icon-font quirks. Reported as the v2.1.0 follow-up
+  // on #488 ("lente decentrata sul Cmd-K").
   .p-inputicon {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    inset-block: 0;
+    display: inline-grid;
+    place-items: center;
     width: 40px;
-    height: 40px;
     color: var(--p-text-muted-color);
     pointer-events: none;
     z-index: 1;
 
     i {
       font-size: 1.0625rem; // --type-body — match the input
+      line-height: 1; // strip icon-font baseline drift
     }
   }
 
