@@ -30,9 +30,11 @@ use Illuminate\Support\Facades\Cache;
  *   `report()` the exception and treat the password as not-known-
  *   breached. Better to soft-allow than to outage our auth surface
  *   on a third-party hiccup.
- * - **Short connect timeout (3s).** The strength meter on the SPA
- *   is non-blocking; the server-side rule only fires on submit, so
- *   3s is a humane upper bound before we soft-fail.
+ * - **Short overall request timeout (3s).** Implemented via Laravel's
+ *   `->timeout(3)`, which bounds the total request — connect + TLS +
+ *   response read. The strength meter on the SPA is non-blocking; the
+ *   server-side rule only fires on submit, so 3s is a humane upper
+ *   bound before we soft-fail.
  *
  * Bound as a singleton in `AppServiceProvider::register()` so the
  * client instance is shared for the process lifetime. The cache
@@ -48,7 +50,7 @@ class PwnedPasswordsClient
     /** Per-prefix cache TTL — 24h matches the issue brief. */
     private const int CACHE_TTL_SECONDS = 86400;
 
-    /** HTTP connect+request timeout. Strict so a slow upstream soft-fails fast. */
+    /** Overall HTTP request timeout (connect + TLS + read). Strict so a slow upstream soft-fails fast. */
     private const int HTTP_TIMEOUT_SECONDS = 3;
 
     public function __construct(private readonly HttpClientFactory $http)

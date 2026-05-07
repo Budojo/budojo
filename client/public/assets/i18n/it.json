@@ -39,6 +39,7 @@
       "subProcessors": "Sub-processors"
     },
     "passwordMeter": {
+      "label": "Robustezza della password",
       "bucket": {
         "0": "Molto debole",
         "1": "Debole",

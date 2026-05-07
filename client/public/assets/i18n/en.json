@@ -39,6 +39,7 @@
       "subProcessors": "Sub-processors"
     },
     "passwordMeter": {
+      "label": "Password strength",
       "bucket": {
         "0": "Very weak",
         "1": "Weak",
