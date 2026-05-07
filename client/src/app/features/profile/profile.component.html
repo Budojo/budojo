@@ -162,9 +162,37 @@
           </div>
         </form>
       } @else {
-        <div class="profile-page__row">
-          <span class="profile-page__label">{{ 'profile.name' | translate }}</span>
-          <span class="profile-page__value" data-cy="profile-name">{{ u.full_name }}</span>
+        <!--
+          Display mode for Nome + Cognome (#479 follow-up). Two atomic
+          rows — one per field — share a single pencil affordance to
+          the right. The earlier shape rendered the full name under a
+          single "Nome" label which lied about the field on display.
+          Krug § self-evidence: the label tells you what value is on
+          the right.
+        -->
+        <div class="profile-page__row profile-page__row--name-display">
+          <div class="profile-page__name-stack">
+            <div class="profile-page__name-field">
+              <span class="profile-page__label">{{ 'profile.firstName' | translate }}</span>
+              <span class="profile-page__value" data-cy="profile-first-name">{{
+                u.first_name
+              }}</span>
+            </div>
+            <div class="profile-page__name-field">
+              <span class="profile-page__label">{{ 'profile.lastName' | translate }}</span>
+              <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
+            </div>
+          </div>
+          <!--
+            Legacy data-cy preserved so existing E2E specs keep matching
+            the full name. aria-hidden so screen readers don't announce
+            "Mario … Bonanno … Mario Bonanno" — the two atomic rows
+            above already carry the readable shape. The visually-
+            hidden styling keeps the node selectable for Cypress.
+          -->
+          <span class="profile-page__sr-only" data-cy="profile-name" aria-hidden="true">{{
+            u.full_name
+          }}</span>
           <p-button
             type="button"
             icon="pi pi-pencil"
@@ -199,8 +227,16 @@
           <label for="profileHandle" class="profile-page__label">
             {{ 'profile.handle' | translate }}
           </label>
-          <div class="profile-page__handle-input-wrap">
-            <span class="profile-page__handle-prefix" aria-hidden="true">&#64;</span>
+          <!--
+            Composite control (#479 follow-up). Mirrors the p-datepicker
+            override pattern (see budojo-theme.scss): the wrapper carries
+            the pill chrome, the addon + input are flat children. Reads
+            as a single Instagram-style field — Norman § signifier.
+            data-cy stays on the inner <input> so existing E2E selectors
+            continue to resolve.
+          -->
+          <p-inputgroup class="profile-page__handle-group">
+            <p-inputgroup-addon aria-hidden="true">&#64;</p-inputgroup-addon>
             <input
               id="profileHandle"
               type="text"
@@ -215,10 +251,9 @@
               autocorrect="off"
               spellcheck="false"
               maxlength="30"
-              class="profile-page__input profile-page__handle-input"
               data-cy="profile-handle-input"
             />
-          </div>
+          </p-inputgroup>
           @if (handleError; as err) {
             <small id="profileHandleError" class="field-error" [attr.data-cy]="err.dataCy">
               {{ err.key | translate }}
