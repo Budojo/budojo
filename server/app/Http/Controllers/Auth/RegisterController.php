@@ -19,7 +19,8 @@ class RegisterController extends Controller
     public function __invoke(RegisterRequest $request): JsonResponse
     {
         $user = $this->action->execute(
-            name: $request->string('name')->toString(),
+            firstName: $request->string('first_name')->toString(),
+            lastName: $request->string('last_name')->toString(),
             email: $request->string('email')->toString(),
             password: $request->string('password')->toString(),
             // The FormRequest's `accepted` rule has already confirmed

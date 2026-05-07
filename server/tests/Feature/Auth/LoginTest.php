@@ -25,7 +25,7 @@ it('logs in an existing user and returns a token', function (): void {
     ])
         ->assertOk()
         ->assertJsonStructure([
-            'data' => ['id', 'name', 'email'],
+            'data' => ['id', 'first_name', 'last_name', 'full_name', 'handle', 'email'],
             'token',
         ]);
 });
@@ -76,7 +76,7 @@ it('populates deletion_pending on the login response when the user is in the gra
 
     $response->assertJsonStructure([
         'data' => [
-            'id', 'name', 'email',
+            'id', 'first_name', 'last_name', 'full_name', 'handle', 'email',
             'deletion_pending' => ['requested_at', 'scheduled_for'],
         ],
         'token',
@@ -103,7 +103,7 @@ it('emits null deletion_pending on login when the user has no pending deletion',
     // the field altogether, the SPA's banner logic breaks but a `toBeNull`
     // assertion alone would happily pass (Copilot review on #256).
     $response->assertJsonStructure([
-        'data' => ['id', 'name', 'email', 'deletion_pending'],
+        'data' => ['id', 'first_name', 'last_name', 'full_name', 'handle', 'email', 'deletion_pending'],
         'token',
     ]);
 

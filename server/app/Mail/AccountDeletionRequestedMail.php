@@ -53,7 +53,7 @@ class AccountDeletionRequestedMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            to: [new Address($this->user->email, $this->user->name)],
+            to: [new Address($this->user->email, $this->user->full_name)],
             subject: 'Your Budojo account is scheduled for deletion',
         );
     }
@@ -63,7 +63,10 @@ class AccountDeletionRequestedMail extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'mail.account-deletion-requested',
             with: [
-                'name' => $this->user->name,
+                // Account-deletion is a legal/audit context — full
+                // legal name is the right shape for the body, not the
+                // first-name greeting we use elsewhere.
+                'name' => $this->user->full_name,
                 'scheduledFor' => $this->scheduledFor->format('F j, Y'),
                 'clientUrl' => $this->resolvedClientUrl(),
             ],

@@ -12,7 +12,8 @@ it('queues a verification email when a new user registers', function (): void {
     Notification::fake();
 
     $this->postJson('/api/v1/auth/register', [
-        'name' => 'Mario Rossi',
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
@@ -27,7 +28,8 @@ it('queues a verification email when a new user registers', function (): void {
 
 it('exposes email_verified_at on the registered user resource', function (): void {
     $response = $this->postJson('/api/v1/auth/register', [
-        'name' => 'Mario Rossi',
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
         'email' => 'mario@example.com',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',

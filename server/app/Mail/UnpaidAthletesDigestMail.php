@@ -59,7 +59,7 @@ class UnpaidAthletesDigestMail extends Mailable implements ShouldQueue
         $owner = $this->owner();
 
         return new Envelope(
-            to: [new Address($owner->email, $owner->name)],
+            to: [new Address($owner->email, $owner->full_name)],
             subject: \sprintf(
                 'Athletes still unpaid for %s — %s',
                 $this->monthLabel(),
@@ -87,7 +87,7 @@ class UnpaidAthletesDigestMail extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'mail.unpaid-athletes-digest',
             with: [
-                'ownerName' => $owner->name,
+                'ownerName' => $owner->first_name,
                 'academyName' => $this->academy->name,
                 'monthLabel' => $this->monthLabel(),
                 'rows' => $rows,

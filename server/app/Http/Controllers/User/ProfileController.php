@@ -11,7 +11,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 
 /**
- * Self-edit controller for the authenticated user's profile (#463).
+ * Self-edit controller for the authenticated user's profile (#463 + #479).
  * Lives under `/api/v1/me` and is auth:sanctum gated at the route level.
  */
 class ProfileController extends Controller
@@ -25,7 +25,15 @@ class ProfileController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $updated = $this->action->execute($user, $request->string('name')->toString());
+        $handleInput = $request->input('handle');
+        $handle = \is_string($handleInput) && $handleInput !== '' ? $handleInput : null;
+
+        $updated = $this->action->execute(
+            $user,
+            $request->string('first_name')->toString(),
+            $request->string('last_name')->toString(),
+            $handle,
+        );
 
         // Eager-load every relation the UserResource projects so the
         // PATCH-/me response carries the same envelope shape /auth/me

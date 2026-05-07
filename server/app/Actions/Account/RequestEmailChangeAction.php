@@ -130,7 +130,8 @@ class RequestEmailChangeAction
         try {
             Mail::to($normalized)->queue(new EmailChangeVerificationMail(
                 rawToken: $rawToken,
-                userName: $user->name,
+                // Greeting context — first name only ("Hi Mario,").
+                userName: $user->first_name,
                 expiresAt: $expiresAt,
             ));
         } catch (\Throwable $e) {
@@ -139,7 +140,9 @@ class RequestEmailChangeAction
 
         try {
             Mail::to($user->email)->queue(new EmailChangeNotificationMail(
-                userName: $user->name,
+                // Audit/notification context — first name still works
+                // here since the OLD-email body opens with "Hi X" too.
+                userName: $user->first_name,
                 newEmailPartial: self::partialMask($normalized),
             ));
         } catch (\Throwable $e) {

@@ -26,7 +26,13 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
+            // Handle is an opt-in feature in V1 — leave NULL by default
+            // so existing factory callers don't accidentally land on the
+            // UNIQUE index. Tests that need a handle override it
+            // explicitly via `->state(['handle' => 'matteo'])`.
+            'handle' => null,
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
