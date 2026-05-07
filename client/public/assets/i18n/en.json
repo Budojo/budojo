@@ -944,6 +944,10 @@
         "paid": "Paid",
         "unpaid": "Unpaid"
       },
+      "social": {
+        "facebookLabel": "Open Facebook profile",
+        "instagramLabel": "Open Instagram profile"
+      },
       "empty": {
         "title": "No athletes found.",
         "filteredHint": "Try clearing your filters or search."
