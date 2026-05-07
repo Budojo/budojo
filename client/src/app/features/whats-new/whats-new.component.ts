@@ -87,7 +87,7 @@ export class WhatsNewComponent {
           heading: '🐛 Input polish — Cmd-K and password fields',
           bullets: [
             "Cmd-K magnifier optically centered. The leading magnifying-glass on the Cmd-K palette and on the help-page search drifted a couple of pixels below center because of how the icon font's baseline interacts with our pill chrome. The cap is now a proper grid container with the glyph optically centered regardless of the icon font's quirks.",
-            'Eye toggles on Change-password are back, everywhere. The "show / hide" eye icons next to Current / New / Confirm passwords were silently missing on some browsers because of how PrimeNG 21\'s SVG icon component interacts with our pill-style overrides. Geometry is now bulletproof; eye is visible at the right edge of every password field.',
+            'Eye toggles on Change password are back, everywhere. The "show / hide" eye icons next to Current / New / Confirm passwords were silently missing on some browsers because of how PrimeNG 21\'s SVG icon component interacts with our pill-style overrides. Geometry is now bulletproof; eye is visible at the right edge of every password field.',
           ],
         },
         {
