@@ -115,6 +115,39 @@ it('PATCH /me rejects a first_name longer than 100 chars', function (): void {
         ->assertJsonValidationErrors(['first_name']);
 });
 
+it('PATCH /me rejects an empty last_name', function (): void {
+    $user = User::factory()->create(['first_name' => 'Mario', 'last_name' => 'Rossi']);
+
+    $this->actingAs($user)
+        ->patchJson('/api/v1/me', ['first_name' => 'Mario', 'last_name' => ''])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['last_name']);
+
+    $user->refresh();
+    expect($user->last_name)->toBe('Rossi');
+});
+
+it('PATCH /me rejects a last_name shorter than 2 chars', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->patchJson('/api/v1/me', ['first_name' => 'Mario', 'last_name' => 'X'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['last_name']);
+});
+
+it('PATCH /me rejects a last_name longer than 100 chars', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->patchJson('/api/v1/me', [
+            'first_name' => 'Mario',
+            'last_name' => str_repeat('A', 101),
+        ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['last_name']);
+});
+
 it('PATCH /me rejects an invalid handle (IG-style format violation)', function (): void {
     $user = User::factory()->create();
 

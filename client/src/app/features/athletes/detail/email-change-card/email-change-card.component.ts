@@ -281,7 +281,13 @@ export class EmailChangeCardComponent {
     const emailErrors = errors['email'];
     const code =
       Array.isArray(emailErrors) && typeof emailErrors[0] === 'string' ? emailErrors[0] : null;
-    if (code === 'email_taken') {
+    if (code === 'email_taken' || code === 'email_already_registered') {
+      // `email_taken` (#476 owner self-edit on the linked user side) and
+      // `email_already_registered` (state-B pre-check in
+      // ChangeAthleteEmailAction) are functionally the same shape from
+      // the user's POV — the candidate is a different existing account.
+      // Collapse to the same inline pillola so the message is specific
+      // instead of falling through to the generic "Invalid" branch.
       this.serverError.set('taken');
     } else if (code === 'email_unchanged') {
       this.serverError.set('unchanged');
