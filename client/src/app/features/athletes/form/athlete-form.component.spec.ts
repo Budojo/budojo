@@ -66,6 +66,12 @@ describe('AthleteFormComponent', () => {
       expect(cmp.form.controls.status.value).toBe('active');
     });
 
+    it('renders the email input in create mode (only place to set it before the athlete exists)', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('input#email')).not.toBeNull();
+    });
+
     it('marks the form as invalid when required fields are empty', () => {
       const fixture = TestBed.createComponent(AthleteFormComponent);
       fixture.detectChanges();
@@ -283,6 +289,29 @@ describe('AthleteFormComponent', () => {
       httpMock.verify();
     });
 
+    it('hides the email INPUT in edit mode — the dedicated email-change-card on the detail page is the canonical editor', () => {
+      // The form's `email` FormControl still exists (so the PUT
+      // payload integrity is preserved when the action submits), but
+      // the visible <input> is gated behind mode === 'create'. v2.1.0
+      // user report: "two emails which one do I edit" — the form's
+      // email field was the redundant third editor for `athletes.email`
+      // alongside the detail-page email-change-card (the verification
+      // flow lives there) and the form's own create-time entry. Closes
+      // the duplication on edit.
+      const athlete = makeAthlete({ id: 42 });
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+
+      fixture.detectChanges();
+      httpMock.expectOne('/api/v1/athletes/42').flush({ data: athlete });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('input#email')).toBeNull();
+      // Control still on the form so the PUT body shape doesn't shift.
+      expect(fixture.componentInstance.form.controls.email).toBeDefined();
+      httpMock.verify();
+    });
+
     it('PUTs payload to /api/v1/athletes/:id on submit', () => {
       const athlete = makeAthlete({ id: 42 });
       const fixture = TestBed.createComponent(AthleteFormComponent);
@@ -298,6 +327,13 @@ describe('AthleteFormComponent', () => {
       const putReq = httpMock.expectOne('/api/v1/athletes/42');
       expect(putReq.request.method).toBe('PUT');
       expect(putReq.request.body.belt).toBe('black');
+      // PR #496 follow-up — `email` is omitted from the wire on edit,
+      // not just hidden from the form. The dedicated email-change-card
+      // is the canonical editor; sending email here would leak the
+      // contract (Copilot review caught this). The form's `email`
+      // FormControl still exists internally so the rest of the payload
+      // serialization stays unaffected.
+      expect('email' in putReq.request.body).toBe(false);
       putReq.flush({ data: { ...athlete, belt: 'black' } });
 
       const router = TestBed.inject(Router);

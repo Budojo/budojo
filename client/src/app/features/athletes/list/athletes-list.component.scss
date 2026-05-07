@@ -69,8 +69,54 @@
   font-weight: 500;
   color: var(--p-surface-900);
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  // Primary line — name link + age badge inline. Replaces the old
+  // single-row layout when socials were absent; structure is now
+  // primary stack + optional socials row below.
+  &__primary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  // Socials row — pi-facebook / pi-instagram icons inline below the
+  // name. Conditional render in template (no empty placeholder for
+  // athletes without socials). Mirrors academy-detail's contactLinks
+  // pattern. Per audit § 5, icon size pinned to 14px (PrimeNG SVG
+  // icon canonical "sm" step) — pre-empts the eventual icon-scale
+  // tokens.
+  &__socials {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--p-text-muted-color);
+    text-decoration: none;
+    transition: color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover,
+    &:focus-visible {
+      color: var(--p-primary-color);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    i.pi {
+      font-size: 0.875rem; // 14px — canon icon "sm" step (audit § 5)
+      line-height: 1;
+    }
+  }
 
   // Name is the canonical "open this athlete's detail" affordance
   // (#281). Visually a link by intent (Norman § signifier — looks

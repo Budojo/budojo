@@ -19,7 +19,7 @@
       "Replace" based on whether `avatar_url` is set; remove only
       surfaces when there's something to remove (Norman § constraints).
     -->
-    <p-card styleClass="profile-page__card">
+    <section class="profile-page__card">
       <div class="avatar-card" data-cy="profile-avatar-card">
         <div class="avatar-card__preview" data-cy="profile-avatar-preview">
           <app-user-avatar
@@ -70,10 +70,10 @@
           data-cy="profile-avatar-input"
         />
       </div>
-    </p-card>
+    </section>
     <p-confirmpopup />
 
-    <p-card styleClass="profile-page__card">
+    <section class="profile-page__card">
       <!--
         Inline name edit (#463). Display mode shows the current name + a
         small pencil affordance (Norman § signifier — the icon+tooltip
@@ -163,36 +163,18 @@
         </form>
       } @else {
         <!--
-          Display mode for Nome + Cognome (#479 follow-up). Two atomic
-          rows — one per field — share a single pencil affordance to
-          the right. The earlier shape rendered the full name under a
-          single "Nome" label which lied about the field on display.
-          Krug § self-evidence: the label tells you what value is on
-          the right.
+          Display mode for Nome + Cognome — two separate rows so they
+          align 1:1 with the rest of the card chrome (Handle, Email).
+          Both pencils open the SAME `nameForm` because first/last are
+          conceptually one identity edit (#463 + #479 keep the unified
+          edit ergonomics); the visual split is only for read-mode
+          uniformity. User feedback 2026-05-07 to converge on academy's
+          row rhythm: "ma non possiamo uniformare con questa grafica
+          che è bella?".
         -->
-        <div class="profile-page__row profile-page__row--name-display">
-          <div class="profile-page__name-stack">
-            <div class="profile-page__name-field">
-              <span class="profile-page__label">{{ 'profile.firstName' | translate }}</span>
-              <span class="profile-page__value" data-cy="profile-first-name">{{
-                u.first_name
-              }}</span>
-            </div>
-            <div class="profile-page__name-field">
-              <span class="profile-page__label">{{ 'profile.lastName' | translate }}</span>
-              <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
-            </div>
-          </div>
-          <!--
-            Legacy data-cy preserved so existing E2E specs keep matching
-            the full name. aria-hidden so screen readers don't announce
-            "Mario … Bonanno … Mario Bonanno" — the two atomic rows
-            above already carry the readable shape. The visually-
-            hidden styling keeps the node selectable for Cypress.
-          -->
-          <span class="profile-page__sr-only" data-cy="profile-name" aria-hidden="true">{{
-            u.full_name
-          }}</span>
+        <div class="profile-page__row">
+          <span class="profile-page__label">{{ 'profile.firstName' | translate }}</span>
+          <span class="profile-page__value" data-cy="profile-first-name">{{ u.first_name }}</span>
           <p-button
             type="button"
             icon="pi pi-pencil"
@@ -204,9 +186,35 @@
             [ariaLabel]="'profile.editName.edit' | translate"
             (onClick)="startEditName()"
             styleClass="profile-page__row-edit-button"
-            data-cy="profile-name-edit"
+            data-cy="profile-first-name-edit"
           />
         </div>
+        <div class="profile-page__row">
+          <span class="profile-page__label">{{ 'profile.lastName' | translate }}</span>
+          <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
+          <p-button
+            type="button"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [pTooltip]="'profile.editName.edit' | translate"
+            tooltipPosition="left"
+            [ariaLabel]="'profile.editName.edit' | translate"
+            (onClick)="startEditName()"
+            styleClass="profile-page__row-edit-button"
+            data-cy="profile-last-name-edit"
+          />
+        </div>
+        <!--
+          Legacy data-cy preserved so existing E2E specs keep matching
+          the full name. aria-hidden so screen readers don't announce
+          "Mario … Bonanno … Mario Bonanno" — the two visible rows
+          above already carry the readable shape.
+        -->
+        <span class="profile-page__sr-only" data-cy="profile-name" aria-hidden="true">{{
+          u.full_name
+        }}</span>
       }
 
       <!--
@@ -406,7 +414,26 @@
       } @else {
         <div class="profile-page__row">
           <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
-          <span class="profile-page__value" data-cy="profile-email">{{ u.email }}</span>
+          <span class="profile-page__value" data-cy="profile-email">
+            {{ u.email }}
+            @if (u.email_verified_at) {
+              <!-- Inline verified marker — replaces the dedicated
+                   "Verification" row that used to render a green pill
+                   even when the user hadn't asked. The verified state
+                   is the boring case (most accounts most of the time);
+                   collapsing it to a small green tick keeps the card
+                   quiet. The full Verification row stays for the
+                   pending case below, where it carries the "Resend
+                   verification email" CTA. -->
+              <i
+                class="pi pi-check-circle profile-page__email-verified-mark"
+                aria-hidden="true"
+                [pTooltip]="'emailVerification.verified' | translate"
+                tooltipPosition="top"
+                data-cy="profile-email-verified-mark"
+              ></i>
+            }
+          </span>
           <p-button
             type="button"
             icon="pi pi-pencil"
@@ -423,11 +450,20 @@
         </div>
       }
 
-      <div class="profile-page__row profile-page__row--status">
-        <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>
-        <app-email-verification-status />
-      </div>
-    </p-card>
+      @if (u.email_verified_at === null) {
+        <!-- Verification row only renders when the email is NOT
+             yet verified — at that point the row is doing real work
+             (label + Resend CTA + pending hint). Once verified, the
+             green tick inline on the email row above is sufficient,
+             and a dedicated row repeating "Email verified" for the
+             rest of the user's life is visual noise — user feedback
+             2026-05-07: "ma che gusti abbiamo?". -->
+        <div class="profile-page__row profile-page__row--status">
+          <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>
+          <app-email-verification-status />
+        </div>
+      }
+    </section>
 
     <!--
       Change-password card (#409). Inline form on the profile page so a
@@ -440,7 +476,7 @@
       while a success toast confirms the operation since the form is
       reset on success and would otherwise look like nothing happened.
     -->
-    <p-card styleClass="profile-page__card">
+    <section class="profile-page__card">
       <section class="profile-page__change-password" data-cy="profile-change-password">
         <span class="profile-page__label">{{ 'profile.changePassword.title' | translate }}</span>
         <p class="profile-page__change-password-hint">
@@ -567,7 +603,7 @@
           />
         </form>
       </section>
-    </p-card>
+    </section>
 
     <!--
       GDPR data portability (#222). Single tertiary action — a ZIP that
@@ -581,7 +617,7 @@
       a settings utility, not the primary action of the page) and broke
       scan order — Krug § "self-evident UI" + canon § Card anatomy.
     -->
-    <p-card styleClass="profile-page__card">
+    <section class="profile-page__card">
       <section class="profile-page__data-export" data-cy="profile-data-export">
         <span class="profile-page__label">{{ 'profile.yourData' | translate }}</span>
         <p class="profile-page__export-hint">{{ 'profile.exportHint' | translate }}</p>
@@ -598,7 +634,7 @@
           data-cy="profile-export-data"
         />
       </section>
-    </p-card>
+    </section>
 
     <!--
       No `<p-toast>` here on purpose — the dashboard shell mounts a single

@@ -41,7 +41,7 @@ describe('profile — inline name edit (#463 + #479)', () => {
     cy.wait('@me');
 
     cy.get('[data-cy="profile-name"]').should('contain.text', 'Mario Rossi');
-    cy.get('[data-cy="profile-name-edit"]').should('exist');
+    cy.get('[data-cy="profile-first-name-edit"]').should('exist');
     cy.get('[data-cy="profile-name-edit-form"]').should('not.exist');
   });
 
@@ -58,7 +58,7 @@ describe('profile — inline name edit (#463 + #479)', () => {
     cy.visitAuthenticated('/dashboard/profile');
     cy.wait('@me');
 
-    cy.get('[data-cy="profile-name-edit"]').click();
+    cy.get('[data-cy="profile-first-name-edit"]').click();
     cy.get('[data-cy="profile-first-name-input"]').should('have.value', 'Mario');
     cy.get('[data-cy="profile-last-name-input"]').should('have.value', 'Rossi').clear().type('R.');
     cy.get('[data-cy="profile-name-save"]').click();
@@ -81,7 +81,7 @@ describe('profile — inline name edit (#463 + #479)', () => {
     cy.visitAuthenticated('/dashboard/profile');
     cy.wait('@me');
 
-    cy.get('[data-cy="profile-name-edit"]').click();
+    cy.get('[data-cy="profile-first-name-edit"]').click();
     cy.get('[data-cy="profile-first-name-input"]').clear().type('Whatever');
     cy.get('[data-cy="profile-name-save"]').click();
 
@@ -100,7 +100,7 @@ describe('profile — inline name edit (#463 + #479)', () => {
     cy.visitAuthenticated('/dashboard/profile');
     cy.wait('@me');
 
-    cy.get('[data-cy="profile-name-edit"]').click();
+    cy.get('[data-cy="profile-first-name-edit"]').click();
     cy.get('[data-cy="profile-first-name-input"]').clear().type('Throwaway');
     cy.get('[data-cy="profile-name-cancel"]').click();
 

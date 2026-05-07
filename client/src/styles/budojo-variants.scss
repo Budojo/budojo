@@ -412,15 +412,19 @@
 }
 
 // p-password — same composite-wrapper pattern as p-datepicker (#318).
-// PrimeNG 21 renders (verified against the bundled .mjs in #491 — the
-// pre-21 `.p-password-toggle-mask-icon` selector is gone):
+// PrimeNG 21 renders (verified against the bundled .mjs in #491 + the
+// element-shape correction in v2.1.x ux-polish — the pre-21
+// `<i class="pi">` markup is gone, the icons are now SVGs):
 //
 //   <p-password class="p-password p-inputwrapper">
 //     <input class="p-password-input p-inputtext" />
-//     <i class="pi pi-eye p-password-mask-icon">…</i>     <!-- show -->
-//     <i class="pi pi-eye-slash p-password-unmask-icon">…</i> <!-- hide -->
-//     <i class="pi pi-times p-password-clear-icon">…</i>      <!-- clear -->
+//     <svg data-p-icon="eye"      class="p-icon p-password-mask-icon">…</svg>
+//     <svg data-p-icon="eyeslash" class="p-icon p-password-unmask-icon">…</svg>
+//     <svg data-p-icon="times"    class="p-icon p-password-clear-icon">…</svg>
 //   </p-password>
+//
+// Each SVG carries intrinsic `width="14" height="14" viewBox="0 0 14 14"`
+// host attrs from PrimeNG's BaseIcon — see `primeng-icons-baseicon.mjs`.
 //
 // Pre-2.0.x we extended `%budojo-field` to `.p-password input`, which
 // gave the inner input a pill but left the toggle-mask icon floating
@@ -430,6 +434,7 @@
 // pill (Norman § signifier — looks like one control, behaves like
 // one control).
 .p-password {
+  position: relative; // anchor for absolute-positioned mask/unmask/clear icons
   display: inline-flex;
   align-items: stretch;
   background: var(--p-form-field-filled-background);
@@ -451,6 +456,10 @@
   }
 
   // Inner input — strip its own pill, become the wrapper's text body.
+  // Right padding reserves the icon-zone via :has() rules below
+  // (would have come for free from PrimeNG's `:has()` rule, but ours
+  // is unlayered while PrimeNG's lives in @layer primeng — unlayered
+  // wins so we lose the framework adjustment unless we re-stamp it).
   input,
   .p-password-input {
     flex: 1 1 auto;
@@ -475,37 +484,54 @@
     }
   }
 
-  // Mask / unmask / clear icons — borderless flat right cap sharing
-  // the wrapper bg. PrimeNG 21's actual class names verified in
-  // `node_modules/primeng/fesm2022/primeng-password.mjs`
-  // (`PasswordClasses.maskIcon` / `unmaskIcon` / `clearIcon`). The
-  // earlier `.p-password-toggle-mask-icon` selector was a guess and
-  // matched nothing — the icon was unstyled, dropped out of the flex
-  // flow, and read as missing on the change-password section. Catch
-  // the three verified class names + a defensive `> i.pi` direct-
-  // child fallback for any future PrimeNG rename that ships a generic
-  // `<i>` instead.
-  .p-password-mask-icon,
-  .p-password-unmask-icon,
-  .p-password-clear-icon,
-  > i.pi {
-    display: inline-flex;
-    flex: 0 0 auto;
-    align-self: center;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    color: var(--p-text-color-secondary);
-    padding: 0 12px;
-    cursor: pointer;
-    transition: color 160ms var(--budojo-motion-decelerate);
+  // Mask / unmask / clear icons — DON'T STYLE THEM. PrimeNG's own
+  // CSS (verified in `@primeuix/styles/dist/password/index.mjs`)
+  // already positions them with the canonical `top: 50% + margin-top:
+  // calc(-icon.size/2)` centring trick, anchored via
+  // `inset-inline-end: form.field.padding.x`, sized by `dt('icon.size')`.
+  //
+  // Three iterative attempts to re-implement that here each broke
+  // a different way (#491 → b7f04da → 7f0b6f5 → d69b556): missing
+  // icons, bottom-aligned, comic-book gigantic, then "ancora
+  // piccolo". User pushback 2026-05-07: "ma non si può usare quello
+  // nativo senza modifiche???". Right answer: yes — drop the local
+  // overrides on the icon classes and let PrimeNG own the rendering.
+  //
+  // The wrapper-level pill chrome above (background, border, radius,
+  // min-height, hover/focus state) IS load-bearing for our design
+  // system; PrimeNG's icon rendering is NOT something we need to
+  // override.
 
-    &:hover {
-      color: var(--p-text-color);
-    }
+  // Reproduce PrimeNG's "input padding adapts to icon presence"
+  // rule (would be inherited automatically if our padding rule
+  // weren't unlayered — PrimeNG's @layer primeng wrapper means our
+  // `padding: 12px 14px` above wins, dropping the framework's icon-
+  // aware padding-inline-end adjustment). Re-stamp it here.
+  //
+  // Selector keys off the canonical PrimeNG 21 class names
+  // (`p-password-mask-icon` / `p-password-unmask-icon` /
+  // `p-password-clear-icon`) verified in
+  // `primeng-password.mjs § PasswordClasses` — NOT the legacy
+  // `p-password-toggle-mask-icon` that PrimeNG also stamps as a
+  // transitional alias. Using the canonical names keeps this rule
+  // aligned with the markup comment block above and makes the
+  // intent explicit (the eye icon is mutually exclusive: either
+  // `mask-icon` or `unmask-icon` renders, never both, so the
+  // `:has(...)` covers both states).
+  &:has(.p-password-mask-icon) input,
+  &:has(.p-password-mask-icon) .p-password-input,
+  &:has(.p-password-unmask-icon) input,
+  &:has(.p-password-unmask-icon) .p-password-input,
+  &:has(.p-password-clear-icon) input,
+  &:has(.p-password-clear-icon) .p-password-input {
+    padding-right: 36px;
+  }
+
+  &:has(.p-password-mask-icon):has(.p-password-clear-icon) input,
+  &:has(.p-password-mask-icon):has(.p-password-clear-icon) .p-password-input,
+  &:has(.p-password-unmask-icon):has(.p-password-clear-icon) input,
+  &:has(.p-password-unmask-icon):has(.p-password-clear-icon) .p-password-input {
+    padding-right: 64px;
   }
 
   // Hover / focus / invalid / disabled all lift to the WRAPPER so
@@ -649,13 +675,30 @@
   align-items: stretch;
   width: 100%;
 
+  // Centring the icon cap robustly. PrimeNG's default style for
+  // `.p-inputicon` (verified in `@primeuix/styles/dist/iconfield/index.mjs`)
+  // uses `position: absolute; top: 50%; margin-top: calc(-1 *
+  // (dt('icon.size') / 2))` — the "negative margin = half the icon
+  // height" centring trick from before `transform: translate` was
+  // a thing. The trick relies on the icon having a known fixed
+  // height equal to the `icon.size` token. Our previous override
+  // tried `inset-block: 0` to span the full wrapper height, but
+  // didn't reset PrimeNG's negative `margin-top`, so the cap
+  // remained shifted (caught by visual smoke 2026-05-07 — third
+  // attempt at this fix).
+  //
+  // Right shape: explicit reset of `margin-top: 0`, then use the
+  // canonical `top: 50% + translateY(-50%)` centring on a fixed-
+  // height cap. `display: inline-grid; place-items: center` keeps
+  // the inner `<i>` glyph optically centred regardless of icon-font
+  // baseline asymmetry.
   .p-inputicon {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    margin-top: 0; // reset PrimeNG's calc(-1 * icon.size/2)
+    display: inline-grid;
+    place-items: center;
     width: 40px;
     height: 40px;
     color: var(--p-text-muted-color);
@@ -664,6 +707,7 @@
 
     i {
       font-size: 1.0625rem; // --type-body — match the input
+      line-height: 1; // strip icon-font baseline drift
     }
   }
 

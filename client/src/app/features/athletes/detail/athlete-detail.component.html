@@ -95,6 +95,15 @@
 
     <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">
       <p-tablist>
+        <!-- Edit comes first in the tab strip (post-v2.1.0 reorder).
+             Editing is the most-frequent action when an owner opens
+             an athlete fresh; the read-mostly tabs (Documents,
+             Attendance, Payments) sit to the right. Norman § Fitts —
+             primary action gets the leftmost (most predictable) tab. -->
+        <p-tab value="edit" routerLink="edit" data-cy="athlete-tab-edit">
+          <i class="pi pi-pencil"></i>
+          <span>{{ 'athletes.detail.tabs.edit' | translate }}</span>
+        </p-tab>
         <p-tab value="documents" routerLink="documents" data-cy="athlete-tab-documents">
           <i class="pi pi-file"></i>
           <span>{{ 'athletes.detail.tabs.documents' | translate }}</span>
@@ -106,15 +115,6 @@
         <p-tab value="payments" routerLink="payments" data-cy="athlete-tab-payments">
           <i class="pi pi-euro"></i>
           <span>{{ 'athletes.detail.tabs.payments' | translate }}</span>
-        </p-tab>
-        <!-- Edit moved into the detail's tab strip (#281). The athlete
-             form lives in the same router-outlet as the other tabs;
-             the header above (name, belt, status) stays visible while
-             editing — Norman § "the editor belongs in the page about
-             the thing it edits". -->
-        <p-tab value="edit" routerLink="edit" data-cy="athlete-tab-edit">
-          <i class="pi pi-pencil"></i>
-          <span>{{ 'athletes.detail.tabs.edit' | translate }}</span>
         </p-tab>
       </p-tablist>
     </p-tabs>

@@ -51,11 +51,45 @@
     }
   }
 
+  // Card primitive — replaces `<p-card>` with the academy `.card`
+  // shape (audit § 2). PrimeNG's `<p-card>` adds a 1.25rem body
+  // padding wrapper that fights with the row's own padding rules
+  // and produces the height drift the user reported. The raw card
+  // surface owns ITS OWN chrome (background, hairline border,
+  // 12px radius) and lets each row provide its full padding.
+  // Same shape as `academy-detail.component.scss § .card`.
+  &__card {
+    background: var(--p-surface-0);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+    overflow: hidden;
+  }
+
+  // Row primitive — full academy parity now that the wrapper isn't
+  // the PrimeNG card body. Padding 1rem on ALL sides; mobile bumps
+  // padding-right to reserve space for the absolute-positioned pencil
+  // affordance (32px button + buffer). Hairline border-bottom between
+  // rows except the last. User feedback 2026-05-07 to fully unify
+  // the profile card chrome with academy's: "ma non possiamo
+  // uniformare con questa grafica che è bella?".
+  //
+  // **Label typography** matches academy: 0.8125rem / 500 / muted
+  // (audit § 1). Was one of three different label shapes in the SPA
+  // before this branch.
+  //
+  // **Pencil affordance** stays inline-edit per row (#463 / #476 —
+  // email change has three different states needing dedicated UX,
+  // can't collapse to a single page-level Edit button like academy).
+  // The pencil host is absolute-positioned via `:has()` further down
+  // so it stays on the row's top-right on mobile instead of wrapping
+  // to its own line below the value.
   &__row {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    padding: 1rem 0;
+    padding: 1rem;
+    padding-right: 3rem; // mobile: reserve for the absolute pencil
 
     &:not(:last-child) {
       border-bottom: 1px solid var(--p-content-border-color);
@@ -63,14 +97,20 @@
 
     @media (min-width: 768px) {
       flex-direction: row;
-      align-items: center;
+      // Baseline align matches academy's row — the label sits on the
+      // value's baseline rather than centred to the row's bounding
+      // box.
+      align-items: baseline;
       gap: 1.5rem;
+      padding-right: 1rem; // desktop: pencil is a flex sibling, no reservation
     }
   }
 
   &__label {
-    color: var(--p-text-color-secondary);
-    font-size: 0.875rem;
+    // Academy parity: 13px Footnote, weight 500, muted token.
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--p-text-muted-color);
 
     // The 8rem flex-basis reserves the left column at >=768px so the
     // labels and values align in a clean two-column grid. Without
@@ -88,6 +128,18 @@
     color: var(--p-text-color);
   }
 
+  // Inline verified-mark on the email row (replaces the dedicated
+  // Verification row for the verified case — see template comment).
+  // Apple-style green tick; sized at 1em so it scales with the value
+  // text. `vertical-align: middle` keeps it visually anchored to the
+  // x-height of the surrounding email body text.
+  &__email-verified-mark {
+    margin-inline-start: 0.375rem;
+    color: var(--p-green-600, #16a34a);
+    font-size: 1em;
+    vertical-align: middle;
+  }
+
   &__row--status {
     align-items: flex-start;
 
@@ -96,16 +148,24 @@
     }
   }
 
-  // Inline name edit (#463). The edit row collapses to a single
-  // column on mobile (label → input → buttons stacked) and lays the
-  // form-controls out side-by-side at >=768px under the same 8rem
-  // left-label column the read-only rows use, so the visual rhythm
-  // is preserved when the user toggles between view and edit.
+  // Inline edit rows. Mobile: column flex (label → input → buttons
+  // stacked). Desktop: flex-row with `align-items: center` so each
+  // label-input pair sits on its OWN baseline — labels center on the
+  // 48px input height instead of sticking to the top of the row.
+  // User feedback 2026-05-07 on desktop: "i label tipo first name
+  // ecc a sinistra degli input centrati verticalmente non sarebbe
+  // meglio?".
+  //
+  // Field errors, hints, and the actions row are pinned to
+  // `flex-basis: 100%` so they always break to a new line under the
+  // input. The input keeps `flex: 1 1 auto` to fill the rest of the
+  // row width after the 8rem label column.
   &__row--edit {
     align-items: stretch;
 
     @media (min-width: 768px) {
       flex-wrap: wrap;
+      align-items: center;
     }
 
     .profile-page__input {
@@ -126,62 +186,26 @@
         margin-left: 9.5rem;
       }
     }
-  }
 
-  // Display mode for the Nome + Cognome row (#479 follow-up). Two
-  // atomic fields stack vertically on mobile and inline on desktop;
-  // the pencil sits at the row's trailing edge so the affordance is
-  // unambiguous (Norman § signifier — one button, one action).
-  &__row--name-display {
-    @media (min-width: 768px) {
-      align-items: flex-start;
+    .field-hint {
+      @media (min-width: 768px) {
+        flex-basis: 100%;
+        margin-left: 9.5rem;
+      }
+    }
+
+    .profile-page__row-actions {
+      @media (min-width: 768px) {
+        flex-basis: 100%;
+      }
     }
   }
 
-  &__name-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem; // 8dp canon — paired-field rhythm
-    flex: 1 1 auto;
-    min-width: 0;
-
-    @media (min-width: 768px) {
-      flex-direction: row;
-      gap: 2rem;
-    }
-  }
-
-  &__name-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-    min-width: 0;
-
-    // Reset the row-level `flex: 0 0 8rem` desktop pin (Copilot caught
-    // this — without the reset the label inside this column flex
-    // container reads as 8rem of HEIGHT instead of width on tablet+,
-    // creating a huge gap above the value). Same shape as the
-    // change-password / data-export card resets below.
-    .profile-page__label {
-      flex: 0 0 auto;
-      font-size: 0.75rem; // --type-caption-1: 12px field label
-      line-height: 1rem;
-      color: var(--p-text-muted-color);
-    }
-
-    .profile-page__value {
-      font-size: 1.0625rem; // --type-headline: 17px primary
-      line-height: 1.375rem;
-      font-weight: 600;
-      letter-spacing: -0.003em;
-      color: var(--p-text-color);
-      // Defensive truncation — a long single-token last_name on a
-      // narrow viewport doesn't push the pencil off-screen.
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
+  // (Removed: `__row--name-display`, `__name-stack`, `__name-field`.
+  // The two-atom name display now uses two plain `__row` nodes — one
+  // per field — giving 1:1 visual parity with Handle / Email rows.
+  // The unified edit form is unchanged; the visual split is only for
+  // read-mode uniformity per user feedback 2026-05-07.)
 
   // Visually-hidden helper (no scrollbar, no width, screen-reader
   // and selector-only). Preserves the legacy `data-cy="profile-name"`
@@ -252,11 +276,27 @@
     }
   }
 
-  // The pencil affordance on the read-only name row sits at the right
-  // edge of the row at >=768px (Fitts — large reach target on the
-  // outer corner) and below the value on mobile.
-  :host ::ng-deep .profile-page__row-edit-button {
-    margin-left: auto;
+  // Pencil affordance — pinned to the row's top-right corner on
+  // mobile so it doesn't wrap to its own line below the value
+  // (v2.1.0 iPhone report). On desktop it sits at the row's
+  // trailing edge via `margin-left: auto`.
+  //
+  // Targets `<p-button>` host elements that are DIRECT children of
+  // `.profile-page__row`. The Save / Cancel buttons in edit forms
+  // are wrapped in `.profile-page__row-actions` so they're NOT
+  // direct children — this selector matches only the pencil. The
+  // earlier `:has(> .profile-page__row-edit-button)` shape didn't
+  // win the cascade reliably across all browsers (caught visually
+  // 2026-05-07 — pencil still wrapped to its own row on mobile).
+  :host ::ng-deep .profile-page__row > p-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+
+    @media (min-width: 768px) {
+      position: static;
+      margin-left: auto;
+    }
   }
 
   // Your-data export section (#284). Vertical stack — eyebrow label,
@@ -271,6 +311,14 @@
   // size="small" trims it from the marketing-CTA height it had to
   // a settings-utility height that fits the visual hierarchy.
   &__data-export {
+    // Internal padding for the stacked-content variant of the card
+    // (eyebrow + description + button). The row-based cards above
+    // get their padding from each `&__row` rule; this section's
+    // children are flat siblings, so the card surface itself owns
+    // the padding. Matches PrimeNG's previous `<p-card>` body
+    // padding (1.25rem) so removing the framework wrapper doesn't
+    // collapse the breathing room.
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -302,6 +350,12 @@
   // `field` / `field-error` pattern as the auth pages so the SPA stays
   // visually consistent across credential flows.
   &__change-password {
+    // Internal padding for the stacked-content variant of the card —
+    // same rationale as `&__data-export` above. The change-password
+    // section's children are flat siblings (eyebrow / hint / form /
+    // submit), not row primitives, so the card surface itself owns
+    // the padding.
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
     align-items: stretch;
