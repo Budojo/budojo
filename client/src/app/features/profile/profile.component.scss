@@ -296,6 +296,14 @@
   // size="small" trims it from the marketing-CTA height it had to
   // a settings-utility height that fits the visual hierarchy.
   &__data-export {
+    // Internal padding for the stacked-content variant of the card
+    // (eyebrow + description + button). The row-based cards above
+    // get their padding from each `&__row` rule; this section's
+    // children are flat siblings, so the card surface itself owns
+    // the padding. Matches PrimeNG's previous `<p-card>` body
+    // padding (1.25rem) so removing the framework wrapper doesn't
+    // collapse the breathing room.
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -327,6 +335,12 @@
   // `field` / `field-error` pattern as the auth pages so the SPA stays
   // visually consistent across credential flows.
   &__change-password {
+    // Internal padding for the stacked-content variant of the card —
+    // same rationale as `&__data-export` above. The change-password
+    // section's children are flat siblings (eyebrow / hint / form /
+    // submit), not row primitives, so the card surface itself owns
+    // the padding.
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
     align-items: stretch;
