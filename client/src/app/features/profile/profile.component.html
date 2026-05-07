@@ -207,7 +207,9 @@
               pInputText
               formControlName="handle"
               [attr.aria-invalid]="handleError !== null ? true : null"
-              [attr.aria-describedby]="handleError !== null ? 'profileHandleError' : 'profileHandleHelp'"
+              [attr.aria-describedby]="
+                handleError !== null ? 'profileHandleError' : 'profileHandleHelp'
+              "
               autocomplete="off"
               autocapitalize="off"
               autocorrect="off"
@@ -255,7 +257,10 @@
           @if (u.handle) {
             <span class="profile-page__value" data-cy="profile-handle">&#64;{{ u.handle }}</span>
           } @else {
-            <span class="profile-page__value profile-page__value--placeholder" data-cy="profile-handle-empty">
+            <span
+              class="profile-page__value profile-page__value--placeholder"
+              data-cy="profile-handle-empty"
+            >
               {{ 'profile.editHandle.notSet' | translate }}
             </span>
           }

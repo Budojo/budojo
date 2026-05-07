@@ -18,7 +18,7 @@ Every authenticated request in the system is made on behalf of a single user. Th
 | `last_name` | string | not null, default `''` | Family name (#479). May legitimately be empty for a single-token migrated row. |
 | `handle` | string(30) | nullable, **unique** | Instagram-style user-chosen handle (#479). Lowercase `[a-z0-9_.]`, 3-30 chars, must start with a letter, no consecutive dots, no leading/trailing dot. Lowercased on save (the unique index is therefore effectively case-insensitive). Null until the user opts in via the profile page. |
 | `email` | string | not null, **unique** | Login credential and contact email |
-| `email_verified_at` | timestamp | nullable | Reserved for future email verification flow; currently never set by the app |
+| `email_verified_at` | timestamp | nullable | Set when the user clicks the M5 verification link issued at `POST /auth/register`. Also stamped by `AcceptAthleteInvitationAction` (#445 — the invite token IS the email proof) and re-stamped by `ConfirmEmailChangeAction` (#476 — the verification click on the new address). Null until a flow above runs. |
 | `terms_accepted_at` | timestamp | nullable | Set on `POST /auth/register` when the user ticks the Terms-of-Service gate (#420). Null for pre-#420 accounts and any future system-only user creation path. |
 | `avatar_path` | string | nullable | Relative path on the `public` disk of the uploaded avatar (#411). Null until the first `POST /me/avatar`. The wire layer emits `avatar_url` (full URL) via `UserResource`, never the raw path. |
 | `password` | string | not null | Bcrypt hash (cost 12, configured via `BCRYPT_ROUNDS`) |

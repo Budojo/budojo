@@ -40,8 +40,15 @@ class UpdateProfileRequest extends FormRequest
             'first_name' => ['required', 'string', 'min:2', 'max:100'],
             'last_name' => ['required', 'string', 'min:2', 'max:100'],
             'handle' => [
+                // `bail` short-circuits on the FIRST failure so a non-
+                // string payload doesn't fall through to `HandleFormat`
+                // AND surface Laravel's default "must be a string"
+                // message alongside our `handle_invalid_format` code.
+                // The `string` rule is intentionally absent: HandleFormat
+                // already checks `is_string` and emits the canonical
+                // single failure code for every type / format violation.
+                'bail',
                 'nullable',
-                'string',
                 new HandleFormat(),
                 // Uniqueness is case-insensitive on the storage side
                 // (handle is lowercased on save), but the validator

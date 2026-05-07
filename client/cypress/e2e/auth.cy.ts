@@ -16,7 +16,14 @@ const ATHLETES_EMPTY = {
 const LOGIN_OK = {
   statusCode: 200,
   body: {
-    data: { id: 1, first_name: 'Test', last_name: 'User', full_name: 'Test User', handle: null, email: 'test@example.com' },
+    data: {
+      id: 1,
+      first_name: 'Test',
+      last_name: 'User',
+      full_name: 'Test User',
+      handle: null,
+      email: 'test@example.com',
+    },
     token: 'fake-token',
   },
 };

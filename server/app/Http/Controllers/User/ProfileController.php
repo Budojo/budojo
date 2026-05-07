@@ -25,8 +25,12 @@ class ProfileController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $handleInput = $request->input('handle');
-        $handle = \is_string($handleInput) && $handleInput !== '' ? $handleInput : null;
+        // PATCH semantics: distinguish "key missing" (don't touch) from
+        // "key present but null/empty" (clear). Without this, a name-only
+        // PATCH from any non-SPA caller would silently wipe the handle.
+        // The SPA itself always sends all three, so the missing-key
+        // branch is the safety net for partial updates.
+        $handle = $request->has('handle') ? $this->normalizeHandle($request->input('handle')) : $user->handle;
 
         $updated = $this->action->execute(
             $user,
@@ -42,5 +46,19 @@ class ProfileController extends Controller
         $updated->load(['pendingDeletion', 'pendingEmailChange']);
 
         return new UserResource($updated);
+    }
+
+    /**
+     * Normalize the validated handle payload. Empty string + null both
+     * map to a clear (`null`); a real string is passed through verbatim
+     * (the action lowercases on save).
+     */
+    private function normalizeHandle(mixed $value): ?string
+    {
+        if (\is_string($value) && $value !== '') {
+            return $value;
+        }
+
+        return null;
     }
 }

@@ -676,9 +676,12 @@ export class ProfileComponent {
 
   /**
    * Submit the handle change (#479). Empty input clears the handle
-   * (server-side `null`); a valid IG-style string sets it. The server
-   * lowercases on save, so the SPA's `(input)` handler also lowercases
-   * as the user types — keeps the preview honest.
+   * (server-side `null`); a valid IG-style string sets it. We
+   * lowercase on submit (defensive — the `HandleFormat` validator
+   * rejects mixed-case input client-side already, so a mixed-case
+   * value can only land here from a programmatic patchValue / a stale
+   * paste before the validator runs). The server lowercases again on
+   * save as a final backstop for non-HTTP callers.
    */
   submitEditHandle(): void {
     if (this.savingHandle()) return;
@@ -746,10 +749,16 @@ export class ProfileComponent {
         return { dataCy: 'profile-first-name-required', key: 'profile.editName.firstNameRequired' };
       }
       if (this.firstNameControl.errors?.['minlength']) {
-        return { dataCy: 'profile-first-name-minlength', key: 'profile.editName.firstNameMinLength' };
+        return {
+          dataCy: 'profile-first-name-minlength',
+          key: 'profile.editName.firstNameMinLength',
+        };
       }
       if (this.firstNameControl.errors?.['maxlength']) {
-        return { dataCy: 'profile-first-name-maxlength', key: 'profile.editName.firstNameMaxLength' };
+        return {
+          dataCy: 'profile-first-name-maxlength',
+          key: 'profile.editName.firstNameMaxLength',
+        };
       }
     }
     return null;

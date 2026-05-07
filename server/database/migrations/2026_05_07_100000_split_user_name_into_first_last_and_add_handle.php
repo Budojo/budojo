@@ -46,20 +46,21 @@ return new class extends Migration
             $table->unique('handle');
         });
 
-        // Backfill: split each existing `name` on the FIRST space.
+        // Backfill: split each existing `name` on the FIRST whitespace
+        // run. `preg_split` with `\s+` collapses tabs / non-breaking
+        // spaces / multi-space sequences into a single split point —
+        // explode(' ', ...) would leave `last_name` starting with a
+        // space for `"Mario   Rossi"` and would miss tab-separated
+        // input entirely. Both pieces are trimmed defensively.
         DB::table('users')->orderBy('id')->each(function (object $row): void {
             $raw = is_string($row->name) ? trim($row->name) : '';
             if ($raw === '') {
                 return;
             }
 
-            // `explode` with a limit of 2 yields at most two pieces:
-            // everything before the first space, then everything after
-            // (which itself may contain spaces). Single-token names
-            // produce a 1-element array.
-            $parts = explode(' ', $raw, 2);
-            $firstName = $parts[0];
-            $lastName = $parts[1] ?? '';
+            $parts = preg_split('/\s+/', $raw, 2) ?: [$raw];
+            $firstName = trim($parts[0]);
+            $lastName = isset($parts[1]) ? trim($parts[1]) : '';
 
             DB::table('users')->where('id', $row->id)->update([
                 'first_name' => $firstName,
