@@ -1,11 +1,11 @@
 # PNG exports — Budojo logos
 
-Rasterized from `budojo-logos/` SVG sources.
+Rasterized from the canonical SVG sources in `../glyph/`, `../wordmark/`, and `../app-icon/` (the kit's source of truth — see [`../README.md`](../README.md)). The active SPA mirrors at `client/public/{logo-glyph.svg,wordmark.svg,favicon.svg,favicon-light.svg}` are byte-identical to those kit files.
 
 ## Folder layout
 
 ```
-exports/png/
+docs/design/brand-kit/png/
 ├── glyph-{dark|light|accent}/        Square symbol only
 ├── wordmark-{dark|light|accent}/     "Budojo" + glyph lockup
 └── app-icon-{accent|dark|light|maskable}/  Tile icons (no padding)
@@ -45,4 +45,4 @@ Examples:
 
 ## Regenerating
 
-The export is reproducible from the SVG sources — re-run the rasterization script if you change the source vectors.
+The export is reproducible from the SVG sources via the Claude Design (claude.ai/design) handoff pipeline — same path the parent README's "Rasterized PNG exports" section describes. There is no in-repo rasterization script today; if the upstream geometry under `client/public/{logo-glyph.svg,wordmark.svg}` changes, regenerate the kit + the PNG tree externally and import both back into the repo in the same PR.

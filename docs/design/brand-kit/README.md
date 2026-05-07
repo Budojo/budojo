@@ -49,7 +49,7 @@ The geometry is locked. Updates must originate upstream in `client/public/logo-g
 
 ## Rasterized PNG exports
 
-The SVG kit above is the source of truth; `png/` ships pre-rasterized variants for the surfaces that can't consume SVG (slide decks, marketing tiles, app store screenshots, email signatures). 141 files across 11 categories with size + background variants — see [`png/README.md`](./png/README.md) for the full naming convention.
+The SVG kit above is the source of truth; `png/` ships pre-rasterized variants for the surfaces that can't consume SVG (slide decks, marketing tiles, app store screenshots, email signatures). 141 files across 10 category folders with size + background variants — see [`png/README.md`](./png/README.md) for the full naming convention.
 
 ```
 docs/design/brand-kit/png/
