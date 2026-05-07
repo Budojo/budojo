@@ -304,17 +304,25 @@
   // Pencil affordance — pinned to the row's top-right corner on
   // mobile (was wrapping below the value as a flex sibling, which
   // read as an orphan affordance — v2.1.0 iPhone report). On desktop
-  // it sits at the row's trailing edge via `margin-left: auto` like
-  // before, so the desktop layout stays unchanged.
+  // it sits at the row's trailing edge via `margin-left: auto`.
   //
-  // `top: 0.75rem` matches the row's `padding: 1rem 0` minus the
-  // pencil button's intrinsic vertical padding (~4px), keeping the
-  // pencil optically aligned with the label baseline on mobile.
-  :host ::ng-deep .profile-page__row-edit-button {
+  // The earlier shape targeted `.profile-page__row-edit-button`
+  // directly. PrimeNG's `<p-button>` `styleClass` input stamps the
+  // class on the INNER `<button>` element, not on the `<p-button>`
+  // host — so position: absolute applied to the inner button left
+  // the `<p-button>` host in normal flex flow, and on mobile the
+  // host wrapped to its own row anyway (caught visually 2026-05-07).
+  //
+  // Right shape: target the `<p-button>` host directly via
+  // `:has(.profile-page__row-edit-button)` so absolute positioning
+  // takes the WHOLE pencil out of flow. `top: 0.75rem` matches the
+  // row's `padding: 1rem 0` minus the button's intrinsic vertical
+  // padding (~4px), keeping the pencil optically aligned with the
+  // label baseline on mobile.
+  :host ::ng-deep p-button:has(> .profile-page__row-edit-button) {
     position: absolute;
     top: 0.75rem;
     right: 0;
-    margin-left: 0;
 
     @media (min-width: 768px) {
       position: static;
