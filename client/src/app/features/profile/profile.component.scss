@@ -128,6 +128,106 @@
     }
   }
 
+  // Display mode for the Nome + Cognome row (#479 follow-up). Two
+  // atomic fields stack vertically on mobile and inline on desktop;
+  // the pencil sits at the row's trailing edge so the affordance is
+  // unambiguous (Norman § signifier — one button, one action).
+  &__row--name-display {
+    @media (min-width: 768px) {
+      align-items: flex-start;
+    }
+  }
+
+  &__name-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem; // 8dp canon — paired-field rhythm
+    flex: 1 1 auto;
+    min-width: 0;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      gap: 2rem;
+    }
+  }
+
+  &__name-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+
+    .profile-page__label {
+      font-size: 0.75rem; // --type-caption-1: 12px field label
+      line-height: 1rem;
+      color: var(--p-text-muted-color);
+    }
+
+    .profile-page__value {
+      font-size: 1.0625rem; // --type-headline: 17px primary
+      line-height: 1.375rem;
+      font-weight: 600;
+      letter-spacing: -0.003em;
+      color: var(--p-text-color);
+      // Defensive truncation — a long single-token last_name on a
+      // narrow viewport doesn't push the pencil off-screen.
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Visually-hidden helper (no scrollbar, no width, screen-reader
+  // and selector-only). Preserves the legacy `data-cy="profile-name"`
+  // so existing E2E specs that match on the full name keep resolving
+  // without the page actually rendering a "Nome | Mario Rossi" lie
+  // in the sighted UI.
+  &__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  // Edit mode — Nome + Cognome on two columns on tablet+, stacked on
+  // mobile. 8dp gap mobile, 16dp tablet (canon spacing). The two
+  // labels + inputs are siblings of the form, so a CSS grid reads
+  // cleanly and avoids deeper DOM nesting.
+  &__row--edit-name {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: 1fr 1fr;
+      column-gap: 1rem;
+      row-gap: 0.5rem;
+
+      .profile-page__row-actions {
+        grid-column: 1 / -1;
+      }
+
+      .field-error {
+        margin-left: 0;
+      }
+    }
+  }
+
+  // Composite-control wrapper for the Instagram-style handle (#479
+  // follow-up). The pill chrome lives on `<p-inputgroup>` itself —
+  // see the sanctioned override in `budojo-variants.scss` (mirrors
+  // the p-datepicker fix from #318). The host element is the
+  // `<p-inputgroup>` itself; we just stretch it to fill the column.
+  &__handle-group {
+    display: flex;
+    width: 100%;
+  }
+
   &__row-actions {
     display: flex;
     gap: 0.5rem;

@@ -22,6 +22,8 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { TooltipModule } from 'primeng/tooltip';
@@ -55,6 +57,8 @@ const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
     CardModule,
     ConfirmPopup,
     EmailVerificationStatusComponent,
+    InputGroupModule,
+    InputGroupAddonModule,
     InputTextModule,
     PasswordModule,
     ReactiveFormsModule,
