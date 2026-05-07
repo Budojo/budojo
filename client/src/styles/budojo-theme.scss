@@ -138,6 +138,31 @@
   --budojo-motion-slow: 360ms;
   --budojo-motion-decelerate: cubic-bezier(0.22, 1, 0.36, 1);
 
+  // ───── Icon scale (audit § 5) ────────────────────────────────────
+  // Five canonical sizes. Existing call sites currently use a random
+  // mix of `font-size: 1.0625rem / 1.125rem / 1.25rem / 1.5rem /
+  // 1.75rem / 1.875rem` etc.; the audit catalogued the drift and
+  // proposed this 5-step scale as the canonical replacement. Tokens
+  // ship FIRST so per-component apply PRs that follow can reference
+  // them; this commit doesn't touch any call site (each migration
+  // ships in its own focused PR so reviewers can verify the visual
+  // impact site-by-site).
+  //
+  //   xs  →  eyebrow / inline metadata icons (e.g. small caret next to
+  //          a label). Compact UI metadata.
+  //   sm  →  inline-button glyphs in form chrome (the canonical
+  //          PrimeNG `<svg>` icon size — BaseIcon hosts at width=14).
+  //   md  →  body / row-action icons (pencil / trash on athlete rows,
+  //          social-link icons in academy / list).
+  //   lg  →  section-header icons, primary CTA button glyphs, status
+  //          pills with leading icon.
+  //   xl  →  page-hero / empty-state illustrations, big-number cards.
+  --budojo-icon-xs: 12px;
+  --budojo-icon-sm: 14px;
+  --budojo-icon-md: 16px;
+  --budojo-icon-lg: 20px;
+  --budojo-icon-xl: 24px;
+
   --budojo-safe-top: env(safe-area-inset-top, 0px);
   --budojo-safe-bottom: env(safe-area-inset-bottom, 0px);
 
