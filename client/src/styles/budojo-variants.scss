@@ -456,11 +456,10 @@
   }
 
   // Inner input — strip its own pill, become the wrapper's text body.
-  // Right padding reserves space for the absolute-positioned eye icon
-  // (48px hit cell + 4px optical buffer). When the call site also opts
-  // into [showClear], the clear icon sits to the LEFT of the eye and
-  // the input gets an extra 48px of right padding via the :has() rule
-  // below. Without this, typed text would render under the icons.
+  // Right padding reserves the icon-zone via :has() rules below
+  // (would have come for free from PrimeNG's `:has()` rule, but ours
+  // is unlayered while PrimeNG's lives in @layer primeng — unlayered
+  // wins so we lose the framework adjustment unless we re-stamp it).
   input,
   .p-password-input {
     flex: 1 1 auto;
@@ -469,7 +468,7 @@
     border: none;
     border-radius: 0;
     min-height: auto;
-    padding: 12px 52px 12px 14px;
+    padding: 12px 14px;
     font: inherit;
     color: inherit;
     letter-spacing: inherit;
@@ -485,86 +484,39 @@
     }
   }
 
-  // Mask / unmask / clear icons — borderless flat right cap sharing
-  // the wrapper bg. Two layers of verification (canon
-  // `feedback_verify_primeng_classnames_in_source`):
+  // Mask / unmask / clear icons — DON'T STYLE THEM. PrimeNG's own
+  // CSS (verified in `@primeuix/styles/dist/password/index.mjs`)
+  // already positions them with the canonical `top: 50% + margin-top:
+  // calc(-icon.size/2)` centring trick, anchored via
+  // `inset-inline-end: form.field.padding.x`, sized by `dt('icon.size')`.
   //
-  // 1. **Class names** — verified in
-  //    `node_modules/primeng/fesm2022/primeng-password.mjs` § `PasswordClasses`:
-  //    `maskIcon = "p-password-mask-icon"`, `unmaskIcon = "p-password-unmask-icon"`,
-  //    `clearIcon = "p-password-clear-icon"`. (PrimeNG also stamps the
-  //    legacy `p-password-toggle-mask-icon` alongside as a transitional
-  //    alias — covered for free by our targeted selectors.)
-  // 2. **Element shape** — PrimeNG 21 renders these as bare `<svg>`
-  //    elements (verified in `primeng-icons-baseicon.mjs` § `BaseIcon`
-  //    host attributes: `width="14" height="14" viewBox="0 0 14 14"`),
-  //    NOT `<i class="pi">`. The earlier rule (#491) used
-  //    `display: inline-flex; padding: 0 12px` — which on `<svg>`
-  //    creates a 38×14 CSS box around a 14×14 painted viewBox, and
-  //    different browsers clip the glyph or render it off-center
-  //    enough to read as "missing". Reported on v2.1.0 ("non sembrano
-  //    esserci gli occhi sulle password").
+  // Three iterative attempts to re-implement that here each broke
+  // a different way (#491 → b7f04da → 7f0b6f5 → d69b556): missing
+  // icons, bottom-aligned, comic-book gigantic, then "ancora
+  // piccolo". User pushback 2026-05-07: "ma non si può usare quello
+  // nativo senza modifiche???". Right answer: yes — drop the local
+  // overrides on the icon classes and let PrimeNG own the rendering.
   //
-  // Absolute-positioned 48×48 hit cells anchored to the wrapper's
-  // right edge. The first padding-based shape (Copilot follow-up on
-  // PR #496) had the right CSS box geometry on paper (38×48 with the
-  // SVG centred via content-box padding) but the user reported the
-  // glyph rendered visually at the BOTTOM-RIGHT of the field, not
-  // centred. The flex `align-self: center` was being out-prioritised
-  // by something in the cascade we couldn't pin down without browser
-  // dev-tools inspection. Switching to absolute positioning bypasses
-  // the entire flex cross-axis negotiation and gives deterministic
-  // centring regardless of the wrapper's actual rendered height —
-  // same trick that fixed the Cmd-K cap. The 48×48 cell satisfies
-  // Fitts; `place-items: center` on the grid centres the SVG's
-  // intrinsic 14×14 viewBox inside the cell.
-  //
-  // Position semantics:
-  //
-  // - mask-icon / unmask-icon are mutually exclusive (one renders at
-  //   a time depending on `unmasked` state) — both pin to right: 0.
-  // - clear-icon renders ALONGSIDE the eye when [showClear] is
-  //   active — pins to right: 48px so it sits left of the eye.
-  //   The input's right-padding bumps to 100px via :has() below
-  //   when both icons are present.
-  .p-password-mask-icon,
-  .p-password-unmask-icon,
-  .p-password-clear-icon {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    display: inline-grid;
-    place-items: center;
-    width: 48px;
-    height: 48px;
-    color: var(--p-text-color-secondary);
-    cursor: pointer;
-    transition: color 160ms var(--budojo-motion-decelerate);
-    z-index: 1;
+  // The wrapper-level pill chrome above (background, border, radius,
+  // min-height, hover/focus state) IS load-bearing for our design
+  // system; PrimeNG's icon rendering is NOT something we need to
+  // override.
 
-    &:hover {
-      color: var(--p-text-color);
-    }
+  // Reproduce PrimeNG's "input padding adapts to icon presence"
+  // rule (would be inherited automatically if our padding rule
+  // weren't unlayered — PrimeNG's @layer primeng wrapper means our
+  // `padding: 12px 14px` above wins, dropping the framework's icon-
+  // aware padding-inline-end adjustment). Re-stamp it here.
+  &:has(.p-password-toggle-mask-icon) input,
+  &:has(.p-password-toggle-mask-icon) .p-password-input,
+  &:has(.p-password-clear-icon) input,
+  &:has(.p-password-clear-icon) .p-password-input {
+    padding-right: 36px;
   }
 
-  .p-password-mask-icon,
-  .p-password-unmask-icon {
-    right: 0;
-  }
-
-  .p-password-clear-icon {
-    right: 48px;
-  }
-
-  // When BOTH a clear icon AND an eye icon are present, the input
-  // needs another 48px of right-padding so typed text doesn't slide
-  // under the clear icon's hit cell.
-  &:has(.p-password-clear-icon):has(.p-password-mask-icon),
-  &:has(.p-password-clear-icon):has(.p-password-unmask-icon) {
-    input,
-    .p-password-input {
-      padding-right: 100px;
-    }
+  &:has(.p-password-toggle-mask-icon):has(.p-password-clear-icon) input,
+  &:has(.p-password-toggle-mask-icon):has(.p-password-clear-icon) .p-password-input {
+    padding-right: 64px;
   }
 
   // Hover / focus / invalid / disabled all lift to the WRAPPER so
@@ -708,22 +660,32 @@
   align-items: stretch;
   width: 100%;
 
-  // Cap stretches to the wrapper's full height (which is the input's
-  // 48px min-height) instead of being a 40px box positioned via
-  // `top: 50% / translateY(-50%)`. The earlier shape centered the cap
-  // mathematically but the `pi` icon font has asymmetric intrinsic
-  // line-height, so the GLYPH inside the cap drifted 2-3px below
-  // optical center even with `align-items: center`. `place-items: center`
-  // on a grid cap + `line-height: 1` on the `<i>` strips the font's
-  // baseline contribution and produces a glyph that's optically centered
-  // regardless of icon-font quirks. Reported as the v2.1.0 follow-up
-  // on #488 ("lente decentrata sul Cmd-K").
+  // Centring the icon cap robustly. PrimeNG's default style for
+  // `.p-inputicon` (verified in `@primeuix/styles/dist/iconfield/index.mjs`)
+  // uses `position: absolute; top: 50%; margin-top: calc(-1 *
+  // (dt('icon.size') / 2))` — the "negative margin = half the icon
+  // height" centring trick from before `transform: translate` was
+  // a thing. The trick relies on the icon having a known fixed
+  // height equal to the `icon.size` token. Our previous override
+  // tried `inset-block: 0` to span the full wrapper height, but
+  // didn't reset PrimeNG's negative `margin-top`, so the cap
+  // remained shifted (caught by visual smoke 2026-05-07 — third
+  // attempt at this fix).
+  //
+  // Right shape: explicit reset of `margin-top: 0`, then use the
+  // canonical `top: 50% + translateY(-50%)` centring on a fixed-
+  // height cap. `display: inline-grid; place-items: center` keeps
+  // the inner `<i>` glyph optically centred regardless of icon-font
+  // baseline asymmetry.
   .p-inputicon {
     position: absolute;
-    inset-block: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-top: 0; // reset PrimeNG's calc(-1 * icon.size/2)
     display: inline-grid;
     place-items: center;
     width: 40px;
+    height: 40px;
     color: var(--p-text-muted-color);
     pointer-events: none;
     z-index: 1;
