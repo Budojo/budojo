@@ -183,8 +183,19 @@
               <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
             </div>
           </div>
-          <!-- Legacy data-cy preserved so existing E2E specs keep working. -->
-          <span class="profile-page__sr-only" data-cy="profile-name">{{ u.full_name }}</span>
+          <!--
+            Legacy data-cy preserved so existing E2E specs keep matching
+            the full name. aria-hidden so screen readers don't announce
+            "Mario … Bonanno … Mario Bonanno" — the two atomic rows
+            above already carry the readable shape. The visually-
+            hidden styling keeps the node selectable for Cypress.
+          -->
+          <span
+            class="profile-page__sr-only"
+            data-cy="profile-name"
+            aria-hidden="true"
+            >{{ u.full_name }}</span
+          >
           <p-button
             type="button"
             icon="pi pi-pencil"

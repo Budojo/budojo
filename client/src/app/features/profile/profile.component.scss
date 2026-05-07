@@ -157,7 +157,13 @@
     gap: 0.125rem;
     min-width: 0;
 
+    // Reset the row-level `flex: 0 0 8rem` desktop pin (Copilot caught
+    // this — without the reset the label inside this column flex
+    // container reads as 8rem of HEIGHT instead of width on tablet+,
+    // creating a huge gap above the value). Same shape as the
+    // change-password / data-export card resets below.
     .profile-page__label {
+      flex: 0 0 auto;
       font-size: 0.75rem; // --type-caption-1: 12px field label
       line-height: 1rem;
       color: var(--p-text-muted-color);
@@ -221,11 +227,19 @@
   // Composite-control wrapper for the Instagram-style handle (#479
   // follow-up). The pill chrome lives on `<p-inputgroup>` itself —
   // see the sanctioned override in `budojo-variants.scss` (mirrors
-  // the p-datepicker fix from #318). The host element is the
-  // `<p-inputgroup>` itself; we just stretch it to fill the column.
+  // the p-datepicker fix from #318). On mobile the host stretches
+  // full-width; on tablet+ it sits inside the `__row--edit` flex-row
+  // and needs the same `flex: 1 1 auto; width: auto` shape as
+  // `.profile-page__input` (Copilot caught this — without it the
+  // inputgroup wraps onto a new line under the label).
   &__handle-group {
     display: flex;
     width: 100%;
+
+    @media (min-width: 768px) {
+      flex: 1 1 auto;
+      width: auto;
+    }
   }
 
   &__row-actions {
