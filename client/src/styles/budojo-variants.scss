@@ -412,11 +412,14 @@
 }
 
 // p-password — same composite-wrapper pattern as p-datepicker (#318).
-// PrimeNG renders:
+// PrimeNG 21 renders (verified against the bundled .mjs in #491 — the
+// pre-21 `.p-password-toggle-mask-icon` selector is gone):
 //
 //   <p-password class="p-password p-inputwrapper">
 //     <input class="p-password-input p-inputtext" />
-//     <span class="p-password-toggle-mask-icon">…</span>
+//     <i class="pi pi-eye p-password-mask-icon">…</i>     <!-- show -->
+//     <i class="pi pi-eye-slash p-password-unmask-icon">…</i> <!-- hide -->
+//     <i class="pi pi-times p-password-clear-icon">…</i>      <!-- clear -->
 //   </p-password>
 //
 // Pre-2.0.x we extended `%budojo-field` to `.p-password input`, which

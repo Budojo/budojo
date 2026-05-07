@@ -65,6 +65,17 @@ describe('PasswordStrengthMeterComponent (#415)', () => {
     expect(bar!.getAttribute('aria-valuenow')).toBe(String(score));
   });
 
+  it('exposes a translated aria-label so screen readers announce what the value refers to', () => {
+    // Copilot caught the original release missing this — without an
+    // accessible name, NVDA/VoiceOver read the value but not "what
+    // the value is for". Pinning the resolved translated string here
+    // (via provideI18nTesting → en bundle) guards both the binding
+    // and the presence of the i18n key.
+    const { fixture } = setup('hunter2');
+    const bar = fixture.nativeElement.querySelector('[role="progressbar"]');
+    expect(bar!.getAttribute('aria-label')).toBe('Password strength');
+  });
+
   it('clearing the password between ticks hides the meter again', () => {
     const { fixture } = setup('something');
     expect(
