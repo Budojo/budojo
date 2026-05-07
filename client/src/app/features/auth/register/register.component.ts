@@ -9,6 +9,7 @@ import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
+import { PasswordStrengthMeterComponent } from '../../../shared/components/password-strength-meter/password-strength-meter.component';
 
 @Component({
   selector: 'app-register',
@@ -20,6 +21,7 @@ import { AuthService } from '../../../core/services/auth.service';
     InputTextModule,
     MessageModule,
     PasswordModule,
+    PasswordStrengthMeterComponent,
     TranslatePipe,
   ],
   templateUrl: './register.component.html',
@@ -32,6 +34,14 @@ export class RegisterComponent {
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  /**
+   * Server-mapped error for the password field (#415). `breached` flips
+   * on a 422 with `errors.password: ['password_breached']` so the SPA
+   * renders the dedicated copy ("This password has appeared in known
+   * data breaches…") next to the field — Norman § feedback. Cleared on
+   * every fresh submit attempt before the validity guard.
+   */
+  readonly passwordServerError = signal<'breached' | null>(null);
 
   readonly form = this.fb.group(
     {
@@ -73,6 +83,7 @@ export class RegisterComponent {
 
     this.loading.set(true);
     this.error.set(null);
+    this.passwordServerError.set(null);
 
     this.auth
       .register({
@@ -91,7 +102,17 @@ export class RegisterComponent {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => this.router.navigate(['/dashboard']),
-        error: (err) => {
+        error: (err: {
+          status?: number;
+          error?: { message?: string; errors?: Record<string, string[]> };
+        }) => {
+          // Map `password_breached` (#415) to the inline server-error
+          // signal. Other 422s fall through to the generic banner.
+          const passwordErrs = err?.error?.errors?.['password'] ?? [];
+          if (passwordErrs.includes('password_breached')) {
+            this.passwordServerError.set('breached');
+            return;
+          }
           this.error.set(err?.error?.message ?? 'Something went wrong. Please try again.');
         },
       });

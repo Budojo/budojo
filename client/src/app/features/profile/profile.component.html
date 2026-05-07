@@ -497,6 +497,7 @@
                 (newPassword.invalid && newPassword.touched ? ' ng-invalid ng-dirty' : '')
               "
             />
+            <app-password-strength-meter [password]="newPassword.value ?? null" />
             @if (newPassword.touched && newPassword.errors?.['required']) {
               <small class="field-error">
                 {{ 'profile.changePassword.newPasswordRequired' | translate }}
@@ -506,7 +507,11 @@
                 {{ 'profile.changePassword.newPasswordMinlength' | translate }}
               </small>
             }
-            @if (changePasswordServerError() === 'password') {
+            @if (changePasswordServerError() === 'breached') {
+              <small class="field-error" data-cy="change-password-new-breached">
+                {{ 'profile.changePassword.newPasswordBreached' | translate }}
+              </small>
+            } @else if (changePasswordServerError() === 'password') {
               <small class="field-error" data-cy="change-password-new-server-error">
                 {{ 'profile.changePassword.newPasswordServerError' | translate }}
               </small>
