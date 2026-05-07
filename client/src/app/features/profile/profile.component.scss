@@ -180,71 +180,11 @@
     }
   }
 
-  // Display mode for the Nome + Cognome row (#479 follow-up). Two
-  // atomic fields stack vertically on mobile and inline on desktop;
-  // the pencil sits at the row's trailing edge so the affordance is
-  // unambiguous (Norman § signifier — one button, one action).
-  &__row--name-display {
-    @media (min-width: 768px) {
-      align-items: flex-start;
-    }
-  }
-
-  &__name-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem; // 8dp canon — paired-field rhythm
-    flex: 1 1 auto;
-    min-width: 0;
-
-    @media (min-width: 768px) {
-      flex-direction: row;
-      gap: 2rem;
-    }
-  }
-
-  &__name-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    min-width: 0;
-
-    // Typography matches the canonical card-row primitive (audit § 1):
-    // 0.8125rem / 500 / muted label, body value. The earlier shape used
-    // a smaller "caption" label + bolder "headline" value to emphasise
-    // the name as identity, but it broke row-height parity with the
-    // other rows in the card (Handle / Email / Verification) — user
-    // reported "altezza non conforme ad academy". Aligning the
-    // typography flattens the row to the same vertical rhythm as the
-    // rest of the card; the name still reads as identity because of
-    // its position (first row) and the bolder weight inherited from
-    // the value rule below, not via a bespoke font scale.
-    //
-    // Reset the row-level `flex: 0 0 8rem` desktop pin (Copilot caught
-    // this — without the reset the label inside this column flex
-    // container reads as 8rem of HEIGHT instead of width on tablet+,
-    // creating a huge gap above the value). Same shape as the
-    // change-password / data-export card resets below.
-    .profile-page__label {
-      flex: 0 0 auto;
-      font-size: 0.8125rem; // canonical row label — audit § 1
-      font-weight: 500;
-      line-height: 1.2;
-      color: var(--p-text-muted-color);
-    }
-
-    .profile-page__value {
-      font-size: 1rem; // canonical row value — body
-      line-height: 1.4;
-      font-weight: 600; // keep the identity emphasis via weight, not size
-      color: var(--p-text-color);
-      // Defensive truncation — a long single-token last_name on a
-      // narrow viewport doesn't push the pencil off-screen.
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
+  // (Removed: `__row--name-display`, `__name-stack`, `__name-field`.
+  // The two-atom name display now uses two plain `__row` nodes — one
+  // per field — giving 1:1 visual parity with Handle / Email rows.
+  // The unified edit form is unchanged; the visual split is only for
+  // read-mode uniformity per user feedback 2026-05-07.)
 
   // Visually-hidden helper (no scrollbar, no width, screen-reader
   // and selector-only). Preserves the legacy `data-cy="profile-name"`

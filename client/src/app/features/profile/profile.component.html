@@ -163,36 +163,18 @@
         </form>
       } @else {
         <!--
-          Display mode for Nome + Cognome (#479 follow-up). Two atomic
-          rows — one per field — share a single pencil affordance to
-          the right. The earlier shape rendered the full name under a
-          single "Nome" label which lied about the field on display.
-          Krug § self-evidence: the label tells you what value is on
-          the right.
+          Display mode for Nome + Cognome — two separate rows so they
+          align 1:1 with the rest of the card chrome (Handle, Email).
+          Both pencils open the SAME `nameForm` because first/last are
+          conceptually one identity edit (#463 + #479 keep the unified
+          edit ergonomics); the visual split is only for read-mode
+          uniformity. User feedback 2026-05-07 to converge on academy's
+          row rhythm: "ma non possiamo uniformare con questa grafica
+          che è bella?".
         -->
-        <div class="profile-page__row profile-page__row--name-display">
-          <div class="profile-page__name-stack">
-            <div class="profile-page__name-field">
-              <span class="profile-page__label">{{ 'profile.firstName' | translate }}</span>
-              <span class="profile-page__value" data-cy="profile-first-name">{{
-                u.first_name
-              }}</span>
-            </div>
-            <div class="profile-page__name-field">
-              <span class="profile-page__label">{{ 'profile.lastName' | translate }}</span>
-              <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
-            </div>
-          </div>
-          <!--
-            Legacy data-cy preserved so existing E2E specs keep matching
-            the full name. aria-hidden so screen readers don't announce
-            "Mario … Bonanno … Mario Bonanno" — the two atomic rows
-            above already carry the readable shape. The visually-
-            hidden styling keeps the node selectable for Cypress.
-          -->
-          <span class="profile-page__sr-only" data-cy="profile-name" aria-hidden="true">{{
-            u.full_name
-          }}</span>
+        <div class="profile-page__row">
+          <span class="profile-page__label">{{ 'profile.firstName' | translate }}</span>
+          <span class="profile-page__value" data-cy="profile-first-name">{{ u.first_name }}</span>
           <p-button
             type="button"
             icon="pi pi-pencil"
@@ -204,9 +186,35 @@
             [ariaLabel]="'profile.editName.edit' | translate"
             (onClick)="startEditName()"
             styleClass="profile-page__row-edit-button"
-            data-cy="profile-name-edit"
+            data-cy="profile-first-name-edit"
           />
         </div>
+        <div class="profile-page__row">
+          <span class="profile-page__label">{{ 'profile.lastName' | translate }}</span>
+          <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
+          <p-button
+            type="button"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [pTooltip]="'profile.editName.edit' | translate"
+            tooltipPosition="left"
+            [ariaLabel]="'profile.editName.edit' | translate"
+            (onClick)="startEditName()"
+            styleClass="profile-page__row-edit-button"
+            data-cy="profile-last-name-edit"
+          />
+        </div>
+        <!--
+          Legacy data-cy preserved so existing E2E specs keep matching
+          the full name. aria-hidden so screen readers don't announce
+          "Mario … Bonanno … Mario Bonanno" — the two visible rows
+          above already carry the readable shape.
+        -->
+        <span class="profile-page__sr-only" data-cy="profile-name" aria-hidden="true">{{
+          u.full_name
+        }}</span>
       }
 
       <!--

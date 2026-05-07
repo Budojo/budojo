@@ -271,10 +271,20 @@ describe('ProfileComponent — avatar upload (#411)', () => {
 });
 
 describe('ProfileComponent — inline name edit (#463)', () => {
-  it('renders the read-only name + pencil affordance by default', () => {
+  it('renders the read-only name + pencil affordances by default', () => {
+    // Post-PR-#496-ux-polish: the name display is two atomic rows
+    // (first / last) each with its own pencil. Both pencils open
+    // the same combined edit form (#463 / #479 keep the unified
+    // edit ergonomics; the visual split is only for read-mode
+    // uniformity with the rest of the card chrome).
     const { fixture } = setup();
     expect(fixture.nativeElement.querySelector('[data-cy="profile-name"]')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-cy="profile-name-edit"]')).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-first-name-edit"]'),
+    ).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-last-name-edit"]'),
+    ).not.toBeNull();
     expect(fixture.nativeElement.querySelector('[data-cy="profile-name-edit-form"]')).toBeNull();
   });
 
