@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Rules\PasswordNotBreached;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RegisterRequest extends FormRequest
@@ -25,7 +26,10 @@ class RegisterRequest extends FormRequest
             'first_name' => ['required', 'string', 'min:2', 'max:100'],
             'last_name' => ['required', 'string', 'min:2', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            // Password policy: min 8 + confirmed + not in HIBP (#415).
+            // The breach check runs LAST and is soft-fail (HIBP outage
+            // → allow) so a third-party hiccup doesn't outage signup.
+            'password' => ['required', 'string', 'min:8', 'confirmed', app(PasswordNotBreached::class)],
             // Terms of Service acceptance gate (#420). Laravel's
             // `accepted` rule rejects falsy values (false, 0, "0",
             // null, empty string, missing) AND requires one of the

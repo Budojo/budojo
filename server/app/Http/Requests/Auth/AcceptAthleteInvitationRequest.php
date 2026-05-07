@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Rules\PasswordNotBreached;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
@@ -30,6 +31,12 @@ class AcceptAthleteInvitationRequest extends FormRequest
                 'required',
                 'confirmed',
                 Password::min(8),
+                // Same HIBP breach check as RegisterRequest /
+                // ResetPasswordRequest / ChangePasswordRequest (#415).
+                // The invite-accept flow IS the athlete's first
+                // password choice, so a known-breached candidate must
+                // be rejected here too for consistency.
+                app(PasswordNotBreached::class),
             ],
             'accept_privacy' => ['required', 'accepted'],
             'accept_terms' => ['required', 'accepted'],

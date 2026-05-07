@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Rules\PasswordNotBreached;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -58,6 +59,10 @@ class ChangePasswordRequest extends FormRequest
                 // pointless from the rotate-credentials standpoint that
                 // motivates the feature.
                 Rule::notIn([$this->input('current_password')]),
+                // HIBP breach check (#415). Same rule shared with
+                // RegisterRequest + ResetPasswordRequest — a rotation
+                // mustn't land on a known-breached candidate.
+                app(PasswordNotBreached::class),
             ],
         ];
     }
