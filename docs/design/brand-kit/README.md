@@ -49,7 +49,9 @@ The geometry is locked. Updates must originate upstream in `client/public/logo-g
 
 ## Rasterized PNG exports
 
-The SVG kit above is the source of truth; `png/` ships pre-rasterized variants for the surfaces that can't consume SVG (slide decks, marketing tiles, app store screenshots, email signatures). 141 files across 10 category folders with size + background variants — see [`png/README.md`](./png/README.md) for the full naming convention.
+The canonical **export set** for the brand sits in this folder (the SVG kit above + the PNG tree below). The canonical **geometry** still originates upstream at `client/public/{logo-glyph.svg,wordmark.svg}` per the source-of-truth note above — kit derivatives mirror that geometry byte-for-byte.
+
+`png/` ships pre-rasterized variants for the surfaces that can't consume SVG (slide decks, marketing tiles, app store screenshots, email signatures). 141 files across 10 category folders with size + background variants — see [`png/README.md`](./png/README.md) for the full naming convention.
 
 ```
 docs/design/brand-kit/png/
