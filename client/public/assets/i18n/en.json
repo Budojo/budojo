@@ -496,6 +496,7 @@
   "profile": {
     "title": "Profile",
     "subtitle": "Account details and verification status.",
+    "eyebrow": "Profile",
     "verifyRequiredBanner": "You need to verify your email before adding athletes or documents. Check your inbox for the verification link, or use the Resend button below.",
     "name": "Name",
     "firstName": "First name",
