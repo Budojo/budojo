@@ -605,9 +605,7 @@ describe('AthletesListComponent', () => {
     });
 
     it('renders neither icon when both socials are null', () => {
-      const fixture = setupWithRows([
-        makeListAthlete({ id: 9, facebook: null, instagram: null }),
-      ]);
+      const fixture = setupWithRows([makeListAthlete({ id: 9, facebook: null, instagram: null })]);
       expect(
         fixture.nativeElement.querySelector('[data-cy^="athlete-social-facebook-"]'),
       ).toBeNull();
@@ -617,19 +615,33 @@ describe('AthletesListComponent', () => {
     });
 
     it('icon link click does NOT bubble — the row navigation should not trigger', () => {
+      // Asserts the propagation gate by attaching a listener on a
+      // higher ancestor and verifying it does NOT fire when the icon
+      // link is clicked. Spying on `Event.prototype.stopPropagation`
+      // was brittle in jsdom (Copilot review on PR #496) and the
+      // post-dispatch `cancelBubble` flag wasn't reliably reflected
+      // through Angular's event-binding wrapper. The parent-listener
+      // approach is the most honest assertion: it matches the actual
+      // user-visible side-effect ("clicking the social icon must not
+      // trigger the row's primary nav target").
       const fixture = setupWithRows([
         makeListAthlete({ id: 10, facebook: 'https://facebook.com/x' }),
       ]);
       const link = fixture.nativeElement.querySelector(
         '[data-cy="athlete-social-facebook-10"]',
       ) as HTMLAnchorElement;
-      // Stub the default-action so the test runner doesn't actually
-      // try to navigate to facebook.com during the assertion.
+      // Stub the default-action so jsdom doesn't try to navigate to
+      // facebook.com during the assertion.
       link.addEventListener('click', (ev) => ev.preventDefault());
-      const event = new MouseEvent('click', { bubbles: true, cancelable: true });
-      const propagationStop = vi.spyOn(event, 'stopPropagation');
-      link.dispatchEvent(event);
-      expect(propagationStop).toHaveBeenCalled();
+
+      const ancestorSpy = vi.fn();
+      document.body.addEventListener('click', ancestorSpy);
+      try {
+        link.click();
+        expect(ancestorSpy).not.toHaveBeenCalled();
+      } finally {
+        document.body.removeEventListener('click', ancestorSpy);
+      }
     });
   });
 });

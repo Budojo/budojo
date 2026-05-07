@@ -80,6 +80,12 @@
     flex-direction: column;
     gap: 0.25rem;
     padding: 1rem 0;
+    // Reserve right-side space on mobile for the absolute-positioned
+    // pencil affordance (32px button + 8px buffer). Without this a
+    // long value (email, handle) renders UNDER the button — Copilot
+    // review on PR #496. Reset on desktop where the pencil sits as
+    // a flex sibling at the row's trailing edge.
+    padding-right: 2.5rem;
 
     &:not(:last-child) {
       border-bottom: 1px solid var(--p-content-border-color);
@@ -94,6 +100,7 @@
       // (v2.1.0 user report).
       align-items: baseline;
       gap: 1.5rem;
+      padding-right: 0;
     }
   }
 

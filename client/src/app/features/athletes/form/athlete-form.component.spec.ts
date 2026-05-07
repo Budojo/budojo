@@ -327,6 +327,13 @@ describe('AthleteFormComponent', () => {
       const putReq = httpMock.expectOne('/api/v1/athletes/42');
       expect(putReq.request.method).toBe('PUT');
       expect(putReq.request.body.belt).toBe('black');
+      // PR #496 follow-up — `email` is omitted from the wire on edit,
+      // not just hidden from the form. The dedicated email-change-card
+      // is the canonical editor; sending email here would leak the
+      // contract (Copilot review caught this). The form's `email`
+      // FormControl still exists internally so the rest of the payload
+      // serialization stays unaffected.
+      expect('email' in putReq.request.body).toBe(false);
       putReq.flush({ data: { ...athlete, belt: 'black' } });
 
       const router = TestBed.inject(Router);

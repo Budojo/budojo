@@ -412,15 +412,19 @@
 }
 
 // p-password — same composite-wrapper pattern as p-datepicker (#318).
-// PrimeNG 21 renders (verified against the bundled .mjs in #491 — the
-// pre-21 `.p-password-toggle-mask-icon` selector is gone):
+// PrimeNG 21 renders (verified against the bundled .mjs in #491 + the
+// element-shape correction in v2.1.x ux-polish — the pre-21
+// `<i class="pi">` markup is gone, the icons are now SVGs):
 //
 //   <p-password class="p-password p-inputwrapper">
 //     <input class="p-password-input p-inputtext" />
-//     <i class="pi pi-eye p-password-mask-icon">…</i>     <!-- show -->
-//     <i class="pi pi-eye-slash p-password-unmask-icon">…</i> <!-- hide -->
-//     <i class="pi pi-times p-password-clear-icon">…</i>      <!-- clear -->
+//     <svg data-p-icon="eye"      class="p-icon p-password-mask-icon">…</svg>
+//     <svg data-p-icon="eyeslash" class="p-icon p-password-unmask-icon">…</svg>
+//     <svg data-p-icon="times"    class="p-icon p-password-clear-icon">…</svg>
 //   </p-password>
+//
+// Each SVG carries intrinsic `width="14" height="14" viewBox="0 0 14 14"`
+// host attrs from PrimeNG's BaseIcon — see `primeng-icons-baseicon.mjs`.
 //
 // Pre-2.0.x we extended `%budojo-field` to `.p-password input`, which
 // gave the inner input a pill but left the toggle-mask icon floating
@@ -496,17 +500,30 @@
   //    esserci gli occhi sulle password").
   //
   // The right shape for SVG icons in a flex composite: keep the
-  // default `.p-icon { display: inline-block }` from BaseIcon, set
-  // `width`/`height` explicitly to lock the rendered box equal to the
-  // viewBox, and use `margin` (not padding) for the cap whitespace.
+  // default `.p-icon { display: inline-block }` from BaseIcon, lock
+  // the SVG content box to the viewBox dimensions (14×14), then
+  // expand the click target via PADDING (Fitts § primary touch
+  // targets ≥ 48 × 48 CSS px — DESIGN_SYSTEM.md). The padding sits
+  // OUTSIDE the SVG's painted viewBox so the glyph stays visually
+  // 14×14 while the hit-area covers the full input height.
+  //
+  // `box-sizing: content-box` is the default but called out to make
+  // the geometry explicit: 14px content + 17px×2 vertical padding
+  // = 48px clickable, 14px content + 12px×2 horizontal padding
+  // = 38px wide cell. The 12px horizontal padding doubles as the
+  // spacing between icons — `margin` is unset so the click areas
+  // are flush, and a tap anywhere in the 38×48 box fires the
+  // handler PrimeNG attached to the SVG. Reported by Copilot on
+  // PR #496 (v2.1.x ux-polish review).
   .p-password-mask-icon,
   .p-password-unmask-icon,
   .p-password-clear-icon {
     flex: 0 0 auto;
     align-self: center;
+    box-sizing: content-box;
     width: 14px;
     height: 14px;
-    margin: 0 12px;
+    padding: 17px 12px;
     color: var(--p-text-color-secondary);
     cursor: pointer;
     transition: color 160ms var(--budojo-motion-decelerate);

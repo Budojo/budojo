@@ -165,7 +165,13 @@ describe('Athlete edit form', () => {
     cy.get('h1').should('contain', 'Edit athlete');
     cy.get('input[id="first_name"]').should('have.value', 'Mario');
     cy.get('input[id="last_name"]').should('have.value', 'Rossi');
-    cy.get('input[id="email"]').should('have.value', 'mario@example.com');
+    // `input#email` is intentionally absent on the edit route — the
+    // dedicated email-change-card on the athlete-detail page is the
+    // canonical editor for `athletes.email` (audit § 9, branch
+    // fix/ux-polish-v2.1.x). The form's email FormControl is still
+    // hydrated under the hood so the PUT body carries the unchanged
+    // value through; only the visible <input> goes away on edit.
+    cy.get('input[id="email"]').should('not.exist');
     cy.contains('button', 'Save changes').scrollIntoView().should('be.visible');
   });
 

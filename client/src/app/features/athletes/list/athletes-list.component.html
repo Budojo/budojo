@@ -194,10 +194,11 @@
                       rel="noopener noreferrer"
                       [pTooltip]="'athletes.list.social.facebookLabel' | translate"
                       [attr.aria-label]="'athletes.list.social.facebookLabel' | translate"
+                      [attr.title]="'athletes.list.social.facebookLabel' | translate"
                       [attr.data-cy]="'athlete-social-facebook-' + athlete.id"
                       (click)="$event.stopPropagation()"
                     >
-                      <i class="pi pi-facebook"></i>
+                      <i class="pi pi-facebook" aria-hidden="true"></i>
                     </a>
                   }
                   @if (athlete.instagram) {
@@ -208,10 +209,11 @@
                       rel="noopener noreferrer"
                       [pTooltip]="'athletes.list.social.instagramLabel' | translate"
                       [attr.aria-label]="'athletes.list.social.instagramLabel' | translate"
+                      [attr.title]="'athletes.list.social.instagramLabel' | translate"
                       [attr.data-cy]="'athlete-social-instagram-' + athlete.id"
                       (click)="$event.stopPropagation()"
                     >
-                      <i class="pi pi-instagram"></i>
+                      <i class="pi pi-instagram" aria-hidden="true"></i>
                     </a>
                   }
                 </div>
