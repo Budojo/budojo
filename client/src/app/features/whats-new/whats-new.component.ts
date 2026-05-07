@@ -59,6 +59,47 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.2.0',
+      date: '2026-05-07',
+      headline:
+        "A polish-heavy release. The Profile page got a top-to-bottom rework so it reads exactly like the Academy detail card you already know — same row rhythm, same spacing, same edit affordance. The Athletes list now shows little Facebook and Instagram icons next to each athlete who has those links on file. And a handful of small input bugs from the v2.1 polish round are now properly fixed: the Cmd-K magnifier is back at the optical center of the search bar, the eye toggles on the change-password fields are visible everywhere, and the \"two email fields, which one do I edit?\" confusion on the athlete edit form is gone.",
+      sections: [
+        {
+          heading: '✨ Athletes list — Facebook + Instagram icons inline',
+          bullets: [
+            "Social icons on each athlete row — when an athlete has facebook or instagram filled in, you'll see the matching icon directly under their name on the list. Click it and the profile opens in a new tab. Athletes without socials show nothing — no empty placeholders, no clutter.",
+            'Same look as the academy card. This mirrors the social-link chips on the academy detail page; the visual treatment, hover state, and tooltip are identical.',
+            "Click on the icon doesn't open the athlete. The icon's link is its own affordance — tapping the Instagram icon takes you to Instagram, not into the athlete page. Tap the name itself for the athlete detail.",
+          ],
+        },
+        {
+          heading: '🎨 Profile page — convergence on the Academy card design',
+          bullets: [
+            'Same card chrome as Academy detail. The Profile page used a slightly different card style than the Academy page (different border, different padding, different label rhythm). Both pages now share the exact same card primitive — a clean rounded container with a hairline border, hairline separators between rows, and consistent typography for labels and values. Side-by-side they look like siblings, not cousins.',
+            "First name + Last name show as separate rows. Two clean rows (\"First name\" / \"Last name\") instead of one combined two-column block. Each carries its own pencil — clicking either opens the same combined edit form so the editing ergonomics are unchanged.",
+            "The \"Email verified\" row is gone — replaced by an inline green tick. A dedicated row that just said \"Email verified\" with a green badge was visual noise for the 99% case. Now when your email is verified you see a small green checkmark next to the email value itself. The full Verification row only shows up when there's actually something to do — i.e. when the email is pending verification, with the \"Resend verification email\" button right there.",
+            "Mobile layout fixed. On phones, the pencil affordance was wrapping below the value as an orphan affordance. It now sits cleanly at the top-right corner of each row regardless of the value's length.",
+            "Edit tab first on the athlete detail. When you open an athlete, the tabs are now Edit | Documents | Attendance | Payments (was Documents | Attendance | Payments | Edit). Edit is the most-frequent action on a freshly-opened athlete; it gets the leftmost tab so it's the default reach.",
+            'Athlete edit form drops the duplicate Email field. Editing an existing athlete used to show an Email row in the form even though the dedicated "Account & invitation" card above already let you change it (with the proper verification flow on linked accounts). The duplicate is gone — the Account card is the single canonical email editor on the detail page. Creating a new athlete still asks for email up-front, of course.',
+          ],
+        },
+        {
+          heading: '🐛 Input polish — Cmd-K and password fields',
+          bullets: [
+            "Cmd-K magnifier optically centered. The leading magnifying-glass on the Cmd-K palette and on the help-page search drifted a couple of pixels below center because of how the icon font's baseline interacts with our pill chrome. The cap is now a proper grid container with the glyph optically centered regardless of the icon font's quirks.",
+            "Eye toggles on Change-password are back, everywhere. The \"show / hide\" eye icons next to Current / New / Confirm passwords were silently missing on some browsers because of how PrimeNG 21's SVG icon component interacts with our pill-style overrides. Geometry is now bulletproof; eye is visible at the right edge of every password field.",
+          ],
+        },
+        {
+          heading: '🧹 Behind the scenes',
+          bullets: [
+            "Design-system audit + canonical icon-scale tokens. A doc walk-through of the SPA's UI surfaces shipped alongside this release cataloguing inconsistencies and proposing canonical patterns. The audit's icon-scale step (5 sizes — xs / sm / md / lg / xl) shipped as design tokens; per-surface migrations onto the scale will land in subsequent focused releases.",
+            'Dependency hygiene. Routine semver-safe bumps for the Angular 21.2.x cohort, libphonenumber, and devDeps (eslint, prettier, vitest, typescript-eslint). No behavior change.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.1.0',
       date: '2026-05-07',
       headline:
