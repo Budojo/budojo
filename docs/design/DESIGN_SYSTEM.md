@@ -101,6 +101,22 @@ Third shadow ramp is forbidden. If you reach for it, use a hairline border.
 
 No bounce, no elastic. PWAs in standalone mode read bounce as "this app is broken."
 
+### 1.6.1 Icon scale (audit § 5)
+
+| Token | Value | Use |
+|---|---|---|
+| `--budojo-icon-xs` | 12px | Eyebrow / inline metadata icons. Compact UI metadata. |
+| `--budojo-icon-sm` | 14px | Inline-button glyphs in form chrome — the canonical PrimeNG `<svg>` icon size (BaseIcon hosts at `width="14"`). |
+| `--budojo-icon-md` | 16px | Body / row-action icons (pencil, trash, social-link icons in academy / athlete list). Default for inline body icons. |
+| `--budojo-icon-lg` | 20px | Section-header icons, primary CTA button glyphs, status pills with a leading icon. |
+| `--budojo-icon-xl` | 24px | Page-hero / empty-state illustrations, big-number cards. |
+
+**Rule.** New components that render an icon read its size from one of the five tokens, not from a bespoke `font-size`. The audit (`docs/design/component-audit-v2.1.0.md` § 5) catalogued the existing call-site drift (`1.0625rem / 1.125rem / 1.25rem / 1.5rem / 1.75rem / 1.875rem` mixed) — the per-site migrations land in their own focused PRs after these tokens ship.
+
+**Why 5 steps.** Five steps cover every legitimate "this icon needs a size" case in the SPA without overspecifying. xs / sm / md / lg / xl matches the spacing-step vocabulary (8dp grid) and the breakpoint vocabulary (mobile / tablet / desktop / wide), so it reads as familiar without inventing new naming.
+
+**PrimeNG-icon caveat.** PrimeNG 21's built-in icons (`<svg data-p-icon="…">`) are rendered at `width="14" height="14"` by `BaseIcon`'s host attrs (verified in `node_modules/primeng/fesm2022/primeng-icons-baseicon.mjs`). That maps to the `sm` step exactly — call sites overriding PrimeNG icon dimensions should clamp to the canonical scale, not invent intermediate values.
+
 ### 1.7 Page containers (#261)
 
 Two semantic tokens replace the per-page `max-width` zoo. Pages pick the one that matches their content density — never a raw px value.
