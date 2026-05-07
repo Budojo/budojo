@@ -434,6 +434,7 @@
 // pill (Norman § signifier — looks like one control, behaves like
 // one control).
 .p-password {
+  position: relative; // anchor for absolute-positioned mask/unmask/clear icons
   display: inline-flex;
   align-items: stretch;
   background: var(--p-form-field-filled-background);
@@ -455,6 +456,11 @@
   }
 
   // Inner input — strip its own pill, become the wrapper's text body.
+  // Right padding reserves space for the absolute-positioned eye icon
+  // (48px hit cell + 4px optical buffer). When the call site also opts
+  // into [showClear], the clear icon sits to the LEFT of the eye and
+  // the input gets an extra 48px of right padding via the :has() rule
+  // below. Without this, typed text would render under the icons.
   input,
   .p-password-input {
     flex: 1 1 auto;
@@ -463,7 +469,7 @@
     border: none;
     border-radius: 0;
     min-height: auto;
-    padding: 12px 14px;
+    padding: 12px 52px 12px 14px;
     font: inherit;
     color: inherit;
     letter-spacing: inherit;
@@ -499,37 +505,65 @@
   //    enough to read as "missing". Reported on v2.1.0 ("non sembrano
   //    esserci gli occhi sulle password").
   //
-  // The right shape for SVG icons in a flex composite: keep the
-  // default `.p-icon { display: inline-block }` from BaseIcon, lock
-  // the SVG content box to the viewBox dimensions (14×14), then
-  // expand the click target via PADDING (Fitts § primary touch
-  // targets ≥ 48 × 48 CSS px — DESIGN_SYSTEM.md). The padding sits
-  // OUTSIDE the SVG's painted viewBox so the glyph stays visually
-  // 14×14 while the hit-area covers the full input height.
+  // Absolute-positioned 48×48 hit cells anchored to the wrapper's
+  // right edge. The first padding-based shape (Copilot follow-up on
+  // PR #496) had the right CSS box geometry on paper (38×48 with the
+  // SVG centred via content-box padding) but the user reported the
+  // glyph rendered visually at the BOTTOM-RIGHT of the field, not
+  // centred. The flex `align-self: center` was being out-prioritised
+  // by something in the cascade we couldn't pin down without browser
+  // dev-tools inspection. Switching to absolute positioning bypasses
+  // the entire flex cross-axis negotiation and gives deterministic
+  // centring regardless of the wrapper's actual rendered height —
+  // same trick that fixed the Cmd-K cap. The 48×48 cell satisfies
+  // Fitts; `place-items: center` on the grid centres the SVG's
+  // intrinsic 14×14 viewBox inside the cell.
   //
-  // `box-sizing: content-box` is the default but called out to make
-  // the geometry explicit: 14px content + 17px×2 vertical padding
-  // = 48px clickable, 14px content + 12px×2 horizontal padding
-  // = 38px wide cell. The 12px horizontal padding doubles as the
-  // spacing between icons — `margin` is unset so the click areas
-  // are flush, and a tap anywhere in the 38×48 box fires the
-  // handler PrimeNG attached to the SVG. Reported by Copilot on
-  // PR #496 (v2.1.x ux-polish review).
+  // Position semantics:
+  //
+  // - mask-icon / unmask-icon are mutually exclusive (one renders at
+  //   a time depending on `unmasked` state) — both pin to right: 0.
+  // - clear-icon renders ALONGSIDE the eye when [showClear] is
+  //   active — pins to right: 48px so it sits left of the eye.
+  //   The input's right-padding bumps to 100px via :has() below
+  //   when both icons are present.
   .p-password-mask-icon,
   .p-password-unmask-icon,
   .p-password-clear-icon {
-    flex: 0 0 auto;
-    align-self: center;
-    box-sizing: content-box;
-    width: 14px;
-    height: 14px;
-    padding: 17px 12px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
     color: var(--p-text-color-secondary);
     cursor: pointer;
     transition: color 160ms var(--budojo-motion-decelerate);
+    z-index: 1;
 
     &:hover {
       color: var(--p-text-color);
+    }
+  }
+
+  .p-password-mask-icon,
+  .p-password-unmask-icon {
+    right: 0;
+  }
+
+  .p-password-clear-icon {
+    right: 48px;
+  }
+
+  // When BOTH a clear icon AND an eye icon are present, the input
+  // needs another 48px of right-padding so typed text doesn't slide
+  // under the clear icon's hit cell.
+  &:has(.p-password-clear-icon):has(.p-password-mask-icon),
+  &:has(.p-password-clear-icon):has(.p-password-unmask-icon) {
+    input,
+    .p-password-input {
+      padding-right: 100px;
     }
   }
 

@@ -192,9 +192,20 @@
   &__name-field {
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: 0.25rem;
     min-width: 0;
 
+    // Typography matches the canonical card-row primitive (audit § 1):
+    // 0.8125rem / 500 / muted label, body value. The earlier shape used
+    // a smaller "caption" label + bolder "headline" value to emphasise
+    // the name as identity, but it broke row-height parity with the
+    // other rows in the card (Handle / Email / Verification) — user
+    // reported "altezza non conforme ad academy". Aligning the
+    // typography flattens the row to the same vertical rhythm as the
+    // rest of the card; the name still reads as identity because of
+    // its position (first row) and the bolder weight inherited from
+    // the value rule below, not via a bespoke font scale.
+    //
     // Reset the row-level `flex: 0 0 8rem` desktop pin (Copilot caught
     // this — without the reset the label inside this column flex
     // container reads as 8rem of HEIGHT instead of width on tablet+,
@@ -202,16 +213,16 @@
     // change-password / data-export card resets below.
     .profile-page__label {
       flex: 0 0 auto;
-      font-size: 0.75rem; // --type-caption-1: 12px field label
-      line-height: 1rem;
+      font-size: 0.8125rem; // canonical row label — audit § 1
+      font-weight: 500;
+      line-height: 1.2;
       color: var(--p-text-muted-color);
     }
 
     .profile-page__value {
-      font-size: 1.0625rem; // --type-headline: 17px primary
-      line-height: 1.375rem;
-      font-weight: 600;
-      letter-spacing: -0.003em;
+      font-size: 1rem; // canonical row value — body
+      line-height: 1.4;
+      font-weight: 600; // keep the identity emphasis via weight, not size
       color: var(--p-text-color);
       // Defensive truncation — a long single-token last_name on a
       // narrow viewport doesn't push the pencil off-screen.
