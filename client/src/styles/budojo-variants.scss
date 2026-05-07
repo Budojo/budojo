@@ -612,6 +612,79 @@
   }
 }
 
+// p-iconfield — composite for an inline-leading or trailing icon
+// (e.g. a search-glyph on the Cmd-K palette and the help-page filter).
+// PrimeNG renders:
+//
+//   <p-iconfield iconPosition="left">
+//     <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+//     <input pInputText />
+//   </p-iconfield>
+//
+// PrimeNG's default puts `<p-inputicon>` on `position: absolute` over
+// the input, but our `%budojo-field` resets the input padding to
+// `12px 14px`. Result: the icon sits on TOP of the placeholder text
+// (caught on the Cmd-K palette desktop). Fix: force the wrapper into
+// `position: relative` + add left/right padding to the inner input
+// proportional to the icon-cap width (40px = 8dp grid + 24px icon
+// hit-area). Same composite-control philosophy as the p-datepicker
+// + p-password + p-inputgroup blocks above.
+.p-iconfield {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  width: 100%;
+
+  .p-inputicon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    color: var(--p-text-muted-color);
+    pointer-events: none;
+    z-index: 1;
+
+    i {
+      font-size: 1.0625rem; // --type-body — match the input
+    }
+  }
+
+  // Padding inset for the inner input — iconPosition controls which
+  // side. The `:not(:has(.p-inputicon))` guard keeps the rule a no-op
+  // when the iconfield is empty (defensive — should never happen in
+  // practice).
+  &[iconPosition='left'] .p-inputtext,
+  &:has(.p-inputicon:first-child) .p-inputtext {
+    padding-left: 40px;
+  }
+
+  &[iconPosition='right'] .p-inputtext,
+  &:has(.p-inputicon:last-child:not(:first-child)) .p-inputtext {
+    padding-right: 40px;
+  }
+
+  // Default — `iconPosition` defaults to "left" in PrimeNG when the
+  // attribute is omitted. Mirror that so the rule fires without the
+  // explicit attribute too.
+  > .p-inputicon:first-child + .p-inputtext {
+    padding-left: 40px;
+  }
+
+  // Right-side icon repositioning when iconPosition=right.
+  &[iconPosition='right'] .p-inputicon {
+    left: auto;
+    right: 0;
+  }
+  &[iconPosition='left'] .p-inputicon,
+  &:not([iconPosition]) .p-inputicon {
+    left: 0;
+  }
+}
+
 // Textarea: same semantics, bigger radius, min-height 96
 .p-textarea,
 textarea.p-inputtext {
