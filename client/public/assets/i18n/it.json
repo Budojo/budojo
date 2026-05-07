@@ -38,6 +38,16 @@
       "terms": "Termini",
       "subProcessors": "Sub-processors"
     },
+    "passwordMeter": {
+      "label": "Robustezza della password",
+      "bucket": {
+        "0": "Molto debole",
+        "1": "Debole",
+        "2": "Accettabile",
+        "3": "Forte",
+        "4": "Molto forte"
+      }
+    },
     "login": {
       "title": "Bentornato",
       "subtitle": "Accedi al tuo account Budojo",
@@ -72,6 +82,7 @@
       "passwordPlaceholder": "Min. 8 caratteri",
       "passwordRequired": "La password è obbligatoria.",
       "passwordMinlength": "Almeno 8 caratteri.",
+      "passwordBreached": "Questa password è apparsa in note violazioni di dati. Scegline una più lunga e meno comune.",
       "passwordConfirmation": "Conferma la nuova password",
       "passwordConfirmationPlaceholder": "Ripeti la nuova password",
       "passwordsMismatch": "Le password non coincidono.",
@@ -101,6 +112,7 @@
       "passwordPlaceholder": "Min. 8 caratteri",
       "passwordRequired": "La password è obbligatoria.",
       "passwordMinlength": "Almeno 8 caratteri.",
+      "passwordBreached": "Questa password è apparsa in note violazioni di dati. Scegline una più lunga e meno comune.",
       "passwordConfirmation": "Conferma password",
       "passwordConfirmationPlaceholder": "Ripeti la tua password",
       "passwordsMismatch": "Le password non coincidono.",
@@ -556,6 +568,7 @@
       "newPassword": "Nuova password",
       "newPasswordRequired": "Inserisci una nuova password.",
       "newPasswordMinlength": "Usa almeno 8 caratteri.",
+      "newPasswordBreached": "Questa password è apparsa in note violazioni di dati. Scegline una più lunga e meno comune.",
       "newPasswordServerError": "La nuova password è stata rifiutata dal server. Verifica che abbia almeno 8 caratteri, sia diversa dalla password attuale e che la conferma corrisponda.",
       "newPasswordConfirmation": "Conferma nuova password",
       "mismatch": "Le password non coincidono.",

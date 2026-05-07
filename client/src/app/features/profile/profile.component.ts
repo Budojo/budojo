@@ -22,12 +22,15 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { TooltipModule } from 'primeng/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
+import { PasswordStrengthMeterComponent } from '../../shared/components/password-strength-meter/password-strength-meter.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
@@ -55,8 +58,11 @@ const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
     CardModule,
     ConfirmPopup,
     EmailVerificationStatusComponent,
+    InputGroupModule,
+    InputGroupAddonModule,
     InputTextModule,
     PasswordModule,
+    PasswordStrengthMeterComponent,
     ReactiveFormsModule,
     TooltipModule,
     TranslatePipe,
@@ -212,9 +218,9 @@ export class ProfileComponent {
    * mismatched confirmation in the rare case the SPA's own validators
    * miss it). Cleared on every new submit attempt.
    */
-  protected readonly changePasswordServerError = signal<'current' | 'password' | 'generic' | null>(
-    null,
-  );
+  protected readonly changePasswordServerError = signal<
+    'current' | 'breached' | 'password' | 'generic' | null
+  >(null);
 
   /**
    * Reactive form for the change-password sub-section (#409). Three
@@ -558,10 +564,16 @@ export class ProfileComponent {
             detail: this.translate.instant('profile.changePassword.successDetail'),
           });
         },
-        error: (err: { status?: number; error?: { errors?: Record<string, unknown> } }) => {
+        error: (err: { status?: number; error?: { errors?: Record<string, string[]> } }) => {
           const errors = err.error?.errors ?? {};
+          const passwordErrs = errors['password'] ?? [];
           if ('current_password' in errors) {
             this.changePasswordServerError.set('current');
+          } else if (passwordErrs.includes('password_breached')) {
+            // HIBP breach hit (#415) — distinct from a generic
+            // `password` 422 so the SPA shows the actionable copy
+            // ("This password has appeared in known data breaches…").
+            this.changePasswordServerError.set('breached');
           } else if ('password' in errors) {
             this.changePasswordServerError.set('password');
           } else {

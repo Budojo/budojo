@@ -294,7 +294,6 @@
 }
 
 .p-inputtext,
-.p-password input,
 .p-select,
 .p-inputnumber-input {
   @extend %budojo-field;
@@ -409,6 +408,293 @@
     .p-datepicker-dropdown {
       cursor: inherit;
     }
+  }
+}
+
+// p-password — same composite-wrapper pattern as p-datepicker (#318).
+// PrimeNG 21 renders (verified against the bundled .mjs in #491 — the
+// pre-21 `.p-password-toggle-mask-icon` selector is gone):
+//
+//   <p-password class="p-password p-inputwrapper">
+//     <input class="p-password-input p-inputtext" />
+//     <i class="pi pi-eye p-password-mask-icon">…</i>     <!-- show -->
+//     <i class="pi pi-eye-slash p-password-unmask-icon">…</i> <!-- hide -->
+//     <i class="pi pi-times p-password-clear-icon">…</i>      <!-- clear -->
+//   </p-password>
+//
+// Pre-2.0.x we extended `%budojo-field` to `.p-password input`, which
+// gave the inner input a pill but left the toggle-mask icon floating
+// outside that pill — visually disconnected from the field. Hoisting
+// the chrome onto `.p-password` itself and making the inner input +
+// toggle icon transparent inheritors fuses them into a single iOS
+// pill (Norman § signifier — looks like one control, behaves like
+// one control).
+.p-password {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--p-form-field-filled-background);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  min-height: 48px;
+  font: var(--type-body, 400 17px/22px var(--p-font-family));
+  letter-spacing: -0.003em;
+  transition:
+    background-color 160ms var(--budojo-motion-decelerate),
+    border-color 160ms var(--budojo-motion-decelerate);
+
+  // Pre-existing `styleClass="w-full"` from the call sites stretches
+  // the wrapper to fill the form column — keep that as the canonical
+  // call-site shape. The fallback below covers ad-hoc usage.
+  &.w-full,
+  &.p-inputwrapper.w-full {
+    display: flex;
+  }
+
+  // Inner input — strip its own pill, become the wrapper's text body.
+  input,
+  .p-password-input {
+    flex: 1 1 auto;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    min-height: auto;
+    padding: 12px 14px;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    box-shadow: none !important;
+
+    &::placeholder {
+      color: var(--p-form-field-placeholder-color);
+    }
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      background: transparent;
+    }
+  }
+
+  // Mask / unmask / clear icons — borderless flat right cap sharing
+  // the wrapper bg. PrimeNG 21's actual class names verified in
+  // `node_modules/primeng/fesm2022/primeng-password.mjs`
+  // (`PasswordClasses.maskIcon` / `unmaskIcon` / `clearIcon`). The
+  // earlier `.p-password-toggle-mask-icon` selector was a guess and
+  // matched nothing — the icon was unstyled, dropped out of the flex
+  // flow, and read as missing on the change-password section. Catch
+  // the three verified class names + a defensive `> i.pi` direct-
+  // child fallback for any future PrimeNG rename that ships a generic
+  // `<i>` instead.
+  .p-password-mask-icon,
+  .p-password-unmask-icon,
+  .p-password-clear-icon,
+  > i.pi {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    color: var(--p-text-color-secondary);
+    padding: 0 12px;
+    cursor: pointer;
+    transition: color 160ms var(--budojo-motion-decelerate);
+
+    &:hover {
+      color: var(--p-text-color);
+    }
+  }
+
+  // Hover / focus / invalid / disabled all lift to the WRAPPER so
+  // the affordance reads as a single control. Same ordering rules as
+  // p-datepicker — exclude `:focus-within` AND `.p-disabled` from
+  // hover so neither gets shadowed.
+  &:hover:not(:focus-within):not(.p-disabled) {
+    background: var(--p-form-field-filled-hover-background);
+  }
+  &:focus-within:not(.p-disabled) {
+    background: var(--p-form-field-filled-focus-background);
+    border-color: var(--p-primary-color);
+  }
+  &.ng-invalid.ng-touched,
+  &[aria-invalid='true'] {
+    border-color: var(--budojo-danger);
+  }
+  // Per-input invalid state lifts to the wrapper too. The change-
+  // password call sites set `ng-invalid ng-dirty` (not `ng-touched`)
+  // via `[inputStyleClass]`, and the inline-edit forms thread
+  // `[attr.aria-invalid]` through directly. Match both shapes so the
+  // wrapper border lights up regardless of which signal the SPA picked.
+  &:has(input.ng-invalid.ng-dirty),
+  &:has(input[aria-invalid='true']) {
+    border-color: var(--budojo-danger);
+  }
+  &.p-disabled {
+    opacity: var(--budojo-btn-disabled-opacity);
+    cursor: not-allowed;
+
+    input,
+    .p-password-input,
+    .p-password-mask-icon,
+    .p-password-unmask-icon,
+    .p-password-clear-icon,
+    > i.pi {
+      cursor: inherit;
+    }
+  }
+}
+
+// p-inputgroup — composite for prefix/suffix addons (#479 handle field).
+// PrimeNG renders:
+//
+//   <p-inputgroup>
+//     <p-inputgroup-addon>@</p-inputgroup-addon>
+//     <input pInputText />
+//   </p-inputgroup>
+//
+// Same composite-wrapper pattern: the host carries the pill chrome,
+// the addon + input flatten into transparent inheritors. Reads as a
+// single Instagram-style field.
+.p-inputgroup {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--p-form-field-filled-background);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  min-height: 48px;
+  font: var(--type-body, 400 17px/22px var(--p-font-family));
+  letter-spacing: -0.003em;
+  transition:
+    background-color 160ms var(--budojo-motion-decelerate),
+    border-color 160ms var(--budojo-motion-decelerate);
+
+  // Addon — inert prefix/suffix glyph. Muted text color so it reads
+  // as decoration, not as input content. No vertical seam against the
+  // input — they share the wrapper bg.
+  .p-inputgroup-addon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--p-text-muted-color);
+    padding: 0 4px 0 14px;
+    min-width: 0;
+    font: inherit;
+    letter-spacing: inherit;
+  }
+
+  // Inner input — strip its own pill so the wrapper carries the
+  // chrome. Same shape as the p-password rule above.
+  .p-inputtext {
+    flex: 1 1 auto;
+    width: auto;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    min-height: auto;
+    padding: 12px 10px 12px 4px;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    box-shadow: none !important;
+
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      background: transparent;
+      border-color: transparent;
+    }
+  }
+
+  &:hover:not(:focus-within):not(.p-disabled) {
+    background: var(--p-form-field-filled-hover-background);
+  }
+  &:focus-within:not(.p-disabled) {
+    background: var(--p-form-field-filled-focus-background);
+    border-color: var(--p-primary-color);
+  }
+  &:has(input.ng-invalid.ng-dirty),
+  &:has(input[aria-invalid='true']),
+  &.ng-invalid.ng-touched,
+  &[aria-invalid='true'] {
+    border-color: var(--budojo-danger);
+  }
+}
+
+// p-iconfield — composite for an inline-leading or trailing icon
+// (e.g. a search-glyph on the Cmd-K palette and the help-page filter).
+// PrimeNG renders:
+//
+//   <p-iconfield iconPosition="left">
+//     <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+//     <input pInputText />
+//   </p-iconfield>
+//
+// PrimeNG's default puts `<p-inputicon>` on `position: absolute` over
+// the input, but our `%budojo-field` resets the input padding to
+// `12px 14px`. Result: the icon sits on TOP of the placeholder text
+// (caught on the Cmd-K palette desktop). Fix: force the wrapper into
+// `position: relative` + add left/right padding to the inner input
+// proportional to the icon-cap width (40px = 8dp grid + 24px icon
+// hit-area). Same composite-control philosophy as the p-datepicker
+// + p-password + p-inputgroup blocks above.
+.p-iconfield {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  width: 100%;
+
+  .p-inputicon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    color: var(--p-text-muted-color);
+    pointer-events: none;
+    z-index: 1;
+
+    i {
+      font-size: 1.0625rem; // --type-body — match the input
+    }
+  }
+
+  // Two cases, kept symmetric to avoid the round-1 bug where the
+  // descendant-order selector forced a right-padded input AND a
+  // left-positioned icon at the same time:
+  //
+  // 1. iconPosition="left" (PrimeNG's default; assumed when the
+  //    attribute is omitted) → icon at left:0, input padded on the
+  //    left.
+  // 2. iconPosition="right" → icon at right:0, input padded on the
+  //    right.
+  //
+  // Padding + icon-position are wired off the SAME selector for each
+  // case so they can never desync. No descendant-order fallback —
+  // it produced contradictory geometry when iconPosition was implicit.
+  &[iconPosition='left'] .p-inputicon,
+  &:not([iconPosition]) .p-inputicon {
+    left: 0;
+  }
+  &[iconPosition='left'] .p-inputtext,
+  &:not([iconPosition]) .p-inputtext {
+    padding-left: 40px;
+  }
+
+  &[iconPosition='right'] .p-inputicon {
+    left: auto;
+    right: 0;
+  }
+  &[iconPosition='right'] .p-inputtext {
+    padding-right: 40px;
   }
 }
 

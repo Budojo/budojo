@@ -38,6 +38,16 @@
       "terms": "Terms",
       "subProcessors": "Sub-processors"
     },
+    "passwordMeter": {
+      "label": "Password strength",
+      "bucket": {
+        "0": "Very weak",
+        "1": "Weak",
+        "2": "Reasonable",
+        "3": "Strong",
+        "4": "Very strong"
+      }
+    },
     "login": {
       "title": "Welcome back",
       "subtitle": "Sign in to your Budojo account",
@@ -72,6 +82,7 @@
       "passwordPlaceholder": "Min. 8 characters",
       "passwordRequired": "Password is required.",
       "passwordMinlength": "At least 8 characters.",
+      "passwordBreached": "This password has appeared in known data breaches. Pick a longer, less common one.",
       "passwordConfirmation": "Confirm new password",
       "passwordConfirmationPlaceholder": "Repeat your new password",
       "passwordsMismatch": "Passwords do not match.",
@@ -101,6 +112,7 @@
       "passwordPlaceholder": "Min. 8 characters",
       "passwordRequired": "Password is required.",
       "passwordMinlength": "At least 8 characters.",
+      "passwordBreached": "This password has appeared in known data breaches. Pick a longer, less common one.",
       "passwordConfirmation": "Confirm password",
       "passwordConfirmationPlaceholder": "Repeat your password",
       "passwordsMismatch": "Passwords do not match.",
@@ -556,6 +568,7 @@
       "newPassword": "New password",
       "newPasswordRequired": "Enter a new password.",
       "newPasswordMinlength": "Use at least 8 characters.",
+      "newPasswordBreached": "This password has appeared in known data breaches. Pick a longer, less common one.",
       "newPasswordServerError": "The new password was rejected by the server. Make sure it's at least 8 characters, different from your current password, and that the confirmation matches.",
       "newPasswordConfirmation": "Confirm new password",
       "mismatch": "The passwords don't match.",

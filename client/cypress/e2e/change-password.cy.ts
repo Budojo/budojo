@@ -47,7 +47,13 @@ describe('Change password (#409)', () => {
 
     cy.visitAuthenticated('/dashboard/profile');
 
-    cy.get('[data-cy="profile-change-password"]').should('be.visible');
+    // The change-password section sits below the avatar + name + handle
+    // + email rows; on the default Cypress viewport the dashboard
+    // shell's `.main { overflow-y: auto }` clips it. Scroll into view
+    // before asserting visibility — same gotcha as `.claude/gotchas.md`
+    // § Cypress / overflow:auto. With v2.0.0+ adding the handle row,
+    // there's more vertical content above this section.
+    cy.get('[data-cy="profile-change-password"]').scrollIntoView().should('be.visible');
 
     // `<p-password>` renders the actual <input> inside the host. Match
     // the existing auth-page selector pattern (`input[id="..."]`) so we

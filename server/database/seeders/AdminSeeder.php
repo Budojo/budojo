@@ -27,7 +27,21 @@ class AdminSeeder extends Seeder
             throw new \RuntimeException('LOCAL_ADMIN_PASSWORD must be set in .env before running AdminSeeder.');
         }
 
-        $admin = User::firstOrCreate(['email' => 'admin@example.it'], ['name' => 'Admin Budojo', 'password' => Hash::make($password)]);
+        // After #479 the User schema is split into `first_name` +
+        // `last_name` (+ optional `handle`). The legacy single `name`
+        // column was dropped — passing it here would now throw a
+        // `SQLSTATE[42S22]: Column not found: 1054 Unknown column
+        // 'name'` and brick `php artisan db:seed` for any fresh local
+        // checkout, exactly the regression a coder following the
+        // README quick-start would hit. Match the new shape verbatim.
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@example.it'],
+            [
+                'first_name' => 'Admin',
+                'last_name' => 'Budojo',
+                'password' => Hash::make($password),
+            ],
+        );
 
         if ($admin->wasRecentlyCreated) {
             $admin->forceFill([
