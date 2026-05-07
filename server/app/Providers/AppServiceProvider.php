@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Services\PwnedPasswordsClient;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\CanResetPassword;
@@ -16,6 +17,14 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // PwnedPasswordsClient (#415). Singleton so the per-prefix
+        // bucket cache layer is owned by a single instance for the
+        // process lifetime. The cache itself (`Cache::*`) is already
+        // process-external, but pinning a single client instance also
+        // saves the constructor's HttpClientFactory wire-up on every
+        // password-validation hit (Register / Reset / ChangePassword
+        // / AcceptAthleteInvitation).
+        $this->app->singleton(PwnedPasswordsClient::class);
     }
 
     public function boot(): void

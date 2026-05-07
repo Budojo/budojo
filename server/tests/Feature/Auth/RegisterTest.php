@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Services\PwnedPasswordsClient;
 use Illuminate\Support\Facades\Hash;
 
 it('registers a new user and returns a token', function (): void {
@@ -102,6 +103,38 @@ it('fails registration when required fields are missing', function (): void {
     $this->postJson('/api/v1/auth/register', [])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['first_name', 'last_name', 'email', 'password', 'terms_accepted']);
+});
+
+it('rejects a known-breached password with `password_breached` (HIBP, #415)', function (): void {
+    // Swap the test bootstrap's "no breach" stub for a "breach
+    // detected" one. The TestCase default keeps every other spec
+    // soft-allowed; this one specifically exercises the rejection.
+    $this->app->instance(
+        PwnedPasswordsClient::class,
+        new class () extends PwnedPasswordsClient {
+            public function __construct()
+            {
+            }
+
+            public function isPwned(string $password): bool
+            {
+                return true;
+            }
+        },
+    );
+
+    $this->postJson('/api/v1/auth/register', [
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+        'email' => 'mario@example.com',
+        'password' => 'qwerty123',
+        'password_confirmation' => 'qwerty123',
+        'terms_accepted' => true,
+    ])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.password.0', 'password_breached');
+
+    $this->assertDatabaseMissing('users', ['email' => 'mario@example.com']);
 });
 
 it('fails registration when password confirmation does not match', function (): void {

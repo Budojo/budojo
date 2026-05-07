@@ -612,6 +612,78 @@
   }
 }
 
+// p-iconfield — composite for an inline-leading or trailing icon
+// (e.g. a search-glyph on the Cmd-K palette and the help-page filter).
+// PrimeNG renders:
+//
+//   <p-iconfield iconPosition="left">
+//     <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+//     <input pInputText />
+//   </p-iconfield>
+//
+// PrimeNG's default puts `<p-inputicon>` on `position: absolute` over
+// the input, but our `%budojo-field` resets the input padding to
+// `12px 14px`. Result: the icon sits on TOP of the placeholder text
+// (caught on the Cmd-K palette desktop). Fix: force the wrapper into
+// `position: relative` + add left/right padding to the inner input
+// proportional to the icon-cap width (40px = 8dp grid + 24px icon
+// hit-area). Same composite-control philosophy as the p-datepicker
+// + p-password + p-inputgroup blocks above.
+.p-iconfield {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  width: 100%;
+
+  .p-inputicon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    color: var(--p-text-muted-color);
+    pointer-events: none;
+    z-index: 1;
+
+    i {
+      font-size: 1.0625rem; // --type-body — match the input
+    }
+  }
+
+  // Two cases, kept symmetric to avoid the round-1 bug where the
+  // descendant-order selector forced a right-padded input AND a
+  // left-positioned icon at the same time:
+  //
+  // 1. iconPosition="left" (PrimeNG's default; assumed when the
+  //    attribute is omitted) → icon at left:0, input padded on the
+  //    left.
+  // 2. iconPosition="right" → icon at right:0, input padded on the
+  //    right.
+  //
+  // Padding + icon-position are wired off the SAME selector for each
+  // case so they can never desync. No descendant-order fallback —
+  // it produced contradictory geometry when iconPosition was implicit.
+  &[iconPosition='left'] .p-inputicon,
+  &:not([iconPosition]) .p-inputicon {
+    left: 0;
+  }
+  &[iconPosition='left'] .p-inputtext,
+  &:not([iconPosition]) .p-inputtext {
+    padding-left: 40px;
+  }
+
+  &[iconPosition='right'] .p-inputicon {
+    left: auto;
+    right: 0;
+  }
+  &[iconPosition='right'] .p-inputtext {
+    padding-right: 40px;
+  }
+}
+
 // Textarea: same semantics, bigger radius, min-height 96
 .p-textarea,
 textarea.p-inputtext {
