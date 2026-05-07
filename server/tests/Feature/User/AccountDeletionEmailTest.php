@@ -84,7 +84,7 @@ it('declares ShouldQueue so deletion confirmation does not block the request', f
 });
 
 it('renders the mail content with the user name + scheduled deletion date', function (): void {
-    $user = User::factory()->make(['name' => 'Mario Rossi', 'email' => 'mario@example.com']);
+    $user = User::factory()->make(['first_name' => 'Mario', 'last_name' => 'Rossi', 'email' => 'mario@example.com']);
     $scheduledFor = Carbon::create(2026, 6, 15);
 
     $rendered = new AccountDeletionRequestedMail($user, $scheduledFor)->render();

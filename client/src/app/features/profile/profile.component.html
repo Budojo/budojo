@@ -24,7 +24,7 @@
         <div class="avatar-card__preview" data-cy="profile-avatar-preview">
           <app-user-avatar
             [url]="avatarUrl()"
-            [name]="u.name"
+            [name]="u.full_name"
             size="card"
             [alt]="'profile.avatarAlt' | translate"
           />
@@ -87,29 +87,57 @@
           [formGroup]="nameForm"
           (ngSubmit)="submitEditName()"
           novalidate
-          class="profile-page__row profile-page__row--edit"
+          class="profile-page__row profile-page__row--edit profile-page__row--edit-name"
           data-cy="profile-name-edit-form"
         >
-          <label for="profileName" class="profile-page__label">
-            {{ 'profile.name' | translate }}
+          <label for="profileFirstName" class="profile-page__label">
+            {{ 'profile.firstName' | translate }}
           </label>
           <input
-            id="profileName"
+            id="profileFirstName"
             type="text"
             pInputText
-            formControlName="name"
-            [attr.aria-invalid]="nameError !== null ? true : null"
-            [attr.aria-describedby]="nameError !== null ? 'profileNameError' : null"
-            autocomplete="name"
-            maxlength="255"
+            formControlName="first_name"
+            [attr.aria-invalid]="firstNameError !== null ? true : null"
+            [attr.aria-describedby]="firstNameError !== null ? 'profileFirstNameError' : null"
+            autocomplete="given-name"
+            maxlength="100"
             class="profile-page__input"
-            data-cy="profile-name-input"
+            data-cy="profile-first-name-input"
           />
-          @if (nameError; as err) {
-            <small id="profileNameError" class="field-error" [attr.data-cy]="err.dataCy">
+          @if (firstNameError; as err) {
+            <small id="profileFirstNameError" class="field-error" [attr.data-cy]="err.dataCy">
               {{ err.key | translate }}
             </small>
           }
+
+          <label for="profileLastName" class="profile-page__label">
+            {{ 'profile.lastName' | translate }}
+          </label>
+          <input
+            id="profileLastName"
+            type="text"
+            pInputText
+            formControlName="last_name"
+            [attr.aria-invalid]="lastNameError !== null ? true : null"
+            [attr.aria-describedby]="lastNameError !== null ? 'profileLastNameError' : null"
+            autocomplete="family-name"
+            maxlength="100"
+            class="profile-page__input"
+            data-cy="profile-last-name-input"
+          />
+          @if (lastNameError; as err) {
+            <small id="profileLastNameError" class="field-error" [attr.data-cy]="err.dataCy">
+              {{ err.key | translate }}
+            </small>
+          }
+
+          @if (nameServerErrorRow; as err) {
+            <small class="field-error" [attr.data-cy]="err.dataCy">
+              {{ err.key | translate }}
+            </small>
+          }
+
           <div class="profile-page__row-actions">
             <p-button
               type="submit"
@@ -136,7 +164,7 @@
       } @else {
         <div class="profile-page__row">
           <span class="profile-page__label">{{ 'profile.name' | translate }}</span>
-          <span class="profile-page__value" data-cy="profile-name">{{ u.name }}</span>
+          <span class="profile-page__value" data-cy="profile-name">{{ u.full_name }}</span>
           <p-button
             type="button"
             icon="pi pi-pencil"
@@ -153,10 +181,212 @@
         </div>
       }
 
-      <div class="profile-page__row">
-        <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
-        <span class="profile-page__value" data-cy="profile-email">{{ u.email }}</span>
-      </div>
+      <!--
+        Handle row (#479). Instagram-style user-chosen identifier with
+        an `@` prefix decorator; helper text spells out the IG-style
+        rules verbatim (Krug — self-evident UI: the rules are visible
+        BEFORE typing, so a generic "Invalid handle" error doesn't have
+        to carry the explanation). Empty input clears the handle.
+      -->
+      @if (editingHandle()) {
+        <form
+          [formGroup]="handleForm"
+          (ngSubmit)="submitEditHandle()"
+          novalidate
+          class="profile-page__row profile-page__row--edit profile-page__row--edit-handle"
+          data-cy="profile-handle-edit-form"
+        >
+          <label for="profileHandle" class="profile-page__label">
+            {{ 'profile.handle' | translate }}
+          </label>
+          <div class="profile-page__handle-input-wrap">
+            <span class="profile-page__handle-prefix" aria-hidden="true">&#64;</span>
+            <input
+              id="profileHandle"
+              type="text"
+              pInputText
+              formControlName="handle"
+              [attr.aria-invalid]="handleError !== null ? true : null"
+              [attr.aria-describedby]="
+                handleError !== null ? 'profileHandleError' : 'profileHandleHelp'
+              "
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              maxlength="30"
+              class="profile-page__input profile-page__handle-input"
+              data-cy="profile-handle-input"
+            />
+          </div>
+          @if (handleError; as err) {
+            <small id="profileHandleError" class="field-error" [attr.data-cy]="err.dataCy">
+              {{ err.key | translate }}
+            </small>
+          } @else {
+            <small id="profileHandleHelp" class="field-hint" data-cy="profile-handle-help">
+              {{ 'profile.editHandle.help' | translate }}
+            </small>
+          }
+          <div class="profile-page__row-actions">
+            <p-button
+              type="submit"
+              [label]="'profile.editHandle.save' | translate"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              [loading]="savingHandle()"
+              [disabled]="savingHandle()"
+              data-cy="profile-handle-save"
+            />
+            <p-button
+              type="button"
+              [label]="'profile.editHandle.cancel' | translate"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [disabled]="savingHandle()"
+              (onClick)="cancelEditHandle()"
+              data-cy="profile-handle-cancel"
+            />
+          </div>
+        </form>
+      } @else {
+        <div class="profile-page__row">
+          <span class="profile-page__label">{{ 'profile.handle' | translate }}</span>
+          @if (u.handle) {
+            <span class="profile-page__value" data-cy="profile-handle">&#64;{{ u.handle }}</span>
+          } @else {
+            <span
+              class="profile-page__value profile-page__value--placeholder"
+              data-cy="profile-handle-empty"
+            >
+              {{ 'profile.editHandle.notSet' | translate }}
+            </span>
+          }
+          <p-button
+            type="button"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [pTooltip]="'profile.editHandle.edit' | translate"
+            tooltipPosition="left"
+            [ariaLabel]="'profile.editHandle.edit' | translate"
+            (onClick)="startEditHandle()"
+            styleClass="profile-page__row-edit-button"
+            data-cy="profile-handle-edit"
+          />
+        </div>
+      }
+
+      <!--
+        Inline email change (#476). When a pending row is outstanding,
+        a pillola sits ABOVE the row to make the "waiting on
+        confirmation" state self-evident (Norman § feedback) and
+        offers a "Cancel pending" CTA so the user can revoke without
+        waiting out the 24h expiry. The live `u.email` row stays
+        read-only with a pencil — the pencil opens the inline form;
+        on submit the confirm-popup spells out the consequence
+        ("we'll send a link to {new}; until you click it your login
+        email stays {old}") before the request fires.
+      -->
+      @if (pendingEmailChange(); as pending) {
+        <div class="profile-page__pending-pillola" data-cy="profile-email-pending-pillola">
+          <i class="pi pi-clock" aria-hidden="true"></i>
+          <div class="profile-page__pending-text">
+            <strong>{{ 'account.emailChange.pendingPillola.label' | translate }}</strong>
+            <p class="profile-page__pending-detail">
+              {{
+                'account.emailChange.pendingPillola.detail'
+                  | translate: { newEmail: pending.new_email_partial }
+              }}
+            </p>
+          </div>
+          <p-button
+            type="button"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [label]="'account.emailChange.pendingPillola.cancel' | translate"
+            [loading]="cancellingEmail()"
+            (onClick)="cancelPendingEmailChange()"
+            data-cy="profile-email-pending-cancel"
+          />
+        </div>
+      }
+
+      @if (editingEmail()) {
+        <form
+          [formGroup]="emailForm"
+          (ngSubmit)="submitEditEmail($event)"
+          novalidate
+          class="profile-page__row profile-page__row--edit"
+          data-cy="profile-email-edit-form"
+        >
+          <label for="profileEmail" class="profile-page__label">
+            {{ 'account.emailChange.profile.newEmailLabel' | translate }}
+          </label>
+          <input
+            id="profileEmail"
+            type="email"
+            pInputText
+            formControlName="email"
+            [attr.aria-invalid]="emailError !== null ? true : null"
+            [attr.aria-describedby]="emailError !== null ? 'profileEmailError' : null"
+            autocomplete="email"
+            maxlength="255"
+            [placeholder]="'account.emailChange.profile.newEmailPlaceholder' | translate"
+            class="profile-page__input"
+            data-cy="profile-email-input"
+          />
+          @if (emailError; as err) {
+            <small id="profileEmailError" class="field-error" [attr.data-cy]="err.dataCy">
+              {{ err.key | translate }}
+            </small>
+          }
+          <div class="profile-page__row-actions">
+            <p-button
+              type="submit"
+              [label]="'account.emailChange.profile.save' | translate"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              [loading]="requestingEmail()"
+              [disabled]="requestingEmail()"
+              data-cy="profile-email-save"
+            />
+            <p-button
+              type="button"
+              [label]="'account.emailChange.profile.cancel' | translate"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [disabled]="requestingEmail()"
+              (onClick)="cancelEditEmail()"
+              data-cy="profile-email-cancel"
+            />
+          </div>
+        </form>
+      } @else {
+        <div class="profile-page__row">
+          <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
+          <span class="profile-page__value" data-cy="profile-email">{{ u.email }}</span>
+          <p-button
+            type="button"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            [pTooltip]="'account.emailChange.profile.edit' | translate"
+            tooltipPosition="left"
+            [ariaLabel]="'account.emailChange.profile.edit' | translate"
+            (onClick)="startEditEmail()"
+            styleClass="profile-page__row-edit-button"
+            data-cy="profile-email-edit"
+          />
+        </div>
+      }
 
       <div class="profile-page__row profile-page__row--status">
         <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>

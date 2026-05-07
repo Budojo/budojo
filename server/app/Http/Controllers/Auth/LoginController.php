@@ -29,14 +29,14 @@ class LoginController extends Controller
 
         $token = $user->createToken('auth')->plainTextToken;
 
-        // Eager-load the deletion-pending relation so the SPA's
-        // `deletion_pending` block on the login response reflects
-        // reality immediately — without it, a user already in the
-        // 30-day grace window would see `deletion_pending: null` on
-        // login and only learn the true state from the next /auth/me
-        // bootstrap call. Single indexed query against a small table
-        // (#255).
-        $user->load('pendingDeletion');
+        // Eager-load the relations the `UserResource` projects so the
+        // wire envelope reflects reality immediately on login. Without
+        // this, a user already in the 30-day grace window (#223) or
+        // with an outstanding email-change request (#476) would see
+        // the corresponding block as `null` and only learn the true
+        // state from the next /auth/me bootstrap call. Two indexed
+        // queries against small tables (#255 caught the first half).
+        $user->load(['pendingDeletion', 'pendingEmailChange']);
 
         return response()->json(
             [

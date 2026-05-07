@@ -52,7 +52,7 @@ class WelcomeMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            to: [new Address($this->user->email, $this->user->name)],
+            to: [new Address($this->user->email, $this->user->full_name)],
             subject: 'Welcome to Budojo',
         );
     }
@@ -62,7 +62,9 @@ class WelcomeMail extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'mail.welcome',
             with: [
-                'name' => $this->user->name,
+                // Greeting takes the first name only — friendlier than
+                // the full legal name for a "Hi X" welcome line.
+                'name' => $this->user->first_name,
                 // Single CTA URL — the SPA's noAcademyGuard auto-redirects
                 // a freshly-registered user to /setup, so a root-level
                 // link is correct regardless of onboarding state. We

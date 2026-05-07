@@ -101,27 +101,105 @@ export class ProfileComponent {
   protected readonly nameServerError = signal<'invalid' | 'generic' | null>(null);
 
   /**
-   * Reactive form for the inline name edit (#463). Constraints mirror the
-   * server's `UpdateProfileRequest`: `required | min:2 | max:255`. The
-   * `nonWhitespaceRequired` validator catches the whitespace-only case
-   * the raw `Validators.required` blind-spots (`"   "` passes the raw
-   * required check) — without it `submitEditName()` would trim to `""`
-   * and the user would see a server 422 instead of the inline error
-   * (#471). Scoped so short non-whitespace input (`"X"`) still falls
-   * through to `Validators.minLength` — otherwise both errors compete
-   * and the getter priority chain shows the wrong copy.
+   * Reactive form for the inline name edit (#463 + #479). After the
+   * #479 split, "name" is two fields: `first_name` + `last_name`. Each
+   * carries the same validator stack as the legacy single field
+   * (required + non-whitespace-only + min 2 + max 100, mirroring the
+   * server's `UpdateProfileRequest`).
    */
   protected readonly nameForm = this.fb.group({
-    name: [
+    first_name: [
       '',
       [
         Validators.required,
         nonWhitespaceRequiredValidator(),
         Validators.minLength(2),
-        Validators.maxLength(255),
+        Validators.maxLength(100),
+      ],
+    ],
+    last_name: [
+      '',
+      [
+        Validators.required,
+        nonWhitespaceRequiredValidator(),
+        Validators.minLength(2),
+        Validators.maxLength(100),
       ],
     ],
   });
+
+  /** True while PATCH /me is in flight for the handle edit (#479). */
+  protected readonly savingHandle = signal<boolean>(false);
+
+  /** True when the user has clicked the inline pencil to edit their handle (#479). */
+  protected readonly editingHandle = signal<boolean>(false);
+
+  /**
+   * Server-mapped error for the handle-edit row (#479). Three branches:
+   * `invalid` (422 `handle_invalid_format` — IG-style format violation),
+   * `taken` (422 `handle_taken` — already a different user's), `generic`
+   * (5xx / network / unknown). Cleared on every fresh submit attempt.
+   */
+  protected readonly handleServerError = signal<'invalid' | 'taken' | 'generic' | null>(null);
+
+  /**
+   * Reactive form for the inline handle edit (#479). Constraints mirror
+   * the server's `HandleFormat` rule: 3-30 chars, lowercase `[a-z0-9_.]`,
+   * must start with a letter, no consecutive dots, no leading/trailing
+   * dot. Empty string clears the handle (sent to the server as `null`).
+   */
+  protected readonly handleForm = this.fb.group({
+    handle: [
+      '',
+      [
+        // Empty is allowed — clearing the handle is a valid action.
+        // The submit path translates `''` to `null` on the wire.
+        Validators.maxLength(30),
+        handleFormatValidator(),
+      ],
+    ],
+  });
+
+  /** True while POST /me/email-change is in flight (#476). */
+  protected readonly requestingEmail = signal<boolean>(false);
+
+  /** True while DELETE /me/email-change is in flight (#476). */
+  protected readonly cancellingEmail = signal<boolean>(false);
+
+  /** True when the user has clicked the inline pencil to change their email (#476). */
+  protected readonly editingEmail = signal<boolean>(false);
+
+  /**
+   * Server-mapped error for the email-change row (#476). Five named
+   * branches cover the wire shapes the server emits:
+   *
+   * - `invalid` — 422 `errors.email` with no recognized code
+   * - `taken` — 422 `email_taken` (already a different user's email)
+   * - `unchanged` — 422 `email_unchanged` (same as current)
+   * - `throttled` — 429 (too many requests within the hourly window)
+   * - `generic` — 5xx / network / unknown
+   *
+   * Cleared on every fresh submit attempt before the validity guard
+   * so a stale 422 doesn't linger while the user fixes a client-side
+   * error (mirrors the change-password pattern below).
+   */
+  protected readonly emailServerError = signal<
+    'invalid' | 'taken' | 'unchanged' | 'throttled' | 'generic' | null
+  >(null);
+
+  /**
+   * Reactive form for the inline email edit (#476). The validators
+   * mirror the server's `RequestEmailChangeRequest`: `required` +
+   * `email` + `max:255`. Error rendering follows the same priority
+   * chain as the name edit (touched-and-invalid client validators
+   * first, then a server-mapped error).
+   */
+  protected readonly emailForm = this.fb.group({
+    email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
+  });
+
+  /** Pending email-change block from the cached user, when any. */
+  protected readonly pendingEmailChange = computed(() => this.user()?.pending_email_change ?? null);
 
   /** True while POST /me/password is in flight. */
   protected readonly changingPassword = signal<boolean>(false);
@@ -304,6 +382,137 @@ export class ProfileComponent {
   }
 
   /**
+   * Open the inline email-edit row (#476). The form is pre-cleared
+   * rather than pre-filled — typing a fresh address from scratch is
+   * the user's whole intent here, unlike the name edit where the
+   * current value is the obvious starting point.
+   */
+  startEditEmail(): void {
+    this.emailForm.reset({ email: '' });
+    this.emailServerError.set(null);
+    this.editingEmail.set(true);
+  }
+
+  /** Drop the in-progress email edit; the cached user.email stays unchanged. */
+  cancelEditEmail(): void {
+    this.editingEmail.set(false);
+    this.emailServerError.set(null);
+  }
+
+  /**
+   * Submit the email change request (#476). On success the SPA does
+   * NOT mutate the cached user signal — the live email won't change
+   * until the verification link is clicked. We refetch via
+   * `loadCurrentUser()` so the `pending_email_change` block on the
+   * envelope hydrates the pillola immediately. Then we toast.
+   *
+   * Confirm-popup pattern (Krug § "forgiveness for mistakes"): the
+   * dialog spells out "we'll send a link to {newEmail}; until you
+   * click it your login email stays {currentEmail}". This is the
+   * critical-action moment — getting the new address right matters
+   * because a typo locks the legitimate inbox out of the new address
+   * round-trip.
+   */
+  submitEditEmail(event: Event): void {
+    if (this.requestingEmail()) return;
+
+    this.emailServerError.set(null);
+
+    if (this.emailForm.invalid) {
+      this.emailForm.markAllAsTouched();
+      return;
+    }
+
+    const newEmail = (this.emailForm.getRawValue().email ?? '').trim();
+    const currentEmail = this.user()?.email ?? '';
+
+    this.confirmationService.confirm({
+      target: event.currentTarget as HTMLElement,
+      header: this.translate.instant('account.emailChange.profile.confirmTitle'),
+      message: this.translate.instant('account.emailChange.profile.confirmMessage', {
+        newEmail,
+        currentEmail,
+      }),
+      acceptLabel: this.translate.instant('account.emailChange.profile.confirmAccept'),
+      rejectLabel: this.translate.instant('account.emailChange.profile.confirmReject'),
+      accept: () => this.dispatchEmailRequest(newEmail),
+    });
+  }
+
+  private dispatchEmailRequest(newEmail: string): void {
+    this.requestingEmail.set(true);
+    this.authService
+      .requestEmailChange(newEmail)
+      .pipe(finalize(() => this.requestingEmail.set(false)))
+      .subscribe({
+        next: () => {
+          this.editingEmail.set(false);
+          // Refresh the cached user so the pending pillola lights up
+          // in this tab without the user having to refresh.
+          this.authService.loadCurrentUser().subscribe({ error: () => undefined });
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translate.instant('account.emailChange.toast.linkSentSummary'),
+            detail: this.translate.instant('account.emailChange.toast.linkSentDetail', {
+              newEmail,
+            }),
+            life: 4000,
+          });
+        },
+        error: (err: { status?: number; error?: { errors?: Record<string, unknown> } }) => {
+          const errors = err.error?.errors ?? {};
+          if (err.status === 429) {
+            this.emailServerError.set('throttled');
+            return;
+          }
+          // Laravel keys validation errors by FIELD; the message
+          // string ("email_taken" / "email_unchanged") sits in the
+          // values array.
+          const emailErrors = errors['email'];
+          const code =
+            Array.isArray(emailErrors) && typeof emailErrors[0] === 'string'
+              ? emailErrors[0]
+              : null;
+          if (code === 'email_taken') {
+            this.emailServerError.set('taken');
+          } else if (code === 'email_unchanged') {
+            this.emailServerError.set('unchanged');
+          } else if ('email' in errors) {
+            this.emailServerError.set('invalid');
+          } else {
+            this.emailServerError.set('generic');
+          }
+        },
+      });
+  }
+
+  /**
+   * Cancel an outstanding email-change pending row (#476). Server-side
+   * is idempotent (a no-op when no row exists), so we don't gate on
+   * `pendingEmailChange()` being non-null — defensive against a stale
+   * cached user signal. Toast on success; the auth service refreshes
+   * the cached user afterwards so the pillola disappears in the same
+   * tick.
+   */
+  cancelPendingEmailChange(): void {
+    if (this.cancellingEmail()) return;
+    this.cancellingEmail.set(true);
+    this.authService
+      .cancelPendingEmailChange()
+      .pipe(finalize(() => this.cancellingEmail.set(false)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translate.instant('account.emailChange.toast.cancelledSummary'),
+            life: 2500,
+          });
+        },
+        error: () => undefined,
+      });
+  }
+
+  /**
    * In-app password change (#409). Submits the form to `POST
    * /api/v1/me/password`; on success the SPA stays logged in (the server
    * preserves the current Sanctum token while revoking every other token
@@ -363,32 +572,30 @@ export class ProfileComponent {
   }
 
   /**
-   * Open the inline name-edit form (#463). Pre-fills with the cached
-   * user.name so the user starts from the current value rather than an
-   * empty input — Krug § "self-evident UI" (the user sees what's there
-   * and edits in place, the destination is the edit, not "type your
-   * whole name from scratch").
+   * Open the inline name-edit form (#463 + #479). Pre-fills both
+   * controls with the cached values so the user starts from the
+   * current state rather than empty inputs.
    */
   startEditName(): void {
-    const current = this.user()?.name ?? '';
-    this.nameForm.reset({ name: current });
+    const u = this.user();
+    this.nameForm.reset({
+      first_name: u?.first_name ?? '',
+      last_name: u?.last_name ?? '',
+    });
     this.nameServerError.set(null);
     this.editingName.set(true);
   }
 
-  /** Drop the in-progress edit; the cached user.name stays untouched. */
+  /** Drop the in-progress edit; the cached user names stay untouched. */
   cancelEditName(): void {
     this.editingName.set(false);
     this.nameServerError.set(null);
   }
 
   /**
-   * Submit the name change (#463). On success we close the edit row +
-   * toast; the cached `user` signal is updated inside `AuthService.
-   * updateProfile` so the static value re-renders without an extra
-   * round-trip. Inline error on 422 (Norman § feedback — the user is
-   * staring at the form, the toast is the wrong channel for a validation
-   * issue).
+   * Submit the name change (#463 + #479). Sends first_name + last_name +
+   * the current handle (so the no-op handle-on-name-edit doesn't
+   * accidentally clear it server-side via the absence of the field).
    */
   submitEditName(): void {
     if (this.savingName()) return;
@@ -400,11 +607,13 @@ export class ProfileComponent {
       return;
     }
 
-    const name = (this.nameForm.getRawValue().name ?? '').trim();
-    // No-op short-circuit: if the user opened the edit, didn't change
-    // anything, and clicked save, we'd otherwise round-trip to the
-    // server for nothing. Treat it like a cancel.
-    if (name === (this.user()?.name ?? '')) {
+    const raw = this.nameForm.getRawValue();
+    const firstName = (raw.first_name ?? '').trim();
+    const lastName = (raw.last_name ?? '').trim();
+    const u = this.user();
+    // No-op short-circuit: if neither first nor last changed, treat it
+    // like a cancel — no round-trip, no toast.
+    if (firstName === (u?.first_name ?? '') && lastName === (u?.last_name ?? '')) {
       this.editingName.set(false);
       return;
     }
@@ -412,7 +621,11 @@ export class ProfileComponent {
     this.savingName.set(true);
 
     this.authService
-      .updateProfile(name)
+      .updateProfile({
+        first_name: firstName,
+        last_name: lastName,
+        handle: u?.handle ?? null,
+      })
       .pipe(finalize(() => this.savingName.set(false)))
       .subscribe({
         next: () => {
@@ -425,13 +638,101 @@ export class ProfileComponent {
         },
         error: (err: { error?: { errors?: Record<string, unknown> } }) => {
           const errors = err.error?.errors ?? {};
-          this.nameServerError.set('name' in errors ? 'invalid' : 'generic');
+          this.nameServerError.set(
+            'first_name' in errors || 'last_name' in errors ? 'invalid' : 'generic',
+          );
         },
       });
   }
 
-  protected get nameControl(): AbstractControl {
-    return this.nameForm.get('name')!;
+  protected get firstNameControl(): AbstractControl {
+    return this.nameForm.get('first_name')!;
+  }
+
+  protected get lastNameControl(): AbstractControl {
+    return this.nameForm.get('last_name')!;
+  }
+
+  protected get handleControl(): AbstractControl {
+    return this.handleForm.get('handle')!;
+  }
+
+  /**
+   * Open the inline handle-edit form (#479). Pre-fills with the cached
+   * handle (or empty string if the user hasn't set one yet).
+   */
+  startEditHandle(): void {
+    const current = this.user()?.handle ?? '';
+    this.handleForm.reset({ handle: current });
+    this.handleServerError.set(null);
+    this.editingHandle.set(true);
+  }
+
+  /** Drop the in-progress handle edit; the cached value stays untouched. */
+  cancelEditHandle(): void {
+    this.editingHandle.set(false);
+    this.handleServerError.set(null);
+  }
+
+  /**
+   * Submit the handle change (#479). Empty input clears the handle
+   * (server-side `null`); a valid IG-style string sets it. We
+   * lowercase on submit (defensive — the `HandleFormat` validator
+   * rejects mixed-case input client-side already, so a mixed-case
+   * value can only land here from a programmatic patchValue / a stale
+   * paste before the validator runs). The server lowercases again on
+   * save as a final backstop for non-HTTP callers.
+   */
+  submitEditHandle(): void {
+    if (this.savingHandle()) return;
+
+    this.handleServerError.set(null);
+
+    if (this.handleForm.invalid) {
+      this.handleForm.markAllAsTouched();
+      return;
+    }
+
+    const raw = (this.handleForm.getRawValue().handle ?? '').trim();
+    const newHandle = raw === '' ? null : raw.toLowerCase();
+    const u = this.user();
+    // No-op short-circuit: same value as cached → treat like cancel.
+    if (newHandle === (u?.handle ?? null)) {
+      this.editingHandle.set(false);
+      return;
+    }
+
+    this.savingHandle.set(true);
+
+    this.authService
+      .updateProfile({
+        first_name: u?.first_name ?? '',
+        last_name: u?.last_name ?? '',
+        handle: newHandle,
+      })
+      .pipe(finalize(() => this.savingHandle.set(false)))
+      .subscribe({
+        next: () => {
+          this.editingHandle.set(false);
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translate.instant('profile.editHandle.successSummary'),
+            life: 2500,
+          });
+        },
+        error: (err: { error?: { errors?: Record<string, string[]> } }) => {
+          const handleErrs = err.error?.errors?.['handle'] ?? [];
+          if (handleErrs.includes('handle_taken')) {
+            this.handleServerError.set('taken');
+          } else if (handleErrs.includes('handle_invalid_format')) {
+            this.handleServerError.set('invalid');
+          } else if (handleErrs.length > 0) {
+            this.handleServerError.set('invalid');
+          } else {
+            this.handleServerError.set('generic');
+          }
+        },
+      });
   }
 
   /**
@@ -442,24 +743,138 @@ export class ProfileComponent {
    * the duplicate-id + ambiguous-aria-describedby a11y trap that
    * surfaces when each branch ships its own `<small>` with the same id.
    */
-  protected get nameError(): { dataCy: string; key: string } | null {
-    if (this.nameControl.touched) {
-      if (this.nameControl.errors?.['required']) {
-        return { dataCy: 'profile-name-required', key: 'profile.editName.required' };
+  protected get firstNameError(): { dataCy: string; key: string } | null {
+    if (this.firstNameControl.touched) {
+      if (this.firstNameControl.errors?.['required']) {
+        return { dataCy: 'profile-first-name-required', key: 'profile.editName.firstNameRequired' };
       }
-      if (this.nameControl.errors?.['minlength']) {
-        return { dataCy: 'profile-name-minlength', key: 'profile.editName.minLength' };
+      if (this.firstNameControl.errors?.['minlength']) {
+        return {
+          dataCy: 'profile-first-name-minlength',
+          key: 'profile.editName.firstNameMinLength',
+        };
       }
-      if (this.nameControl.errors?.['maxlength']) {
-        return { dataCy: 'profile-name-maxlength', key: 'profile.editName.maxLength' };
+      if (this.firstNameControl.errors?.['maxlength']) {
+        return {
+          dataCy: 'profile-first-name-maxlength',
+          key: 'profile.editName.firstNameMaxLength',
+        };
       }
     }
+    return null;
+  }
+
+  protected get lastNameError(): { dataCy: string; key: string } | null {
+    if (this.lastNameControl.touched) {
+      if (this.lastNameControl.errors?.['required']) {
+        return { dataCy: 'profile-last-name-required', key: 'profile.editName.lastNameRequired' };
+      }
+      if (this.lastNameControl.errors?.['minlength']) {
+        return { dataCy: 'profile-last-name-minlength', key: 'profile.editName.lastNameMinLength' };
+      }
+      if (this.lastNameControl.errors?.['maxlength']) {
+        return { dataCy: 'profile-last-name-maxlength', key: 'profile.editName.lastNameMaxLength' };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Server-mapped error row that's shared by both name fields (the
+   * server returns `errors.first_name` or `errors.last_name` and we
+   * collapse to one banner above the form because the user already
+   * sees per-field validity from the local validators).
+   */
+  protected get nameServerErrorRow(): { dataCy: string; key: string } | null {
     const server = this.nameServerError();
     if (server === 'invalid') {
       return { dataCy: 'profile-name-server-invalid', key: 'profile.editName.serverInvalid' };
     }
     if (server === 'generic') {
       return { dataCy: 'profile-name-server-generic', key: 'profile.editName.serverGeneric' };
+    }
+    return null;
+  }
+
+  /**
+   * Single source of truth for the inline handle-edit error row (#479).
+   * Picks the highest-priority message: client format violation first,
+   * then server-mapped errors (taken / invalid / generic).
+   */
+  protected get handleError(): { dataCy: string; key: string } | null {
+    if (this.handleControl.touched) {
+      if (this.handleControl.errors?.['handleInvalidFormat']) {
+        return { dataCy: 'profile-handle-format', key: 'profile.editHandle.invalidFormat' };
+      }
+      if (this.handleControl.errors?.['maxlength']) {
+        return { dataCy: 'profile-handle-maxlength', key: 'profile.editHandle.invalidFormat' };
+      }
+    }
+    const server = this.handleServerError();
+    if (server === 'taken') {
+      return { dataCy: 'profile-handle-taken', key: 'profile.editHandle.taken' };
+    }
+    if (server === 'invalid') {
+      return { dataCy: 'profile-handle-server-invalid', key: 'profile.editHandle.invalidFormat' };
+    }
+    if (server === 'generic') {
+      return { dataCy: 'profile-handle-server-generic', key: 'profile.editHandle.serverGeneric' };
+    }
+    return null;
+  }
+
+  /** Form control accessor for the inline email-edit row (#476). */
+  protected get emailControl(): AbstractControl {
+    return this.emailForm.get('email')!;
+  }
+
+  /**
+   * Single source of truth for the inline email-edit error row (#476).
+   * Mirrors the `nameError` getter pattern: touched-and-invalid client
+   * validators first, then a server-mapped error.
+   */
+  protected get emailError(): { dataCy: string; key: string } | null {
+    if (this.emailControl.touched) {
+      if (this.emailControl.errors?.['required']) {
+        return { dataCy: 'profile-email-required', key: 'account.emailChange.profile.required' };
+      }
+      if (this.emailControl.errors?.['email']) {
+        return { dataCy: 'profile-email-invalid', key: 'account.emailChange.profile.invalid' };
+      }
+      if (this.emailControl.errors?.['maxlength']) {
+        return { dataCy: 'profile-email-maxlength', key: 'account.emailChange.profile.maxLength' };
+      }
+    }
+    const server = this.emailServerError();
+    if (server === 'taken') {
+      return {
+        dataCy: 'profile-email-server-taken',
+        key: 'account.emailChange.profile.serverEmailTaken',
+      };
+    }
+    if (server === 'unchanged') {
+      return {
+        dataCy: 'profile-email-server-unchanged',
+        key: 'account.emailChange.profile.serverEmailUnchanged',
+      };
+    }
+    if (server === 'throttled') {
+      return {
+        dataCy: 'profile-email-server-throttled',
+        key: 'account.emailChange.profile.serverThrottled',
+      };
+    }
+    if (server === 'invalid') {
+      return {
+        dataCy: 'profile-email-server-invalid',
+        key: 'account.emailChange.profile.serverInvalid',
+      };
+    }
+    if (server === 'generic') {
+      return {
+        dataCy: 'profile-email-server-generic',
+        key: 'account.emailChange.profile.serverGeneric',
+      };
     }
     return null;
   }
@@ -513,5 +928,35 @@ function nonWhitespaceRequiredValidator(): ValidatorFn {
     const value: unknown = control.value;
     if (typeof value !== 'string') return null;
     return value.length > 0 && value.trim().length === 0 ? { required: true } : null;
+  };
+}
+
+/**
+ * Instagram-style handle validator (#479). Mirrors the server's
+ * `App\Rules\HandleFormat` rule verbatim so the SPA preview matches
+ * what the server will accept:
+ *
+ * - 3-30 chars
+ * - lowercase `[a-z0-9_.]` charset
+ * - must start with a letter
+ * - no consecutive dots
+ * - no leading/trailing dot
+ *
+ * Empty string is ALLOWED (clearing the handle is a valid action; the
+ * submit handler translates `''` to `null` on the wire). Returns
+ * `{ handleInvalidFormat: true }` on failure so the template can
+ * surface the IG-style helper text.
+ */
+function handleFormatValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const value: unknown = control.value;
+    if (typeof value !== 'string' || value === '') return null;
+
+    if (value.length < 3 || value.length > 30) return { handleInvalidFormat: true };
+    if (!/^[a-z][a-z0-9._]{2,29}$/.test(value)) return { handleInvalidFormat: true };
+    if (value.includes('..')) return { handleInvalidFormat: true };
+    if (value.endsWith('.')) return { handleInvalidFormat: true };
+
+    return null;
   };
 }

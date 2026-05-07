@@ -111,7 +111,7 @@ it('POST accept creates an athlete user, links the row, returns a Sanctum token'
         'accept_terms' => true,
     ])
         ->assertCreated()
-        ->assertJsonStructure(['data' => ['token', 'user' => ['id', 'name', 'email', 'role']]])
+        ->assertJsonStructure(['data' => ['token', 'user' => ['id', 'first_name', 'last_name', 'full_name', 'handle', 'email', 'role']]])
         ->assertJsonPath('data.user.email', 'newathlete@example.com')
         ->assertJsonPath('data.user.role', 'athlete');
 

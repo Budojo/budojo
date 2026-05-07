@@ -29,7 +29,10 @@ describe("What's new page (#254)", () => {
       body: {
         data: {
           id: 1,
-          name: 'Test User',
+          first_name: 'Test',
+          last_name: 'User',
+          full_name: 'Test User',
+          handle: null,
           email: 'test@example.com',
           email_verified_at: '2026-01-01T00:00:00Z',
           deletion_pending: null,
@@ -44,7 +47,7 @@ describe("What's new page (#254)", () => {
 
     // The latest release sits at the top — assert it's actually
     // visible without scrolling (the user sees it on landing).
-    cy.get('[data-cy="whats-new-release-v1.19.0"]').should('be.visible');
+    cy.get('[data-cy="whats-new-release-v2.0.0"]').should('be.visible');
 
     // Older releases are below the fold of the default Cypress
     // viewport (1280×720) — the dashboard shell's `.main` container
@@ -52,6 +55,7 @@ describe("What's new page (#254)", () => {
     // clipped. We assert presence in the DOM, not visibility, since
     // a user has to scroll either way. The newest-first ordering
     // (which IS load-bearing UX) is pinned in the vitest spec.
+    cy.get('[data-cy="whats-new-release-v1.19.0"]').should('exist');
     cy.get('[data-cy="whats-new-release-v1.18.0"]').should('exist');
     cy.get('[data-cy="whats-new-release-v1.17.0"]').should('exist');
     cy.get('[data-cy="whats-new-release-v1.16.0"]').should('exist');
@@ -106,7 +110,10 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
         body: {
           data: {
             id: 1,
-            name: 'Test User',
+            first_name: 'Test',
+            last_name: 'User',
+            full_name: 'Test User',
+            handle: null,
             email: 'test@example.com',
             email_verified_at: '2026-01-01T00:00:00Z',
             deletion_pending: null,

@@ -19,7 +19,8 @@ class RegisterController extends Controller
     public function __invoke(RegisterRequest $request): JsonResponse
     {
         $user = $this->action->execute(
-            name: $request->string('name')->toString(),
+            firstName: $request->string('first_name')->toString(),
+            lastName: $request->string('last_name')->toString(),
             email: $request->string('email')->toString(),
             password: $request->string('password')->toString(),
             // The FormRequest's `accepted` rule has already confirmed
@@ -30,12 +31,12 @@ class RegisterController extends Controller
 
         $token = $user->createToken('auth')->plainTextToken;
 
-        // Eager-load the deletion-pending relation so `UserResource`
-        // emits a coherent `deletion_pending` (always null for a
-        // fresh registration; we still load to keep the invariant
-        // that all UserResource consumers pre-load the relation).
-        // Mirrors LoginController + MeController (#255).
-        $user->load('pendingDeletion');
+        // Eager-load the relations the `UserResource` projects so the
+        // emitted envelope is coherent (both blocks are always null
+        // for a fresh registration; we still load to keep the
+        // invariant that all `UserResource` consumers pre-load the
+        // relations — see the comment in the Resource for context).
+        $user->load(['pendingDeletion', 'pendingEmailChange']);
 
         return response()->json(
             [

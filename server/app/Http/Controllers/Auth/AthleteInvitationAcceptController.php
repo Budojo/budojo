@@ -70,7 +70,10 @@ class AthleteInvitationAcceptController extends Controller
                 'token' => $result['token']->plainTextToken,
                 'user' => [
                     'id' => $result['user']->id,
-                    'name' => $result['user']->name,
+                    'first_name' => $result['user']->first_name,
+                    'last_name' => $result['user']->last_name,
+                    'full_name' => $result['user']->full_name,
+                    'handle' => $result['user']->handle,
                     'email' => $result['user']->email,
                     'role' => $result['user']->role->value,
                 ],

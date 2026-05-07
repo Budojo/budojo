@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\Mail;
 class RegisterUserAction
 {
     public function execute(
-        string $name,
+        string $firstName,
+        string $lastName,
         string $email,
         string $password,
         CarbonInterface $termsAcceptedAt,
@@ -27,7 +28,8 @@ class RegisterUserAction
         // we deliberately don't default to `now()` so that path can't
         // silently fabricate consent that never happened.
         $user = User::create([
-            'name' => $name,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
             'email' => $email,
             'password' => $password,
             'terms_accepted_at' => $termsAcceptedAt,

@@ -72,7 +72,7 @@ describe('role guards (#445, M7 PR-D)', () => {
     });
 
     it('treats a missing role as owner (backwards compat with cached envelopes)', async () => {
-      expect(await runGuard(roleOwnerGuard, authStub({ name: 'Mario' } as User))).toBe(true);
+      expect(await runGuard(roleOwnerGuard, authStub({ first_name: 'Mario' } as User))).toBe(true);
     });
 
     it('hits /auth/me when the cached user is null (bootstrap race)', async () => {

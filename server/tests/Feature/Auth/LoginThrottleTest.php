@@ -95,7 +95,7 @@ it('does not throttle a successful login below the cap', function (): void {
     ])
         ->assertOk()
         ->assertJsonStructure([
-            'data' => ['id', 'name', 'email'],
+            'data' => ['id', 'first_name', 'last_name', 'full_name', 'handle', 'email'],
             'token',
         ]);
 });

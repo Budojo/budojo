@@ -41,7 +41,7 @@ class AvatarController extends Controller
         // load here so `avatar` mutations return a consistent envelope —
         // a user in the deletion grace window who replaces their avatar
         // still sees the warning banner.
-        $user->load('pendingDeletion');
+        $user->load(['pendingDeletion', 'pendingEmailChange']);
 
         return new UserResource($user);
     }
@@ -51,7 +51,7 @@ class AvatarController extends Controller
         /** @var User $user */
         $user = $request->user();
         $user = $this->deleteAction->execute($user);
-        $user->load('pendingDeletion');
+        $user->load(['pendingDeletion', 'pendingEmailChange']);
 
         return new UserResource($user);
     }

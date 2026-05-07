@@ -13,7 +13,7 @@ it('returns the authenticated user envelope including email_verified_at', functi
     $this->actingAs($user)
         ->getJson('/api/v1/auth/me')
         ->assertOk()
-        ->assertJsonStructure(['data' => ['id', 'name', 'email', 'email_verified_at']])
+        ->assertJsonStructure(['data' => ['id', 'first_name', 'last_name', 'full_name', 'handle', 'email', 'email_verified_at']])
         ->assertJsonPath('data.email', 'mario@example.com');
 });
 

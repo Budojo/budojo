@@ -22,13 +22,15 @@ class MeController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        // Eager-load the deletion-pending relation so `UserResource`
-        // can surface the `deletion_pending` field without a lazy
-        // follow-up query (#223). The Login + Register controllers
-        // do the same now (#255 fixed the gap where they didn't,
-        // and a user in the grace window saw `deletion_pending: null`
-        // on the login response).
-        $user->load('pendingDeletion');
+        // Eager-load the relations `UserResource` projects: the
+        // deletion-pending grace-window record (#223) and the
+        // email-change pending-then-verify row (#476). Both surface
+        // optional blocks on the user envelope; the Resource itself
+        // never lazy-loads — every call site loads explicitly so a
+        // future caller-without-load shows up as `null` instead of an
+        // N+1 query (#255 caught this gap on login + register the
+        // first time around).
+        $user->load(['pendingDeletion', 'pendingEmailChange']);
 
         return new UserResource($user);
     }

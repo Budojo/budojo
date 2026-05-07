@@ -244,4 +244,10 @@
   <main class="main">
     <router-outlet />
   </main>
+
+  <!-- Global Cmd/Ctrl-K command palette (#426). Mounted once at the
+       dashboard shell so the keyboard shortcut works on every
+       authenticated route. The component owns its own visibility +
+       hotkey listener; the shell only needs to host it. -->
+  <app-search-palette />
 </div>

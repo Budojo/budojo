@@ -11,14 +11,14 @@ Every authenticated request in the system is made on behalf of a single user. Th
 
 ## Schema — `users`
 
-Laravel default structure, unchanged.
-
 | Column | Type | Constraints | Purpose |
 |---|---|---|---|
 | `id` | bigint unsigned | PK, auto-increment | Internal identifier |
-| `name` | string | not null | Display name of the owner (e.g. "Mario Rossi") |
+| `first_name` | string | not null, default `''` | Given name (#479). Default `''` covers the migration backfill; never lands from a validated request. |
+| `last_name` | string | not null, default `''` | Family name (#479). May legitimately be empty for a single-token migrated row. |
+| `handle` | string(30) | nullable, **unique** | Instagram-style user-chosen handle (#479). Lowercase `[a-z0-9_.]`, 3-30 chars, must start with a letter, no consecutive dots, no leading/trailing dot. Lowercased on save (the unique index is therefore effectively case-insensitive). Null until the user opts in via the profile page. |
 | `email` | string | not null, **unique** | Login credential and contact email |
-| `email_verified_at` | timestamp | nullable | Reserved for future email verification flow; currently never set by the app |
+| `email_verified_at` | timestamp | nullable | Set when the user clicks the M5 verification link issued at `POST /auth/register`. Also stamped by `AcceptAthleteInvitationAction` (#445 — the invite token IS the email proof) and re-stamped by `ConfirmEmailChangeAction` (#476 — the verification click on the new address). Null until a flow above runs. |
 | `terms_accepted_at` | timestamp | nullable | Set on `POST /auth/register` when the user ticks the Terms-of-Service gate (#420). Null for pre-#420 accounts and any future system-only user creation path. |
 | `avatar_path` | string | nullable | Relative path on the `public` disk of the uploaded avatar (#411). Null until the first `POST /me/avatar`. The wire layer emits `avatar_url` (full URL) via `UserResource`, never the raw path. |
 | `password` | string | not null | Bcrypt hash (cost 12, configured via `BCRYPT_ROUNDS`) |
@@ -37,11 +37,14 @@ Laravel default structure, unchanged.
 
 - `PRIMARY KEY(id)`
 - `UNIQUE(email)` — enforces one account per email address
+- `UNIQUE(handle)` — enforces one account per Instagram-style handle (#479). Storage is lowercased on every write, so the index is effectively case-insensitive.
 
 ## Business rules
 
 - **Email uniqueness is global**, not scoped. Two academies cannot share an owner's email.
-- **Registration flow** (`POST /api/v1/auth/register`) creates the user without an academy. The SPA routes newly-registered users to `/setup` via the `noAcademyGuard`.
+- **Handle uniqueness is global** (#479) — same shape as email. The `App\Rules\HandleFormat` rule mirrors the front-end regex so the SPA preview matches the server-accepted shape. The handle is OPTIONAL in V1: NULL is the default, and existing accounts stay NULL through the migration. The user opts in via the profile page; mention/lookup surfaces consume the column in follow-up issues.
+- **Name shape** (#479) — `first_name` + `last_name` are the canonical structured fields. Surfaces that want one string consume the `full_name` accessor (`UserResource.full_name`, `User->full_name` in PHP) which is `trim(first_name . ' ' . last_name)`. Greeting contexts (welcome mail, "Hi X" lines) prefer `first_name` directly.
+- **Registration flow** (`POST /api/v1/auth/register`) creates the user without an academy. The SPA routes newly-registered users to `/setup` via the `noAcademyGuard`. Handle is NOT collected at registration — post-signup self-service.
 - **Password hashing** is handled by Laravel's `hashed` cast — callers pass plaintext and the framework hashes before insert.
 - **No soft-delete** on users. Deleting a user cascades to their academy (which cascades to athletes) via FK cascade.
 - **Sanctum tokens** issued at login do not expire by default — `expires_at` in `personal_access_tokens` is null. There is no `/api/v1/auth/logout` endpoint today; "logout" in the SPA is client-side only (drops the token from `localStorage`) and does **not** revoke the row in `personal_access_tokens`. Adding a server-side revoke endpoint is queued for a future PR.

@@ -17,7 +17,10 @@ class FakeAuthService {
 function userFactory(overrides: Partial<User> = {}): User {
   return {
     id: 1,
-    name: 'Mario Rossi',
+    first_name: 'Mario',
+    last_name: 'Rossi',
+    full_name: 'Mario Rossi',
+    handle: null,
     email: 'mario@example.com',
     email_verified_at: null,
     avatar_url: null,

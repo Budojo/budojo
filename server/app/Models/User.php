@@ -9,6 +9,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -19,7 +20,10 @@ use Laravel\Sanctum\HasApiTokens;
 
 /**
  * @property int          $id
- * @property string       $name
+ * @property string       $first_name         Given name. Required (NOT NULL); empty string never lands from a validated request — only the migration default for the few seconds between column-add and backfill.
+ * @property string       $last_name          Family name. Required (NOT NULL, default ''). May legitimately be empty for a single-token migrated record (the user fixes on next profile visit).
+ * @property string|null  $handle             Instagram-style user-chosen identifier (#479). 3-30 chars, lowercase `[a-z0-9_.]`, must start with a letter, no consecutive dots, no leading/trailing dot. Globally unique. Null until the user opts in via the profile page.
+ * @property-read string  $full_name          Trimmed `first_name + ' ' + last_name`. Read-only accessor for surfaces (mailables, audit log) that still want a single string.
  * @property string       $email
  * @property Carbon|null  $email_verified_at  Set when the user clicks the signed verification link; null until then.
  * @property Carbon|null  $terms_accepted_at  Set on /auth/register when the user ticks the ToS gate (#420); null for pre-#420 / system-seeded accounts.
@@ -31,7 +35,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role'])]
+#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -84,6 +88,20 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Email-change-with-verification pending row (#476). At most one
+     * row exists at a time per user (DB UNIQUE on `user_id`). Presence
+     * ⇒ the user has requested an email change but hasn't clicked the
+     * verification link yet — `users.email` stays the OLD address until
+     * confirmation, the candidate lives on the pending row.
+     *
+     * @return HasOne<PendingEmailChange, $this>
+     */
+    public function pendingEmailChange(): HasOne
+    {
+        return $this->hasOne(PendingEmailChange::class);
+    }
+
+    /**
      * Public URL of the avatar — `null` when none is set (#411). Mirrors the
      * shape of `AcademyResource::logo_url` (resolves through `Storage::disk
      * ('public')->url(...)`) so the SPA contract stays uniform: the wire
@@ -111,6 +129,23 @@ class User extends Authenticatable implements MustVerifyEmail
         $version = $this->updated_at->getTimestamp();
 
         return $url . '?v=' . $version;
+    }
+
+    /**
+     * Trimmed `first_name + ' ' + last_name` for the surfaces (mailables,
+     * audit logs, account-deletion confirmation) that still want a
+     * single string. Greeting surfaces should prefer `first_name`
+     * directly — this accessor is the formal-letter shape, not the
+     * conversational one. Read-only; mutating `full_name` is a no-op
+     * by design — first/last are the source of truth.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function fullName(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): string => trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? '')),
+        );
     }
 
     /**

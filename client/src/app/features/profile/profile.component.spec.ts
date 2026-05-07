@@ -9,7 +9,10 @@ import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 const FAKE_USER: User = {
   id: 1,
-  name: 'Tester',
+  first_name: 'Tester',
+  last_name: 'McTest',
+  full_name: 'Tester McTest',
+  handle: null,
   email: 'tester@example.com',
   email_verified_at: '2026-01-01T00:00:00Z',
   avatar_url: null,
@@ -26,7 +29,19 @@ function setup(authOverrides: Partial<AuthService> = {}, userOverride?: User | n
     ),
     removeAvatar: vi.fn(() => of({ ...FAKE_USER, avatar_url: null })),
     changePassword: vi.fn(() => of({ message: 'Password updated.' })),
-    updateProfile: vi.fn((name: string) => of({ ...FAKE_USER, name })),
+    updateProfile: vi.fn(
+      (payload: { first_name: string; last_name: string; handle: string | null }) =>
+        of({
+          ...FAKE_USER,
+          first_name: payload.first_name,
+          last_name: payload.last_name,
+          full_name: `${payload.first_name} ${payload.last_name}`.trim(),
+          handle: payload.handle,
+        }),
+    ),
+    requestEmailChange: vi.fn(() => of({ message: 'verification_link_sent' })),
+    cancelPendingEmailChange: vi.fn(() => of(undefined as void)),
+    loadCurrentUser: vi.fn(() => of(FAKE_USER)),
     ...authOverrides,
   };
 
@@ -263,59 +278,56 @@ describe('ProfileComponent — inline name edit (#463)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="profile-name-edit-form"]')).toBeNull();
   });
 
-  it('startEditName: pre-fills the form with the cached user name and opens the edit row', () => {
+  it('startEditName: pre-fills the form with the cached first/last name and opens the edit row', () => {
     const { cmp, fixture } = setup();
 
     cmp.startEditName();
     fixture.detectChanges();
 
     expect(cmp['editingName']()).toBe(true);
-    expect(cmp['nameForm'].value.name).toBe('Tester');
+    expect(cmp['nameForm'].value.first_name).toBe('Tester');
+    expect(cmp['nameForm'].value.last_name).toBe('McTest');
     expect(
       fixture.nativeElement.querySelector('[data-cy="profile-name-edit-form"]'),
     ).not.toBeNull();
   });
 
-  it('blocks submit when the form is invalid (empty name)', () => {
-    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+  it('blocks submit when the first_name is empty', () => {
+    const updateSpy = vi.fn(() => of(FAKE_USER));
     const { cmp } = setup({ updateProfile: updateSpy } as never);
 
     cmp.startEditName();
-    cmp['nameForm'].patchValue({ name: '' });
+    cmp['nameForm'].patchValue({ first_name: '', last_name: 'Rossi' });
     cmp.submitEditName();
 
     expect(updateSpy).not.toHaveBeenCalled();
   });
 
-  it('blocks submit when the name is shorter than 2 characters', () => {
-    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+  it('blocks submit when the first_name is shorter than 2 characters', () => {
+    const updateSpy = vi.fn(() => of(FAKE_USER));
     const { cmp } = setup({ updateProfile: updateSpy } as never);
 
     cmp.startEditName();
-    cmp['nameForm'].patchValue({ name: 'X' });
+    cmp['nameForm'].patchValue({ first_name: 'X', last_name: 'Rossi' });
     cmp.submitEditName();
 
     expect(updateSpy).not.toHaveBeenCalled();
   });
 
-  it('blocks submit when the name is whitespace-only (#471)', () => {
-    // Without the trimmed-length validator, "   " (3 spaces) passes
-    // raw `Validators.minLength(2)` and the trim in `submitEditName`
-    // sends an empty string to the server — bad UX. The local
-    // validator must reject whitespace-only input as `required`.
-    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+  it('blocks submit when the first_name is whitespace-only (#471)', () => {
+    const updateSpy = vi.fn(() => of(FAKE_USER));
     const { cmp } = setup({ updateProfile: updateSpy } as never);
 
     cmp.startEditName();
-    cmp['nameForm'].patchValue({ name: '   ' });
+    cmp['nameForm'].patchValue({ first_name: '   ', last_name: 'Rossi' });
     cmp.submitEditName();
 
     expect(updateSpy).not.toHaveBeenCalled();
-    expect(cmp['nameControl'].errors?.['required']).toBe(true);
+    expect(cmp['firstNameControl'].errors?.['required']).toBe(true);
   });
 
-  it('skips the network round-trip when the name is unchanged', () => {
-    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+  it('skips the network round-trip when neither field changed', () => {
+    const updateSpy = vi.fn(() => of(FAKE_USER));
     const { cmp } = setup({ updateProfile: updateSpy } as never);
 
     cmp.startEditName();
@@ -325,33 +337,37 @@ describe('ProfileComponent — inline name edit (#463)', () => {
     expect(cmp['editingName']()).toBe(false);
   });
 
-  it('on success: calls updateProfile with the trimmed name, closes the edit row, and toasts', () => {
-    const updateSpy = vi.fn((name: string) => of({ ...FAKE_USER, name }));
+  it('on success: calls updateProfile with trimmed first_name + last_name, closes the row, toasts', () => {
+    const updateSpy = vi.fn(() => of(FAKE_USER));
     const messageSpy = vi.fn();
     const { cmp, fixture } = setup({ updateProfile: updateSpy } as never);
     TestBed.inject(MessageService).add = messageSpy;
 
     cmp.startEditName();
-    cmp['nameForm'].patchValue({ name: '  Mario R.  ' });
+    cmp['nameForm'].patchValue({ first_name: '  Mario  ', last_name: '  Rossi  ' });
     cmp.submitEditName();
     fixture.detectChanges();
 
-    expect(updateSpy).toHaveBeenCalledWith('Mario R.');
+    expect(updateSpy).toHaveBeenCalledWith({
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      handle: null,
+    });
     expect(cmp['editingName']()).toBe(false);
     expect(messageSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
     expect(cmp['savingName']()).toBe(false);
   });
 
-  it('on 422 with errors.name: surfaces an inline "invalid" server error and stays in edit mode', () => {
+  it('on 422 with errors.first_name: surfaces an inline "invalid" server error and stays in edit mode', () => {
     const error = {
       status: 422,
-      error: { errors: { name: ['The name must be between 2 and 255 characters.'] } },
+      error: { errors: { first_name: ['The first name must be between 2 and 100 characters.'] } },
     };
     const updateSpy = vi.fn(() => throwError(() => error));
     const { cmp, fixture } = setup({ updateProfile: updateSpy } as never);
 
     cmp.startEditName();
-    cmp['nameForm'].patchValue({ name: 'New Name' });
+    cmp['nameForm'].patchValue({ first_name: 'New', last_name: 'Name' });
     cmp.submitEditName();
     fixture.detectChanges();
 
@@ -367,7 +383,7 @@ describe('ProfileComponent — inline name edit (#463)', () => {
     const { cmp, fixture } = setup({ updateProfile: updateSpy } as never);
 
     cmp.startEditName();
-    cmp['nameForm'].patchValue({ name: 'New Name' });
+    cmp['nameForm'].patchValue({ first_name: 'New', last_name: 'Name' });
     cmp.submitEditName();
     fixture.detectChanges();
 
@@ -377,11 +393,11 @@ describe('ProfileComponent — inline name edit (#463)', () => {
     ).not.toBeNull();
   });
 
-  it('cancelEditName: closes the row and clears any server error without touching the name', () => {
+  it('cancelEditName: closes the row and clears any server error without touching the user', () => {
     const { cmp, fixture, userSignal } = setup();
 
     cmp.startEditName();
-    cmp['nameForm'].patchValue({ name: 'Other' });
+    cmp['nameForm'].patchValue({ first_name: 'Other', last_name: 'Person' });
     cmp['nameServerError'].set('generic');
 
     cmp.cancelEditName();
@@ -389,7 +405,7 @@ describe('ProfileComponent — inline name edit (#463)', () => {
 
     expect(cmp['editingName']()).toBe(false);
     expect(cmp['nameServerError']()).toBeNull();
-    expect(userSignal()?.name).toBe('Tester');
+    expect(userSignal()?.first_name).toBe('Tester');
   });
 
   it('toggles `savingName` while the request is in flight', () => {
@@ -397,13 +413,13 @@ describe('ProfileComponent — inline name edit (#463)', () => {
     const { cmp } = setup({ updateProfile: vi.fn(() => subject.asObservable()) } as never);
 
     cmp.startEditName();
-    cmp['nameForm'].patchValue({ name: 'New Name' });
+    cmp['nameForm'].patchValue({ first_name: 'New', last_name: 'Name' });
 
     expect(cmp['savingName']()).toBe(false);
     cmp.submitEditName();
     expect(cmp['savingName']()).toBe(true);
 
-    subject.next({ ...FAKE_USER, name: 'New Name' });
+    subject.next({ ...FAKE_USER, first_name: 'New', last_name: 'Name', full_name: 'New Name' });
     subject.complete();
     expect(cmp['savingName']()).toBe(false);
   });
@@ -414,7 +430,7 @@ describe('ProfileComponent — inline name edit (#463)', () => {
     const { cmp } = setup({ updateProfile: updateSpy } as never);
 
     cmp.startEditName();
-    cmp['nameForm'].patchValue({ name: 'New Name' });
+    cmp['nameForm'].patchValue({ first_name: 'New', last_name: 'Name' });
 
     cmp.submitEditName();
     cmp.submitEditName();
@@ -597,5 +613,143 @@ describe('ProfileComponent — change password (#409)', () => {
     cmp.submitChangePassword();
 
     expect(changeSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ProfileComponent — inline email change (#476)', () => {
+  /**
+   * The confirm-popup hands control to the user via `accept` / `reject`
+   * callbacks; calling the component method directly never reaches the
+   * service. This helper short-circuits the confirmation by patching
+   * the component's own `ConfirmationService.confirm` to invoke the
+   * `accept` callback synchronously.
+   */
+  function autoAcceptConfirm(cmp: ProfileComponent): void {
+    const confirm = (
+      cmp as unknown as {
+        confirmationService: { confirm: (opts: { accept?: () => void }) => void };
+      }
+    ).confirmationService;
+    confirm.confirm = vi.fn((opts: { accept?: () => void }) => opts.accept?.());
+  }
+
+  it('renders the email row with a pencil affordance', () => {
+    const { fixture } = setup();
+    expect(fixture.nativeElement.querySelector('[data-cy="profile-email-edit"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="profile-email-edit-form"]')).toBeNull();
+  });
+
+  it('opens the inline form when the pencil is clicked', () => {
+    const { fixture, cmp } = setup();
+    cmp.startEditEmail();
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-email-edit-form"]'),
+    ).not.toBeNull();
+  });
+
+  it('on submit (after confirm-accept) calls authService.requestEmailChange + closes form + toasts', () => {
+    const messageSpy = vi.fn();
+    const { cmp, authStub } = setup();
+    autoAcceptConfirm(cmp);
+    const messageService = TestBed.inject(MessageService);
+    messageService.add = messageSpy;
+
+    cmp.startEditEmail();
+    cmp['emailForm'].patchValue({ email: 'new@example.com' });
+    cmp.submitEditEmail({ currentTarget: document.createElement('button') } as unknown as Event);
+
+    expect(authStub.requestEmailChange).toHaveBeenCalledWith('new@example.com');
+    expect(cmp['editingEmail']()).toBe(false);
+    expect(messageSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+    // Cached user is refetched so the pillola can light up.
+    expect(authStub.loadCurrentUser).toHaveBeenCalled();
+  });
+
+  it('surfaces email_taken inline on a 422 response', () => {
+    const { cmp } = setup({
+      requestEmailChange: vi.fn(() =>
+        throwError(() => ({
+          status: 422,
+          error: { errors: { email: ['email_taken'] } },
+        })),
+      ),
+    } as never);
+    autoAcceptConfirm(cmp);
+    cmp.startEditEmail();
+    cmp['emailForm'].patchValue({ email: 'taken@example.com' });
+    cmp.submitEditEmail({ currentTarget: document.createElement('button') } as unknown as Event);
+
+    expect(cmp['emailServerError']()).toBe('taken');
+  });
+
+  it('surfaces email_unchanged inline on a 422 response', () => {
+    const { cmp } = setup({
+      requestEmailChange: vi.fn(() =>
+        throwError(() => ({
+          status: 422,
+          error: { errors: { email: ['email_unchanged'] } },
+        })),
+      ),
+    } as never);
+    autoAcceptConfirm(cmp);
+    cmp.startEditEmail();
+    cmp['emailForm'].patchValue({ email: 'tester@example.com' });
+    cmp.submitEditEmail({ currentTarget: document.createElement('button') } as unknown as Event);
+
+    expect(cmp['emailServerError']()).toBe('unchanged');
+  });
+
+  it('surfaces throttled inline on a 429 response', () => {
+    const { cmp } = setup({
+      requestEmailChange: vi.fn(() => throwError(() => ({ status: 429 }))),
+    } as never);
+    autoAcceptConfirm(cmp);
+    cmp.startEditEmail();
+    cmp['emailForm'].patchValue({ email: 'new@example.com' });
+    cmp.submitEditEmail({ currentTarget: document.createElement('button') } as unknown as Event);
+
+    expect(cmp['emailServerError']()).toBe('throttled');
+  });
+
+  it('renders the pending pillola when the cached user has a pending_email_change block', () => {
+    const { fixture } = setup({}, {
+      ...FAKE_USER,
+      pending_email_change: {
+        new_email_partial: 'j***@e***.com',
+        expires_at: '2026-05-07T00:00:00Z',
+      },
+    } as User);
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-email-pending-pillola"]'),
+    ).not.toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-email-pending-cancel"]'),
+    ).not.toBeNull();
+  });
+
+  it('cancelPendingEmailChange calls the auth service and toasts', () => {
+    const messageSpy = vi.fn();
+    const { cmp, authStub } = setup();
+    const messageService = TestBed.inject(MessageService);
+    messageService.add = messageSpy;
+
+    cmp.cancelPendingEmailChange();
+
+    expect(authStub.cancelPendingEmailChange).toHaveBeenCalled();
+    expect(messageSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+  });
+
+  it('ignores duplicate cancel clicks while a request is in flight', () => {
+    const subject = new Subject<void>();
+    const cancelSpy = vi.fn(() => subject.asObservable());
+    const { cmp } = setup({ cancelPendingEmailChange: cancelSpy } as never);
+
+    cmp.cancelPendingEmailChange();
+    cmp.cancelPendingEmailChange();
+    cmp.cancelPendingEmailChange();
+
+    expect(cancelSpy).toHaveBeenCalledTimes(1);
   });
 });

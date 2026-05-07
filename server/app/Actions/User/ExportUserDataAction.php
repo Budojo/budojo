@@ -75,7 +75,9 @@ class ExportUserDataAction
     {
         return [
             'id' => $user->id,
-            'name' => $user->name,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'handle' => $user->handle,
             'email' => $user->email,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),
             'terms_accepted_at' => $user->terms_accepted_at?->toIso8601String(),

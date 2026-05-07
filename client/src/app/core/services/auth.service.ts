@@ -14,7 +14,31 @@ export type UserRole = 'owner' | 'athlete';
 
 export interface User {
   id: number;
-  name: string;
+  /**
+   * Given name (#479). Required by the server (`first_name` NOT NULL,
+   * default '' covers the migration backfill). The SPA uses this on
+   * its own for greeting surfaces ("Hi Mario") — the welcome topbar
+   * chip, mail bodies, etc.
+   */
+  first_name: string;
+  /**
+   * Family name (#479). Required. May legitimately be empty for a
+   * single-token migrated row that hasn't been edited yet.
+   */
+  last_name: string;
+  /**
+   * Server-derived `first_name + ' ' + last_name`, trimmed. The SPA
+   * renders this anywhere the legacy `name` field used to land
+   * (sidebar greeting fallback, account menu, audit lines).
+   */
+  full_name: string;
+  /**
+   * Instagram-style user-chosen handle (#479). Globally unique,
+   * lowercase, 3-30 chars, `[a-z0-9_.]`, must start with a letter,
+   * no consecutive dots, no leading/trailing dot. Null until the user
+   * opts in via the profile page; never auto-generated.
+   */
+  handle: string | null;
   email: string;
   /**
    * Persona discriminator (#445). The SPA reads this to branch the
@@ -38,10 +62,26 @@ export interface User {
    * silent `undefined → null` fallback.
    */
   avatar_url: string | null;
+  /**
+   * Pending email change row (#476). Non-null when the user has
+   * requested an email change but hasn't clicked the verification
+   * link yet — `email` above is still the OLD address until the click
+   * confirms. The wire shape carries a partial mask (`j***@e***.com`),
+   * not the full candidate: defence in depth against shoulder-surfing
+   * the destination from the same inbox the change is being audited
+   * to. Optional in the type so pre-#476 fixtures / Cypress mocks
+   * continue to compile; the server's `UserResource` always emits the
+   * key (null or object).
+   */
+  pending_email_change?: {
+    new_email_partial: string;
+    expires_at: string;
+  } | null;
 }
 
 export interface RegisterPayload {
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   password: string;
   password_confirmation: string;
@@ -227,19 +267,27 @@ export class AuthService {
   }
 
   /**
-   * `PATCH /api/v1/me` (#463) — self-edit on the authenticated user's
-   * profile. Currently scoped to `name` only — the email-change flow
-   * lands separately because it needs the pending-email-changes schema
-   * + signed-link verification + banner UX.
+   * `PATCH /api/v1/me` (#463 + #479) — self-edit on the authenticated
+   * user's profile. Three editable fields after #479: `first_name`,
+   * `last_name`, `handle`. Email change is the dedicated `/me/email-
+   * change` flow (#476).
    *
-   * Response is the full `User` envelope (mirroring `/auth/me`), so we
-   * swap the cached `user` signal in `tap()` — every consumer (header
-   * chip via initials fallback, profile card, future surfaces) sees the
-   * new name on the next change-detection tick without a follow-up
-   * `loadCurrentUser()` round-trip.
+   * `handle` accepts `null` to clear, a valid IG-style string to set,
+   * or the current value (no-op edit). The server lowercases and
+   * validates uniqueness; the rule rejects mixed-case input so the
+   * SPA-side handle input must lowercase as the user types.
+   *
+   * Response is the full `User` envelope (mirroring `/auth/me`), so
+   * we swap the cached `user` signal in `tap()` — every consumer
+   * (header chip via initials fallback, profile card, future
+   * surfaces) sees the new shape on the next change-detection tick.
    */
-  updateProfile(name: string): Observable<User> {
-    return this.http.patch<MeResponse>(`${environment.apiBase}/api/v1/me`, { name }).pipe(
+  updateProfile(payload: {
+    first_name: string;
+    last_name: string;
+    handle: string | null;
+  }): Observable<User> {
+    return this.http.patch<MeResponse>(`${environment.apiBase}/api/v1/me`, payload).pipe(
       tap((res) => this.user.set(res.data)),
       map((res) => res.data),
     );
@@ -257,6 +305,56 @@ export class AuthService {
     return this.http.post<{ message: string }>(
       `${environment.apiBase}/api/v1/me/password`,
       payload,
+    );
+  }
+
+  /**
+   * `POST /api/v1/me/email-change` (#476) — request a change to the
+   * authenticated user's login email. The server creates a
+   * `pending_email_changes` row and queues two mails (verification to
+   * the new address, audit notification to the old). The CACHED USER
+   * SIGNAL IS NOT MUTATED HERE: until the verification link is
+   * clicked the live email is unchanged, so swapping the SPA-side
+   * cache would lie to every consumer (header chip, profile row,
+   * dashboard sidebar). The pending pillola surfaces from the
+   * `pending_email_change` block on the next `/auth/me` round-trip
+   * (or directly via `loadCurrentUser()`).
+   */
+  requestEmailChange(newEmail: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiBase}/api/v1/me/email-change`, {
+      email: newEmail,
+    });
+  }
+
+  /**
+   * `DELETE /api/v1/me/email-change` (#476) — drop an outstanding
+   * pending row. Idempotent server-side. After cancelling, hydrate
+   * the cached user signal so the pillola disappears in the same
+   * tick (no stale UI).
+   */
+  cancelPendingEmailChange(): Observable<void> {
+    return this.http
+      .delete<void>(`${environment.apiBase}/api/v1/me/email-change`)
+      .pipe(tap(() => this.loadCurrentUser().subscribe()));
+  }
+
+  /**
+   * `POST /api/v1/email-change/{token}/verify` (#476) — public
+   * confirmation endpoint. The click on the verification link IS the
+   * auth (no Sanctum bearer required). On success the server applies
+   * the change and returns 200; on expired / consumed / unknown
+   * tokens it returns 410 with `{message: 'invalid_or_expired_link'}`.
+   *
+   * Deliberately does NOT auto-login the user (server-side decision
+   * for #476): the verify component renders a confirmed panel and
+   * bounces to `/auth/login` so the user signs in with the new
+   * address. Conservative anti-leak choice — a verification URL
+   * found in a stranger's inbox cannot grant a session.
+   */
+  verifyEmailChange(token: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${environment.apiBase}/api/v1/email-change/${token}/verify`,
+      {},
     );
   }
 

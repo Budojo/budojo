@@ -56,6 +56,25 @@ class AppServiceProvider extends ServiceProvider
             $request->ip() ?? 'unknown',
         ));
 
+        // Email-change-with-verification (#476). Five requests per
+        // hour PER AUTHENTICATED USER (not per IP — these endpoints
+        // are auth-gated, the user identity is the right key for
+        // shared-NAT environments like office networks where multiple
+        // legitimate users sit behind one IP). Falls back to IP only
+        // if no authenticated user is on the request, which would
+        // only happen if the auth middleware is misconfigured.
+        //
+        // Hourly window (vs the password-reset's per-minute) because
+        // the failure mode is different: a stuck email-change request
+        // means waiting before trying again with a corrected typo,
+        // and the per-real-user verification-mail volume should be
+        // 1-2 a year. Five per hour leaves ample headroom for honest
+        // typo + re-submit + dropped queue, while a script can't drum
+        // the mail vendor at our expense.
+        RateLimiter::for('email-change-request', fn (Request $request): Limit => Limit::perHour(5)->by(
+            $request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown',
+        ));
+
         // Reshape the password-reset URL embedded in the email to
         // point at the SPA's `/auth/reset-password` route instead of
         // a server-rendered Laravel page. Same APP_URL → CLIENT_URL

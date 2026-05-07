@@ -41,7 +41,8 @@ describe('RegisterComponent — privacy consent gate (#219)', () => {
 
   function fillFormExceptConsent(): void {
     component.form.patchValue({
-      name: 'Mario Rossi',
+      first_name: 'Mario',
+      last_name: 'Rossi',
       email: 'mario@example.com',
       password: 'verysafe123',
       password_confirmation: 'verysafe123',

@@ -331,3 +331,42 @@
     border: 0;
   }
 }
+
+// Pending-email-change pillola (#476). Sits above the email row when
+// the user has an outstanding change request — same hairline-amber
+// tone as the verify-required banner so the page reads as one
+// coherent state language rather than competing alert styles.
+.profile-page__pending-pillola {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  border: 1px solid var(--p-amber-200, #fde68a);
+  background: var(--p-amber-50, #fffbeb);
+  color: var(--p-amber-900, #78350f);
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+
+  i {
+    flex: 0 0 auto;
+    font-size: 1.125rem;
+    line-height: 1.4;
+    padding-top: 0.125rem;
+  }
+}
+
+.profile-page__pending-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.profile-page__pending-detail {
+  margin: 0;
+  color: var(--p-amber-900, #78350f);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
