@@ -81,6 +81,39 @@ it('returns 404 from the route constraint on a malformed token (not 64 chars)', 
     $this->postJson('/api/v1/email-change/' . str_repeat('a', 63) . '!/verify')->assertStatus(404);
 });
 
+it('responds 410 and prunes the pending row when the candidate was claimed between request and confirm', function (): void {
+    // Race window: between RequestEmailChangeAction (which pre-checks
+    // email_taken) and the verify click, another user registered with
+    // the same email. The unique index on users.email is the final
+    // backstop — we catch the violation, drop the now-unredeemable
+    // pending row, and 410.
+    /** @var User $user */
+    $user = User::factory()->create([
+        'email' => 'old@example.com',
+    ]);
+    $rawToken = Str::random(64);
+    PendingEmailChange::factory()->create([
+        'user_id' => $user->id,
+        'new_email' => 'claimed@example.com',
+        'token' => PendingEmailChange::hashToken($rawToken),
+    ]);
+
+    // Squatter claims the candidate after the pending row was issued.
+    User::factory()->create(['email' => 'claimed@example.com']);
+
+    $this->postJson("/api/v1/email-change/{$rawToken}/verify")
+        ->assertStatus(410)
+        ->assertJsonPath('message', 'invalid_or_expired_link');
+
+    // The original user's email is unchanged (transaction rolled back).
+    $user->refresh();
+    expect($user->email)->toBe('old@example.com');
+
+    // The pending row is dropped so the SPA's pending pillola
+    // disappears and the user can re-request with a different address.
+    expect(PendingEmailChange::query()->where('user_id', $user->id)->count())->toBe(0);
+});
+
 it('syncs athletes.email when the user is linked to an athlete row (state-C confirmation)', function (): void {
     // Owner builds a roster row; later that athlete accepted their
     // invite (gets a `users.id`). Now the owner asks to change their

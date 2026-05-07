@@ -44,7 +44,7 @@ class EmailChangeNotificationMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Cambio email richiesto sul tuo account Budojo');
+        return new Envelope(subject: 'Email change requested on your Budojo account');
     }
 
     public function content(): Content

@@ -88,6 +88,22 @@ class ChangeAthleteEmailAction
         // mid-state.
         $latestActive = $athlete->latestActiveInvitation;
         if ($latestActive !== null && $latestActive->isPending()) {
+            // Pre-validate the new email is not already a registered
+            // user. Without this, `SendAthleteInvitationAction` (called
+            // AFTER the transaction commits) could throw
+            // `email_already_registered`, leaving the system with the
+            // OLD invite revoked + `athletes.email` swapped + NO new
+            // active invite — a partial mid-state the owner can't
+            // recover from in one click. Pre-checking up-front keeps
+            // the failure path mutation-free; the post-commit re-issue
+            // path is then guaranteed to succeed (modulo a microsecond
+            // TOCTOU window the unique index would still backstop).
+            if (User::query()->where('email', $normalized)->exists()) {
+                throw ValidationException::withMessages([
+                    'email' => 'email_already_registered',
+                ]);
+            }
+
             DB::transaction(function () use ($athlete, $normalized, $latestActive): void {
                 $this->invitationAction->revoke($latestActive);
                 $athlete->forceFill(['email' => $normalized])->save();

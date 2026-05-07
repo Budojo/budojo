@@ -47,7 +47,7 @@ class EmailChangeVerificationMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Conferma il tuo nuovo indirizzo email su Budojo');
+        return new Envelope(subject: 'Confirm your new Budojo email');
     }
 
     public function content(): Content

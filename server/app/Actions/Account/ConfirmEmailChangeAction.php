@@ -35,11 +35,17 @@ use Illuminate\Support\Facades\DB;
  * - Row found but expired — `expires_at` in the past.
  * - User no longer exists — FK cascade should prevent this; defensive
  *   guard.
+ * - Race-window unique violation — the candidate was claimed by a
+ *   different user between request and confirm. `RequestEmailChangeAction`
+ *   pre-checks `email_taken` but cannot prevent a `/register` or another
+ *   email-change confirm landing in-between; the unique index on
+ *   `users.email` is the final backstop. We catch the violation, drop
+ *   the now-unredeemable pending row, and 410.
  *
- * The exception class deliberately collapses these three cases: the
- * SPA's user-facing remedy is the same in all three (request a fresh
- * link), and differentiating would only leak signal to a probing
- * attacker.
+ * The exception class deliberately collapses these four cases: the
+ * SPA's user-facing remedy is the same (request a fresh link with a
+ * different address if the email is taken), and differentiating
+ * would only leak signal to a probing attacker.
  */
 class ConfirmEmailChangeAction
 {
@@ -72,54 +78,66 @@ class ConfirmEmailChangeAction
             throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
         }
 
-        return DB::transaction(function () use ($pending): User {
-            // Re-fetch under lock to serialise concurrent verify
-            // attempts on the same token (a double-click would
-            // otherwise race the apply + delete pair).
-            /** @var PendingEmailChange|null $locked */
-            $locked = PendingEmailChange::query()
-                ->whereKey($pending->id)
-                ->lockForUpdate()
-                ->first();
-            if ($locked === null) {
-                // Another concurrent click already consumed it.
-                throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
-            }
+        try {
+            return DB::transaction(function () use ($pending): User {
+                // Re-fetch under lock to serialise concurrent verify
+                // attempts on the same token (a double-click would
+                // otherwise race the apply + delete pair).
+                /** @var PendingEmailChange|null $locked */
+                $locked = PendingEmailChange::query()
+                    ->whereKey($pending->id)
+                    ->lockForUpdate()
+                    ->first();
+                if ($locked === null) {
+                    // Another concurrent click already consumed it.
+                    throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
+                }
 
-            /** @var User|null $user */
-            $user = User::query()->whereKey($locked->user_id)->lockForUpdate()->first();
-            if ($user === null) {
+                /** @var User|null $user */
+                $user = User::query()->whereKey($locked->user_id)->lockForUpdate()->first();
+                if ($user === null) {
+                    $locked->delete();
+
+                    throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
+                }
+
+                $newEmail = $locked->new_email;
+
+                $user->forceFill([
+                    'email' => $newEmail,
+                    // The click validates the new address as deliverable
+                    // and owned by the legitimate user — that's the same
+                    // proof the M5 verify-email flow needs. Stamp it so
+                    // gated endpoints don't re-bounce the user.
+                    'email_verified_at' => now(),
+                ])->save();
+
+                // State-C path sync (#476). When the user is linked to an
+                // athlete row, keep `athletes.email` in lock-step with the
+                // login email — without this the roster card would
+                // diverge from "this is how the athlete signs in". The
+                // `whereKey` is on `user_id` because the `Athlete` schema
+                // carries a nullable FK there (M7 #445).
+                Athlete::query()
+                    ->where('user_id', $user->id)
+                    ->update(['email' => $newEmail]);
+
+                // Single-use token: drop the row so a refresh / browser-
+                // back / shared-link replay 410s on the next attempt.
                 $locked->delete();
 
-                throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
-            }
+                return $user->fresh() ?? $user;
+            });
+        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+            // The candidate was claimed by another user between request
+            // and confirm. The transaction rolled back, so the pending
+            // row is still in the DB; drop it out-of-band so the SPA's
+            // pending pillola disappears and the user can request a
+            // fresh change with a different address. The same shape
+            // `AcceptAthleteInvitationAction` uses as a final backstop.
+            PendingEmailChange::query()->whereKey($pending->id)->delete();
 
-            $newEmail = $locked->new_email;
-
-            $user->forceFill([
-                'email' => $newEmail,
-                // The click validates the new address as deliverable
-                // and owned by the legitimate user — that's the same
-                // proof the M5 verify-email flow needs. Stamp it so
-                // gated endpoints don't re-bounce the user.
-                'email_verified_at' => now(),
-            ])->save();
-
-            // State-C path sync (#476). When the user is linked to an
-            // athlete row, keep `athletes.email` in lock-step with the
-            // login email — without this the roster card would
-            // diverge from "this is how the athlete signs in". The
-            // `whereKey` is on `user_id` because the `Athlete` schema
-            // carries a nullable FK there (M7 #445).
-            Athlete::query()
-                ->where('user_id', $user->id)
-                ->update(['email' => $newEmail]);
-
-            // Single-use token: drop the row so a refresh / browser-
-            // back / shared-link replay 410s on the next attempt.
-            $locked->delete();
-
-            return $user->fresh() ?? $user;
-        });
+            throw new EmailChangeTokenInvalidException('invalid_or_expired_link');
+        }
     }
 }

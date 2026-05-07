@@ -115,6 +115,44 @@ it('state C: linked user — pending row created, athletes.email NOT mutated, bo
     Mail::assertQueued(EmailChangeNotificationMail::class);
 });
 
+it('state B: rejects with 422 email_already_registered when target email is registered, no mutation', function (): void {
+    // Pre-check guard: without it, the post-commit
+    // SendAthleteInvitationAction would throw email_already_registered
+    // AFTER the old invite is revoked + athletes.email is swapped,
+    // leaving the athlete in a partial state with no active invite.
+    /** @var User $owner */
+    $owner = userWithAcademy();
+    /** @var Athlete $athlete */
+    $athlete = Athlete::factory()->for($owner->academy)->create([
+        'email' => 'old@example.com',
+        'user_id' => null,
+    ]);
+    /** @var AthleteInvitation $original */
+    $original = AthleteInvitation::factory()->create([
+        'athlete_id' => $athlete->id,
+        'academy_id' => $athlete->academy_id,
+        'sent_by_user_id' => $owner->id,
+        'email' => 'old@example.com',
+    ]);
+
+    // Squatter is already a registered user.
+    User::factory()->create(['email' => 'taken@example.com']);
+
+    $this->actingAs($owner)
+        ->postJson("/api/v1/athletes/{$athlete->id}/email", ['email' => 'taken@example.com'])
+        ->assertStatus(422)
+        ->assertJsonPath('errors.email.0', 'email_already_registered');
+
+    // Failure path is mutation-free: original invite still pending,
+    // athletes.email unchanged, no new invite issued.
+    $original->refresh();
+    expect($original->isPending())->toBeTrue();
+    $athlete->refresh();
+    expect($athlete->email)->toBe('old@example.com');
+    expect(AthleteInvitation::query()->where('athlete_id', $athlete->id)->count())->toBe(1);
+    Mail::assertNothingQueued();
+});
+
 it('rejects with 403 when the caller is not the academy owner', function (): void {
     /** @var User $owner */
     $owner = userWithAcademy();
