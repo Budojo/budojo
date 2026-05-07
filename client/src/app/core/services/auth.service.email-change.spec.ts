@@ -49,7 +49,10 @@ describe('AuthService email-change endpoints (#476)', () => {
     meReq.flush({
       data: {
         id: 1,
-        name: 'Tester',
+        first_name: 'Tester',
+        last_name: 'McTest',
+        full_name: 'Tester McTest',
+        handle: null,
         email: 'tester@example.com',
         email_verified_at: '2026-01-01T00:00:00Z',
         avatar_url: null,

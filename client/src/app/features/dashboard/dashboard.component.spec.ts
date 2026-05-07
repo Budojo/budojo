@@ -22,7 +22,16 @@ class FakeAuthService {
   readonly isEmailVerified = signal(false);
   readonly getToken = vi.fn(() => null as string | null);
   readonly loadCurrentUser = vi.fn(() =>
-    of({ id: 1, name: 'X', email: 'x@y', email_verified_at: null }),
+    of({
+      id: 1,
+      first_name: 'X',
+      last_name: 'Y',
+      full_name: 'X Y',
+      handle: null,
+      email: 'x@y',
+      email_verified_at: null,
+      avatar_url: null,
+    }),
   );
   readonly resendVerificationEmail = vi.fn(() => of(undefined));
 }
@@ -156,7 +165,10 @@ describe('DashboardComponent', () => {
     it('renders a topbar avatar chip linking to /dashboard/profile with initials fallback', () => {
       authService.user.set({
         id: 1,
-        name: 'Mario Rossi',
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        full_name: 'Mario Rossi',
+        handle: null,
         email: 'mario@example.com',
         email_verified_at: null,
         avatar_url: null,
@@ -180,7 +192,10 @@ describe('DashboardComponent', () => {
     it('renders the uploaded avatar image when avatar_url is set', () => {
       authService.user.set({
         id: 1,
-        name: 'Mario Rossi',
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        full_name: 'Mario Rossi',
+        handle: null,
         email: 'mario@example.com',
         email_verified_at: null,
         avatar_url: '/storage/users/avatars/1.jpg',

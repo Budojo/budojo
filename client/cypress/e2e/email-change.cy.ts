@@ -13,7 +13,10 @@ import { MOCK_ACADEMY } from '../support/fixtures';
 
 const FAKE_USER_NO_PENDING = {
   id: 1,
-  name: 'Tester',
+  first_name: 'Tester',
+  last_name: 'McTest',
+  full_name: 'Tester McTest',
+  handle: null,
   email: 'tester@example.com',
   role: 'owner' as const,
   email_verified_at: '2026-01-01T00:00:00Z',

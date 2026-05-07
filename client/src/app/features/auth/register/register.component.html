@@ -12,23 +12,46 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="field">
-        <label for="name">{{ 'auth.register.name' | translate }}</label>
+        <label for="first_name">{{ 'auth.register.firstName' | translate }}</label>
         <input
           pInputText
-          id="name"
+          id="first_name"
           type="text"
-          formControlName="name"
-          [placeholder]="'auth.register.namePlaceholder' | translate"
-          autocomplete="name"
-          [class.ng-invalid]="name.invalid && name.touched"
-          [class.ng-dirty]="name.touched"
+          formControlName="first_name"
+          [placeholder]="'auth.register.firstNamePlaceholder' | translate"
+          autocomplete="given-name"
+          [class.ng-invalid]="firstName.invalid && firstName.touched"
+          [class.ng-dirty]="firstName.touched"
         />
-        @if (name.invalid && name.touched) {
+        @if (firstName.invalid && firstName.touched) {
           <small class="field-error">
-            @if (name.errors?.['required']) {
-              {{ 'auth.register.nameRequired' | translate }}
-            } @else if (name.errors?.['minlength']) {
-              {{ 'auth.register.nameMinlength' | translate }}
+            @if (firstName.errors?.['required']) {
+              {{ 'auth.register.firstNameRequired' | translate }}
+            } @else if (firstName.errors?.['minlength']) {
+              {{ 'auth.register.firstNameMinlength' | translate }}
+            }
+          </small>
+        }
+      </div>
+
+      <div class="field">
+        <label for="last_name">{{ 'auth.register.lastName' | translate }}</label>
+        <input
+          pInputText
+          id="last_name"
+          type="text"
+          formControlName="last_name"
+          [placeholder]="'auth.register.lastNamePlaceholder' | translate"
+          autocomplete="family-name"
+          [class.ng-invalid]="lastName.invalid && lastName.touched"
+          [class.ng-dirty]="lastName.touched"
+        />
+        @if (lastName.invalid && lastName.touched) {
+          <small class="field-error">
+            @if (lastName.errors?.['required']) {
+              {{ 'auth.register.lastNameRequired' | translate }}
+            } @else if (lastName.errors?.['minlength']) {
+              {{ 'auth.register.lastNameMinlength' | translate }}
             }
           </small>
         }

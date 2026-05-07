@@ -86,7 +86,7 @@ export class DashboardComponent implements OnInit {
    * upload / removal swaps the value in `AuthService`.
    */
   protected readonly userAvatarUrl = computed(() => this.authService.user()?.avatar_url ?? null);
-  protected readonly userName = computed(() => this.authService.user()?.name ?? null);
+  protected readonly userName = computed(() => this.authService.user()?.full_name ?? null);
 
   /**
    * Mobile sidebar drawer state. On viewports below the sidebar breakpoint

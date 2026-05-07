@@ -16,7 +16,7 @@ const ATHLETES_EMPTY = {
 const LOGIN_OK = {
   statusCode: 200,
   body: {
-    data: { id: 1, name: 'Test User', email: 'test@example.com' },
+    data: { id: 1, first_name: 'Test', last_name: 'User', full_name: 'Test User', handle: null, email: 'test@example.com' },
     token: 'fake-token',
   },
 };
@@ -119,7 +119,8 @@ describe('Register page', () => {
 
   it('renders the register form', () => {
     cy.get('h1').should('contain', 'Create your account');
-    cy.get('input[id="name"]').should('exist');
+    cy.get('input[id="first_name"]').should('exist');
+    cy.get('input[id="last_name"]').should('exist');
     cy.get('input[id="email"]').should('exist');
     cy.get('input[id="password"]').should('exist');
     cy.get('input[id="password_confirmation"]').should('exist');
@@ -128,13 +129,15 @@ describe('Register page', () => {
 
   it('shows validation errors when submitting empty form', () => {
     cy.get('button[type="submit"]').click();
-    cy.contains('Name is required').should('be.visible');
+    cy.contains('First name is required').should('be.visible');
+    cy.contains('Last name is required').should('be.visible');
     cy.contains('Email is required').should('be.visible');
     cy.contains('Password is required').should('be.visible');
   });
 
   it('shows error when passwords do not match', () => {
-    cy.get('input[id="name"]').type('Test User');
+    cy.get('input[id="first_name"]').type('Test');
+    cy.get('input[id="last_name"]').type('User');
     cy.get('input[id="email"]').type('test@example.com');
     cy.get('input[id="password"]').type('password123');
     cy.get('input[id="password_confirmation"]').type('different-password');
@@ -147,7 +150,8 @@ describe('Register page', () => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
 
-    cy.get('input[id="name"]').type('Test User');
+    cy.get('input[id="first_name"]').type('Test');
+    cy.get('input[id="last_name"]').type('User');
     cy.get('input[id="email"]').type('test@example.com');
     cy.get('input[id="password"]').type('password123');
     cy.get('input[id="password_confirmation"]').type('password123');
@@ -165,7 +169,8 @@ describe('Register page', () => {
   it('blocks submit + shows the privacy error when consent is missing (#219)', () => {
     cy.intercept('POST', '/api/v1/auth/register', cy.spy().as('register'));
 
-    cy.get('input[id="name"]').type('Test User');
+    cy.get('input[id="first_name"]').type('Test');
+    cy.get('input[id="last_name"]').type('User');
     cy.get('input[id="email"]').type('test@example.com');
     cy.get('input[id="password"]').type('password123');
     cy.get('input[id="password_confirmation"]').type('password123');
@@ -181,7 +186,8 @@ describe('Register page', () => {
   it('blocks submit + shows the terms error when consent is missing (#420)', () => {
     cy.intercept('POST', '/api/v1/auth/register', cy.spy().as('register'));
 
-    cy.get('input[id="name"]').type('Test User');
+    cy.get('input[id="first_name"]').type('Test');
+    cy.get('input[id="last_name"]').type('User');
     cy.get('input[id="email"]').type('test@example.com');
     cy.get('input[id="password"]').type('password123');
     cy.get('input[id="password_confirmation"]').type('password123');

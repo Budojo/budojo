@@ -14,7 +14,31 @@ export type UserRole = 'owner' | 'athlete';
 
 export interface User {
   id: number;
-  name: string;
+  /**
+   * Given name (#479). Required by the server (`first_name` NOT NULL,
+   * default '' covers the migration backfill). The SPA uses this on
+   * its own for greeting surfaces ("Hi Mario") — the welcome topbar
+   * chip, mail bodies, etc.
+   */
+  first_name: string;
+  /**
+   * Family name (#479). Required. May legitimately be empty for a
+   * single-token migrated row that hasn't been edited yet.
+   */
+  last_name: string;
+  /**
+   * Server-derived `first_name + ' ' + last_name`, trimmed. The SPA
+   * renders this anywhere the legacy `name` field used to land
+   * (sidebar greeting fallback, account menu, audit lines).
+   */
+  full_name: string;
+  /**
+   * Instagram-style user-chosen handle (#479). Globally unique,
+   * lowercase, 3-30 chars, `[a-z0-9_.]`, must start with a letter,
+   * no consecutive dots, no leading/trailing dot. Null until the user
+   * opts in via the profile page; never auto-generated.
+   */
+  handle: string | null;
   email: string;
   /**
    * Persona discriminator (#445). The SPA reads this to branch the
@@ -56,7 +80,8 @@ export interface User {
 }
 
 export interface RegisterPayload {
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   password: string;
   password_confirmation: string;
@@ -242,19 +267,27 @@ export class AuthService {
   }
 
   /**
-   * `PATCH /api/v1/me` (#463) — self-edit on the authenticated user's
-   * profile. Currently scoped to `name` only — the email-change flow
-   * lands separately because it needs the pending-email-changes schema
-   * + signed-link verification + banner UX.
+   * `PATCH /api/v1/me` (#463 + #479) — self-edit on the authenticated
+   * user's profile. Three editable fields after #479: `first_name`,
+   * `last_name`, `handle`. Email change is the dedicated `/me/email-
+   * change` flow (#476).
    *
-   * Response is the full `User` envelope (mirroring `/auth/me`), so we
-   * swap the cached `user` signal in `tap()` — every consumer (header
-   * chip via initials fallback, profile card, future surfaces) sees the
-   * new name on the next change-detection tick without a follow-up
-   * `loadCurrentUser()` round-trip.
+   * `handle` accepts `null` to clear, a valid IG-style string to set,
+   * or the current value (no-op edit). The server lowercases and
+   * validates uniqueness; the rule rejects mixed-case input so the
+   * SPA-side handle input must lowercase as the user types.
+   *
+   * Response is the full `User` envelope (mirroring `/auth/me`), so
+   * we swap the cached `user` signal in `tap()` — every consumer
+   * (header chip via initials fallback, profile card, future
+   * surfaces) sees the new shape on the next change-detection tick.
    */
-  updateProfile(name: string): Observable<User> {
-    return this.http.patch<MeResponse>(`${environment.apiBase}/api/v1/me`, { name }).pipe(
+  updateProfile(payload: {
+    first_name: string;
+    last_name: string;
+    handle: string | null;
+  }): Observable<User> {
+    return this.http.patch<MeResponse>(`${environment.apiBase}/api/v1/me`, payload).pipe(
       tap((res) => this.user.set(res.data)),
       map((res) => res.data),
     );

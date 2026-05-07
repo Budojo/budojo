@@ -29,7 +29,10 @@ const ME_OK = {
   body: {
     data: {
       id: 1,
-      name: 'Mario Rossi',
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      full_name: 'Mario Rossi',
+      handle: null,
       email: 'mario@example.com',
       email_verified_at: '2026-01-01T00:00:00Z',
       deletion_pending: null,
