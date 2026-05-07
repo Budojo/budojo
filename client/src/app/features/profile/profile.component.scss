@@ -51,41 +51,45 @@
     }
   }
 
-  // Row primitive — converged with the academy-detail `.row` shape per
-  // the v2.1.0 component audit (`docs/design/component-audit-v2.1.0.md`
-  // § 1). Two key changes from the previous flex-only shape:
+  // Card primitive — replaces `<p-card>` with the academy `.card`
+  // shape (audit § 2). PrimeNG's `<p-card>` adds a 1.25rem body
+  // padding wrapper that fights with the row's own padding rules
+  // and produces the height drift the user reported. The raw card
+  // surface owns ITS OWN chrome (background, hairline border,
+  // 12px radius) and lets each row provide its full padding.
+  // Same shape as `academy-detail.component.scss § .card`.
+  &__card {
+    background: var(--p-surface-0);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+    overflow: hidden;
+  }
+
+  // Row primitive — full academy parity now that the wrapper isn't
+  // the PrimeNG card body. Padding 1rem on ALL sides; mobile bumps
+  // padding-right to reserve space for the absolute-positioned pencil
+  // affordance (32px button + buffer). Hairline border-bottom between
+  // rows except the last. User feedback 2026-05-07 to fully unify
+  // the profile card chrome with academy's: "ma non possiamo
+  // uniformare con questa grafica che è bella?".
   //
-  // 1. **Position: relative + the pencil-action absolute-positioned**
-  //    on mobile. The earlier shape kept the pencil as a flex sibling
-  //    in a column-direction container, so on iPhone-class viewports
-  //    the pencil wrapped onto its OWN row below the value, reading
-  //    as an orphan affordance ("brutto su iPhone 14 Pro Max" — v2.1.0
-  //    user report). Pinning the action to the row's top-right corner
-  //    on mobile keeps it on the same visual row as the label/value.
+  // **Label typography** matches academy: 0.8125rem / 500 / muted
+  // (audit § 1). Was one of three different label shapes in the SPA
+  // before this branch.
   //
-  // 2. **Label typography matches academy** — 0.8125rem / 500 / muted
-  //    color. The 0.875rem / 400 / secondary previously here was one
-  //    of three different label shapes coexisting in the SPA (see audit
-  //    § 1 table). Picking academy's shape because it reads as the
-  //    canon — and because the 13/18 footnote size is the iOS HIG
-  //    field-label (DESIGN_SYSTEM.md § typography).
-  //
-  // The row's <p-card> wrapper already provides horizontal padding
-  // (PrimeNG's body 1.25rem), so the row itself only adds vertical.
-  // Don't promote profile to a raw `.card` here — that's the next
-  // apply step in the audit's order, not this one.
+  // **Pencil affordance** stays inline-edit per row (#463 / #476 —
+  // email change has three different states needing dedicated UX,
+  // can't collapse to a single page-level Edit button like academy).
+  // The pencil host is absolute-positioned via `:has()` further down
+  // so it stays on the row's top-right on mobile instead of wrapping
+  // to its own line below the value.
   &__row {
     position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    padding: 1rem 0;
-    // Reserve right-side space on mobile for the absolute-positioned
-    // pencil affordance (32px button + 8px buffer). Without this a
-    // long value (email, handle) renders UNDER the button — Copilot
-    // review on PR #496. Reset on desktop where the pencil sits as
-    // a flex sibling at the row's trailing edge.
-    padding-right: 2.5rem;
+    padding: 1rem;
+    padding-right: 3rem; // mobile: reserve for the absolute pencil
 
     &:not(:last-child) {
       border-bottom: 1px solid var(--p-content-border-color);
@@ -95,12 +99,10 @@
       flex-direction: row;
       // Baseline align matches academy's row — the label sits on the
       // value's baseline rather than centred to the row's bounding
-      // box, which is what produced the "first/last row not centred"
-      // perception when one row had a hint <small> and another didn't
-      // (v2.1.0 user report).
+      // box.
       align-items: baseline;
       gap: 1.5rem;
-      padding-right: 0;
+      padding-right: 1rem; // desktop: pencil is a flex sibling, no reservation
     }
   }
 
@@ -333,8 +335,8 @@
   // label baseline on mobile.
   :host ::ng-deep p-button:has(> .profile-page__row-edit-button) {
     position: absolute;
-    top: 0.75rem;
-    right: 0;
+    top: 0.5rem;
+    right: 0.5rem;
 
     @media (min-width: 768px) {
       position: static;

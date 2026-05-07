@@ -19,7 +19,7 @@
       "Replace" based on whether `avatar_url` is set; remove only
       surfaces when there's something to remove (Norman § constraints).
     -->
-    <p-card styleClass="profile-page__card">
+    <section class="profile-page__card">
       <div class="avatar-card" data-cy="profile-avatar-card">
         <div class="avatar-card__preview" data-cy="profile-avatar-preview">
           <app-user-avatar
@@ -70,10 +70,10 @@
           data-cy="profile-avatar-input"
         />
       </div>
-    </p-card>
+    </section>
     <p-confirmpopup />
 
-    <p-card styleClass="profile-page__card">
+    <section class="profile-page__card">
       <!--
         Inline name edit (#463). Display mode shows the current name + a
         small pencil affordance (Norman § signifier — the icon+tooltip
@@ -455,7 +455,7 @@
           <app-email-verification-status />
         </div>
       }
-    </p-card>
+    </section>
 
     <!--
       Change-password card (#409). Inline form on the profile page so a
@@ -468,7 +468,7 @@
       while a success toast confirms the operation since the form is
       reset on success and would otherwise look like nothing happened.
     -->
-    <p-card styleClass="profile-page__card">
+    <section class="profile-page__card">
       <section class="profile-page__change-password" data-cy="profile-change-password">
         <span class="profile-page__label">{{ 'profile.changePassword.title' | translate }}</span>
         <p class="profile-page__change-password-hint">
@@ -595,7 +595,7 @@
           />
         </form>
       </section>
-    </p-card>
+    </section>
 
     <!--
       GDPR data portability (#222). Single tertiary action — a ZIP that
@@ -609,7 +609,7 @@
       a settings utility, not the primary action of the page) and broke
       scan order — Krug § "self-evident UI" + canon § Card anatomy.
     -->
-    <p-card styleClass="profile-page__card">
+    <section class="profile-page__card">
       <section class="profile-page__data-export" data-cy="profile-data-export">
         <span class="profile-page__label">{{ 'profile.yourData' | translate }}</span>
         <p class="profile-page__export-hint">{{ 'profile.exportHint' | translate }}</p>
@@ -626,7 +626,7 @@
           data-cy="profile-export-data"
         />
       </section>
-    </p-card>
+    </section>
 
     <!--
       No `<p-toast>` here on purpose — the dashboard shell mounts a single
