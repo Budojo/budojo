@@ -294,7 +294,6 @@
 }
 
 .p-inputtext,
-.p-password input,
 .p-select,
 .p-inputnumber-input {
   @extend %budojo-field;
@@ -409,6 +408,207 @@
     .p-datepicker-dropdown {
       cursor: inherit;
     }
+  }
+}
+
+// p-password — same composite-wrapper pattern as p-datepicker (#318).
+// PrimeNG renders:
+//
+//   <p-password class="p-password p-inputwrapper">
+//     <input class="p-password-input p-inputtext" />
+//     <span class="p-password-toggle-mask-icon">…</span>
+//   </p-password>
+//
+// Pre-2.0.x we extended `%budojo-field` to `.p-password input`, which
+// gave the inner input a pill but left the toggle-mask icon floating
+// outside that pill — visually disconnected from the field. Hoisting
+// the chrome onto `.p-password` itself and making the inner input +
+// toggle icon transparent inheritors fuses them into a single iOS
+// pill (Norman § signifier — looks like one control, behaves like
+// one control).
+.p-password {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--p-form-field-filled-background);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  min-height: 48px;
+  font: var(--type-body, 400 17px/22px var(--p-font-family));
+  letter-spacing: -0.003em;
+  transition:
+    background-color 160ms var(--budojo-motion-decelerate),
+    border-color 160ms var(--budojo-motion-decelerate);
+
+  // Pre-existing `styleClass="w-full"` from the call sites stretches
+  // the wrapper to fill the form column — keep that as the canonical
+  // call-site shape. The fallback below covers ad-hoc usage.
+  &.w-full,
+  &.p-inputwrapper.w-full {
+    display: flex;
+  }
+
+  // Inner input — strip its own pill, become the wrapper's text body.
+  input,
+  .p-password-input {
+    flex: 1 1 auto;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    min-height: auto;
+    padding: 12px 14px;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    box-shadow: none !important;
+
+    &::placeholder {
+      color: var(--p-form-field-placeholder-color);
+    }
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      background: transparent;
+    }
+  }
+
+  // Toggle-mask icon — borderless flat right cap sharing the wrapper
+  // bg. PrimeNG ships this as either a `<span>` or a child element with
+  // a `pi pi-eye*` class; both shapes are covered by the wildcard +
+  // descendant rules below.
+  .p-password-toggle-mask-icon,
+  .p-password-toggle-mask,
+  > i.pi {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    color: var(--p-text-color-secondary);
+    padding: 0 12px;
+    cursor: pointer;
+    transition: color 160ms var(--budojo-motion-decelerate);
+
+    &:hover {
+      color: var(--p-text-color);
+    }
+  }
+
+  // Hover / focus / invalid / disabled all lift to the WRAPPER so
+  // the affordance reads as a single control. Same ordering rules as
+  // p-datepicker — exclude `:focus-within` AND `.p-disabled` from
+  // hover so neither gets shadowed.
+  &:hover:not(:focus-within):not(.p-disabled) {
+    background: var(--p-form-field-filled-hover-background);
+  }
+  &:focus-within:not(.p-disabled) {
+    background: var(--p-form-field-filled-focus-background);
+    border-color: var(--p-primary-color);
+  }
+  &.ng-invalid.ng-touched,
+  &[aria-invalid='true'] {
+    border-color: var(--budojo-danger);
+  }
+  // Per-input invalid state lifts to the wrapper too. The change-
+  // password call sites set `ng-invalid ng-dirty` (not `ng-touched`)
+  // via `[inputStyleClass]`, and the inline-edit forms thread
+  // `[attr.aria-invalid]` through directly. Match both shapes so the
+  // wrapper border lights up regardless of which signal the SPA picked.
+  &:has(input.ng-invalid.ng-dirty),
+  &:has(input[aria-invalid='true']) {
+    border-color: var(--budojo-danger);
+  }
+  &.p-disabled {
+    opacity: var(--budojo-btn-disabled-opacity);
+    cursor: not-allowed;
+
+    input,
+    .p-password-input,
+    .p-password-toggle-mask-icon,
+    .p-password-toggle-mask {
+      cursor: inherit;
+    }
+  }
+}
+
+// p-inputgroup — composite for prefix/suffix addons (#479 handle field).
+// PrimeNG renders:
+//
+//   <p-inputgroup>
+//     <p-inputgroup-addon>@</p-inputgroup-addon>
+//     <input pInputText />
+//   </p-inputgroup>
+//
+// Same composite-wrapper pattern: the host carries the pill chrome,
+// the addon + input flatten into transparent inheritors. Reads as a
+// single Instagram-style field.
+.p-inputgroup {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--p-form-field-filled-background);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  min-height: 48px;
+  font: var(--type-body, 400 17px/22px var(--p-font-family));
+  letter-spacing: -0.003em;
+  transition:
+    background-color 160ms var(--budojo-motion-decelerate),
+    border-color 160ms var(--budojo-motion-decelerate);
+
+  // Addon — inert prefix/suffix glyph. Muted text color so it reads
+  // as decoration, not as input content. No vertical seam against the
+  // input — they share the wrapper bg.
+  .p-inputgroup-addon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--p-text-muted-color);
+    padding: 0 4px 0 14px;
+    min-width: 0;
+    font: inherit;
+    letter-spacing: inherit;
+  }
+
+  // Inner input — strip its own pill so the wrapper carries the
+  // chrome. Same shape as the p-password rule above.
+  .p-inputtext {
+    flex: 1 1 auto;
+    width: auto;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    min-height: auto;
+    padding: 12px 10px 12px 4px;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    box-shadow: none !important;
+
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      background: transparent;
+      border-color: transparent;
+    }
+  }
+
+  &:hover:not(:focus-within):not(.p-disabled) {
+    background: var(--p-form-field-filled-hover-background);
+  }
+  &:focus-within:not(.p-disabled) {
+    background: var(--p-form-field-filled-focus-background);
+    border-color: var(--p-primary-color);
+  }
+  &:has(input.ng-invalid.ng-dirty),
+  &:has(input[aria-invalid='true']),
+  &.ng-invalid.ng-touched,
+  &[aria-invalid='true'] {
+    border-color: var(--budojo-danger);
   }
 }
 
