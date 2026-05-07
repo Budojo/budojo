@@ -507,15 +507,30 @@
   // weren't unlayered — PrimeNG's @layer primeng wrapper means our
   // `padding: 12px 14px` above wins, dropping the framework's icon-
   // aware padding-inline-end adjustment). Re-stamp it here.
-  &:has(.p-password-toggle-mask-icon) input,
-  &:has(.p-password-toggle-mask-icon) .p-password-input,
+  //
+  // Selector keys off the canonical PrimeNG 21 class names
+  // (`p-password-mask-icon` / `p-password-unmask-icon` /
+  // `p-password-clear-icon`) verified in
+  // `primeng-password.mjs § PasswordClasses` — NOT the legacy
+  // `p-password-toggle-mask-icon` that PrimeNG also stamps as a
+  // transitional alias. Using the canonical names keeps this rule
+  // aligned with the markup comment block above and makes the
+  // intent explicit (the eye icon is mutually exclusive: either
+  // `mask-icon` or `unmask-icon` renders, never both, so the
+  // `:has(...)` covers both states).
+  &:has(.p-password-mask-icon) input,
+  &:has(.p-password-mask-icon) .p-password-input,
+  &:has(.p-password-unmask-icon) input,
+  &:has(.p-password-unmask-icon) .p-password-input,
   &:has(.p-password-clear-icon) input,
   &:has(.p-password-clear-icon) .p-password-input {
     padding-right: 36px;
   }
 
-  &:has(.p-password-toggle-mask-icon):has(.p-password-clear-icon) input,
-  &:has(.p-password-toggle-mask-icon):has(.p-password-clear-icon) .p-password-input {
+  &:has(.p-password-mask-icon):has(.p-password-clear-icon) input,
+  &:has(.p-password-mask-icon):has(.p-password-clear-icon) .p-password-input,
+  &:has(.p-password-unmask-icon):has(.p-password-clear-icon) input,
+  &:has(.p-password-unmask-icon):has(.p-password-clear-icon) .p-password-input {
     padding-right: 64px;
   }
 
