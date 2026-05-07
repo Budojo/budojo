@@ -66,14 +66,10 @@
   min-width: 160px;
 }
 
-:host ::ng-deep .attendance__search {
-  // Same cascade fix as athletes-list: pInputText ships its own padding
-  // stack which would overlap the leading magnifier icon. Force the
-  // left padding so "Search by name" starts to the right of the icon.
-  input.p-inputtext {
-    padding-left: 2.25rem;
-  }
-}
+// Per-component padding-left override removed — the global
+// `.p-iconfield` composite rule in `client/src/styles/budojo-variants.scss`
+// now owns the icon-clear inset (40px on iconPosition=left), shared
+// across this surface, athletes-list, the search palette, and help.
 
 // ── Table wrapper ─────────────────────────────────────────────────────────────
 //

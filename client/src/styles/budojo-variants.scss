@@ -653,35 +653,34 @@
     }
   }
 
-  // Padding inset for the inner input — iconPosition controls which
-  // side. The `:not(:has(.p-inputicon))` guard keeps the rule a no-op
-  // when the iconfield is empty (defensive — should never happen in
-  // practice).
+  // Two cases, kept symmetric to avoid the round-1 bug where the
+  // descendant-order selector forced a right-padded input AND a
+  // left-positioned icon at the same time:
+  //
+  // 1. iconPosition="left" (PrimeNG's default; assumed when the
+  //    attribute is omitted) → icon at left:0, input padded on the
+  //    left.
+  // 2. iconPosition="right" → icon at right:0, input padded on the
+  //    right.
+  //
+  // Padding + icon-position are wired off the SAME selector for each
+  // case so they can never desync. No descendant-order fallback —
+  // it produced contradictory geometry when iconPosition was implicit.
+  &[iconPosition='left'] .p-inputicon,
+  &:not([iconPosition]) .p-inputicon {
+    left: 0;
+  }
   &[iconPosition='left'] .p-inputtext,
-  &:has(.p-inputicon:first-child) .p-inputtext {
+  &:not([iconPosition]) .p-inputtext {
     padding-left: 40px;
   }
 
-  &[iconPosition='right'] .p-inputtext,
-  &:has(.p-inputicon:last-child:not(:first-child)) .p-inputtext {
-    padding-right: 40px;
-  }
-
-  // Default — `iconPosition` defaults to "left" in PrimeNG when the
-  // attribute is omitted. Mirror that so the rule fires without the
-  // explicit attribute too.
-  > .p-inputicon:first-child + .p-inputtext {
-    padding-left: 40px;
-  }
-
-  // Right-side icon repositioning when iconPosition=right.
   &[iconPosition='right'] .p-inputicon {
     left: auto;
     right: 0;
   }
-  &[iconPosition='left'] .p-inputicon,
-  &:not([iconPosition]) .p-inputicon {
-    left: 0;
+  &[iconPosition='right'] .p-inputtext {
+    padding-right: 40px;
   }
 }
 
