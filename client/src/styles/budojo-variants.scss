@@ -472,10 +472,6 @@
     }
   }
 
-  // Toggle-mask icon — borderless flat right cap sharing the wrapper
-  // bg. PrimeNG ships this as either a `<span>` or a child element with
-  // a `pi pi-eye*` class; both shapes are covered by the wildcard +
-  // descendant rules below.
   // Mask / unmask / clear icons — borderless flat right cap sharing
   // the wrapper bg. PrimeNG 21's actual class names verified in
   // `node_modules/primeng/fesm2022/primeng-password.mjs`
@@ -483,8 +479,9 @@
   // earlier `.p-password-toggle-mask-icon` selector was a guess and
   // matched nothing — the icon was unstyled, dropped out of the flex
   // flow, and read as missing on the change-password section. Catch
-  // the verified set + a defensive `i.pi` fallback for any future
-  // PrimeNG rename.
+  // the three verified class names + a defensive `> i.pi` direct-
+  // child fallback for any future PrimeNG rename that ships a generic
+  // `<i>` instead.
   .p-password-mask-icon,
   .p-password-unmask-icon,
   .p-password-clear-icon,
@@ -540,7 +537,8 @@
     .p-password-input,
     .p-password-mask-icon,
     .p-password-unmask-icon,
-    .p-password-clear-icon {
+    .p-password-clear-icon,
+    > i.pi {
       cursor: inherit;
     }
   }
