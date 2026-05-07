@@ -47,6 +47,29 @@ docs/design/brand-kit/
 
 The geometry is locked. Updates must originate upstream in `client/public/logo-glyph.svg` and `client/public/wordmark.svg`, never by editing this kit in place. If you need a new variant, regenerate the kit — don't hand-edit one file and let the rest drift.
 
+## Rasterized PNG exports
+
+The SVG kit above is the source of truth; `png/` ships pre-rasterized variants for the surfaces that can't consume SVG (slide decks, marketing tiles, app store screenshots, email signatures). 141 files across 11 categories with size + background variants — see [`png/README.md`](./png/README.md) for the full naming convention.
+
+```
+docs/design/brand-kit/png/
+├── glyph-{dark|light|accent}/        Square symbol only — 64/128/256/512/1024 px
+├── wordmark-{dark|light|accent}/     "Budojo" + glyph lockup — h64/h128/h256/h512 (height-pinned)
+└── app-icon-{accent|dark|light|maskable}/  Tile icons — 64/128/256/512/1024 px
+```
+
+Quick picks:
+
+| Where | File |
+|---|---|
+| Email signature | `wordmark-dark/wordmark-dark_h64_white.png` |
+| Loading splash, dark UI | `wordmark-light/wordmark-light_h256_transparent.png` |
+| Slide deck title page | `wordmark-accent/wordmark-accent_h512_white.png` |
+| Marketing tile, app store screenshot | `app-icon-accent/app-icon-accent_1024_transparent.png` |
+| iOS home screen / PWA install | `app-icon-maskable/app-icon-maskable_512_transparent.png` |
+
+The exports are reproducible from the SVG sources; regenerate the PNG tree via the Claude Design pipeline if the upstream geometry changes.
+
 ## Active SPA mirror
 
 These four files in `client/public/` are **bytewise mirrors** of the corresponding kit variants — the SPA loads its assets from there, so the kit and the active assets are kept identical to avoid drift:
