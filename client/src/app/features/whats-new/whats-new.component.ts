@@ -62,7 +62,7 @@ export class WhatsNewComponent {
       version: 'v2.3.1',
       date: '2026-05-08',
       headline:
-        'A small follow-up on yesterday\'s v2.3.0. One visible fix: the Profile photo card on /dashboard/profile was missing internal padding, so the avatar + "Profile photo" / Replace / Remove block was flush against the card edges. Restored the same padding shape as the Change password and Your data sections below. The other change is invisible — the file Chrome reads to validate the upcoming Android app (/.well-known/assetlinks.json) was being served from the API host when it actually needs to live on the SPA host. Moved to a static file under the SPA bundle.',
+        'A small follow-up on the v2.3.0 release earlier today. One visible fix: the Profile photo card on /dashboard/profile was missing internal padding, so the avatar + "Profile photo" / Replace / Remove block was flush against the card edges. Restored the same padding shape as the Change password and Your data sections below. The other change is invisible — the file Chrome reads to validate the upcoming Android app (/.well-known/assetlinks.json) was being served from the API host when it actually needs to live on the SPA host. Moved to a static file under the SPA bundle.',
       sections: [
         {
           heading: '🐛 Profile photo card padding',
