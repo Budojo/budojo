@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "it.budojo.app",
+      "sha256_cert_fingerprints": [
+        "91:88:45:AA:3C:37:53:87:22:D0:12:3D:ED:EF:24:53:26:8B:1F:8B:9A:71:C6:59:C0:B2:65:82:D0:6A:24:F2"
+      ]
+    }
+  }
+]
