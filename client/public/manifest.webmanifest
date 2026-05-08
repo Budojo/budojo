@@ -4,11 +4,14 @@
   "description": "BJJ gym management — athletes, documents, attendance.",
   "lang": "en",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait",
   "start_url": "/dashboard/athletes",
   "scope": "/",
   "background_color": "#0a0a0b",
   "theme_color": "#0a0a0b",
+  "categories": ["business", "productivity", "sports"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -27,6 +30,29 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Athletes",
+      "short_name": "Athletes",
+      "description": "Open the athletes roster",
+      "url": "/dashboard/athletes",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Today's attendance",
+      "short_name": "Attendance",
+      "description": "Mark attendance for today",
+      "url": "/dashboard/attendance",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Add athlete",
+      "short_name": "Add",
+      "description": "Open the create-athlete form",
+      "url": "/dashboard/athletes/new",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }
