@@ -86,30 +86,40 @@
       </div>
 
       <div class="athlete-form__row">
-        <div class="field">
-          <label for="email">
-            {{ 'athletes.form.label.email' | translate }}
-            <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
-          </label>
-          <input
-            pInputText
-            id="email"
-            type="email"
-            formControlName="email"
-            autocomplete="email"
-            [class.ng-invalid]="email.invalid && email.touched"
-            [class.ng-dirty]="email.touched"
-          />
-          @if (email.invalid && email.touched) {
-            <small class="field-error">
-              @if (email.errors?.['email']) {
-                {{ 'athletes.form.validation.email.invalid' | translate }}
-              } @else if (email.errors?.['maxlength']) {
-                {{ 'athletes.form.validation.maxLength255' | translate }}
-              }
-            </small>
-          }
-        </div>
+        <!-- Email is editable inline ONLY at create time. Once the
+             athlete exists, the dedicated email-change-card on the
+             detail page (`features/athletes/detail/email-change-card`)
+             is the canonical editor — it routes through the verification
+             flow on linked accounts (state C) or atomic invite-swap
+             (state B), neither of which makes sense from a generic
+             form PUT. v2.1.0 user report: "two emails which one do I
+             edit" — collapses the third editor for `athletes.email`. -->
+        @if (mode() === 'create') {
+          <div class="field">
+            <label for="email">
+              {{ 'athletes.form.label.email' | translate }}
+              <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
+            </label>
+            <input
+              pInputText
+              id="email"
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+              [class.ng-invalid]="email.invalid && email.touched"
+              [class.ng-dirty]="email.touched"
+            />
+            @if (email.invalid && email.touched) {
+              <small class="field-error">
+                @if (email.errors?.['email']) {
+                  {{ 'athletes.form.validation.email.invalid' | translate }}
+                } @else if (email.errors?.['maxlength']) {
+                  {{ 'athletes.form.validation.maxLength255' | translate }}
+                }
+              </small>
+            }
+          </div>
+        }
 
         <div class="field">
           <label for="phone_national_number">

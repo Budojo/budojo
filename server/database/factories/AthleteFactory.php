@@ -29,6 +29,24 @@ class AthleteFactory extends Factory
         // case the phone shape.
         $hasPhone = $this->faker->boolean(50);
 
+        // Contact-link probabilities — picked low so demo data feels
+        // realistic (not every athlete shares a website / FB / IG) while
+        // populating ENOUGH rows to surface the v2.1.x list-row icons
+        // feature visually. The icons render conditionally per athlete
+        // when their respective field is non-null.
+        //
+        // URLs intentionally land on `example.com` (IETF-reserved demo
+        // domain) so a tester clicking a seeded link never accidentally
+        // navigates to a real Facebook / Instagram profile that happens
+        // to share a faker-generated username. The list-row icons
+        // (`pi-facebook` / `pi-instagram`) render off the column being
+        // populated, NOT off the URL domain — so safe placeholders
+        // still demonstrate the feature.
+        $slug = $this->faker->unique()->userName();
+        $hasWebsite   = $this->faker->boolean(20);
+        $hasFacebook  = $this->faker->boolean(40);
+        $hasInstagram = $this->faker->boolean(50);
+
         return [
             'academy_id'            => Academy::factory(),
             'first_name'            => $this->faker->firstName(),
@@ -36,6 +54,9 @@ class AthleteFactory extends Factory
             'email'                 => $this->faker->boolean(70) ? $this->faker->unique()->safeEmail() : null,
             'phone_country_code'    => $hasPhone ? '+39' : null,
             'phone_national_number' => $hasPhone ? '333' . $this->faker->numerify('#######') : null,
+            'website'               => $hasWebsite ? "https://example.com/web/{$slug}" : null,
+            'facebook'              => $hasFacebook ? "https://example.com/fb/{$slug}" : null,
+            'instagram'             => $hasInstagram ? "https://example.com/ig/{$slug}" : null,
             'date_of_birth'         => $this->faker->optional(0.6)->dateTimeBetween('-50 years', '-16 years')?->format('Y-m-d'),
             'belt'                  => $this->faker->randomElement(Belt::cases())->value,
             'stripes'               => $this->faker->numberBetween(0, 4),

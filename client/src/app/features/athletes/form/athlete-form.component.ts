@@ -31,6 +31,7 @@ import {
   AthletePayload,
   AthleteService,
   AthleteStatus,
+  AthleteUpdatePayload,
   Belt,
   MAX_STRIPES_PER_BELT,
 } from '../../../core/services/athlete.service';
@@ -376,7 +377,22 @@ export class AthleteFormComponent implements OnInit {
 
     const id = this.athleteId();
     const obs =
-      id === null ? this.athleteService.create(payload) : this.athleteService.update(id, payload);
+      id === null
+        ? this.athleteService.create(payload)
+        : // On EDIT, strip `email` from the wire body (Copilot review on
+          // PR #496). The email INPUT is hidden in edit mode (audit § 9
+          // — the dedicated email-change-card on the detail page is the
+          // canonical editor) but the FormControl is still hydrated from
+          // the loaded athlete. Sending it back unchanged is functionally
+          // a no-op against the backend, but it leaks the "email is not
+          // edited via this form" promise — and a future drift (a stray
+          // patchValue on the control, an obscure interceptor injecting
+          // a value) could turn the no-op into an unintended overwrite.
+          // Omitting the key entirely makes the contract explicit:
+          // FormRequest.validated() only returns sent keys, so the
+          // server-side update path won't touch `users.email` /
+          // `athletes.email` regardless.
+          this.athleteService.update(id, this.stripEmailForUpdate(payload));
 
     obs.pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: (athlete) => {
@@ -516,6 +532,12 @@ export class AthleteFormComponent implements OnInit {
           this.error.set(this.translate.instant('athletes.form.loadError'));
         },
       });
+  }
+
+  private stripEmailForUpdate(payload: AthletePayload): AthleteUpdatePayload {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { email, ...rest } = payload;
+    return rest;
   }
 
   private buildPayload(): AthletePayload | null {

@@ -551,4 +551,97 @@ describe('AthletesListComponent', () => {
       expect(listSpy.mock.calls[0][0].paid).toBeUndefined();
     });
   });
+
+  describe('social icons inline in the Full name cell', () => {
+    // Mirrors the academy-detail social-link pattern (academy
+    // canon: see `academy-detail.component.ts § contactLinks`).
+    // Conditional render — the icon row only mounts when the
+    // athlete actually carries that social. No empty placeholders.
+    function makeListAthlete(over: Partial<Athlete> = {}): Athlete {
+      return {
+        id: 1,
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        email: null,
+        phone_country_code: null,
+        phone_national_number: null,
+        address: null,
+        date_of_birth: null,
+        belt: 'white',
+        stripes: 0,
+        status: 'active',
+        joined_at: '2026-01-01',
+        created_at: '2026-01-01T00:00:00Z',
+        ...over,
+      } as Athlete;
+    }
+
+    function setupWithRows(rows: Athlete[]) {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.athletes.set(rows);
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('renders a Facebook icon link when athlete.facebook is set', () => {
+      const fixture = setupWithRows([
+        makeListAthlete({ id: 7, facebook: 'https://facebook.com/mario' }),
+      ]);
+      const link = fixture.nativeElement.querySelector('[data-cy="athlete-social-facebook-7"]');
+      expect(link).not.toBeNull();
+      expect(link.getAttribute('href')).toBe('https://facebook.com/mario');
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toContain('noopener');
+    });
+
+    it('renders an Instagram icon link when athlete.instagram is set', () => {
+      const fixture = setupWithRows([
+        makeListAthlete({ id: 8, instagram: 'https://instagram.com/mario' }),
+      ]);
+      const link = fixture.nativeElement.querySelector('[data-cy="athlete-social-instagram-8"]');
+      expect(link).not.toBeNull();
+      expect(link.getAttribute('href')).toBe('https://instagram.com/mario');
+    });
+
+    it('renders neither icon when both socials are null', () => {
+      const fixture = setupWithRows([makeListAthlete({ id: 9, facebook: null, instagram: null })]);
+      expect(
+        fixture.nativeElement.querySelector('[data-cy^="athlete-social-facebook-"]'),
+      ).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('[data-cy^="athlete-social-instagram-"]'),
+      ).toBeNull();
+    });
+
+    it('icon link click does NOT bubble — the row navigation should not trigger', () => {
+      // Asserts the propagation gate by attaching a listener on a
+      // higher ancestor and verifying it does NOT fire when the icon
+      // link is clicked. Spying on `Event.prototype.stopPropagation`
+      // was brittle in jsdom (Copilot review on PR #496) and the
+      // post-dispatch `cancelBubble` flag wasn't reliably reflected
+      // through Angular's event-binding wrapper. The parent-listener
+      // approach is the most honest assertion: it matches the actual
+      // user-visible side-effect ("clicking the social icon must not
+      // trigger the row's primary nav target").
+      const fixture = setupWithRows([
+        makeListAthlete({ id: 10, facebook: 'https://facebook.com/x' }),
+      ]);
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="athlete-social-facebook-10"]',
+      ) as HTMLAnchorElement;
+      // Stub the default-action so jsdom doesn't try to navigate to
+      // facebook.com during the assertion.
+      link.addEventListener('click', (ev) => ev.preventDefault());
+
+      const ancestorSpy = vi.fn();
+      document.body.addEventListener('click', ancestorSpy);
+      try {
+        link.click();
+        expect(ancestorSpy).not.toHaveBeenCalled();
+      } finally {
+        document.body.removeEventListener('click', ancestorSpy);
+      }
+    });
+  });
 });
