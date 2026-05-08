@@ -151,10 +151,10 @@ Commit `twa-manifest.json` + `.gitignore` + the generated Android project skelet
 
 ```bash
 cd mobile-android
-bubblewrap build --skipPwaValidation
+bubblewrap build --mode=release --skipPwaValidation
 ```
 
-`--skipPwaValidation` skips the manifest fetch (we already validated in Step 2). Bubblewrap shells out to Gradle, prompts for the keystore + alias passwords, produces:
+`--mode=release` produces the signed release-build artefacts — issue #505 acceptance criterion (the debug-mode `.apk` Bubblewrap defaults to without this flag is signed with the dev debug keystore and Play Store would reject it). `--skipPwaValidation` skips the manifest fetch (we already validated in Step 2). Bubblewrap shells out to Gradle, prompts for the keystore + alias passwords, produces:
 
 ```
 mobile-android/app/build/outputs/apk/release/app-release.apk
@@ -230,8 +230,8 @@ Bug findings → file as separate issues, NOT inline in this runbook.
 After the manual smoke is clean, the rest is Play Console UI work:
 
 1. Create the Google Play Console developer account if not already there (one-time €25 fee, identity verification can take 24–48h).
-2. Inside the console, "Create app" → name "Budojo", default locale `en-IT`, type "App", category "Free".
-3. Set the package name to **exactly** `it.budojo.app` (cannot be changed later — must match the keystore).
+2. Inside the console, "Create app" → name "Budojo", default locale `en-IT`, type "App" (not "Game"), pricing "Free" (paid-vs-free is the pricing question, not a category — Play asks both). The **app category** (Productivity / Sports / Business) is set later in the listing-copy step.
+3. Set the package name to **exactly** `it.budojo.app` (cannot be changed later — must equal `TWA_PACKAGE_NAME` from the env config and the `applicationId` in the Bubblewrap project).
 4. Enroll in **Play App Signing**. Google generates a production signing key; we keep our keystore as the upload key. Two fingerprints exist now — append the SECOND one to `TWA_SHA256_FINGERPRINTS`:
 
    ```
@@ -250,7 +250,7 @@ After the manual smoke is clean, the rest is Play Console UI work:
 ## Operating principles
 
 - **Never check the keystore into git.** It's in `mobile-android/.gitignore`. Verify with `git status` before every commit in `mobile-android/`.
-- **Restart the API after touching `TWA_SHA256_FINGERPRINTS`.** The endpoint serves the env var at request time but the framework caches config — a deploy restart is the safe cycle.
+- **Restart the API after touching `TWA_SHA256_FINGERPRINTS`.** Laravel caches the env-resolved config when `php artisan config:cache` has run (typical in production deployments) — without a restart, the new fingerprint won't be picked up. Even when config:cache is NOT in use, restarting is the safe-default cycle: it guarantees the fresh env reaches the running process. After the restart, verify by curling `/.well-known/assetlinks.json` and checking the new fingerprint appears in the response.
 - **Update `mobile-android/twa-manifest.json` then re-run `bubblewrap update`** when the PWA manifest changes (e.g. a new `start_url`, new icons, new shortcuts). Don't hand-edit the generated Gradle files; re-run instead.
 - **Version-bump the Android shell separately from the web app version.** `twa-manifest.json` has `appVersionCode` (integer, monotonic) + `appVersionName` (string, follows the web `vX.Y.Z`). Bump both on every Play Store upload.
 
