@@ -59,6 +59,35 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.3.0',
+      date: '2026-05-08',
+      headline:
+        'A preparation release for the Android app coming next. Most of what shipped is plumbing — the foundation an installable Android APK needs to look and feel native. The one user-visible add: when you install Budojo as a PWA on Android, long-pressing the launcher icon now offers three quick shortcuts so you can jump straight into a workflow without going through the dashboard first.',
+      sections: [
+        {
+          heading: '📱 PWA shortcuts on Android',
+          bullets: [
+            "When you've installed Budojo as a PWA on an Android phone (or you've added it to your home screen on iOS), long-pressing the launcher icon opens three quick shortcuts: Athletes — jumps straight to the roster, Today's attendance — jumps to the attendance day view, Add athlete — opens the create-athlete form. Saves a tap or two on the most-frequent flows when you've got the app pinned to your home screen.",
+          ],
+        },
+        {
+          heading: '🔧 Behind the scenes — Android APK groundwork',
+          bullets: [
+            "The server now serves /.well-known/assetlinks.json, the Digital Asset Links record an Android Trusted Web Activity (TWA) shell needs to enter fullscreen mode (no URL bar visible — looks like a real native app). This is invisible until the actual APK ships, but it's the foundation: without it the upcoming Android app would render with the URL bar visible on top of the dashboard.",
+            'A separate runbook (docs/mobile/twa-runbook.md in the repo) walks the engineer through generating the signing keystore, scaffolding the Bubblewrap project, building the APK, and uploading to Play Store internal testing. The next release will carry the actual Android app.',
+          ],
+        },
+        {
+          heading: '🧹 Other',
+          bullets: [
+            'PWA manifest gains categories (business / productivity / sports) — feeds into the Play Store listing for cleaner store-tab placement once we ship.',
+            "display_override for progressive display-mode fallback — TWA prefers standalone, falls back through minimal-ui to browser if the host Chrome can't honour fullscreen.",
+            'prefer_related_applications: false — defensive against Chrome cross-recommending another app over Budojo.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.2.0',
       date: '2026-05-07',
       headline:
