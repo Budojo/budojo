@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Twa;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Config;
 
 /**
  * Serves `/.well-known/assetlinks.json` for the Android Trusted Web
@@ -57,10 +56,10 @@ final class AssetLinksController extends Controller
 {
     public function __invoke(): JsonResponse
     {
-        $packageNameRaw = Config::get('twa.package_name', '');
+        $packageNameRaw = config('twa.package_name', '');
         $packageName = \is_string($packageNameRaw) ? $packageNameRaw : '';
 
-        $fingerprintsRaw = Config::get('twa.sha256_fingerprints', []);
+        $fingerprintsRaw = config('twa.sha256_fingerprints', []);
         /** @var list<string> $fingerprints */
         $fingerprints = \is_array($fingerprintsRaw)
             ? array_values(array_filter($fingerprintsRaw, 'is_string'))
