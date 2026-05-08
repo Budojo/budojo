@@ -117,3 +117,23 @@ it('does not require authentication', function (): void {
 
     $response->assertStatus(200);
 });
+
+it('does not start a session on hit (no Set-Cookie on the response)', function (): void {
+    // Copilot review on PR #519: with SESSION_DRIVER=database, the
+    // default `web` middleware group would create a row in the
+    // sessions table on every anonymous hit — and Chrome re-validates
+    // frequently. The route explicitly opts out of StartSession +
+    // cookie middleware in routes/web.php. This test pins that
+    // contract: no Set-Cookie header on the response (without the
+    // cookie middleware in the stack, the framework has nothing to
+    // attach), and by extension no session row gets created.
+    config([
+        'twa.package_name' => 'it.budojo.app',
+        'twa.sha256_fingerprints' => [],
+    ]);
+
+    $response = $this->get('/.well-known/assetlinks.json');
+
+    $response->assertStatus(200);
+    expect($response->headers->all('set-cookie'))->toBeEmpty();
+});
