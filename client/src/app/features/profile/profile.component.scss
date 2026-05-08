@@ -439,6 +439,15 @@
 // left, title + hint + button row on the right, hidden file input
 // at the end so the SCSS doesn't have to care about its position.
 .avatar-card {
+  // Internal padding for the stacked-content variant of the card —
+  // same rationale as `&__change-password` and `&__data-export`
+  // (the row-based cards get padding from each `&__row` rule; the
+  // avatar card is a flat-sibling layout — preview + body + actions —
+  // and needs the padding on the card surface itself). User
+  // feedback 2026-05-08 caught the omission; the change-password +
+  // data-export sections were already at 1.25rem, this one was the
+  // only stacked-content card still flush to the edge.
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
