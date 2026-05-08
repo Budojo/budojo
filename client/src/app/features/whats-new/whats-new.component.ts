@@ -59,6 +59,26 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.3.1',
+      date: '2026-05-08',
+      headline:
+        'A small follow-up on the v2.3.0 release earlier today. One visible fix: the Profile photo card on /dashboard/profile was missing internal padding, so the avatar + "Profile photo" / Replace / Remove block was flush against the card edges. Restored the same padding shape as the Change password and Your data sections below. The other change is invisible — the file Chrome reads to validate the upcoming Android app (/.well-known/assetlinks.json) was being served from the API host when it actually needs to live on the SPA host. Moved to a static file under the SPA bundle.',
+      sections: [
+        {
+          heading: '🐛 Profile photo card padding',
+          bullets: [
+            'The avatar block on the Profile page was rendering with no internal padding — the photo, the "Profile photo" label, the format hint, and the Replace / Remove buttons were tight against the card border. Now sits at the same internal-padding rhythm as the Change password and Your data cards directly below it.',
+          ],
+        },
+        {
+          heading: '🔧 Behind the scenes — TWA assetlinks moved to the SPA host',
+          bullets: [
+            "A small architectural correction on the v2.3.0 Android-app groundwork. The previous release shipped the /.well-known/assetlinks.json endpoint as a Laravel route at api.budojo.it, but Chrome's TWA verifier reads that file at the SAME ORIGIN as the PWA manifest — which lives on budojo.it (Cloudflare Pages, static), not api.budojo.it (Laravel). The endpoint was in the wrong place. Moved to a static file under the SPA bundle so Cloudflare Pages serves it from the edge directly. Invisible to existing users; unblocks the upcoming Android app once the signing keystore + Bubblewrap build land.",
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.3.0',
       date: '2026-05-08',
       headline:
