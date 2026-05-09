@@ -48,7 +48,7 @@ Il presente DPA ha la stessa durata del contratto di servizio Budojo sottoscritt
 | Atleta minore | Come sopra + dati identificativi e di contatto del/dei tutori legali. |
 | Istruttore / amministratore della palestra | Dati identificativi e di contatto, credenziali (hash bcrypt). |
 
-I dati relativi alla salute (certificati medici) sono trattati con misure rafforzate documentate in `docs/legal/dpia-medical-certificates.md` (DPIA, #227 — pianificata).
+I dati relativi alla salute (certificati medici) sono trattati con misure rafforzate documentate in [`docs/legal/dpia-medical-certificates.md`](./dpia-medical-certificates.md) (DPIA-lite, #227).
 
 ## 5. Obblighi del Responsabile
 
@@ -170,7 +170,7 @@ In caso di conflitto fra il presente DPA e il contratto di servizio Budojo, prev
 - [Sub-processor list](./sub-processors.md) (#225)
 - [Cookie audit](./cookie-audit.md) (#221)
 - Privacy policy — `docs/legal/privacy-policy.md`, in lavorazione su #219; link diretto attivato una volta che #219 sarà mergato.
-- DPIA certificati medici — `docs/legal/dpia-medical-certificates.md`, pianificata su #227; link attivato una volta che il documento sarà redatto.
+- [DPIA-lite certificati medici](./dpia-medical-certificates.md) (#227) — bozza tecnica; in attesa della decisione strategica fra Opzione A (PDF in Budojo + misure rafforzate) e Opzione B (solo metadati) e della revisione legale.
 - GDPR Art. 28 — responsabili del trattamento
 - Standard Contractual Clauses Commissione UE 2021/914
 
