@@ -363,8 +363,8 @@ export class DailyAttendanceComponent implements OnInit {
         ...(belt ? { belt } : {}),
         ...(q ? { q } : {}),
         ...(sortBy ? { sortBy, sortOrder: this.sortOrder() } : {}),
-        // Page 1 is the implicit default and the service omits the param
-        // when page === 1, so the wire stays clean for the common case.
+        // Page 1 is the implicit default — omit the param here so the wire
+        // stays clean for the common case (single-page rosters).
         ...(this.page > 1 ? { page: this.page } : {}),
       })
       .subscribe({
