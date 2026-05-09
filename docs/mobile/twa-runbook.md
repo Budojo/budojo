@@ -56,7 +56,7 @@ keytool -genkeypair \
 - Primary: 1Password file attachment.
 - Secondary: encrypted USB drive in a drawer.
 
-**Extract the SHA-256 fingerprint** (needed for issue #503's assetlinks.json env var):
+**Extract the SHA-256 fingerprint** (needed for the static `assetlinks.json` file):
 
 ```bash
 keytool -list -v \
@@ -66,22 +66,32 @@ keytool -list -v \
 
 Output looks like `SHA256: AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99`.
 
-Copy the fingerprint value (everything after `SHA256: `) into the production `.env`:
+Copy the fingerprint value (everything after `SHA256: `) into the static **`client/public/.well-known/assetlinks.json`** in this repo:
 
+```json
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "it.budojo.app",
+      "sha256_cert_fingerprints": [
+        "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
+      ]
+    }
+  }
+]
 ```
-TWA_PACKAGE_NAME=it.budojo.app
-TWA_SHA256_FINGERPRINTS=AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99
-```
 
-Restart the API container in production (the route is dynamic — no rebuild needed, just a config refresh).
+Open a PR with the change, squash-merge to `develop`, and the standard release pipeline ships it to **Cloudflare Pages** — the SPA origin serves the file directly at `/.well-known/assetlinks.json`. No backend route, no env var, no container restart (#522 retired the Laravel-routed implementation in v2.3.1 because session/CSRF middleware was breaking the unauthenticated Digital Asset Links fetch).
 
-Verify by curl:
+Verify by curl after the deploy completes:
 
 ```bash
 curl -i https://app.budojo.it/.well-known/assetlinks.json
 ```
 
-Should return `200 application/json` with the canonical statement, NOT `[]`. If still `[]`, the env var isn't reaching the running container — check the deployment process.
+Should return `200 application/json` with the canonical statement above. If a fingerprint is missing, edit the JSON file and re-ship — that's the entire workflow.
 
 ---
 
@@ -100,7 +110,7 @@ bubblewrap init --manifest=https://app.budojo.it/manifest.webmanifest
 Bubblewrap reads the live manifest, prompts for a few values:
 
 - **Domain** — confirm `app.budojo.it` (or whatever the prod host is)
-- **Application ID (package name)** — `it.budojo.app` — MUST match `TWA_PACKAGE_NAME`
+- **Application ID (package name)** — `it.budojo.app` — MUST match the `package_name` in `client/public/.well-known/assetlinks.json`
 - **App name** — `Budojo`
 - **Display mode** — pick `standalone` (matches manifest)
 - **Orientation** — pick `portrait` (matches manifest)
@@ -205,9 +215,8 @@ adb logcat | grep -i "digital_asset"
 
 Will show why asset-links failed. Common causes:
 
-- The fingerprint in `.env` doesn't match the keystore's fingerprint (typo, wrong alias, etc.).
-- The production API hasn't restarted since the env var was set.
-- The package name in `mobile-android/twa-manifest.json` doesn't match `TWA_PACKAGE_NAME`.
+- The fingerprint in `client/public/.well-known/assetlinks.json` doesn't match the keystore's fingerprint (typo, wrong alias, or the JSON change wasn't deployed yet — Cloudflare Pages takes a minute or two after merge).
+- The package name in `mobile-android/twa-manifest.json` doesn't match the `package_name` in `assetlinks.json`.
 
 Run the **golden-path manual smoke**:
 
@@ -231,14 +240,17 @@ After the manual smoke is clean, the rest is Play Console UI work:
 
 1. Create the Google Play Console developer account if not already there (one-time €25 fee, identity verification can take 24–48h).
 2. Inside the console, "Create app" → name "Budojo", default locale `en-IT`, type "App" (not "Game"), pricing "Free" (paid-vs-free is the pricing question, not a category — Play asks both). The **app category** (Productivity / Sports / Business) is set later in the listing-copy step.
-3. Set the package name to **exactly** `it.budojo.app` (cannot be changed later — must equal `TWA_PACKAGE_NAME` from the env config and the `applicationId` in the Bubblewrap project).
-4. Enroll in **Play App Signing**. Google generates a production signing key; we keep our keystore as the upload key. Two fingerprints exist now — append the SECOND one to `TWA_SHA256_FINGERPRINTS`:
+3. Set the package name to **exactly** `it.budojo.app` (cannot be changed later — must equal the `package_name` in `client/public/.well-known/assetlinks.json` and the `applicationId` in the Bubblewrap project).
+4. Enroll in **Play App Signing**. Google generates a production signing key; we keep our keystore as the upload key. Two fingerprints exist now — append the SECOND one to the `sha256_cert_fingerprints` array in `client/public/.well-known/assetlinks.json`:
 
-   ```
-   TWA_SHA256_FINGERPRINTS=<upload-key-fingerprint>,<play-managed-key-fingerprint>
+   ```json
+   "sha256_cert_fingerprints": [
+     "<upload-key-fingerprint>",
+     "<play-managed-key-fingerprint>"
+   ]
    ```
 
-   Restart the API container.
+   Open a PR with the JSON change, squash-merge to `develop`, and Cloudflare Pages picks up the new fingerprint on the next deploy.
 
 5. Upload `app-release.aab` to the **Internal testing** track.
 6. Add tester emails (your Google account + 3-10 trusted gym owners). Send the opt-in link.
@@ -250,7 +262,7 @@ After the manual smoke is clean, the rest is Play Console UI work:
 ## Operating principles
 
 - **Never check the keystore into git.** It's in `mobile-android/.gitignore`. Verify with `git status` before every commit in `mobile-android/`.
-- **Restart the API after touching `TWA_SHA256_FINGERPRINTS`.** Laravel caches the env-resolved config when `php artisan config:cache` has run (typical in production deployments) — without a restart, the new fingerprint won't be picked up. Even when config:cache is NOT in use, restarting is the safe-default cycle: it guarantees the fresh env reaches the running process. After the restart, verify by curling `/.well-known/assetlinks.json` and checking the new fingerprint appears in the response.
+- **Edits to `client/public/.well-known/assetlinks.json` ship through the standard PR pipeline.** The file is committed to the repo and served as a static asset by Cloudflare Pages — no backend route, no env var, no container restart. After the develop deploy completes, verify by curling `https://app.budojo.it/.well-known/assetlinks.json` and checking the new fingerprint is present. (#522 retired the env-driven Laravel route in v2.3.1 because session/CSRF middleware was breaking the unauthenticated Digital Asset Links fetch — keep this file static, never re-introduce a backend route for it.)
 - **Update `mobile-android/twa-manifest.json` then re-run `bubblewrap update`** when the PWA manifest changes (e.g. a new `start_url`, new icons, new shortcuts). Don't hand-edit the generated Gradle files; re-run instead.
 - **Version-bump the Android shell separately from the web app version.** `twa-manifest.json` has `appVersionCode` (integer, monotonic) + `appVersionName` (string, follows the web `vX.Y.Z`). Bump both on every Play Store upload.
 
