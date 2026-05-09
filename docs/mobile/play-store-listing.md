@@ -12,7 +12,7 @@ Length budgets are enforced by Play Console at upload time:
 | Short description | 80        |
 | Full description  | 4000      |
 
-The byte counts at the bottom of each section are the live count after the last edit — re-run them when you change copy. A copy edit that goes over budget is the kind of mistake the store catches at the very end of the submission flow when nobody wants to be there.
+The character counts at the bottom of each section are the live count after the last edit — re-run them when you change copy. Play Console enforces **character** budgets (not byte budgets), so the counts here use Python's `len()` on the unicode string. With non-ASCII text (Italian `è`, `—`, `'`) bytes and characters diverge, and the byte count is irrelevant for store acceptance — use chars. A copy edit that goes over budget is the kind of mistake the store catches at the very end of the submission flow when nobody wants to be there.
 
 ---
 
@@ -42,7 +42,7 @@ BJJ + martial-arts academy management: athletes, certs, attendance, payments.
 Gestione palestra BJJ e arti marziali — atleti, certificati, presenze, quote.
 ```
 
-(78 / 80)
+(77 / 80)
 
 > "Quote" is the Italian word an academy owner uses for monthly dues — mirrors what they say to the parents at the door. "Pagamenti" is technically correct but reads colder.
 
@@ -195,7 +195,7 @@ The Data Safety form is a structured questionnaire, not free text. Answers below
 
 ### Is all of the user data collected by your app encrypted in transit?
 
-**Yes.** TLS 1.2+ end-to-end (Cloudflare Pages → Forge-managed origin → MySQL).
+**Yes.** TLS 1.2+ end-to-end. The SPA is served from Cloudflare Pages over HTTPS; the SPA then calls the API origin (`api.budojo.it`, Forge-managed) directly over HTTPS — Pages does not proxy the API. The API talks to MySQL over an internal connection on the same host (no public network). Every external hop is encrypted in transit.
 
 ### Do you provide a way for users to request that their data is deleted?
 
@@ -219,7 +219,8 @@ The Data Safety form is a structured questionnaire, not free text. Answers below
 | **App activity → In-app search history**| No    | —                         | —                   | Not stored.                                                                                                        |
 | **App info and performance → Crash logs**| No   | —                         | —                   | No third-party crash reporter wired (deliberate — #226-style decision).                                            |
 | **Device or other identifiers**     | No        | —                         | —                   | No advertising ID, no device fingerprinting.                                                                       |
-| **Financial info**                  | No        | —                         | —                   | We track *that a payment happened* (per #408-area work) but never card numbers, IBANs, or transaction processors.  |
+| **Financial info → Purchase history**| Yes      | No                        | Optional            | The owner records, per athlete, that the monthly dues were paid (`amount_cents` + month/year ledger). No card numbers, no IBANs, no transaction processors — Budojo never sees a card. Per Play's taxonomy this is **purchase history** even without the payment instrument.|
+| **Financial info → Other (cards, IBANs, etc)**| No | —                         | —                   | Never collected. Budojo does not process payments — the academy collects offline.                                  |
 | **Location → Approximate / precise**| No        | —                         | —                   | Never requested or stored.                                                                                         |
 | **Web browsing**                    | No        | —                         | —                   | Not relevant.                                                                                                      |
 | **Audio**                           | No        | —                         | —                   | Not relevant.                                                                                                      |
@@ -256,7 +257,7 @@ When the time comes to fill the Play Console listing UI, work top-down through t
 - [ ] Short description (both locales) — copy from § Short description
 - [ ] Full description (both locales) — copy from § Full description
 - [ ] Privacy policy URL (both locales) — copy from § Privacy policy URL
-- [ ] App category — `Productivity` (primary), `Sports` (secondary). Sports alone gets the app filtered against athlete-tracking competitor apps; Productivity widens the discovery surface.
+- [ ] App category — pick **one** category in Play Console (the field is single-select). Recommendation: `Productivity`. Rationale: `Sports` alone funnels the app into athlete-tracking comparisons (Strava-style apps) where Budojo doesn't win; `Productivity` matches "academy management tool" more cleanly. Use the `Tags` field (separate from category, multi-select) to add `Sports` / `Business` once the listing is live so the app surfaces in those discovery slices too.
 - [ ] Content rating — fill the IARC questionnaire. No violence, no in-app purchases, no user-to-user communication today; expect a "Everyone" rating.
 - [ ] Target audience — adults (academy owners). Not designed for children.
 - [ ] Data Safety form — answer per § Data Safety section above.

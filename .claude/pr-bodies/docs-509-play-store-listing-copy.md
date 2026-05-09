@@ -16,10 +16,10 @@ Splitting copy from visuals is deliberate: the copy is text-only and committable
 
 - **Length budgets table** at the top — Play's hard limits (App name 30, Short 80, Full 4000) so anyone editing the file knows what they're up against.
 - **App name** — `Budojo`, both locales.
-- **Short description** — 77 / 80 in both EN and IT (deliberate 3-char headroom against future tweaks). Each block is a fenced code box so byte counts are unambiguous.
+- **Short description** — 77 / 80 in both EN and IT (deliberate 3-char headroom against future tweaks). Each block is a fenced code box so character counts are unambiguous (Play Console enforces *character* budgets, not bytes — `len()` on the unicode string; non-ASCII like `è` and `—` would diverge if we counted bytes).
 - **Full description** — 2337 / 4000 EN, 2488 / 4000 IT. Voice is folksy / second-person (Krug's "Don't Make Me Think" applied to listing copy — the store reader is a busy academy owner browsing on a phone). Five thematic sections: what you get / why mobile / what it costs / who built this / privacy. The privacy paragraph links the per-locale `/privacy` URL.
 - **Privacy policy URL** — table mapping EN/IT listing locales to `/privacy` and `/privacy/it`.
-- **Data Safety questionnaire** — full per-category answers keyed to Play's actual form fields. Two yes-answers worth flagging for review optics: health info (medical certificates) and photos (avatars). Both user-provided, both with documented retention, neither shared.
+- **Data Safety questionnaire** — full per-category answers keyed to Play's actual form fields. Three yes-answers worth flagging for review optics: health info (medical certificates), photos (avatars), and purchase history (the per-athlete monthly-dues ledger — `amount_cents` + month/year, NO card data). All three are user-provided / owner-recorded, all with documented retention, none shared with third parties.
 - **Visual assets — separate work item** — explicit pointer to follow-up issue #531.
 - **Submission checklist** — operator-facing top-down list for the actual Play Console UI session.
 
