@@ -37,14 +37,14 @@ Il trattamento riguarda i **certificati medici sportivi** (idoneità non agonist
 - data di emissione
 - data di scadenza
 - tipologia (campo libero corto)
-- file binario in object storage
+- file binario su filesystem privato (campo `file_path` su `documents`)
 
 Implementazione attuale (M3 Documents):
 
-- Upload via UI istruttore (`/dashboard/athletes/:id/documents`).
-- Storage: filesystem privato sull'host applicativo (DigitalOcean droplet, regione `fra1`); l'object storage è acceduto solo dal backend autenticato.
-- Lettura: download autenticato via endpoint `/api/v1/documents/:id/download` con scoping `academy_id`.
-- Scadenze: cron `documents:scan-expiring` invia notifiche all'istruttore quando un certificato scade nei 30/14/3 giorni.
+- Upload via UI istruttore (`/dashboard/athletes/{id}/documents`).
+- Storage: filesystem privato sull'host applicativo (DigitalOcean droplet, regione `fra1`), via Laravel `Storage::disk('local')` sotto `storage/app/private/documents/`. L'accesso al file è sempre mediato dal backend autenticato; non c'è bucket/object-storage esposto. Vedere `docs/entities/document.md`.
+- Lettura: download autenticato via endpoint `GET /api/v1/documents/{id}/download` con scoping `academy_id`.
+- Scadenze: cron `budojo:send-medical-cert-expiry-reminders` (M5 PR-D) invia un **digest per academy** ai T-30 / T-7 / T-0 giorni dalla scadenza del singolo certificato.
 
 ### 2.2 Finalità
 
@@ -91,9 +91,10 @@ Retention proposta (sia in caso di Opzione A che B):
 
 | Evento                                              | Azione sul certificato                                         |
 | --------------------------------------------------- | -------------------------------------------------------------- |
-| Atleta si ritira / l'academy lo rimuove             | Cancellazione automatica di TUTTI i certificati al `purge` post-grace-window (cron `budojo:purge-expired-pending-deletions`) |
-| Certificato scaduto da > 24 mesi                    | Cancellazione automatica del singolo file (mantenendo eventualmente solo i metadati `valid no + expired_at` per audit)        |
-| Risoluzione del contratto Budojo dell'academy       | Cancellazione di tutti i certificati al termine del § 12 del DPA template |
+| Atleta rimosso dall'academy                         | Cancellazione **immediata e a cascata** di tutti i suoi documenti via `AthleteObserver` → `DeleteDocumentAction` (rimuove sia il record `documents` sia il file binario sul disco `local`). Già implementato.                                       |
+| Certificato scaduto da > 24 mesi                    | Cancellazione automatica del singolo file (mantenendo eventualmente solo i metadati `valid no + expired_at` per audit). **Non ancora implementato** — follow-up `#227-a` da aprire.                                                                |
+| Account utente cancellato (Titolare/istruttore)     | Cancellazione finale alla fine della grace-window 30 giorni via cron `budojo:purge-expired-pending-deletions` (#223). Distinto dal caso "atleta rimosso" qui sopra: questo cron purga *utenti*, non *atleti*; le rispettive cascate sono separate.  |
+| Risoluzione del contratto Budojo dell'academy       | Cancellazione di tutti i certificati al termine del § 12 del DPA template (processo manuale documentato in `docs/operations/academy-offboarding.md`, TODO follow-up).                                                                                |
 
 La finestra di 24 mesi è il compromesso fra "audit storico" (un controllo CONI / FGI può chiedere certificati passati) e minimizzazione. Il numero esatto è negoziabile col Titolare in fase di onboarding.
 
@@ -105,7 +106,7 @@ Rischi principali per l'interessato (l'atleta), valutati su scala bassa / media 
 
 | #   | Rischio                                                                       | Probabilità | Severità | Score |
 | --- | ----------------------------------------------------------------------------- | ----------- | -------- | ----- |
-| R1  | **Data breach** del DB / object storage → esposizione dei certificati medici  | Media       | Alta     | Alto  |
+| R1  | **Data breach** del DB / disco applicativo → esposizione dei certificati medici | Media     | Alta     | Alto  |
 | R2  | **Accesso non autorizzato** all'interno della stessa academy (istruttore curioso, account compromesso) | Media | Media | Medio |
 | R3  | **Cross-academy leak** — un istruttore vede certificati di un'altra palestra (bug di scoping) | Bassa | Alta | Medio |
 | R4  | **Perdita di dati** (storage failure senza backup automatici)                 | Media       | Bassa    | Basso |
@@ -123,12 +124,12 @@ Rischi principali per l'interessato (l'atleta), valutati su scala bassa / media 
 | ------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------- |
 | R1      | TLS in transito; backend autenticato; storage privato (non bucket pubblico); password bcrypt          | **Encryption at-rest** dei file medici (chiave gestita lato Budojo) — rinviata in attesa della scelta A vs B               | #224                 |
 | R1      | —                                                                                                    | **Backup automatici** documentati come prerequisito di go-live; clausola DPA aggiornata quando attiva                       | DPA § 8              |
-| R2      | Audit log applicativo degli accessi a documenti — solo errori per ora                                | **Audit log immutabile** delle azioni sensibili: visualizzazione/download certificati, modifica/cancellazione, accesso staff | #429                 |
+| R2      | Nessun audit log strutturato delle azioni sui documenti — solo log applicativi non-strutturati per errori HTTP. | **Audit log immutabile** delle azioni sensibili: visualizzazione/download certificati, modifica/cancellazione, accesso staff | #429                 |
 | R3      | Scoping `academy_id` in tutte le query del repository documenti; coverage PEST con feature test cross-academy | Estensione della coverage a tutti gli endpoint che restituiscono documenti; test mirati di tentato cross-academy access | M7-pre               |
 | R4      | Storage su droplet (single-host)                                                                     | Backup automatici (vedi sopra)                                                                                              | DPA § 8              |
 | R5      | Sub-processor esclusivamente UE (DigitalOcean Frankfurt + Cloudflare con SCC); lista pubblica         | Nessun cambiamento — già mitigato                                                                                          | sub-processors.md   |
-| R6      | Cron `budojo:purge-expired-pending-deletions` per gli utenti                                         | Estendere il cron al cleanup dei certificati scaduti da > 24 mesi e dei certificati di atleti rimossi                       | follow-up #227-a    |
-| R7      | Endpoint `/me/export` (#222), `/me/deletion-request` (#223)                                          | Verifica che l'export includa certificati e che la cancellazione li tolga effettivamente da object storage                  | follow-up #227-b    |
+| R6      | Cancellazione cascata documenti via `AthleteObserver` → `DeleteDocumentAction` quando l'atleta è rimosso. | Estendere la cancellazione automatica ai certificati scaduti da > 24 mesi (cron dedicato, non `budojo:purge-expired-pending-deletions` che riguarda gli utenti). | follow-up #227-a    |
+| R7      | Endpoint `/me/export` (#222), `/me/deletion-request` (#223)                                          | Verifica che l'export includa certificati e che la cancellazione li tolga effettivamente dal disco `local`                  | follow-up #227-b    |
 
 ---
 
@@ -215,7 +216,7 @@ I rischi residui (R2 = istruttore curioso, R6 = ritenzione oltre finalità) rest
 
 ### 8.2 Se Opzione B (solo metadati)
 
-- [ ] Issue separata `feat(documents): remove PDF storage for medical certificates, retain valid + expiry`. Migrazione: `documents.path` nullable, valori esistenti spostati a uno storage temporaneo + email proattiva all'academy con il PDF in allegato + cancellazione dopo 30 giorni.
+- [ ] Issue separata `feat(documents): remove PDF storage for medical certificates, retain valid + expiry`. Migrazione richiesta: rendere `documents.file_path` nullable (oggi `string` NOT NULL — vedere `2026_xx_xxxxxxxxxxxx_create_documents_table`) e gestire la transizione dei valori esistenti — spostarli in uno storage temporaneo + email proattiva all'academy con il PDF in allegato + cancellazione dopo 30 giorni.
 - [ ] Aggiornare la UI Documents: row di tipo "medical" perde l'upload, mantiene il toggle "valid" e il datepicker `expiry`.
 - [ ] Aggiornare il privacy-policy.md per rimuovere "certificati medici" dalla categoria art. 9 (o segnalare che, dal vX.Y.Z, Budojo non conserva più PDF medici).
 - [ ] Chiudere #224 con label "Won't fix per DPIA decision (B)".
