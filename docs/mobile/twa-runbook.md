@@ -83,7 +83,7 @@ Copy the fingerprint value (everything after `SHA256: `) into the static **`clie
 ]
 ```
 
-Open a PR with the change, squash-merge to `develop`, and the standard release pipeline ships it to **Cloudflare Pages** — the SPA origin serves the file directly at `/.well-known/assetlinks.json`. No backend route, no env var, no container restart (#522 retired the Laravel-routed implementation in v2.3.1 because session/CSRF middleware was breaking the unauthenticated Digital Asset Links fetch).
+Open a PR with the change, squash-merge it through the repo's normal release pipeline (currently: feature → `develop` for beta deploy, `develop` → `main` for stable; see the root `CLAUDE.md` § Release Flow if the branch model changes), and **Cloudflare Pages** ships the SPA origin so the file is served directly at `/.well-known/assetlinks.json`. No backend route, no env var, no container restart (#522 retired the Laravel-routed implementation in v2.3.1 because session/CSRF middleware was breaking the unauthenticated Digital Asset Links fetch).
 
 Verify by curl after the deploy completes:
 
@@ -91,7 +91,7 @@ Verify by curl after the deploy completes:
 curl -i https://app.budojo.it/.well-known/assetlinks.json
 ```
 
-Should return `200 application/json` with the canonical statement above. If a fingerprint is missing, edit the JSON file and re-ship — that's the entire workflow.
+Should return **HTTP 200** with a JSON `Content-Type` (e.g. `application/json` or `application/json; charset=utf-8`) and a body containing the expected `package_name` and the SHA-256 fingerprint(s) you just committed. If a fingerprint is missing, edit `client/public/.well-known/assetlinks.json` and re-ship — that's the entire workflow.
 
 ---
 
@@ -216,7 +216,7 @@ adb logcat | grep -i "digital_asset"
 Will show why asset-links failed. Common causes:
 
 - The fingerprint in `client/public/.well-known/assetlinks.json` doesn't match the keystore's fingerprint (typo, wrong alias, or the JSON change wasn't deployed yet — Cloudflare Pages takes a minute or two after merge).
-- The package name in `mobile-android/twa-manifest.json` doesn't match the `package_name` in `assetlinks.json`.
+- The package name in `mobile-android/twa-manifest.json` doesn't match the `package_name` in `client/public/.well-known/assetlinks.json`.
 
 Run the **golden-path manual smoke**:
 
