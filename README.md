@@ -32,7 +32,7 @@ Architecture, deploy flow, env vars, runbook and gotchas: **[`docs/infra/product
 | **Notifications (M5)** | 📋 Planned | Email reminders before document expiry, configurable lead time |
 | **Promotions & reports (M6)** | 📋 Planned | Belt promotion history, attendance reports, exports, analytics |
 | **Document AI (M8)** | 📋 Planned | Extract every field a medical / consent document carries — driving athlete profile pre-fill |
-| **Mobile / Android TWA (M9)** | 🚧 In flight | PWA manifest TWA-ready (categories, shortcuts, `display_override`); `/.well-known/assetlinks.json` route serves Digital Asset Links from env-driven config. Bubblewrap APK + Play Store track next |
+| **Mobile / Android TWA (M9)** | 🚧 In flight | PWA manifest TWA-ready (categories, shortcuts, `display_override`); `/.well-known/assetlinks.json` shipped as a static file under `client/public/.well-known/` and served by the SPA host (Cloudflare Pages). Bubblewrap APK + Play Store track next |
 
 ---
 
@@ -149,7 +149,7 @@ Athlete-side login & self-service. Single `users.role` enum (owner / athlete), i
 LLM-driven document parsing — extract every field a medical-certificate / consent / membership-form scan carries (athlete identity, dates, codice fiscale, address). Implies adding `athletes.address` + `codice_fiscale` columns BEFORE the AI work begins.
 
 ### M9 — Mobile / Android TWA 🚧 In flight
-Native-feeling Android shell wrapping the existing PWA via Trusted Web Activity (TWA). Shipped: PWA manifest TWA-readiness (`categories`, `shortcuts`, `display_override`), `/.well-known/assetlinks.json` route serving Digital Asset Links from env config, end-to-end TWA runbook ([`docs/mobile/twa-runbook.md`](docs/mobile/twa-runbook.md)). In flight: signing keystore, Bubblewrap APK build, Play Console internal track, staged production rollout. Capacitor / Flutter rewrites tracked separately as M10+.
+Native-feeling Android shell wrapping the existing PWA via Trusted Web Activity (TWA). Shipped: PWA manifest TWA-readiness (`categories`, `shortcuts`, `display_override`), `/.well-known/assetlinks.json` deployed as a static file under `client/public/.well-known/` and served by the SPA host on Cloudflare Pages (the original Laravel-routed implementation was retired in v2.3.1 because session middleware was breaking the Digital Asset Links fetch), end-to-end TWA runbook ([`docs/mobile/twa-runbook.md`](docs/mobile/twa-runbook.md)). In flight: signing keystore, Bubblewrap APK build, Play Console internal track, staged production rollout. Capacitor / Flutter rewrites tracked separately as M10+.
 
 ---
 

@@ -8,7 +8,7 @@ Two real findings; the rest of the canonical checklist (code-level greps, npm/co
 
 The post-release sweep is mandatory between a stable release and the next feature train (root `CLAUDE.md` § Post-release tech-debt sweep). Without it small drifts accumulate — a TODO that no longer reflects the code, an API doc that lies about validation, a README roadmap stuck two milestones back. Each one tiny, together they're slow rot.
 
-Since the last sweep we shipped v2.1.0 (HIBP password-breach check #415), v2.2.0 + v2.3.0 + v2.3.1 (M9 mobile / Android TWA groundwork — assetlinks route, PWA manifest TWA-readiness, runbook). Two surfaces drifted from that work.
+Since the last sweep we shipped v2.1.0 (HIBP password-breach check #415), v2.2.0 + v2.3.0 + v2.3.1 (M9 mobile / Android TWA groundwork — PWA manifest TWA-readiness, runbook, and an assetlinks deploy that pivoted from a Laravel API route to a static file served by Cloudflare Pages in v2.3.1 because session middleware broke the Digital Asset Links fetch). Two surfaces drifted from that work.
 
 ## How
 
@@ -29,8 +29,8 @@ Six edits, all under `docs/api/v1.yaml`:
 
 The "What's live right now" table didn't reflect the M7 athlete-login surface that's been shipping (PR-A through PR-D-minimal — `users.role` enum, invite-only flow, role-aware guards, athlete-portal landing) or the M9 mobile/TWA work just shipped over the last 24 h. The Roadmap section ended at M6.
 
-- "What's live" table — refreshed the Authentication row to mention the HIBP breach check; appended an "Athlete login (M7)" row marked 🚧 In flight; appended a "Document AI (M8)" row 📋 Planned and a "Mobile / Android TWA (M9)" row 🚧 In flight describing what shipped (manifest, assetlinks, runbook) vs what's next (Bubblewrap APK, Play Console).
-- "Roadmap" section — added M7, M8, M9 entries with PRD / runbook links and explicit V1-vs-V2 scope notes.
+- "What's live" table — refreshed the Authentication row to mention the HIBP breach check; appended an "Athlete login (M7)" row marked 🚧 In flight; appended a "Document AI (M8)" row 📋 Planned and a "Mobile / Android TWA (M9)" row 🚧 In flight describing what shipped (manifest, **static** assetlinks on Cloudflare Pages, runbook) vs what's next (Bubblewrap APK, Play Console).
+- "Roadmap" section — added M7, M8, M9 entries with PRD / runbook links, explicit V1-vs-V2 scope notes, and the v2.3.1 pivot from API-route to static-file assetlinks.
 
 ### Checklist outcomes (no-finding entries)
 
