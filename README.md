@@ -22,14 +22,17 @@ Architecture, deploy flow, env vars, runbook and gotchas: **[`docs/infra/product
 
 | Area | Status | Details |
 |------|--------|---------|
-| **Authentication** | ✅ Live | Register, login, logout via Sanctum Bearer tokens |
+| **Authentication** | ✅ Live | Register, login, logout via Sanctum Bearer tokens; password-strength meter + HaveIBeenPwned breach check on register / change-password / reset / invite-accept (#415) |
 | **Academy setup** | ✅ Live | Create your gym profile — name, structured polymorphic address, monthly fee, training-day schedule, logo upload |
 | **Athletes** | ✅ Live | Full CRUD with structured phone (libphonenumber-validated), structured polymorphic address, server-side name search, belt / status / paid filters, rank-aware sorting |
 | **Documents (M3)** | ✅ Live | Upload, list, download, soft-delete; cancelled toggle; reactive-form upload dialog; cross-athlete expiring-list dashboard widget with deep-linking |
 | **Attendance (M4)** | ✅ Live | Daily check-in (mobile-first, optimistic UI + 5s undo toast); per-athlete calendar history; monthly summary widget + full table; training-days % rate against scheduled denominator |
 | **Payments** | ✅ Live | Per-athlete monthly payment ledger; "paid" badge on athletes list; idempotent record/delete; `monthly_fee_cents` snapshotted into payment rows |
+| **Athlete login (M7)** | 🚧 In flight | Single `users.role` enum (owner / athlete), invite-only onboarding via signed link, athlete portal landing route. Owner-issued invite + invite-accept + role-aware guards live; full athlete self-service surface lands V2 |
 | **Notifications (M5)** | 📋 Planned | Email reminders before document expiry, configurable lead time |
 | **Promotions & reports (M6)** | 📋 Planned | Belt promotion history, attendance reports, exports, analytics |
+| **Document AI (M8)** | 📋 Planned | Extract every field a medical / consent document carries — driving athlete profile pre-fill |
+| **Mobile / Android TWA (M9)** | 🚧 In flight | PWA manifest TWA-ready (categories, shortcuts, `display_override`); `/.well-known/assetlinks.json` route serves Digital Asset Links from env-driven config. Bubblewrap APK + Play Store track next |
 
 ---
 
@@ -138,6 +141,15 @@ Automated email reminders before documents expire. Configurable lead time per ac
 
 ### M6 — Promotions & Reports 📋 Planned
 Belt promotion history, attendance reports, PDF/Excel export, analytics dashboard.
+
+### M7 — Athlete login 🚧 In flight
+Athlete-side login & self-service. Single `users.role` enum (owner / athlete), invite-only onboarding via signed link (no public self-register), role-aware route guards, athlete-portal landing route. PRD: [`docs/specs/m7-athlete-login.md`](docs/specs/m7-athlete-login.md). Owner → invite athlete → athlete accepts + sets password lives; full athlete-side surface (own attendance / payments / documents) ships V2.
+
+### M8 — Document AI 📋 Planned
+LLM-driven document parsing — extract every field a medical-certificate / consent / membership-form scan carries (athlete identity, dates, codice fiscale, address). Implies adding `athletes.address` + `codice_fiscale` columns BEFORE the AI work begins.
+
+### M9 — Mobile / Android TWA 🚧 In flight
+Native-feeling Android shell wrapping the existing PWA via Trusted Web Activity (TWA). Shipped: PWA manifest TWA-readiness (`categories`, `shortcuts`, `display_override`), `/.well-known/assetlinks.json` route serving Digital Asset Links from env config, end-to-end TWA runbook ([`docs/mobile/twa-runbook.md`](docs/mobile/twa-runbook.md)). In flight: signing keystore, Bubblewrap APK build, Play Console internal track, staged production rollout. Capacitor / Flutter rewrites tracked separately as M10+.
 
 ---
 

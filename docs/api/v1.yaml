@@ -213,8 +213,12 @@ paths:
         1. **Form-level validation** (FormRequest fires first):
            missing / malformed `email`, missing `token`, missing
            `password`, password under 8 chars, `password` not
-           confirmed → `errors` carries the offending field name
-           (`email` / `token` / `password` / `password_confirmation`).
+           confirmed, OR `password` rejected by the HaveIBeenPwned
+           breach check (#415) — surfaced as
+           `errors.password[0] = "password_breached"` so the SPA
+           can render a specific actionable message → `errors`
+           carries the offending field name (`email` / `token` /
+           `password` / `password_confirmation`).
 
         2. **Broker failures** (token invalid, token expired,
            unknown email, token already consumed): collapsed to an
@@ -513,8 +517,10 @@ paths:
         **Validation.**
 
         - `current_password` must Hash::check against the stored password.
-        - `password` policy mirrors registration: `min:8` + `confirmed`
-          (matching `password_confirmation`).
+        - `password` policy mirrors registration: `min:8`, `confirmed`
+          (matching `password_confirmation`), and the HaveIBeenPwned breach
+          check (#415) — a breached password is rejected with
+          `errors.password[0] = "password_breached"`.
         - `password` must differ from `current_password` — a no-op rotation
           is rejected with a 422 on the `password` field rather than
           silently succeeding.
@@ -910,6 +916,11 @@ paths:
                 password:
                   type: string
                   minLength: 8
+                  description: |
+                    New password for the linked user account. Same policy as
+                    `RegisterRequest.password`: `min:8` plus the HaveIBeenPwned
+                    breach check (#415). A breached password is rejected with
+                    `errors.password[0] = "password_breached"`.
                 password_confirmation:
                   type: string
                 accept_privacy:
@@ -2515,6 +2526,14 @@ components:
           type: string
           format: password
           minLength: 8
+          description: |
+            Plain-text password. Server enforces `min:8` plus the HaveIBeenPwned
+            breach check (#415): a password that appears in the HIBP `range`
+            dataset is rejected with `errors.password[0] = "password_breached"`
+            so the SPA can render an actionable "this password has appeared in
+            known data breaches" message. Upstream outage soft-fails (the
+            request is accepted) — the check is defence-in-depth, not a hard
+            availability dependency.
         password_confirmation:
           type: string
           format: password
@@ -2563,6 +2582,10 @@ components:
           type: string
           format: password
           minLength: 8
+          description: |
+            New password. Same policy as `RegisterRequest.password`: `min:8`
+            plus the HaveIBeenPwned breach check (#415). A breached password
+            is rejected with `errors.password[0] = "password_breached"`.
         password_confirmation:
           type: string
           format: password
@@ -2613,7 +2636,11 @@ components:
           type: string
           format: password
           minLength: 8
-          description: The NEW password. Must differ from `current_password`.
+          description: |
+            The NEW password. Must differ from `current_password`. Same policy
+            as `RegisterRequest.password`: `min:8` plus the HaveIBeenPwned
+            breach check (#415). A breached password is rejected with
+            `errors.password[0] = "password_breached"`.
         password_confirmation:
           type: string
           format: password
