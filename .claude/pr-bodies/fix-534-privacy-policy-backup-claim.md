@@ -39,7 +39,7 @@ The three changes ship in a single commit so the i18n discipline holds.
 - [x] `grep -rn 'Backup giornalieri\|Daily database backups\|retention 30' client/src/ docs/legal/` returns zero matches after the change.
 - [x] `npm run lint` (Angular ESLint) — clean.
 - [x] `npm test -- --watch=false` (Vitest) — all 713 tests pass; no spec asserted on the old bullet text.
-- [x] Markdown source still readable; the new bullet's internal links resolve (`./dpa-template.md`, `docs/infra/production-deployment.md`).
+- [x] Markdown source still readable; both internal references in the new bullet are proper markdown links resolved relatively from `docs/legal/` — `./dpa-template.md` and `../infra/production-deployment.md`.
 - [ ] Manual smoke: load `/privacy` and `/privacy/it` in the browser, confirm the bullet has been replaced and the section still renders cleanly.
 - [ ] Cypress E2E (CI) — `privacy.cy.ts` verifies routing + page chrome only; not affected by the copy change.
 - [ ] Native-Italian-speaker review of the IT bullet phrasing before any legal counsel sees the file (out-of-band, not blocking this PR).
