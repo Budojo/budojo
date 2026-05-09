@@ -64,7 +64,7 @@ I dati sono trattati con strumenti elettronici, ospitati in **datacenter UE (Fra
 - Accessi amministrativi via SSH con autenticazione a chiave
 - Audit periodico dei sub-processor (vedi § 7)
 
-I certificati medici, in quanto **dati relativi alla salute** ex art. 9 GDPR, sono oggetto di una valutazione separata documentata in `docs/legal/dpia-medical-certificates.md` (#227).
+I certificati medici, in quanto **dati relativi alla salute** ex art. 9 GDPR, sono oggetto di una valutazione separata documentata in [`docs/legal/dpia-medical-certificates.md`](./dpia-medical-certificates.md) (#227).
 
 ## 6. Cookie e archiviazione lato browser
 
@@ -117,5 +117,5 @@ Eventuali modifiche sostanziali saranno notificate all'utente via email almeno 3
 
 - [Sub-processor](./sub-processors.md) (#225)
 - [Cookie audit](./cookie-audit.md) (#221)
-- [DPIA certificati medici](./dpia-medical-certificates.md) — pianificata (#227)
-- [DPA template per academy](./dpa-template.md) — pianificato (#220)
+- [DPIA-lite certificati medici](./dpia-medical-certificates.md) — bozza tecnica (#227)
+- [DPA template per academy](./dpa-template.md) — bozza tecnica (#220)
