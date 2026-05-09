@@ -120,14 +120,31 @@ export class DailyAttendanceComponent implements OnInit {
   protected readonly selectedDate = signal<Date>(new Date());
 
   /**
-   * The full list of active athletes for the academy. Page 1 only for
-   * MVP — typical dojos are < 20 active so this covers the case; if a
-   * larger academy hits the limit we'll add load-more / pagination in
-   * M4.2.5. There's a "showing 20 of N" hint at the foot of the list
-   * to surface the limit explicitly.
+   * Active athletes on the currently-selected page. Backed by the SAME
+   * paginated `/api/v1/athletes` endpoint as athletes-list, so the
+   * default 20-row slice applies — the page walks via `onPageChange()`
+   * (#527). Without pagination, sorting a > 20-row roster by belt rank
+   * pinned the user to page 1 and silently hid every belt above the
+   * first 20 rows in rank order.
    */
   protected readonly athletes = signal<Athlete[]>([]);
   protected readonly totalActiveAthletes = signal<number>(0);
+
+  /**
+   * Current 1-indexed page. Mirrors `AthletesListComponent.page` —
+   * incremented through `onPageChange()` and reset to 1 on every
+   * filter / sort / search change so a narrower result set never
+   * leaves the user on a phantom empty page (#527).
+   */
+  private page = 1;
+
+  /**
+   * `<p-table>`'s 0-indexed offset of the first row on the current
+   * page (page 2 with rows=20 → first=20). Bound to `[first]` so the
+   * paginator's active-page indicator stays in sync after a programmatic
+   * reset (e.g. filter change).
+   */
+  protected readonly first = signal(0);
 
   /**
    * athlete_id → record_id for each present athlete. The record_id is the
@@ -346,6 +363,9 @@ export class DailyAttendanceComponent implements OnInit {
         ...(belt ? { belt } : {}),
         ...(q ? { q } : {}),
         ...(sortBy ? { sortBy, sortOrder: this.sortOrder() } : {}),
+        // Page 1 is the implicit default — omit the param here so the wire
+        // stays clean for the common case (single-page rosters).
+        ...(this.page > 1 ? { page: this.page } : {}),
       })
       .subscribe({
         next: (page) => {
@@ -510,6 +530,7 @@ export class DailyAttendanceComponent implements OnInit {
 
   protected applySearch(q: string): void {
     this.searchTerm.set(q.trim());
+    this.resetPage();
     // Filter/sort changes reload the ROSTER only — the date hasn't
     // moved, so the attendance records on the wire are unchanged
     // and a parallel re-fetch would race any in-flight optimistic
@@ -519,6 +540,7 @@ export class DailyAttendanceComponent implements OnInit {
 
   protected onBeltChange(belt: Belt | ''): void {
     this.selectedBelt.set(belt);
+    this.resetPage();
     this.loadAthletes();
   }
 
@@ -535,7 +557,31 @@ export class DailyAttendanceComponent implements OnInit {
 
     this.sortField.set(field as AthleteSortField);
     this.sortOrder.set(event.order === 1 ? 'asc' : 'desc');
+    this.resetPage();
     this.loadAthletes();
+  }
+
+  /**
+   * `<p-table>` (paginator) emits `{first, rows}` on page change.
+   * `first` is the 0-indexed offset of the first row on the new page,
+   * so the 1-indexed page number is `floor(first / rows) + 1`. Mirrors
+   * `AthletesListComponent.onPageChange` so the two pages walk in
+   * lockstep when the same roster is browsed under either UI (#527).
+   */
+  protected onPageChange(event: { first: number; rows: number }): void {
+    this.page = Math.floor(event.first / event.rows) + 1;
+    this.first.set(event.first);
+    this.loadAthletes();
+  }
+
+  /**
+   * Resets pagination to page 1 + first row. Called from every filter /
+   * sort / search handler — without it, narrowing a result set while on
+   * page 3 leaves the user on a phantom empty page (#527).
+   */
+  private resetPage(): void {
+    this.page = 1;
+    this.first.set(0);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────
