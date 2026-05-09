@@ -21,6 +21,17 @@ So the doc does two things:
 
 ## How
 
+Two surfaces changed in this PR:
+
+**1. New file** `docs/legal/dpia-medical-certificates.md`
+
+**2. Two stale "pianificata" qualifiers in adjacent legal docs**, now that the file actually exists:
+
+- `docs/legal/privacy-policy.md` § 5 — converted the bare code-span to a markdown link.
+- `docs/legal/privacy-policy.md` § 12 (Riferimenti) — changed the bullet wording from "pianificata (#227)" to "bozza tecnica (#227)" so a reader knows the file exists but is in draft pending the strategic A/B decision + legal review. Same posture as the DPA template's own draft annotation. Also tightened the adjacent DPA-template bullet for consistency.
+- `docs/legal/dpa-template.md` § 4 — converted the bare code-span to a link; dropped "— pianificata".
+- `docs/legal/dpa-template.md` § Riferimenti — replaced the longer "link attivato una volta che il documento sarà redatto" postscript with a one-line current-state summary noting the strategic decision is still pending.
+
 The file is structured in 9 sections:
 
 - **§ 1 What this document is** — DPIA-lite vs full Art. 35 DPIA, scope, decision posture.
