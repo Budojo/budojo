@@ -216,6 +216,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->where('id', '[A-Za-z0-9\-]{36}');
     Route::post('/me/notifications/read-all', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAllAsRead']);
 
+    // First-run onboarding state (#424). The SPA reads `show` once on
+    // dashboard mount to decide whether to render the guided tour /
+    // "Getting started" checklist; `complete-step` is fired per
+    // ticked checklist item, `dismiss` permanently retires the tour.
+    Route::get('/me/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'show']);
+    Route::post('/me/onboarding/steps', [\App\Http\Controllers\User\OnboardingController::class, 'completeStep']);
+    Route::post('/me/onboarding/dismiss', [\App\Http\Controllers\User\OnboardingController::class, 'dismiss']);
+
     // Login history audit log (#430). Surfaces the last 50 login
     // attempts (success + failure) on the authenticated user so a
     // compromise probe is self-serve. Pairs with the live

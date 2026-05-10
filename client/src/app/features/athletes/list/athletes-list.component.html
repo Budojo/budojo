@@ -2,6 +2,13 @@
 <p-confirmpopup />
 
 <div class="athletes-page">
+  <!--
+    First-run onboarding checklist (#424). Self-gated: renders only
+    when the user hasn't dismissed the tour AND hasn't ticked every
+    step. The component handles its own visibility internally.
+  -->
+  <app-onboarding-checklist />
+
   <header class="athletes-page__header">
     <div class="athletes-page__title-area">
       <h1 class="athletes-page__title">{{ 'athletes.list.title' | translate }}</h1>

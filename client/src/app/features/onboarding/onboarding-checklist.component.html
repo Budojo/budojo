@@ -1,0 +1,63 @@
+@if (visible()) {
+  <section class="onboarding-checklist" data-cy="onboarding-checklist">
+    <header class="onboarding-checklist__header">
+      <div class="onboarding-checklist__heading">
+        <h2 class="onboarding-checklist__title">
+          {{ 'onboarding.checklist.title' | translate }}
+        </h2>
+        <p class="onboarding-checklist__subtitle">
+          {{ 'onboarding.checklist.subtitle' | translate: { progress: progress(), total: total } }}
+        </p>
+      </div>
+      <p-button
+        type="button"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        icon="pi pi-times"
+        [pTooltip]="'onboarding.checklist.dismiss' | translate"
+        [ariaLabel]="'onboarding.checklist.dismiss' | translate"
+        (onClick)="confirmDismiss($event)"
+        data-cy="onboarding-checklist-dismiss"
+      />
+    </header>
+    <p-confirmpopup />
+
+    <ul class="onboarding-checklist__list">
+      @for (step of steps; track step) {
+        <li
+          class="onboarding-checklist__item"
+          [class.onboarding-checklist__item--done]="isCompleted(step)"
+          [attr.data-cy]="'onboarding-step-' + step"
+        >
+          <i
+            class="onboarding-checklist__status"
+            [class.pi-check-circle]="isCompleted(step)"
+            [class.pi-circle]="!isCompleted(step)"
+            [class.pi]="true"
+            aria-hidden="true"
+          ></i>
+          <div class="onboarding-checklist__body">
+            <strong class="onboarding-checklist__step-label">
+              {{ labelKey(step) | translate }}
+            </strong>
+            <p class="onboarding-checklist__step-hint">
+              {{ hintKey(step) | translate }}
+            </p>
+          </div>
+          @if (!isCompleted(step)) {
+            <p-button
+              type="button"
+              severity="secondary"
+              [outlined]="true"
+              size="small"
+              [label]="'onboarding.checklist.cta' | translate"
+              (onClick)="goTo(step)"
+              [attr.data-cy]="'onboarding-step-' + step + '-cta'"
+            />
+          }
+        </li>
+      }
+    </ul>
+  </section>
+}
