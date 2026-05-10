@@ -25,7 +25,7 @@ import { localeFor } from '../../utils/locale';
   template: `
     @if (years(); as y) {
       <p-tag
-        [value]="y + ' y'"
+        [value]="y + 'y'"
         severity="secondary"
         [rounded]="true"
         [pTooltip]="dobLabel()"
