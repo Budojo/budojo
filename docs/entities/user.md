@@ -23,6 +23,8 @@ Every authenticated request in the system is made on behalf of a single user. Th
 | `avatar_path` | string | nullable | Relative path on the `public` disk of the uploaded avatar (#411). Null until the first `POST /me/avatar`. The wire layer emits `avatar_url` (full URL) via `UserResource`, never the raw path. |
 | `password` | string | not null | Bcrypt hash (cost 12, configured via `BCRYPT_ROUNDS`) |
 | `role` | string(32) | not null, default `'owner'` | Persona discriminator (#445). One of `owner` / `athlete` (the `App\Enums\UserRole` PHP enum). Cast as enum on the model. Backfilled to `owner` for every pre-M7 row. Public `/auth/register` ALWAYS produces `owner`; `athlete` is only set through `AcceptAthleteInvitationAction` (M7 PR-C). |
+| `onboarding_dismissed_at` | timestamp | nullable | Set the first time the user explicitly dismisses the first-run guided tour overlay (#424). Once non-null the SPA never re-renders the tour/checklist, even after a localStorage wipe. |
+| `onboarding_completed_steps` | json | nullable | JSON array of step-key strings the user has ticked off in the "Getting started" checklist (#424). Allowed values mirror `App\Support\OnboardingStep::all()`. Null until the first tick. |
 | `remember_token` | string(100) | nullable | Laravel "remember me" token — unused by the SPA auth flow but kept for compatibility |
 | `created_at` | timestamp | nullable | |
 | `updated_at` | timestamp | nullable | |

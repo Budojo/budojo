@@ -33,10 +33,12 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string       $password
  * @property string|null  $remember_token
  * @property array<string, bool>|null $notification_preferences Per-category opt-out for digest / reminder emails (#416). Null = all categories enabled.
+ * @property Carbon|null  $onboarding_dismissed_at Set when the user explicitly skips the first-run guided tour (#424). Once non-null the SPA never re-renders the tour.
+ * @property array<int, string>|null  $onboarding_completed_steps Step keys the user has ticked off on the "Getting started" checklist (#424). Null until first interaction.
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences'])]
+#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'onboarding_dismissed_at', 'onboarding_completed_steps'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -164,6 +166,9 @@ class User extends Authenticatable implements MustVerifyEmail
             // `App\Support\NotificationCategory`), values are booleans
             // — `false` = opted out, `true` (or absent) = enabled.
             'notification_preferences' => 'array',
+            // First-run onboarding state (#424).
+            'onboarding_dismissed_at' => 'datetime',
+            'onboarding_completed_steps' => 'array',
         ];
     }
 }

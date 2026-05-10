@@ -42,6 +42,8 @@ import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/exp
 import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
 import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpaid-this-month-widget/unpaid-this-month-widget.component';
 import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
+import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
+import { OnboardingService } from '../../../core/services/onboarding.service';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -72,6 +74,7 @@ interface SelectOption<T extends string> {
     MonthlySummaryWidgetComponent,
     UnpaidThisMonthWidgetComponent,
     PaidBadgeComponent,
+    OnboardingChecklistComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',
@@ -86,6 +89,7 @@ export class AthletesListComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+  private readonly onboardingService = inject(OnboardingService);
 
   readonly athletes = signal<Athlete[]>([]);
   readonly totalRecords = signal(0);
@@ -266,6 +270,16 @@ export class AthletesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    // Lazy-load onboarding state — only when the user hasn't already
+    // dismissed/completed the tour. The component itself is the
+    // visibility gate; a single HTTP call hydrates the state.
+    if (!this.onboardingService.loaded()) {
+      this.onboardingService.load().subscribe({
+        // Silent on error — the checklist just won't render, which is
+        // the no-op default anyway.
+        error: () => {},
+      });
+    }
   }
 
   onBeltChange(belt: Belt | ''): void {

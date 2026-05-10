@@ -934,6 +934,135 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /me/onboarding:
+    get:
+      tags: [auth]
+      summary: Current first-run onboarding state for the authenticated user
+      description: |
+        Surfaces the user's first-run onboarding flags (#424) so the SPA
+        can decide whether to render the guided tour / "Getting started"
+        checklist on the dashboard home. Three boolean-derived states:
+
+        - `dismissed_at !== null` → user explicitly dismissed the tour;
+          the SPA never re-renders it.
+        - `completed_steps.length === available_steps.length` → user
+          has ticked every step; checklist self-dismisses.
+        - Otherwise → checklist + tour both render.
+      operationId: meOnboardingShow
+      responses:
+        '200':
+          description: Current onboarding state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [dismissed_at, completed_steps, available_steps]
+                    properties:
+                      dismissed_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      completed_steps:
+                        type: array
+                        items:
+                          type: string
+                        example: ['add_athlete']
+                      available_steps:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          [
+                            'add_athlete',
+                            'log_attendance',
+                            'mark_payment',
+                            'upload_document',
+                            'view_stats',
+                          ]
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/onboarding/steps:
+    post:
+      tags: [auth]
+      summary: Mark an onboarding step as completed
+      description: |
+        Idempotent (#424): re-posting the same step key is a no-op.
+        Unknown step keys (anything outside `OnboardingStep::all()`)
+        return 422 to keep the column shape disciplined.
+      operationId: meOnboardingCompleteStep
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [step]
+              properties:
+                step:
+                  type: string
+                  enum:
+                    - add_athlete
+                    - log_attendance
+                    - mark_payment
+                    - upload_document
+                    - view_stats
+      responses:
+        '200':
+          description: Step recorded — the full completed list returns.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [completed_steps]
+                    properties:
+                      completed_steps:
+                        type: array
+                        items:
+                          type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /me/onboarding/dismiss:
+    post:
+      tags: [auth]
+      summary: Permanently dismiss the first-run onboarding tour
+      description: |
+        Stamps `onboarding_dismissed_at = now()` (#424). Idempotent —
+        re-dismissing does NOT advance the timestamp; the first
+        dismissal is the meaningful one. The action is irreversible
+        from the SPA today (no "show me the tour again" surface).
+      operationId: meOnboardingDismiss
+      responses:
+        '200':
+          description: Dismissal timestamp returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [dismissed_at]
+                    properties:
+                      dismissed_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
   /me/login-history:
     get:
       tags: [auth]
