@@ -102,7 +102,13 @@ describe('Two-factor authentication panel (#412)', () => {
       .and('be.visible');
     cy.get('[data-cy="profile-two-factor-recovery-dismiss"] button').click();
 
-    cy.get('[data-cy="profile-two-factor-active"]').should('be.visible');
+    // After dismissing the dialog, the active state renders. The
+    // outer panel can sit below a parent with `overflow: hidden`
+    // (profile-page card chrome), so `be.visible` against the host
+    // is brittle. Asserting on the regenerate CTA — a nested child
+    // that lives well inside the panel — is the durable signal.
+    cy.get('[data-cy="profile-two-factor-active"]').should('exist');
+    cy.get('[data-cy="profile-two-factor-regenerate"]').scrollIntoView().should('be.visible');
   });
 
   it('shows an inline error when the confirm code is wrong', () => {
