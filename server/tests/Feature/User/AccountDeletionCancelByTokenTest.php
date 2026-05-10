@@ -92,3 +92,25 @@ it('is one-shot — a second click on the same token returns cancelled=false', f
     $second = $this->postJson("/api/v1/me/deletion-request/cancel/{$token}");
     $second->assertOk()->assertJsonPath('data.cancelled', false);
 });
+
+it('refuses to cancel a row whose grace window has already elapsed', function (): void {
+    // Race window: between `scheduled_for` and the cron actually firing,
+    // the row still physically exists. A click in that gap should NOT
+    // resurrect the account — the deadline passed, the user had 30 days,
+    // the conservative answer is to let the queued purge proceed.
+    $user = userWithAcademy();
+    $token = str_repeat('d', 64);
+
+    $row = PendingDeletion::query()->create([
+        'user_id' => $user->id,
+        'requested_at' => Carbon::now()->subDays(31),
+        'scheduled_for' => Carbon::now()->subSeconds(5),
+        'confirmation_token' => $token,
+    ]);
+
+    $response = $this->postJson("/api/v1/me/deletion-request/cancel/{$token}");
+
+    $response->assertOk()->assertJsonPath('data.cancelled', false);
+    // The row stays so the cron can pick it up on its next tick.
+    expect(PendingDeletion::query()->find($row->id))->not->toBeNull();
+});

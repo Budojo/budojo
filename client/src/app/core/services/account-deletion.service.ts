@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 interface CancelResponse {
   readonly data: { readonly cancelled: boolean };
@@ -20,6 +21,7 @@ interface CancelResponse {
 @Injectable({ providedIn: 'root' })
 export class AccountDeletionService {
   private readonly http = inject(HttpClient);
+  private readonly base = `${environment.apiBase}/api/v1/me/deletion-request`;
 
   /**
    * Public, unauthenticated call. The 64-char token comes from the URL
@@ -27,9 +29,10 @@ export class AccountDeletionService {
    * landed on the public SPA cancel page). Resolves to:
    *
    * - `true`  — token matched an active row, the row is gone, account safe.
-   * - `false` — already-clicked / never valid / already purged. The page
-   *   renders one "deletion is no longer pending" panel either way; we
-   *   don't leak whether the link was used vs invalid.
+   * - `false` — already-clicked / never valid / already purged / grace
+   *   window already elapsed. The page renders one "deletion is no
+   *   longer pending" panel for all four; we don't leak which case the
+   *   user is in.
    *
    * The API returns 200 in both cases (4xx is reserved for malformed
    * route shape, which the route binding rejects before the controller
@@ -38,7 +41,7 @@ export class AccountDeletionService {
    */
   cancelByToken(token: string): Observable<boolean> {
     return this.http
-      .post<CancelResponse>(`/api/v1/me/deletion-request/cancel/${token}`, {})
+      .post<CancelResponse>(`${this.base}/cancel/${token}`, {})
       .pipe(map((response) => response.data.cancelled));
   }
 }

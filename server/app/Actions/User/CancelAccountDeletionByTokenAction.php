@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\User;
 
 use App\Models\PendingDeletion;
+use Illuminate\Support\Carbon;
 
 /**
  * Cancels a pending account deletion via the one-time token from the
@@ -33,6 +34,15 @@ use App\Models\PendingDeletion;
  * row, so the same token immediately stops resolving on the next
  * call. We do NOT add a "consumed at" column or a soft-delete shape;
  * the existence of the row IS the cancellation surface.
+ *
+ * **Grace-window gate**: the delete is constrained to rows whose
+ * `scheduled_for` is still in the future. After the cron purges the
+ * account at `scheduled_for`, the cascade drops the row anyway and
+ * a click resolves to false; but in the narrow race between the
+ * scheduled time and the cron actually firing, an expired-window
+ * click would (without this gate) still cancel the queued purge.
+ * Conservative: a click after the grace window has elapsed should
+ * NOT save the account — the user had 30 days, the deadline passed.
  */
 class CancelAccountDeletionByTokenAction
 {
@@ -40,6 +50,7 @@ class CancelAccountDeletionByTokenAction
     {
         return PendingDeletion::query()
             ->where('confirmation_token', $token)
+            ->where('scheduled_for', '>', Carbon::now())
             ->delete() > 0;
     }
 }

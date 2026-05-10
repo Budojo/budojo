@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -49,6 +50,7 @@ export class AccountDeletionCancelComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly accountDeletion = inject(AccountDeletionService);
   private readonly authService = inject(AuthService);
+  private readonly document = inject(DOCUMENT);
 
   protected readonly state = signal<ViewState>('loading');
 
@@ -56,11 +58,13 @@ export class AccountDeletionCancelComponent implements OnInit {
    * Where the user goes when they tap the bottom CTA. A signed-in
    * user (rare here — they likely clicked from a logged-out tab) goes
    * straight to the dashboard; a stranger gets the sign-in page.
-   * Computed from a signal so a token expiring mid-render doesn't
-   * change the destination.
+   *
+   * Reads `authService.isLoggedIn` (a signal) so the computed actually
+   * recomputes — earlier shape called `getToken()` which doesn't read
+   * any signal, leaving the computed pinned to its first value.
    */
   protected readonly continueTarget = computed<'/dashboard' | '/auth/login'>(() =>
-    this.authService.getToken() ? '/dashboard' : '/auth/login',
+    this.authService.isLoggedIn() ? '/dashboard' : '/auth/login',
   );
 
   ngOnInit(): void {
@@ -76,10 +80,38 @@ export class AccountDeletionCancelComponent implements OnInit {
     this.accountDeletion.cancelByToken(token).subscribe({
       next: (cancelled) => {
         this.state.set(cancelled ? 'cancelled' : 'no-longer-pending');
+        // Drop the token from the URL post-consume — it is one-shot
+        // and consumed at this point (success OR no-longer-pending).
+        // Keeping it in the address bar leaks via screenshots, browser
+        // history, and `Referer` headers on subsequent navigations.
+        // `replaceState` keeps the calm landing page visible without
+        // adding a new history entry the user would have to back out
+        // of.
+        this.stripTokenFromUrl();
       },
       error: () => {
         this.state.set('error');
+        // On error the row is unchanged — the token may still be
+        // valid for a retry — so we LEAVE the URL intact. The user
+        // can refresh to retry the same call.
       },
     });
+  }
+
+  private stripTokenFromUrl(): void {
+    const win = this.document.defaultView;
+    if (!win) return;
+
+    // Replace the token segment with a generic landing path. Empty
+    // history.state preserves the existing state object semantics
+    // (Angular Router uses it for navigation context). Best-effort:
+    // any error in the History API is swallowed since the in-app
+    // state is already updated and the URL strip is a defense-in-
+    // depth nicety.
+    try {
+      win.history.replaceState(win.history.state, '', '/account/deletion-cancel');
+    } catch {
+      // No-op — the panel content is the load-bearing UX.
+    }
   }
 }
