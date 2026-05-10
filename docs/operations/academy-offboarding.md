@@ -1,7 +1,7 @@
 # Academy offboarding runbook
 
 > **STATO: BOZZA TECNICA — OPERATIVAMENTE FUNZIONALE.**
-> Questo file è il puntatore concreto referenziato dal § 12 del DPA template (`docs/legal/dpa-template.md`) e dal § 8 della DPIA-lite (`docs/legal/dpia-medical-certificates.md`). Descrive **la procedura manuale** che il personale Budojo segue quando un'academy cliente termina il contratto. La forma "manuale" è deliberata: il volume attuale (singole accademie, terminazioni rare e mai bulk) non giustifica un'automazione, e una procedura scritta è facile da rivedere all'occorrenza.
+> Questo file è il puntatore concreto referenziato dal § 12 del DPA template (`docs/legal/dpa-template.md`) e dal § 4 (Retention) della DPIA-lite (`docs/legal/dpia-medical-certificates.md`). Descrive **la procedura manuale** che il personale Budojo segue quando un'academy cliente termina il contratto. La forma "manuale" è deliberata: il volume attuale (singole accademie, terminazioni rare e mai bulk) non giustifica un'automazione, e una procedura scritta è facile da rivedere all'occorrenza.
 
 Versione: 0.1 (bozza) · Ultima modifica: 2026-05-09
 
@@ -33,7 +33,7 @@ Il cliente è informato di tutte e tre le finestre nella comunicazione di T-30 (
 
 ## Step 1 — T-30 (oppure data di comunicazione + 7gg) — Notifica di cessazione
 
-**Inviato a**: contatto amministrativo dell'academy registrato nel record `academy.email`.
+**Inviato a**: l'email del titolare dell'academy. Lo schema attuale ha la relazione 1:1 `academies.user_id` → `users.id`, quindi il contatto amministrativo è `Academy::find($id)->owner->email` (oggi non esiste un campo `email` sulla tabella `academies`, e fino a quando il pattern multi-utente di #427/#428 non sblocca più owner per academy, l'unico contatto è quello).
 
 **Canale**: email transazionale firmata + (per i clienti enterprise) PEC parallela.
 
@@ -57,16 +57,11 @@ Eseguito da personale Budojo autorizzato (oggi: il singolo titolare; in futuro: 
 
 **Azioni in ordine, idempotenti**:
 
-1. **Disattivare il login dell'academy.** Un campo `users.disabled_at` (o equivalente) viene impostato per ogni utente associato all'academy. Tentativi di login restituiscono 403 con messaggio "Il tuo account è in fase di offboarding — contatta support@budojo.it".
+1. **Disattivare il login dell'owner.** L'unica colonna oggi disponibile come switch sicuro è la cancellazione manuale del `password` di `users` con un valore non-bcrypt-validabile (es. `'OFFBOARDING-DISABLED'`), che fa fallire ogni `Hash::check()` al login senza droppare la riga. Tentativi di login restituiscono 401. Soluzione di transizione: la regola adatta — un `users.disabled_at nullable` o `academies.disabled_at nullable` con middleware esplicito — è documentata nei TODO finali.
 
-   > NOTA: oggi questa colonna NON esiste nel modello `User`. Il workaround attuale è impostare la password a un hash non-recuperabile + attivare un flag mentale "do not assist this email". È una soluzione temporanea che funziona finché il volume è zero; va sostituita con un vero campo `disabled_at` quando arriva il primo offboarding reale (TODO `#academy-offboarding-a` da aprire come issue al primo caso reale).
+2. **Marcare l'academy come offboarding.** Per assenza, oggi, di una tabella `academy_offboardings`, il marker è un record in un foglio Google interno (id academy + nome + T0 + T+30 + reason). Manuale ma traceable. Quando il volume giustifica l'automazione, si crea la tabella e il marker diventa una riga DB. **Senza marker**: la coda email + i cron scheduler continuerebbero a partire sull'academy cessata.
 
-2. **Marcare l'academy.** Aggiungere un record nella tabella `academy_offboardings` (TODO: tabella da implementare al primo caso reale) con `academy_id`, `t0`, `t_purge` (= T+30), `reason`, `notice_sent_at`. Serve a:
-   - Coordinare cron e personale durante la grace
-   - Ricostruire l'audit trail post-purge
-   - Bloccare riattivazioni accidentali se l'utente ricrea l'account con la stessa email
-
-3. **Sospendere i cron operativi per l'academy.** I principali sono `budojo:send-medical-cert-expiry-reminders` (M5 PR-D) e altri reminder scheduler. La sospensione è un filtro `WHERE academy.disabled_at IS NULL` aggiunto alle query del cron. Senza questo filtro, l'academy continuerebbe a ricevere email anche dopo la cessazione — peggio: dopo il purge, le email partirebbero su academy_id orfani e fallirebbero in modo silenzioso.
+3. **Sospendere i cron operativi per l'academy.** I principali sono `budojo:send-medical-cert-expiry-reminders` (M5 PR-D) e altri reminder scheduler. Oggi non c'è un filtro applicativo per saltare un'academy specifica — il workaround è eliminare a mano gli atleti dell'academy dalla query (rendendoli soft-deleted) prima del prossimo run del cron. Questa è la dipendenza più fastidiosa di Step 2: senza un vero `academies.disabled_at` (TODO finali) il cron parte a meno che gli atleti siano già soft-deleted o l'academy intera sia stata cancellata. **In pratica**: se il purge è imminente (T+30 in giornata), si tollera un giro di reminder in più; se è lontano, è preferibile soft-deletare gli atleti subito al T0.
 
 4. **Notifica al titolare amministrativo Budojo** (email interna): "L'academy `<id>:<nome>` è entrata in grace export. Purge programmato per T+30 (`<data>`). Verifica la coda email outbound per gli ultimi 30 giorni e considera se cancellare reminder già schedulati."
 
@@ -78,7 +73,7 @@ Eseguito da personale Budojo autorizzato (oggi: il singolo titolare; in futuro: 
 
 **Operazioni eseguite su richiesta**:
 
-- **Export su richiesta**: il personale autorizzato accede via SSH alla droplet, esegue `php artisan academy:export <academy_id>` (TODO: comando da implementare al primo caso reale; per ora si compone manualmente facendo `php artisan tinker` + `User::find(...)->export()`). Output: ZIP firmato consegnato al cliente via link Cloudflare R2 a scadenza 7 giorni.
+- **Export su richiesta**: il punto di ingresso canonico è l'`ExportUserDataAction` (rotta `GET /api/v1/me/export`, #222). Per un utente cessato, l'access token Sanctum non è più valido (Step 2 ha bloccato il login), quindi il personale Budojo accede via SSH alla droplet ed esegue manualmente l'Action sull'utente target — concretamente: `app(\App\Actions\User\ExportUserDataAction::class)->execute(User::find($id))` da `php artisan tinker`, o un comando wrapper `php artisan academy:export <user_id>` quando lo scriviamo (TODO finali). Output: ZIP firmato. Consegna **diretta via email allegata** se < 25 MB; altrimenti upload manuale su un canale già usato col cliente (la palestra in genere ha un proprio Drive). **Non** si introduce un nuovo sub-processor (es. object storage) per il solo caso offboarding — il sub-processor list è la lista del DPA, e ogni aggiunta richiede un preavviso di 30 giorni che fa più rumore della consegna stessa.
 - **Domande del cliente**: indirizzate a `privacy@budojo.it`. Risposte entro 2 giorni lavorativi.
 
 **Operazioni NON eseguite**:
@@ -100,19 +95,35 @@ Eseguito da personale Budojo autorizzato (oggi: il singolo titolare; in futuro: 
 
 **Sequenza purge**:
 
-1. **Documenti su disco** — `Storage::disk('local')->delete($document->file_path)` per ogni `Document` con `academy_id = X`. Attualmente eseguito via `php artisan tinker` o uno script ad-hoc; al primo caso reale, promuovere a `php artisan academy:purge <id>`.
-2. **Record DB** — sequenza cascade:
-   - `attendance_records` WHERE academy_id = X
-   - `documents` WHERE athlete.academy_id = X (l'observer cascade `AthleteObserver` → `DeleteDocumentAction` non si attiva per il soft-delete dell'academy; va eseguito esplicitamente)
-   - `athletes` WHERE academy_id = X
-   - `users` con `academy_id = X` (titolare academy + eventuali istruttori)
-   - `personal_access_tokens` per quegli utenti (cascade tipicamente automatico via FK; verificare)
-   - `academies` WHERE id = X
-   - Eventuali tabelle ausiliarie (`pending_deletions`, `password_resets`, ecc.) per gli stessi user_id.
-3. **Email outbound già in coda** — purge dei job `Mail` ancora schedulati su quella academy. Comando: `php artisan queue:flush` filtrato per payload (TODO: scriver helper `php artisan academy:purge-queued-mail` al primo caso).
-4. **Log applicativi** — i log Laravel ruotano automaticamente a 12 mesi (dichiarazione privacy policy § 4). Non si tocca: la rotazione fisiologica è la garanzia.
-5. **Sub-processor** — Budojo non delega mai il dato grezzo a sub-processor che lo conservino fuori dalla droplet UE. Cloudflare ha solo cache effimero; DigitalOcean ospita la VM (la VM stessa è il dato — non c'è una copia separata da invalidare); Forge accede via SSH ma non conserva una copia. **Nessuna azione richiesta sui sub-processor.**
-6. **Update `academy_offboardings.t_purge_executed_at = NOW()`** + nota libera `purge_notes` con eventuali deviazioni dalla checklist.
+**Schema reale attuale (per onestà operativa)**: la catena di cascade DB è `users → academies (academies.user_id, FK cascade) → athletes (athletes.academy_id, FK cascade) → documents + attendance_records (entrambe FK athlete_id cascade)`. Significato pratico: cancellare l'`User` owner dell'academy, in DB, fa il 90 % del lavoro automaticamente. Ciò che il cascade DB **non** copre: il file binario su disco di ogni `Document` (la cascade tocca la riga, non `storage/app/private/documents/<file>`), i token Sanctum (`personal_access_tokens.tokenable_type/_id` è polimorfico, non c'è FK), i job email in coda. Quindi:
+
+1. **Documenti su disco** — PRIMA del cascade DB: per ogni `Document` raggiungibile dall'academy (via join `documents.athlete_id → athletes.academy_id = X`), `Storage::disk('local')->delete($document->file_path)`. Equivalente runnable in tinker:
+   ```php
+   $academy = Academy::findOrFail($id);
+   $academy->athletes->each(fn ($a) => $a->documents->each(
+       fn ($d) => Storage::disk('local')->delete($d->file_path)
+   ));
+   ```
+   Questo va FATTO PRIMA della cancellazione DB perché altrimenti si perdono i `file_path` necessari a sapere cosa eliminare. Quando il primo offboarding reale arriva, promuovere a `php artisan academy:purge <id>` con questa logica racchiusa nell'Action.
+
+2. **Record DB** — `User::destroy($academy->owner->id)` innesca la catena: l'`academies` cascade-elimina, gli `athletes` cascade-eliminano, i loro `documents` + `attendance_records` cascade-eliminano. Altre tabelle correlate al solo user (es. `pending_deletions`, `password_reset_tokens` — nota: `password_reset_tokens` è chiavata su `email` non `user_id`, va eliminata separatamente con `DB::table('password_reset_tokens')->where('email', $email)->delete()`).
+
+3. **Token Sanctum** — Sanctum usa `morphs('tokenable')` (`tokenable_type` + `tokenable_id`), NON una FK. Il cascade su `users` non li tocca. Cancellazione esplicita:
+   ```php
+   DB::table('personal_access_tokens')
+       ->where('tokenable_type', User::class)
+       ->where('tokenable_id', $userId)
+       ->delete();
+   ```
+   Eseguire DOPO `User::destroy()` perché l'ID sopravvive nel binding fino al delete. Senza questo step, i token resterebbero orfani in DB — non danno accesso (il `tokenable` non risolve più), ma sono dati personali che non devono restare.
+
+4. **Email outbound già in coda** — `php artisan queue:flush` cancella **l'intera coda**, non solo i job dell'academy: usarlo è sproporzionato al singolo offboarding. Realtà attuale: la coda è piccola, i reminder schedulati sono per i prossimi pochi giorni, e dopo il purge DB i reminder che provassero a colpire l'academy fallirebbero in `MailerJob` con un model-not-found e finirebbero in `failed_jobs`. **Cosa fare oggi**: lasciare scadere la coda; pulire `failed_jobs` dopo 7 giorni con `php artisan queue:prune-failed`. **Cosa fare quando il volume cresce**: scrivere un `php artisan academy:purge-queued-mail <id>` che ispeziona i job serializzati e droppa solo quelli legati all'academy specifica (TODO finali). Documentato come TODO per evitare che qualcuno usi `queue:flush` come scorciatoia.
+
+5. **Log applicativi** — i log Laravel ruotano automaticamente a 12 mesi (dichiarazione privacy policy § 4). Non si tocca: la rotazione fisiologica è la garanzia.
+
+6. **Sub-processor** — la lista canonica del DPA (Cloudflare, DigitalOcean, Laravel Forge) NON conserva copie indipendenti del dato applicativo: Cloudflare cachea solo asset statici della SPA, DigitalOcean ospita la VM (il dato È la VM, non c'è copia separata), Forge accede via SSH ma non conserva. **Nessuna azione richiesta sui sub-processor**, e non ne vengono introdotti di nuovi durante l'offboarding (es. NON si carica l'export su un object storage di terzi; vedere § Step 3 per il protocollo di consegna).
+
+7. **Update del marker** — il foglio interno (cf. Step 2) registra `t_purge_executed_at = NOW()` + nota libera per eventuali deviazioni. Quando esiste la tabella `academy_offboardings`, lo stesso campo si scrive in DB.
 
 **Conferma al cliente** (se residuo contattabile): email di conferma "I dati della tua academy sono stati cancellati il `<data>`. Una copia dell'export resta nei tuoi archivi. Grazie per aver usato Budojo."
 
