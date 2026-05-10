@@ -59,6 +59,41 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.3.2',
+      date: '2026-05-10',
+      headline:
+        'A two-fix release plus a wave of behind-the-scenes legal-docs work. (1) Luigi reported that on /dashboard/attendance, sorting by belt was hiding every belt above white when there were more than 20 active athletes — there was no paginator and the per-page slice exhausted itself on white belts before any blue / purple / black belt could appear. The page now paginates at 20 per page, the paginator surfaces below the table when you have a roster bigger than that, and any filter / search / sort change snaps you back to page 1. (2) The privacy policy used to claim "daily database backups with 30-day retention" but the automated backup strategy is still being implemented before the first real production data lands. Reworded to "an automated database-backup plan planned to be implemented before any real production customer data is collected". Stopped over-promising; aligned the public claim with what the DPA template and infra runbook say internally. Everything else is invisible compliance + documentation hardening: a DPIA for medical certificates, an academy-offboarding runbook, the actual Play Store listing copy, and a fresh test layer pinning the medical-cert handling in the GDPR access + erasure paths.',
+      sections: [
+        {
+          heading: '🐛 Attendance — sort-by-belt no longer hides the rest of the roster',
+          bullets: [
+            'Luigi (a customer) reported that with more than 20 active athletes and the table sorted by belt ascending, the white-belt cohort exhausted the per-page slice before any blue / purple / black belt could appear, so the rest of the roster was invisible. Filter strip changes had the same shape — narrowing on a belt and then sorting could drop you onto a phantom empty page.',
+            'The page now requests one server-paginated slice at a time and binds the paginator chrome (page numbers + arrows below the table) to the result. You see the same paginator you already know from the main athletes list.',
+            'Searching, filtering by belt, or clicking a sort header always snaps you back to page 1 — so a narrowing filter never leaves you on an empty page.',
+            'The paginator only renders when you actually have more than 20 athletes; under that threshold the page looks identical to before.',
+          ],
+        },
+        {
+          heading: '🐛 Privacy policy — "daily backups" claim corrected',
+          bullets: [
+            'The bullet under § 5 ("Modalità di trattamento e misure di sicurezza" / "Processing methods and security measures") used to say "Backup giornalieri della base dati con retention 30 giorni" / "Daily database backups with 30-day retention". That was stronger than reality — the automated backup strategy is documented as an explicit prerequisite for real production customer data, but it isn\'t yet active.',
+            'Reworded to "Piano di backup automatizzato della base dati in implementazione prima della raccolta di dati reali in produzione" / "An automated database-backup plan planned to be implemented before any real production customer data is collected." Points at the DPA template § 8 and the production-deployment runbook for the technical decision (DigitalOcean Managed DB vs mysqldump cron vs droplet snapshots) that\'s still being made.',
+            'Transparency-improvement, not a security regression — nothing about how your data is handled changed; only what we say about it. The actual backup strategy is the next item on the production-readiness checklist.',
+          ],
+        },
+        {
+          heading: '🔧 Behind the scenes — legal docs + medical-cert test coverage',
+          bullets: [
+            "DPIA-lite for medical certificates (Data Protection Impact Assessment, GDPR Art. 35) lives at docs/legal/dpia-medical-certificates.md. It walks through the risks, mitigations, and the strategic A-vs-B choice between keeping medical-cert PDFs inside Budojo (with encryption + audit) vs storing only valid yes/no + expiry and letting the academy's own storage hold the file. Recommendation is option B until traction; the choice itself is still pending.",
+            'Academy-offboarding runbook at docs/operations/academy-offboarding.md walks the manual procedure for when an academy customer ends the contract — three windows (T-30 notice, T0-T+30 grace export, T+30 purge) with explicit steps for each.',
+            'TWA runbook rewritten so it describes the actual /.well-known/assetlinks.json flow (static file under the SPA bundle, edited via PR, served by Cloudflare Pages) instead of the retired Laravel-routed env-driven implementation deprecated in v2.3.1.',
+            'Play Store listing copy drafted in English and Italian at docs/mobile/play-store-listing.md, including the Data Safety questionnaire answers — so when the Android app ships, the listing is paste-ready.',
+            "Medical-certificate test coverage added to the GDPR Art. 15 export and Art. 17 erasure flows. The flows already did the right thing; the tests pin the behavior so a future refactor can't silently regress the special-category-data handling.",
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.3.1',
       date: '2026-05-08',
       headline:
