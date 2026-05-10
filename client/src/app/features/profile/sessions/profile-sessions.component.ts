@@ -74,7 +74,11 @@ export class ProfileSessionsComponent implements OnInit {
    */
   protected confirmRevoke(event: MouseEvent, session: ActiveSession): void {
     this.confirmationService.confirm({
-      target: event.target as EventTarget,
+      // `currentTarget` (the element the listener is bound to) is the
+      // p-button host; `event.target` can be an inner `<span>` or
+      // `<i>` (PrimeNG icon) which mis-anchors the popup. Matches the
+      // pattern used by the rest of the app.
+      target: event.currentTarget as EventTarget,
       message: this.translate.instant(
         session.is_current
           ? 'profile.sessions.confirmRevokeCurrent'
@@ -94,6 +98,12 @@ export class ProfileSessionsComponent implements OnInit {
     this.revokingId.set(session.id);
     this.sessionService.revoke(session.id).subscribe({
       next: () => {
+        // Clear the per-row spinner BEFORE the early-return path so a
+        // current-session revoke doesn't leave the row stuck in a
+        // permanent loading state if the auth interceptor takes a
+        // beat to bounce. Symmetric with the other branches.
+        this.revokingId.set(null);
+
         // The CURRENT session was just revoked — the next request
         // bounces on 401 and the auth interceptor handles the
         // sign-out. Don't refresh the list (the call would also
@@ -109,7 +119,6 @@ export class ProfileSessionsComponent implements OnInit {
           }),
           life: 4000,
         });
-        this.revokingId.set(null);
         this.refresh();
       },
       error: () => {
@@ -126,7 +135,11 @@ export class ProfileSessionsComponent implements OnInit {
 
   protected confirmRevokeOthers(event: MouseEvent): void {
     this.confirmationService.confirm({
-      target: event.target as EventTarget,
+      // `currentTarget` (the element the listener is bound to) is the
+      // p-button host; `event.target` can be an inner `<span>` or
+      // `<i>` (PrimeNG icon) which mis-anchors the popup. Matches the
+      // pattern used by the rest of the app.
+      target: event.currentTarget as EventTarget,
       message: this.translate.instant('profile.sessions.confirmRevokeOthers'),
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: this.translate.instant('profile.sessions.confirmAccept'),

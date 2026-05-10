@@ -179,6 +179,24 @@ it('revoke-all-others returns 0 when the user has only the current session', fun
     expect(PersonalAccessToken::query()->find($current->accessToken->id))->not->toBeNull();
 });
 
+it('revoke-all-others is a no-op when there is no real PAT in the request (TransientToken)', function (): void {
+    // `actingAs($user)` binds a Laravel\Sanctum\TransientToken (not a
+    // PersonalAccessToken) as the request's currentAccessToken. The
+    // controller refuses to revoke ANYTHING in that state — a
+    // current_id of 0 with `id != 0` would otherwise wipe every
+    // PAT the user owns, which is the opposite of "keep current".
+    // In production this case can't happen (auth:sanctum requires a
+    // real PAT), but the spec pins the defensive shape.
+    $user = userWithAcademy();
+    $user->createToken('Chrome on macOS');
+    $user->createToken('Safari on iOS');
+
+    $response = $this->actingAs($user)->deleteJson('/api/v1/me/sessions');
+
+    $response->assertOk()->assertJsonPath('data.revoked', 0);
+    expect($user->tokens()->count())->toBe(2);
+});
+
 it('revoke-all-others does NOT touch other users tokens', function (): void {
     $alice = userWithAcademy();
     $bob = User::factory()->create();

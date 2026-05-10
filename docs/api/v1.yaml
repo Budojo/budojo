@@ -873,10 +873,14 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '404':
           description: |
-            The id doesn't belong to the authenticated user, OR the
-            id never existed, OR the path failed the route binding's
-            digit constraint. Same shape for all three so a probe
-            can't enumerate other users' token IDs.
+            Returned when the id doesn't belong to the authenticated
+            user, when the id never existed, or when the path fails
+            the route binding's digit constraint. The status code is
+            the same in all three cases so a probe can't enumerate
+            other users' token IDs by status alone — the response
+            body shape, however, is NOT normalised across the three
+            (the controller emits its own JSON, while route-binding
+            failures fall through to Laravel's default 404 page).
 
   /me/avatar:
     post:

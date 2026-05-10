@@ -120,14 +120,20 @@ class SessionController extends Controller
         $current = $user->currentAccessToken();
         // See the analogous comment in `index()` — the runtime type
         // can be `PersonalAccessToken`, `TransientToken`, or null,
-        // even though Sanctum's @return suggests otherwise. Fallback
-        // 0 keeps the `id != 0` filter inert for the empty case so
-        // the user's own current row isn't accidentally revoked.
+        // even though Sanctum's @return suggests otherwise. When the
+        // request is NOT authenticated by a real PAT (TransientToken
+        // / null — only happens in test paths via `actingAs` since
+        // the auth:sanctum middleware requires a token in
+        // production), refuse to revoke ANYTHING: a falsy "current"
+        // id with `id != 0` matches every token and would wipe all
+        // of the user's sessions, the opposite of "keep current".
         // @phpstan-ignore-next-line instanceof.alwaysTrue
-        $currentId = $current instanceof PersonalAccessToken ? $current->id : 0;
+        if (! $current instanceof PersonalAccessToken) {
+            return response()->json(['data' => ['revoked' => 0]]);
+        }
 
         $revoked = $user->tokens()
-            ->where('id', '!=', $currentId)
+            ->where('id', '!=', $current->id)
             ->delete();
 
         return response()->json(['data' => ['revoked' => $revoked]]);

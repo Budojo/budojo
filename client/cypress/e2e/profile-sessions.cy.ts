@@ -54,6 +54,11 @@ describe('Active sessions panel (#413)', () => {
     cy.visitAuthenticated('/dashboard/profile');
     cy.wait('@sessions');
 
+    // The panel is the LAST card on the profile page — make sure the
+    // viewport reaches it before asserting visibility (the page
+    // exceeds 720px and the panel sits below the fold). 1280×720
+    // is the default Cypress viewport.
+    cy.get('[data-cy="profile-sessions"]').scrollIntoView();
     cy.get('[data-cy="profile-sessions"]').should('be.visible');
     cy.get('[data-cy="profile-session-row-1"]').should('contain.text', 'Chrome on macOS');
     cy.get('[data-cy="profile-session-row-2"]').should('contain.text', 'Safari on iOS');
@@ -84,7 +89,7 @@ describe('Active sessions panel (#413)', () => {
       body: { data: [SESSIONS_INITIAL[1]] },
     }).as('refresh');
 
-    cy.get('[data-cy="profile-session-revoke-1"]').click();
+    cy.get('[data-cy="profile-session-revoke-1"]').scrollIntoView().click();
     // PrimeNG's confirm popup renders a `.p-confirmpopup-accept-button`
     // — click the accept arm.
     cy.get('.p-confirmpopup-accept-button').click();
@@ -114,7 +119,7 @@ describe('Active sessions panel (#413)', () => {
       body: { data: [SESSIONS_INITIAL[1]] },
     }).as('refresh');
 
-    cy.get('[data-cy="profile-sessions-revoke-others"]').click();
+    cy.get('[data-cy="profile-sessions-revoke-others"]').scrollIntoView().click();
     cy.get('.p-confirmpopup-accept-button').click();
 
     cy.wait('@revokeOthers');
