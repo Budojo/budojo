@@ -82,6 +82,16 @@ describe('OnboardingService (#424)', () => {
     expect(service.progress()).toBe(5);
   });
 
+  it('tourActive is false before load() resolves — no flash-of-checklist', () => {
+    // Defaults (_dismissedAt null, _completedSteps []) would
+    // otherwise paint tourActive=true on a brand-new instance. The
+    // `_loaded` gate keeps the surface hidden until the server
+    // confirms state, so an already-dismissed user doesn't see a
+    // flash of the checklist between page load and the GET resolving.
+    expect(service.loaded()).toBe(false);
+    expect(service.tourActive()).toBe(false);
+  });
+
   it('tourActive is true with partial progress and no dismissal', () => {
     service.load().subscribe();
     httpMock.expectOne('/api/v1/me/onboarding').flush({

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\OnboardingStep;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -26,8 +27,11 @@ use Illuminate\Validation\Rule;
  *
  * The "Getting started" checklist on the dashboard home is
  * idempotent against this state: completed steps tick green and the
- * whole card auto-dismisses when every step is checked OR the user
- * explicitly clicks "Dismiss".
+ * whole card auto-dismisses when every step is explicitly ticked OR
+ * the user clicks "Dismiss". The SPA does NOT today consult
+ * domain-state proofs (existence of athletes, payments, etc.) as
+ * auto-completion signals — only the explicit tick + dismiss flag
+ * are load-bearing.
  */
 class OnboardingController extends Controller
 {
@@ -54,19 +58,39 @@ class OnboardingController extends Controller
             'step' => ['required', 'string', Rule::in(OnboardingStep::all())],
         ]);
 
-        $existing = $user->onboarding_completed_steps ?? [];
-        // Idempotent: adding the same step twice keeps the array
-        // unique. Re-posting is allowed (the SPA may fire on
-        // background heuristics — last-attendance row, first
-        // payment marked — and we don't want to 422 on those).
-        if (! \in_array($validated['step'], $existing, true)) {
-            $existing[] = $validated['step'];
-            $user->forceFill(['onboarding_completed_steps' => $existing])->save();
-        }
+        // Wrapped in a transaction with `lockForUpdate()` so two
+        // concurrent POSTs targeting different steps don't lose one
+        // another's append — without the lock both can read the same
+        // pre-image array, each append its own step, and the second
+        // write clobbers the first. The lock-read-modify-write
+        // sequence is the canonical fix for the lost-update race.
+        $completed = DB::transaction(function () use ($user, $validated): array {
+            /** @var User|null $locked */
+            $locked = User::query()->lockForUpdate()->find($user->id);
+            if ($locked === null) {
+                return [];
+            }
+            $existing = $locked->onboarding_completed_steps ?? [];
+            if (! \in_array($validated['step'], $existing, true)) {
+                $existing[] = $validated['step'];
+                $locked->forceFill(['onboarding_completed_steps' => $existing])->save();
+            }
+
+            // Mirror the persisted state back onto the caller-side
+            // $user so subsequent reads on the same instance (e.g. a
+            // GET in the same test that uses actingAs($user)) see
+            // the fresh value. In production each request rehydrates
+            // from the token, so this is test-correctness scaffolding
+            // — but it also avoids surprising callers that pass a
+            // model around across multiple operations.
+            $user->setAttribute('onboarding_completed_steps', $existing);
+
+            return $existing;
+        });
 
         return response()->json([
             'data' => [
-                'completed_steps' => $existing,
+                'completed_steps' => $completed,
             ],
         ]);
     }

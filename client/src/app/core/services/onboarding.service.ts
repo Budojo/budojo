@@ -72,6 +72,16 @@ export class OnboardingService {
    * the rest of the session.
    */
   readonly tourActive = computed(() => {
+    // Hidden until the server has confirmed state. Without this guard
+    // the default signal values (dismissedAt null + completedSteps
+    // empty) light up as "show the tour!" on every page load, and a
+    // user who's already dismissed it sees a flash-of-checklist
+    // before `load()` resolves. The empty initial state is
+    // indistinguishable from the legitimate empty state until we
+    // hear from the server.
+    if (!this._loaded()) {
+      return false;
+    }
     if (this._dismissedAt() !== null) {
       return false;
     }

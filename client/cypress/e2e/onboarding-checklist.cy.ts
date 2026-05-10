@@ -3,8 +3,12 @@ import { MOCK_ACADEMY } from '../support/fixtures';
 /**
  * First-run "Getting started" checklist E2E (#424). Three scenarios:
  *  1. Fresh user (no dismissal, no completed steps) → checklist renders.
- *  2. Clicking a step CTA → navigation fires + the row turns "done".
- *  3. Dismiss flow — confirm popup → row hides + survives reload.
+ *  2. Clicking a step CTA → navigation fires + complete-step POSTs.
+ *  3. Already-dismissed user → checklist does NOT render.
+ *
+ * The interactive dismiss flow (CTA → confirm-popup → POST →
+ * checklist hides) is covered by the component-level unit specs;
+ * keeping the cypress shard tight here.
  */
 
 const FAKE_USER = {

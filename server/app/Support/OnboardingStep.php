@@ -17,8 +17,10 @@ namespace App\Support;
  * checklist iterates this list as-is.
  *
  * Adding a step: append the new key here AND mirror it in
- * `client/src/app/core/services/onboarding.service.ts` STEPS const
- * AND add an i18n entry under `onboarding.steps.<key>` in EN+IT.
+ * `client/src/app/core/services/onboarding.service.ts` (the
+ * exported `ONBOARDING_STEPS` const) AND add an i18n entry under
+ * `onboarding.steps.<key>` in EN+IT, plus the STEP_LABEL_KEY /
+ * STEP_HINT_KEY static maps in `onboarding-checklist.component.ts`.
  * A vitest parity check (`onboarding.service.spec.ts`) keeps the
  * lists in lock-step.
  */

@@ -22,11 +22,11 @@ use Illuminate\Support\Facades\Schema;
  *    has manually marked done from the "Getting started" checklist on
  *    the dashboard home. The keys are the same string identifiers the
  *    SPA uses (`add_athlete`, `log_attendance`, etc.). When every key
- *    has either been ticked OR the corresponding domain proof exists
- *    (the user really does have ≥ 1 athlete, etc.), the checklist
- *    self-dismisses. Tracking explicit ticks is what allows a user to
- *    confirm "yes I know how to do this" even when their seeded
- *    state already proves the action — manual override always wins.
+ *    in `App\Support\OnboardingStep::all()` is present, the checklist
+ *    self-dismisses. Domain-state auto-completion (the user really
+ *    has ≥ 1 athlete, has a payment row, etc.) is NOT consulted
+ *    today — only explicit ticks count. Adding the domain-proof
+ *    heuristic is a follow-up; the column shape doesn't change.
  */
 return new class extends Migration
 {
