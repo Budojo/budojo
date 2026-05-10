@@ -44,7 +44,7 @@ class AcceptAthleteInvitationAction
     /**
      * @return array{user: User, token: NewAccessToken, invitation: AthleteInvitation}
      */
-    public function execute(string $rawToken, string $password): array
+    public function execute(string $rawToken, string $password, string $deviceLabel = 'athlete-invite-accept'): array
     {
         $hash = AthleteInvitation::hashToken($rawToken);
 
@@ -90,7 +90,7 @@ class AcceptAthleteInvitationAction
         // level race), we surface it as the same friendly 422 error
         // code instead of bubbling a 500.
         try {
-            return DB::transaction(function () use ($invitation, $password): array {
+            return DB::transaction(function () use ($invitation, $password, $deviceLabel): array {
                 $lockedInvitation = AthleteInvitation::query()
                     ->whereKey($invitation->id)
                     ->lockForUpdate()
@@ -143,7 +143,15 @@ class AcceptAthleteInvitationAction
 
                 $lockedInvitation->forceFill(['accepted_at' => now()])->save();
 
-                $token = $user->createToken('athlete-invite-accept');
+                // Token name shows up in the user's "Active sessions"
+                // list (#413). The Action accepts a `$deviceLabel`
+                // string (parsed by the controller from the request's
+                // `User-Agent`) so the row reads as "Chrome on macOS"
+                // rather than the legacy `athlete-invite-accept`
+                // identifier — which still shows when a CLI / test
+                // path calls `execute()` without overriding the
+                // default arg.
+                $token = $user->createToken($deviceLabel);
 
                 return [
                     'user' => $user->fresh() ?? $user,

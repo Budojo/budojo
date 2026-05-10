@@ -150,6 +150,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->middleware('throttle:5,1');
     Route::delete('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'destroy']);
 
+    // Active sessions list with per-token revoke (#413). Surfaces every
+    // Sanctum personal-access-token tied to the user; backs the
+    // "Active sessions" panel on /dashboard/profile + the
+    // "logout everywhere except here" CTA. Each row carries an
+    // `is_current` flag so the SPA can stamp the "this session" pill
+    // on the token authenticating THIS request.
+    Route::get('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'index']);
+    Route::delete('/me/sessions/{id}', [\App\Http\Controllers\User\SessionController::class, 'destroy'])
+        ->where('id', '[0-9]+');
+    Route::delete('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'destroyOthers']);
+
     // Avatar — multipart upload + delete (#411). Mirrors the
     // /academy/logo precedent: stores the original bytes (no
     // server-side resize — the API container ships GD without JPEG
