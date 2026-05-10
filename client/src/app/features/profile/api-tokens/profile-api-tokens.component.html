@@ -1,0 +1,228 @@
+<div class="profile-api-tokens" data-cy="profile-api-tokens">
+  <header class="profile-api-tokens__header">
+    <div class="profile-api-tokens__heading">
+      <h2 class="profile-api-tokens__title">
+        {{ 'profile.apiTokens.title' | translate }}
+      </h2>
+      <p class="profile-api-tokens__subtitle">
+        {{ 'profile.apiTokens.subtitle' | translate }}
+      </p>
+    </div>
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      size="small"
+      icon="pi pi-plus"
+      [label]="'profile.apiTokens.createCta' | translate"
+      (onClick)="openCreateDialog()"
+      data-cy="profile-api-tokens-create"
+    />
+  </header>
+  <p-confirmpopup />
+
+  @if (loading()) {
+    <div class="profile-api-tokens__state" data-cy="profile-api-tokens-loading">
+      <p-progress-spinner strokeWidth="3" styleClass="profile-api-tokens__spinner" />
+    </div>
+  } @else if (errored()) {
+    <div
+      class="profile-api-tokens__state profile-api-tokens__state--error"
+      data-cy="profile-api-tokens-error"
+    >
+      <i class="pi pi-times-circle" aria-hidden="true"></i>
+      <p>{{ 'profile.apiTokens.errorMessage' | translate }}</p>
+      <p-button
+        type="button"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        [label]="'profile.apiTokens.retry' | translate"
+        (onClick)="refresh()"
+      />
+    </div>
+  } @else if (!hasTokens()) {
+    <div class="profile-api-tokens__state" data-cy="profile-api-tokens-empty">
+      <i class="pi pi-key" aria-hidden="true"></i>
+      <p>{{ 'profile.apiTokens.empty' | translate }}</p>
+    </div>
+  } @else {
+    <ul class="profile-api-tokens__list" data-cy="profile-api-tokens-list">
+      @for (token of tokens(); track token.id) {
+        <li class="profile-api-tokens__row" [attr.data-cy]="'profile-api-token-row-' + token.id">
+          <div class="profile-api-tokens__row-main">
+            <strong class="profile-api-tokens__row-name">{{ token.name }}</strong>
+            <div class="profile-api-tokens__row-chips">
+              @for (ability of token.abilities; track ability) {
+                <span class="profile-api-tokens__chip">{{ ability }}</span>
+              }
+            </div>
+            <div class="profile-api-tokens__row-meta">
+              @if (token.last_used_at) {
+                <span>{{
+                  'profile.apiTokens.lastUsedAt'
+                    | translate: { datetime: (token.last_used_at | date: 'short') }
+                }}</span>
+              } @else {
+                <span>{{ 'profile.apiTokens.neverUsed' | translate }}</span>
+              }
+              @if (token.expires_at) {
+                <span class="profile-api-tokens__row-meta-sep" aria-hidden="true">·</span>
+                <span>{{
+                  'profile.apiTokens.expiresAt'
+                    | translate: { datetime: (token.expires_at | date: 'short') }
+                }}</span>
+              }
+            </div>
+          </div>
+          <p-button
+            type="button"
+            severity="danger"
+            [text]="true"
+            size="small"
+            icon="pi pi-trash"
+            [label]="'profile.apiTokens.revoke' | translate"
+            [loading]="revokingId() === token.id"
+            (onClick)="confirmRevoke($event, token)"
+            [attr.data-cy]="'profile-api-token-revoke-' + token.id"
+          />
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+<!-- Create dialog -->
+<p-dialog
+  [visible]="createDialogOpen()"
+  (visibleChange)="createDialogOpen.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!creating()"
+  [style]="{ width: '32rem', maxWidth: '90vw' }"
+  [header]="'profile.apiTokens.createDialog.title' | translate"
+  data-cy="profile-api-tokens-create-dialog"
+>
+  <form
+    [formGroup]="createForm"
+    (ngSubmit)="submitCreate()"
+    novalidate
+    class="profile-api-tokens__create-form"
+  >
+    <div class="field">
+      <label for="apiTokenName">{{ 'profile.apiTokens.createDialog.nameLabel' | translate }}</label>
+      <input
+        id="apiTokenName"
+        type="text"
+        pInputText
+        formControlName="name"
+        [placeholder]="'profile.apiTokens.createDialog.namePlaceholder' | translate"
+        autocomplete="off"
+        maxlength="100"
+        data-cy="profile-api-tokens-name-input"
+      />
+    </div>
+
+    <div class="field" role="group" [attr.aria-label]="'profile.apiTokens.createDialog.abilitiesLabel' | translate">
+      <span class="profile-api-tokens__group-label">{{
+        'profile.apiTokens.createDialog.abilitiesLabel' | translate
+      }}</span>
+      <p class="field-hint">
+        {{ 'profile.apiTokens.createDialog.abilitiesHint' | translate }}
+      </p>
+      <div class="profile-api-tokens__abilities">
+        @for (ability of availableAbilities(); track ability; let i = $index) {
+          <label class="profile-api-tokens__ability-row">
+            <input
+              type="checkbox"
+              [attr.data-cy]="'profile-api-tokens-ability-' + ability"
+              [checked]="abilityChecked(i)"
+              (change)="toggleAbility(i)"
+            />
+            <span>{{ ability }}</span>
+          </label>
+        }
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="apiTokenExpires">
+        {{ 'profile.apiTokens.createDialog.expiresLabel' | translate }}
+      </label>
+      <p-inputnumber
+        inputId="apiTokenExpires"
+        formControlName="expires_in_days"
+        [showButtons]="false"
+        [min]="1"
+        [max]="730"
+        [placeholder]="'profile.apiTokens.createDialog.expiresPlaceholder' | translate"
+      />
+      <small class="field-hint">{{
+        'profile.apiTokens.createDialog.expiresHint' | translate
+      }}</small>
+    </div>
+
+    <div class="profile-api-tokens__dialog-actions">
+      <p-button
+        type="button"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        [label]="'profile.apiTokens.createDialog.cancel' | translate"
+        [disabled]="creating()"
+        (onClick)="createDialogOpen.set(false)"
+      />
+      <p-button
+        type="submit"
+        severity="primary"
+        size="small"
+        [label]="'profile.apiTokens.createDialog.confirm' | translate"
+        [loading]="creating()"
+        [disabled]="creating()"
+        data-cy="profile-api-tokens-create-submit"
+      />
+    </div>
+  </form>
+</p-dialog>
+
+<!-- Plaintext dialog — shown ONCE after a successful create -->
+<p-dialog
+  [visible]="plaintextDialogOpen()"
+  [modal]="true"
+  [closable]="false"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '34rem', maxWidth: '90vw' }"
+  [header]="'profile.apiTokens.plaintextDialog.title' | translate"
+  data-cy="profile-api-tokens-plaintext-dialog"
+>
+  <p class="profile-api-tokens__plaintext-hint">
+    {{ 'profile.apiTokens.plaintextDialog.hint' | translate }}
+  </p>
+  @if (createdToken(); as token) {
+    <code class="profile-api-tokens__plaintext" data-cy="profile-api-tokens-plaintext">{{
+      token.plain_text_token
+    }}</code>
+  }
+  <div class="profile-api-tokens__dialog-actions">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      size="small"
+      icon="pi pi-copy"
+      [label]="'profile.apiTokens.plaintextDialog.copy' | translate"
+      (onClick)="copyPlaintext()"
+      data-cy="profile-api-tokens-plaintext-copy"
+    />
+    <p-button
+      type="button"
+      severity="primary"
+      size="small"
+      [label]="'profile.apiTokens.plaintextDialog.acknowledge' | translate"
+      (onClick)="closePlaintextDialog()"
+      data-cy="profile-api-tokens-plaintext-dismiss"
+    />
+  </div>
+</p-dialog>
