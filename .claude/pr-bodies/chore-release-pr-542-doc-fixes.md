@@ -1,6 +1,6 @@
 ## What
 
-Addresses the eight Copilot review comments on release PR **#542 (v2.3.2)**. Doc-only changes across five files; once merged to `develop`, PR #542 auto-includes them and can be re-merged to `main`.
+Addresses the eight Copilot review comments on release PR **#542 (v2.3.2)**. Doc-only changes across **five user-facing docs** (legal + ops + mobile) plus two `.claude/pr-bodies/` artefact files (this PR's own body + the release PR body); once merged to `develop`, PR #542 auto-includes them and can be re-merged to `main`.
 
 Replies posted on the corresponding Copilot threads on #542 reference the SHA of this PR's merge commit so the review trail closes cleanly.
 
