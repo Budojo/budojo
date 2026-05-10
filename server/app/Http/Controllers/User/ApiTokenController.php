@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\ApiTokenAbility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -86,16 +87,21 @@ class ApiTokenController extends Controller
         $expiresInDays = $validated['expires_in_days'] ?? null;
         $expiresAt = $expiresInDays !== null ? now()->addDays($expiresInDays) : null;
 
-        $newToken = $user->createToken(
-            name: $validated['name'],
-            abilities: $abilities,
-            expiresAt: $expiresAt,
-        );
+        // Wrap create + kind-stamp in a transaction so a crash
+        // between the two queries can't leak a token marked
+        // `kind = 'session'` (which would surface in `/me/sessions`
+        // and risk being wiped by "revoke other sessions"). Atomic
+        // either-both-or-neither is the right contract.
+        $newToken = DB::transaction(function () use ($user, $validated, $abilities, $expiresAt) {
+            $minted = $user->createToken(
+                name: $validated['name'],
+                abilities: $abilities,
+                expiresAt: $expiresAt,
+            );
+            $minted->accessToken->forceFill(['kind' => 'api'])->save();
 
-        // Stamp the token row with `kind = 'api'` so `/me/sessions`
-        // doesn't accidentally surface it. `createToken` doesn't take
-        // a kind arg directly — patch the row right after.
-        $newToken->accessToken->forceFill(['kind' => 'api'])->save();
+            return $minted;
+        });
 
         $row = $newToken->accessToken;
 
@@ -104,6 +110,10 @@ class ApiTokenController extends Controller
                 'id' => $row->id,
                 'name' => $row->name,
                 'abilities' => $abilities,
+                // `last_used_at` matches the index endpoint's shape so
+                // the SPA can splice the response row straight into the
+                // list without a follow-up GET. Freshly-minted = null.
+                'last_used_at' => null,
                 'expires_at' => $row->expires_at?->toIso8601String(),
                 'created_at' => $row->created_at?->toIso8601String(),
                 // PLAINTEXT — returned once. The SPA must surface it

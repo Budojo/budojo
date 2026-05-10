@@ -9,7 +9,6 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { DialogModule } from 'primeng/dialog';
@@ -44,7 +43,6 @@ import {
   standalone: true,
   imports: [
     ButtonModule,
-    CheckboxModule,
     ConfirmPopupModule,
     DatePipe,
     DialogModule,
