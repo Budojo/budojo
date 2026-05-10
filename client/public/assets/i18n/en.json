@@ -200,6 +200,16 @@
       "signOut": "Sign out"
     }
   },
+  "notifications": {
+    "bell": {
+      "ariaLabel": "Notifications",
+      "tooltip": "Notifications",
+      "panelTitle": "Notifications",
+      "markAllRead": "Mark all read",
+      "empty": "Nothing here yet. We'll let you know when something needs your attention.",
+      "unreadCount": "{{count}} unread"
+    }
+  },
   "onboarding": {
     "checklist": {
       "title": "Getting started",

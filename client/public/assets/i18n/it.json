@@ -200,6 +200,16 @@
       "signOut": "Esci"
     }
   },
+  "notifications": {
+    "bell": {
+      "ariaLabel": "Notifiche",
+      "tooltip": "Notifiche",
+      "panelTitle": "Notifiche",
+      "markAllRead": "Segna tutte lette",
+      "empty": "Niente di nuovo per ora. Ti avvisiamo quando c'è qualcosa che richiede la tua attenzione.",
+      "unreadCount": "{{count}} non lette"
+    }
+  },
   "onboarding": {
     "checklist": {
       "title": "Per iniziare",

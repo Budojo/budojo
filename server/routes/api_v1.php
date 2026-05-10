@@ -202,6 +202,20 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'show']);
     Route::patch('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'update']);
 
+    // In-app notification inbox (#418). Bell-icon dropdown on the
+    // dashboard topbar; per-user state in the standard Laravel
+    // `notifications` table. The inbox SURFACE ships here. Wiring
+    // the existing reminder Actions (medical-cert expiry digest,
+    // unpaid-athletes monthly digest) to ALSO write database
+    // notifications alongside their email is a separate, focused
+    // follow-up — touching M5 critical-path code is deliberately
+    // out of scope for this PR. The table is empty in production
+    // until that follow-up lands.
+    Route::get('/me/notifications', [\App\Http\Controllers\User\NotificationInboxController::class, 'index']);
+    Route::post('/me/notifications/{id}/read', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAsRead'])
+        ->where('id', '[A-Za-z0-9\-]{36}');
+    Route::post('/me/notifications/read-all', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAllAsRead']);
+
     // First-run onboarding state (#424). The SPA reads `show` once on
     // dashboard mount to decide whether to render the guided tour /
     // "Getting started" checklist; `complete-step` is fired per

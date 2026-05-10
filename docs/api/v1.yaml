@@ -943,6 +943,142 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /me/notifications:
+    get:
+      tags: [auth]
+      summary: In-app notification inbox (latest 20 + unread count)
+      description: |
+        Backs the bell-icon dropdown in the dashboard topbar (#418).
+        Returns the most recent 20 notification rows for the authed
+        user (`ORDER BY created_at DESC LIMIT 20`) plus an unread
+        count for the badge.
+
+        **Population is deferred** — the inbox surface ships here;
+        wiring the existing reminder Actions (medical-cert expiry
+        digest, unpaid-athletes monthly digest) to ALSO call
+        `$user->notify(...)` alongside their email channel is a
+        focused follow-up. Today the `notifications` table is empty
+        in production until that follow-up lands.
+      operationId: meNotificationsIndex
+      responses:
+        '200':
+          description: Latest notifications + unread count.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, type, title, body, link, read_at, created_at]
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        type:
+                          type: string
+                          example: 'App\Notifications\MedicalCertExpiringNotification'
+                        title:
+                          type: string
+                        body:
+                          type: string
+                        link:
+                          type: string
+                          nullable: true
+                          example: '/dashboard/athletes/42/documents'
+                        read_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                  meta:
+                    type: object
+                    required: [unread_count]
+                    properties:
+                      unread_count:
+                        type: integer
+                        example: 3
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/notifications/{id}/read:
+    post:
+      tags: [auth]
+      summary: Mark a single notification as read
+      description: |
+        Flips `read_at` to `now()` on the addressed row (#418).
+        Idempotent — re-posting on an already-read row does NOT
+        advance the timestamp. 404s when the id doesn't belong to
+        the authenticated user; the response shape matches the
+        "id never existed" branch so an enumeration probe cannot
+        recover other users' notification ids.
+      operationId: meNotificationsMarkAsRead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Row updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [id, read_at]
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      read_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Notification id doesn't belong to the authenticated user.
+
+  /me/notifications/read-all:
+    post:
+      tags: [auth]
+      summary: Bulk mark every unread notification as read
+      description: |
+        Flips every `read_at IS NULL` row owned by the authenticated
+        user (#418). Returns the count that was flipped — `0` when
+        the user had no unread notifications.
+      operationId: meNotificationsMarkAllAsRead
+      responses:
+        '200':
+          description: Bulk update count.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [marked_read]
+                    properties:
+                      marked_read:
+                        type: integer
+                        example: 5
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
   /me/onboarding:
     get:
       tags: [auth]
