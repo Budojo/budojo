@@ -12,8 +12,8 @@ use App\Models\User;
  * and that's it for now. The token-based "click here to cancel"
  * email-link flow lives behind the `confirmation_token` column on
  * `pending_deletions` and will land as a separate Action / endpoint
- * once the deletion-request email is implemented (TODO follow-up
- * tracked on #223).
+ * once the deletion-request email is implemented (tracked on #545,
+ * carved out of the closed #223 umbrella).
  *
  * Returns true when something was actually cancelled, false when
  * the user had nothing pending — so the controller can shape the
