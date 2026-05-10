@@ -105,8 +105,11 @@ function resolveSha() {
   // SHA inside `tag` so two builds at the same tag (rare, but possible
   // during a hotfix cycle on the same commit) still produce distinct
   // identities. Falls back to a sentinel of all zeroes when git is
-  // unreachable, which the runtime check treats as "always reload" —
-  // honest signal for a misconfigured build.
+  // unreachable; both outputs receive the same fallback, so the
+  // runtime cache-bust check sees a "match" and stays quiet — the
+  // sidebar footer's `tag: "dev"` is the surfaced signal that this
+  // build was cut without git context (broken CI, unusual local
+  // setup), not a forced reload loop.
   const sha = tryGit('git rev-parse HEAD');
   return sha || '0000000000000000000000000000000000000000';
 }

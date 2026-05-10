@@ -1,9 +1,10 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { DOCUMENT, DestroyRef, Injectable, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, fromEvent, merge, timer } from 'rxjs';
+import { fromEvent, merge, timer } from 'rxjs';
 import { catchError, of, switchMap } from 'rxjs';
 import { VERSION } from '../../../environments/version';
+import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 
 /**
  * How often the SPA polls `/version.json` to detect that a deploy has
@@ -86,17 +87,18 @@ export class VersionCheckService {
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
 
-  private readonly trigger$ = new Subject<void>();
   private started = false;
 
   /**
    * Wire the focus listener, the periodic poll, and the boot-time
    * `?force-update=1` handler. Idempotent — a second call is a no-op.
+   *
+   * The `started` latch flips AFTER the early-return guards (force-
+   * update handler + DEV sentinel) so a no-op call doesn't permanently
+   * disable later initialization in the same session — mirrors the
+   * shape of `AppUpdateService.start()`.
    */
   start(): void {
-    if (this.started) return;
-    this.started = true;
-
     // Boot-time force-update handler runs before the version-check
     // pipeline so a stuck user can hit the URL without the (broken)
     // bundle's HTTP layer needing to work — `nuke()` only depends on
@@ -116,10 +118,13 @@ export class VersionCheckService {
       return;
     }
 
+    if (this.started) return;
+    this.started = true;
+
     const focus$ = fromEvent(this.document.defaultView ?? window, 'focus');
     const interval$ = timer(0, VERSION_CHECK_INTERVAL_MS);
 
-    merge(this.trigger$, focus$, interval$)
+    merge(focus$, interval$)
       .pipe(
         // `switchMap` gives us the natural "supersede in-flight on
         // every new trigger" semantics — if focus and the timer fire
@@ -133,6 +138,12 @@ export class VersionCheckService {
               // an aggressive corporate cache could still strip headers
               // but won't ignore a unique URL.
               params: { _: Date.now().toString() },
+              // Opt out of `errorInterceptor`'s `status === 0` →
+              // `/offline` global redirect. A background poll failing
+              // mid-form should never navigate the user away from
+              // their work; the `catchError` below absorbs the failure
+              // and the next interval tick retries.
+              context: new HttpContext().set(SKIP_OFFLINE_REDIRECT, true),
             })
             .pipe(
               catchError(() => {
