@@ -77,7 +77,7 @@ export class WhatsNewComponent {
           bullets: [
             'New panel on /dashboard/profile lists every device with a live session: a friendly device label (e.g. "Chrome on macOS", "Safari on iOS"), the last time each session was used, and a "this session" pill on the row you\'re using right now.',
             'Each row has a "Revoke" button; the panel also has a top-level "Sign out other sessions" CTA for the "I forgot my laptop at the gym" flow.',
-            'You can revoke the session you\'re currently using — the next request from that tab gets signed out automatically and you\'re bounced back to login.',
+            "You can revoke the session you're currently using — the next request from that tab gets signed out automatically and you're bounced back to login.",
             'Older session names from before this release still show as "auth" or "athlete-invite-accept"; new logins re-mint with the friendly device label automatically.',
           ],
         },
@@ -92,7 +92,7 @@ export class WhatsNewComponent {
         {
           heading: '🛡️ Email notification preferences',
           bullets: [
-            'Budojo sends a few digest / reminder emails per month: the medical-cert expiry reminder (daily, only when there\'s something to flag) and the unpaid-athletes monthly digest (16th of the month). Until now you received both with no way to opt out.',
+            "Budojo sends a few digest / reminder emails per month: the medical-cert expiry reminder (daily, only when there's something to flag) and the unpaid-athletes monthly digest (16th of the month). Until now you received both with no way to opt out.",
             'The new "Email notifications" panel lets you toggle each category independently. Toggles save instantly; no "Save changes" button. On a rare save failure the switch reverts and a toast surfaces.',
             'Transactional emails (welcome, password reset, email verification, account-deletion confirmation, athlete invitation) are listed in a read-only "always sent" block — they\'re required for the service to work and can\'t be turned off.',
           ],
