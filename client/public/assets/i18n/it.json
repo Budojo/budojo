@@ -645,6 +645,20 @@
       }
     }
   },
+  "accountDeletion": {
+    "cancel": {
+      "loadingTitle": "Sto annullando la cancellazione programmata…",
+      "successTitle": "Il tuo account è al sicuro",
+      "successMessage": "Abbiamo annullato la cancellazione programmata. Il tuo account resta attivo e non è stato eliminato nulla.",
+      "successCta": "Continua",
+      "noLongerPendingTitle": "Nessuna cancellazione in sospeso",
+      "noLongerPendingMessage": "Questo link non è più valido — o la cancellazione è già stata annullata, o il link è già stato usato, o l'account è già stato rimosso.",
+      "noLongerPendingCta": "Continua",
+      "errorTitle": "Non siamo riusciti ad annullare ora",
+      "errorMessage": "Qualcosa è andato storto durante l'annullamento. Puoi riprovare il link, oppure accedere e annullare dal tuo profilo.",
+      "errorCta": "Continua"
+    }
+  },
   "emailVerification": {
     "verified": "Email verificata",
     "notVerified": "Email non verificata",

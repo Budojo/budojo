@@ -694,6 +694,72 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/deletion-request/cancel/{token}:
+    post:
+      tags: [auth]
+      summary: Cancel a pending account deletion via the email-link token (no auth)
+      description: |
+        Public, unauthenticated entry point for the "Cancel deletion"
+        CTA in the deletion-confirmation email (#545). The token is
+        the 64-char `confirmation_token` from the user's
+        `pending_deletions` row, served on the email at request time.
+
+        On success, the row is deleted and the user's account is
+        preserved. The token is invalidated by the row delete, so a
+        second click on the same link resolves to `cancelled: false`
+        — same shape as already-clicked / never-valid /
+        already-purged / grace-window-elapsed. The SPA renders one
+        "deletion is no longer pending" panel for all of these; we
+        don't leak which case the user is in.
+
+        Route binding constrains `{token}` to `[A-Za-z0-9]{64}`, so a
+        malformed link 404s before reaching the controller.
+      operationId: meDeletionRequestCancelByToken
+      # Override the global `security: - bearerAuth: []` — this
+      # endpoint is INTENTIONALLY public; the click on the email link
+      # IS the auth.
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{64}$'
+            example: 'a3f2c8d4b9e1f7c2a3f2c8d4b9e1f7c2a3f2c8d4b9e1f7c2a3f2c8d4b9e1f7c2'
+          description: |
+            One-time `confirmation_token` from `pending_deletions`.
+      responses:
+        '200':
+          description: Cancellation result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [cancelled]
+                    properties:
+                      cancelled:
+                        type: boolean
+                        description: |
+                          True when the token matched an active row
+                          (with `scheduled_for` still in the future)
+                          and the row was removed. False when the
+                          token matched nothing (idempotent re-click,
+                          never valid, account already purged, or
+                          grace window already elapsed).
+        '404':
+          description: |
+            Returned when `{token}` does not match the
+            `[A-Za-z0-9]{64}` shape — the route binding rejects the
+            request before the controller is reached. A real
+            consumed/never-valid token returns 200 with
+            `cancelled: false` instead (see above) — the 404 here
+            covers ONLY the malformed-shape case.
+
   /me/avatar:
     post:
       tags: [auth]

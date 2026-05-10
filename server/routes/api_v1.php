@@ -80,6 +80,20 @@ Route::post('/athlete-invite/{token}/accept', [\App\Http\Controllers\Auth\Athlet
 Route::post('/email-change/{token}/verify', [\App\Http\Controllers\Account\EmailChangeController::class, 'verify'])
     ->where('token', '[A-Za-z0-9]{64}');
 
+// Account-deletion cancel by token (#545) — public endpoint, the click
+// on the "Cancel deletion" CTA in the request-confirmation email IS
+// the auth. The 64-char token comes from the `pending_deletions`
+// table and is invalidated by a successful cancel (the row is
+// deleted), so a second click on the same link resolves to
+// `cancelled: false` — the SPA renders a single "deletion is no
+// longer pending" page either way; we don't leak whether the link
+// was used vs invalid. The token shape is `Str::random(64)` →
+// alphanumeric with the same regex as the email-change + invite
+// tokens, constrained at the route layer so a malformed link 404s
+// before the action is called.
+Route::post('/me/deletion-request/cancel/{token}', [\App\Http\Controllers\User\AccountDeletionController::class, 'cancelByToken'])
+    ->where('token', '[A-Za-z0-9]{64}');
+
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {
     // Currently authenticated user. Used by the SPA on bootstrap to hydrate

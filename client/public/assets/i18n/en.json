@@ -645,6 +645,20 @@
       }
     }
   },
+  "accountDeletion": {
+    "cancel": {
+      "loadingTitle": "Cancelling your scheduled deletion…",
+      "successTitle": "Your account is safe",
+      "successMessage": "We've cancelled the scheduled deletion. Your account stays active and nothing has been removed.",
+      "successCta": "Continue",
+      "noLongerPendingTitle": "No deletion is pending",
+      "noLongerPendingMessage": "This link is no longer valid — either the deletion has already been cancelled, the link has been used, or the account has already been removed.",
+      "noLongerPendingCta": "Continue",
+      "errorTitle": "We couldn't cancel right now",
+      "errorMessage": "Something went wrong while cancelling. You can try the link again, or sign in and cancel from your profile.",
+      "errorCta": "Continue"
+    }
+  },
   "emailVerification": {
     "verified": "Email verified",
     "notVerified": "Email not verified",

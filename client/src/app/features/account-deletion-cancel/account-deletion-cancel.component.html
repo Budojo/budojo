@@ -1,0 +1,66 @@
+<div class="cancel-page" data-cy="account-deletion-cancel">
+  <app-brand-glyph class="cancel-page__brand" aria-hidden="true" />
+
+  @if (state() === 'loading') {
+    <div class="cancel-page__icon" aria-hidden="true">
+      <p-progress-spinner styleClass="cancel-page__spinner" strokeWidth="3" />
+    </div>
+    <h1 class="cancel-page__title" data-cy="account-deletion-cancel-loading">
+      {{ 'accountDeletion.cancel.loadingTitle' | translate }}
+    </h1>
+  } @else if (state() === 'cancelled') {
+    <div class="cancel-page__icon cancel-page__icon--success">
+      <i class="pi pi-check-circle" aria-hidden="true"></i>
+    </div>
+    <h1 class="cancel-page__title" data-cy="account-deletion-cancel-success">
+      {{ 'accountDeletion.cancel.successTitle' | translate }}
+    </h1>
+    <p class="cancel-page__message">
+      {{ 'accountDeletion.cancel.successMessage' | translate }}
+    </p>
+    <p-button
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [label]="'accountDeletion.cancel.successCta' | translate"
+      [routerLink]="continueTarget()"
+      data-cy="account-deletion-cancel-cta-success"
+    />
+  } @else if (state() === 'no-longer-pending') {
+    <div class="cancel-page__icon cancel-page__icon--neutral">
+      <i class="pi pi-info-circle" aria-hidden="true"></i>
+    </div>
+    <h1 class="cancel-page__title" data-cy="account-deletion-cancel-no-longer-pending">
+      {{ 'accountDeletion.cancel.noLongerPendingTitle' | translate }}
+    </h1>
+    <p class="cancel-page__message">
+      {{ 'accountDeletion.cancel.noLongerPendingMessage' | translate }}
+    </p>
+    <p-button
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [label]="'accountDeletion.cancel.noLongerPendingCta' | translate"
+      [routerLink]="continueTarget()"
+      data-cy="account-deletion-cancel-cta-no-longer-pending"
+    />
+  } @else {
+    <div class="cancel-page__icon cancel-page__icon--error">
+      <i class="pi pi-times-circle" aria-hidden="true"></i>
+    </div>
+    <h1 class="cancel-page__title" data-cy="account-deletion-cancel-error">
+      {{ 'accountDeletion.cancel.errorTitle' | translate }}
+    </h1>
+    <p class="cancel-page__message">
+      {{ 'accountDeletion.cancel.errorMessage' | translate }}
+    </p>
+    <p-button
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [label]="'accountDeletion.cancel.errorCta' | translate"
+      [routerLink]="continueTarget()"
+      data-cy="account-deletion-cancel-cta-error"
+    />
+  }
+</div>
