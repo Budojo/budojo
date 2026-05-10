@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\User\PurgeAccountAction;
+use App\Enums\DocumentType;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Models\AttendanceRecord;
@@ -158,4 +159,72 @@ it('PurgeAccountAction does not touch other users data', function (): void {
 
     expect(\App\Models\User::query()->where('id', $userB->id)->count())->toBe(1);
     expect(Athlete::query()->where('first_name', 'Untouched')->count())->toBe(1);
+});
+
+// ─── Medical-certificate handling — Art. 17 GDPR (#538 / DPIA #227-b) ────────
+//
+// The general "documents go to disk" cascade is covered above. These two
+// add the explicit medical-certificate angle: Art. 9 + Art. 17 means an
+// orphan PDF on disk after account hard-delete is a real compliance
+// defect, not just a hygiene issue. Pin it with tests so a future refactor
+// can't silently regress.
+
+it('PurgeAccountAction wipes medical certificates (Art. 9 + Art. 17, #538)', function (): void {
+    Storage::fake('local');
+
+    $user = userWithAcademy();
+    /** @var Athlete $athlete */
+    $athlete = Athlete::factory()->for($user->academy)->create();
+
+    $upload = UploadedFile::fake()->create('cert-medico.pdf', 150, 'application/pdf');
+    $stored = $upload->store('documents', 'local');
+
+    $doc = Document::factory()->for($athlete)->create([
+        'type' => DocumentType::MedicalCertificate,
+        'file_path' => $stored,
+        'mime_type' => 'application/pdf',
+    ]);
+
+    expect(Storage::disk('local')->exists($stored))->toBeTrue(); // sanity
+
+    app(PurgeAccountAction::class)->execute($user);
+
+    // (1) Document row is gone (cascade-driven).
+    expect(Document::withTrashed()->where('id', $doc->id)->count())->toBe(0);
+
+    // (2) The binary file is gone from disk — the new piece. Without
+    //     the explicit assertion the cascade could keep deleting the
+    //     row but stop touching the disk in some future refactor and
+    //     this test would still pass on the row-only path.
+    expect(Storage::disk('local')->exists($stored))->toBeFalse();
+});
+
+it('PurgeAccountAction wipes medical certificates of soft-deleted athletes too (#538)', function (): void {
+    Storage::fake('local');
+
+    $user = userWithAcademy();
+    /** @var Athlete $athlete */
+    $athlete = Athlete::factory()->for($user->academy)->create();
+
+    $upload = UploadedFile::fake()->create('cert-old.pdf', 100, 'application/pdf');
+    $stored = $upload->store('documents', 'local');
+
+    Document::factory()->for($athlete)->create([
+        'type' => DocumentType::MedicalCertificate,
+        'file_path' => $stored,
+        'mime_type' => 'application/pdf',
+    ]);
+
+    // Soft-delete via the model API (not a factory attribute) so any
+    // `deleting`/`deleted` hooks run exactly as they would in production.
+    // A factory `deleted_at => now()` skips the model events; we want
+    // the runtime path here, otherwise the test is asserting on a
+    // shape that never actually occurs in production.
+    $athlete->delete();
+
+    app(PurgeAccountAction::class)->execute($user);
+
+    // The PurgeAccountAction walks soft-deleted athletes via withTrashed()
+    // — confirm the medical-cert path is covered by that walk.
+    expect(Storage::disk('local')->exists($stored))->toBeFalse();
 });
