@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
 import { AppUpdateService } from './core/services/app-update.service';
 import { LanguageService } from './core/services/language.service';
+import { VersionCheckService } from './core/services/version-check.service';
 import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.component';
 
 @Component({
@@ -14,6 +15,7 @@ import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.co
 export class App implements OnInit {
   private readonly languageService = inject(LanguageService);
   private readonly appUpdateService = inject(AppUpdateService);
+  private readonly versionCheckService = inject(VersionCheckService);
 
   ngOnInit(): void {
     // i18n bootstrap (#273) — must run BEFORE any user-visible
@@ -26,5 +28,12 @@ export class App implements OnInit {
     // main lands in the user's browser without a manual cache
     // clear. No-op in dev mode (SwUpdate.isEnabled is false there).
     this.appUpdateService.start();
+
+    // SW-independent cache-bust (#548). Polls /version.json on focus
+    // + a 20-min interval and runs the nuclear unregister + clear +
+    // reload sequence on a SHA mismatch with the embedded build SHA.
+    // Also handles the boot-time `?force-update=1` escape hatch.
+    // No-op when the build is on the `dev` sentinel SHA.
+    this.versionCheckService.start();
   }
 }

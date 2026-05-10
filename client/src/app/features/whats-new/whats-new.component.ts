@@ -59,6 +59,45 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.4.0',
+      date: '2026-05-10',
+      headline:
+        'A polish-and-plumbing release. Three visible iPhone fixes on the dashboard, plus a behind-the-scenes safety net so tabs stuck on an old version of the app stop staying stuck. Visible: (1) Profile page — the pencil affordance next to First name / Last name / Handle / Email no longer falls onto its own row below the value on iPhone; (2) Athletes list + Attendance — the age chip "35 y" no longer wraps to two lines on a tight column (now reads "35y"); (3) Athletes list + Attendance — kid-variant belt labels like "Green (kids)" no longer split with the colour on top and "(kids)" underneath. Invisible safety net: the dashboard now polls a version file every 20 minutes (and on every tab focus); if your tab is running an older bundle than the latest deploy, it clears its caches and reloads quietly so you land on the latest. For tabs already stuck on an old bundle, a recovery URL (https://budojo.it/?force-update=1) frees them in a single visit. Network blips during the poll never disrupt your work — the failure is silently absorbed.',
+      sections: [
+        {
+          heading: '🐛 iPhone — pencil affordance no longer falls under the value on Profile',
+          bullets: [
+            'On /dashboard/profile, every editable row (First name, Last name, Handle, Email) shows the value plus a small pencil icon you can tap to edit. On iPhone-class viewports the pencil was rendering BELOW the value on its own line — the row read as "label / value / pencil" stacked vertically instead of "label / (value pencil)" as designed.',
+            'Fixed by restructuring the row so value + pencil sit in a flex container; the pencil now sits on the trailing edge regardless of viewport width.',
+            "This was a recurring report — the v2.1.0 polish sweep tried to fix it via absolute positioning, the iOS browser cascade silently ignored the rule, the bug came back. The new shape doesn't depend on cascade gymnastics so it should stick.",
+          ],
+        },
+        {
+          heading: '🐛 Athletes list — age chip and belt label no longer wrap to two lines',
+          bullets: [
+            'Age chip wrapped "35" and "y" onto two lines. The chip displayed the age followed by a literal space and a "y" (e.g. "35 y"); on a tight column the space broke and the chip rendered a digit on top, the "y" underneath. Now reads "35y" with no breakable space — fits on one line at any width.',
+            'Belt label wrapped on the kid variants. Pills like "Green (kids)" were splitting on the space before "(kids)", rendering the colour on top and "(kids)" underneath. The pill now grows in width when needed instead of in height; one line at every viewport.',
+            'Both fixes apply across the Athletes list AND the Attendance daily check-in page.',
+          ],
+        },
+        {
+          heading: '🛡️ Behind the scenes — your tab now reliably picks up new versions',
+          bullets: [
+            'The dashboard now polls a version file every 20 minutes (and every time you switch back to the tab). When the version doesn\'t match the one your tab is running, the tab quietly clears its caches and reloads on the latest version. No banners, no "click here to update" — it just lands.',
+            "For tabs already stuck on an old bundle, we can now hand out a single recovery URL (https://budojo.it/?force-update=1). Visiting it once unsticks the tab without you having to clear browser data manually. We'll send this proactively to any customer flagged as stuck.",
+            'Network blips don\'t disrupt your work. The version check is a background poll; if it fails (Wi-Fi drops, etc.) the tab stays exactly where you are — no false "you\'re offline" page.',
+            "This is invisible if you've been refreshing normally; it's load-bearing for anyone who pinned the dashboard to their iPhone home screen and hasn't touched the tab in weeks.",
+          ],
+        },
+        {
+          heading: '🔧 Behind the scenes — post-v2.3.2 tech-debt sweep',
+          bullets: [
+            'The post-release sweep walked the canonical checklist (TODO comments, suppressions, outdated deps, doc drift, gotchas, memory). v2.3.2 was a small patch so the sweep was largely empty — one finding: a TODO comment in the account-deletion code referenced a closed issue. Repointed at the new follow-up (#545 — token-based "click here to cancel" email-link flow for pending account deletions). No code-behavior change.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.3.2',
       date: '2026-05-10',
       headline:

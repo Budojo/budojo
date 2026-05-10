@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 
 /**
  * Network-error redirect interceptor (#425).
@@ -38,11 +39,19 @@ import { catchError, throwError } from 'rxjs';
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
 
+  const skipOfflineRedirect = req.context.get(SKIP_OFFLINE_REDIRECT);
+
   return next(req).pipe(
     catchError((err: unknown) => {
-      if (err instanceof HttpErrorResponse && err.status === 0) {
+      if (err instanceof HttpErrorResponse && err.status === 0 && !skipOfflineRedirect) {
         // Avoid bouncing if we're already there (a refresh on /offline
         // that fails again would otherwise loop).
+        //
+        // Background polls opt out via `SKIP_OFFLINE_REDIRECT` (#548)
+        // — a transient `/version.json` blip should not navigate the
+        // user away from a form they're filling out. The
+        // user-initiated traffic (which IS the right place for the
+        // takeover) leaves the flag at its default `false`.
         if (!router.url.startsWith('/offline')) {
           void router.navigateByUrl('/offline', { skipLocationChange: true });
         }
