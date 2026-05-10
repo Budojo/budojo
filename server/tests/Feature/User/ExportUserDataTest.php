@@ -131,7 +131,7 @@ it('throttles /me/export to 1 request per minute per user', function (): void {
 // medical-cert-shaped — generic-document coverage already exists above
 // and below this block.
 
-it('export ZIP includes the medical-certificate binary AND the type=medical_certificate metadata (DPIA #538)', function (): void {
+it('export ZIP includes the medical-certificate binary AND the type=medical_certificate metadata (#538 / DPIA #227-b)', function (): void {
     Storage::fake('local');
 
     $user = userWithAcademy();
@@ -153,8 +153,12 @@ it('export ZIP includes the medical-certificate binary AND the type=medical_cert
     $response = $this->actingAs($user)->get('/api/v1/me/export?format=zip');
     $response->assertOk();
 
+    // tempnam() already creates a real file at the returned path —
+    // open the ZIP IN PLACE rather than appending '.zip', which would
+    // leave the original empty tempfile behind and never unlink it.
     $zipBytes = $response->streamedContent();
-    $tmp = tempnam(sys_get_temp_dir(), 'budojo-test-export-medical-') . '.zip';
+    $tmp = tempnam(sys_get_temp_dir(), 'budojo-test-export-medical-');
+    expect($tmp)->toBeString();
     file_put_contents($tmp, $zipBytes);
 
     $zip = new ZipArchive();
@@ -164,6 +168,7 @@ it('export ZIP includes the medical-certificate binary AND the type=medical_cert
     //     to special-category data requires the user knows what kind of
     //     document each entry is, not just a generic blob.
     $jsonRaw = $zip->getFromName('data.json');
+    expect($jsonRaw)->toBeString();
     /** @var array<string, mixed> $decoded */
     $decoded = json_decode((string) $jsonRaw, true);
     /** @var array{type: string, original_name: string} $exportedDoc */
@@ -187,7 +192,7 @@ it('export ZIP includes the medical-certificate binary AND the type=medical_cert
     @unlink($tmp);
 });
 
-it('export ZIP keeps medical-cert metadata even when the binary is missing on disk (DPIA #538)', function (): void {
+it('export ZIP keeps medical-cert metadata even when the binary is missing on disk (#538 / DPIA #227-b)', function (): void {
     Storage::fake('local');
 
     $user = userWithAcademy();
@@ -208,8 +213,10 @@ it('export ZIP keeps medical-cert metadata even when the binary is missing on di
     $response = $this->actingAs($user)->get('/api/v1/me/export?format=zip');
     $response->assertOk();
 
+    // Reuse the same in-place-tempnam discipline as above.
     $zipBytes = $response->streamedContent();
-    $tmp = tempnam(sys_get_temp_dir(), 'budojo-test-export-orphan-') . '.zip';
+    $tmp = tempnam(sys_get_temp_dir(), 'budojo-test-export-orphan-');
+    expect($tmp)->toBeString();
     file_put_contents($tmp, $zipBytes);
 
     $zip = new ZipArchive();
@@ -218,6 +225,7 @@ it('export ZIP keeps medical-cert metadata even when the binary is missing on di
     // JSON entry IS present (the row exists in DB) — the controller
     // must NOT skip the metadata just because the binary is missing.
     $jsonRaw = $zip->getFromName('data.json');
+    expect($jsonRaw)->toBeString();
     /** @var array<string, mixed> $decoded */
     $decoded = json_decode((string) $jsonRaw, true);
     expect($decoded['data']['athletes'][0]['documents'])

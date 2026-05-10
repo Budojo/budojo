@@ -203,10 +203,8 @@ it('PurgeAccountAction wipes medical certificates of soft-deleted athletes too (
     Storage::fake('local');
 
     $user = userWithAcademy();
-    // Athlete was removed from the roster before the user requested
-    // account deletion. Under Art. 17 the PDF still has to go.
     /** @var Athlete $athlete */
-    $athlete = Athlete::factory()->for($user->academy)->create(['deleted_at' => now()]);
+    $athlete = Athlete::factory()->for($user->academy)->create();
 
     $upload = UploadedFile::fake()->create('cert-old.pdf', 100, 'application/pdf');
     $stored = $upload->store('documents', 'local');
@@ -216,6 +214,13 @@ it('PurgeAccountAction wipes medical certificates of soft-deleted athletes too (
         'file_path' => $stored,
         'mime_type' => 'application/pdf',
     ]);
+
+    // Soft-delete via the model API (not a factory attribute) so any
+    // `deleting`/`deleted` hooks run exactly as they would in production.
+    // A factory `deleted_at => now()` skips the model events; we want
+    // the runtime path here, otherwise the test is asserting on a
+    // shape that never actually occurs in production.
+    $athlete->delete();
 
     app(PurgeAccountAction::class)->execute($user);
 
