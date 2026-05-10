@@ -21,7 +21,7 @@
  * runtime check. Compiled locally only because the committed file
  * still carried the sentinel. Widening to `string` at the type level
  * lets the same comparison hold across local + prod builds; the
- * runtime values are still pinned by the script. See #553 hotfix.
+ * runtime values are still pinned by the script. See #554 hotfix.
  */
 export interface AppVersion {
   /** Resolved from `git describe --tags --always` at build time. */

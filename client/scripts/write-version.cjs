@@ -137,7 +137,7 @@ function main() {
  * prebuild wrote a real SHA — \`VERSION.sha === 'dev'\` had no literal-
  * type overlap. The interface is re-emitted into the generated file so
  * downstream code can \`import type { AppVersion } from './version'\`
- * without a round-trip via a separate types module. See #553 hotfix.
+ * without a round-trip via a separate types module. See #554 hotfix.
  */
 export interface AppVersion {
   /** Resolved from \`git describe --tags --always\` at build time. */
