@@ -18,8 +18,8 @@ use Illuminate\Support\Facades\Schema;
  * **Default-enabled**: omitting a category from the JSON means the
  * user is opted IN — preserves the historical behavior for existing
  * users (no row mutation needed at deploy time) and means a future
- * new category category ships enabled-by-default until the user
- * actively opts out. Document carefully wherever this is consumed.
+ * new category ships enabled-by-default until the user actively
+ * opts out. Document carefully wherever this is consumed.
  *
  * **NOT toggleable from this column**: transactional emails
  * (welcome, password-reset, email-verification, account-deletion-

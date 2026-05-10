@@ -37,7 +37,7 @@ it('NotificationPreferences::isEnabled honors explicit false', function (): void
         ->toBeTrue();
 });
 
-it('NotificationPreferences::update merges, lowercases unknown keys, persists', function (): void {
+it('NotificationPreferences::update merges, drops unknown category keys, persists', function (): void {
     $user = User::factory()->create();
 
     NotificationPreferences::update($user, [

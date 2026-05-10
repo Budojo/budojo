@@ -46,6 +46,7 @@
             [ngModel]="isEnabled(category.key)"
             (ngModelChange)="onToggle(category, $event)"
             [disabled]="saving() !== null"
+            [ariaLabel]="category.i18nLabel | translate"
             [attr.data-cy]="'profile-notifications-toggle-' + category.key"
           />
         </li>

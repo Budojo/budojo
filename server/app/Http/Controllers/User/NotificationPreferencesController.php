@@ -66,11 +66,15 @@ class NotificationPreferencesController extends Controller
         $patch = $validated['preferences'];
         NotificationPreferences::update($user, $patch);
 
-        // Echo the full snapshot back so the SPA can refresh its
-        // local state with one request, no follow-up GET.
+        // Refresh ONCE before the loop, reuse the hydrated instance
+        // for every category lookup. The prior shape called
+        // `$user->refresh()` inside the foreach, triggering a DB
+        // query per category that would scale linearly as the
+        // catalog grows.
+        $user->refresh();
         $rendered = [];
         foreach (NotificationCategory::all() as $category) {
-            $rendered[$category] = NotificationPreferences::isEnabled($user->refresh(), $category);
+            $rendered[$category] = NotificationPreferences::isEnabled($user, $category);
         }
 
         return response()->json(['data' => $rendered]);

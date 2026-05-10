@@ -12,9 +12,10 @@ namespace App\Support;
  * sites) consult `NotificationPreferences::isEnabled` keyed by these
  * strings before queueing a digest / reminder email.
  *
- * **Not listed here**: transactional emails (welcome, password-reset,
- * email-verification, account-deletion-confirmation, account-deletion
- * -cancel-link, athlete-invitation). Those are legally required or
+ * **Not listed here**: transactional emails — `welcome`,
+ * `password-reset`, `email-verification`,
+ * `account-deletion-confirmation`, `account-deletion-cancel-link`,
+ * `athlete-invitation`. Those are legally required or
  * security-load-bearing; the user cannot opt out of them and they
  * are NEVER gated by `notification_preferences`.
  *
