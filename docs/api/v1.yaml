@@ -760,6 +760,105 @@ paths:
             `cancelled: false` instead (see above) — the 404 here
             covers ONLY the malformed-shape case.
 
+  /unsubscribe/{userId}/{category}:
+    get:
+      tags: [auth]
+      summary: One-click unsubscribe via signed URL (no auth)
+      description: |
+        Public, signed-URL endpoint for the unsubscribe footer link
+        embedded in non-transactional Mailables (#417). The signed
+        URL is built by `App\Support\UnsubscribeUrl::for(User, category)`
+        with a 30-day expiry; the framework's `signed` middleware
+        validates the signature server-side. Tampered / expired
+        signatures get a 403 from the middleware before reaching the
+        controller.
+
+        On success, the controller flips
+        `users.notification_preferences.{category} = false` and
+        302-redirects to the SPA `/unsubscribed?category={category}`
+        page. On unknown category / unknown user_id (signature valid
+        but the row is gone), it redirects to
+        `/unsubscribed?status=invalid` instead.
+      operationId: unsubscribeGet
+      security: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+            example: 42
+        - in: path
+          name: category
+          required: true
+          schema:
+            type: string
+            example: 'medical_cert_expiry_reminders'
+        - in: query
+          name: expires
+          required: true
+          schema:
+            type: integer
+            description: Unix-time signature expiry from `URL::temporarySignedRoute`.
+        - in: query
+          name: signature
+          required: true
+          schema:
+            type: string
+            description: HMAC signature produced from the app key.
+      responses:
+        '302':
+          description: |
+            Redirects to `/unsubscribed?category={category}` on success
+            or `/unsubscribed?status=invalid` on unknown user_id /
+            unknown category.
+        '403':
+          description: |
+            Signature missing, tampered, or expired (the `signed`
+            middleware rejects before the controller fires).
+        '404':
+          description: Returned for non-numeric `userId` (route binding constraint).
+    post:
+      tags: [auth]
+      summary: One-click unsubscribe via List-Unsubscribe-Post (RFC 8058)
+      description: |
+        Same effect as the GET — flips the matching preference off —
+        but adapted for Gmail / Yahoo's bulk-sender
+        `List-Unsubscribe-Post: List-Unsubscribe=One-Click` flow.
+        Email clients send a no-body POST and don't render any UI;
+        the response is always 200 with an empty body so the client
+        doesn't surface server-side errors to the user (RFC 8058 § 3).
+      operationId: unsubscribePost
+      security: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: category
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: expires
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: signature
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success (empty body).
+        '403':
+          description: Signature missing, tampered, or expired.
+        '404':
+          description: Non-numeric `userId`.
+
   /me/notification-preferences:
     get:
       tags: [auth]

@@ -6,6 +6,8 @@ namespace App\Mail;
 
 use App\Models\Academy;
 use App\Models\Athlete;
+use App\Support\NotificationCategory;
+use App\Support\UnsubscribeUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,6 +15,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
 
@@ -93,8 +96,32 @@ class UnpaidAthletesDigestMail extends Mailable implements ShouldQueue
                 'rows' => $rows,
                 'count' => $this->athletes->count(),
                 'clientUrl' => $this->resolvedClientUrl(),
+                'unsubscribeUrl' => UnsubscribeUrl::for(
+                    $owner,
+                    NotificationCategory::UNPAID_ATHLETES_DIGEST,
+                ),
+                'unsubscribeCategory' => 'unpaid athletes monthly digest',
             ],
         );
+    }
+
+    /**
+     * `List-Unsubscribe` + `List-Unsubscribe-Post` headers (#417,
+     * RFC 8058). Same shape as MedicalCertificateExpiringMail —
+     * see that class for the rationale on bulk-sender compliance
+     * and the RFC 2369 / 8058 wrapper conventions.
+     */
+    public function headers(): Headers
+    {
+        $url = UnsubscribeUrl::for(
+            $this->owner(),
+            NotificationCategory::UNPAID_ATHLETES_DIGEST,
+        );
+
+        return new Headers(text: [
+            'List-Unsubscribe' => '<' . $url . '>',
+            'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click',
+        ]);
     }
 
     /**

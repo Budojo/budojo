@@ -724,6 +724,18 @@
       "errorCta": "Continua"
     }
   },
+  "unsubscribe": {
+    "successTitle": "Disiscrizione completata",
+    "successMessage": "Non ti invieremo più {{category}}.",
+    "reEnableHint": "Puoi riattivare questa categoria in qualsiasi momento dalle preferenze del tuo profilo.",
+    "invalidTitle": "Questo link non è più valido",
+    "invalidMessage": "Il link è scaduto, è stato manomesso, oppure l'account non esiste più. Se volevi disattivare una notifica email, accedi e usa il pannello preferenze nel profilo.",
+    "continueCta": "Continua",
+    "categories": {
+      "medical_cert_expiry_reminders": "i promemoria di scadenza del certificato medico",
+      "unpaid_athletes_digest": "il digest mensile degli atleti non paganti"
+    }
+  },
   "emailVerification": {
     "verified": "Email verificata",
     "notVerified": "Email non verificata",

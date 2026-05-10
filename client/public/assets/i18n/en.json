@@ -724,6 +724,18 @@
       "errorCta": "Continue"
     }
   },
+  "unsubscribe": {
+    "successTitle": "You're unsubscribed",
+    "successMessage": "We won't send you {{category}} anymore.",
+    "reEnableHint": "You can re-enable this category any time from your profile preferences.",
+    "invalidTitle": "This link is no longer valid",
+    "invalidMessage": "The link has expired, was tampered with, or the account no longer exists. If you wanted to opt out of an email, sign in and use the preferences panel on your profile.",
+    "continueCta": "Continue",
+    "categories": {
+      "medical_cert_expiry_reminders": "medical certificate expiring reminders",
+      "unpaid_athletes_digest": "the unpaid athletes monthly digest"
+    }
+  },
   "emailVerification": {
     "verified": "Email verified",
     "notVerified": "Email not verified",

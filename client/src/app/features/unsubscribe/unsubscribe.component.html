@@ -1,0 +1,47 @@
+<div class="unsubscribe-page" data-cy="unsubscribe-page">
+  <app-brand-glyph class="unsubscribe-page__brand" aria-hidden="true" />
+
+  @if (state() === 'success') {
+    <div class="unsubscribe-page__icon unsubscribe-page__icon--success" aria-hidden="true">
+      <i class="pi pi-check-circle"></i>
+    </div>
+    <h1 class="unsubscribe-page__title" data-cy="unsubscribe-success">
+      {{ 'unsubscribe.successTitle' | translate }}
+    </h1>
+    <p class="unsubscribe-page__message">
+      {{
+        'unsubscribe.successMessage'
+          | translate: { category: (categoryLabelKey()! | translate) }
+      }}
+    </p>
+    <p class="unsubscribe-page__hint">
+      {{ 'unsubscribe.reEnableHint' | translate }}
+    </p>
+    <p-button
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [label]="'unsubscribe.continueCta' | translate"
+      [routerLink]="continueTarget()"
+      data-cy="unsubscribe-cta-success"
+    />
+  } @else {
+    <div class="unsubscribe-page__icon unsubscribe-page__icon--invalid" aria-hidden="true">
+      <i class="pi pi-info-circle"></i>
+    </div>
+    <h1 class="unsubscribe-page__title" data-cy="unsubscribe-invalid">
+      {{ 'unsubscribe.invalidTitle' | translate }}
+    </h1>
+    <p class="unsubscribe-page__message">
+      {{ 'unsubscribe.invalidMessage' | translate }}
+    </p>
+    <p-button
+      type="button"
+      severity="secondary"
+      [text]="true"
+      [label]="'unsubscribe.continueCta' | translate"
+      [routerLink]="continueTarget()"
+      data-cy="unsubscribe-cta-invalid"
+    />
+  }
+</div>
