@@ -174,37 +174,41 @@
         -->
         <div class="profile-page__row">
           <span class="profile-page__label">{{ 'profile.firstName' | translate }}</span>
-          <span class="profile-page__value" data-cy="profile-first-name">{{ u.first_name }}</span>
-          <p-button
-            type="button"
-            icon="pi pi-pencil"
-            severity="secondary"
-            [text]="true"
-            size="small"
-            [pTooltip]="'profile.editName.edit' | translate"
-            tooltipPosition="left"
-            [ariaLabel]="'profile.editName.edit' | translate"
-            (onClick)="startEditName()"
-            styleClass="profile-page__row-edit-button"
-            data-cy="profile-first-name-edit"
-          />
+          <div class="profile-page__value-row">
+            <span class="profile-page__value" data-cy="profile-first-name">{{ u.first_name }}</span>
+            <p-button
+              type="button"
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [pTooltip]="'profile.editName.edit' | translate"
+              tooltipPosition="left"
+              [ariaLabel]="'profile.editName.edit' | translate"
+              (onClick)="startEditName()"
+              styleClass="profile-page__row-edit-button"
+              data-cy="profile-first-name-edit"
+            />
+          </div>
         </div>
         <div class="profile-page__row">
           <span class="profile-page__label">{{ 'profile.lastName' | translate }}</span>
-          <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
-          <p-button
-            type="button"
-            icon="pi pi-pencil"
-            severity="secondary"
-            [text]="true"
-            size="small"
-            [pTooltip]="'profile.editName.edit' | translate"
-            tooltipPosition="left"
-            [ariaLabel]="'profile.editName.edit' | translate"
-            (onClick)="startEditName()"
-            styleClass="profile-page__row-edit-button"
-            data-cy="profile-last-name-edit"
-          />
+          <div class="profile-page__value-row">
+            <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
+            <p-button
+              type="button"
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [pTooltip]="'profile.editName.edit' | translate"
+              tooltipPosition="left"
+              [ariaLabel]="'profile.editName.edit' | translate"
+              (onClick)="startEditName()"
+              styleClass="profile-page__row-edit-button"
+              data-cy="profile-last-name-edit"
+            />
+          </div>
         </div>
         <!--
           Legacy data-cy preserved so existing E2E specs keep matching
@@ -297,29 +301,31 @@
       } @else {
         <div class="profile-page__row">
           <span class="profile-page__label">{{ 'profile.handle' | translate }}</span>
-          @if (u.handle) {
-            <span class="profile-page__value" data-cy="profile-handle">&#64;{{ u.handle }}</span>
-          } @else {
-            <span
-              class="profile-page__value profile-page__value--placeholder"
-              data-cy="profile-handle-empty"
-            >
-              {{ 'profile.editHandle.notSet' | translate }}
-            </span>
-          }
-          <p-button
-            type="button"
-            icon="pi pi-pencil"
-            severity="secondary"
-            [text]="true"
-            size="small"
-            [pTooltip]="'profile.editHandle.edit' | translate"
-            tooltipPosition="left"
-            [ariaLabel]="'profile.editHandle.edit' | translate"
-            (onClick)="startEditHandle()"
-            styleClass="profile-page__row-edit-button"
-            data-cy="profile-handle-edit"
-          />
+          <div class="profile-page__value-row">
+            @if (u.handle) {
+              <span class="profile-page__value" data-cy="profile-handle">&#64;{{ u.handle }}</span>
+            } @else {
+              <span
+                class="profile-page__value profile-page__value--placeholder"
+                data-cy="profile-handle-empty"
+              >
+                {{ 'profile.editHandle.notSet' | translate }}
+              </span>
+            }
+            <p-button
+              type="button"
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [pTooltip]="'profile.editHandle.edit' | translate"
+              tooltipPosition="left"
+              [ariaLabel]="'profile.editHandle.edit' | translate"
+              (onClick)="startEditHandle()"
+              styleClass="profile-page__row-edit-button"
+              data-cy="profile-handle-edit"
+            />
+          </div>
         </div>
       }
 
@@ -414,39 +420,41 @@
       } @else {
         <div class="profile-page__row">
           <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
-          <span class="profile-page__value" data-cy="profile-email">
-            {{ u.email }}
-            @if (u.email_verified_at) {
-              <!-- Inline verified marker — replaces the dedicated
-                   "Verification" row that used to render a green pill
-                   even when the user hadn't asked. The verified state
-                   is the boring case (most accounts most of the time);
-                   collapsing it to a small green tick keeps the card
-                   quiet. The full Verification row stays for the
-                   pending case below, where it carries the "Resend
-                   verification email" CTA. -->
-              <i
-                class="pi pi-check-circle profile-page__email-verified-mark"
-                aria-hidden="true"
-                [pTooltip]="'emailVerification.verified' | translate"
-                tooltipPosition="top"
-                data-cy="profile-email-verified-mark"
-              ></i>
-            }
-          </span>
-          <p-button
-            type="button"
-            icon="pi pi-pencil"
-            severity="secondary"
-            [text]="true"
-            size="small"
-            [pTooltip]="'account.emailChange.profile.edit' | translate"
-            tooltipPosition="left"
-            [ariaLabel]="'account.emailChange.profile.edit' | translate"
-            (onClick)="startEditEmail()"
-            styleClass="profile-page__row-edit-button"
-            data-cy="profile-email-edit"
-          />
+          <div class="profile-page__value-row">
+            <span class="profile-page__value" data-cy="profile-email">
+              {{ u.email }}
+              @if (u.email_verified_at) {
+                <!-- Inline verified marker — replaces the dedicated
+                     "Verification" row that used to render a green pill
+                     even when the user hadn't asked. The verified state
+                     is the boring case (most accounts most of the time);
+                     collapsing it to a small green tick keeps the card
+                     quiet. The full Verification row stays for the
+                     pending case below, where it carries the "Resend
+                     verification email" CTA. -->
+                <i
+                  class="pi pi-check-circle profile-page__email-verified-mark"
+                  aria-hidden="true"
+                  [pTooltip]="'emailVerification.verified' | translate"
+                  tooltipPosition="top"
+                  data-cy="profile-email-verified-mark"
+                ></i>
+              }
+            </span>
+            <p-button
+              type="button"
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [pTooltip]="'account.emailChange.profile.edit' | translate"
+              tooltipPosition="left"
+              [ariaLabel]="'account.emailChange.profile.edit' | translate"
+              (onClick)="startEditEmail()"
+              styleClass="profile-page__row-edit-button"
+              data-cy="profile-email-edit"
+            />
+          </div>
         </div>
       }
 
