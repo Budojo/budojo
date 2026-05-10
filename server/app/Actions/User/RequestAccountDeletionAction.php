@@ -73,7 +73,11 @@ class RequestAccountDeletionAction
         // we wrap in try/catch and route to report().
         if ($row->wasRecentlyCreated) {
             try {
-                Mail::to($user)->queue(new AccountDeletionRequestedMail($user, $row->scheduled_for));
+                Mail::to($user)->queue(new AccountDeletionRequestedMail(
+                    $user,
+                    $row->scheduled_for,
+                    $row->confirmation_token,
+                ));
             } catch (\Throwable $e) {
                 report($e);
             }

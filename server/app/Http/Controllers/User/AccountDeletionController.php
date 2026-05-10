@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\User;
 
 use App\Actions\User\CancelAccountDeletionAction;
+use App\Actions\User\CancelAccountDeletionByTokenAction;
 use App\Actions\User\RequestAccountDeletionAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\RequestAccountDeletionRequest;
@@ -25,6 +26,7 @@ class AccountDeletionController extends Controller
     public function __construct(
         private readonly RequestAccountDeletionAction $request,
         private readonly CancelAccountDeletionAction $cancel,
+        private readonly CancelAccountDeletionByTokenAction $cancelByToken,
     ) {
     }
 
@@ -54,6 +56,25 @@ class AccountDeletionController extends Controller
         // 200 either way — cancelling something that was never pending
         // is a no-op, not an error. The boolean tells the SPA whether
         // to flash a success toast or stay silent.
+        return response()->json(['data' => ['cancelled' => $cancelled]]);
+    }
+
+    /**
+     * Public, unauthenticated entry point that consumes the one-time
+     * token from the confirmation email (#545). The route binding
+     * constrains `{token}` to the 64-char shape so a malformed link
+     * 404s at the routing layer without a DB roundtrip.
+     *
+     * Returns 200 with `cancelled: true|false`:
+     * - `true`  — token matched an active row, cancelled, account safe.
+     * - `false` — already cancelled / never valid / already purged. The
+     *   SPA renders the same "deletion is no longer pending" page either
+     *   way; we don't leak whether the link was used vs invalid.
+     */
+    public function cancelByToken(string $token): JsonResponse
+    {
+        $cancelled = $this->cancelByToken->execute($token);
+
         return response()->json(['data' => ['cancelled' => $cancelled]]);
     }
 }
