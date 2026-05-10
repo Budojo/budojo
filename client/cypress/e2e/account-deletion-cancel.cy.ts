@@ -24,7 +24,11 @@ describe('Account-deletion cancel by token (#545)', () => {
     cy.get('[data-cy="account-deletion-cancel-cta-success"]').should('exist');
     // No auto-redirect — the user just clicked an email link, they
     // deserve a calm landing page that stays put until they tap.
-    cy.url().should('include', `/account/deletion-cancel/${token}`);
+    // The token segment IS stripped from the URL post-consume (#557
+    // copilot review — defense-in-depth against screenshot / Referer
+    // / browser-history leakage), so we assert the path lands on
+    // `/account/deletion-cancel` WITHOUT the token tail.
+    cy.url().should('include', '/account/deletion-cancel').and('not.include', token);
   });
 
   it('cancelled: false → "no longer pending" panel (idempotent re-click)', () => {
