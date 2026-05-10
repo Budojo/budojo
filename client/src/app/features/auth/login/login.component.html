@@ -11,55 +11,98 @@
     }
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <div class="field">
-        <label for="email">{{ 'auth.login.email' | translate }}</label>
-        <input
-          pInputText
-          id="email"
-          type="email"
-          formControlName="email"
-          [placeholder]="'auth.login.emailPlaceholder' | translate"
-          autocomplete="email"
-          [class.ng-invalid]="email.invalid && email.touched"
-          [class.ng-dirty]="email.touched"
-        />
-        @if (email.invalid && email.touched) {
-          <small class="field-error">
-            @if (email.errors?.['required']) {
-              {{ 'auth.login.emailRequired' | translate }}
-            } @else if (email.errors?.['email']) {
-              {{ 'auth.login.emailInvalid' | translate }}
-            }
-          </small>
-        }
-      </div>
+      @if (!twoFactorRequired()) {
+        <div class="field">
+          <label for="email">{{ 'auth.login.email' | translate }}</label>
+          <input
+            pInputText
+            id="email"
+            type="email"
+            formControlName="email"
+            [placeholder]="'auth.login.emailPlaceholder' | translate"
+            autocomplete="email"
+            [class.ng-invalid]="email.invalid && email.touched"
+            [class.ng-dirty]="email.touched"
+          />
+          @if (email.invalid && email.touched) {
+            <small class="field-error">
+              @if (email.errors?.['required']) {
+                {{ 'auth.login.emailRequired' | translate }}
+              } @else if (email.errors?.['email']) {
+                {{ 'auth.login.emailInvalid' | translate }}
+              }
+            </small>
+          }
+        </div>
 
-      <div class="field">
-        <label for="password">{{ 'auth.login.password' | translate }}</label>
-        <p-password
-          inputId="password"
-          formControlName="password"
-          [placeholder]="'auth.login.passwordPlaceholder' | translate"
-          autocomplete="current-password"
-          [feedback]="false"
-          [toggleMask]="true"
-          styleClass="w-full"
-          [inputStyleClass]="
-            'w-full' + (password.invalid && password.touched ? ' ng-invalid ng-dirty' : '')
-          "
-        />
-        @if (password.invalid && password.touched) {
-          <small class="field-error">{{ 'auth.login.passwordRequired' | translate }}</small>
-        }
-      </div>
+        <div class="field">
+          <label for="password">{{ 'auth.login.password' | translate }}</label>
+          <p-password
+            inputId="password"
+            formControlName="password"
+            [placeholder]="'auth.login.passwordPlaceholder' | translate"
+            autocomplete="current-password"
+            [feedback]="false"
+            [toggleMask]="true"
+            styleClass="w-full"
+            [inputStyleClass]="
+              'w-full' + (password.invalid && password.touched ? ' ng-invalid ng-dirty' : '')
+            "
+          />
+          @if (password.invalid && password.touched) {
+            <small class="field-error">{{ 'auth.login.passwordRequired' | translate }}</small>
+          }
+        </div>
+      } @else {
+        <!-- 2FA challenge step (#412). Email/password are already
+             accepted by the server; we now collect the TOTP / backup
+             code and retry. -->
+        <div class="field" data-cy="auth-login-two-factor-step">
+          <p class="auth-two-factor-hint">{{ 'auth.login.twoFactor.hint' | translate }}</p>
+          <label for="twoFactorCode">{{ 'auth.login.twoFactor.codeLabel' | translate }}</label>
+          <input
+            pInputText
+            id="twoFactorCode"
+            type="text"
+            formControlName="two_factor_code"
+            inputmode="text"
+            autocomplete="one-time-code"
+            autocapitalize="characters"
+            spellcheck="false"
+            maxlength="32"
+            [placeholder]="'auth.login.twoFactor.codePlaceholder' | translate"
+            data-cy="auth-login-two-factor-code"
+          />
+          @if (twoFactorError(); as err) {
+            <small class="field-error" data-cy="auth-login-two-factor-error">
+              {{ err | translate }}
+            </small>
+          }
+        </div>
+      }
 
       <p-button
         type="submit"
-        [label]="'auth.login.submit' | translate"
+        [label]="
+          (twoFactorRequired() ? 'auth.login.twoFactor.submit' : 'auth.login.submit') | translate
+        "
         styleClass="submit-btn"
         [loading]="loading()"
         [disabled]="loading()"
+        data-cy="auth-login-submit"
       />
+
+      @if (twoFactorRequired()) {
+        <p-button
+          type="button"
+          [label]="'auth.login.twoFactor.cancel' | translate"
+          severity="secondary"
+          [text]="true"
+          (onClick)="cancelTwoFactor()"
+          styleClass="auth-two-factor-cancel"
+          data-cy="auth-login-two-factor-cancel"
+        />
+      }
     </form>
 
     <p class="auth-nav-link">

@@ -21,6 +21,14 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+            // Optional — only required when the user has 2FA active.
+            // Either a 6-digit TOTP from the authenticator app, or
+            // an 8-char backup code with the `XXXX-XXXX` dash. The
+            // controller distinguishes shape and consumes
+            // accordingly. Loose validation here so an invalid code
+            // gets the precise 422 from the controller (not a generic
+            // shape error from the form).
+            'two_factor_code' => ['sometimes', 'string', 'min:6', 'max:32'],
         ];
     }
 }
