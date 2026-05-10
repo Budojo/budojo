@@ -64,32 +64,47 @@ class PurgeExpiredMedicalCertificates extends Command
 
     public function handle(): int
     {
-        $cutoff = Carbon::now()->subMonths(self::RETENTION_MONTHS);
+        // `documents.expires_at` is a DATE column. Using a date-only
+        // cutoff aligns with the retention rule precisely — a cert
+        // whose expiry sits EXACTLY 24 months ago today is STILL
+        // within the window (strict `>` semantics in the doc/DPIA).
+        // Carbon::today() snaps to the start of the day so the cron's
+        // wall-clock time (e.g. 03:15) doesn't shift the cutoff.
+        $cutoff = Carbon::today()->subMonths(self::RETENTION_MONTHS);
         $dryRun = (bool) $this->option('dry-run');
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Document> $rows */
-        $rows = Document::query()
+        // Uncapped count first so the log line + dry-run report the
+        // true backlog size, not the per-run cap. Mirrors the shape
+        // of the other purge-* commands (#430, #476, #223).
+        $totalExpected = Document::query()
             ->where('type', DocumentType::MedicalCertificate->value)
-            ->where('expires_at', '<', $cutoff)
-            ->limit(self::DELETE_CAP)
-            ->get();
+            ->whereDate('expires_at', '<', $cutoff)
+            ->count();
 
-        if ($rows->isEmpty()) {
+        if ($totalExpected === 0) {
             $this->info('No expired medical certificates to purge.');
 
             return self::SUCCESS;
         }
 
         $this->info(\sprintf(
-            '%s: found %d medical certificate(s) with expires_at older than %s.',
+            '%s: found %d medical certificate(s) with expires_at older than %s (cap: %d/run).',
             $dryRun ? 'DRY RUN' : 'Processing',
-            $rows->count(),
+            $totalExpected,
             $cutoff->toDateString(),
+            self::DELETE_CAP,
         ));
 
         if ($dryRun) {
             return self::SUCCESS;
         }
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Document> $rows */
+        $rows = Document::query()
+            ->where('type', DocumentType::MedicalCertificate->value)
+            ->whereDate('expires_at', '<', $cutoff)
+            ->limit(self::DELETE_CAP)
+            ->get();
 
         $purged = 0;
         $failed = 0;

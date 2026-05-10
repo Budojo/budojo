@@ -17,11 +17,16 @@ it('purges medical certificates whose expires_at is older than 24 months', funct
     $owner = userWithAcademy();
     $athlete = Athlete::factory()->create(['academy_id' => $owner->academy->id]);
 
+    // Seed the file on the fake disk so we can assert the binary
+    // gets unlinked alongside the row.
+    Storage::disk('local')->put('documents/expired-cert.pdf', 'fake pdf bytes');
+
     // Cert #1: expired 25 months ago → SHOULD be purged.
     $old = Document::factory()->create([
         'athlete_id' => $athlete->id,
         'type' => DocumentType::MedicalCertificate->value,
         'expires_at' => now()->subMonths(25)->toDateString(),
+        'file_path' => 'documents/expired-cert.pdf',
     ]);
 
     // Cert #2: expired 12 months ago → still within the 24-month
@@ -42,9 +47,39 @@ it('purges medical certificates whose expires_at is older than 24 months', funct
     $exitCode = \Artisan::call('budojo:purge-expired-medical-certificates');
 
     expect($exitCode)->toBe(0);
+
+    // Soft-delete: the row is gone from default queries…
     expect(Document::query()->where('id', $old->id)->exists())->toBeFalse();
+    // …but stays accessible via withTrashed() with deleted_at stamped
+    // (the compliance trail).
+    $trashed = Document::withTrashed()->find($old->id);
+    expect($trashed)->not->toBeNull();
+    expect($trashed->deleted_at)->not->toBeNull();
+
+    // File binary on the local disk is unlinked.
+    expect(Storage::disk('local')->exists('documents/expired-cert.pdf'))->toBeFalse();
+
     expect(Document::query()->where('id', $recentlyExpired->id)->exists())->toBeTrue();
     expect(Document::query()->where('id', $stillValid->id)->exists())->toBeTrue();
+});
+
+it('does NOT purge a certificate whose expires_at sits exactly on the cutoff (strict-greater-than boundary)', function (): void {
+    // The retention rule reads "> 24 months". A cert dated EXACTLY
+    // 24 months ago is still in-window and MUST remain. Without this
+    // boundary case the strict-vs-inclusive semantics would silently
+    // regress to >= on a future query change.
+    $owner = userWithAcademy();
+    $athlete = Athlete::factory()->create(['academy_id' => $owner->academy->id]);
+
+    $boundary = Document::factory()->create([
+        'athlete_id' => $athlete->id,
+        'type' => DocumentType::MedicalCertificate->value,
+        'expires_at' => now()->startOfDay()->subMonths(24)->toDateString(),
+    ]);
+
+    \Artisan::call('budojo:purge-expired-medical-certificates');
+
+    expect(Document::query()->where('id', $boundary->id)->exists())->toBeTrue();
 });
 
 it('does not touch non-medical documents even when they are well-aged', function (): void {
