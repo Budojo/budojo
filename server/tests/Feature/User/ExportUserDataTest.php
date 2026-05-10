@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Belt;
+use App\Enums\DocumentType;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Models\AttendanceRecord;
@@ -118,4 +119,112 @@ it('throttles /me/export to 1 request per minute per user', function (): void {
 
     $this->actingAs($user)->getJson('/api/v1/me/export')->assertOk();
     $this->actingAs($user)->getJson('/api/v1/me/export')->assertStatus(429);
+});
+
+// ─── Medical-certificate handling — Art. 9 GDPR (#538 / DPIA #227-b) ─────────
+//
+// Medical certificates are special-category data. The DPIA-lite explicitly
+// flags Art. 15 (right of access) and Art. 17 (right to erasure) as risks
+// to verify; without these assertions a future refactor of the
+// document-export or document-deletion path could silently break GDPR
+// compliance and no test would catch it. Each assertion is intentionally
+// medical-cert-shaped — generic-document coverage already exists above
+// and below this block.
+
+it('export ZIP includes the medical-certificate binary AND the type=medical_certificate metadata (DPIA #538)', function (): void {
+    Storage::fake('local');
+
+    $user = userWithAcademy();
+    /** @var Athlete $athlete */
+    $athlete = Athlete::factory()->for($user->academy)->create(['first_name' => 'Luca']);
+
+    $upload = UploadedFile::fake()->create('cert-medico-luca.pdf', 200, 'application/pdf');
+    $storedPath = $upload->store('documents', 'local');
+
+    /** @var Document $doc */
+    $doc = Document::factory()->for($athlete)->create([
+        'type' => DocumentType::MedicalCertificate,
+        'original_name' => 'cert-medico-luca.pdf',
+        'file_path' => $storedPath,
+        'mime_type' => 'application/pdf',
+        'size_bytes' => 200,
+    ]);
+
+    $response = $this->actingAs($user)->get('/api/v1/me/export?format=zip');
+    $response->assertOk();
+
+    $zipBytes = $response->streamedContent();
+    $tmp = tempnam(sys_get_temp_dir(), 'budojo-test-export-medical-') . '.zip';
+    file_put_contents($tmp, $zipBytes);
+
+    $zip = new ZipArchive();
+    expect($zip->open($tmp))->toBeTrue();
+
+    // (1) JSON metadata carries the medical-certificate type — Art. 15 access
+    //     to special-category data requires the user knows what kind of
+    //     document each entry is, not just a generic blob.
+    $jsonRaw = $zip->getFromName('data.json');
+    /** @var array<string, mixed> $decoded */
+    $decoded = json_decode((string) $jsonRaw, true);
+    /** @var array{type: string, original_name: string} $exportedDoc */
+    $exportedDoc = $decoded['data']['athletes'][0]['documents'][0];
+    expect($exportedDoc['type'])->toBe(DocumentType::MedicalCertificate->value);
+    expect($exportedDoc['original_name'])->toBe('cert-medico-luca.pdf');
+
+    // (2) The ZIP entry path is canonical: documents/athlete-{id}/{doc_id}-{filename}.
+    $entryName = sprintf('documents/athlete-%d/%d-cert-medico-luca.pdf', $athlete->id, $doc->id);
+    expect($zip->statName($entryName))->not->toBeFalse();
+
+    // (3) The binary inside the ZIP matches what we stored on disk —
+    //     not a stub, not a metadata placeholder. Without this the
+    //     "right of access" returns the user's data minus the actual
+    //     certificate, which is not portability under Art. 20.
+    $extracted = $zip->getFromName($entryName);
+    $original = Storage::disk('local')->get($storedPath);
+    expect($extracted)->toBe($original);
+
+    $zip->close();
+    @unlink($tmp);
+});
+
+it('export ZIP keeps medical-cert metadata even when the binary is missing on disk (DPIA #538)', function (): void {
+    Storage::fake('local');
+
+    $user = userWithAcademy();
+    /** @var Athlete $athlete */
+    $athlete = Athlete::factory()->for($user->academy)->create();
+
+    // Document row exists but the underlying file was lost (corrupt
+    // backup, manual deletion, disk failure during a previous purge).
+    // The export must still surface the metadata — silent omission
+    // would let a data subject's record disappear without trace.
+    Document::factory()->for($athlete)->create([
+        'type' => DocumentType::MedicalCertificate,
+        'original_name' => 'lost-cert.pdf',
+        'file_path' => 'documents/this-file-does-not-exist.pdf',
+        'mime_type' => 'application/pdf',
+    ]);
+
+    $response = $this->actingAs($user)->get('/api/v1/me/export?format=zip');
+    $response->assertOk();
+
+    $zipBytes = $response->streamedContent();
+    $tmp = tempnam(sys_get_temp_dir(), 'budojo-test-export-orphan-') . '.zip';
+    file_put_contents($tmp, $zipBytes);
+
+    $zip = new ZipArchive();
+    expect($zip->open($tmp))->toBeTrue();
+
+    // JSON entry IS present (the row exists in DB) — the controller
+    // must NOT skip the metadata just because the binary is missing.
+    $jsonRaw = $zip->getFromName('data.json');
+    /** @var array<string, mixed> $decoded */
+    $decoded = json_decode((string) $jsonRaw, true);
+    expect($decoded['data']['athletes'][0]['documents'])
+        ->toHaveCount(1)
+        ->and($decoded['data']['athletes'][0]['documents'][0]['type'])
+        ->toBe(DocumentType::MedicalCertificate->value);
+
+    $zip->close();
+    @unlink($tmp);
 });
