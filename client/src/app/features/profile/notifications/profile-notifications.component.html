@@ -1,0 +1,75 @@
+<div class="profile-notifications" data-cy="profile-notifications">
+  <header class="profile-notifications__header">
+    <h2 class="profile-notifications__title">
+      {{ 'profile.notifications.title' | translate }}
+    </h2>
+    <p class="profile-notifications__subtitle">
+      {{ 'profile.notifications.subtitle' | translate }}
+    </p>
+  </header>
+
+  @if (loading()) {
+    <div class="profile-notifications__state" data-cy="profile-notifications-loading">
+      <p-progress-spinner styleClass="profile-notifications__spinner" strokeWidth="3" />
+    </div>
+  } @else if (errored()) {
+    <div
+      class="profile-notifications__state profile-notifications__state--error"
+      data-cy="profile-notifications-error"
+    >
+      <i class="pi pi-times-circle" aria-hidden="true"></i>
+      <p>{{ 'profile.notifications.errorMessage' | translate }}</p>
+      <p-button
+        type="button"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        [label]="'profile.notifications.retry' | translate"
+        (onClick)="refresh()"
+        data-cy="profile-notifications-retry"
+      />
+    </div>
+  } @else {
+    <ul class="profile-notifications__list" data-cy="profile-notifications-list">
+      @for (category of categories; track category.key) {
+        <li
+          class="profile-notifications__row"
+          [attr.data-cy]="'profile-notifications-row-' + category.key"
+        >
+          <div class="profile-notifications__row-text">
+            <span class="profile-notifications__label">{{ category.i18nLabel | translate }}</span>
+            <p class="profile-notifications__description">
+              {{ category.i18nDescription | translate }}
+            </p>
+          </div>
+          <p-toggleswitch
+            [ngModel]="isEnabled(category.key)"
+            (ngModelChange)="onToggle(category, $event)"
+            [disabled]="saving() !== null"
+            [attr.data-cy]="'profile-notifications-toggle-' + category.key"
+          />
+        </li>
+      }
+    </ul>
+
+    <section
+      class="profile-notifications__transactional"
+      data-cy="profile-notifications-transactional"
+    >
+      <h3 class="profile-notifications__transactional-title">
+        {{ 'profile.notifications.alwaysSentTitle' | translate }}
+      </h3>
+      <p class="profile-notifications__transactional-subtitle">
+        {{ 'profile.notifications.alwaysSentSubtitle' | translate }}
+      </p>
+      <ul class="profile-notifications__transactional-list">
+        @for (key of transactionalKeys; track key) {
+          <li class="profile-notifications__transactional-row">
+            <i class="pi pi-lock" aria-hidden="true"></i>
+            <span>{{ 'profile.notifications.transactional.' + key | translate }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</div>

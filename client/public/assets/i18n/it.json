@@ -578,6 +578,33 @@
       "successDetail": "La tua password è stata cambiata. Gli altri dispositivi sono stati disconnessi.",
       "genericError": "Non è stato possibile aggiornare la password. Riprova."
     },
+    "notifications": {
+      "title": "Notifiche email",
+      "subtitle": "Scegli quali email non essenziali vuoi ricevere.",
+      "medicalCertReminders": {
+        "label": "Promemoria scadenza certificato medico",
+        "description": "Digest giornaliero alle 09:00 con gli atleti il cui certificato medico scade tra 30, 7 o 0 giorni."
+      },
+      "unpaidAthletesDigest": {
+        "label": "Digest mensile atleti non paganti",
+        "description": "Una volta al mese, il giorno 16, l'elenco degli atleti che non hanno pagato la quota del mese corrente."
+      },
+      "alwaysSentTitle": "Sempre inviate",
+      "alwaysSentSubtitle": "Email transazionali — necessarie al funzionamento del servizio, inviate indipendentemente dalle scelte sopra.",
+      "transactional": {
+        "welcome": "Email di benvenuto alla registrazione",
+        "password_reset": "Link per il reset della password",
+        "email_verification": "Link di verifica email",
+        "account_deletion": "Conferma cancellazione account + link di annullamento",
+        "athlete_invitation": "Link di invito atleta"
+      },
+      "errorMessage": "Non è stato possibile caricare le preferenze. Riprova tra un momento.",
+      "retry": "Riprova",
+      "saveError": {
+        "summary": "Impossibile salvare la preferenza",
+        "detail": "Qualcosa è andato storto. Riprova tra un momento."
+      }
+    },
     "loginHistory": {
       "title": "Cronologia accessi",
       "subtitle": "Gli ultimi 50 tentativi di accesso sul tuo account, riusciti e falliti.",
