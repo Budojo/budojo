@@ -645,6 +645,15 @@
     </section>
 
     <!--
+      Two-factor authentication panel (#412). TOTP enrolment + backup
+      codes, surfaced right after the change-password card so all
+      "login hardening" actions cluster together (Krug § proximity).
+    -->
+    <section class="profile-page__card">
+      <app-profile-two-factor />
+    </section>
+
+    <!--
       Active sessions panel (#413). Lists every Sanctum personal-
       access-token tied to the current user with a per-row revoke
       action and a "Revoke all other sessions" CTA at the top.

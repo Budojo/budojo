@@ -98,6 +98,13 @@ export interface RegisterPayload {
 export interface LoginPayload {
   email: string;
   password: string;
+  /**
+   * Optional second-factor (TOTP or backup code) sent with the
+   * login. Absent on the first attempt; the server replies 422
+   * with `message: "two_factor_required"` if the account has 2FA
+   * active, and the SPA retries with this field populated.
+   */
+  two_factor_code?: string;
 }
 
 export interface ForgotPasswordPayload {

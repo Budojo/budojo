@@ -177,6 +177,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->middleware('throttle:5,1');
     Route::delete('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'destroy']);
 
+    // Two-factor authentication (#412). TOTP enrolment + backup
+    // codes + disable-with-password. The login flow at
+    // `/auth/login` consults `users.two_factor_confirmed_at` and
+    // demands a `two_factor_code` body param (TOTP or backup) before
+    // issuing a session token when 2FA is active.
+    Route::get('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'show']);
+    Route::post('/me/two-factor/enrol', [\App\Http\Controllers\User\TwoFactorController::class, 'enrol']);
+    Route::post('/me/two-factor/confirm', [\App\Http\Controllers\User\TwoFactorController::class, 'confirm']);
+    Route::post('/me/two-factor/recovery-codes/regenerate', [\App\Http\Controllers\User\TwoFactorController::class, 'regenerateRecoveryCodes']);
+    Route::delete('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'destroy']);
+
     // Active sessions list with per-token revoke (#413). Surfaces every
     // Sanctum personal-access-token tied to the user; backs the
     // "Active sessions" panel on /dashboard/profile + the

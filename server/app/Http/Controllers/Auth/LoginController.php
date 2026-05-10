@@ -9,6 +9,8 @@ use App\Actions\Auth\RecordLoginAttemptAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
+use App\Support\TwoFactorAuth;
 use App\Support\UserAgentLabel;
 use Illuminate\Http\JsonResponse;
 
@@ -64,6 +66,29 @@ class LoginController extends Controller
             return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
+        // Two-factor challenge (#412). When the user has 2FA active
+        // (confirmed_at is set), password validation is necessary
+        // but NOT sufficient — the body must also carry a valid
+        // `two_factor_code` (TOTP from the authenticator OR a
+        // single-use backup code). Three failure modes return 422
+        // with distinct messages so the SPA can render the right
+        // shape (prompt for code vs prompt for new code).
+        if ($user->two_factor_confirmed_at !== null) {
+            $code = $request->string('two_factor_code')->toString();
+            if ($code === '') {
+                return response()->json(
+                    ['message' => 'two_factor_required'],
+                    422,
+                );
+            }
+            if (! $this->verifyTwoFactor($user, $code)) {
+                return response()->json(
+                    ['message' => 'invalid_two_factor_code'],
+                    422,
+                );
+            }
+        }
+
         // Token name surfaces in the user's "Active sessions" list
         // (#413) — derive a coarse "Chrome on macOS"-style label from
         // the User-Agent header so the row is human-readable.
@@ -88,5 +113,31 @@ class LoginController extends Controller
                 'token' => $token,
             ],
         );
+    }
+
+    /**
+     * Accepts either a 6-digit TOTP OR an 8-char backup code (with
+     * or without the canonical dash). Tries the cheaper TOTP check
+     * first; falls through to backup-code consumption on miss.
+     *
+     * On a backup-code match the matched code is removed from the
+     * stored array (`array_filter` + persist) so it can't be reused.
+     */
+    private function verifyTwoFactor(User $user, string $code): bool
+    {
+        $secret = $user->two_factor_secret;
+        if ($secret !== null && TwoFactorAuth::verifyTotp($secret, $code)) {
+            return true;
+        }
+
+        $codes = $user->two_factor_recovery_codes ?? [];
+        $remaining = TwoFactorAuth::consumeRecoveryCode($codes, $code);
+        if ($remaining === null) {
+            return false;
+        }
+
+        $user->forceFill(['two_factor_recovery_codes' => $remaining])->save();
+
+        return true;
     }
 }
