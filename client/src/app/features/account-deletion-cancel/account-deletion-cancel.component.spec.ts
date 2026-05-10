@@ -224,6 +224,8 @@ describe('AccountDeletionCancelComponent (#545)', () => {
     // because there's nothing to cancel; we avoid the 404 trap an
     // earlier shape had + we never fire a wasted HTTP call.
     httpMock.expectNone(() => true);
-    expect(el.querySelector('[data-cy="account-deletion-cancel-no-longer-pending"]')).not.toBeNull();
+    expect(
+      el.querySelector('[data-cy="account-deletion-cancel-no-longer-pending"]'),
+    ).not.toBeNull();
   });
 });

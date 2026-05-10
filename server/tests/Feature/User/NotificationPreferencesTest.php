@@ -37,6 +37,31 @@ it('NotificationPreferences::isEnabled honors explicit false', function (): void
         ->toBeTrue();
 });
 
+it('NotificationPreferences::isEnabled treats corrupt non-bool values as default-enabled', function (): void {
+    // Defense-in-depth: corrupt JSON shouldn't accidentally silence a
+    // user's notifications. Only the boolean `false` opts the user
+    // out; any other unexpected value (string 'false', int 0, an
+    // array, …) is treated as enabled. Pinned because the SPA panel
+    // only ever PATCHes booleans, but a legacy / hand-edited row
+    // shouldn't cause a notification blackout.
+    foreach (
+        [
+            'string-false' => 'false',
+            'int-zero' => 0,
+            'empty-string' => '',
+            'array' => [],
+        ] as $shape => $corruptValue
+    ) {
+        $user = User::factory()->create([
+            'notification_preferences' => [
+                NotificationCategory::MEDICAL_CERT_EXPIRY_REMINDERS => $corruptValue,
+            ],
+        ]);
+        expect(NotificationPreferences::isEnabled($user, NotificationCategory::MEDICAL_CERT_EXPIRY_REMINDERS))
+            ->toBeTrue("[{$shape}] should resolve to enabled");
+    }
+});
+
 it('NotificationPreferences::update merges, drops unknown category keys, persists', function (): void {
     $user = User::factory()->create();
 
