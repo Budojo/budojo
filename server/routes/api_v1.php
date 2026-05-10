@@ -156,6 +156,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // "logout everywhere except here" CTA. Each row carries an
     // `is_current` flag so the SPA can stamp the "this session" pill
     // on the token authenticating THIS request.
+    // Email-notification preferences (#416). Per-category opt-out
+    // for the digest / reminder emails (medical-cert expiry, unpaid
+    // athletes monthly digest). Transactional emails (welcome,
+    // password-reset, email-verification, account-deletion-*) are
+    // NOT toggleable.
+    Route::get('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'show']);
+    Route::patch('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'update']);
+
     // Login history audit log (#430). Surfaces the last 50 login
     // attempts (success + failure) on the authenticated user so a
     // compromise probe is self-serve. Pairs with the live

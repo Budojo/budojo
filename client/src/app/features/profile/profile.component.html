@@ -657,6 +657,16 @@
     </section>
 
     <!--
+      Notification preferences panel (#416). Per-category opt-out for
+      digest / reminder emails. Transactional emails are NOT
+      toggleable; the panel surfaces them in a read-only "always
+      sent" block for transparency.
+    -->
+    <section class="profile-page__card">
+      <app-profile-notifications />
+    </section>
+
+    <!--
       Login history panel (#430). Read-only list of the most recent 50
       attempts (success + failure), pairs with the active-sessions
       panel above — sessions covers LIVE tokens, history covers

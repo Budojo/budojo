@@ -760,6 +760,81 @@ paths:
             `cancelled: false` instead (see above) — the 404 here
             covers ONLY the malformed-shape case.
 
+  /me/notification-preferences:
+    get:
+      tags: [auth]
+      summary: Read the user's per-category email-notification preferences
+      description: |
+        Returns the snapshot of toggleable digest / reminder
+        categories with their current boolean state (#416).
+        Default-opt-in: a category not explicitly stored in the
+        underlying JSON resolves to `true`.
+
+        Transactional emails (welcome, password-reset,
+        email-verification, account-deletion-*, athlete-invitation)
+        are NOT toggleable and are NOT surfaced here. The SPA panel
+        labels them in a separate read-only "always sent" block.
+      operationId: meNotificationPreferencesShow
+      responses:
+        '200':
+          description: Snapshot of toggleable categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                    example:
+                      medical_cert_expiry_reminders: true
+                      unpaid_athletes_digest: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    patch:
+      tags: [auth]
+      summary: Update one or more email-notification preferences
+      description: |
+        Accepts a partial map of `{category: bool}` and merges with
+        the existing JSON column. Unknown category keys are rejected
+        with 422 — the catalog of valid keys mirrors the constants in
+        `App\Support\NotificationCategory`. Echoes the full snapshot
+        back so the SPA can refresh local state with one request.
+      operationId: meNotificationPreferencesUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [preferences]
+              properties:
+                preferences:
+                  type: object
+                  additionalProperties:
+                    type: boolean
+                  example:
+                    medical_cert_expiry_reminders: false
+      responses:
+        '200':
+          description: Full snapshot of the user's notification preferences.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /me/login-history:
     get:
       tags: [auth]

@@ -578,6 +578,33 @@
       "successDetail": "Your password has been changed. Other devices have been signed out.",
       "genericError": "Couldn't update your password. Please try again."
     },
+    "notifications": {
+      "title": "Email notifications",
+      "subtitle": "Choose which non-essential emails you want to receive.",
+      "medicalCertReminders": {
+        "label": "Medical certificate expiring reminders",
+        "description": "Daily digest at 09:00 listing athletes whose medical certificate expires in 30, 7, or 0 days."
+      },
+      "unpaidAthletesDigest": {
+        "label": "Unpaid athletes monthly digest",
+        "description": "Once a month on the 16th, a list of athletes who haven't paid the monthly fee for the current month."
+      },
+      "alwaysSentTitle": "Always sent",
+      "alwaysSentSubtitle": "Transactional emails — required for the service to work, sent regardless of the toggles above.",
+      "transactional": {
+        "welcome": "Welcome email at sign-up",
+        "password_reset": "Password reset link",
+        "email_verification": "Email verification link",
+        "account_deletion": "Account deletion confirmation + cancel link",
+        "athlete_invitation": "Athlete invitation link"
+      },
+      "errorMessage": "We couldn't load your preferences. Try again in a moment.",
+      "retry": "Retry",
+      "saveError": {
+        "summary": "Couldn't save the preference",
+        "detail": "Something went wrong. Try again in a moment."
+      }
+    },
     "loginHistory": {
       "title": "Login history",
       "subtitle": "The last 50 sign-in attempts on your account, successful and failed.",
