@@ -33,13 +33,16 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string       $password
  * @property string|null  $remember_token
  * @property array<string, bool>|null $notification_preferences Per-category opt-out for digest / reminder emails (#416). Null = all categories enabled.
+ * @property string|null  $two_factor_secret             Encrypted base32 TOTP secret (#412). Null when 2FA isn't enrolled.
+ * @property array<int, string>|null $two_factor_recovery_codes Encrypted JSON array of single-use backup codes (#412).
+ * @property Carbon|null  $two_factor_confirmed_at       Set when the user completes TOTP enrolment (#412). Null = 2FA not active.
  * @property Carbon|null  $onboarding_dismissed_at Set when the user explicitly skips the first-run guided tour (#424). Once non-null the SPA never re-renders the tour.
  * @property array<int, string>|null  $onboarding_completed_steps Step keys the user has ticked off on the "Getting started" checklist (#424). Null until first interaction.
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'onboarding_dismissed_at', 'onboarding_completed_steps'])]
-#[Hidden(['password', 'remember_token'])]
+#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at', 'onboarding_dismissed_at', 'onboarding_completed_steps'])]
+#[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens;
@@ -166,6 +169,14 @@ class User extends Authenticatable implements MustVerifyEmail
             // `App\Support\NotificationCategory`), values are booleans
             // — `false` = opted out, `true` (or absent) = enabled.
             'notification_preferences' => 'array',
+            // 2FA columns (#412). `encrypted` ensures DB-dump leaks
+            // don't expose usable secrets; `encrypted:array` does
+            // the same for the JSON backup-codes column. The
+            // `confirmed_at` timestamp is the load-bearing "is 2FA
+            // active" gate.
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
             // First-run onboarding state (#424).
             'onboarding_dismissed_at' => 'datetime',
             'onboarding_completed_steps' => 'array',

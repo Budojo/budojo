@@ -1,0 +1,263 @@
+<div class="profile-two-factor" data-cy="profile-two-factor">
+  <header class="profile-two-factor__header">
+    <h2 class="profile-two-factor__title">
+      {{ 'profile.twoFactor.title' | translate }}
+    </h2>
+    <p class="profile-two-factor__subtitle">
+      {{ 'profile.twoFactor.subtitle' | translate }}
+    </p>
+  </header>
+
+  @if (loading()) {
+    <div class="profile-two-factor__state" data-cy="profile-two-factor-loading">
+      <p-progress-spinner styleClass="profile-two-factor__spinner" strokeWidth="3" />
+    </div>
+  } @else if (errored()) {
+    <div
+      class="profile-two-factor__state profile-two-factor__state--error"
+      data-cy="profile-two-factor-error"
+    >
+      <i class="pi pi-times-circle" aria-hidden="true"></i>
+      <p>{{ 'profile.twoFactor.errorMessage' | translate }}</p>
+      <p-button
+        type="button"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        [label]="'profile.twoFactor.retry' | translate"
+        (onClick)="refresh()"
+      />
+    </div>
+  } @else if (status(); as s) {
+    @if (s.enabled) {
+      <!-- Active state ---------------------------------------------------- -->
+      <div class="profile-two-factor__active" data-cy="profile-two-factor-active">
+        <div class="profile-two-factor__active-status">
+          <i class="pi pi-shield profile-two-factor__active-icon" aria-hidden="true"></i>
+          <div>
+            <p class="profile-two-factor__active-label">
+              {{ 'profile.twoFactor.activeLabel' | translate }}
+            </p>
+            <p class="profile-two-factor__active-detail">
+              {{
+                'profile.twoFactor.activeDetail'
+                  | translate: { remaining: s.recovery_codes_remaining }
+              }}
+            </p>
+          </div>
+        </div>
+        <div class="profile-two-factor__active-actions">
+          <p-button
+            type="button"
+            severity="secondary"
+            [outlined]="true"
+            size="small"
+            icon="pi pi-refresh"
+            [label]="'profile.twoFactor.regenerateCodes' | translate"
+            [loading]="regenerating()"
+            [disabled]="regenerating()"
+            (onClick)="onRegenerateCodes()"
+            data-cy="profile-two-factor-regenerate"
+          />
+          <p-button
+            type="button"
+            severity="danger"
+            [outlined]="true"
+            size="small"
+            icon="pi pi-shield-slash"
+            [label]="'profile.twoFactor.disable' | translate"
+            (onClick)="openDisableDialog()"
+            data-cy="profile-two-factor-disable"
+          />
+        </div>
+      </div>
+    } @else if (s.pending && enrolment(); as enr) {
+      <!-- Pending confirmation state ------------------------------------- -->
+      <div class="profile-two-factor__pending" data-cy="profile-two-factor-pending">
+        <p class="profile-two-factor__pending-hint">
+          {{ 'profile.twoFactor.pendingHint' | translate }}
+        </p>
+
+        @if (qrDataUrl(); as qr) {
+          <img
+            [src]="qr"
+            [alt]="'profile.twoFactor.qrAlt' | translate"
+            class="profile-two-factor__qr"
+            data-cy="profile-two-factor-qr"
+          />
+        }
+
+        <div class="profile-two-factor__secret" data-cy="profile-two-factor-secret">
+          <span class="profile-two-factor__secret-label">
+            {{ 'profile.twoFactor.secretLabel' | translate }}
+          </span>
+          <code class="profile-two-factor__secret-value">{{ enr.secret }}</code>
+        </div>
+
+        <form
+          [formGroup]="confirmForm"
+          (ngSubmit)="submitConfirm()"
+          novalidate
+          class="profile-two-factor__confirm-form"
+          data-cy="profile-two-factor-confirm-form"
+        >
+          <label for="twoFactorCode" class="profile-two-factor__label">
+            {{ 'profile.twoFactor.confirmCodeLabel' | translate }}
+          </label>
+          <input
+            id="twoFactorCode"
+            type="text"
+            pInputText
+            formControlName="code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            class="profile-two-factor__input"
+            data-cy="profile-two-factor-code-input"
+          />
+          @if (confirmCodeError(); as err) {
+            <small class="field-error" data-cy="profile-two-factor-code-error">
+              {{ err | translate }}
+            </small>
+          }
+          <p-button
+            type="submit"
+            [label]="'profile.twoFactor.confirmSubmit' | translate"
+            severity="secondary"
+            [outlined]="true"
+            size="small"
+            [loading]="confirming()"
+            [disabled]="confirming()"
+            data-cy="profile-two-factor-confirm-submit"
+          />
+        </form>
+      </div>
+    } @else {
+      <!-- Not enrolled --------------------------------------------------- -->
+      <div class="profile-two-factor__off" data-cy="profile-two-factor-off">
+        <p class="profile-two-factor__off-hint">
+          {{ 'profile.twoFactor.offHint' | translate }}
+        </p>
+        <p-button
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          size="small"
+          icon="pi pi-shield"
+          [label]="'profile.twoFactor.enable' | translate"
+          [loading]="enrolling()"
+          [disabled]="enrolling()"
+          (onClick)="onEnable()"
+          data-cy="profile-two-factor-enable"
+        />
+      </div>
+    }
+  }
+</div>
+
+<!-- Recovery codes dialog. Shown ONCE after confirm/regenerate. -->
+<p-dialog
+  [visible]="recoveryDialogOpen()"
+  [modal]="true"
+  [closable]="false"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '32rem', maxWidth: '90vw' }"
+  [header]="'profile.twoFactor.recoveryDialog.title' | translate"
+  data-cy="profile-two-factor-recovery-dialog"
+>
+  <p class="profile-two-factor__dialog-hint">
+    {{ 'profile.twoFactor.recoveryDialog.hint' | translate }}
+  </p>
+  @if (recoveryCodes(); as codes) {
+    <ul class="profile-two-factor__codes" data-cy="profile-two-factor-recovery-codes">
+      @for (code of codes; track code) {
+        <li class="profile-two-factor__code">
+          <code>{{ code }}</code>
+        </li>
+      }
+    </ul>
+  }
+  <div class="profile-two-factor__dialog-actions">
+    <p-button
+      type="button"
+      severity="secondary"
+      [outlined]="true"
+      size="small"
+      icon="pi pi-copy"
+      [label]="'profile.twoFactor.recoveryDialog.copy' | translate"
+      (onClick)="copyRecoveryCodes()"
+      data-cy="profile-two-factor-recovery-copy"
+    />
+    <p-button
+      type="button"
+      severity="primary"
+      size="small"
+      [label]="'profile.twoFactor.recoveryDialog.acknowledge' | translate"
+      (onClick)="closeRecoveryDialog()"
+      data-cy="profile-two-factor-recovery-dismiss"
+    />
+  </div>
+</p-dialog>
+
+<!-- Disable dialog. Re-auth gate (current password). -->
+<p-dialog
+  [visible]="disableDialogOpen()"
+  [modal]="true"
+  [closable]="!disabling()"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '28rem', maxWidth: '90vw' }"
+  [header]="'profile.twoFactor.disableDialog.title' | translate"
+  (visibleChange)="disableDialogOpen.set($event)"
+  data-cy="profile-two-factor-disable-dialog"
+>
+  <p class="profile-two-factor__dialog-hint">
+    {{ 'profile.twoFactor.disableDialog.hint' | translate }}
+  </p>
+  <form
+    [formGroup]="disableForm"
+    (ngSubmit)="submitDisable()"
+    novalidate
+    class="profile-two-factor__disable-form"
+  >
+    <label for="twoFactorDisablePassword" class="profile-two-factor__label">
+      {{ 'profile.twoFactor.disableDialog.passwordLabel' | translate }}
+    </label>
+    <p-password
+      inputId="twoFactorDisablePassword"
+      formControlName="password"
+      [feedback]="false"
+      [toggleMask]="true"
+      autocomplete="current-password"
+      styleClass="w-full"
+      inputStyleClass="w-full"
+    />
+    @if (disablePasswordError(); as err) {
+      <small class="field-error" data-cy="profile-two-factor-disable-error">
+        {{ err | translate }}
+      </small>
+    }
+    <div class="profile-two-factor__dialog-actions">
+      <p-button
+        type="button"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        [label]="'profile.twoFactor.disableDialog.cancel' | translate"
+        [disabled]="disabling()"
+        (onClick)="disableDialogOpen.set(false)"
+        data-cy="profile-two-factor-disable-cancel"
+      />
+      <p-button
+        type="submit"
+        severity="danger"
+        size="small"
+        [label]="'profile.twoFactor.disableDialog.confirm' | translate"
+        [loading]="disabling()"
+        [disabled]="disabling()"
+        data-cy="profile-two-factor-disable-submit"
+      />
+    </div>
+  </form>
+</p-dialog>

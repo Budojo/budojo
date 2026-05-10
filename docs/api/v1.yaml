@@ -130,6 +130,15 @@ paths:
         a countdown before re-enabling the submit button. Successful logins
         count toward the cap as well — the limiter is keyed on the request
         signature, not on response status.
+
+        **Two-factor authentication (#412).** When the user has TOTP 2FA
+        active (`two_factor_confirmed_at` is non-null), the password-only
+        body returns `422` with `message: "two_factor_required"`. The
+        client retries with the additional `two_factor_code` field
+        (6-digit TOTP from an authenticator app, or one of the user's
+        single-use backup codes — `XXXX-XXXX` format). An invalid code
+        returns `422` with `message: "invalid_two_factor_code"`. A valid
+        backup code is consumed (removed from the array) on use.
       operationId: authLogin
       security: []
       requestBody:
@@ -1243,6 +1252,207 @@ paths:
             body shape, however, is NOT normalised across the three
             (the controller emits its own JSON, while route-binding
             failures fall through to Laravel's default 404 page).
+
+  /me/two-factor:
+    get:
+      tags: [auth]
+      summary: Show the current two-factor enrolment state
+      description: |
+        Surfaces the user's 2FA enrolment shape for the SPA panel
+        (#412). Three states encoded in two booleans:
+
+        - `enabled=false, pending=false` → never enrolled.
+        - `enabled=false, pending=true`  → secret minted, awaiting
+          TOTP confirmation (the QR-code-shown state).
+        - `enabled=true`                 → fully active. `recovery_codes_remaining`
+          carries the current backup-code count (drops by one on every
+          backup-code login).
+      operationId: meTwoFactorShow
+      responses:
+        '200':
+          description: Current 2FA enrolment state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [enabled, pending, recovery_codes_remaining]
+                    properties:
+                      enabled:
+                        type: boolean
+                      pending:
+                        type: boolean
+                      recovery_codes_remaining:
+                        type: integer
+                        example: 8
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    delete:
+      tags: [auth]
+      summary: Disable two-factor authentication (requires current password)
+      description: |
+        Wipes `two_factor_secret`, `two_factor_recovery_codes`, and
+        `two_factor_confirmed_at` (#412). Requires the current password
+        in the request body as a re-auth gate — defense in depth so a
+        stolen session cannot strip 2FA without the password.
+      operationId: meTwoFactorDestroy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  example: 'correct-horse-battery-staple'
+      responses:
+        '200':
+          description: 2FA disabled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [disabled]
+                    properties:
+                      disabled:
+                        type: boolean
+                        example: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: Password missing or incorrect.
+
+  /me/two-factor/enrol:
+    post:
+      tags: [auth]
+      summary: Mint a TOTP secret and return the provisioning URI
+      description: |
+        Step 1 of the 3-step enrolment flow (#412). Generates a fresh
+        32-character base32 TOTP secret, stores it on the user UNCONFIRMED
+        (i.e. `two_factor_confirmed_at` stays null), and returns the
+        `otpauth://` URI for QR-code rendering on the SPA. Calling this
+        on an already-active 2FA setup returns 422 — the user must
+        explicitly `DELETE /me/two-factor` first.
+
+        The secret travels back to the SPA in plaintext so the user can
+        type it manually if QR scanning isn't possible. The server-side
+        column is encrypted at-rest via Eloquent's `encrypted` cast.
+      operationId: meTwoFactorEnrol
+      responses:
+        '200':
+          description: Fresh secret + provisioning URI.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [secret, provisioning_uri]
+                    properties:
+                      secret:
+                        type: string
+                        example: 'JBSWY3DPEHPK3PXP'
+                      provisioning_uri:
+                        type: string
+                        example: 'otpauth://totp/Budojo:tester%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Budojo'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: 2FA already enabled — call DELETE first to reset.
+
+  /me/two-factor/confirm:
+    post:
+      tags: [auth]
+      summary: Confirm enrolment with a TOTP and receive backup codes
+      description: |
+        Step 2 of the 3-step enrolment flow (#412). The user types the
+        6-digit TOTP shown by their authenticator app; on a valid code
+        the server flips `two_factor_confirmed_at` to now() and mints
+        8 single-use backup codes (`XXXX-XXXX` format). The plaintext
+        codes are returned ONCE here — the SPA must surface them with
+        a "save these somewhere safe" warning.
+      operationId: meTwoFactorConfirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  example: '123456'
+      responses:
+        '200':
+          description: 2FA active. Backup codes returned once.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [recovery_codes]
+                    properties:
+                      recovery_codes:
+                        type: array
+                        items:
+                          type: string
+                        example: ['AAAA-2345', 'BCDF-6789']
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: |
+            Code missing / malformed, OR no secret was previously
+            minted via `/me/two-factor/enrol`, OR 2FA is already
+            confirmed for this user.
+
+  /me/two-factor/recovery-codes/regenerate:
+    post:
+      tags: [auth]
+      summary: Regenerate 8 fresh backup codes, invalidating the old ones
+      description: |
+        Mints 8 new single-use backup codes (#412). The previous codes
+        are atomically replaced — any unused code in the old set stops
+        working. Only callable while 2FA is already active
+        (`two_factor_confirmed_at` is non-null); the SPA shouldn't
+        surface the action before that point.
+      operationId: meTwoFactorRegenerateRecoveryCodes
+      responses:
+        '200':
+          description: Fresh backup codes returned once.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [recovery_codes]
+                    properties:
+                      recovery_codes:
+                        type: array
+                        items:
+                          type: string
+                        example: ['NEWA-2345', 'NEWB-6789']
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: 2FA not active — call /me/two-factor/enrol first.
 
   /me/avatar:
     post:
@@ -3109,6 +3319,16 @@ components:
         password:
           type: string
           format: password
+        two_factor_code:
+          type: string
+          description: |
+            Required ONLY on the second submit when the first one
+            returned `422 two_factor_required` (#412). Either a 6-digit
+            TOTP from the user's authenticator app, or one of the
+            single-use backup codes in `XXXX-XXXX` format.
+          minLength: 6
+          maxLength: 32
+          example: '123456'
 
     ForgotPasswordRequest:
       type: object

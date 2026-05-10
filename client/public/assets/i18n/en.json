@@ -61,7 +61,16 @@
       "submit": "Sign in",
       "noAccount": "Don't have an account?",
       "registerLink": "Create one",
-      "forgotPassword": "Forgot your password?"
+      "forgotPassword": "Forgot your password?",
+      "twoFactor": {
+        "hint": "Two-factor authentication is enabled on this account. Enter the 6-digit code from your authenticator app, or a backup code.",
+        "codeLabel": "Authentication code",
+        "codePlaceholder": "123456 or AAAA-BBBB",
+        "codeRequired": "Enter the code from your authenticator app.",
+        "codeInvalid": "That code didn't work. Try again or use a backup code.",
+        "submit": "Verify and sign in",
+        "cancel": "Use a different account"
+      }
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -675,6 +684,45 @@
       "revokeError": {
         "summary": "Couldn't sign out the session",
         "detail": "Something went wrong. Try again in a moment."
+      }
+    },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "subtitle": "Add an extra step at sign-in: a 6-digit code from an authenticator app on your phone.",
+      "errorMessage": "We couldn't load your two-factor status. Try again in a moment.",
+      "retry": "Retry",
+      "offHint": "Two-factor authentication is currently off. Turning it on means you'll need both your password AND a code from your phone every time you sign in.",
+      "enable": "Turn on two-factor",
+      "pendingHint": "Scan the QR code below with Google Authenticator, 1Password, Authy, or any other authenticator app. Then enter the 6-digit code it shows to finish setup.",
+      "qrAlt": "QR code for two-factor authentication setup",
+      "secretLabel": "Can't scan? Type this code manually:",
+      "confirmCodeLabel": "6-digit code from your authenticator app",
+      "confirmCodeRequired": "Enter the 6-digit code from your authenticator app.",
+      "confirmCodeInvalid": "That code didn't work. Codes refresh every 30 seconds — try the next one.",
+      "confirmSubmit": "Confirm and turn on",
+      "activeLabel": "Two-factor authentication is on",
+      "activeDetail": "{{remaining}} backup codes remaining. You'll need a code at every sign-in.",
+      "regenerateCodes": "Regenerate backup codes",
+      "disable": "Turn off two-factor",
+      "disabledSummary": "Two-factor authentication turned off",
+      "disabledDetail": "We've also wiped your backup codes. Turn it back on any time.",
+      "codesCopiedSummary": "Backup codes copied to clipboard",
+      "genericErrorSummary": "Something went wrong",
+      "genericErrorDetail": "Try again in a moment.",
+      "disablePasswordRequired": "Enter your current password to confirm.",
+      "disablePasswordWrong": "That password doesn't match. Try again.",
+      "recoveryDialog": {
+        "title": "Save your backup codes",
+        "hint": "Each code works once. Use them to sign in if you lose your phone. Save them in a password manager or print them — you won't see them again.",
+        "copy": "Copy all",
+        "acknowledge": "I've saved them"
+      },
+      "disableDialog": {
+        "title": "Turn off two-factor authentication?",
+        "hint": "Your account will go back to password-only sign-in. Enter your password to confirm.",
+        "passwordLabel": "Current password",
+        "cancel": "Cancel",
+        "confirm": "Turn off"
       }
     }
   },
