@@ -694,6 +694,58 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/deletion-request/cancel/{token}:
+    post:
+      tags: [auth]
+      summary: Cancel a pending account deletion via the email-link token (no auth)
+      description: |
+        Public, unauthenticated entry point for the "Cancel deletion"
+        CTA in the deletion-confirmation email (#545). The token is
+        the 64-char `confirmation_token` from the user's
+        `pending_deletions` row, served on the email at request time.
+
+        On success, the row is deleted and the user's account is
+        preserved. The token is invalidated by the row delete, so a
+        second click on the same link resolves to `cancelled: false`
+        — same shape as already-clicked / never-valid /
+        already-purged. The SPA renders one "deletion is no longer
+        pending" panel for all three; we don't leak which case the
+        user is in.
+
+        Route binding constrains `{token}` to `[A-Za-z0-9]{64}`, so a
+        malformed link 404s before reaching the controller.
+      operationId: meDeletionRequestCancelByToken
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{64}$'
+            example: 'a3f2c8d4b9e1f7c2a3f2c8d4b9e1f7c2a3f2c8d4b9e1f7c2a3f2c8d4b9e1f7c2'
+          description: |
+            One-time `confirmation_token` from `pending_deletions`.
+      responses:
+        '200':
+          description: Cancellation result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [cancelled]
+                    properties:
+                      cancelled:
+                        type: boolean
+                        description: |
+                          True when the token matched an active row and
+                          the row was removed. False when the token
+                          matched nothing (idempotent re-click, never
+                          valid, or the account has already been purged).
+
   /me/avatar:
     post:
       tags: [auth]

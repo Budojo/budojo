@@ -81,6 +81,19 @@ export const routes: Routes = [
       ),
   },
   {
+    // Public account-deletion cancel landing page (#545). Outside the
+    // dashboard shell — the user clicks the "Cancel deletion" CTA in
+    // the request-confirmation email, possibly from a device they're
+    // not signed in on; the dashboard guards would otherwise bounce
+    // them. The 64-char raw token in the path is the auth, validated
+    // server-side at `POST /api/v1/me/deletion-request/cancel/{token}`.
+    path: 'account/deletion-cancel/:token',
+    loadComponent: () =>
+      import('./features/account-deletion-cancel/account-deletion-cancel.component').then(
+        (m) => m.AccountDeletionCancelComponent,
+      ),
+  },
+  {
     // Athlete-side landing surface (#445, M7 PR-D minimal). The full
     // athlete dashboard with own attendance / payments / documents
     // ships in PR-E next milestone; this route + the welcome
