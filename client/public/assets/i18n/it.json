@@ -200,6 +200,40 @@
       "signOut": "Esci"
     }
   },
+  "onboarding": {
+    "checklist": {
+      "title": "Per iniziare",
+      "subtitle": "{{progress}} di {{total}} fatti. Spunta un passaggio o vai direttamente.",
+      "cta": "Mostrami",
+      "dismiss": "Chiudi",
+      "confirmDismiss": "Nascondere questa checklist per sempre? Non la vedrai più.",
+      "confirmDismissAccept": "Nascondi",
+      "confirmDismissReject": "Tienila",
+      "dismissedSummary": "Checklist nascosta"
+    },
+    "steps": {
+      "add_athlete": {
+        "label": "Aggiungi il primo atleta",
+        "hint": "Crea il profilo di un atleta — nome, cintura, stato. La roster è la base."
+      },
+      "log_attendance": {
+        "label": "Registra una presenza",
+        "hint": "Segna chi era presente alla lezione di oggi. Un tocco per atleta."
+      },
+      "mark_payment": {
+        "label": "Registra un pagamento mensile",
+        "hint": "Segna un atleta come pagato per il mese corrente."
+      },
+      "upload_document": {
+        "label": "Carica un documento",
+        "hint": "Allega un certificato medico o qualsiasi altro PDF a un atleta."
+      },
+      "view_stats": {
+        "label": "Controlla le statistiche",
+        "hint": "Trend di presenze, ricavi mensili, chi sta mollando."
+      }
+    }
+  },
   "setup": {
     "title": "Configura la tua academy",
     "subtitle": "Ci siamo quasi — raccontaci della tua palestra",

@@ -200,6 +200,40 @@
       "signOut": "Sign out"
     }
   },
+  "onboarding": {
+    "checklist": {
+      "title": "Getting started",
+      "subtitle": "{{progress}} of {{total}} done. Tick a step or jump straight to it.",
+      "cta": "Show me",
+      "dismiss": "Dismiss",
+      "confirmDismiss": "Hide this checklist for good? You won't see it again.",
+      "confirmDismissAccept": "Hide",
+      "confirmDismissReject": "Keep it",
+      "dismissedSummary": "Checklist hidden"
+    },
+    "steps": {
+      "add_athlete": {
+        "label": "Add your first athlete",
+        "hint": "Create an athlete profile — name, belt, status. Roster is the foundation."
+      },
+      "log_attendance": {
+        "label": "Log an attendance",
+        "hint": "Mark who showed up at today's class. One tap per athlete."
+      },
+      "mark_payment": {
+        "label": "Mark a monthly payment",
+        "hint": "Tick an athlete as paid for the current month."
+      },
+      "upload_document": {
+        "label": "Upload a document",
+        "hint": "Attach a medical certificate or any other PDF to an athlete."
+      },
+      "view_stats": {
+        "label": "Check your stats",
+        "hint": "Attendance trends, monthly revenue, who's slipping."
+      }
+    }
+  },
   "setup": {
     "title": "Set up your academy",
     "subtitle": "You're almost there — tell us about your gym",
