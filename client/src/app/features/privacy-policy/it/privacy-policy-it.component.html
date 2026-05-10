@@ -149,9 +149,12 @@
       <li>Trasmissione cifrata TLS 1.2+ per ogni richiesta.</li>
       <li>Password salvate solo come hash bcrypt.</li>
       <li>Autenticazione tramite token Bearer (Laravel Sanctum), nessun cookie di sessione.</li>
-      <li>Backup giornalieri della base dati con retention 30 giorni.</li>
       <li>Accessi amministrativi via SSH con autenticazione a chiave.</li>
       <li>Audit periodico dei sub-processor.</li>
+      <li>
+        Piano di backup automatizzato della base dati
+        <strong>in implementazione prima della raccolta di dati reali in produzione</strong>.
+      </li>
     </ul>
     <p>
       I certificati medici, in quanto dati relativi alla salute (art. 9 GDPR), sono oggetto di una
