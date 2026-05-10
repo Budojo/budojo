@@ -645,6 +645,18 @@
     </section>
 
     <!--
+      Active sessions panel (#413). Lists every Sanctum personal-
+      access-token tied to the current user with a per-row revoke
+      action and a "Revoke all other sessions" CTA at the top.
+      The lazy load + the contained card chrome means a slow
+      `/me/sessions` fetch doesn't delay the rest of the profile
+      page from painting.
+    -->
+    <section class="profile-page__card">
+      <app-profile-sessions />
+    </section>
+
+    <!--
       No `<p-toast>` here on purpose — the dashboard shell mounts a single
       app-level toast host, and our `MessageService` is the app-level
       instance from `app.config.ts`. Adding another would overlap.

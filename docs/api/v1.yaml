@@ -760,6 +760,128 @@ paths:
             `cancelled: false` instead (see above) — the 404 here
             covers ONLY the malformed-shape case.
 
+  /me/sessions:
+    get:
+      tags: [auth]
+      summary: List the authenticated user's active sessions (Sanctum tokens)
+      description: |
+        Surfaces every personal-access-token row tied to the user
+        (#413). Backs the "Active sessions" panel on
+        `/dashboard/profile`. Rows are returned sorted by
+        `COALESCE(last_used_at, created_at) DESC` (most-recently-active
+        first); the row that authenticated THIS request is marked with
+        `is_current: true`.
+
+        Token `name` is the human-readable device label set at token
+        creation by `App\Support\UserAgentLabel` — e.g. "Chrome on
+        macOS", "Safari on iOS", or "Unknown device" when the
+        originating User-Agent header was empty / unparseable. Older
+        tokens minted before #413 still carry the legacy `auth` /
+        `athlete-invite-accept` strings.
+      operationId: meSessionsIndex
+      responses:
+        '200':
+          description: One row per Sanctum personal-access-token tied to the user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, last_used_at, created_at, is_current]
+                      properties:
+                        id:
+                          type: integer
+                          example: 42
+                        name:
+                          type: string
+                          example: 'Chrome on macOS'
+                        last_used_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        is_current:
+                          type: boolean
+                          description: True on the row that authenticated this request.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    delete:
+      tags: [auth]
+      summary: Revoke every OTHER active session (keep the current one)
+      description: |
+        The "logout everywhere except here" pattern (#413). Useful
+        when the user suspects compromise on another device or has
+        just changed their password. Returns the count of rows that
+        were actually revoked so the SPA can flash a confirmation
+        toast — `0` when the user only had this session.
+      operationId: meSessionsDestroyOthers
+      responses:
+        '200':
+          description: Count of revoked sessions (excluding the current one).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked:
+                        type: integer
+                        example: 3
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/sessions/{id}:
+    delete:
+      tags: [auth]
+      summary: Revoke a single Sanctum token by id
+      description: |
+        Drops the row from `personal_access_tokens` (#413). 204 on
+        success. 404 when the id doesn't belong to the authenticated
+        user — same shape as a never-existed id, so a probe cannot
+        enumerate other users' token IDs by status code.
+
+        A user CAN revoke their CURRENT session. The next request
+        from that tab gets 401 and the SPA's auth interceptor
+        bounces them to /auth/login.
+
+        Route binding constrains `{id}` to digits — non-numeric
+        404s before reaching the controller.
+      operationId: meSessionsDestroy
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 42
+      responses:
+        '204':
+          description: Session revoked.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: |
+            Returned when the id doesn't belong to the authenticated
+            user, when the id never existed, or when the path fails
+            the route binding's digit constraint. The status code is
+            the same in all three cases so a probe can't enumerate
+            other users' token IDs by status alone — the response
+            body shape, however, is NOT normalised across the three
+            (the controller emits its own JSON, while route-binding
+            failures fall through to Laravel's default 404 page).
+
   /me/avatar:
     post:
       tags: [auth]

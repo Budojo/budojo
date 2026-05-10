@@ -8,6 +8,7 @@ use App\Actions\Auth\LoginUserAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Support\UserAgentLabel;
 use Illuminate\Http\JsonResponse;
 
 class LoginController extends Controller
@@ -27,7 +28,14 @@ class LoginController extends Controller
             return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
-        $token = $user->createToken('auth')->plainTextToken;
+        // Token name surfaces in the user's "Active sessions" list
+        // (#413) — derive a coarse "Chrome on macOS"-style label from
+        // the User-Agent header so the row is human-readable.
+        // Fallback "Unknown device" when the header is missing or
+        // unparseable. Truncated to 80 chars in the helper to stay
+        // well under the column's 255 limit.
+        $tokenName = UserAgentLabel::fromUserAgent($request->userAgent() ?? '');
+        $token = $user->createToken($tokenName)->plainTextToken;
 
         // Eager-load the relations the `UserResource` projects so the
         // wire envelope reflects reality immediately on login. Without

@@ -577,6 +577,35 @@
       "successSummary": "Password updated",
       "successDetail": "Your password has been changed. Other devices have been signed out.",
       "genericError": "Couldn't update your password. Please try again."
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "subtitle": "Devices and browsers signed in to your Budojo account.",
+      "thisSession": "this session",
+      "lastUsedAt": "Last used {{datetime}}",
+      "neverUsed": "Never used",
+      "revoke": "Revoke",
+      "revokeOthersCta": "Sign out other sessions",
+      "confirmRevoke": "Sign out the {{device}} session? You can sign in again any time.",
+      "confirmRevokeCurrent": "Sign out the {{device}} session? This is the device you're using right now — you'll be signed out and asked to log in again.",
+      "confirmRevokeOthers": "Sign out every other session and keep only this one? You'll need to sign in again on those devices.",
+      "confirmAccept": "Sign out",
+      "confirmReject": "Cancel",
+      "errorMessage": "We couldn't load your sessions. Try again in a moment.",
+      "retry": "Retry",
+      "revokeToast": {
+        "summary": "Session signed out",
+        "detail": "{{device}} has been signed out."
+      },
+      "revokeOthersToast": {
+        "summary": "Other sessions signed out",
+        "detail": "{{count}} other session(s) have been signed out.",
+        "detailNone": "There were no other sessions to sign out."
+      },
+      "revokeError": {
+        "summary": "Couldn't sign out the session",
+        "detail": "Something went wrong. Try again in a moment."
+      }
     }
   },
   "account": {
