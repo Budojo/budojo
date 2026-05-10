@@ -55,12 +55,15 @@ const ASSET_EXT_RE = /\.(?:js|css|map|json|png|jpe?g|gif|webp|svg|ico|woff2?|ttf
 // clear browser cache. Customer feedback on v1.15.0 reported exactly
 // this symptom (#398). `/safety-worker.js` is Angular's kill-switch
 // worker; if a future deploy ever ships it to deactivate the SW, it
-// must also bypass cache.
+// must also bypass cache. `/version.json` (#548) is the runtime
+// cache-bust identity poll — the whole point is detecting drift, so a
+// cached response is the failure mode by definition.
 const NO_CACHE_PATHS = new Set([
   '/index.html',
   '/ngsw.json',
   '/ngsw-worker.js',
   '/safety-worker.js',
+  '/version.json',
 ]);
 
 const NO_CACHE_HEADER = 'no-cache, no-store, must-revalidate';

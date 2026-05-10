@@ -204,6 +204,7 @@ describe('SPA fallback worker', () => {
     '/ngsw.json',
     '/ngsw-worker.js',
     '/safety-worker.js',
+    '/version.json',
   ])('stamps no-cache headers on %s when the file exists', async (pathname) => {
     const env = makeEnv({
       [pathname]: () =>

@@ -1,8 +1,9 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, HttpContext, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
+import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 import { errorInterceptor } from './error.interceptor';
 
 interface RouterStub {
@@ -99,6 +100,28 @@ describe('errorInterceptor', () => {
       .expectOne('/api/v1/anything')
       .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
 
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+    httpMock.verify();
+  });
+
+  it('honors the SKIP_OFFLINE_REDIRECT context flag — background poll stays put on status 0', () => {
+    const { http, httpMock, router } = setup();
+    http
+      .get('/version.json', {
+        context: new HttpContext().set(SKIP_OFFLINE_REDIRECT, true),
+      })
+      .subscribe({
+        next: () => undefined,
+        error: () => undefined,
+      });
+
+    httpMock
+      .expectOne('/version.json')
+      .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+
+    // The user is mid-form; a transient version-poll blip must NOT
+    // throw them onto /offline. The error still propagates to the
+    // caller's catchError, just no global side-effect.
     expect(router.navigateByUrl).not.toHaveBeenCalled();
     httpMock.verify();
   });
