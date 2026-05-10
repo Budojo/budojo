@@ -1282,7 +1282,7 @@ paths:
                         type: array
                         items:
                           type: string
-                        example: ['AAAA-1111', 'BBBB-2222']
+                        example: ['AAAA-2345', 'BCDF-6789']
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '422':
@@ -1319,7 +1319,7 @@ paths:
                         type: array
                         items:
                           type: string
-                        example: ['NEW1-1111', 'NEW2-2222']
+                        example: ['NEWA-2345', 'NEWB-6789']
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '422':

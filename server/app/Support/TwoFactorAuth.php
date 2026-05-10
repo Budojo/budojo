@@ -85,15 +85,26 @@ final class TwoFactorAuth
      */
     public static function consumeRecoveryCode(array $codes, string $input): ?array
     {
-        // Match case-insensitively + strip whitespace so a user
-        // typing in mixed case or with stray spaces still wins.
-        $normalized = strtoupper(trim($input));
+        // Normalize BOTH sides identically so a user typing
+        // `aaaa-bbbb`, `AAAABBBB`, or ` aaaa bbbb ` all match a stored
+        // `AAAA-BBBB`. Strip every non-alphanumeric char then
+        // upper-case — covers dashes, spaces, accidental hyphens and
+        // capitalization drift in one pass.
+        $needle = self::normalizeCode($input);
+        if ($needle === '') {
+            return null;
+        }
         $remaining = array_values(array_filter(
             $codes,
-            static fn (string $code): bool => strtoupper($code) !== $normalized,
+            fn (string $code): bool => self::normalizeCode($code) !== $needle,
         ));
 
         return \count($remaining) === \count($codes) ? null : $remaining;
+    }
+
+    private static function normalizeCode(string $value): string
+    {
+        return strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $value));
     }
 
     private static function generateRecoveryCode(): string

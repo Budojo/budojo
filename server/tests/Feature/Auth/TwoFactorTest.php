@@ -240,6 +240,83 @@ it('login with a valid backup code consumes the code and issues a token', functi
     expect($user->two_factor_recovery_codes)->not->toContain($codes[0]);
 });
 
+it('login with a backup code accepts the value without the canonical dash', function (): void {
+    $codes = TwoFactorAuth::generateRecoveryCodes();
+    $user = User::factory()->create([
+        'email' => 'mario@example.com',
+        'password' => Hash::make('Password1!'),
+    ]);
+    $user->forceFill([
+        'two_factor_secret' => TwoFactorAuth::generateSecret(),
+        'two_factor_recovery_codes' => $codes,
+        'two_factor_confirmed_at' => now(),
+    ])->save();
+
+    // Strip the dash before sending — covers the "user typed the code
+    // from a printed backup without the separator" path.
+    $noDash = str_replace('-', '', $codes[0]);
+    $this->postJson('/api/v1/auth/login', [
+        'email' => 'mario@example.com',
+        'password' => 'Password1!',
+        'two_factor_code' => $noDash,
+    ])->assertOk();
+
+    $user->refresh();
+    expect(count($user->two_factor_recovery_codes))->toBe(7);
+});
+
+it('login with a backup code accepts mixed case input', function (): void {
+    $codes = TwoFactorAuth::generateRecoveryCodes();
+    $user = User::factory()->create([
+        'email' => 'mario@example.com',
+        'password' => Hash::make('Password1!'),
+    ]);
+    $user->forceFill([
+        'two_factor_secret' => TwoFactorAuth::generateSecret(),
+        'two_factor_recovery_codes' => $codes,
+        'two_factor_confirmed_at' => now(),
+    ])->save();
+
+    // Codes are uppercase; sending lowercase still consumes the
+    // matching entry.
+    $lower = strtolower($codes[0]);
+    $this->postJson('/api/v1/auth/login', [
+        'email' => 'mario@example.com',
+        'password' => 'Password1!',
+        'two_factor_code' => $lower,
+    ])->assertOk();
+
+    $user->refresh();
+    expect(count($user->two_factor_recovery_codes))->toBe(7);
+});
+
+it('a failed 2FA challenge is logged in login_attempts as success=false', function (): void {
+    $user = User::factory()->create([
+        'email' => 'mario@example.com',
+        'password' => Hash::make('Password1!'),
+    ]);
+    $user->forceFill([
+        'two_factor_secret' => TwoFactorAuth::generateSecret(),
+        'two_factor_confirmed_at' => now(),
+    ])->save();
+
+    $this->postJson('/api/v1/auth/login', [
+        'email' => 'mario@example.com',
+        'password' => 'Password1!',
+        'two_factor_code' => '000000',
+    ])->assertUnprocessable();
+
+    // The audit row should attribute to the user AND mark the
+    // attempt as failed — without #412's restructuring the prior
+    // shape stamped success=true based on the password check alone.
+    $attempt = \App\Models\LoginAttempt::query()
+        ->where('user_id', $user->id)
+        ->latest('id')
+        ->first();
+    expect($attempt)->not->toBeNull();
+    expect($attempt->success)->toBeFalse();
+});
+
 it('login with a backup code is one-shot — the same code does not work twice', function (): void {
     $codes = TwoFactorAuth::generateRecoveryCodes();
     $user = User::factory()->create([

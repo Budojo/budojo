@@ -2,13 +2,12 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ButtonModule } from 'primeng/button';
-import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TooltipModule } from 'primeng/tooltip';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import * as QRCode from 'qrcode';
 import {
@@ -38,7 +37,6 @@ import {
   standalone: true,
   imports: [
     ButtonModule,
-    ConfirmPopupModule,
     DialogModule,
     InputTextModule,
     PasswordModule,
@@ -50,11 +48,9 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile-two-factor.component.html',
   styleUrl: './profile-two-factor.component.scss',
-  providers: [ConfirmationService],
 })
 export class ProfileTwoFactorComponent implements OnInit {
   private readonly twoFactorService = inject(TwoFactorService);
-  private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
@@ -79,8 +75,11 @@ export class ProfileTwoFactorComponent implements OnInit {
   protected readonly recoveryDialogOpen = signal<boolean>(false);
   protected readonly disableDialogOpen = signal<boolean>(false);
 
+  // Enrolment-confirmation accepts ONLY the 6-digit TOTP; backup
+  // codes can't be used to complete enrolment. Matches the server's
+  // `size:6` rule on `POST /me/two-factor/confirm`.
   protected readonly confirmForm = this.fb.nonNullable.group({
-    code: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(8)]],
+    code: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]],
   });
 
   protected readonly disableForm = this.fb.nonNullable.group({
