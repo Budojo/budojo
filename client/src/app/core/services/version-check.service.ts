@@ -118,10 +118,18 @@ export class VersionCheckService {
       return;
     }
 
+    // SSR / test bootstrap with no DOM defaultView: skip the whole
+    // service. The previous shape fell back to `?? window`, but if
+    // `defaultView` is null the global `window` is also undefined in
+    // SSR — referencing it would throw a `ReferenceError` at boot.
+    // Copilot caught this on PR #551.
+    const win = this.document.defaultView;
+    if (!win) return;
+
     if (this.started) return;
     this.started = true;
 
-    const focus$ = fromEvent(this.document.defaultView ?? window, 'focus');
+    const focus$ = fromEvent(win, 'focus');
     const interval$ = timer(0, VERSION_CHECK_INTERVAL_MS);
 
     merge(focus$, interval$)

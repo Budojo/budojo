@@ -93,6 +93,27 @@ describe('VersionCheckService', () => {
     expect(win.location.reload).not.toHaveBeenCalled();
   });
 
+  it('is a no-op when document.defaultView is null (SSR / non-browser bootstrap)', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: DOCUMENT,
+          useValue: { defaultView: null },
+        },
+      ],
+    });
+    const ssrHttpMock = TestBed.inject(HttpTestingController);
+    const service = TestBed.inject(VersionCheckService);
+
+    // Must not throw — previously fell back to a global `window`
+    // reference which is undefined in SSR / Node test runners
+    // without a DOM. Copilot caught this on PR #551.
+    expect(() => service.start()).not.toThrow();
+    ssrHttpMock.expectNone(() => true);
+  });
+
   it('fetches /version.json on boot and stays silent on a SHA match', async () => {
     const service = setup();
     service.start();
