@@ -94,7 +94,7 @@ Retention proposta (sia in caso di Opzione A che B):
 | Atleta rimosso dall'academy                         | Cancellazione **immediata e a cascata** di tutti i suoi documenti via `AthleteObserver` → `DeleteDocumentAction` (rimuove sia il record `documents` sia il file binario sul disco `local`). Già implementato.                                       |
 | Certificato scaduto da > 24 mesi                    | Cancellazione automatica del singolo file (mantenendo eventualmente solo i metadati `valid no + expired_at` per audit). **Non ancora implementato** — follow-up `#227-a` da aprire.                                                                |
 | Account utente cancellato (Titolare/istruttore)     | Cancellazione finale alla fine della grace-window 30 giorni via cron `budojo:purge-expired-pending-deletions` (#223). Distinto dal caso "atleta rimosso" qui sopra: questo cron purga *utenti*, non *atleti*; le rispettive cascate sono separate.  |
-| Risoluzione del contratto Budojo dell'academy       | Cancellazione di tutti i certificati al termine del § 12 del DPA template (processo manuale documentato in `docs/operations/academy-offboarding.md`, TODO follow-up).                                                                                |
+| Risoluzione del contratto Budojo dell'academy       | Cancellazione di tutti i certificati al termine del § 12 del DPA template; il processo manuale è documentato in [`docs/operations/academy-offboarding.md`](../operations/academy-offboarding.md).                                                    |
 
 La finestra di 24 mesi è il compromesso fra "audit storico" (un controllo CONI / FGI può chiedere certificati passati) e minimizzazione. Il numero esatto è negoziabile col Titolare in fase di onboarding.
 
