@@ -77,6 +77,11 @@
 
   &__label {
     line-height: 1;
+    // Pin to a single line — kid variants ship "Green (kids)" / "Yellow (kids)"
+    // strings that wrap on the inner space when the column is narrow on
+    // mobile (iPhone-class viewport, athletes-list belt cell). The pill
+    // grows in width to fit; height stays one row.
+    white-space: nowrap;
   }
 
   // Inline stripe markers (#165). Each tile is a small filled square in the
