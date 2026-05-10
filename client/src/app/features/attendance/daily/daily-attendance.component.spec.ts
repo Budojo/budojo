@@ -464,4 +464,194 @@ describe('DailyAttendanceComponent', () => {
     // first/last_name + belt sorts are surfaced) — sortField stays put.
     expect(component['sortField']()).toBe('last_name');
   });
+
+  // ─── Pagination (#527) ─────────────────────────────────────────────────────
+  // Daily attendance reuses the SAME paginated /api/v1/athletes endpoint as
+  // athletes-list, so it must walk the same pagination path. Without it,
+  // sorting a roster of > 20 athletes by belt rank pinned the user to page 1
+  // — the entire blue+ tier silently disappeared because the first 20 rows
+  // were exhausted by white belts (Luigi's bug report).
+
+  it('forwards page=N to the athletes endpoint when onPageChange runs', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    // PrimeNG's <p-table> emits {first, rows} on (onPage). first=20 + rows=20
+    // means "page 2" in 1-indexed terms.
+    component['onPageChange']({ first: 20, rows: 20 });
+
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('page') === '2')
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 2,
+          from: null,
+          last_page: 2,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 25,
+        },
+      });
+    // Pagination is roster-only — attendance records for the date are
+    // unchanged across pages, so no /api/v1/attendance re-hit.
+    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
+
+    expect(component['first']()).toBe(20);
+  });
+
+  it('resets to page 1 when the search term changes', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    // Land on page 3 first.
+    component['onPageChange']({ first: 40, rows: 20 });
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('page') === '3')
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 3,
+          from: null,
+          last_page: 3,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 50,
+        },
+      });
+
+    // Now searching should bounce back to page 1 — otherwise a filter that
+    // matches fewer than 41 rows leaves us on an empty phantom page.
+    component['applySearch']('mario');
+
+    httpMock
+      .expectOne(
+        (r) =>
+          r.url === '/api/v1/athletes' &&
+          r.params.get('q') === 'mario' &&
+          // Page 1 is the implicit default — the service omits the param when
+          // page === 1, so we assert the absence of the `page` query param.
+          r.params.get('page') === null,
+      )
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 1,
+          from: null,
+          last_page: 1,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 0,
+        },
+      });
+
+    expect(component['first']()).toBe(0);
+  });
+
+  it('resets to page 1 when the belt filter changes', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    component['onPageChange']({ first: 40, rows: 20 });
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('page') === '3')
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 3,
+          from: null,
+          last_page: 3,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 50,
+        },
+      });
+
+    component['onBeltChange']('blue');
+
+    httpMock
+      .expectOne(
+        (r) =>
+          r.url === '/api/v1/athletes' &&
+          r.params.get('belt') === 'blue' &&
+          r.params.get('page') === null,
+      )
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 1,
+          from: null,
+          last_page: 1,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 0,
+        },
+      });
+
+    expect(component['first']()).toBe(0);
+  });
+
+  it('resets to page 1 when the sort header is clicked (the bug)', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    component['onPageChange']({ first: 40, rows: 20 });
+    httpMock
+      .expectOne((r) => r.url === '/api/v1/athletes' && r.params.get('page') === '3')
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 3,
+          from: null,
+          last_page: 3,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 50,
+        },
+      });
+
+    // Belt sort from page 3 must bounce to page 1 — otherwise a sort that
+    // changes the row order leaves us on a stale slice.
+    component['onSort']({ field: 'belt', order: 1 });
+
+    httpMock
+      .expectOne(
+        (r) =>
+          r.url === '/api/v1/athletes' &&
+          r.params.get('sort_by') === 'belt' &&
+          r.params.get('sort_order') === 'asc' &&
+          r.params.get('page') === null,
+      )
+      .flush({
+        data: [],
+        links: { first: null, last: null, prev: null, next: null },
+        meta: {
+          current_page: 1,
+          from: null,
+          last_page: 1,
+          path: '',
+          per_page: 20,
+          to: null,
+          total: 0,
+        },
+      });
+
+    expect(component['first']()).toBe(0);
+  });
 });

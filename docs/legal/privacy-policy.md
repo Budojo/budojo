@@ -60,11 +60,11 @@ I dati sono trattati con strumenti elettronici, ospitati in **datacenter UE (Fra
 - Trasmissione cifrata (TLS 1.2+) per ogni richiesta
 - Password salvate solo come hash bcrypt
 - Autenticazione tramite token Bearer (Laravel Sanctum) — nessun cookie di sessione
-- Backup giornalieri della base dati con retention 30 giorni
 - Accessi amministrativi via SSH con autenticazione a chiave
 - Audit periodico dei sub-processor (vedi § 7)
+- Piano di backup automatizzato della base dati **in implementazione prima della raccolta di dati reali in produzione**; lo stato corrente e la valutazione delle opzioni (DigitalOcean Managed DB, `mysqldump` cron, snapshot del droplet) sono documentati al § 8 del [DPA template](./dpa-template.md) e in [`../infra/production-deployment.md`](../infra/production-deployment.md). La decisione finale fra le tre opzioni resta da prendere e sarà annunciata prima dell'attivazione dei backup.
 
-I certificati medici, in quanto **dati relativi alla salute** ex art. 9 GDPR, sono oggetto di una valutazione separata documentata in `docs/legal/dpia-medical-certificates.md` (#227).
+I certificati medici, in quanto **dati relativi alla salute** ex art. 9 GDPR, sono oggetto di una valutazione separata documentata in [`docs/legal/dpia-medical-certificates.md`](./dpia-medical-certificates.md) (#227).
 
 ## 6. Cookie e archiviazione lato browser
 
@@ -117,5 +117,5 @@ Eventuali modifiche sostanziali saranno notificate all'utente via email almeno 3
 
 - [Sub-processor](./sub-processors.md) (#225)
 - [Cookie audit](./cookie-audit.md) (#221)
-- [DPIA certificati medici](./dpia-medical-certificates.md) — pianificata (#227)
-- [DPA template per academy](./dpa-template.md) — pianificato (#220)
+- [DPIA-lite certificati medici](./dpia-medical-certificates.md) — bozza tecnica (#227)
+- [DPA template per academy](./dpa-template.md) — bozza tecnica (#220)

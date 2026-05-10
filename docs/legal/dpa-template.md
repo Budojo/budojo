@@ -48,7 +48,7 @@ Il presente DPA ha la stessa durata del contratto di servizio Budojo sottoscritt
 | Atleta minore | Come sopra + dati identificativi e di contatto del/dei tutori legali. |
 | Istruttore / amministratore della palestra | Dati identificativi e di contatto, credenziali (hash bcrypt). |
 
-I dati relativi alla salute (certificati medici) sono trattati con misure rafforzate documentate in `docs/legal/dpia-medical-certificates.md` (DPIA, #227 — pianificata).
+I dati relativi alla salute (certificati medici) sono trattati con misure rafforzate documentate in [`docs/legal/dpia-medical-certificates.md`](./dpia-medical-certificates.md) (DPIA-lite, #227).
 
 ## 5. Obblighi del Responsabile
 
@@ -145,7 +145,7 @@ Alla risoluzione del contratto di servizio Budojo, il Responsabile:
 
 1. Mette a disposizione del Titolare l'**export completo** dei dati associati al suo account (formato JSON + ZIP coi documenti) per **30 giorni** dalla data di risoluzione.
 2. Decorso tale termine, **cancella in modo irreversibile** tutti i dati del Titolare e dei suoi atleti dalla base dati e dai backup, salvo obblighi di legge contrari (es. dati di fatturazione conservati per 10 anni ex art. 2220 c.c. — limitati ai dati identificativi del Titolare, NON degli atleti).
-3. La cancellazione è eseguita automaticamente dal cron `budojo:purge-expired-pending-deletions` per gli account utente; per la chiusura completa di un'academy un processo manuale documentato in `docs/operations/academy-offboarding.md` (TODO follow-up) è eseguito da un membro autorizzato del personale Budojo.
+3. La cancellazione è eseguita automaticamente dal cron `budojo:purge-expired-pending-deletions` per gli account utente; per la chiusura completa di un'academy il processo manuale è documentato in [`docs/operations/academy-offboarding.md`](../operations/academy-offboarding.md) ed è eseguito da un membro autorizzato del personale Budojo.
 
 ## 13. Responsabilità e indennizzo
 
@@ -169,8 +169,8 @@ In caso di conflitto fra il presente DPA e il contratto di servizio Budojo, prev
 
 - [Sub-processor list](./sub-processors.md) (#225)
 - [Cookie audit](./cookie-audit.md) (#221)
-- Privacy policy — `docs/legal/privacy-policy.md`, in lavorazione su #219; link diretto attivato una volta che #219 sarà mergato.
-- DPIA certificati medici — `docs/legal/dpia-medical-certificates.md`, pianificata su #227; link attivato una volta che il documento sarà redatto.
+- [Privacy policy](./privacy-policy.md) (#219) — bozza tecnica.
+- [DPIA-lite certificati medici](./dpia-medical-certificates.md) (#227) — bozza tecnica; in attesa della decisione strategica fra Opzione A (PDF in Budojo + misure rafforzate) e Opzione B (solo metadati) e della revisione legale.
 - GDPR Art. 28 — responsabili del trattamento
 - Standard Contractual Clauses Commissione UE 2021/914
 
