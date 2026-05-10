@@ -734,6 +734,44 @@
         "cancel": "Cancel",
         "confirm": "Turn off"
       }
+    },
+    "apiTokens": {
+      "title": "API tokens",
+      "subtitle": "Mint long-lived tokens for scripts and integrations. Each token can be scoped to specific actions and given an optional expiry.",
+      "createCta": "New token",
+      "errorMessage": "We couldn't load your API tokens. Try again in a moment.",
+      "retry": "Retry",
+      "empty": "No API tokens yet. Generate one when you need a script or integration to talk to Budojo on your behalf.",
+      "revoke": "Revoke",
+      "abilitiesRequired": "Select at least one ability before generating the token.",
+      "revokedSummary": "Token revoked",
+      "revokeErrorSummary": "Couldn't revoke the token",
+      "createErrorSummary": "Couldn't generate the token",
+      "copiedSummary": "Token copied to clipboard",
+      "lastUsedAt": "Last used {{datetime}}",
+      "neverUsed": "Never used",
+      "expiresAt": "Expires {{datetime}}",
+      "confirmRevoke": "Revoke {{name}}? Any script using this token will stop working immediately.",
+      "confirmRevokeAccept": "Revoke",
+      "confirmRevokeReject": "Cancel",
+      "createDialog": {
+        "title": "Generate a new API token",
+        "nameLabel": "Token name",
+        "namePlaceholder": "nightly-export-script",
+        "abilitiesLabel": "Abilities",
+        "abilitiesHint": "Pick which actions this token can perform. Granting fewer is safer.",
+        "expiresLabel": "Expires in (days)",
+        "expiresPlaceholder": "Leave empty for no expiry",
+        "expiresHint": "Optional. Tokens with no expiry stay valid until you revoke them.",
+        "cancel": "Cancel",
+        "confirm": "Generate token"
+      },
+      "plaintextDialog": {
+        "title": "Save your new token",
+        "hint": "Copy this token now and save it in your password manager. It won't be shown again — if you lose it, generate a new one.",
+        "copy": "Copy",
+        "acknowledge": "I've saved it"
+      }
     }
   },
   "account": {

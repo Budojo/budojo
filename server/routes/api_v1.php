@@ -237,6 +237,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->where('id', '[0-9]+');
     Route::delete('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'destroyOthers']);
 
+    // API tokens (#431). Long-lived, user-named, abilities-scoped
+    // Sanctum tokens for integrations (export scripts, automation
+    // hooks). Same `personal_access_tokens` table as session tokens
+    // — distinguished by the `kind` column. Plaintext returned ONCE
+    // on creation.
+    Route::get('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'index']);
+    Route::post('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store']);
+    Route::delete('/me/api-tokens/{id}', [\App\Http\Controllers\User\ApiTokenController::class, 'destroy'])
+        ->where('id', '[0-9]+');
+
     // Avatar — multipart upload + delete (#411). Mirrors the
     // /academy/logo precedent: stores the original bytes (no
     // server-side resize — the API container ships GD without JPEG

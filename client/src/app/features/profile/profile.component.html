@@ -666,6 +666,16 @@
     </section>
 
     <!--
+      API tokens panel (#431). Long-lived, user-named, abilities-
+      scoped Sanctum tokens for integrations. Sits below the
+      sessions panel so the two "tokens in this account" surfaces
+      cluster (Krug § proximity).
+    -->
+    <section class="profile-page__card">
+      <app-profile-api-tokens />
+    </section>
+
+    <!--
       Notification preferences panel (#416). Per-category opt-out for
       digest / reminder emails. Transactional emails are NOT
       toggleable; the panel surfaces them in a read-only "always

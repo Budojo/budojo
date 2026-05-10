@@ -54,8 +54,14 @@ class SessionController extends Controller
         // @phpstan-ignore-next-line instanceof.alwaysTrue (Sanctum's @return is misleading; runtime can return TransientToken or null)
         $currentId = $current instanceof PersonalAccessToken ? $current->id : null;
 
+        // Scope to session tokens only (#431). API tokens
+        // (`kind = 'api'`) live in the same table but are surfaced on
+        // a separate panel. Without the filter the "Active sessions"
+        // list would conflate user-minted integration tokens with
+        // actual browser sessions.
         /** @var \Illuminate\Database\Eloquent\Collection<int, PersonalAccessToken> $tokens */
         $tokens = $user->tokens()
+            ->where('kind', 'session')
             ->orderByRaw('COALESCE(last_used_at, created_at) DESC')
             ->get();
 
@@ -97,7 +103,10 @@ class SessionController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $deleted = $user->tokens()->whereKey($id)->delete();
+        $deleted = $user->tokens()
+            ->where('kind', 'session')
+            ->whereKey($id)
+            ->delete();
 
         if ($deleted === 0) {
             return response()->json(['message' => 'Session not found.'], 404);
@@ -132,7 +141,12 @@ class SessionController extends Controller
             return response()->json(['data' => ['revoked' => 0]]);
         }
 
+        // Scope to session tokens only — `kind = 'api'` rows live in
+        // the same table but the user manages them on the API-tokens
+        // panel (#431). A "revoke all other sessions" sweep MUST NOT
+        // wipe long-lived integration credentials silently.
         $revoked = $user->tokens()
+            ->where('kind', 'session')
             ->where('id', '!=', $current->id)
             ->delete();
 

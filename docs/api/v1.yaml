@@ -1389,6 +1389,182 @@ paths:
             (the controller emits its own JSON, while route-binding
             failures fall through to Laravel's default 404 page).
 
+  /me/api-tokens:
+    get:
+      tags: [auth]
+      summary: List the authenticated user's API tokens
+      description: |
+        Surfaces every `kind = 'api'` row in `personal_access_tokens`
+        tied to the user (#431). Session tokens (`kind = 'session'`)
+        are NOT included here — they live on `/me/sessions`. The
+        `meta.available_abilities` array is the catalog the SPA
+        renders as the checkbox grid on the "Generate a new token"
+        dialog; new tokens MUST pick a non-empty subset.
+      operationId: meApiTokensIndex
+      responses:
+        '200':
+          description: API token rows + abilities catalog.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, abilities, last_used_at, expires_at, created_at]
+                      properties:
+                        id:
+                          type: integer
+                          example: 42
+                        name:
+                          type: string
+                          example: 'nightly-export-script'
+                        abilities:
+                          type: array
+                          items:
+                            type: string
+                        last_used_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        expires_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                  meta:
+                    type: object
+                    required: [available_abilities]
+                    properties:
+                      available_abilities:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          ['athletes:read', 'athletes:write', 'documents:read', 'documents:write']
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    post:
+      tags: [auth]
+      summary: Mint a new API token (plaintext returned ONCE)
+      description: |
+        Creates a fresh Sanctum personal-access-token (#431) with
+        `kind = 'api'`, the supplied name, the supplied non-empty
+        abilities subset, and an optional `expires_in_days` window
+        (1-730 days, null means no expiry). Returns the plaintext
+        token in `data.plain_text_token` ONCE — the SPA MUST surface
+        it immediately with a copy CTA and a "you won't see this
+        again" warning. The string is unrecoverable from the DB after
+        the response is dropped.
+      operationId: meApiTokensCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, abilities]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  example: 'nightly-export-script'
+                abilities:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                  example: ['athletes:read', 'documents:read']
+                expires_in_days:
+                  type: integer
+                  nullable: true
+                  minimum: 1
+                  maximum: 730
+                  example: 30
+      responses:
+        '201':
+          description: Token minted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      [id, name, abilities, expires_at, created_at, plain_text_token]
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      abilities:
+                        type: array
+                        items:
+                          type: string
+                      expires_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      plain_text_token:
+                        type: string
+                        description: |
+                          The bearer string. Returned ONCE — never
+                          retrievable after this response.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /me/api-tokens/{id}:
+    delete:
+      tags: [auth]
+      summary: Revoke an API token
+      description: |
+        Drops the row from `personal_access_tokens` (#431). 200 on
+        success. 404 when the id doesn't belong to the authenticated
+        user — same shape as a never-existed id, so a probe cannot
+        enumerate other users' token IDs by status code.
+      operationId: meApiTokensDestroy
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 42
+      responses:
+        '200':
+          description: Token revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked:
+                        type: boolean
+                        example: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Token id doesn't belong to the authenticated user.
+
   /me/two-factor:
     get:
       tags: [auth]

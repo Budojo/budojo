@@ -734,6 +734,44 @@
         "cancel": "Annulla",
         "confirm": "Disattiva"
       }
+    },
+    "apiTokens": {
+      "title": "Token API",
+      "subtitle": "Genera token long-lived per script e integrazioni. Ogni token può essere limitato a specifiche azioni e avere una scadenza opzionale.",
+      "createCta": "Nuovo token",
+      "errorMessage": "Non è stato possibile caricare i token API. Riprova tra un momento.",
+      "retry": "Riprova",
+      "empty": "Nessun token API ancora. Generane uno quando ti serve far parlare uno script o un'integrazione con Budojo per tuo conto.",
+      "revoke": "Revoca",
+      "abilitiesRequired": "Seleziona almeno un'abilità prima di generare il token.",
+      "revokedSummary": "Token revocato",
+      "revokeErrorSummary": "Non è stato possibile revocare il token",
+      "createErrorSummary": "Non è stato possibile generare il token",
+      "copiedSummary": "Token copiato negli appunti",
+      "lastUsedAt": "Ultimo utilizzo {{datetime}}",
+      "neverUsed": "Mai utilizzato",
+      "expiresAt": "Scade {{datetime}}",
+      "confirmRevoke": "Revocare {{name}}? Qualsiasi script che usa questo token smetterà di funzionare immediatamente.",
+      "confirmRevokeAccept": "Revoca",
+      "confirmRevokeReject": "Annulla",
+      "createDialog": {
+        "title": "Genera un nuovo token API",
+        "nameLabel": "Nome del token",
+        "namePlaceholder": "script-esportazione-notturno",
+        "abilitiesLabel": "Abilità",
+        "abilitiesHint": "Scegli quali azioni questo token può eseguire. Concedere meno permessi è più sicuro.",
+        "expiresLabel": "Scadenza (giorni)",
+        "expiresPlaceholder": "Lascia vuoto per nessuna scadenza",
+        "expiresHint": "Opzionale. I token senza scadenza restano validi finché non li revochi.",
+        "cancel": "Annulla",
+        "confirm": "Genera token"
+      },
+      "plaintextDialog": {
+        "title": "Salva il tuo nuovo token",
+        "hint": "Copia questo token adesso e salvalo in un password manager. Non verrà mostrato di nuovo — se lo perdi, generane uno nuovo.",
+        "copy": "Copia",
+        "acknowledge": "L'ho salvato"
+      }
     }
   },
   "account": {

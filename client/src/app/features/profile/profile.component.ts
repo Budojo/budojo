@@ -35,6 +35,7 @@ import { ProfileLoginHistoryComponent } from './login-history/profile-login-hist
 import { ProfileNotificationsComponent } from './notifications/profile-notifications.component';
 import { ProfileSessionsComponent } from './sessions/profile-sessions.component';
 import { ProfileTwoFactorComponent } from './two-factor/profile-two-factor.component';
+import { ProfileApiTokensComponent } from './api-tokens/profile-api-tokens.component';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
@@ -69,6 +70,7 @@ const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
     ProfileNotificationsComponent,
     ProfileSessionsComponent,
     ProfileTwoFactorComponent,
+    ProfileApiTokensComponent,
     ReactiveFormsModule,
     TooltipModule,
     TranslatePipe,
