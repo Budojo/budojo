@@ -93,8 +93,15 @@ class NotificationInboxController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $flipped = $user->unreadNotifications()->count();
-        $user->unreadNotifications->markAsRead();
+        // Single bulk UPDATE — atomic, no N+1 load-then-flip. The
+        // affected-row count IS the marked_read total, so we don't
+        // need a separate count() query upfront. Scales O(1) wire
+        // roundtrips regardless of inbox size.
+        $now = now();
+        $flipped = $user->unreadNotifications()->update([
+            'read_at' => $now,
+            'updated_at' => $now,
+        ]);
 
         return response()->json([
             'data' => [

@@ -951,9 +951,14 @@ paths:
         Backs the bell-icon dropdown in the dashboard topbar (#418).
         Returns the most recent 20 notification rows for the authed
         user (`ORDER BY created_at DESC LIMIT 20`) plus an unread
-        count for the badge. Notifications are written by the
-        existing reminder Actions (medical-cert expiry digest,
-        unpaid-athletes monthly digest) alongside the email channel.
+        count for the badge.
+
+        **Population is deferred** — the inbox surface ships here;
+        wiring the existing reminder Actions (medical-cert expiry
+        digest, unpaid-athletes monthly digest) to ALSO call
+        `$user->notify(...)` alongside their email channel is a
+        focused follow-up. Today the `notifications` table is empty
+        in production until that follow-up lands.
       operationId: meNotificationsIndex
       responses:
         '200':

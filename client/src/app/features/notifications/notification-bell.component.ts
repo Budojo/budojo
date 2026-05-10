@@ -22,14 +22,17 @@ import {
 /**
  * Bell-icon notification center (#418). Sits in the dashboard topbar
  * next to the user-avatar chip. Shows a badge with the unread count;
- * tapping the bell opens a PrimeNG `p-overlayPanel` listing the
- * latest 20 rows. Each row is clickable — clicking navigates to the
- * row's `link` (when present) AND flips the row to read in the same
- * call. A "Mark all as read" CTA at the top bulk-flips.
+ * tapping the bell opens a PrimeNG `p-popover` listing the latest 20
+ * rows. Each row is clickable — clicking navigates to the row's
+ * `link` (when present) AND flips the row to read in the same call.
+ * A "Mark all as read" CTA at the top bulk-flips.
  *
  * Data hydrates lazily — the first time the bell renders we fire one
  * GET to `/me/notifications`. The dashboard shell mounts the bell
- * once, so this fetch happens at-most-once per page load.
+ * once per page load, and the component re-fetches when the
+ * document's visibility flips to `visible` (the user switched back
+ * to the tab) so a notification produced server-side while the tab
+ * was inactive lands in the badge on next focus without polling.
  */
 @Component({
   selector: 'app-notification-bell',

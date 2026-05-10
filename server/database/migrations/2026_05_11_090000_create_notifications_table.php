@@ -8,10 +8,15 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * In-app notification inbox (#418). Standard Laravel `notifications`
- * table shape — owned by `Notifiable` users, written by the existing
- * reminder Actions (medical-cert expiry digest, unpaid-athletes
- * monthly digest), surfaced by a bell-icon dropdown in the dashboard
- * topbar.
+ * table shape — owned by `Notifiable` users, surfaced by a bell-icon
+ * dropdown in the dashboard topbar.
+ *
+ * **Population is deferred** — the existing reminder Actions
+ * (medical-cert expiry digest, unpaid-athletes monthly digest) still
+ * only send email + write the academy-scoped `notification_log`
+ * dedup row. Wiring them to ALSO call `$user->notify(...)` so a
+ * database notification lands here is a separate focused follow-up;
+ * this migration creates the inbox plumbing the SPA renders against.
  *
  * **Distinct from `notification_log`**: that table is academy-scoped
  * dedup for OUTBOUND emails (so a re-run of the cron doesn't email

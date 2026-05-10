@@ -59,11 +59,19 @@ export class NotificationInboxService {
   markAsRead(id: string): Observable<MarkOneResponse> {
     return this.http.post<MarkOneResponse>(`${this.base}/${id}/read`, {}).pipe(
       tap((r) => {
+        // Decrement unread ONLY when the local row was previously
+        // unread — without this guard, two clicks in rapid succession
+        // (or a click on an already-read row) drift the badge below
+        // the truthful count. The local-state pre-image is the
+        // load-bearing check; we don't trust the server response shape
+        // beyond the read_at value it carries.
+        const wasUnread = this._rows().some((n) => n.id === r.data.id && n.read_at === null);
         this._rows.set(
           this._rows().map((n) => (n.id === r.data.id ? { ...n, read_at: r.data.read_at } : n)),
         );
-        // Decrement unread iff this was the row's first read flip.
-        this._unread.update((v) => Math.max(0, v - 1));
+        if (wasUnread && r.data.read_at !== null) {
+          this._unread.update((v) => Math.max(0, v - 1));
+        }
       }),
     );
   }
