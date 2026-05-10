@@ -102,7 +102,7 @@ within the day.
 Budojo is the data processor; your academy is the data controller. We process
 athlete data on your behalf, in EU data centres, with encryption in transit (TLS)
 and access controls per academy. Read our privacy policy at
-https://app.budojo.it/privacy for the full picture, including the per-data-category
+https://budojo.it/privacy for the full picture, including the per-data-category
 retention table and the contact for data subject requests.
 
 Questions? support@budojo.it
@@ -164,7 +164,7 @@ giornata.
 Budojo è il responsabile del trattamento; la tua palestra è il titolare. Trattiamo
 i dati degli atleti per tuo conto, in data center UE, con cifratura in transito
 (TLS) e separazione degli accessi per palestra. Leggi la privacy policy completa
-su https://app.budojo.it/privacy/it — c'è la tabella di conservazione per
+su https://budojo.it/privacy/it — c'è la tabella di conservazione per
 categoria di dato e il contatto per le richieste di esercizio dei diritti.
 
 Domande? support@budojo.it
@@ -178,8 +178,8 @@ Domande? support@budojo.it
 
 | Field          | Value                              |
 | -------------- | ---------------------------------- |
-| EN listing URL | `https://app.budojo.it/privacy`    |
-| IT listing URL | `https://app.budojo.it/privacy/it` |
+| EN listing URL | `https://budojo.it/privacy`    |
+| IT listing URL | `https://budojo.it/privacy/it` |
 
 The localized variant is automatically selected by the store based on user locale. Both are public, unauthenticated routes — already shipped (#420 / cookie-banner umbrella).
 
