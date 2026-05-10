@@ -29,15 +29,15 @@ use Illuminate\Http\Response;
  * server-side. Expired / tampered signatures get the framework's
  * default 403 from the middleware before reaching the controller.
  *
- * **Unknown category** — defensive 410. The category list is
- * controlled by the catalog (`App\Support\NotificationCategory`);
- * a deprecated category in an old email link should land on a
- * "this link is no longer valid" page rather than silently no-op.
- *
- * **Unknown user_id** — same 410. The signature was valid (caller
- * couldn't have forged it without our app key) but the row is gone
- * — the user hard-deleted their account in the grace window.
- * Nothing to flip; show the same "no longer valid" landing.
+ * **Unknown category / unknown user_id** — the signature was valid
+ * (caller couldn't have forged it without our app key) but either
+ * the category isn't in the catalog (`App\Support\NotificationCategory`)
+ * or the user row is gone (hard-deleted via the grace window). The
+ * GET path 302-redirects to `/unsubscribed?status=invalid` so the SPA
+ * renders the "this link is no longer valid" landing; the POST path
+ * (RFC 8058 List-Unsubscribe-Post) responds 200 with empty body
+ * regardless, since email clients don't surface server-side errors
+ * to the user. Nothing to flip in either case.
  */
 class UnsubscribeController extends Controller
 {
@@ -67,8 +67,14 @@ class UnsubscribeController extends Controller
     }
 
     /**
-     * Returns null on success, or an opaque error tag the caller
-     * can use to choose its response shape. Never throws.
+     * Returns null on success, or an opaque error tag the caller can
+     * use to choose its response shape. Doesn't throw on validation
+     * (unknown category / unknown user) — those resolve to error
+     * tags. CAN throw on transport-level failure of the underlying
+     * `NotificationPreferences::update` (DB connection drop, write
+     * timeout). The framework's default exception handler turns
+     * those into a 500; the GET / POST callers don't try to catch
+     * them because the email client doesn't surface them anyway.
      */
     private function apply(int $userId, string $category): ?string
     {

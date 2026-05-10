@@ -17,11 +17,12 @@ use Illuminate\Support\Facades\URL;
  *     Gmail / Yahoo's bulk-sender unsubscribe button hits it
  *     directly without rendering the body.
  *
- * The URL is **signed** via Laravel's `URL::signedRoute` — the
- * signature is the auth (no session, no token-table round-trip),
- * and the middleware on the public route validates it
- * server-side. Expired / tampered signatures land on a 410 from
- * the controller.
+ * The URL is **signed** via Laravel's `URL::temporarySignedRoute`
+ * with a 30-day expiry — the signature is the auth (no session, no
+ * token-table round-trip), and the `signed` middleware on the
+ * public route validates it server-side. Tampered or expired
+ * signatures are rejected by the middleware with a 403 BEFORE the
+ * controller is reached.
  *
  * **Why a 30-day expiry**: long enough that a user reading an old
  * email a couple of weeks late can still click; short enough that
