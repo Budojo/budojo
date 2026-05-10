@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Actions\Auth\LoginUserAction;
+use App\Actions\Auth\RecordLoginAttemptAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
@@ -13,16 +14,40 @@ use Illuminate\Http\JsonResponse;
 
 class LoginController extends Controller
 {
-    public function __construct(private readonly LoginUserAction $action)
-    {
+    public function __construct(
+        private readonly LoginUserAction $action,
+        private readonly RecordLoginAttemptAction $recordAttempt,
+    ) {
     }
 
     public function __invoke(LoginRequest $request): JsonResponse
     {
+        $email = $request->string('email')->toString();
+        $ip = $request->ip();
+        $userAgent = $request->userAgent();
+
         $user = $this->action->execute(
-            email: $request->string('email')->toString(),
+            email: $email,
             password: $request->string('password')->toString(),
         );
+
+        // Login-history audit log (#430). Records EVERY attempt —
+        // success or failure — with email, IP, and User-Agent so
+        // the user's "Login history" panel can surface the
+        // compromise signal (failed-login bursts are the high-value
+        // security event to detect). Wrapped so a hiccup in the
+        // audit insert never blocks a legitimate login.
+        try {
+            $this->recordAttempt->execute(
+                userId: $user?->id,
+                emailAttempted: $email,
+                ip: $ip,
+                userAgent: $userAgent,
+                success: $user !== null,
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         if ($user === null) {
             return response()->json(['message' => 'Invalid credentials.'], 401);

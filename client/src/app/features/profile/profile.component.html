@@ -657,6 +657,18 @@
     </section>
 
     <!--
+      Login history panel (#430). Read-only list of the most recent 50
+      attempts (success + failure), pairs with the active-sessions
+      panel above — sessions covers LIVE tokens, history covers
+      PAST attempts including ones whose token has since been
+      revoked or expired. The compromise signal a user wants to
+      detect (failed-login bursts) lives here.
+    -->
+    <section class="profile-page__card">
+      <app-profile-login-history />
+    </section>
+
+    <!--
       No `<p-toast>` here on purpose — the dashboard shell mounts a single
       app-level toast host, and our `MessageService` is the app-level
       instance from `app.config.ts`. Adding another would overlap.

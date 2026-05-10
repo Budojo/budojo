@@ -52,6 +52,7 @@ I dati degli atleti, in quanto trattati per conto dell'academy-titolare, sono re
 | Account in cancellazione (cancellazione richiesta dall'utente) | **30 giorni di grace window** entro cui l'utente può annullare la richiesta; dopo tale finestra l'account è **hard-deleted** in modo irreversibile (#223) |
 | Dati di fatturazione e contabilità | 10 anni dalla data di emissione (obbligo art. 2220 c.c.) |
 | Log applicativi (errori, accessi sospetti) | Massimo 12 mesi |
+| Cronologia accessi all'account (login_attempts: timestamp, IP, user-agent, esito) | **90 giorni**, poi cancellazione automatica (#430). L'utente può consultare i propri ultimi 50 tentativi di accesso dalla pagina `/dashboard/profile` per individuare accessi sospetti |
 
 ## 5. Modalità di trattamento e misure di sicurezza
 

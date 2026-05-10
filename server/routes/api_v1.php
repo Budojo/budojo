@@ -156,6 +156,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // "logout everywhere except here" CTA. Each row carries an
     // `is_current` flag so the SPA can stamp the "this session" pill
     // on the token authenticating THIS request.
+    // Login history audit log (#430). Surfaces the last 50 login
+    // attempts (success + failure) on the authenticated user so a
+    // compromise probe is self-serve. Pairs with the live
+    // /me/sessions list — sessions covers ACTIVE tokens, history
+    // covers PAST attempts, including ones that no longer have a
+    // live token.
+    Route::get('/me/login-history', [\App\Http\Controllers\User\LoginHistoryController::class, 'index']);
+
     Route::get('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'index']);
     Route::delete('/me/sessions/{id}', [\App\Http\Controllers\User\SessionController::class, 'destroy'])
         ->where('id', '[0-9]+');

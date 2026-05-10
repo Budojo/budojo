@@ -1,0 +1,79 @@
+<div class="profile-login-history" data-cy="profile-login-history">
+  <header class="profile-login-history__header">
+    <h2 class="profile-login-history__title">
+      {{ 'profile.loginHistory.title' | translate }}
+    </h2>
+    <p class="profile-login-history__subtitle">
+      {{ 'profile.loginHistory.subtitle' | translate }}
+    </p>
+  </header>
+
+  @if (loading()) {
+    <div class="profile-login-history__state" data-cy="profile-login-history-loading">
+      <p-progress-spinner styleClass="profile-login-history__spinner" strokeWidth="3" />
+    </div>
+  } @else if (errored()) {
+    <div
+      class="profile-login-history__state profile-login-history__state--error"
+      data-cy="profile-login-history-error"
+    >
+      <i class="pi pi-times-circle" aria-hidden="true"></i>
+      <p>{{ 'profile.loginHistory.errorMessage' | translate }}</p>
+      <p-button
+        type="button"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        [label]="'profile.loginHistory.retry' | translate"
+        (onClick)="refresh()"
+        data-cy="profile-login-history-retry"
+      />
+    </div>
+  } @else if (rows().length === 0) {
+    <p class="profile-login-history__empty" data-cy="profile-login-history-empty">
+      {{ 'profile.loginHistory.empty' | translate }}
+    </p>
+  } @else {
+    <ul class="profile-login-history__list" data-cy="profile-login-history-list">
+      @for (row of rows(); track row.id) {
+        <li
+          class="profile-login-history__row"
+          [class.profile-login-history__row--failed]="!row.success"
+          [attr.data-cy]="'profile-login-history-row-' + row.id"
+        >
+          <div class="profile-login-history__row-status" aria-hidden="true">
+            @if (row.success) {
+              <i
+                class="pi pi-check-circle profile-login-history__icon profile-login-history__icon--success"
+              ></i>
+            } @else {
+              <i
+                class="pi pi-times-circle profile-login-history__icon profile-login-history__icon--failed"
+              ></i>
+            }
+          </div>
+          <div class="profile-login-history__row-main">
+            <div class="profile-login-history__row-line">
+              <span class="profile-login-history__device">{{ row.device }}</span>
+              @if (!row.success) {
+                <span class="profile-login-history__failed-pill">
+                  {{ 'profile.loginHistory.failedPill' | translate }}
+                </span>
+              }
+            </div>
+            <p class="profile-login-history__row-meta">
+              {{ row.created_at | date: 'medium' }}
+              @if (row.ip_address) {
+                <span class="profile-login-history__ip">· {{ row.ip_address }}</span>
+              }
+            </p>
+          </div>
+        </li>
+      }
+    </ul>
+
+    <p class="profile-login-history__hint" data-cy="profile-login-history-hint">
+      {{ 'profile.loginHistory.unfamiliarHint' | translate }}
+    </p>
+  }
+</div>
