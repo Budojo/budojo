@@ -84,10 +84,10 @@ export class WhatsNewComponent {
         {
           heading: '🔧 Behind the scenes — legal docs + medical-cert test coverage',
           bullets: [
-            'DPIA-lite for medical certificates (Data Protection Impact Assessment, GDPR Art. 35) lives at docs/legal/dpia-medical-certificates.md. It walks through the risks, mitigations, and the strategic A-vs-B choice between keeping medical-cert PDFs inside Budojo (with encryption + audit) vs storing only valid yes/no + expiry and letting the academy\'s own storage hold the file. Recommendation is option B until traction; the choice itself is still pending.',
-            "Academy-offboarding runbook at docs/operations/academy-offboarding.md walks the manual procedure for when an academy customer ends the contract — three windows (T-30 notice, T0-T+30 grace export, T+30 purge) with explicit steps for each.",
-            "TWA runbook rewritten so it describes the actual /.well-known/assetlinks.json flow (static file under the SPA bundle, edited via PR, served by Cloudflare Pages) instead of the retired Laravel-routed env-driven implementation deprecated in v2.3.1.",
-            "Play Store listing copy drafted in English and Italian at docs/mobile/play-store-listing.md, including the Data Safety questionnaire answers — so when the Android app ships, the listing is paste-ready.",
+            "DPIA-lite for medical certificates (Data Protection Impact Assessment, GDPR Art. 35) lives at docs/legal/dpia-medical-certificates.md. It walks through the risks, mitigations, and the strategic A-vs-B choice between keeping medical-cert PDFs inside Budojo (with encryption + audit) vs storing only valid yes/no + expiry and letting the academy's own storage hold the file. Recommendation is option B until traction; the choice itself is still pending.",
+            'Academy-offboarding runbook at docs/operations/academy-offboarding.md walks the manual procedure for when an academy customer ends the contract — three windows (T-30 notice, T0-T+30 grace export, T+30 purge) with explicit steps for each.',
+            'TWA runbook rewritten so it describes the actual /.well-known/assetlinks.json flow (static file under the SPA bundle, edited via PR, served by Cloudflare Pages) instead of the retired Laravel-routed env-driven implementation deprecated in v2.3.1.',
+            'Play Store listing copy drafted in English and Italian at docs/mobile/play-store-listing.md, including the Data Safety questionnaire answers — so when the Android app ships, the listing is paste-ready.',
             "Medical-certificate test coverage added to the GDPR Art. 15 export and Art. 17 erasure flows. The flows already did the right thing; the tests pin the behavior so a future refactor can't silently regress the special-category-data handling.",
           ],
         },
