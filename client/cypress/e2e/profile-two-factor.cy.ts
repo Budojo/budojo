@@ -30,6 +30,15 @@ describe('Two-factor authentication panel (#412)', () => {
     cy.intercept('GET', '/api/v1/auth/me', { statusCode: 200, body: { data: FAKE_USER } });
     cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: MOCK_ACADEMY } });
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
+    // Sibling-panel intercepts. Without these the dev-server proxy
+    // gets a real request, the page paints with errored panels, and
+    // the resulting layout shifts can race with our click below.
+    cy.intercept('GET', '/api/v1/me/sessions', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/me/login-history', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/me/notification-preferences', {
+      statusCode: 200,
+      body: { data: {} },
+    });
   });
 
   it('renders the "Enable" CTA when 2FA is off', () => {
@@ -67,7 +76,8 @@ describe('Two-factor authentication panel (#412)', () => {
 
     cy.visitAuthenticated('/dashboard/profile');
     cy.wait('@status');
-    cy.get('[data-cy="profile-two-factor-enable"]').scrollIntoView().click();
+    cy.get('[data-cy="profile-two-factor-enable"]').scrollIntoView();
+    cy.get('[data-cy="profile-two-factor-enable"] button').click();
     cy.wait('@enrol');
 
     cy.get('[data-cy="profile-two-factor-secret"]').should('contain.text', 'JBSWY3DPEHPK3PXP');
@@ -80,13 +90,13 @@ describe('Two-factor authentication panel (#412)', () => {
     }).as('statusActive');
 
     cy.get('[data-cy="profile-two-factor-code-input"]').type('123456');
-    cy.get('[data-cy="profile-two-factor-confirm-submit"]').click();
+    cy.get('[data-cy="profile-two-factor-confirm-submit"] button').click();
     cy.wait('@confirm');
     cy.wait('@statusActive');
 
     cy.get('[data-cy="profile-two-factor-recovery-dialog"]').should('be.visible');
     cy.get('[data-cy="profile-two-factor-recovery-codes"]').should('contain.text', 'AAAA-1111');
-    cy.get('[data-cy="profile-two-factor-recovery-dismiss"]').click();
+    cy.get('[data-cy="profile-two-factor-recovery-dismiss"] button').click();
 
     cy.get('[data-cy="profile-two-factor-active"]').should('be.visible');
   });
@@ -109,10 +119,11 @@ describe('Two-factor authentication panel (#412)', () => {
 
     cy.visitAuthenticated('/dashboard/profile');
     cy.wait('@status');
-    cy.get('[data-cy="profile-two-factor-enable"]').scrollIntoView().click();
+    cy.get('[data-cy="profile-two-factor-enable"]').scrollIntoView();
+    cy.get('[data-cy="profile-two-factor-enable"] button').click();
     cy.wait('@enrol');
     cy.get('[data-cy="profile-two-factor-code-input"]').type('000000');
-    cy.get('[data-cy="profile-two-factor-confirm-submit"]').click();
+    cy.get('[data-cy="profile-two-factor-confirm-submit"] button').click();
     cy.wait('@confirm');
 
     cy.get('[data-cy="profile-two-factor-code-error"]').should('be.visible');
@@ -174,12 +185,12 @@ describe('Login 2FA challenge (#412)', () => {
     cy.visit('/auth/login');
     cy.get('#email').type('tester@example.com');
     cy.get('input#password').type('Password1!');
-    cy.get('[data-cy="auth-login-submit"]').click();
+    cy.get('[data-cy="auth-login-submit"] button').click();
     cy.wait('@login');
 
     cy.get('[data-cy="auth-login-two-factor-step"]').should('be.visible');
     cy.get('[data-cy="auth-login-two-factor-code"]').type('123456');
-    cy.get('[data-cy="auth-login-submit"]').click();
+    cy.get('[data-cy="auth-login-submit"] button').click();
     cy.wait('@login');
 
     cy.url().should('include', '/dashboard');
