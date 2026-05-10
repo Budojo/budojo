@@ -92,7 +92,7 @@ Retention proposta (sia in caso di Opzione A che B):
 | Evento                                              | Azione sul certificato                                         |
 | --------------------------------------------------- | -------------------------------------------------------------- |
 | Atleta rimosso dall'academy                         | Cancellazione **immediata e a cascata** di tutti i suoi documenti via `AthleteObserver` → `DeleteDocumentAction` (rimuove sia il record `documents` sia il file binario sul disco `local`). Già implementato.                                       |
-| Certificato scaduto da > 24 mesi                    | Cancellazione automatica del singolo file (mantenendo eventualmente solo i metadati `valid no + expired_at` per audit). **Non ancora implementato** — follow-up `#227-a` da aprire.                                                                |
+| Certificato scaduto da > 24 mesi                    | Cancellazione automatica del singolo file (mantenendo eventualmente solo i metadati `valid no + expired_at` per audit). **Non ancora implementato** — tracciato in #537 (DPIA #227-a).                                                            |
 | Account utente cancellato (Titolare/istruttore)     | Cancellazione finale alla fine della grace-window 30 giorni via cron `budojo:purge-expired-pending-deletions` (#223). Distinto dal caso "atleta rimosso" qui sopra: questo cron purga *utenti*, non *atleti*; le rispettive cascate sono separate.  |
 | Risoluzione del contratto Budojo dell'academy       | Cancellazione di tutti i certificati al termine del § 12 del DPA template; il processo manuale è documentato in [`docs/operations/academy-offboarding.md`](../operations/academy-offboarding.md).                                                    |
 
@@ -128,8 +128,8 @@ Rischi principali per l'interessato (l'atleta), valutati su scala bassa / media 
 | R3      | Scoping `academy_id` in tutte le query del repository documenti; coverage PEST con feature test cross-academy | Estensione della coverage a tutti gli endpoint che restituiscono documenti; test mirati di tentato cross-academy access | M7-pre               |
 | R4      | Storage su droplet (single-host)                                                                     | Backup automatici (vedi sopra)                                                                                              | DPA § 8              |
 | R5      | Sub-processor esclusivamente UE (DigitalOcean Frankfurt + Cloudflare con SCC); lista pubblica         | Nessun cambiamento — già mitigato                                                                                          | sub-processors.md   |
-| R6      | Cancellazione cascata documenti via `AthleteObserver` → `DeleteDocumentAction` quando l'atleta è rimosso. | Estendere la cancellazione automatica ai certificati scaduti da > 24 mesi (cron dedicato, non `budojo:purge-expired-pending-deletions` che riguarda gli utenti). | follow-up #227-a    |
-| R7      | Endpoint `/me/export` (#222), `/me/deletion-request` (#223)                                          | Verifica che l'export includa certificati e che la cancellazione li tolga effettivamente dal disco `local`                  | follow-up #227-b    |
+| R6      | Cancellazione cascata documenti via `AthleteObserver` → `DeleteDocumentAction` quando l'atleta è rimosso. | Estendere la cancellazione automatica ai certificati scaduti da > 24 mesi (cron dedicato, non `budojo:purge-expired-pending-deletions` che riguarda gli utenti). | #537 (DPIA #227-a)  |
+| R7      | Endpoint `/me/export` (#222), `/me/deletion-request` (#223); coverage PEST esplicita su `type = medical_certificate` aggiunta in #539 (Art. 15 ZIP include il binario; Art. 17 `PurgeAccountAction` rimuove il file dal disco). **Verificato in v2.3.2.** | Riapertura solo se la decisione A/B § 8 cambia la forma del binario (es. niente più PDF in Budojo). | #538 (DPIA #227-b) — chiuso da #539 |
 
 ---
 
@@ -212,7 +212,7 @@ I rischi residui (R2 = istruttore curioso, R6 = ritenzione oltre finalità) rest
 - [ ] Anticipare #429 (`feat(audit): immutable audit log of academy actions`) limitatamente ai documenti sanitari come scope iniziale; estensione successiva.
 - [ ] Aggiornare § 4 del DPA template (`docs/legal/dpa-template.md`) sostituendo "DPIA pianificata" con il puntatore al presente file dopo che la decisione è formalizzata.
 - [ ] Calendarizzare DPIA piena al raggiungimento di 500 atleti cumulati attraverso tutti i clienti Budojo, e nomina DPO esterno alla soglia di 1.000.
-- [ ] Cron retention dei certificati scaduti da > 24 mesi (follow-up `#227-a` da aprire come issue separato).
+- [ ] Cron retention dei certificati scaduti da > 24 mesi — tracciato in #537 (DPIA #227-a).
 
 ### 8.2 Se Opzione B (solo metadati)
 

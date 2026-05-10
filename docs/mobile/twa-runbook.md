@@ -83,12 +83,12 @@ Copy the fingerprint value (everything after `SHA256: `) into the static **`clie
 ]
 ```
 
-Open a PR with the change, squash-merge it through the repo's normal release pipeline (currently: feature → `develop` for beta deploy, `develop` → `main` for stable; see the root `CLAUDE.md` § Release Flow if the branch model changes), and **Cloudflare Pages** ships the SPA origin so the file is served directly at `/.well-known/assetlinks.json`. No backend route, no env var, no container restart (#522 retired the Laravel-routed implementation in v2.3.1 because session/CSRF middleware was breaking the unauthenticated Digital Asset Links fetch).
+Open a PR with the change, ship it through the repo's normal release pipeline: feature → `develop` (beta train — Cloudflare Pages preview deploys are disabled, see `docs/infra/production-deployment.md` § Cloudflare Pages), then `develop` → `main` for stable. **Cloudflare Pages builds production from `main`** ("Branch = main" + "Push to deploy = ON" — every merge to main rebuilds `https://budojo.it`), and only at that point does the new `assetlinks.json` go live. The file lands at `/.well-known/assetlinks.json` on the SPA origin — no backend route, no env var, no container restart (#522 retired the Laravel-routed implementation in v2.3.1 because session/CSRF middleware was breaking the unauthenticated Digital Asset Links fetch).
 
 Verify by curl after the deploy completes:
 
 ```bash
-curl -i https://app.budojo.it/.well-known/assetlinks.json
+curl -i https://budojo.it/.well-known/assetlinks.json
 ```
 
 Should return **HTTP 200** with a JSON `Content-Type` (e.g. `application/json` or `application/json; charset=utf-8`) and a body containing the expected `package_name` and the SHA-256 fingerprint(s) you just committed. If a fingerprint is missing, edit `client/public/.well-known/assetlinks.json` and re-ship — that's the entire workflow.
@@ -104,12 +104,12 @@ From the repo root:
 ```bash
 mkdir -p mobile-android
 cd mobile-android
-bubblewrap init --manifest=https://app.budojo.it/manifest.webmanifest
+bubblewrap init --manifest=https://budojo.it/manifest.webmanifest
 ```
 
 Bubblewrap reads the live manifest, prompts for a few values:
 
-- **Domain** — confirm `app.budojo.it` (or whatever the prod host is)
+- **Domain** — confirm `budojo.it` (or whatever the prod host is)
 - **Application ID (package name)** — `it.budojo.app` — MUST match the `package_name` in `client/public/.well-known/assetlinks.json`
 - **App name** — `Budojo`
 - **Display mode** — pick `standalone` (matches manifest)
@@ -215,7 +215,7 @@ adb logcat | grep -i "digital_asset"
 
 Will show why asset-links failed. Common causes:
 
-- The fingerprint in `client/public/.well-known/assetlinks.json` doesn't match the keystore's fingerprint (typo, wrong alias, or the JSON change wasn't deployed yet — Cloudflare Pages takes a minute or two after merge).
+- The fingerprint in `client/public/.well-known/assetlinks.json` doesn't match the keystore's fingerprint (typo, wrong alias, or the JSON change wasn't deployed to production yet — `develop → main` must have merged AND Cloudflare Pages must have built; ~2 min after the main-branch merge).
 - The package name in `mobile-android/twa-manifest.json` doesn't match the `package_name` in `client/public/.well-known/assetlinks.json`.
 
 Run the **golden-path manual smoke**:
@@ -250,7 +250,7 @@ After the manual smoke is clean, the rest is Play Console UI work:
    ]
    ```
 
-   Open a PR with the JSON change, squash-merge to `develop`, and Cloudflare Pages picks up the new fingerprint on the next deploy.
+   Open a PR with the JSON change. The full pipeline (develop → main) has to complete for production to pick up the new fingerprint, because Cloudflare Pages production builds from `main`. A merge to develop alone does not flip the live site.
 
 5. Upload `app-release.aab` to the **Internal testing** track.
 6. Add tester emails (your Google account + 3-10 trusted gym owners). Send the opt-in link.
@@ -262,7 +262,7 @@ After the manual smoke is clean, the rest is Play Console UI work:
 ## Operating principles
 
 - **Never check the keystore into git.** It's in `mobile-android/.gitignore`. Verify with `git status` before every commit in `mobile-android/`.
-- **Edits to `client/public/.well-known/assetlinks.json` ship through the standard PR pipeline.** The file is committed to the repo and served as a static asset by Cloudflare Pages — no backend route, no env var, no container restart. After the develop deploy completes, verify by curling `https://app.budojo.it/.well-known/assetlinks.json` and checking the new fingerprint is present. (#522 retired the env-driven Laravel route in v2.3.1 because session/CSRF middleware was breaking the unauthenticated Digital Asset Links fetch — keep this file static, never re-introduce a backend route for it.)
+- **Edits to `client/public/.well-known/assetlinks.json` ship through the standard PR pipeline + a stable release.** The file is committed to the repo and served as a static asset by Cloudflare Pages from the `main` branch — no backend route, no env var, no container restart. After `develop → main` has merged AND the CF Pages build has finished (~2 min from merge), verify by curling `https://budojo.it/.well-known/assetlinks.json` and checking the new fingerprint is present. A beta-only deploy (develop merge alone) does NOT flip the live `assetlinks.json` because CF Pages preview deploys are disabled. (#522 retired the env-driven Laravel route in v2.3.1 because session/CSRF middleware was breaking the unauthenticated Digital Asset Links fetch — keep this file static, never re-introduce a backend route for it.)
 - **Update `mobile-android/twa-manifest.json` then re-run `bubblewrap update`** when the PWA manifest changes (e.g. a new `start_url`, new icons, new shortcuts). Don't hand-edit the generated Gradle files; re-run instead.
 - **Version-bump the Android shell separately from the web app version.** `twa-manifest.json` has `appVersionCode` (integer, monotonic) + `appVersionName` (string, follows the web `vX.Y.Z`). Bump both on every Play Store upload.
 
