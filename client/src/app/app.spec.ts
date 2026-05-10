@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { MessageService } from 'primeng/api';
 import { SwUpdate } from '@angular/service-worker';
@@ -21,10 +22,18 @@ describe('App', () => {
       // unit-test contract (no real worker present) so the service early-
       // returns and the App spec keeps testing what it cares about
       // (component creation + router-outlet rendering).
+      //
+      // `provideHttpClient` is needed because `VersionCheckService` (also
+      // wired from App.ngOnInit, #548) injects `HttpClient`. The service
+      // is a no-op when `VERSION.sha === 'dev'` (the default committed
+      // sentinel during unit tests), so no actual fetch is fired — but
+      // Angular still resolves the constructor injection at boot, which
+      // requires the provider to exist.
       providers: [
         MessageService,
         provideRouter([]),
         provideAnimationsAsync(),
+        provideHttpClient(),
         ...provideI18nTesting(),
         { provide: SwUpdate, useValue: { isEnabled: false, versionUpdates: NEVER } },
       ],
