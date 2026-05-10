@@ -1,0 +1,95 @@
+<div class="profile-sessions" data-cy="profile-sessions">
+  <header class="profile-sessions__header">
+    <div class="profile-sessions__heading">
+      <h2 class="profile-sessions__title">
+        {{ 'profile.sessions.title' | translate }}
+      </h2>
+      <p class="profile-sessions__subtitle">
+        {{ 'profile.sessions.subtitle' | translate }}
+      </p>
+    </div>
+
+    @if (hasOtherSessions()) {
+      <p-button
+        type="button"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        icon="pi pi-sign-out"
+        [label]="'profile.sessions.revokeOthersCta' | translate"
+        [loading]="revokingOthers()"
+        [disabled]="revokingOthers()"
+        (onClick)="confirmRevokeOthers($event)"
+        data-cy="profile-sessions-revoke-others"
+      />
+    }
+  </header>
+
+  @if (loading()) {
+    <div class="profile-sessions__state" data-cy="profile-sessions-loading">
+      <p-progress-spinner styleClass="profile-sessions__spinner" strokeWidth="3" />
+    </div>
+  } @else if (errored()) {
+    <div
+      class="profile-sessions__state profile-sessions__state--error"
+      data-cy="profile-sessions-error"
+    >
+      <i class="pi pi-times-circle" aria-hidden="true"></i>
+      <p>{{ 'profile.sessions.errorMessage' | translate }}</p>
+      <p-button
+        type="button"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        [label]="'profile.sessions.retry' | translate"
+        (onClick)="refresh()"
+        data-cy="profile-sessions-retry"
+      />
+    </div>
+  } @else {
+    <ul class="profile-sessions__list" data-cy="profile-sessions-list">
+      @for (session of sessions(); track session.id) {
+        <li class="profile-sessions__row" [attr.data-cy]="'profile-session-row-' + session.id">
+          <div class="profile-sessions__row-main">
+            <div class="profile-sessions__row-name">
+              <span class="profile-sessions__device">{{ session.name }}</span>
+              @if (session.is_current) {
+                <span class="profile-sessions__current-pill" data-cy="profile-session-current-pill">
+                  {{ 'profile.sessions.thisSession' | translate }}
+                </span>
+              }
+            </div>
+            @if (session.last_used_at) {
+              <p class="profile-sessions__last-used">
+                {{
+                  'profile.sessions.lastUsedAt'
+                    | translate: { datetime: session.last_used_at | date: 'medium' }
+                }}
+              </p>
+            } @else {
+              <p class="profile-sessions__last-used">
+                {{ 'profile.sessions.neverUsed' | translate }}
+              </p>
+            }
+          </div>
+          <p-button
+            type="button"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            icon="pi pi-trash"
+            [pTooltip]="'profile.sessions.revoke' | translate"
+            tooltipPosition="left"
+            [ariaLabel]="'profile.sessions.revoke' | translate"
+            [loading]="revokingId() === session.id"
+            [disabled]="revokingId() !== null || revokingOthers()"
+            (onClick)="confirmRevoke($event, session)"
+            [attr.data-cy]="'profile-session-revoke-' + session.id"
+          />
+        </li>
+      }
+    </ul>
+  }
+
+  <p-confirmpopup />
+</div>
