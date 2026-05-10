@@ -66,12 +66,10 @@
   }
 
   // Row primitive — full academy parity now that the wrapper isn't
-  // the PrimeNG card body. Padding 1rem on ALL sides; mobile bumps
-  // padding-right to reserve space for the absolute-positioned pencil
-  // affordance (32px button + buffer). Hairline border-bottom between
-  // rows except the last. User feedback 2026-05-07 to fully unify
-  // the profile card chrome with academy's: "ma non possiamo
-  // uniformare con questa grafica che è bella?".
+  // the PrimeNG card body. Padding 1rem on ALL sides; hairline
+  // border-bottom between rows except the last. User feedback
+  // 2026-05-07 to fully unify the profile card chrome with academy's:
+  // "ma non possiamo uniformare con questa grafica che è bella?".
   //
   // **Label typography** matches academy: 0.8125rem / 500 / muted
   // (audit § 1). Was one of three different label shapes in the SPA
@@ -80,16 +78,18 @@
   // **Pencil affordance** stays inline-edit per row (#463 / #476 —
   // email change has three different states needing dedicated UX,
   // can't collapse to a single page-level Edit button like academy).
-  // The pencil host is absolute-positioned via `:has()` further down
-  // so it stays on the row's top-right on mobile instead of wrapping
-  // to its own line below the value.
+  // Earlier shapes used `:host ::ng-deep .__row > p-button { position:
+  // absolute }` to pin the pencil to the row's top-right corner on
+  // mobile, but the cascade lost on iPhone (user-confirmed bug May
+  // 2026 — pencil rendered on its own row below the value). The
+  // current shape wraps `value + pencil` in `__value-row` (a plain
+  // flex container) so the layout works in normal flow without any
+  // `::ng-deep` gymnastics — see `&__value-row` below.
   &__row {
-    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
     padding: 1rem;
-    padding-right: 3rem; // mobile: reserve for the absolute pencil
 
     &:not(:last-child) {
       border-bottom: 1px solid var(--p-content-border-color);
@@ -102,7 +102,22 @@
       // box.
       align-items: baseline;
       gap: 1.5rem;
-      padding-right: 1rem; // desktop: pencil is a flex sibling, no reservation
+    }
+  }
+
+  // Wrapper around `<value> + <pencil>` for the read-mode rows.
+  // Mobile: flex row, value flex-grows to push the pencil to the
+  // trailing edge (effectively the same visual as the old absolute
+  // shape, but in normal flow). Desktop: same shape, just
+  // expanded across the row's free width.
+  &__value-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+
+    @media (min-width: 768px) {
+      flex: 1 1 auto;
     }
   }
 
@@ -126,6 +141,14 @@
 
   &__value {
     color: var(--p-text-color);
+    // Lets the value text take all the available width inside
+    // `__value-row`, pushing the pencil button to the trailing edge.
+    // `min-width: 0` is the standard flex-shrink unlock so a long
+    // email like `verylongemail@long.example.it` wraps inside the
+    // span instead of breaking out of the row.
+    flex: 1 1 auto;
+    min-width: 0;
+    word-break: break-word;
   }
 
   // Inline verified-mark on the email row (replaces the dedicated
@@ -273,29 +296,6 @@
     @media (min-width: 768px) {
       flex-basis: 100%;
       justify-content: flex-end;
-    }
-  }
-
-  // Pencil affordance — pinned to the row's top-right corner on
-  // mobile so it doesn't wrap to its own line below the value
-  // (v2.1.0 iPhone report). On desktop it sits at the row's
-  // trailing edge via `margin-left: auto`.
-  //
-  // Targets `<p-button>` host elements that are DIRECT children of
-  // `.profile-page__row`. The Save / Cancel buttons in edit forms
-  // are wrapped in `.profile-page__row-actions` so they're NOT
-  // direct children — this selector matches only the pencil. The
-  // earlier `:has(> .profile-page__row-edit-button)` shape didn't
-  // win the cascade reliably across all browsers (caught visually
-  // 2026-05-07 — pencil still wrapped to its own row on mobile).
-  :host ::ng-deep .profile-page__row > p-button {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-
-    @media (min-width: 768px) {
-      position: static;
-      margin-left: auto;
     }
   }
 
