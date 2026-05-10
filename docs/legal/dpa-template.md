@@ -145,7 +145,7 @@ Alla risoluzione del contratto di servizio Budojo, il Responsabile:
 
 1. Mette a disposizione del Titolare l'**export completo** dei dati associati al suo account (formato JSON + ZIP coi documenti) per **30 giorni** dalla data di risoluzione.
 2. Decorso tale termine, **cancella in modo irreversibile** tutti i dati del Titolare e dei suoi atleti dalla base dati e dai backup, salvo obblighi di legge contrari (es. dati di fatturazione conservati per 10 anni ex art. 2220 c.c. — limitati ai dati identificativi del Titolare, NON degli atleti).
-3. La cancellazione è eseguita automaticamente dal cron `budojo:purge-expired-pending-deletions` per gli account utente; per la chiusura completa di un'academy un processo manuale documentato in `docs/operations/academy-offboarding.md` (TODO follow-up) è eseguito da un membro autorizzato del personale Budojo.
+3. La cancellazione è eseguita automaticamente dal cron `budojo:purge-expired-pending-deletions` per gli account utente; per la chiusura completa di un'academy il processo manuale è documentato in [`docs/operations/academy-offboarding.md`](../operations/academy-offboarding.md) ed è eseguito da un membro autorizzato del personale Budojo.
 
 ## 13. Responsabilità e indennizzo
 
