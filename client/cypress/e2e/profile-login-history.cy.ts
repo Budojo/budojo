@@ -61,7 +61,11 @@ describe('Login history panel (#430)', () => {
     cy.get('[data-cy="profile-login-history-row-1"]').should('contain.text', 'Chrome on macOS');
     cy.get('[data-cy="profile-login-history-row-2"]').should('contain.text', 'Unknown device');
 
-    // Footer hint shows whenever at least one row is visible.
+    // Footer hint shows whenever at least one row is visible. The
+    // hint sits BELOW the row list — on the default 1280×720
+    // Cypress viewport it's below the fold of the profile page, so
+    // we have to scroll into view before asserting visibility.
+    cy.get('[data-cy="profile-login-history-hint"]').scrollIntoView();
     cy.get('[data-cy="profile-login-history-hint"]').should('be.visible');
   });
 
