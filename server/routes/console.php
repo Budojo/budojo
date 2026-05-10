@@ -54,3 +54,17 @@ Artisan::command('inspire', function (): void {
     ->monthlyOn(16, '09:00')
     ->timezone('Europe/Rome')
     ->withoutOverlapping(60);
+
+
+// Daily prune of `login_attempts` rows older than 90 days (#430).
+// The login-history audit log is high-write (one row per login
+// attempt, success or failure); without retention the table grows
+// unbounded. 90 days is the discipline disclosed in `/privacy` §
+// Sicurezza and the DPA template. Runs at 03:00 Europe/Rome —
+// off-peak, so the bulk delete doesn't compete with a busy login
+// hour. Capped at 5000 deletes per run; daily cadence absorbs any
+// volume spike.
+\Illuminate\Support\Facades\Schedule::command('budojo:purge-expired-login-attempts')
+    ->dailyAt('03:00')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(60);

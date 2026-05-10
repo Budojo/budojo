@@ -760,6 +760,65 @@ paths:
             `cancelled: false` instead (see above) — the 404 here
             covers ONLY the malformed-shape case.
 
+  /me/login-history:
+    get:
+      tags: [auth]
+      summary: List the last 50 login attempts on the authenticated user (success + failure)
+      description: |
+        Read-only audit log over the `login_attempts` table (#430).
+        Pairs with `/me/sessions` — sessions covers LIVE Sanctum
+        tokens, history covers PAST attempts including ones whose
+        token has since been revoked or expired.
+
+        Both successful AND failed attempts are surfaced — failed
+        bursts are the high-signal compromise event the user wants
+        to detect. Rows are sorted newest-first and capped at 50;
+        retention on the underlying table is 90 days (enforced by
+        the `budojo:purge-expired-login-attempts` cron).
+
+        The `device` field is parsed from the stored User-Agent at
+        read time using the same `App\Support\UserAgentLabel` helper
+        used by `/me/sessions` ("Chrome on macOS", "Safari on iOS",
+        "Unknown device").
+
+        **Privacy**: `ip_address` is personal data per GDPR Art. 4
+        (1). Storage justified by Art. 6 (1) (f) — legitimate
+        interest in security and audit. Disclosed in the public
+        privacy policy and DPA template.
+      operationId: meLoginHistoryIndex
+      responses:
+        '200':
+          description: Up to 50 login attempts, newest-first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, success, device, ip_address, created_at]
+                      properties:
+                        id:
+                          type: integer
+                        success:
+                          type: boolean
+                          description: True for a successful login, false for a failed attempt.
+                        device:
+                          type: string
+                          example: 'Chrome on macOS'
+                        ip_address:
+                          type: string
+                          nullable: true
+                          example: '203.0.113.42'
+                        created_at:
+                          type: string
+                          format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
   /me/sessions:
     get:
       tags: [auth]

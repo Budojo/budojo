@@ -578,6 +578,15 @@
       "successDetail": "La tua password è stata cambiata. Gli altri dispositivi sono stati disconnessi.",
       "genericError": "Non è stato possibile aggiornare la password. Riprova."
     },
+    "loginHistory": {
+      "title": "Cronologia accessi",
+      "subtitle": "Gli ultimi 50 tentativi di accesso sul tuo account, riusciti e falliti.",
+      "failedPill": "fallito",
+      "empty": "Nessun accesso ancora registrato — vedrai qui i tentativi di accesso dopo aver usato la dashboard per un po'.",
+      "errorMessage": "Non è stato possibile caricare la cronologia degli accessi. Riprova tra un momento.",
+      "retry": "Riprova",
+      "unfamiliarHint": "Se qualcosa qui non ti sembra familiare, cambia password e disconnetti le sessioni che non riconosci."
+    },
     "sessions": {
       "title": "Sessioni attive",
       "subtitle": "Dispositivi e browser collegati al tuo account Budojo.",

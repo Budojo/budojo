@@ -578,6 +578,15 @@
       "successDetail": "Your password has been changed. Other devices have been signed out.",
       "genericError": "Couldn't update your password. Please try again."
     },
+    "loginHistory": {
+      "title": "Login history",
+      "subtitle": "The last 50 sign-in attempts on your account, successful and failed.",
+      "failedPill": "failed",
+      "empty": "No login history yet — you'll see your sign-in attempts here once you've used the dashboard for a bit.",
+      "errorMessage": "We couldn't load your login history. Try again in a moment.",
+      "retry": "Retry",
+      "unfamiliarHint": "If something here looks unfamiliar, change your password and revoke any session you don't recognise."
+    },
     "sessions": {
       "title": "Active sessions",
       "subtitle": "Devices and browsers signed in to your Budojo account.",
