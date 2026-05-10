@@ -143,9 +143,14 @@
       <li>Encrypted transmission (TLS 1.2+) for every request.</li>
       <li>Passwords stored only as bcrypt hashes.</li>
       <li>Bearer-token authentication (Laravel Sanctum); no session cookies.</li>
-      <li>Daily database backups with 30-day retention.</li>
       <li>Administrative SSH access via key-based authentication.</li>
       <li>Periodic audit of sub-processors.</li>
+      <li>
+        An automated database-backup plan
+        <strong
+          >planned to be implemented before any real production customer data is collected</strong
+        >.
+      </li>
     </ul>
     <p>
       Medical certificates, as health data (GDPR Art. 9), are subject to a separate assessment
