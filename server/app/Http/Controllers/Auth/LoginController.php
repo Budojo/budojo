@@ -9,6 +9,7 @@ use App\Actions\Auth\RecordLoginAttemptAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use App\Support\UserAgentLabel;
 use Illuminate\Http\JsonResponse;
 
@@ -35,11 +36,36 @@ class LoginController extends Controller
         // success or failure — with email, IP, and User-Agent so
         // the user's "Login history" panel can surface the
         // compromise signal (failed-login bursts are the high-value
-        // security event to detect). Wrapped so a hiccup in the
-        // audit insert never blocks a legitimate login.
+        // security event to detect).
+        //
+        // **Wrong-password attribution**: when the email matches a
+        // real account but the password is wrong, we attribute the
+        // row to that user_id so it surfaces in THEIR login-history
+        // panel. The HTTP response is identical to the
+        // unknown-email branch (401, "Invalid credentials.") so the
+        // attribution does NOT leak account-existence to the
+        // caller. user_id stays null only when the email truly
+        // doesn't match any user.
+        //
+        // Wrapped so a hiccup in the audit insert never blocks a
+        // legitimate login.
+        if ($user !== null) {
+            $matchedUserId = $user->id;
+        } else {
+            // Email matched no user — keep user_id null. OR the
+            // password didn't match a real account — look up the id
+            // explicitly so the row attributes to the user even
+            // though the password was wrong. `first()?->id` resolves
+            // to `int|null` cleanly without the mixed-typed
+            // `value('id')` PHPStan flags at level 9.
+            $matchedUserId = User::query()
+                ->where('email', strtolower($email))
+                ->first()?->id;
+        }
+
         try {
             $this->recordAttempt->execute(
-                userId: $user?->id,
+                userId: $matchedUserId,
                 emailAttempted: $email,
                 ip: $ip,
                 userAgent: $userAgent,

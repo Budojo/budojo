@@ -48,9 +48,13 @@ it('writes a login_attempts row on a failed login (wrong password — user exist
     $row = LoginAttempt::query()->where('email_attempted', 'mario@example.com')->first();
     expect($row)->not->toBeNull();
     expect($row->success)->toBeFalse();
-    // user_id is null on failure — we don't surface "this email exists"
-    // by attaching the user_id, even on a wrong-password attempt.
-    expect($row->user_id)->toBeNull();
+    // user_id IS set even on wrong-password — the user needs to see
+    // the failed attempt in their own /me/login-history (the whole
+    // point of the feature is detecting unfamiliar attempts on YOUR
+    // account). The 401 HTTP response shape is identical to the
+    // unknown-email branch, so the attribution doesn't leak account
+    // existence to the caller.
+    expect($row->user_id)->toBe($user->id);
 });
 
 it('writes a login_attempts row on a failed login against an unknown email', function (): void {
@@ -103,6 +107,24 @@ it('truncates user-agent strings longer than 1024 chars at insert time', functio
 });
 
 // ─── GET /api/v1/me/login-history ────────────────────────────────────────────
+
+it('surfaces wrong-password attempts on the user own login-history list', function (): void {
+    // End-to-end check on the wrong-password attribution rule: a
+    // failed attempt against an existing account is attributed to
+    // that user_id and DOES appear in the user's own /me/login-history.
+    // This is the load-bearing security UX of the feature.
+    $user = userWithAcademy();
+    $user->update(['email' => 'mario@example.com', 'password' => Hash::make('Password1!')]);
+
+    $this->postJson('/api/v1/auth/login', [
+        'email' => 'mario@example.com',
+        'password' => 'WrongPassword!',
+    ])->assertUnauthorized();
+
+    $response = $this->actingAs($user)->getJson('/api/v1/me/login-history');
+    $response->assertOk()->assertJsonCount(1, 'data');
+    expect($response->json('data.0.success'))->toBeFalse();
+});
 
 it('lists the authenticated users last 50 login attempts, newest-first', function (): void {
     $user = userWithAcademy();

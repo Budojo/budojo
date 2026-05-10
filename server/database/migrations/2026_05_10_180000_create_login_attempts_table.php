@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * `login_attempts` (#430). Read-only audit log of every authentication
  * attempt — successful AND failed. Backs the user-facing "Login
- * history" panel on `/dashboard/profile/security` and the underlying
+ * history" panel on `/dashboard/profile` and the underlying
  * compromise-detection signal ("if a row here looks unfamiliar, change
  * your password").
  *
@@ -80,6 +80,14 @@ return new class extends Migration
             // `user_id` and orders by `created_at DESC`. The composite
             // index covers both halves cheaply.
             $table->index(['user_id', 'created_at']);
+
+            // Standalone `created_at` index for the daily retention
+            // cron (`budojo:purge-expired-login-attempts`). The cron
+            // filters ONLY by `created_at < cutoff` (no user_id
+            // predicate), so the composite above can't be used —
+            // without this dedicated index the daily delete degrades
+            // into a full-table scan as rows accumulate.
+            $table->index('created_at');
         });
     }
 
