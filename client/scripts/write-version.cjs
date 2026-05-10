@@ -130,15 +130,29 @@ function main() {
  * \`ng serve\` (no prebuild) and a fresh clone both work; this file is
  * regenerated on every \`ng build\` (CI runs the prebuild script before
  * each Pages deploy).
+ *
+ * **Typing: explicit \`AppVersion\` interface with \`string\` fields**
+ * rather than \`as const\` literal narrowing. \`as const\` shipped on
+ * v2.4.0 and broke the production build (TS2367) the moment the
+ * prebuild wrote a real SHA — \`VERSION.sha === 'dev'\` had no literal-
+ * type overlap. The interface is re-emitted into the generated file so
+ * downstream code can \`import type { AppVersion } from './version'\`
+ * without a round-trip via a separate types module. See #553 hotfix.
  */
-export const VERSION = {
+export interface AppVersion {
   /** Resolved from \`git describe --tags --always\` at build time. */
-  tag: ${JSON.stringify(tag)},
+  readonly tag: string;
   /** Full 40-char commit SHA — used as the cache-bust identity. */
-  sha: ${JSON.stringify(sha)},
+  readonly sha: string;
   /** ISO-8601 UTC build timestamp — diagnostic field, not used as identity. */
+  readonly buildTime: string;
+}
+
+export const VERSION: AppVersion = {
+  tag: ${JSON.stringify(tag)},
+  sha: ${JSON.stringify(sha)},
   buildTime: ${JSON.stringify(buildTime)},
-} as const;
+};
 `;
   fs.writeFileSync(TS_OUT_PATH, tsContents, 'utf8');
 
