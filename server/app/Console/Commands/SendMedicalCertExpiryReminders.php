@@ -86,6 +86,25 @@ class SendMedicalCertExpiryReminders extends Command
                             continue;
                         }
 
+                        // Per-user opt-out gate (#416). When the
+                        // owner has unticked the
+                        // `medical_cert_expiry_reminders` checkbox on
+                        // /dashboard/profile, skip the academy without
+                        // claiming a notification_log row — tomorrow's
+                        // run will check again so re-opting in takes
+                        // effect on the next trigger naturally. Orphan
+                        // academies (owner null, theoretically possible
+                        // mid-deletion) are skipped defensively.
+                        $owner = $academy->owner;
+                        if ($owner === null || ! \App\Support\NotificationPreferences::isEnabled(
+                            $owner,
+                            \App\Support\NotificationCategory::MEDICAL_CERT_EXPIRY_REMINDERS,
+                        )) {
+                            $skipped++;
+
+                            continue;
+                        }
+
                         // --force bypass: clear today's claim row so the
                         // claim-then-queue cycle below succeeds. Done in
                         // its own statement so a malformed --force run

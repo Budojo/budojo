@@ -645,6 +645,40 @@
     </section>
 
     <!--
+      Active sessions panel (#413). Lists every Sanctum personal-
+      access-token tied to the current user with a per-row revoke
+      action and a "Revoke all other sessions" CTA at the top.
+      The lazy load + the contained card chrome means a slow
+      `/me/sessions` fetch doesn't delay the rest of the profile
+      page from painting.
+    -->
+    <section class="profile-page__card">
+      <app-profile-sessions />
+    </section>
+
+    <!--
+      Notification preferences panel (#416). Per-category opt-out for
+      digest / reminder emails. Transactional emails are NOT
+      toggleable; the panel surfaces them in a read-only "always
+      sent" block for transparency.
+    -->
+    <section class="profile-page__card">
+      <app-profile-notifications />
+    </section>
+
+    <!--
+      Login history panel (#430). Read-only list of the most recent 50
+      attempts (success + failure), pairs with the active-sessions
+      panel above — sessions covers LIVE tokens, history covers
+      PAST attempts including ones whose token has since been
+      revoked or expired. The compromise signal a user wants to
+      detect (failed-login bursts) lives here.
+    -->
+    <section class="profile-page__card">
+      <app-profile-login-history />
+    </section>
+
+    <!--
       No `<p-toast>` here on purpose — the dashboard shell mounts a single
       app-level toast host, and our `MessageService` is the app-level
       instance from `app.config.ts`. Adding another would overlap.

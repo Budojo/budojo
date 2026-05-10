@@ -32,10 +32,11 @@ use Laravel\Sanctum\HasApiTokens;
  * @property UserRole     $role               Persona discriminator (#445). `owner` for every public-register row; `athlete` only via the M7 invite flow.
  * @property string       $password
  * @property string|null  $remember_token
+ * @property array<string, bool>|null $notification_preferences Per-category opt-out for digest / reminder emails (#416). Null = all categories enabled.
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role'])]
+#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -158,6 +159,11 @@ class User extends Authenticatable implements MustVerifyEmail
             'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            // Per-category opt-out preferences for digest / reminder
+            // emails (#416). Keys are category strings (see
+            // `App\Support\NotificationCategory`), values are booleans
+            // — `false` = opted out, `true` (or absent) = enabled.
+            'notification_preferences' => 'array',
         ];
     }
 }

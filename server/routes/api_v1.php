@@ -80,6 +80,27 @@ Route::post('/athlete-invite/{token}/accept', [\App\Http\Controllers\Auth\Athlet
 Route::post('/email-change/{token}/verify', [\App\Http\Controllers\Account\EmailChangeController::class, 'verify'])
     ->where('token', '[A-Za-z0-9]{64}');
 
+// Account-deletion cancel by token (#545) — public endpoint, the click
+// on the "Cancel deletion" CTA in the request-confirmation email IS
+// the auth. The 64-char token comes from the `pending_deletions`
+// table and is invalidated by a successful cancel (the row is
+// deleted), so a second click on the same link resolves to
+// `cancelled: false` — the SPA renders a single "deletion is no
+// longer pending" page either way; we don't leak whether the link
+// was used vs invalid. The token shape is `Str::random(64)` →
+// alphanumeric with the same regex as the email-change + invite
+// tokens, constrained at the route layer so a malformed link 404s
+// before the action is called.
+Route::post('/me/deletion-request/cancel/{token}', [\App\Http\Controllers\User\AccountDeletionController::class, 'cancelByToken'])
+    ->where('token', '[A-Za-z0-9]{64}')
+    // Rate-limited at 10 req/min/IP. The 64-char token is high-entropy
+    // enough that guessing inside the 30-day grace window is
+    // computationally implausible — but a script hammering random
+    // tokens would still spam the DB lookup. Mirrors the
+    // /athlete-invite/{token}/accept throttle (5/min); we sit a notch
+    // higher to absorb a legitimate user's dev-tools refresh loop.
+    ->middleware('throttle:10,1');
+
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {
     // Currently authenticated user. Used by the SPA on bootstrap to hydrate
@@ -135,6 +156,33 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'store'])
         ->middleware('throttle:5,1');
     Route::delete('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'destroy']);
+
+    // Active sessions list with per-token revoke (#413). Surfaces every
+    // Sanctum personal-access-token tied to the user; backs the
+    // "Active sessions" panel on /dashboard/profile + the
+    // "logout everywhere except here" CTA. Each row carries an
+    // `is_current` flag so the SPA can stamp the "this session" pill
+    // on the token authenticating THIS request.
+    // Email-notification preferences (#416). Per-category opt-out
+    // for the digest / reminder emails (medical-cert expiry, unpaid
+    // athletes monthly digest). Transactional emails (welcome,
+    // password-reset, email-verification, account-deletion-*) are
+    // NOT toggleable.
+    Route::get('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'show']);
+    Route::patch('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'update']);
+
+    // Login history audit log (#430). Surfaces the last 50 login
+    // attempts (success + failure) on the authenticated user so a
+    // compromise probe is self-serve. Pairs with the live
+    // /me/sessions list — sessions covers ACTIVE tokens, history
+    // covers PAST attempts, including ones that no longer have a
+    // live token.
+    Route::get('/me/login-history', [\App\Http\Controllers\User\LoginHistoryController::class, 'index']);
+
+    Route::get('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'index']);
+    Route::delete('/me/sessions/{id}', [\App\Http\Controllers\User\SessionController::class, 'destroy'])
+        ->where('id', '[0-9]+');
+    Route::delete('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'destroyOthers']);
 
     // Avatar — multipart upload + delete (#411). Mirrors the
     // /academy/logo precedent: stores the original bytes (no

@@ -577,6 +577,71 @@
       "successSummary": "Password aggiornata",
       "successDetail": "La tua password è stata cambiata. Gli altri dispositivi sono stati disconnessi.",
       "genericError": "Non è stato possibile aggiornare la password. Riprova."
+    },
+    "notifications": {
+      "title": "Notifiche email",
+      "subtitle": "Scegli quali email non essenziali vuoi ricevere.",
+      "medicalCertReminders": {
+        "label": "Promemoria scadenza certificato medico",
+        "description": "Digest giornaliero alle 09:00 con gli atleti il cui certificato medico scade tra 30, 7 o 0 giorni."
+      },
+      "unpaidAthletesDigest": {
+        "label": "Digest mensile atleti non paganti",
+        "description": "Una volta al mese, il giorno 16, l'elenco degli atleti che non hanno pagato la quota del mese corrente."
+      },
+      "alwaysSentTitle": "Sempre inviate",
+      "alwaysSentSubtitle": "Email transazionali — necessarie al funzionamento del servizio, inviate indipendentemente dalle scelte sopra.",
+      "transactional": {
+        "welcome": "Email di benvenuto alla registrazione",
+        "password_reset": "Link per il reset della password",
+        "email_verification": "Link di verifica email",
+        "account_deletion": "Conferma cancellazione account + link di annullamento",
+        "athlete_invitation": "Link di invito atleta"
+      },
+      "errorMessage": "Non è stato possibile caricare le preferenze. Riprova tra un momento.",
+      "retry": "Riprova",
+      "saveError": {
+        "summary": "Impossibile salvare la preferenza",
+        "detail": "Qualcosa è andato storto. Riprova tra un momento."
+      }
+    },
+    "loginHistory": {
+      "title": "Cronologia accessi",
+      "subtitle": "Gli ultimi 50 tentativi di accesso sul tuo account, riusciti e falliti.",
+      "failedPill": "fallito",
+      "empty": "Nessun accesso ancora registrato — vedrai qui i tentativi di accesso dopo aver usato la dashboard per un po'.",
+      "errorMessage": "Non è stato possibile caricare la cronologia degli accessi. Riprova tra un momento.",
+      "retry": "Riprova",
+      "unfamiliarHint": "Se qualcosa qui non ti sembra familiare, cambia password e disconnetti le sessioni che non riconosci."
+    },
+    "sessions": {
+      "title": "Sessioni attive",
+      "subtitle": "Dispositivi e browser collegati al tuo account Budojo.",
+      "thisSession": "questa sessione",
+      "lastUsedAt": "Ultimo utilizzo {{datetime}}",
+      "neverUsed": "Mai utilizzata",
+      "revoke": "Disconnetti",
+      "revokeOthersCta": "Disconnetti le altre sessioni",
+      "confirmRevoke": "Disconnettere la sessione {{device}}? Potrai accedere di nuovo in qualsiasi momento.",
+      "confirmRevokeCurrent": "Disconnettere la sessione {{device}}? È il dispositivo che stai usando ora — verrai disconnesso e dovrai accedere di nuovo.",
+      "confirmRevokeOthers": "Disconnettere tutte le altre sessioni e tenere solo questa? Dovrai accedere di nuovo dagli altri dispositivi.",
+      "confirmAccept": "Disconnetti",
+      "confirmReject": "Annulla",
+      "errorMessage": "Non è stato possibile caricare le sessioni. Riprova tra un momento.",
+      "retry": "Riprova",
+      "revokeToast": {
+        "summary": "Sessione disconnessa",
+        "detail": "{{device}} è stato disconnesso."
+      },
+      "revokeOthersToast": {
+        "summary": "Altre sessioni disconnesse",
+        "detail": "{{count}} altra/e sessione/i disconnessa/e.",
+        "detailNone": "Non c'erano altre sessioni da disconnettere."
+      },
+      "revokeError": {
+        "summary": "Non è stato possibile disconnettere la sessione",
+        "detail": "Qualcosa è andato storto. Riprova tra un momento."
+      }
     }
   },
   "account": {
@@ -643,6 +708,20 @@
           "detail": "Accedi con il tuo nuovo indirizzo email."
         }
       }
+    }
+  },
+  "accountDeletion": {
+    "cancel": {
+      "loadingTitle": "Sto annullando la cancellazione programmata…",
+      "successTitle": "Il tuo account è al sicuro",
+      "successMessage": "Abbiamo annullato la cancellazione programmata. Il tuo account resta attivo e non è stato eliminato nulla.",
+      "successCta": "Continua",
+      "noLongerPendingTitle": "Nessuna cancellazione in sospeso",
+      "noLongerPendingMessage": "Questo link non è più valido — o la cancellazione è già stata annullata, o il link è già stato usato, o l'account è già stato rimosso.",
+      "noLongerPendingCta": "Continua",
+      "errorTitle": "Non siamo riusciti ad annullare ora",
+      "errorMessage": "Qualcosa è andato storto durante l'annullamento. Puoi riprovare il link, oppure accedere e annullare dal tuo profilo.",
+      "errorCta": "Continua"
     }
   },
   "emailVerification": {

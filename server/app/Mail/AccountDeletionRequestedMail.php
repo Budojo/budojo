@@ -15,25 +15,18 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Account-deletion confirmation email (M5 PR-C, partial close of #223).
+ * Account-deletion confirmation email (M5 PR-C, partial close of #223,
+ * email-link cancel landed in #545).
  * Queued via the database queue; ride-along with the welcome-mail and
  * password-reset path through the same Forge daemon.
  *
  * **What this email is**: confirmation that the user's deletion
  * request was accepted, the scheduled execution date (now + 30 days),
- * and clear instructions for cancelling within the grace window.
- *
- * **What this email is NOT (yet)**: a one-click cancel deep link.
- * The PRD calls for a token-based public cancel endpoint that
- * consumes `pending_deletions.confirmation_token` on click — that
- * lives behind a public SPA page (`/auth/account-deletion-cancelled`)
- * which is in scope of #223 itself, not this PR. Until #223 ships
- * that page, the email links the user to the SPA root; once logged
- * in, they cancel from `/dashboard/profile` (the existing
- * auth-gated `DELETE /me/deletion-request` endpoint). When the SPA
- * page lands, swap the CTA URL to the deep link with the token —
- * the token is already on the `pending_deletions` row, no schema
- * change needed.
+ * and a one-click cancel CTA that hits the public token-bound SPA
+ * page (`/account/deletion-cancel/{token}`). The page POSTs the
+ * token to `/api/v1/me/deletion-request/cancel/{token}`, which
+ * deletes the `pending_deletions` row and shows a calm confirmation
+ * — no login required.
  *
  * **GDPR posture**: the body is deliberately calm and procedural, no
  * "are you sure?" panic. The user knows what they did; we confirm
@@ -47,6 +40,7 @@ class AccountDeletionRequestedMail extends Mailable implements ShouldQueue
     public function __construct(
         public readonly User $user,
         public readonly CarbonInterface $scheduledFor,
+        public readonly string $cancelToken,
     ) {
     }
 
@@ -68,7 +62,9 @@ class AccountDeletionRequestedMail extends Mailable implements ShouldQueue
                 // first-name greeting we use elsewhere.
                 'name' => $this->user->full_name,
                 'scheduledFor' => $this->scheduledFor->format('F j, Y'),
-                'clientUrl' => $this->resolvedClientUrl(),
+                // Public SPA page that POSTs the token to the cancel
+                // endpoint on mount — see #545 for the route shape.
+                'cancelUrl' => $this->resolvedClientUrl() . '/account/deletion-cancel/' . $this->cancelToken,
             ],
         );
     }

@@ -1,0 +1,159 @@
+.profile-login-history {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-color-secondary);
+  }
+
+  &__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem 0;
+    color: var(--p-text-color-secondary);
+
+    &--error {
+      color: var(--p-red-500, #ef4444);
+
+      p {
+        margin: 0;
+        color: var(--p-text-color);
+      }
+    }
+
+    i {
+      font-size: 1.75rem;
+    }
+  }
+
+  &__spinner {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 1rem;
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+    text-align: center;
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+    overflow: hidden;
+  }
+
+  &__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--p-content-border-color);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    // Subtle red wash on failed-attempt rows so they stand out at
+    // a glance in a crowded list — the failed-login burst is the
+    // high-signal pattern the user wants to spot.
+    &--failed {
+      background: var(--p-red-50, #fef2f2);
+    }
+  }
+
+  &__row-status {
+    flex: 0 0 auto;
+    padding-top: 0.125rem;
+  }
+
+  &__icon {
+    font-size: 1.125rem;
+
+    &--success {
+      color: var(--p-green-600, #16a34a);
+    }
+
+    &--failed {
+      color: var(--p-red-500, #ef4444);
+    }
+  }
+
+  &__row-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  &__row-line {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &__device {
+    font-weight: 500;
+    color: var(--p-text-color);
+  }
+
+  &__failed-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--p-red-100, #fee2e2);
+    color: var(--p-red-700, #b91c1c);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  &__row-meta {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
+  }
+
+  &__ip {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__hint {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+    background: var(--p-surface-50, #f9fafb);
+  }
+}

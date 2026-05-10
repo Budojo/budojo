@@ -139,6 +139,23 @@ class SendUnpaidAthletesDigest extends Command
                             continue;
                         }
 
+                        // Per-user opt-out gate (#416). The owner
+                        // can untick the `unpaid_athletes_digest`
+                        // checkbox on /dashboard/profile to suppress
+                        // this category. We don't claim a
+                        // notification_log row when skipping — re-
+                        // opt-in on a future month picks up
+                        // naturally without manual intervention.
+                        $owner = $academy->owner;
+                        if ($owner === null || ! \App\Support\NotificationPreferences::isEnabled(
+                            $owner,
+                            \App\Support\NotificationCategory::UNPAID_ATHLETES_DIGEST,
+                        )) {
+                            $skipped++;
+
+                            continue;
+                        }
+
                         if ($force) {
                             NotificationLog::query()
                                 ->where('academy_id', $academy->id)

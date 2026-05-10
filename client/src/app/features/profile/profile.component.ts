@@ -31,6 +31,9 @@ import { AuthService } from '../../core/services/auth.service';
 import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
 import { PasswordStrengthMeterComponent } from '../../shared/components/password-strength-meter/password-strength-meter.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
+import { ProfileLoginHistoryComponent } from './login-history/profile-login-history.component';
+import { ProfileNotificationsComponent } from './notifications/profile-notifications.component';
+import { ProfileSessionsComponent } from './sessions/profile-sessions.component';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
@@ -61,6 +64,9 @@ const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
     InputTextModule,
     PasswordModule,
     PasswordStrengthMeterComponent,
+    ProfileLoginHistoryComponent,
+    ProfileNotificationsComponent,
+    ProfileSessionsComponent,
     ReactiveFormsModule,
     TooltipModule,
     TranslatePipe,

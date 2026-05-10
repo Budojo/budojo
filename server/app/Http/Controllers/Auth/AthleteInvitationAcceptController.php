@@ -63,7 +63,11 @@ class AthleteInvitationAcceptController extends Controller
         /** @var array{password: string, accept_privacy: bool, accept_terms: bool} $validated */
         $validated = $request->validated();
 
-        $result = $this->action->execute($token, $validated['password']);
+        $result = $this->action->execute(
+            $token,
+            $validated['password'],
+            \App\Support\UserAgentLabel::fromUserAgent($request->userAgent() ?? ''),
+        );
 
         return response()->json([
             'data' => [

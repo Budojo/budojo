@@ -59,6 +59,47 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.5.0',
+      date: '2026-05-10',
+      headline:
+        'A "security & notifications center" on your profile page. Four new sections, all on /dashboard/profile: (1) one-click cancel of a scheduled account deletion via the link in the confirmation email — no sign-in required, the page auto-strips the one-time token from the URL post-consume so it doesn\'t leak via screenshots or browser history; (2) an "Active sessions" panel listing every device with a live Sanctum session, friendly device label like "Chrome on macOS" or "Safari on iOS", last-used timestamp, "this session" pill on the current row, per-row revoke + a top-level "sign out other sessions" CTA — you can revoke the session you\'re currently using too, the next request from that tab gets signed out and you\'re bounced to login; (3) a "Login history" panel listing the last 50 sign-in attempts (successful AND failed) so a failed-login burst from a stranger doesn\'t go unnoticed — failed rows carry a subtle red wash + a "failed" pill, history is kept for 90 days then auto-purged, privacy policy at /privacy § 4 updated to disclose the retention window; (4) per-category email notification preferences for the digest emails (medical-cert reminders, unpaid-athletes monthly digest) with transactional emails (password reset, verification, etc.) listed in a read-only "always sent" block — toggles save instantly with optimistic UI, revert on rare save failures.',
+      sections: [
+        {
+          heading: '🛡️ One-click cancel of a scheduled account deletion',
+          bullets: [
+            'When you click "Delete account" on /dashboard/profile, you enter a 30-day grace window before the data is permanently removed. Until now, cancelling that deletion required signing in again and clicking "Cancel" on the same profile page.',
+            'The confirmation email now carries a "Cancel deletion" button. One tap, no sign-in. The account is restored, no data lost, and you land on a calm confirmation page that auto-strips the one-time token from the URL so it doesn\'t leak via screenshots or browser history.',
+            'If you\'ve already cancelled (or the link is no longer valid because the account was already removed), the page tells you "no deletion is pending" instead of leaking which case you\'re in.',
+          ],
+        },
+        {
+          heading: '🛡️ Active sessions — see and revoke every signed-in device',
+          bullets: [
+            'New panel on /dashboard/profile lists every device with a live session: a friendly device label (e.g. "Chrome on macOS", "Safari on iOS"), the last time each session was used, and a "this session" pill on the row you\'re using right now.',
+            'Each row has a "Revoke" button; the panel also has a top-level "Sign out other sessions" CTA for the "I forgot my laptop at the gym" flow.',
+            "You can revoke the session you're currently using — the next request from that tab gets signed out automatically and you're bounced back to login.",
+            'Older session names from before this release still show as "auth" or "athlete-invite-accept"; new logins re-mint with the friendly device label automatically.',
+          ],
+        },
+        {
+          heading: '🛡️ Login history — spot unfamiliar access at a glance',
+          bullets: [
+            'New panel below sessions lists the last 50 sign-in attempts on your account: successful logins AND failed ones. Failed attempts get a subtle red wash and a "failed" pill so they stand out — a burst of failed attempts from an IP you don\'t recognise is exactly the signal you want to catch.',
+            'Each row shows the device label, the timestamp, and the IP address (when available). A footer hint links to the password-change form: "if something here looks unfamiliar, change your password and revoke the session".',
+            'History is kept for 90 days, then automatically purged. The privacy policy at /privacy § 4 has been updated to disclose the retention window.',
+          ],
+        },
+        {
+          heading: '🛡️ Email notification preferences',
+          bullets: [
+            "Budojo sends a few digest / reminder emails per month: the medical-cert expiry reminder (daily, only when there's something to flag) and the unpaid-athletes monthly digest (16th of the month). Until now you received both with no way to opt out.",
+            'The new "Email notifications" panel lets you toggle each category independently. Toggles save instantly; no "Save changes" button. On a rare save failure the switch reverts and a toast surfaces.',
+            'Transactional emails (welcome, password reset, email verification, account-deletion confirmation, athlete invitation) are listed in a read-only "always sent" block — they\'re required for the service to work and can\'t be turned off.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.4.0',
       date: '2026-05-10',
       headline:

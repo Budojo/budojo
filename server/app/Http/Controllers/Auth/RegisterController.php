@@ -8,6 +8,7 @@ use App\Actions\Auth\RegisterUserAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Support\UserAgentLabel;
 use Illuminate\Http\JsonResponse;
 
 class RegisterController extends Controller
@@ -29,7 +30,11 @@ class RegisterController extends Controller
             termsAcceptedAt: now(),
         );
 
-        $token = $user->createToken('auth')->plainTextToken;
+        // Token name → human-readable device label for the user's
+        // "Active sessions" list (#413). See LoginController for the
+        // full rationale.
+        $tokenName = UserAgentLabel::fromUserAgent($request->userAgent() ?? '');
+        $token = $user->createToken($tokenName)->plainTextToken;
 
         // Eager-load the relations the `UserResource` projects so the
         // emitted envelope is coherent (both blocks are always null

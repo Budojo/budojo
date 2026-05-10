@@ -694,6 +694,328 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /me/deletion-request/cancel/{token}:
+    post:
+      tags: [auth]
+      summary: Cancel a pending account deletion via the email-link token (no auth)
+      description: |
+        Public, unauthenticated entry point for the "Cancel deletion"
+        CTA in the deletion-confirmation email (#545). The token is
+        the 64-char `confirmation_token` from the user's
+        `pending_deletions` row, served on the email at request time.
+
+        On success, the row is deleted and the user's account is
+        preserved. The token is invalidated by the row delete, so a
+        second click on the same link resolves to `cancelled: false`
+        — same shape as already-clicked / never-valid /
+        already-purged / grace-window-elapsed. The SPA renders one
+        "deletion is no longer pending" panel for all of these; we
+        don't leak which case the user is in.
+
+        Route binding constrains `{token}` to `[A-Za-z0-9]{64}`, so a
+        malformed link 404s before reaching the controller.
+      operationId: meDeletionRequestCancelByToken
+      # Override the global `security: - bearerAuth: []` — this
+      # endpoint is INTENTIONALLY public; the click on the email link
+      # IS the auth.
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9]{64}$'
+            example: 'a3f2c8d4b9e1f7c2a3f2c8d4b9e1f7c2a3f2c8d4b9e1f7c2a3f2c8d4b9e1f7c2'
+          description: |
+            One-time `confirmation_token` from `pending_deletions`.
+      responses:
+        '200':
+          description: Cancellation result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [cancelled]
+                    properties:
+                      cancelled:
+                        type: boolean
+                        description: |
+                          True when the token matched an active row
+                          (with `scheduled_for` still in the future)
+                          and the row was removed. False when the
+                          token matched nothing (idempotent re-click,
+                          never valid, account already purged, or
+                          grace window already elapsed).
+        '404':
+          description: |
+            Returned when `{token}` does not match the
+            `[A-Za-z0-9]{64}` shape — the route binding rejects the
+            request before the controller is reached. A real
+            consumed/never-valid token returns 200 with
+            `cancelled: false` instead (see above) — the 404 here
+            covers ONLY the malformed-shape case.
+
+  /me/notification-preferences:
+    get:
+      tags: [auth]
+      summary: Read the user's per-category email-notification preferences
+      description: |
+        Returns the snapshot of toggleable digest / reminder
+        categories with their current boolean state (#416).
+        Default-opt-in: a category not explicitly stored in the
+        underlying JSON resolves to `true`.
+
+        Transactional emails (welcome, password-reset,
+        email-verification, account-deletion-*, athlete-invitation)
+        are NOT toggleable and are NOT surfaced here. The SPA panel
+        labels them in a separate read-only "always sent" block.
+      operationId: meNotificationPreferencesShow
+      responses:
+        '200':
+          description: Snapshot of toggleable categories.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                    example:
+                      medical_cert_expiry_reminders: true
+                      unpaid_athletes_digest: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    patch:
+      tags: [auth]
+      summary: Update one or more email-notification preferences
+      description: |
+        Accepts a partial map of `{category: bool}` and merges with
+        the existing JSON column. Unknown category keys are rejected
+        with 422 — the catalog of valid keys mirrors the constants in
+        `App\Support\NotificationCategory`. Echoes the full snapshot
+        back so the SPA can refresh local state with one request.
+      operationId: meNotificationPreferencesUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [preferences]
+              properties:
+                preferences:
+                  type: object
+                  additionalProperties:
+                    type: boolean
+                  example:
+                    medical_cert_expiry_reminders: false
+      responses:
+        '200':
+          description: Full snapshot of the user's notification preferences.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /me/login-history:
+    get:
+      tags: [auth]
+      summary: List the last 50 login attempts on the authenticated user (success + failure)
+      description: |
+        Read-only audit log over the `login_attempts` table (#430).
+        Pairs with `/me/sessions` — sessions covers LIVE Sanctum
+        tokens, history covers PAST attempts including ones whose
+        token has since been revoked or expired.
+
+        Both successful AND failed attempts are surfaced — failed
+        bursts are the high-signal compromise event the user wants
+        to detect. Rows are sorted newest-first and capped at 50;
+        retention on the underlying table is 90 days (enforced by
+        the `budojo:purge-expired-login-attempts` cron).
+
+        The `device` field is parsed from the stored User-Agent at
+        read time using the same `App\Support\UserAgentLabel` helper
+        used by `/me/sessions` ("Chrome on macOS", "Safari on iOS",
+        "Unknown device").
+
+        **Privacy**: `ip_address` is personal data per GDPR Art. 4
+        (1). Storage justified by Art. 6 (1) (f) — legitimate
+        interest in security and audit. Disclosed in the public
+        privacy policy and DPA template.
+      operationId: meLoginHistoryIndex
+      responses:
+        '200':
+          description: Up to 50 login attempts, newest-first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, success, device, ip_address, created_at]
+                      properties:
+                        id:
+                          type: integer
+                        success:
+                          type: boolean
+                          description: True for a successful login, false for a failed attempt.
+                        device:
+                          type: string
+                          example: 'Chrome on macOS'
+                        ip_address:
+                          type: string
+                          nullable: true
+                          example: '203.0.113.42'
+                        created_at:
+                          type: string
+                          format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/sessions:
+    get:
+      tags: [auth]
+      summary: List the authenticated user's active sessions (Sanctum tokens)
+      description: |
+        Surfaces every personal-access-token row tied to the user
+        (#413). Backs the "Active sessions" panel on
+        `/dashboard/profile`. Rows are returned sorted by
+        `COALESCE(last_used_at, created_at) DESC` (most-recently-active
+        first); the row that authenticated THIS request is marked with
+        `is_current: true`.
+
+        Token `name` is the human-readable device label set at token
+        creation by `App\Support\UserAgentLabel` — e.g. "Chrome on
+        macOS", "Safari on iOS", or "Unknown device" when the
+        originating User-Agent header was empty / unparseable. Older
+        tokens minted before #413 still carry the legacy `auth` /
+        `athlete-invite-accept` strings.
+      operationId: meSessionsIndex
+      responses:
+        '200':
+          description: One row per Sanctum personal-access-token tied to the user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, last_used_at, created_at, is_current]
+                      properties:
+                        id:
+                          type: integer
+                          example: 42
+                        name:
+                          type: string
+                          example: 'Chrome on macOS'
+                        last_used_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        is_current:
+                          type: boolean
+                          description: True on the row that authenticated this request.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    delete:
+      tags: [auth]
+      summary: Revoke every OTHER active session (keep the current one)
+      description: |
+        The "logout everywhere except here" pattern (#413). Useful
+        when the user suspects compromise on another device or has
+        just changed their password. Returns the count of rows that
+        were actually revoked so the SPA can flash a confirmation
+        toast — `0` when the user only had this session.
+      operationId: meSessionsDestroyOthers
+      responses:
+        '200':
+          description: Count of revoked sessions (excluding the current one).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked:
+                        type: integer
+                        example: 3
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/sessions/{id}:
+    delete:
+      tags: [auth]
+      summary: Revoke a single Sanctum token by id
+      description: |
+        Drops the row from `personal_access_tokens` (#413). 204 on
+        success. 404 when the id doesn't belong to the authenticated
+        user — same shape as a never-existed id, so a probe cannot
+        enumerate other users' token IDs by status code.
+
+        A user CAN revoke their CURRENT session. The next request
+        from that tab gets 401 and the SPA's auth interceptor
+        bounces them to /auth/login.
+
+        Route binding constrains `{id}` to digits — non-numeric
+        404s before reaching the controller.
+      operationId: meSessionsDestroy
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 42
+      responses:
+        '204':
+          description: Session revoked.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: |
+            Returned when the id doesn't belong to the authenticated
+            user, when the id never existed, or when the path fails
+            the route binding's digit constraint. The status code is
+            the same in all three cases so a probe can't enumerate
+            other users' token IDs by status alone — the response
+            body shape, however, is NOT normalised across the three
+            (the controller emits its own JSON, while route-binding
+            failures fall through to Laravel's default 404 page).
+
   /me/avatar:
     post:
       tags: [auth]

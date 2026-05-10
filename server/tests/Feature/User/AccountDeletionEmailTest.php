@@ -32,7 +32,13 @@ it('queues an AccountDeletionRequestedMail to the user when deletion is requeste
 
         return $mail->hasTo('mario@example.com')
             && $mail->user->id === $user->id
-            && $mail->scheduledFor->isSameDay($row->scheduled_for);
+            && $mail->scheduledFor->isSameDay($row->scheduled_for)
+            // Cancel token (#545) — the email-link cancel flow needs
+            // the row's confirmation_token surfaced on the Mailable so
+            // the rendered CTA URL can deep-link to the public SPA
+            // cancel page. Pinned here so a refactor that drops the
+            // token plumbing breaks the test loudly.
+            && $mail->cancelToken === $row->confirmation_token;
     });
 });
 
@@ -78,16 +84,17 @@ it('declares ShouldQueue so deletion confirmation does not block the request', f
     $user = User::factory()->make(['email' => 'mario@example.com']);
     $scheduledFor = Carbon::now()->addDays(30);
 
-    $mail = new AccountDeletionRequestedMail($user, $scheduledFor);
+    $mail = new AccountDeletionRequestedMail($user, $scheduledFor, str_repeat('a', 64));
 
     expect($mail)->toBeInstanceOf(\Illuminate\Contracts\Queue\ShouldQueue::class);
 });
 
-it('renders the mail content with the user name + scheduled deletion date', function (): void {
+it('renders the mail content with the user name + scheduled deletion date + cancel deep-link', function (): void {
     $user = User::factory()->make(['first_name' => 'Mario', 'last_name' => 'Rossi', 'email' => 'mario@example.com']);
     $scheduledFor = Carbon::create(2026, 6, 15);
+    $token = str_repeat('a', 64);
 
-    $rendered = new AccountDeletionRequestedMail($user, $scheduledFor)->render();
+    $rendered = new AccountDeletionRequestedMail($user, $scheduledFor, $token)->render();
 
     expect($rendered)->toContain('Mario Rossi');
     // Date must appear in the body — that's the load-bearing fact:
@@ -96,6 +103,12 @@ it('renders the mail content with the user name + scheduled deletion date', func
     // be locale-tolerant.
     expect($rendered)->toMatch('/15\\/06\\/2026|2026-06-15|June 15, 2026|15 June 2026/');
     expect($rendered)->toMatch('/budojo\\.it|localhost:4200/');
+    // Cancel deep-link with the row's token (#545) — the SPA
+    // `/account/deletion-cancel/{token}` route POSTs to the public
+    // API and renders a calm "deletion cancelled" page. Pinned in
+    // the body so a future template refactor can't silently break
+    // the click-to-cancel UX (the whole point of this flow).
+    expect($rendered)->toContain("/account/deletion-cancel/{$token}");
 });
 
 it('keeps deletion-request endpoint succeeding when the mail queue insert throws (atomicity)', function (): void {

@@ -577,6 +577,71 @@
       "successSummary": "Password updated",
       "successDetail": "Your password has been changed. Other devices have been signed out.",
       "genericError": "Couldn't update your password. Please try again."
+    },
+    "notifications": {
+      "title": "Email notifications",
+      "subtitle": "Choose which non-essential emails you want to receive.",
+      "medicalCertReminders": {
+        "label": "Medical certificate expiring reminders",
+        "description": "Daily digest at 09:00 listing athletes whose medical certificate expires in 30, 7, or 0 days."
+      },
+      "unpaidAthletesDigest": {
+        "label": "Unpaid athletes monthly digest",
+        "description": "Once a month on the 16th, a list of athletes who haven't paid the monthly fee for the current month."
+      },
+      "alwaysSentTitle": "Always sent",
+      "alwaysSentSubtitle": "Transactional emails — required for the service to work, sent regardless of the toggles above.",
+      "transactional": {
+        "welcome": "Welcome email at sign-up",
+        "password_reset": "Password reset link",
+        "email_verification": "Email verification link",
+        "account_deletion": "Account deletion confirmation + cancel link",
+        "athlete_invitation": "Athlete invitation link"
+      },
+      "errorMessage": "We couldn't load your preferences. Try again in a moment.",
+      "retry": "Retry",
+      "saveError": {
+        "summary": "Couldn't save the preference",
+        "detail": "Something went wrong. Try again in a moment."
+      }
+    },
+    "loginHistory": {
+      "title": "Login history",
+      "subtitle": "The last 50 sign-in attempts on your account, successful and failed.",
+      "failedPill": "failed",
+      "empty": "No login history yet — you'll see your sign-in attempts here once you've used the dashboard for a bit.",
+      "errorMessage": "We couldn't load your login history. Try again in a moment.",
+      "retry": "Retry",
+      "unfamiliarHint": "If something here looks unfamiliar, change your password and revoke any session you don't recognise."
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "subtitle": "Devices and browsers signed in to your Budojo account.",
+      "thisSession": "this session",
+      "lastUsedAt": "Last used {{datetime}}",
+      "neverUsed": "Never used",
+      "revoke": "Revoke",
+      "revokeOthersCta": "Sign out other sessions",
+      "confirmRevoke": "Sign out the {{device}} session? You can sign in again any time.",
+      "confirmRevokeCurrent": "Sign out the {{device}} session? This is the device you're using right now — you'll be signed out and asked to log in again.",
+      "confirmRevokeOthers": "Sign out every other session and keep only this one? You'll need to sign in again on those devices.",
+      "confirmAccept": "Sign out",
+      "confirmReject": "Cancel",
+      "errorMessage": "We couldn't load your sessions. Try again in a moment.",
+      "retry": "Retry",
+      "revokeToast": {
+        "summary": "Session signed out",
+        "detail": "{{device}} has been signed out."
+      },
+      "revokeOthersToast": {
+        "summary": "Other sessions signed out",
+        "detail": "{{count}} other session(s) have been signed out.",
+        "detailNone": "There were no other sessions to sign out."
+      },
+      "revokeError": {
+        "summary": "Couldn't sign out the session",
+        "detail": "Something went wrong. Try again in a moment."
+      }
     }
   },
   "account": {
@@ -643,6 +708,20 @@
           "detail": "Sign in with your new email address."
         }
       }
+    }
+  },
+  "accountDeletion": {
+    "cancel": {
+      "loadingTitle": "Cancelling your scheduled deletion…",
+      "successTitle": "Your account is safe",
+      "successMessage": "We've cancelled the scheduled deletion. Your account stays active and nothing has been removed.",
+      "successCta": "Continue",
+      "noLongerPendingTitle": "No deletion is pending",
+      "noLongerPendingMessage": "This link is no longer valid — either the deletion has already been cancelled, the link has been used, or the account has already been removed.",
+      "noLongerPendingCta": "Continue",
+      "errorTitle": "We couldn't cancel right now",
+      "errorMessage": "Something went wrong while cancelling. You can try the link again, or sign in and cancel from your profile.",
+      "errorCta": "Continue"
     }
   },
   "emailVerification": {
