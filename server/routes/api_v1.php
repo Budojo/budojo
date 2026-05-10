@@ -38,6 +38,26 @@ Route::post('/auth/forgot-password', [\App\Http\Controllers\Auth\PasswordResetCo
     ->middleware('throttle:password-reset-request');
 Route::post('/auth/reset-password', [\App\Http\Controllers\Auth\PasswordResetController::class, 'reset']);
 
+// One-click unsubscribe (#417). Public on purpose — the signed URL
+// IS the auth (validated by the `signed` middleware). Two entry
+// points:
+//   - GET `/unsubscribe/{userId}/{category}` is the human click on
+//     the email footer link; flips the preference off and redirects
+//     to the SPA `/unsubscribed` confirmation page.
+//   - POST `/unsubscribe/{userId}/{category}` is the RFC 8058
+//     `List-Unsubscribe-Post` one-click that Gmail / Yahoo bulk-
+//     sender rules require for senders over 5k/day; same effect,
+//     responds 200 with an empty body.
+// Expired / tampered signatures get a 403 from the framework's
+// signed middleware before reaching the controller.
+Route::get('/unsubscribe/{userId}/{category}', [\App\Http\Controllers\Auth\UnsubscribeController::class, 'get'])
+    ->where('userId', '[0-9]+')
+    ->middleware('signed')
+    ->name('unsubscribe');
+Route::post('/unsubscribe/{userId}/{category}', [\App\Http\Controllers\Auth\UnsubscribeController::class, 'post'])
+    ->where('userId', '[0-9]+')
+    ->middleware('signed');
+
 // Email verification — signed-link callback. Public on purpose: the signed
 // URL is the auth (the user clicks from their inbox, often on a different
 // device than the one they registered on). The hash check inside the

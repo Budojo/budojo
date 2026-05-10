@@ -419,6 +419,17 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/error/offline/offline.component').then((m) => m.OfflineComponent),
   },
+  // Public unsubscribe landing (#417). The signed-URL backend at
+  // `/api/v1/unsubscribe/{userId}/{category}` flips the preference
+  // and 302-redirects here with `?category=` (success) or
+  // `?status=invalid` (tampered / unknown). No auth required — the
+  // user clicks from their inbox, possibly on a device they aren't
+  // signed in on.
+  {
+    path: 'unsubscribed',
+    loadComponent: () =>
+      import('./features/unsubscribe/unsubscribe.component').then((m) => m.UnsubscribeComponent),
+  },
   // Wildcard 404 (#226) — must stay last; everything above is matched
   // first. Hit on any URL that no other route resolves, including
   // dead deep-links that used to exist but were removed/renamed.

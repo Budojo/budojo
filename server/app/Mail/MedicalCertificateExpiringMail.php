@@ -6,6 +6,8 @@ namespace App\Mail;
 
 use App\Models\Academy;
 use App\Models\Document;
+use App\Support\NotificationCategory;
+use App\Support\UnsubscribeUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,6 +15,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 
 /**
@@ -101,8 +104,39 @@ class MedicalCertificateExpiringMail extends Mailable implements ShouldQueue
                 'academyName' => $this->academy->name,
                 'rows' => $rows,
                 'clientUrl' => $this->resolvedClientUrl(),
+                // One-click unsubscribe URL (#417). Embedded in the
+                // template footer + duplicated in the
+                // `List-Unsubscribe` header below for Gmail/Yahoo
+                // bulk-sender compliance.
+                'unsubscribeUrl' => UnsubscribeUrl::for(
+                    $this->owner(),
+                    NotificationCategory::MEDICAL_CERT_EXPIRY_REMINDERS,
+                ),
+                'unsubscribeCategory' => 'medical certificate expiring reminders',
             ],
         );
+    }
+
+    /**
+     * `List-Unsubscribe` + `List-Unsubscribe-Post` headers (#417,
+     * RFC 8058). Email clients (Gmail, Yahoo, Outlook) surface a
+     * one-click unsubscribe button when both headers are present
+     * and the URL is HTTPS. Without these, senders over 5k/day
+     * risk Gmail/Yahoo bulk-sender enforcement bouncing future
+     * mail. The `<>` wrappers around the URL are required by
+     * RFC 2369; `One-Click` is the keyword RFC 8058 expects.
+     */
+    public function headers(): Headers
+    {
+        $url = UnsubscribeUrl::for(
+            $this->owner(),
+            NotificationCategory::MEDICAL_CERT_EXPIRY_REMINDERS,
+        );
+
+        return new Headers(text: [
+            'List-Unsubscribe' => '<' . $url . '>',
+            'List-Unsubscribe-Post' => 'List-Unsubscribe=One-Click',
+        ]);
     }
 
     /**
