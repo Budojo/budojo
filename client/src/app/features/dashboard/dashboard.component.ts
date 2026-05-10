@@ -14,6 +14,7 @@ import { LanguageService, SupportedLanguage } from '../../core/services/language
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { SearchPaletteComponent } from '../search/search-palette.component';
+import { NotificationBellComponent } from '../notifications/notification-bell.component';
 import { VERSION } from '../../../environments/version';
 
 @Component({
@@ -26,6 +27,7 @@ import { VERSION } from '../../../environments/version';
     BrandGlyphComponent,
     UserAvatarComponent,
     SearchPaletteComponent,
+    NotificationBellComponent,
     TranslatePipe,
   ],
   templateUrl: './dashboard.component.html',

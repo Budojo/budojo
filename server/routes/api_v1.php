@@ -202,6 +202,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'show']);
     Route::patch('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'update']);
 
+    // In-app notification inbox (#418). Bell-icon dropdown on the
+    // dashboard topbar; per-user state in the `notifications` table
+    // populated by the existing reminder Actions (medical-cert
+    // expiry digest, unpaid-athletes monthly digest) alongside the
+    // email channel.
+    Route::get('/me/notifications', [\App\Http\Controllers\User\NotificationInboxController::class, 'index']);
+    Route::post('/me/notifications/{id}/read', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAsRead'])
+        ->where('id', '[A-Za-z0-9\-]{36}');
+    Route::post('/me/notifications/read-all', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAllAsRead']);
+
     // Login history audit log (#430). Surfaces the last 50 login
     // attempts (success + failure) on the authenticated user so a
     // compromise probe is self-serve. Pairs with the live
