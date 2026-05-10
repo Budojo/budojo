@@ -84,9 +84,13 @@ it('returns a ZIP carrying the JSON plus binary documents when format=zip', func
         ->toContain('.zip');
 
     // Verify the returned bytes are a real ZIP carrying both the JSON
-    // and the document binary.
+    // and the document binary. tempnam() already creates a real file
+    // at the returned path — open the ZIP IN PLACE rather than
+    // appending '.zip', which would leave the original empty tempfile
+    // behind and never unlink it.
     $zipBytes = $response->streamedContent();
-    $tmp = tempnam(sys_get_temp_dir(), 'budojo-test-export-') . '.zip';
+    $tmp = tempnam(sys_get_temp_dir(), 'budojo-test-export-');
+    expect($tmp)->toBeString();
     file_put_contents($tmp, $zipBytes);
 
     $zip = new ZipArchive();
