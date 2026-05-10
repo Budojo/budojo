@@ -31,5 +31,13 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!--
+            Deterministic document-encryption key (#224) so PEST runs
+            exercise the at-rest encryption path without needing to
+            provision a per-test secret. Base64 of a fixed 32 zero
+            bytes — fine for tests because the key never leaves the
+            test runner, but DON'T use this in any other environment.
+        -->
+        <env name="DOCUMENT_ENCRYPTION_KEY" value="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="/>
     </php>
 </phpunit>

@@ -11,10 +11,13 @@ use App\Http\Requests\Document\UpdateDocumentRequest;
 use App\Http\Resources\DocumentResource;
 use App\Models\Document;
 use App\Models\User;
+use App\Support\DocumentEncryption;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
@@ -51,7 +54,7 @@ class DocumentController extends Controller
         return DocumentResource::collection($documents);
     }
 
-    public function download(Request $request, Document $document): StreamedResponse|JsonResponse
+    public function download(Request $request, Document $document): BinaryFileResponse|Response|StreamedResponse|JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -72,6 +75,33 @@ class DocumentController extends Controller
 
         if (! Storage::disk('local')->exists($document->file_path)) {
             return response()->json(['message' => 'File not found.'], 404);
+        }
+
+        // Encrypted (#224 — medical certs only): read ciphertext from
+        // disk, decrypt in memory, stream the plaintext bytes with the
+        // original Content-Type. We never write the plaintext back to
+        // disk; the response body IS the only plaintext copy that
+        // exists, and it leaves with the HTTP response.
+        if ($document->is_encrypted) {
+            $blob = Storage::disk('local')->get($document->file_path);
+            if (! \is_string($blob)) {
+                return response()->json(['message' => 'File not found.'], 404);
+            }
+
+            try {
+                $plaintext = new DocumentEncryption()->decrypt($blob);
+            } catch (\Throwable $e) {
+                report($e);
+
+                return response()->json(['message' => 'Failed to decrypt document.'], 500);
+            }
+            $filename = $document->original_name;
+
+            return response($plaintext, 200, [
+                'Content-Type' => $document->mime_type,
+                'Content-Disposition' => 'attachment; filename="' . addslashes($filename) . '"',
+                'Content-Length' => (string) \strlen($plaintext),
+            ]);
         }
 
         return Storage::disk('local')->download(

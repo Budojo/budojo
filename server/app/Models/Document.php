@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string              $original_name
  * @property string              $mime_type
  * @property int                 $size_bytes
+ * @property bool                $is_encrypted At-rest encryption flag (#224). True ⇒ bytes on disk are AES-256-GCM ciphertext via `App\Support\DocumentEncryption`; false ⇒ plaintext (pre-#224 uploads, or non-medical types that don't carry special-category data).
  * @property \Carbon\Carbon|null $issued_at
  * @property \Carbon\Carbon|null $expires_at
  * @property string|null         $notes
@@ -34,6 +35,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'original_name',
     'mime_type',
     'size_bytes',
+    'is_encrypted',
     'issued_at',
     'expires_at',
     'notes',
@@ -61,6 +63,7 @@ class Document extends Model
             'issued_at' => 'date',
             'expires_at' => 'date',
             'size_bytes' => 'integer',
+            'is_encrypted' => 'boolean',
         ];
     }
 }
