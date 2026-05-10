@@ -31,14 +31,16 @@ final class NotificationPreferences
             return true;
         }
 
-        // Absent key → default-opt-in. Present key → respect the
-        // boolean exactly. We DO NOT coerce truthy strings or numbers
-        // because the SPA panel only ever PATCHes `true` / `false`;
-        // anything else is corrupt data and should be treated as
-        // "default enabled".
+        // Absent key → default-opt-in. Present key → opt the user
+        // out ONLY when the stored value is the boolean `false`.
+        // Any other unexpected value (e.g. the string `'false'`,
+        // the int `0`, an array, …) is treated as "default enabled"
+        // — corrupt JSON shouldn't accidentally silence a user's
+        // notifications. The SPA panel only ever PATCHes booleans,
+        // so the corrupt-data branch is purely defensive.
         $value = $prefs[$category] ?? null;
 
-        return $value === null || $value === true;
+        return $value !== false;
     }
 
     /**

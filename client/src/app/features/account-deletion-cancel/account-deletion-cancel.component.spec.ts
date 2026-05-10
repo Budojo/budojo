@@ -214,15 +214,16 @@ describe('AccountDeletionCancelComponent (#545)', () => {
     replaceState.mockRestore();
   });
 
-  it('renders error panel without firing a request when token is missing from the URL', () => {
+  it('renders the no-longer-pending panel without firing a request when token is missing', () => {
     const { httpMock, el } = setup({ token: null });
 
-    // The route binding constrains `:token` to the 64-char shape, so
-    // a missing param shouldn't reach here — but the component
-    // defensively bails to the error panel without a wasted HTTP
-    // call. Pinned so a future refactor doesn't accidentally fire
-    // a fetch for an empty token.
+    // No token in the URL — the user landed on the token-less variant
+    // `/account/deletion-cancel` (e.g. after a successful consume
+    // stripped the token via `history.replaceState` and they then
+    // refreshed). Factually-correct render is "no longer pending"
+    // because there's nothing to cancel; we avoid the 404 trap an
+    // earlier shape had + we never fire a wasted HTTP call.
     httpMock.expectNone(() => true);
-    expect(el.querySelector('[data-cy="account-deletion-cancel-error"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="account-deletion-cancel-no-longer-pending"]')).not.toBeNull();
   });
 });

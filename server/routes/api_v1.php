@@ -92,7 +92,14 @@ Route::post('/email-change/{token}/verify', [\App\Http\Controllers\Account\Email
 // tokens, constrained at the route layer so a malformed link 404s
 // before the action is called.
 Route::post('/me/deletion-request/cancel/{token}', [\App\Http\Controllers\User\AccountDeletionController::class, 'cancelByToken'])
-    ->where('token', '[A-Za-z0-9]{64}');
+    ->where('token', '[A-Za-z0-9]{64}')
+    // Rate-limited at 10 req/min/IP. The 64-char token is high-entropy
+    // enough that guessing inside the 30-day grace window is
+    // computationally implausible — but a script hammering random
+    // tokens would still spam the DB lookup. Mirrors the
+    // /athlete-invite/{token}/accept throttle (5/min); we sit a notch
+    // higher to absorb a legitimate user's dev-tools refresh loop.
+    ->middleware('throttle:10,1');
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function (): void {

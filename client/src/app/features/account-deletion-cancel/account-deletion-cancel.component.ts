@@ -70,10 +70,15 @@ export class AccountDeletionCancelComponent implements OnInit {
   ngOnInit(): void {
     const token = this.route.snapshot.paramMap.get('token');
     if (token === null || token === '') {
-      // Defense-in-depth: the route binding constrains `:token` to the
-      // 64-char alphanumeric shape so a missing param shouldn't reach
-      // here, but bail to the error panel if it somehow does.
-      this.state.set('error');
+      // No token in the URL — either the user landed on the token-less
+      // variant of the route (`/account/deletion-cancel`, hit after a
+      // successful consume strips the token via `history.replaceState`,
+      // or after a manual refresh of the cleaned URL), or the route
+      // binding somehow let an empty param through. Either way the
+      // factually-correct render is "no longer pending": there's
+      // nothing to cancel. Avoids the 404 trap that an earlier shape
+      // had after the token strip.
+      this.state.set('no-longer-pending');
       return;
     }
 
