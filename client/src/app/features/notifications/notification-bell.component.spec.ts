@@ -14,12 +14,13 @@ function makeRow(overrides: Partial<InboxNotification> = {}): InboxNotification 
   return {
     id: 'n-1',
     type: 'medical_cert_expiring',
-    body: 'something',
+    title: 'Medical cert expiring',
+    body: 'Mario Rossi — 7 days left',
     link: '/dashboard/athletes/42',
     read_at: null,
     created_at: '2026-05-11T10:00:00Z',
     ...overrides,
-  } as InboxNotification;
+  };
 }
 
 function setup(
@@ -74,6 +75,16 @@ function setup(
 }
 
 describe('NotificationBellComponent (#418)', () => {
+  // The visibility-change tests override `document.visibilityState` by
+  // installing an OWN property on the `document` instance. jsdom ships
+  // `visibilityState` as a getter on `Document.prototype`, so removing
+  // the own property after each test restores the platform getter.
+  // Without this, the override leaks into later specs and produces
+  // order-dependent failures.
+  afterEach(() => {
+    delete (document as unknown as { visibilityState?: string }).visibilityState;
+  });
+
   it('fires inboxService.load() on init to hydrate the badge', () => {
     const { load } = setup();
     expect(load).toHaveBeenCalledOnce();

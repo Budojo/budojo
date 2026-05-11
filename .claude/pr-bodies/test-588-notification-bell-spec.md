@@ -44,4 +44,4 @@ Part of #588 (umbrella). Pairs with PRs #589, #590, #591.
 
 ## Provenance
 
-Same coverage-gap audit (#588). Fourth of 7 slices. Two simpler ones (welcome / verify-success) and one mid (verify-error) already shipped — this is the first with non-trivial reactive surface.
+Same coverage-gap audit (#588). Fourth of 8 slices in the umbrella. Three simpler ones (welcome / verify-success / verify-error) already shipped — this is the first with non-trivial reactive surface.
