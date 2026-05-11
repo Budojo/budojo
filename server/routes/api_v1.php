@@ -419,5 +419,25 @@ Route::middleware('auth:sanctum')->group(function (): void {
             'posts/{post}/reactions',
             [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
         )->middleware('throttle:community-react');
+
+        // PR-D server (#604): 1-level comments under a post.
+        //   GET    /posts/{post}/comments — list (paginated, 50/page)
+        //   POST   /posts/{post}/comments — create (500-char body cap)
+        //   DELETE /comments/{comment}    — soft-delete (author OR
+        //                                    post's academy owner)
+        // Create is rate-limited at 30/min/user via the
+        // `community-comment-create` named limiter.
+        Route::get(
+            'posts/{post}/comments',
+            [\App\Http\Controllers\Community\CommunityCommentsController::class, 'index'],
+        );
+        Route::post(
+            'posts/{post}/comments',
+            [\App\Http\Controllers\Community\CommunityCommentsController::class, 'store'],
+        )->middleware('throttle:community-comment-create');
+        Route::delete(
+            'comments/{comment}',
+            [\App\Http\Controllers\Community\CommunityCommentsController::class, 'destroy'],
+        );
     });
 });
