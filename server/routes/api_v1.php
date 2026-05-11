@@ -171,6 +171,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // athletes read the academy on their linked athlete row.
     Route::get('/me/academy', [\App\Http\Controllers\Me\MyAcademyController::class, 'show']);
 
+    // Athlete-portal attendance history (M7 PR-D slice 3). Returns
+    // the authenticated athlete's attendance records in the optional
+    // `[from, to]` window. Owners hit a 404 (they're not students;
+    // the owner-side `/athletes/{id}/attendance` is the right surface
+    // for any athlete's history).
+    Route::get('/me/attendance', [\App\Http\Controllers\Me\MyAttendanceController::class, 'index']);
+
     // GDPR Art. 17 (right-to-erasure) — request hard-deletion of the
     // account and all academy + athlete data tied to it (#223). POST
     // enters a 30-day grace window; DELETE cancels during that window.

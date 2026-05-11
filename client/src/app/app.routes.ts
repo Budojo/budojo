@@ -153,6 +153,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/my-academy/my-academy.component').then((m) => m.MyAcademyComponent),
       },
+      {
+        path: 'attendance',
+        loadComponent: () =>
+          import('./features/my-attendance/my-attendance.component').then(
+            (m) => m.MyAttendanceComponent,
+          ),
+      },
     ],
   },
   {

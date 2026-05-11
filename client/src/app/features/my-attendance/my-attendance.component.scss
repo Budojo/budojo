@@ -1,0 +1,85 @@
+// MyAttendanceComponent — athlete-portal training history (M7 PR-D
+// slice 3). Apple-minimal, same vocabulary as MyAcademy + MeProfile.
+
+.my-attendance {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__card {
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__summary {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    align-self: flex-start;
+  }
+
+  &__summary-count {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--p-primary-color);
+  }
+
+  &__summary-label {
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__row {
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__date {
+    color: var(--p-text-color);
+    font-weight: 500;
+  }
+
+  &__notes {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+  }
+
+  &__empty {
+    color: var(--p-text-color-secondary);
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+}

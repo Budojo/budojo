@@ -95,6 +95,18 @@
         </li>
         <li>
           <a
+            routerLink="/dashboard/me/attendance"
+            routerLinkActive="sidebar__link--active"
+            class="sidebar__link"
+            (click)="closeSidebar()"
+            data-cy="nav-me-attendance"
+          >
+            <i class="pi pi-calendar" aria-hidden="true"></i>
+            <span>{{ 'athletePortal.nav.attendance' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
             routerLink="/dashboard/me/profile"
             routerLinkActive="sidebar__link--active"
             class="sidebar__link"
