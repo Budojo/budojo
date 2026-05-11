@@ -1,0 +1,133 @@
+// MyAcademyComponent — athlete-portal read-only academy page
+// (#618, M7 PR-D slice 2). Same Apple-minimal style as
+// MeProfileComponent — hairline borders, one card per logical group,
+// page padding inherited from the dashboard shell `.main`.
+
+.my-academy {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__card {
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 1px solid var(--p-content-border-color);
+  }
+
+  &__logo-placeholder {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: var(--p-primary-50, rgba(91, 108, 255, 0.12));
+    color: var(--p-primary-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  &__name {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__subtitle {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--p-text-color-secondary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  &__fields {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    gap: 1rem;
+    align-items: baseline;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+
+    dt {
+      color: var(--p-text-color-secondary);
+      font-size: 0.875rem;
+      margin: 0;
+    }
+
+    dd {
+      margin: 0;
+      color: var(--p-text-color);
+      word-break: break-word;
+    }
+
+    a {
+      color: var(--p-primary-color);
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  &__owner {
+    border-top: 1px solid var(--p-content-border-color);
+    padding-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__owner-name {
+    margin: 0;
+    color: var(--p-text-color);
+    font-weight: 500;
+  }
+
+  &__empty {
+    color: var(--p-text-color-secondary);
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+}

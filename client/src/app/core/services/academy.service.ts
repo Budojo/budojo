@@ -192,6 +192,33 @@ export interface Academy {
   training_days?: number[] | null;
 }
 
+/**
+ * Wire shape for `GET /api/v1/me/academy` (#618, M7 PR-D slice 2).
+ * Same shape as `Academy` (omitting owner-private fields like
+ * `monthly_fee_cents`) plus an `owner` block with the academy's
+ * owner public contact info so athletes know whom to reach out to.
+ */
+export interface MeAcademyOwner {
+  readonly first_name: string;
+  readonly last_name: string;
+  readonly email: string;
+}
+
+export interface MeAcademy {
+  readonly id: number;
+  readonly name: string;
+  readonly slug: string;
+  readonly phone_country_code: string | null;
+  readonly phone_national_number: string | null;
+  readonly website: string | null;
+  readonly facebook: string | null;
+  readonly instagram: string | null;
+  readonly address: Address | null;
+  readonly logo_url: string | null;
+  readonly training_days: number[] | null;
+  readonly owner: MeAcademyOwner | null;
+}
+
 export interface CreateAcademyPayload {
   name: string;
   address?: Address | null;
@@ -344,6 +371,27 @@ export class AcademyService {
 
   removeLogo(): Observable<Academy> {
     return this.mutate(this.http.delete<AcademyResponse>(`${this.base}/logo`));
+  }
+
+  /**
+   * Read the academy the authenticated user belongs to (#618, M7 PR-D
+   * slice 2). Role-agnostic — owners get their owned academy, athletes
+   * get the one on their linked athlete row. Returns `null` on 404 so
+   * the caller can render the empty state without subscribing to an
+   * error path.
+   *
+   * Not cached — this surface is rarely revisited within a session
+   * and the cache invalidation rules would complicate the
+   * (single-purpose, athlete-side) view. The owner-side `get()`
+   * cache stays in charge of the higher-traffic `/api/v1/academy`.
+   */
+  getMine(): Observable<MeAcademy | null> {
+    return this.http.get<{ data: MeAcademy }>(`${environment.apiBase}/api/v1/me/academy`).pipe(
+      map((res) => res.data),
+      catchError((err: HttpErrorResponse) =>
+        err.status === 404 ? of<MeAcademy | null>(null) : throwError(() => err),
+      ),
+    );
   }
 
   /**

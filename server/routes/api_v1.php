@@ -166,6 +166,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me/export', \App\Http\Controllers\User\ExportController::class)
         ->middleware('throttle:1,1');
 
+    // Athlete-portal read onto the caller's academy (#618, M7 PR-D
+    // slice 2). Role-agnostic — owners read their owned academy,
+    // athletes read the academy on their linked athlete row.
+    Route::get('/me/academy', [\App\Http\Controllers\Me\MyAcademyController::class, 'show']);
+
     // GDPR Art. 17 (right-to-erasure) — request hard-deletion of the
     // account and all academy + athlete data tied to it (#223). POST
     // enters a 30-day grace window; DELETE cancels during that window.

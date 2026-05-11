@@ -202,7 +202,8 @@
     },
     "nav": {
       "profile": "Profilo",
-      "feed": "Feed"
+      "feed": "Feed",
+      "academy": "Academy"
     },
     "profile": {
       "title": "Il tuo profilo",
@@ -227,6 +228,16 @@
       "pageOf": "Pagina {{current}} di {{total}}",
       "previous": "Precedente",
       "next": "Successiva"
+    },
+    "academy": {
+      "title": "La tua academy",
+      "emptyBody": "Al momento non sei collegato a nessuna academy. Contatta il tuo academy owner se pensi che sia un errore.",
+      "errorBody": "Non siamo riusciti a caricare la tua academy. Aggiorna la pagina e riprova.",
+      "logoAlt": "Logo {{name}}",
+      "addressLabel": "Indirizzo",
+      "phoneLabel": "Telefono",
+      "websiteLabel": "Sito web",
+      "ownerSection": "Owner"
     }
   },
   "notifications": {
