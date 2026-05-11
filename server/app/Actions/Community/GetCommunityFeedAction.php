@@ -44,7 +44,11 @@ class GetCommunityFeedAction
 
         return $this->baseQuery($academyId)
             ->with([
-                'createdBy:id,first_name,last_name,handle,avatar_path',
+                // `updated_at` is required because the `User::$avatar_url`
+                // accessor uses it as a cache-busting query-string suffix;
+                // omitting it errors when an author with a non-null
+                // `avatar_path` is serialized (Copilot review on #613).
+                'createdBy:id,first_name,last_name,handle,avatar_path,updated_at',
                 'createdBy.athlete:id,user_id,belt',
             ])
             ->withCount(['reactions', 'comments', 'rsvps'])

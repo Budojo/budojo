@@ -164,7 +164,7 @@ it('owner soft-deletes a post in their academy — 204 + post disappears from th
     expect($response->json('data'))->toBe([]);
 });
 
-it('athlete attempting to delete a post gets 403', function (): void {
+it('athlete attempting to delete a post gets 403 with the canonical envelope', function (): void {
     /** @var Athlete $athlete */
     $athlete = Athlete::factory()->for($this->academy)->create(['user_id' => null]);
     /** @var User $athleteUser */
@@ -176,17 +176,19 @@ it('athlete attempting to delete a post gets 403', function (): void {
 
     $this->actingAs($athleteUser)
         ->deleteJson("/api/v1/community/posts/{$post->id}")
-        ->assertStatus(403);
+        ->assertStatus(403)
+        ->assertExactJson(['message' => 'Forbidden.']);
 });
 
-it('owner cannot delete a post from a different academy — 403, post remains', function (): void {
+it('owner cannot delete a post from a different academy — 403 envelope, post remains', function (): void {
     $otherOwner = userWithAcademy();
     /** @var CommunityPost $post */
     $post = CommunityPost::factory()->for($otherOwner->academy)->create();
 
     $this->actingAs($this->owner)
         ->deleteJson("/api/v1/community/posts/{$post->id}")
-        ->assertStatus(403);
+        ->assertStatus(403)
+        ->assertExactJson(['message' => 'Forbidden.']);
 
     expect(CommunityPost::query()->where('id', $post->id)->exists())->toBeTrue();
 });

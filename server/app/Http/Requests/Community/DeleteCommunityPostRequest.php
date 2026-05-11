@@ -7,6 +7,7 @@ namespace App\Http\Requests\Community;
 use App\Models\CommunityPost;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
  * Authorize gate for `DELETE /api/v1/community/posts/{post}` (#612,
@@ -52,5 +53,21 @@ class DeleteCommunityPostRequest extends FormRequest
     public function rules(): array
     {
         return [];
+    }
+
+    /**
+     * Match the canonical wire-level 403 envelope used by every other
+     * write FormRequest in the codebase (StoreAthleteRequest,
+     * UpdateAcademyRequest, MarkAttendanceRequest, …):
+     * `{"message":"Forbidden."}`. Without this override, Laravel falls
+     * back to "This action is unauthorized.", which mismatches both
+     * `docs/api/v1.yaml#components.schemas.ErrorMessage` and the SPA's
+     * uniform 403 handler.
+     */
+    protected function failedAuthorization(): void
+    {
+        throw new HttpResponseException(
+            response()->json(['message' => 'Forbidden.'], 403),
+        );
     }
 }
