@@ -45,6 +45,7 @@ it('creates a belt_promotion post when an athlete is promoted by an authenticate
         ->and($post->visibility)->toBe(CommunityPostVisibility::Academy)
         ->and($post->created_by_user_id)->toBe($this->owner->id)
         ->and($post->payload)->toHaveKey('athlete_id', $athlete->id)
+        ->and($post->payload)->toHaveKey('athlete_name', trim($athlete->first_name . ' ' . $athlete->last_name))
         ->and($post->payload)->toHaveKey('old_belt', 'white')
         ->and($post->payload)->toHaveKey('new_belt', 'blue')
         ->and($post->payload['promoted_at'])->toBeString();

@@ -52,6 +52,15 @@ class AthleteObserver
             'visibility' => CommunityPostVisibility::Academy,
             'payload' => [
                 'athlete_id' => $athlete->id,
+                // Snapshot the athlete's name at promotion time so the
+                // feed can render the celebration line without joining
+                // back to the athletes table on every render (and
+                // without the cascade-delete of the athlete erasing
+                // the historical record). `created_by_user_id` carries
+                // the EDITOR (often the owner), not the athlete, so
+                // the SPA can't derive the athlete name from that
+                // field — Copilot review on PR #615.
+                'athlete_name' => trim($athlete->first_name . ' ' . $athlete->last_name),
                 'old_belt' => $originalBelt instanceof \BackedEnum ? $originalBelt->value : $originalBelt,
                 'new_belt' => $athlete->belt->value,
                 'promoted_at' => now()->toISOString(),

@@ -201,7 +201,8 @@
       "signOut": "Sign out"
     },
     "nav": {
-      "profile": "Profile"
+      "profile": "Profile",
+      "feed": "Feed"
     },
     "profile": {
       "title": "Your profile",
@@ -214,6 +215,18 @@
       "unverified": "Not verified",
       "editHint": "Editing your profile is coming in the next release.",
       "loading": "Loading your profile…"
+    },
+    "feed": {
+      "title": "Your academy's feed",
+      "emptyBody": "No posts yet — grading celebrations and events from your academy will show up here.",
+      "errorBody": "We couldn't load the feed. Refresh the page and try again.",
+      "beltPromotion": {
+        "text": "{{name}} just earned a new belt!"
+      },
+      "pagination": "Feed pagination",
+      "pageOf": "Page {{current}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
     }
   },
   "notifications": {

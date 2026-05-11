@@ -143,6 +143,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/me-profile/me-profile.component').then((m) => m.MeProfileComponent),
       },
+      {
+        path: 'feed',
+        loadComponent: () =>
+          import('./features/my-feed/my-feed.component').then((m) => m.MyFeedComponent),
+      },
     ],
   },
   {
