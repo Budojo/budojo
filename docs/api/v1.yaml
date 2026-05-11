@@ -1565,6 +1565,181 @@ paths:
         '404':
           description: Token id doesn't belong to the authenticated user.
 
+  /me/push-subscriptions:
+    get:
+      tags: [auth]
+      summary: List the authenticated user's Web Push subscriptions
+      description: |
+        Surfaces every `push_subscriptions` row tied to the user
+        (#419). Backs the "Browser notifications" toggle on
+        `/dashboard/profile` (SPA half lands in a focused follow-up).
+        The response also carries the VAPID public key so the SPA
+        can call `PushManager.subscribe()` without a separate
+        config fetch.
+
+        **Endpoint privacy** — only the host of each subscription
+        endpoint is surfaced (e.g. `fcm.googleapis.com`); the full
+        URL is the bearer credential the push vendor uses to route
+        messages and is treated as sensitive.
+
+        **`meta.enabled`** is `false` when ANY of VAPID public key /
+        private key / subject is missing in the server env — the
+        SPA renders the toggle as disabled in that case.
+      operationId: meWebPushIndex
+      responses:
+        '200':
+          description: Push subscriptions + VAPID configuration meta.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, endpoint_host, last_seen_at, created_at]
+                      properties:
+                        id:
+                          type: integer
+                          example: 17
+                        endpoint_host:
+                          type: string
+                          example: 'fcm.googleapis.com'
+                        last_seen_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                  meta:
+                    type: object
+                    required: [vapid_public_key, enabled]
+                    properties:
+                      vapid_public_key:
+                        type: string
+                        nullable: true
+                      enabled:
+                        type: boolean
+                        example: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    post:
+      tags: [auth]
+      summary: Subscribe a browser device for Web Push
+      description: |
+        Accepts the `PushSubscription.toJSON()` envelope the SPA
+        receives from `PushManager.subscribe(...)` (#419) and
+        upserts on `(user_id, sha256(endpoint))` — re-subscribing
+        the same browser refreshes the keys without creating a
+        duplicate row.
+
+        **`endpoint`** must be a fully-formed `https://` URL.
+        Non-HTTPS schemes are rejected to prevent SSRF on the
+        future server-side fanout that will POST back to the
+        endpoint with a VAPID-signed JWT.
+
+        **`keys.p256dh` / `keys.auth`** carry the base64url shape
+        from the W3C `PushSubscription` serialisation — anything
+        outside the `[A-Za-z0-9_-]` charset is rejected so garbage
+        rows can't slip in and fail later at signing time.
+
+        Returns `503` when VAPID public/private/subject is not
+        configured on the server.
+      operationId: meWebPushStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, keys]
+              properties:
+                endpoint:
+                  type: string
+                  format: uri
+                  pattern: '^https://'
+                  example: 'https://fcm.googleapis.com/fcm/send/...'
+                keys:
+                  type: object
+                  required: [p256dh, auth]
+                  properties:
+                    p256dh:
+                      type: string
+                      example: 'BJ_...'
+                    auth:
+                      type: string
+                      example: 'r5y6Z...'
+      responses:
+        '200':
+          description: Subscription already existed; keys refreshed.
+        '201':
+          description: New subscription created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [id, endpoint_host, created_at]
+                    properties:
+                      id:
+                        type: integer
+                      endpoint_host:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          description: VAPID keys not configured on the server.
+
+  /me/push-subscriptions/{id}:
+    delete:
+      tags: [auth]
+      summary: Revoke a Web Push subscription
+      description: |
+        Drops the row from `push_subscriptions` (#419). 200 on
+        success. 404 when the id doesn't belong to the authenticated
+        user — same shape as a never-existed id, so a probe cannot
+        enumerate other users' subscription IDs.
+      operationId: meWebPushDestroy
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 17
+      responses:
+        '200':
+          description: Subscription revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked:
+                        type: boolean
+                        example: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Subscription id doesn't belong to the authenticated user.
+
   /me/two-factor:
     get:
       tags: [auth]
