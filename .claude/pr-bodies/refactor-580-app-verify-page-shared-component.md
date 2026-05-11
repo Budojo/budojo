@@ -74,8 +74,8 @@ After the refactor:
 - [x] `npm test -- --watch=false` — 94 spec files, 793 tests pass (+8 new in verify-page.component.spec.ts)
 - [x] Cold-cache rerun (`rm -rf .angular/cache node_modules/.vite`) — same totals confirmed; new spec file is in the runner's manifest
 - [x] `verify-email-change.component.spec.ts` (pre-existing) passes unchanged → existing data-cy selectors still wired
-- [ ] CI green (prettier + lint + vitest + cypress headless E2E + the PHP / OpenAPI / Worker jobs)
-- [ ] Cypress `email-change.cy.ts` (covers `verify-email-change-success`, `verify-email-change-error`, `verify-email-change-cta-login`) still green via CI
+- [x] CI green (prettier + lint + vitest + cypress headless E2E + the PHP / OpenAPI / Worker jobs)
+- [x] Cypress `email-change.cy.ts` (covers `verify-email-change-success`, `verify-email-change-error`, `verify-email-change-cta-login`) still green via CI
 
 ### Post-merge smoke (manual — needed because the SPA wasn't reachable from the dev session)
 
@@ -86,3 +86,14 @@ After the refactor:
 ## Provenance
 
 Surfaced by `/graphify` `semantically_similar_to` edges on PR #578 — the verify components clustered at score 0.85+. Originally I recommended waiting for a 4th verify-style page before extracting (Rule of Three), but with the diagnostic + new chrome test coverage both in this session, the trade became net-positive on its own. The 4th-instance bar moves from "blocking" to "would be even more obviously worth it."
+
+
+---
+
+### Update — Copilot review addressed in d4a4ace
+
+**Visual regression caught & fixed.** Copilot flagged that pre-#580 `verify-error` used **amber** (`--p-amber-700`) for the icon — semantically a *recoverable* failure (resend / sign in) — while my first cut of `<app-verify-page>` collapsed both `verify-error` and `verify-email-change`'s error branch into a single `error` state with red.
+
+Fix: added a dedicated `'warning'` state on the shared component (amber). The state union is now `'loading' | 'success' | 'error' | 'warning' | 'neutral'`. `verify-error` now uses `state="warning"`; `verify-email-change` keeps `state="error"` for the terminal-token branch.
+
+Updated the "Out of scope" claim — there is no longer a visual change.
