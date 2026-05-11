@@ -5393,7 +5393,7 @@ components:
 
     CommunityPost:
       type: object
-      required: [id, type, visibility, payload, created_at, created_by, reactions_count, comments_count, rsvps_count, your_reaction]
+      required: [id, type, visibility, payload, created_at, created_by, reactions_count, comments_count, rsvps_count, your_reaction, your_rsvp]
       properties:
         id: { type: integer, format: int64 }
         type: { $ref: '#/components/schemas/CommunityPostType' }
@@ -5415,6 +5415,11 @@ components:
           enum: [clap, pray]
           nullable: true
           description: 'The caller''s own reaction on this post (PR-C2). Null when the caller has not reacted. Used by the SPA to render reaction buttons in active state on first paint.'
+        your_rsvp:
+          type: string
+          enum: [going, maybe]
+          nullable: true
+          description: 'The caller''s own RSVP on this post (PR-E2). Always null on non-event posts (no row to find) or when the caller has not RSVPed. Used by the SPA to render RSVP buttons in active state on first paint.'
 
     PostComment:
       type: object

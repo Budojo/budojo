@@ -168,6 +168,33 @@ it('surfaces your_reaction=null when the caller has not reacted', function (): v
     expect($response->json('data.0.your_reaction'))->toBeNull();
 });
 
+it("surfaces the caller's your_rsvp on an event post when they have RSVPed", function (): void {
+    /** @var CommunityPost $event */
+    $event = CommunityPost::factory()->for($this->academy)->event('Open mat')->create();
+
+    \App\Models\PostRsvp::create([
+        'post_id' => $event->id,
+        'user_id' => $this->owner->id,
+        'response' => \App\Enums\RsvpResponse::Going,
+    ]);
+
+    $response = $this->actingAs($this->owner)
+        ->getJson('/api/v1/community/feed')
+        ->assertOk();
+
+    expect($response->json('data.0.your_rsvp'))->toBe('going');
+});
+
+it('surfaces your_rsvp=null when the caller has not RSVPed', function (): void {
+    CommunityPost::factory()->for($this->academy)->event('Open mat')->create();
+
+    $response = $this->actingAs($this->owner)
+        ->getJson('/api/v1/community/feed')
+        ->assertOk();
+
+    expect($response->json('data.0.your_rsvp'))->toBeNull();
+});
+
 it('rejects unauthenticated requests with 401', function (): void {
     $this->getJson('/api/v1/community/feed')->assertStatus(401);
 });

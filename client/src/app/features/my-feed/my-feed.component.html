@@ -78,6 +78,39 @@
                     {{ location }}
                   </p>
                 }
+                <div class="feed__rsvp" data-cy="post-rsvp">
+                  <button
+                    type="button"
+                    class="feed__react-btn"
+                    [class.feed__react-btn--active]="post.your_rsvp === 'going'"
+                    [attr.aria-pressed]="post.your_rsvp === 'going'"
+                    [attr.aria-label]="'athletePortal.feed.rsvpGoingAria' | translate"
+                    (click)="toggleRsvp(post, 'going')"
+                    [attr.data-cy]="'rsvp-going-' + post.id"
+                  >
+                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    <span class="feed__react-label">{{
+                      'athletePortal.feed.rsvpGoing' | translate
+                    }}</span>
+                    @if (post.rsvps_count > 0) {
+                      <span class="feed__react-count">{{ post.rsvps_count }}</span>
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="feed__react-btn"
+                    [class.feed__react-btn--active]="post.your_rsvp === 'maybe'"
+                    [attr.aria-pressed]="post.your_rsvp === 'maybe'"
+                    [attr.aria-label]="'athletePortal.feed.rsvpMaybeAria' | translate"
+                    (click)="toggleRsvp(post, 'maybe')"
+                    [attr.data-cy]="'rsvp-maybe-' + post.id"
+                  >
+                    <i class="pi pi-question-circle" aria-hidden="true"></i>
+                    <span class="feed__react-label">{{
+                      'athletePortal.feed.rsvpMaybe' | translate
+                    }}</span>
+                  </button>
+                </div>
               </div>
             }
             @case ('owner_announcement') {

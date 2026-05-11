@@ -79,6 +79,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
+          your_rsvp: null,
         },
       ],
       meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
@@ -119,6 +120,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
+          your_rsvp: null,
         },
       ],
       meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
@@ -169,6 +171,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
+          your_rsvp: null,
         },
       ],
       meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
@@ -222,6 +225,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
+          your_rsvp: null,
         },
       ],
       meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
@@ -239,6 +243,106 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     fixture.detectChanges();
 
     // Rolled back to inactive.
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('Going-RSVP click optimistically marks the button active + reconciles on response', () => {
+    const { fixture, el, http } = setup();
+
+    const postId = 88;
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          id: postId,
+          type: 'event',
+          visibility: 'academy',
+          payload: {
+            title: 'Open mat',
+            starts_at: '2026-05-17T10:00:00Z',
+            location_text: 'Via Roma 10',
+          },
+          created_at: '2026-05-10T08:00:00Z',
+          created_by: {
+            id: 1,
+            first_name: 'O',
+            last_name: 'O',
+            full_name: 'O O',
+            handle: null,
+            avatar_url: null,
+            belt: null,
+          },
+          reactions_count: 0,
+          comments_count: 0,
+          rsvps_count: 0,
+          your_reaction: null,
+          your_rsvp: null,
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const btn = el.querySelector(`[data-cy="rsvp-going-${postId}"]`) as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+
+    btn.click();
+    fixture.detectChanges();
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+
+    http
+      .expectOne(`${environment.apiBase}/api/v1/community/posts/${postId}/rsvp`)
+      .flush({ your_rsvp: 'going', counts: { going: 1, maybe: 0 } });
+    fixture.detectChanges();
+
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    expect(
+      el.querySelector(`[data-cy="rsvp-going-${postId}"] .feed__react-count`)?.textContent,
+    ).toContain('1');
+  });
+
+  it('rolls back the optimistic RSVP when the API call fails', () => {
+    const { fixture, el, http } = setup();
+
+    const postId = 89;
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          id: postId,
+          type: 'event',
+          visibility: 'academy',
+          payload: { title: 'Open mat', starts_at: '2026-05-17T10:00:00Z' },
+          created_at: '2026-05-10T08:00:00Z',
+          created_by: {
+            id: 1,
+            first_name: 'O',
+            last_name: 'O',
+            full_name: 'O O',
+            handle: null,
+            avatar_url: null,
+            belt: null,
+          },
+          reactions_count: 0,
+          comments_count: 0,
+          rsvps_count: 0,
+          your_reaction: null,
+          your_rsvp: null,
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const btn = el.querySelector(`[data-cy="rsvp-maybe-${postId}"]`) as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+
+    http
+      .expectOne(`${environment.apiBase}/api/v1/community/posts/${postId}/rsvp`)
+      .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
     expect(btn.getAttribute('aria-pressed')).toBe('false');
   });
 
@@ -266,6 +370,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
+          your_rsvp: null,
         },
       ],
       meta: { current_page: 1, per_page: 20, total: 25, last_page: 2 },

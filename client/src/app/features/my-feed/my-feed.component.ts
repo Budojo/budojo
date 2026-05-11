@@ -20,6 +20,8 @@ import {
   CommunityService,
   ReactionEmoji,
   ReactionToggleResponse,
+  RsvpResponse,
+  RsvpToggleResponse,
 } from '../../core/services/community.service';
 import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
@@ -306,6 +308,99 @@ export class MyFeedComponent implements OnInit {
     this.posts.update((list) =>
       list.map((p) =>
         p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count + delta) } : p,
+      ),
+    );
+  }
+
+  /**
+   * Per-post RSVP toggle streams (M9 PR-E2). Same per-post Subject +
+   * switchMap shape as reactions so rapid Going → Maybe → Going
+   * clicks can't land out of order. Different posts get independent
+   * streams.
+   */
+  private readonly rsvpStreams = new Map<
+    number,
+    Subject<{ response: RsvpResponse; rollback: () => void }>
+  >();
+
+  /**
+   * Optimistic RSVP toggle. Updates `your_rsvp` + `rsvps_count`
+   * locally, fires the API, and reconciles to the server's
+   * canonical state. On error, rolls back to the pre-click state.
+   */
+  protected toggleRsvp(post: CommunityPost, response: RsvpResponse): void {
+    const previousRsvp = post.your_rsvp;
+    const previousCount = post.rsvps_count;
+
+    const optimistic = this.predictNextRsvp(post, response);
+    this.replacePostRsvp(post.id, optimistic);
+
+    const stream = this.rsvpStreamFor(post.id);
+    stream.next({
+      response,
+      rollback: () => {
+        this.replacePostRsvp(post.id, {
+          your_rsvp: previousRsvp,
+          rsvps_count: previousCount,
+        });
+      },
+    });
+  }
+
+  private rsvpStreamFor(postId: number): Subject<{ response: RsvpResponse; rollback: () => void }> {
+    const existing = this.rsvpStreams.get(postId);
+    if (existing) return existing;
+
+    const subject = new Subject<{ response: RsvpResponse; rollback: () => void }>();
+    subject
+      .pipe(
+        switchMap(({ response, rollback }) =>
+          this.communityService.toggleRsvp(postId, response).pipe(
+            catchError(() => {
+              rollback();
+              this.messageService.add({
+                severity: 'error',
+                summary: this.translateService.instant('athletePortal.feed.rsvpToastError'),
+                life: 3000,
+              });
+              return of<RsvpToggleResponse | null>(null);
+            }),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((resp) => {
+        if (resp === null) return;
+        this.replacePostRsvp(postId, {
+          your_rsvp: resp.your_rsvp,
+          rsvps_count: resp.counts.going + resp.counts.maybe,
+        });
+      });
+
+    this.rsvpStreams.set(postId, subject);
+    return subject;
+  }
+
+  private predictNextRsvp(
+    post: CommunityPost,
+    response: RsvpResponse,
+  ): { your_rsvp: RsvpResponse | null; rsvps_count: number } {
+    if (post.your_rsvp === null) {
+      return { your_rsvp: response, rsvps_count: post.rsvps_count + 1 };
+    }
+    if (post.your_rsvp === response) {
+      return { your_rsvp: null, rsvps_count: Math.max(0, post.rsvps_count - 1) };
+    }
+    return { your_rsvp: response, rsvps_count: post.rsvps_count };
+  }
+
+  private replacePostRsvp(
+    postId: number,
+    patch: { your_rsvp: RsvpResponse | null; rsvps_count: number },
+  ): void {
+    this.posts.update((list) =>
+      list.map((p) =>
+        p.id === postId ? { ...p, your_rsvp: patch.your_rsvp, rsvps_count: patch.rsvps_count } : p,
       ),
     );
   }
