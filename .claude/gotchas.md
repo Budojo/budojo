@@ -60,6 +60,10 @@ Format: `→` separates the symptom from the action.
 - Used `POST /rulesets` to re-apply an already-existing ruleset → creates a duplicate. Updates use `PUT /rulesets/{id}` or `PATCH`.
 - Expected `gh api .../requested_reviewers -f reviewers[]=Copilot` to assign Copilot → REST API returns 200 but silently drops the reviewer. Use the repo Settings → Code review → "Automatically request Copilot code review" toggle. Bot logins return 422 "not a collaborator".
 
+## Pre-push gate scripts
+
+- `./.claude/scripts/test-client.sh quick` SKIPS `prettier --write` (intended for mid-session re-runs after you've already formatted). On the **first** commit of a newly-written spec file the script will pass locally (lint+vitest only) but CI's `prettier --check` job FAILS. **Rule:** use the full `./.claude/scripts/test-client.sh` (no `quick`) when adding a new file; `quick` only on re-runs of a file that's already been touched by `--write` this session. Same applies to `test-server.sh quick` for cs-fixer.
+
 ## Git hygiene
 
 - `prettier --write` over a broad glob (`"**/*.ts"`) → normalises CRLF↔LF on files outside your intended scope. **Run `git diff --stat` before staging**; revert files showing `0 insertions(+), 0 deletions(-)` with `git checkout --`.
