@@ -24,6 +24,8 @@ import {
 import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
+import { UserFlairComponent } from '../../shared/components/user-flair/user-flair.component';
+import { CommentsThreadComponent } from './comments-thread/comments-thread.component';
 
 /**
  * Athlete-portal community timeline (#614, M9 PR-B2). Consumes the
@@ -53,6 +55,8 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
     ToastModule,
     BeltBadgeComponent,
     UserAvatarComponent,
+    UserFlairComponent,
+    CommentsThreadComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [MessageService],
@@ -266,5 +270,29 @@ export class MyFeedComponent implements OnInit {
           : p,
       ),
     );
+  }
+
+  /**
+   * Per-post comments-thread expand state. The thread mounts lazily
+   * on first toggle so the feed paint stays cheap when no card is
+   * open. Stored as a Set rather than a boolean per-post object so
+   * the signal update is shallow + cheap.
+   */
+  private readonly expandedThreads = signal(new Set<number>());
+
+  protected isThreadOpen(postId: number): boolean {
+    return this.expandedThreads().has(postId);
+  }
+
+  protected toggleThread(postId: number): void {
+    this.expandedThreads.update((s) => {
+      const next = new Set(s);
+      if (next.has(postId)) {
+        next.delete(postId);
+      } else {
+        next.add(postId);
+      }
+      return next;
+    });
   }
 }

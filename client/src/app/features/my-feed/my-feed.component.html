@@ -119,7 +119,28 @@
                 'athletePortal.feed.reactPray' | translate
               }}</span>
             </button>
+            <button
+              type="button"
+              class="feed__react-btn"
+              [class.feed__react-btn--active]="isThreadOpen(post.id)"
+              [attr.aria-expanded]="isThreadOpen(post.id)"
+              [attr.aria-controls]="'thread-' + post.id"
+              (click)="toggleThread(post.id)"
+              [attr.data-cy]="'toggle-comments-' + post.id"
+            >
+              <i class="pi pi-comment" aria-hidden="true"></i>
+              <span class="feed__react-label">{{
+                'athletePortal.feed.commentsToggle' | translate
+              }}</span>
+              @if (post.comments_count > 0) {
+                <span class="feed__react-count">{{ post.comments_count }}</span>
+              }
+            </button>
           </footer>
+
+          @if (isThreadOpen(post.id)) {
+            <app-comments-thread [postId]="post.id" />
+          }
         </li>
       }
     </ul>

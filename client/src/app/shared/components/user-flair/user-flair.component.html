@@ -1,0 +1,16 @@
+<div class="flair" [class.flair--compact]="compact()">
+  @if (!compact()) {
+    <app-user-avatar [name]="user().full_name" [url]="user().avatar_url" />
+  }
+  <div class="flair__meta">
+    <span class="flair__name">{{ user().full_name }}</span>
+    <div class="flair__row">
+      @if (user().handle) {
+        <span class="flair__handle">&#64;{{ user().handle }}</span>
+      }
+      @if (user().belt; as belt) {
+        <app-belt-badge [belt]="belt" />
+      }
+    </div>
+  </div>
+</div>

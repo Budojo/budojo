@@ -233,7 +233,17 @@
       "reactClapAria": "React with a clap",
       "reactPray": "Respect",
       "reactPrayAria": "React with respect",
-      "reactToastError": "Couldn't update your reaction. Try again."
+      "reactToastError": "Couldn't update your reaction. Try again.",
+      "commentsToggle": "Comments",
+      "commentsLoading": "Loading comments…",
+      "commentsEmpty": "No comments yet — be the first.",
+      "commentsLoadError": "Couldn't load comments. Try opening this card again.",
+      "commentsLoadMore": "Load more",
+      "commentPlaceholder": "Write a comment…",
+      "commentSubmit": "Post",
+      "commentSubmitError": "Couldn't post your comment. Try again.",
+      "commentDeleteAria": "Delete this comment",
+      "commentDeleteError": "Couldn't delete your comment. Try again."
     },
     "academy": {
       "title": "Your academy",
