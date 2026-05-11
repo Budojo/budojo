@@ -387,4 +387,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
         Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
     });
+
+    // Community feed (#612, M9 PR-B server). Athletes + owners read the
+    // same paginated /community/feed (tenant-scoped by the Action via
+    // the user's role → academy resolution). DELETE is owner-only —
+    // the FormRequest authorize() gate enforces both the role check
+    // and the cross-academy isolation. SPA wiring follows in PR-B2.
+    Route::prefix('community')->group(function (): void {
+        Route::get('feed', [\App\Http\Controllers\Community\CommunityFeedController::class, 'index']);
+        Route::delete('posts/{post}', [\App\Http\Controllers\Community\CommunityFeedController::class, 'destroy']);
+    });
 });
