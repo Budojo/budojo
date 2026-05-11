@@ -23,7 +23,9 @@
       <app-brand-glyph class="topbar__logo" />
       Budojo
     </a>
-    <app-user-avatar />
+    @if (user(); as topbarUser) {
+      <app-user-avatar [name]="topbarUser.full_name" [url]="topbarUser.avatar_url" />
+    }
   </header>
 
   <!-- Off-canvas backdrop closes the drawer when tapped (mobile only).
@@ -53,7 +55,7 @@
 
     @if (user(); as currentUser) {
       <div class="sidebar__user">
-        <app-user-avatar [user]="currentUser" />
+        <app-user-avatar [name]="currentUser.full_name" [url]="currentUser.avatar_url" />
         <div class="sidebar__user-meta">
           <span class="sidebar__user-name"
             >{{ currentUser.first_name }} {{ currentUser.last_name }}</span

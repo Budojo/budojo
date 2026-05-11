@@ -109,14 +109,11 @@ export const routes: Routes = [
       ),
   },
   {
-    // Athlete-side landing surface (#445, M7 PR-D minimal). The full
-    // athlete dashboard with own attendance / payments / documents
-    // ships in PR-E next milestone; this route + the welcome
     // Legacy athlete-portal tree (#445 PR-D minimal). The proper
     // athlete shell now lives under `/dashboard/me/*` (#610, M7 PR-D
-    // slice 1). Both children below are kept as redirects so any
+    // slice 1). Both children below are kept as pure redirects so any
     // bookmark or in-flight invite-accept link that lands here still
-    // routes the user to the new shell — drop the whole `athlete-portal`
+    // routes the user to the new shell. Drop the whole `athlete-portal`
     // block in a follow-up slice once the access logs confirm zero
     // hits over a stable beta window.
     path: 'athlete-portal',

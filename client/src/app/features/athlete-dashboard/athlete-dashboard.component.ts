@@ -48,7 +48,11 @@ export class AthleteDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     // Hydrate the cached user envelope on first paint so the sidebar
-    // avatar / handle / belt render with real data, not a placeholder.
+    // avatar + name + handle render with real data, not the avatar
+    // initials-fallback placeholder. (Belt comes from the linked
+    // Athlete row, which is NOT in /auth/me — surfaces in later
+    // slices when the athlete endpoint lands.)
+    //
     // The owner-side dashboard does the same via its `loadCurrentUser()`
     // call — same justification: a hard refresh loses the in-memory
     // signal but keeps the auth_token, so /auth/me round-trips it back.
