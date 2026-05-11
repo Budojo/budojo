@@ -2,60 +2,136 @@
   <h1 class="profile__title">{{ 'athletePortal.profile.title' | translate }}</h1>
 
   @if (user(); as currentUser) {
-    <div class="profile__card" data-cy="me-profile-card">
-      <dl class="profile__fields">
-        <div class="profile__row">
-          <dt>{{ 'athletePortal.profile.firstName' | translate }}</dt>
-          <dd data-cy="me-profile-first-name">{{ currentUser.first_name }}</dd>
-        </div>
-        <div class="profile__row">
-          <dt>{{ 'athletePortal.profile.lastName' | translate }}</dt>
-          <dd data-cy="me-profile-last-name">{{ currentUser.last_name }}</dd>
-        </div>
-        <div class="profile__row">
-          <dt>{{ 'athletePortal.profile.handle' | translate }}</dt>
-          <dd data-cy="me-profile-handle">
-            @if (currentUser.handle) {
-              &#64;{{ currentUser.handle }}
-            } @else {
-              <span class="profile__placeholder">{{
-                'athletePortal.profile.noHandle' | translate
-              }}</span>
-            }
-          </dd>
-        </div>
-        <div class="profile__row">
-          <dt>{{ 'athletePortal.profile.email' | translate }}</dt>
-          <dd data-cy="me-profile-email">
-            {{ currentUser.email }}
-            @if (currentUser.email_verified_at) {
-              <span
-                class="profile__badge profile__badge--verified"
-                data-cy="me-profile-email-verified"
-              >
-                <i class="pi pi-verified" aria-hidden="true"></i>
-                {{ 'athletePortal.profile.verified' | translate }}
-              </span>
-            } @else {
-              <span
-                class="profile__badge profile__badge--unverified"
-                data-cy="me-profile-email-unverified"
-              >
-                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-                {{ 'athletePortal.profile.unverified' | translate }}
-              </span>
-            }
-          </dd>
-        </div>
-      </dl>
+    @if (!editing()) {
+      <div class="profile__card" data-cy="me-profile-card">
+        <dl class="profile__fields">
+          <div class="profile__row">
+            <dt>{{ 'athletePortal.profile.firstName' | translate }}</dt>
+            <dd data-cy="me-profile-first-name">{{ currentUser.first_name }}</dd>
+          </div>
+          <div class="profile__row">
+            <dt>{{ 'athletePortal.profile.lastName' | translate }}</dt>
+            <dd data-cy="me-profile-last-name">{{ currentUser.last_name }}</dd>
+          </div>
+          <div class="profile__row">
+            <dt>{{ 'athletePortal.profile.handle' | translate }}</dt>
+            <dd data-cy="me-profile-handle">
+              @if (currentUser.handle) {
+                &#64;{{ currentUser.handle }}
+              } @else {
+                <span class="profile__placeholder">{{
+                  'athletePortal.profile.noHandle' | translate
+                }}</span>
+              }
+            </dd>
+          </div>
+          <div class="profile__row">
+            <dt>{{ 'athletePortal.profile.email' | translate }}</dt>
+            <dd data-cy="me-profile-email">
+              {{ currentUser.email }}
+              @if (currentUser.email_verified_at) {
+                <span
+                  class="profile__badge profile__badge--verified"
+                  data-cy="me-profile-email-verified"
+                >
+                  <i class="pi pi-verified" aria-hidden="true"></i>
+                  {{ 'athletePortal.profile.verified' | translate }}
+                </span>
+              } @else {
+                <span
+                  class="profile__badge profile__badge--unverified"
+                  data-cy="me-profile-email-unverified"
+                >
+                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                  {{ 'athletePortal.profile.unverified' | translate }}
+                </span>
+              }
+            </dd>
+          </div>
+        </dl>
 
-      <p class="profile__hint">
-        {{ 'athletePortal.profile.editHint' | translate }}
-      </p>
-    </div>
+        <button
+          type="button"
+          pButton
+          class="profile__edit-btn"
+          (click)="startEdit()"
+          data-cy="me-profile-edit"
+        >
+          <i class="pi pi-pencil" aria-hidden="true"></i>
+          {{ 'athletePortal.profile.editButton' | translate }}
+        </button>
+      </div>
+    } @else {
+      <form
+        class="profile__card profile__form"
+        [formGroup]="form"
+        (submit)="submit(); $event.preventDefault()"
+        data-cy="me-profile-edit-form"
+      >
+        <label class="profile__field">
+          <span class="profile__label">{{ 'athletePortal.profile.firstName' | translate }}</span>
+          <input
+            pInputText
+            type="text"
+            formControlName="first_name"
+            maxlength="50"
+            data-cy="me-profile-input-first-name"
+            autocomplete="given-name"
+          />
+        </label>
+        <label class="profile__field">
+          <span class="profile__label">{{ 'athletePortal.profile.lastName' | translate }}</span>
+          <input
+            pInputText
+            type="text"
+            formControlName="last_name"
+            maxlength="50"
+            data-cy="me-profile-input-last-name"
+            autocomplete="family-name"
+          />
+        </label>
+        <label class="profile__field">
+          <span class="profile__label">{{ 'athletePortal.profile.handle' | translate }}</span>
+          <input
+            pInputText
+            type="text"
+            formControlName="handle"
+            maxlength="30"
+            data-cy="me-profile-input-handle"
+            autocomplete="off"
+            inputmode="text"
+            placeholder="mariobjj"
+          />
+          <span class="profile__hint">{{ 'athletePortal.profile.handleHint' | translate }}</span>
+        </label>
+
+        <div class="profile__actions">
+          <button
+            type="button"
+            pButton
+            class="p-button-text"
+            (click)="cancelEdit()"
+            [disabled]="submitting()"
+            data-cy="me-profile-cancel"
+          >
+            {{ 'athletePortal.profile.cancelButton' | translate }}
+          </button>
+          <button
+            type="submit"
+            pButton
+            [disabled]="form.invalid || submitting()"
+            data-cy="me-profile-save"
+          >
+            {{ 'athletePortal.profile.saveButton' | translate }}
+          </button>
+        </div>
+      </form>
+    }
   } @else {
     <p class="profile__loading" data-cy="me-profile-loading">
       {{ 'athletePortal.profile.loading' | translate }}
     </p>
   }
+
+  <p-toast position="bottom-center" />
 </section>

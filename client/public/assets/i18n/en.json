@@ -213,12 +213,18 @@
       "firstName": "First name",
       "lastName": "Last name",
       "handle": "Username",
+      "handleHint": "Lowercase letters, numbers, underscore. Leave empty to clear.",
       "noHandle": "No username set yet",
       "email": "Email",
       "verified": "Verified",
       "unverified": "Not verified",
-      "editHint": "Editing your profile is coming in the next release.",
-      "loading": "Loading your profile…"
+      "loading": "Loading your profile…",
+      "editButton": "Edit profile",
+      "saveButton": "Save",
+      "cancelButton": "Cancel",
+      "editSavedToast": "Profile updated.",
+      "editHandleTakenToast": "That username is already taken — pick another.",
+      "editErrorToast": "Couldn't save your profile. Try again."
     },
     "feed": {
       "title": "Your academy's feed",

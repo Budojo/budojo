@@ -213,12 +213,18 @@
       "firstName": "Nome",
       "lastName": "Cognome",
       "handle": "Username",
+      "handleHint": "Lettere minuscole, numeri, underscore. Lascia vuoto per rimuoverlo.",
       "noHandle": "Username non ancora impostato",
       "email": "Email",
       "verified": "Verificata",
       "unverified": "Non verificata",
-      "editHint": "La modifica del profilo arriva nella prossima release.",
-      "loading": "Caricamento del profilo…"
+      "loading": "Caricamento del profilo…",
+      "editButton": "Modifica profilo",
+      "saveButton": "Salva",
+      "cancelButton": "Annulla",
+      "editSavedToast": "Profilo aggiornato.",
+      "editHandleTakenToast": "Questo username è già preso — scegline un altro.",
+      "editErrorToast": "Non siamo riusciti a salvare il profilo. Riprova."
     },
     "feed": {
       "title": "Il feed della tua academy",
