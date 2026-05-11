@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\User;
 
-use App\Actions\Account\CancelPendingEmailChangeAction;
-use App\Actions\Account\RequestEmailChangeAction;
+use App\Actions\User\CancelPendingEmailChangeAction;
+use App\Actions\User\RequestEmailChangeAction;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Account\RequestEmailChangeRequest;
+use App\Http\Requests\User\RequestEmailChangeRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

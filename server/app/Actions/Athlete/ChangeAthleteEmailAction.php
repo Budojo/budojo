@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Athlete;
 
-use App\Actions\Account\RequestEmailChangeAction;
+use App\Actions\User\RequestEmailChangeAction;
 use App\Models\Athlete;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;

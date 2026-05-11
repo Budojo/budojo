@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\Account;
+namespace App\Actions\Auth;
 
 use App\Exceptions\EmailChangeTokenInvalidException;
 use App\Models\Athlete;
