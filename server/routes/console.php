@@ -68,3 +68,16 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('03:00')
     ->timezone('Europe/Rome')
     ->withoutOverlapping(60);
+
+// GDPR retention for medical certificates (#537, DPIA-lite § R6).
+// Daily purge of medical certs whose `expires_at` is older than
+// 24 months. Same code path the athlete-removal cascade uses
+// (`DeleteDocumentAction` — unlinks file bytes + soft-deletes row).
+// Runs at 03:15 Europe/Rome — staggered after the login-attempts
+// purge to keep the off-peak window single-threaded. Capped at
+// 500 purges per run; daily cadence comfortably absorbs even a
+// large multi-academy backlog.
+\Illuminate\Support\Facades\Schedule::command('budojo:purge-expired-medical-certificates')
+    ->dailyAt('03:15')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(60);

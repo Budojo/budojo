@@ -9,8 +9,11 @@ use App\Actions\Auth\RecordLoginAttemptAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
+use App\Support\TwoFactorAuth;
 use App\Support\UserAgentLabel;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class LoginController extends Controller
 {
@@ -31,38 +34,64 @@ class LoginController extends Controller
             password: $request->string('password')->toString(),
         );
 
-        // Login-history audit log (#430). Records EVERY attempt —
-        // success or failure — with email, IP, and User-Agent so
-        // the user's "Login history" panel can surface the
-        // compromise signal (failed-login bursts are the high-signal
-        // security event to detect).
-        //
-        // **Wrong-password attribution**: the LoginResult carries
-        // `matchedUserId` even on failure (when the email matched a
-        // real account but the password was wrong) so the audit row
-        // attributes to that user — the failure surfaces in THEIR
-        // /me/login-history. The HTTP 401 response shape is identical
-        // to the unknown-email branch so the attribution does NOT
-        // leak account-existence to the caller.
-        //
-        // Wrapped so a hiccup in the audit insert never blocks a
-        // legitimate login.
-        try {
-            $this->recordAttempt->execute(
-                userId: $result->matchedUserId,
-                emailAttempted: $email,
-                ip: $ip,
-                userAgent: $userAgent,
-                success: $result->isSuccess(),
-            );
-        } catch (\Throwable $e) {
-            report($e);
-        }
-
         $user = $result->user;
         if ($user === null) {
+            // Wrong-password or unknown-email path — log the failed
+            // attempt with the matched-id (if any) for /me/login-history
+            // attribution, then 401. Audit insert is best-effort: a
+            // DB hiccup never blocks the response.
+            $this->recordAttemptSafely(
+                userId: $result->matchedUserId,
+                email: $email,
+                ip: $ip,
+                userAgent: $userAgent,
+                success: false,
+            );
+
             return response()->json(['message' => 'Invalid credentials.'], 401);
         }
+
+        // Two-factor challenge (#412). Password is correct, but when
+        // the user has 2FA active (confirmed_at is set), the body
+        // must ALSO carry a valid `two_factor_code` (TOTP from the
+        // authenticator OR a single-use backup code). Two failure
+        // modes return 422 with distinct messages so the SPA can
+        // render the right shape (prompt for code vs prompt for new
+        // code). A missing or wrong code on a 2FA-active account is
+        // logged as a failed attempt so a bruteforce-the-code probe
+        // surfaces in the user's login-history panel.
+        if ($user->two_factor_confirmed_at !== null) {
+            $code = $request->string('two_factor_code')->toString();
+            if ($code === '') {
+                return response()->json(
+                    ['message' => 'two_factor_required'],
+                    422,
+                );
+            }
+            if (! $this->verifyTwoFactor($user, $code)) {
+                $this->recordAttemptSafely(
+                    userId: $user->id,
+                    email: $email,
+                    ip: $ip,
+                    userAgent: $userAgent,
+                    success: false,
+                );
+
+                return response()->json(
+                    ['message' => 'invalid_two_factor_code'],
+                    422,
+                );
+            }
+        }
+
+        // Real success — both password AND (if active) 2FA passed.
+        $this->recordAttemptSafely(
+            userId: $user->id,
+            email: $email,
+            ip: $ip,
+            userAgent: $userAgent,
+            success: true,
+        );
 
         // Token name surfaces in the user's "Active sessions" list
         // (#413) — derive a coarse "Chrome on macOS"-style label from
@@ -88,5 +117,73 @@ class LoginController extends Controller
                 'token' => $token,
             ],
         );
+    }
+
+    /**
+     * Accepts either a 6-digit TOTP OR an 8-char backup code (with
+     * or without the canonical dash, case-insensitive). Tries the
+     * cheaper TOTP check first; falls through to backup-code
+     * consumption on miss.
+     *
+     * **Atomicity** — backup-code consumption is wrapped in a DB
+     * transaction with a row-level SELECT FOR UPDATE on the user.
+     * Without this, two concurrent logins racing with the same
+     * recovery code could both succeed (each reads the array, finds
+     * the code, persists `remaining` independently — second write
+     * wins, but BOTH have already returned `true`). The lock + reload
+     * inside the transaction is the canonical pattern for "consume
+     * once" semantics on shared mutable state.
+     */
+    private function verifyTwoFactor(User $user, string $code): bool
+    {
+        $secret = $user->two_factor_secret;
+        if ($secret !== null && TwoFactorAuth::verifyTotp($secret, $code)) {
+            return true;
+        }
+
+        return DB::transaction(function () use ($user, $code): bool {
+            /** @var User|null $locked */
+            $locked = User::query()->lockForUpdate()->find($user->id);
+            if ($locked === null) {
+                return false;
+            }
+            $codes = $locked->two_factor_recovery_codes ?? [];
+            $remaining = TwoFactorAuth::consumeRecoveryCode($codes, $code);
+            if ($remaining === null) {
+                return false;
+            }
+            $locked->forceFill(['two_factor_recovery_codes' => $remaining])->save();
+            // Mirror the in-memory state on the caller's reference so
+            // downstream `$user` reads (e.g. UserResource) see the
+            // post-consume state without a second DB roundtrip.
+            $user->setRawAttributes($locked->getAttributes(), true);
+            $user->exists = true;
+
+            return true;
+        });
+    }
+
+    /**
+     * Best-effort audit insert. Mirrors the prior try/catch shape —
+     * a DB hiccup in the audit insert never blocks the response.
+     */
+    private function recordAttemptSafely(
+        ?int $userId,
+        string $email,
+        ?string $ip,
+        ?string $userAgent,
+        bool $success,
+    ): void {
+        try {
+            $this->recordAttempt->execute(
+                userId: $userId,
+                emailAttempted: $email,
+                ip: $ip,
+                userAgent: $userAgent,
+                success: $success,
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

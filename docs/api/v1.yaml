@@ -130,6 +130,15 @@ paths:
         a countdown before re-enabling the submit button. Successful logins
         count toward the cap as well — the limiter is keyed on the request
         signature, not on response status.
+
+        **Two-factor authentication (#412).** When the user has TOTP 2FA
+        active (`two_factor_confirmed_at` is non-null), the password-only
+        body returns `422` with `message: "two_factor_required"`. The
+        client retries with the additional `two_factor_code` field
+        (6-digit TOTP from an authenticator app, or one of the user's
+        single-use backup codes — `XXXX-XXXX` format). An invalid code
+        returns `422` with `message: "invalid_two_factor_code"`. A valid
+        backup code is consumed (removed from the array) on use.
       operationId: authLogin
       security: []
       requestBody:
@@ -760,6 +769,105 @@ paths:
             `cancelled: false` instead (see above) — the 404 here
             covers ONLY the malformed-shape case.
 
+  /unsubscribe/{userId}/{category}:
+    get:
+      tags: [auth]
+      summary: One-click unsubscribe via signed URL (no auth)
+      description: |
+        Public, signed-URL endpoint for the unsubscribe footer link
+        embedded in non-transactional Mailables (#417). The signed
+        URL is built by `App\Support\UnsubscribeUrl::for(User, category)`
+        with a 30-day expiry; the framework's `signed` middleware
+        validates the signature server-side. Tampered / expired
+        signatures get a 403 from the middleware before reaching the
+        controller.
+
+        On success, the controller flips
+        `users.notification_preferences.{category} = false` and
+        302-redirects to the SPA `/unsubscribed?category={category}`
+        page. On unknown category / unknown user_id (signature valid
+        but the row is gone), it redirects to
+        `/unsubscribed?status=invalid` instead.
+      operationId: unsubscribeGet
+      security: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+            example: 42
+        - in: path
+          name: category
+          required: true
+          schema:
+            type: string
+            example: 'medical_cert_expiry_reminders'
+        - in: query
+          name: expires
+          required: true
+          schema:
+            type: integer
+            description: Unix-time signature expiry from `URL::temporarySignedRoute`.
+        - in: query
+          name: signature
+          required: true
+          schema:
+            type: string
+            description: HMAC signature produced from the app key.
+      responses:
+        '302':
+          description: |
+            Redirects to `/unsubscribed?category={category}` on success
+            or `/unsubscribed?status=invalid` on unknown user_id /
+            unknown category.
+        '403':
+          description: |
+            Signature missing, tampered, or expired (the `signed`
+            middleware rejects before the controller fires).
+        '404':
+          description: Returned for non-numeric `userId` (route binding constraint).
+    post:
+      tags: [auth]
+      summary: One-click unsubscribe via List-Unsubscribe-Post (RFC 8058)
+      description: |
+        Same effect as the GET — flips the matching preference off —
+        but adapted for Gmail / Yahoo's bulk-sender
+        `List-Unsubscribe-Post: List-Unsubscribe=One-Click` flow.
+        Email clients send a no-body POST and don't render any UI;
+        the response is always 200 with an empty body so the client
+        doesn't surface server-side errors to the user (RFC 8058 § 3).
+      operationId: unsubscribePost
+      security: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: category
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: expires
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: signature
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success (empty body).
+        '403':
+          description: Signature missing, tampered, or expired.
+        '404':
+          description: Non-numeric `userId`.
+
   /me/notification-preferences:
     get:
       tags: [auth]
@@ -834,6 +942,271 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  /me/notifications:
+    get:
+      tags: [auth]
+      summary: In-app notification inbox (latest 20 + unread count)
+      description: |
+        Backs the bell-icon dropdown in the dashboard topbar (#418).
+        Returns the most recent 20 notification rows for the authed
+        user (`ORDER BY created_at DESC LIMIT 20`) plus an unread
+        count for the badge.
+
+        **Population is deferred** — the inbox surface ships here;
+        wiring the existing reminder Actions (medical-cert expiry
+        digest, unpaid-athletes monthly digest) to ALSO call
+        `$user->notify(...)` alongside their email channel is a
+        focused follow-up. Today the `notifications` table is empty
+        in production until that follow-up lands.
+      operationId: meNotificationsIndex
+      responses:
+        '200':
+          description: Latest notifications + unread count.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, type, title, body, link, read_at, created_at]
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        type:
+                          type: string
+                          example: 'App\Notifications\MedicalCertExpiringNotification'
+                        title:
+                          type: string
+                        body:
+                          type: string
+                        link:
+                          type: string
+                          nullable: true
+                          example: '/dashboard/athletes/42/documents'
+                        read_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                  meta:
+                    type: object
+                    required: [unread_count]
+                    properties:
+                      unread_count:
+                        type: integer
+                        example: 3
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/notifications/{id}/read:
+    post:
+      tags: [auth]
+      summary: Mark a single notification as read
+      description: |
+        Flips `read_at` to `now()` on the addressed row (#418).
+        Idempotent — re-posting on an already-read row does NOT
+        advance the timestamp. 404s when the id doesn't belong to
+        the authenticated user; the response shape matches the
+        "id never existed" branch so an enumeration probe cannot
+        recover other users' notification ids.
+      operationId: meNotificationsMarkAsRead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Row updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [id, read_at]
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      read_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Notification id doesn't belong to the authenticated user.
+
+  /me/notifications/read-all:
+    post:
+      tags: [auth]
+      summary: Bulk mark every unread notification as read
+      description: |
+        Flips every `read_at IS NULL` row owned by the authenticated
+        user (#418). Returns the count that was flipped — `0` when
+        the user had no unread notifications.
+      operationId: meNotificationsMarkAllAsRead
+      responses:
+        '200':
+          description: Bulk update count.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [marked_read]
+                    properties:
+                      marked_read:
+                        type: integer
+                        example: 5
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/onboarding:
+    get:
+      tags: [auth]
+      summary: Current first-run onboarding state for the authenticated user
+      description: |
+        Surfaces the user's first-run onboarding flags (#424) so the SPA
+        can decide whether to render the guided tour / "Getting started"
+        checklist on the dashboard home. Three boolean-derived states:
+
+        - `dismissed_at !== null` → user explicitly dismissed the tour;
+          the SPA never re-renders it.
+        - `completed_steps.length === available_steps.length` → user
+          has ticked every step; checklist self-dismisses.
+        - Otherwise → checklist + tour both render.
+      operationId: meOnboardingShow
+      responses:
+        '200':
+          description: Current onboarding state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [dismissed_at, completed_steps, available_steps]
+                    properties:
+                      dismissed_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      completed_steps:
+                        type: array
+                        items:
+                          type: string
+                        example: ['add_athlete']
+                      available_steps:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          [
+                            'add_athlete',
+                            'log_attendance',
+                            'mark_payment',
+                            'upload_document',
+                            'view_stats',
+                          ]
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/onboarding/steps:
+    post:
+      tags: [auth]
+      summary: Mark an onboarding step as completed
+      description: |
+        Idempotent (#424): re-posting the same step key is a no-op.
+        Unknown step keys (anything outside `OnboardingStep::all()`)
+        return 422 to keep the column shape disciplined.
+      operationId: meOnboardingCompleteStep
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [step]
+              properties:
+                step:
+                  type: string
+                  enum:
+                    - add_athlete
+                    - log_attendance
+                    - mark_payment
+                    - upload_document
+                    - view_stats
+      responses:
+        '200':
+          description: Step recorded — the full completed list returns.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [completed_steps]
+                    properties:
+                      completed_steps:
+                        type: array
+                        items:
+                          type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /me/onboarding/dismiss:
+    post:
+      tags: [auth]
+      summary: Permanently dismiss the first-run onboarding tour
+      description: |
+        Stamps `onboarding_dismissed_at = now()` (#424). Idempotent —
+        re-dismissing does NOT advance the timestamp; the first
+        dismissal is the meaningful one. The action is irreversible
+        from the SPA today (no "show me the tour again" surface).
+      operationId: meOnboardingDismiss
+      responses:
+        '200':
+          description: Dismissal timestamp returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [dismissed_at]
+                    properties:
+                      dismissed_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
 
   /me/login-history:
     get:
@@ -1015,6 +1388,383 @@ paths:
             body shape, however, is NOT normalised across the three
             (the controller emits its own JSON, while route-binding
             failures fall through to Laravel's default 404 page).
+
+  /me/api-tokens:
+    get:
+      tags: [auth]
+      summary: List the authenticated user's API tokens
+      description: |
+        Surfaces every `kind = 'api'` row in `personal_access_tokens`
+        tied to the user (#431). Session tokens (`kind = 'session'`)
+        are NOT included here — they live on `/me/sessions`. The
+        `meta.available_abilities` array is the catalog the SPA
+        renders as the checkbox grid on the "Generate a new token"
+        dialog; new tokens MUST pick a non-empty subset.
+      operationId: meApiTokensIndex
+      responses:
+        '200':
+          description: API token rows + abilities catalog.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, abilities, last_used_at, expires_at, created_at]
+                      properties:
+                        id:
+                          type: integer
+                          example: 42
+                        name:
+                          type: string
+                          example: 'nightly-export-script'
+                        abilities:
+                          type: array
+                          items:
+                            type: string
+                        last_used_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        expires_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                  meta:
+                    type: object
+                    required: [available_abilities]
+                    properties:
+                      available_abilities:
+                        type: array
+                        items:
+                          type: string
+                        example:
+                          ['athletes:read', 'athletes:write', 'documents:read', 'documents:write']
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    post:
+      tags: [auth]
+      summary: Mint a new API token (plaintext returned ONCE)
+      description: |
+        Creates a fresh Sanctum personal-access-token (#431) with
+        `kind = 'api'`, the supplied name, the supplied non-empty
+        abilities subset, and an optional `expires_in_days` window
+        (1-730 days, null means no expiry). Returns the plaintext
+        token in `data.plain_text_token` ONCE — the SPA MUST surface
+        it immediately with a copy CTA and a "you won't see this
+        again" warning. The string is unrecoverable from the DB after
+        the response is dropped.
+      operationId: meApiTokensCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, abilities]
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  example: 'nightly-export-script'
+                abilities:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                  example: ['athletes:read', 'documents:read']
+                expires_in_days:
+                  type: integer
+                  nullable: true
+                  minimum: 1
+                  maximum: 730
+                  example: 30
+      responses:
+        '201':
+          description: Token minted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      [id, name, abilities, expires_at, created_at, plain_text_token]
+                    properties:
+                      id:
+                        type: integer
+                      name:
+                        type: string
+                      abilities:
+                        type: array
+                        items:
+                          type: string
+                      expires_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      plain_text_token:
+                        type: string
+                        description: |
+                          The bearer string. Returned ONCE — never
+                          retrievable after this response.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /me/api-tokens/{id}:
+    delete:
+      tags: [auth]
+      summary: Revoke an API token
+      description: |
+        Drops the row from `personal_access_tokens` (#431). 200 on
+        success. 404 when the id doesn't belong to the authenticated
+        user — same shape as a never-existed id, so a probe cannot
+        enumerate other users' token IDs by status code.
+      operationId: meApiTokensDestroy
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 42
+      responses:
+        '200':
+          description: Token revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked:
+                        type: boolean
+                        example: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Token id doesn't belong to the authenticated user.
+
+  /me/two-factor:
+    get:
+      tags: [auth]
+      summary: Show the current two-factor enrolment state
+      description: |
+        Surfaces the user's 2FA enrolment shape for the SPA panel
+        (#412). Three states encoded in two booleans:
+
+        - `enabled=false, pending=false` → never enrolled.
+        - `enabled=false, pending=true`  → secret minted, awaiting
+          TOTP confirmation (the QR-code-shown state).
+        - `enabled=true`                 → fully active. `recovery_codes_remaining`
+          carries the current backup-code count (drops by one on every
+          backup-code login).
+      operationId: meTwoFactorShow
+      responses:
+        '200':
+          description: Current 2FA enrolment state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [enabled, pending, recovery_codes_remaining]
+                    properties:
+                      enabled:
+                        type: boolean
+                      pending:
+                        type: boolean
+                      recovery_codes_remaining:
+                        type: integer
+                        example: 8
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    delete:
+      tags: [auth]
+      summary: Disable two-factor authentication (requires current password)
+      description: |
+        Wipes `two_factor_secret`, `two_factor_recovery_codes`, and
+        `two_factor_confirmed_at` (#412). Requires the current password
+        in the request body as a re-auth gate — defense in depth so a
+        stolen session cannot strip 2FA without the password.
+      operationId: meTwoFactorDestroy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  example: 'correct-horse-battery-staple'
+      responses:
+        '200':
+          description: 2FA disabled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [disabled]
+                    properties:
+                      disabled:
+                        type: boolean
+                        example: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: Password missing or incorrect.
+
+  /me/two-factor/enrol:
+    post:
+      tags: [auth]
+      summary: Mint a TOTP secret and return the provisioning URI
+      description: |
+        Step 1 of the 3-step enrolment flow (#412). Generates a fresh
+        32-character base32 TOTP secret, stores it on the user UNCONFIRMED
+        (i.e. `two_factor_confirmed_at` stays null), and returns the
+        `otpauth://` URI for QR-code rendering on the SPA. Calling this
+        on an already-active 2FA setup returns 422 — the user must
+        explicitly `DELETE /me/two-factor` first.
+
+        The secret travels back to the SPA in plaintext so the user can
+        type it manually if QR scanning isn't possible. The server-side
+        column is encrypted at-rest via Eloquent's `encrypted` cast.
+      operationId: meTwoFactorEnrol
+      responses:
+        '200':
+          description: Fresh secret + provisioning URI.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [secret, provisioning_uri]
+                    properties:
+                      secret:
+                        type: string
+                        example: 'JBSWY3DPEHPK3PXP'
+                      provisioning_uri:
+                        type: string
+                        example: 'otpauth://totp/Budojo:tester%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Budojo'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: 2FA already enabled — call DELETE first to reset.
+
+  /me/two-factor/confirm:
+    post:
+      tags: [auth]
+      summary: Confirm enrolment with a TOTP and receive backup codes
+      description: |
+        Step 2 of the 3-step enrolment flow (#412). The user types the
+        6-digit TOTP shown by their authenticator app; on a valid code
+        the server flips `two_factor_confirmed_at` to now() and mints
+        8 single-use backup codes (`XXXX-XXXX` format). The plaintext
+        codes are returned ONCE here — the SPA must surface them with
+        a "save these somewhere safe" warning.
+      operationId: meTwoFactorConfirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  example: '123456'
+      responses:
+        '200':
+          description: 2FA active. Backup codes returned once.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [recovery_codes]
+                    properties:
+                      recovery_codes:
+                        type: array
+                        items:
+                          type: string
+                        example: ['AAAA-2345', 'BCDF-6789']
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: |
+            Code missing / malformed, OR no secret was previously
+            minted via `/me/two-factor/enrol`, OR 2FA is already
+            confirmed for this user.
+
+  /me/two-factor/recovery-codes/regenerate:
+    post:
+      tags: [auth]
+      summary: Regenerate 8 fresh backup codes, invalidating the old ones
+      description: |
+        Mints 8 new single-use backup codes (#412). The previous codes
+        are atomically replaced — any unused code in the old set stops
+        working. Only callable while 2FA is already active
+        (`two_factor_confirmed_at` is non-null); the SPA shouldn't
+        surface the action before that point.
+      operationId: meTwoFactorRegenerateRecoveryCodes
+      responses:
+        '200':
+          description: Fresh backup codes returned once.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [recovery_codes]
+                    properties:
+                      recovery_codes:
+                        type: array
+                        items:
+                          type: string
+                        example: ['NEWA-2345', 'NEWB-6789']
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: 2FA not active — call /me/two-factor/enrol first.
 
   /me/avatar:
     post:
@@ -2881,6 +3631,16 @@ components:
         password:
           type: string
           format: password
+        two_factor_code:
+          type: string
+          description: |
+            Required ONLY on the second submit when the first one
+            returned `422 two_factor_required` (#412). Either a 6-digit
+            TOTP from the user's authenticator app, or one of the
+            single-use backup codes in `XXXX-XXXX` format.
+          minLength: 6
+          maxLength: 32
+          example: '123456'
 
     ForgotPasswordRequest:
       type: object

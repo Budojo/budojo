@@ -42,6 +42,11 @@
       future avatar slot makes the topbar chip redundant there. Below the
       sidebar breakpoint it's the only non-hamburger control in the topbar.
     -->
+    <!-- In-app notification center (#418). Bell + unread badge +
+         dropdown panel listing the latest 20 rows. Self-hydrates on
+         first render; sits LEFT of the avatar chip to keep the chip's
+         top-right "manage my account" affordance unchanged. -->
+    <app-notification-bell />
     <a
       routerLink="/dashboard/profile"
       class="topbar__user-link"

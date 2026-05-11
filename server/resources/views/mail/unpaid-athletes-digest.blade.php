@@ -40,4 +40,8 @@ digest — only active ones who are expected to pay this month.
 
 Thanks,<br>
 The Budojo team
+
+@component('mail::subcopy')
+Don't want this digest anymore? [Unsubscribe from {{ $unsubscribeCategory }}]({{ $unsubscribeUrl }}) — one click, no sign-in required. You can re-enable it any time from your profile preferences.
+@endcomponent
 @endcomponent

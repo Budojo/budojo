@@ -20,6 +20,7 @@ Documents are the first entity in the system that owns **physical files on disk*
 | `original_name` | string | not null | The filename the client uploaded (e.g. `certificate_2026.pdf`). Surfaced in `Content-Disposition` on download. |
 | `mime_type` | string | not null | MIME type at upload time. Used in the download `Content-Type` header. |
 | `size_bytes` | unsignedBigInteger | not null | File size in bytes at upload time |
+| `is_encrypted` | boolean | not null, default false | At-rest encryption flag (#224). True ⇒ the bytes on disk are AES-256-GCM ciphertext via `App\Support\DocumentEncryption`; false ⇒ plaintext (legacy uploads or non-medical types). Today only `type = medical_certificate` uploads set this to true — special-category data under GDPR Art. 9. |
 | `issued_at` | date | nullable | When the document was issued (e.g. medical cert signed by Dr. Rossi on 2026-01-15) |
 | `expires_at` | date | nullable, **indexed** | When the document becomes invalid. Null is allowed. Indexed because it drives the `/documents/expiring` query |
 | `notes` | text | nullable, max 500 chars | Free-text note (e.g. "Dr. Rossi clinic", "replaces 2025 cert") |

@@ -61,7 +61,16 @@
       "submit": "Sign in",
       "noAccount": "Don't have an account?",
       "registerLink": "Create one",
-      "forgotPassword": "Forgot your password?"
+      "forgotPassword": "Forgot your password?",
+      "twoFactor": {
+        "hint": "Two-factor authentication is enabled on this account. Enter the 6-digit code from your authenticator app, or a backup code.",
+        "codeLabel": "Authentication code",
+        "codePlaceholder": "123456 or AAAA-BBBB",
+        "codeRequired": "Enter the code from your authenticator app.",
+        "codeInvalid": "That code didn't work. Try again or use a backup code.",
+        "submit": "Verify and sign in",
+        "cancel": "Use a different account"
+      }
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -189,6 +198,50 @@
       "title": "Welcome to Budojo",
       "body": "Your athlete account is ready. The pages where you'll see your own attendance history, payments, and documents are coming in the next release — for now, sit tight, your academy will let you know when there's more here.",
       "signOut": "Sign out"
+    }
+  },
+  "notifications": {
+    "bell": {
+      "ariaLabel": "Notifications",
+      "tooltip": "Notifications",
+      "panelTitle": "Notifications",
+      "markAllRead": "Mark all read",
+      "empty": "Nothing here yet. We'll let you know when something needs your attention.",
+      "unreadCount": "{{count}} unread"
+    }
+  },
+  "onboarding": {
+    "checklist": {
+      "title": "Getting started",
+      "subtitle": "{{progress}} of {{total}} done. Tick a step or jump straight to it.",
+      "cta": "Show me",
+      "dismiss": "Dismiss",
+      "confirmDismiss": "Hide this checklist for good? You won't see it again.",
+      "confirmDismissAccept": "Hide",
+      "confirmDismissReject": "Keep it",
+      "dismissedSummary": "Checklist hidden"
+    },
+    "steps": {
+      "add_athlete": {
+        "label": "Add your first athlete",
+        "hint": "Create an athlete profile — name, belt, status. Roster is the foundation."
+      },
+      "log_attendance": {
+        "label": "Log an attendance",
+        "hint": "Mark who showed up at today's class. One tap per athlete."
+      },
+      "mark_payment": {
+        "label": "Mark a monthly payment",
+        "hint": "Tick an athlete as paid for the current month."
+      },
+      "upload_document": {
+        "label": "Upload a document",
+        "hint": "Attach a medical certificate or any other PDF to an athlete."
+      },
+      "view_stats": {
+        "label": "Check your stats",
+        "hint": "Attendance trends, monthly revenue, who's slipping."
+      }
     }
   },
   "setup": {
@@ -642,6 +695,83 @@
         "summary": "Couldn't sign out the session",
         "detail": "Something went wrong. Try again in a moment."
       }
+    },
+    "twoFactor": {
+      "title": "Two-factor authentication",
+      "subtitle": "Add an extra step at sign-in: a 6-digit code from an authenticator app on your phone.",
+      "errorMessage": "We couldn't load your two-factor status. Try again in a moment.",
+      "retry": "Retry",
+      "offHint": "Two-factor authentication is currently off. Turning it on means you'll need both your password AND a code from your phone every time you sign in.",
+      "enable": "Turn on two-factor",
+      "pendingHint": "Scan the QR code below with Google Authenticator, 1Password, Authy, or any other authenticator app. Then enter the 6-digit code it shows to finish setup.",
+      "qrAlt": "QR code for two-factor authentication setup",
+      "secretLabel": "Can't scan? Type this code manually:",
+      "confirmCodeLabel": "6-digit code from your authenticator app",
+      "confirmCodeRequired": "Enter the 6-digit code from your authenticator app.",
+      "confirmCodeInvalid": "That code didn't work. Codes refresh every 30 seconds — try the next one.",
+      "confirmSubmit": "Confirm and turn on",
+      "activeLabel": "Two-factor authentication is on",
+      "activeDetail": "{{remaining}} backup codes remaining. You'll need a code at every sign-in.",
+      "regenerateCodes": "Regenerate backup codes",
+      "disable": "Turn off two-factor",
+      "disabledSummary": "Two-factor authentication turned off",
+      "disabledDetail": "We've also wiped your backup codes. Turn it back on any time.",
+      "codesCopiedSummary": "Backup codes copied to clipboard",
+      "genericErrorSummary": "Something went wrong",
+      "genericErrorDetail": "Try again in a moment.",
+      "disablePasswordRequired": "Enter your current password to confirm.",
+      "disablePasswordWrong": "That password doesn't match. Try again.",
+      "recoveryDialog": {
+        "title": "Save your backup codes",
+        "hint": "Each code works once. Use them to sign in if you lose your phone. Save them in a password manager or print them — you won't see them again.",
+        "copy": "Copy all",
+        "acknowledge": "I've saved them"
+      },
+      "disableDialog": {
+        "title": "Turn off two-factor authentication?",
+        "hint": "Your account will go back to password-only sign-in. Enter your password to confirm.",
+        "passwordLabel": "Current password",
+        "cancel": "Cancel",
+        "confirm": "Turn off"
+      }
+    },
+    "apiTokens": {
+      "title": "API tokens",
+      "subtitle": "Mint long-lived tokens for scripts and integrations. Each token can be scoped to specific actions and given an optional expiry.",
+      "createCta": "New token",
+      "errorMessage": "We couldn't load your API tokens. Try again in a moment.",
+      "retry": "Retry",
+      "empty": "No API tokens yet. Generate one when you need a script or integration to talk to Budojo on your behalf.",
+      "revoke": "Revoke",
+      "abilitiesRequired": "Select at least one ability before generating the token.",
+      "revokedSummary": "Token revoked",
+      "revokeErrorSummary": "Couldn't revoke the token",
+      "createErrorSummary": "Couldn't generate the token",
+      "copiedSummary": "Token copied to clipboard",
+      "lastUsedAt": "Last used {{datetime}}",
+      "neverUsed": "Never used",
+      "expiresAt": "Expires {{datetime}}",
+      "confirmRevoke": "Revoke {{name}}? Any script using this token will stop working immediately.",
+      "confirmRevokeAccept": "Revoke",
+      "confirmRevokeReject": "Cancel",
+      "createDialog": {
+        "title": "Generate a new API token",
+        "nameLabel": "Token name",
+        "namePlaceholder": "nightly-export-script",
+        "abilitiesLabel": "Abilities",
+        "abilitiesHint": "Pick which actions this token can perform. Granting fewer is safer.",
+        "expiresLabel": "Expires in (days)",
+        "expiresPlaceholder": "Leave empty for no expiry",
+        "expiresHint": "Optional. Tokens with no expiry stay valid until you revoke them.",
+        "cancel": "Cancel",
+        "confirm": "Generate token"
+      },
+      "plaintextDialog": {
+        "title": "Save your new token",
+        "hint": "Copy this token now and save it in your password manager. It won't be shown again — if you lose it, generate a new one.",
+        "copy": "Copy",
+        "acknowledge": "I've saved it"
+      }
     }
   },
   "account": {
@@ -722,6 +852,18 @@
       "errorTitle": "We couldn't cancel right now",
       "errorMessage": "Something went wrong while cancelling. You can try the link again, or sign in and cancel from your profile.",
       "errorCta": "Continue"
+    }
+  },
+  "unsubscribe": {
+    "successTitle": "You're unsubscribed",
+    "successMessage": "We won't send you {{category}} anymore.",
+    "reEnableHint": "You can re-enable this category any time from your profile preferences.",
+    "invalidTitle": "This link is no longer valid",
+    "invalidMessage": "The link has expired, was tampered with, or the account no longer exists. If you wanted to opt out of an email, sign in and use the preferences panel on your profile.",
+    "continueCta": "Continue",
+    "categories": {
+      "medical_cert_expiry_reminders": "medical certificate expiring reminders",
+      "unpaid_athletes_digest": "the unpaid athletes monthly digest"
     }
   },
   "emailVerification": {

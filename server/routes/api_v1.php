@@ -38,6 +38,26 @@ Route::post('/auth/forgot-password', [\App\Http\Controllers\Auth\PasswordResetCo
     ->middleware('throttle:password-reset-request');
 Route::post('/auth/reset-password', [\App\Http\Controllers\Auth\PasswordResetController::class, 'reset']);
 
+// One-click unsubscribe (#417). Public on purpose — the signed URL
+// IS the auth (validated by the `signed` middleware). Two entry
+// points:
+//   - GET `/unsubscribe/{userId}/{category}` is the human click on
+//     the email footer link; flips the preference off and redirects
+//     to the SPA `/unsubscribed` confirmation page.
+//   - POST `/unsubscribe/{userId}/{category}` is the RFC 8058
+//     `List-Unsubscribe-Post` one-click that Gmail / Yahoo bulk-
+//     sender rules require for senders over 5k/day; same effect,
+//     responds 200 with an empty body.
+// Expired / tampered signatures get a 403 from the framework's
+// signed middleware before reaching the controller.
+Route::get('/unsubscribe/{userId}/{category}', [\App\Http\Controllers\Auth\UnsubscribeController::class, 'get'])
+    ->where('userId', '[0-9]+')
+    ->middleware('signed')
+    ->name('unsubscribe');
+Route::post('/unsubscribe/{userId}/{category}', [\App\Http\Controllers\Auth\UnsubscribeController::class, 'post'])
+    ->where('userId', '[0-9]+')
+    ->middleware('signed');
+
 // Email verification — signed-link callback. Public on purpose: the signed
 // URL is the auth (the user clicks from their inbox, often on a different
 // device than the one they registered on). The hash check inside the
@@ -157,6 +177,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->middleware('throttle:5,1');
     Route::delete('/me/deletion-request', [\App\Http\Controllers\User\AccountDeletionController::class, 'destroy']);
 
+    // Two-factor authentication (#412). TOTP enrolment + backup
+    // codes + disable-with-password. The login flow at
+    // `/auth/login` consults `users.two_factor_confirmed_at` and
+    // demands a `two_factor_code` body param (TOTP or backup) before
+    // issuing a session token when 2FA is active.
+    Route::get('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'show']);
+    Route::post('/me/two-factor/enrol', [\App\Http\Controllers\User\TwoFactorController::class, 'enrol']);
+    Route::post('/me/two-factor/confirm', [\App\Http\Controllers\User\TwoFactorController::class, 'confirm']);
+    Route::post('/me/two-factor/recovery-codes/regenerate', [\App\Http\Controllers\User\TwoFactorController::class, 'regenerateRecoveryCodes']);
+    Route::delete('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'destroy']);
+
     // Active sessions list with per-token revoke (#413). Surfaces every
     // Sanctum personal-access-token tied to the user; backs the
     // "Active sessions" panel on /dashboard/profile + the
@@ -171,6 +202,28 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'show']);
     Route::patch('/me/notification-preferences', [\App\Http\Controllers\User\NotificationPreferencesController::class, 'update']);
 
+    // In-app notification inbox (#418). Bell-icon dropdown on the
+    // dashboard topbar; per-user state in the standard Laravel
+    // `notifications` table. The inbox SURFACE ships here. Wiring
+    // the existing reminder Actions (medical-cert expiry digest,
+    // unpaid-athletes monthly digest) to ALSO write database
+    // notifications alongside their email is a separate, focused
+    // follow-up — touching M5 critical-path code is deliberately
+    // out of scope for this PR. The table is empty in production
+    // until that follow-up lands.
+    Route::get('/me/notifications', [\App\Http\Controllers\User\NotificationInboxController::class, 'index']);
+    Route::post('/me/notifications/{id}/read', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAsRead'])
+        ->where('id', '[A-Za-z0-9\-]{36}');
+    Route::post('/me/notifications/read-all', [\App\Http\Controllers\User\NotificationInboxController::class, 'markAllAsRead']);
+
+    // First-run onboarding state (#424). The SPA reads `show` once on
+    // dashboard mount to decide whether to render the guided tour /
+    // "Getting started" checklist; `complete-step` is fired per
+    // ticked checklist item, `dismiss` permanently retires the tour.
+    Route::get('/me/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'show']);
+    Route::post('/me/onboarding/steps', [\App\Http\Controllers\User\OnboardingController::class, 'completeStep']);
+    Route::post('/me/onboarding/dismiss', [\App\Http\Controllers\User\OnboardingController::class, 'dismiss']);
+
     // Login history audit log (#430). Surfaces the last 50 login
     // attempts (success + failure) on the authenticated user so a
     // compromise probe is self-serve. Pairs with the live
@@ -183,6 +236,26 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('/me/sessions/{id}', [\App\Http\Controllers\User\SessionController::class, 'destroy'])
         ->where('id', '[0-9]+');
     Route::delete('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'destroyOthers']);
+
+    // Web Push subscriptions (#419). One row per device the user has
+    // explicitly granted push permission on. The SPA POSTs the
+    // PushSubscription envelope from `PushManager.subscribe()`;
+    // server-side fanout uses minishlink/web-push to send pushes to
+    // every row tied to a target user.
+    Route::get('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'index']);
+    Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store']);
+    Route::delete('/me/push-subscriptions/{id}', [\App\Http\Controllers\User\PushSubscriptionController::class, 'destroy'])
+        ->where('id', '[0-9]+');
+
+    // API tokens (#431). Long-lived, user-named, abilities-scoped
+    // Sanctum tokens for integrations (export scripts, automation
+    // hooks). Same `personal_access_tokens` table as session tokens
+    // — distinguished by the `kind` column. Plaintext returned ONCE
+    // on creation.
+    Route::get('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'index']);
+    Route::post('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store']);
+    Route::delete('/me/api-tokens/{id}', [\App\Http\Controllers\User\ApiTokenController::class, 'destroy'])
+        ->where('id', '[0-9]+');
 
     // Avatar — multipart upload + delete (#411). Mirrors the
     // /academy/logo precedent: stores the original bytes (no

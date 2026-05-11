@@ -30,4 +30,8 @@ athlete out of the next digest automatically.
 
 Thanks,<br>
 The Budojo team
+
+@component('mail::subcopy')
+Don't want these reminders anymore? [Unsubscribe from {{ $unsubscribeCategory }}]({{ $unsubscribeUrl }}) — one click, no sign-in required. You can re-enable them any time from your profile preferences.
+@endcomponent
 @endcomponent

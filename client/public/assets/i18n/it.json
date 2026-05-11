@@ -61,7 +61,16 @@
       "submit": "Accedi",
       "noAccount": "Non hai un account?",
       "registerLink": "Creane uno",
-      "forgotPassword": "Password dimenticata?"
+      "forgotPassword": "Password dimenticata?",
+      "twoFactor": {
+        "hint": "L'autenticazione a due fattori è attiva su questo account. Inserisci il codice a 6 cifre dalla tua app di autenticazione, oppure un codice di recupero.",
+        "codeLabel": "Codice di autenticazione",
+        "codePlaceholder": "123456 o AAAA-BBBB",
+        "codeRequired": "Inserisci il codice dalla tua app di autenticazione.",
+        "codeInvalid": "Questo codice non funziona. Riprova o usa un codice di recupero.",
+        "submit": "Verifica e accedi",
+        "cancel": "Usa un altro account"
+      }
     },
     "forgotPassword": {
       "title": "Reimposta la password",
@@ -189,6 +198,50 @@
       "title": "Benvenuto in Budojo",
       "body": "Il tuo account atleta è pronto. Le pagine dove vedrai la tua presenza, i tuoi pagamenti e i tuoi documenti arrivano nella prossima release — per ora aspetta, la tua academy ti farà sapere quando ci sarà di più qui.",
       "signOut": "Esci"
+    }
+  },
+  "notifications": {
+    "bell": {
+      "ariaLabel": "Notifiche",
+      "tooltip": "Notifiche",
+      "panelTitle": "Notifiche",
+      "markAllRead": "Segna tutte lette",
+      "empty": "Niente di nuovo per ora. Ti avvisiamo quando c'è qualcosa che richiede la tua attenzione.",
+      "unreadCount": "{{count}} non lette"
+    }
+  },
+  "onboarding": {
+    "checklist": {
+      "title": "Per iniziare",
+      "subtitle": "{{progress}} di {{total}} fatti. Spunta un passaggio o vai direttamente.",
+      "cta": "Mostrami",
+      "dismiss": "Chiudi",
+      "confirmDismiss": "Nascondere questa checklist per sempre? Non la vedrai più.",
+      "confirmDismissAccept": "Nascondi",
+      "confirmDismissReject": "Tienila",
+      "dismissedSummary": "Checklist nascosta"
+    },
+    "steps": {
+      "add_athlete": {
+        "label": "Aggiungi il primo atleta",
+        "hint": "Crea il profilo di un atleta — nome, cintura, stato. La roster è la base."
+      },
+      "log_attendance": {
+        "label": "Registra una presenza",
+        "hint": "Segna chi era presente alla lezione di oggi. Un tocco per atleta."
+      },
+      "mark_payment": {
+        "label": "Registra un pagamento mensile",
+        "hint": "Segna un atleta come pagato per il mese corrente."
+      },
+      "upload_document": {
+        "label": "Carica un documento",
+        "hint": "Allega un certificato medico o qualsiasi altro PDF a un atleta."
+      },
+      "view_stats": {
+        "label": "Controlla le statistiche",
+        "hint": "Trend di presenze, ricavi mensili, chi sta mollando."
+      }
     }
   },
   "setup": {
@@ -642,6 +695,83 @@
         "summary": "Non è stato possibile disconnettere la sessione",
         "detail": "Qualcosa è andato storto. Riprova tra un momento."
       }
+    },
+    "twoFactor": {
+      "title": "Autenticazione a due fattori",
+      "subtitle": "Aggiungi un passaggio extra all'accesso: un codice a 6 cifre da un'app di autenticazione sul tuo telefono.",
+      "errorMessage": "Non è stato possibile caricare lo stato dell'autenticazione a due fattori. Riprova tra un momento.",
+      "retry": "Riprova",
+      "offHint": "L'autenticazione a due fattori è attualmente disattivata. Attivandola ti servirà sia la password CHE un codice dal tuo telefono ad ogni accesso.",
+      "enable": "Attiva l'autenticazione a due fattori",
+      "pendingHint": "Scansiona il QR code qui sotto con Google Authenticator, 1Password, Authy o un'altra app di autenticazione. Poi inserisci il codice a 6 cifre che mostra per completare la configurazione.",
+      "qrAlt": "Codice QR per configurare l'autenticazione a due fattori",
+      "secretLabel": "Non riesci a scansionare? Inserisci questo codice manualmente:",
+      "confirmCodeLabel": "Codice a 6 cifre dalla tua app di autenticazione",
+      "confirmCodeRequired": "Inserisci il codice a 6 cifre dalla tua app di autenticazione.",
+      "confirmCodeInvalid": "Questo codice non funziona. I codici si rinnovano ogni 30 secondi — prova il successivo.",
+      "confirmSubmit": "Conferma e attiva",
+      "activeLabel": "Autenticazione a due fattori attiva",
+      "activeDetail": "Restano {{remaining}} codici di recupero. Ti servirà un codice ad ogni accesso.",
+      "regenerateCodes": "Rigenera codici di recupero",
+      "disable": "Disattiva l'autenticazione a due fattori",
+      "disabledSummary": "Autenticazione a due fattori disattivata",
+      "disabledDetail": "Abbiamo anche cancellato i codici di recupero. Puoi riattivarla quando vuoi.",
+      "codesCopiedSummary": "Codici di recupero copiati negli appunti",
+      "genericErrorSummary": "Qualcosa è andato storto",
+      "genericErrorDetail": "Riprova tra un momento.",
+      "disablePasswordRequired": "Inserisci la password attuale per confermare.",
+      "disablePasswordWrong": "Questa password non corrisponde. Riprova.",
+      "recoveryDialog": {
+        "title": "Salva i codici di recupero",
+        "hint": "Ogni codice funziona una sola volta. Usali per accedere se perdi il telefono. Salvali in un password manager o stampali — non li rivedrai più.",
+        "copy": "Copia tutti",
+        "acknowledge": "Li ho salvati"
+      },
+      "disableDialog": {
+        "title": "Disattivare l'autenticazione a due fattori?",
+        "hint": "Il tuo account tornerà al solo accesso con password. Inserisci la password per confermare.",
+        "passwordLabel": "Password attuale",
+        "cancel": "Annulla",
+        "confirm": "Disattiva"
+      }
+    },
+    "apiTokens": {
+      "title": "Token API",
+      "subtitle": "Genera token long-lived per script e integrazioni. Ogni token può essere limitato a specifiche azioni e avere una scadenza opzionale.",
+      "createCta": "Nuovo token",
+      "errorMessage": "Non è stato possibile caricare i token API. Riprova tra un momento.",
+      "retry": "Riprova",
+      "empty": "Nessun token API ancora. Generane uno quando ti serve far parlare uno script o un'integrazione con Budojo per tuo conto.",
+      "revoke": "Revoca",
+      "abilitiesRequired": "Seleziona almeno un'abilità prima di generare il token.",
+      "revokedSummary": "Token revocato",
+      "revokeErrorSummary": "Non è stato possibile revocare il token",
+      "createErrorSummary": "Non è stato possibile generare il token",
+      "copiedSummary": "Token copiato negli appunti",
+      "lastUsedAt": "Ultimo utilizzo {{datetime}}",
+      "neverUsed": "Mai utilizzato",
+      "expiresAt": "Scade {{datetime}}",
+      "confirmRevoke": "Revocare {{name}}? Qualsiasi script che usa questo token smetterà di funzionare immediatamente.",
+      "confirmRevokeAccept": "Revoca",
+      "confirmRevokeReject": "Annulla",
+      "createDialog": {
+        "title": "Genera un nuovo token API",
+        "nameLabel": "Nome del token",
+        "namePlaceholder": "script-esportazione-notturno",
+        "abilitiesLabel": "Abilità",
+        "abilitiesHint": "Scegli quali azioni questo token può eseguire. Concedere meno permessi è più sicuro.",
+        "expiresLabel": "Scadenza (giorni)",
+        "expiresPlaceholder": "Lascia vuoto per nessuna scadenza",
+        "expiresHint": "Opzionale. I token senza scadenza restano validi finché non li revochi.",
+        "cancel": "Annulla",
+        "confirm": "Genera token"
+      },
+      "plaintextDialog": {
+        "title": "Salva il tuo nuovo token",
+        "hint": "Copia questo token adesso e salvalo in un password manager. Non verrà mostrato di nuovo — se lo perdi, generane uno nuovo.",
+        "copy": "Copia",
+        "acknowledge": "L'ho salvato"
+      }
     }
   },
   "account": {
@@ -722,6 +852,18 @@
       "errorTitle": "Non siamo riusciti ad annullare ora",
       "errorMessage": "Qualcosa è andato storto durante l'annullamento. Puoi riprovare il link, oppure accedere e annullare dal tuo profilo.",
       "errorCta": "Continua"
+    }
+  },
+  "unsubscribe": {
+    "successTitle": "Disiscrizione completata",
+    "successMessage": "Non ti invieremo più {{category}}.",
+    "reEnableHint": "Puoi riattivare questa categoria in qualsiasi momento dalle preferenze del tuo profilo.",
+    "invalidTitle": "Questo link non è più valido",
+    "invalidMessage": "Il link è scaduto, è stato manomesso, oppure l'account non esiste più. Se volevi disattivare una notifica email, accedi e usa il pannello preferenze nel profilo.",
+    "continueCta": "Continua",
+    "categories": {
+      "medical_cert_expiry_reminders": "i promemoria di scadenza del certificato medico",
+      "unpaid_athletes_digest": "il digest mensile degli atleti non paganti"
     }
   },
   "emailVerification": {
