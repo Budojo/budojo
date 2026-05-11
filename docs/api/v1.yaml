@@ -3618,6 +3618,137 @@ paths:
         '429':
           description: Rate-limit exceeded (60 reactions / minute / user).
 
+  /community/posts/{post}/comments:
+    get:
+      tags: [community]
+      summary: List comments on a community post
+      description: |
+        Paginated (50/page) list of comments on a post, ascending by
+        `created_at` (oldest first — natural thread order). Soft-
+        deleted comments are excluded. Caller must belong to the
+        post's academy (403 envelope otherwise).
+      operationId: listCommunityComments
+      parameters:
+        - in: path
+          name: post
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - in: query
+          name: page
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        '200':
+          description: Paginated comment list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/PostComment' }
+                  meta:
+                    type: object
+                    properties:
+                      current_page: { type: integer, minimum: 1 }
+                      per_page: { type: integer, example: 50 }
+                      total: { type: integer, minimum: 0 }
+                      last_page: { type: integer, minimum: 1 }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — caller belongs to a different academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '404': { description: Post not found. }
+
+    post:
+      tags: [community]
+      summary: Create a 1-level comment on a community post
+      description: |
+        Adds a comment under the given post. Body is required, trimmed
+        before storing, and capped at 500 chars. Caller must belong to
+        the post's academy. Rate-limited at 30 / minute / user via
+        the `community-comment-create` named limiter.
+      operationId: createCommunityComment
+      parameters:
+        - in: path
+          name: post
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: 'Comment text. Trimmed before storage. Empty / over-500 → 422.'
+      responses:
+        '201':
+          description: Comment created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/PostComment' }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — caller belongs to a different academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '404': { description: Post not found. }
+        '422':
+          description: Body missing, empty after trim, or > 500 chars.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationErrorBody' }
+        '429':
+          description: Rate-limit exceeded (30 comments / minute / user).
+
+  /community/comments/{comment}:
+    delete:
+      tags: [community]
+      summary: Soft-delete a comment
+      description: |
+        Soft-deletes the comment so it disappears from `GET
+        .../comments` immediately but remains recoverable in the DB.
+        Two authorization paths:
+
+        - **Author**: a user can always delete their own comment.
+        - **Owner**: the owner of the post's academy can delete any
+          comment under that post (moderation surface).
+
+        403 with the canonical envelope otherwise.
+      operationId: deleteCommunityComment
+      parameters:
+        - in: path
+          name: comment
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '204': { description: Comment soft-deleted. }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — caller is neither the author nor the owner of the post's academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '404': { description: Comment not found. }
+
 components:
 
   securitySchemes:
@@ -5199,6 +5330,22 @@ components:
           enum: [clap, pray]
           nullable: true
           description: 'The caller''s own reaction on this post (PR-C2). Null when the caller has not reacted. Used by the SPA to render reaction buttons in active state on first paint.'
+
+    PostComment:
+      type: object
+      required: [id, post_id, body, created_at, created_by]
+      description: |
+        A 1-level comment on a community post (M9 PR-D). `created_by`
+        carries the identity flair (same shape as
+        `CommunityPostAuthor`) so the SPA renders the
+        "name · @handle · belt" line on each comment with the same
+        component used on feed cards.
+      properties:
+        id: { type: integer, format: int64 }
+        post_id: { type: integer, format: int64 }
+        body: { type: string, minLength: 1, maxLength: 500 }
+        created_at: { type: string, format: date-time }
+        created_by: { $ref: '#/components/schemas/CommunityPostAuthor' }
 
 security:
   - bearerAuth: []
