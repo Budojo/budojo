@@ -178,6 +178,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // for any athlete's history).
     Route::get('/me/attendance', [\App\Http\Controllers\Me\MyAttendanceController::class, 'index']);
 
+    // Athlete-portal monthly payment history (M7 PR-D slice 4).
+    // Returns the auth athlete's payment rows for the given
+    // calendar year (defaults to current). Owners 404 — they don't
+    // have a personal payment ledger.
+    Route::get('/me/payments', [\App\Http\Controllers\Me\MyPaymentsController::class, 'index']);
+
     // GDPR Art. 17 (right-to-erasure) — request hard-deletion of the
     // account and all academy + athlete data tied to it (#223). POST
     // enters a 30-day grace window; DELETE cancels during that window.

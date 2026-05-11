@@ -1,0 +1,95 @@
+// MyPaymentsComponent — athlete-portal monthly payments grid
+// (M7 PR-D slice 4). Apple-minimal — same vocabulary as
+// MyAttendance / MyAcademy / MeProfile.
+
+.my-payments {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__year {
+    color: var(--p-text-color-secondary);
+    font-size: 1rem;
+  }
+
+  &__card {
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 8rem 1fr auto;
+    gap: 0.75rem;
+    align-items: baseline;
+    padding: 0.875rem 1rem;
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+
+    &--paid {
+      border-color: var(--p-green-300, #86efac);
+    }
+  }
+
+  &__month {
+    color: var(--p-text-color);
+    font-weight: 500;
+    text-transform: capitalize;
+  }
+
+  &__amount {
+    color: var(--p-green-700, #15803d);
+    font-weight: 600;
+  }
+
+  &__paid-on {
+    color: var(--p-text-color-secondary);
+    font-size: 0.8125rem;
+  }
+
+  &__unpaid {
+    color: var(--p-text-color-secondary);
+    font-style: italic;
+    grid-column: 2 / -1;
+  }
+
+  &__empty {
+    color: var(--p-text-color-secondary);
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+}

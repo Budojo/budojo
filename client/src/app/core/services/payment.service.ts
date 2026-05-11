@@ -46,6 +46,26 @@ export class PaymentService {
   private readonly base = `${environment.apiBase}/api/v1/athletes`;
 
   /**
+   * Athlete-portal monthly payments (M7 PR-D slice 4). Returns the
+   * caller's own payments for the calendar year (defaults to
+   * current year server-side when `year` is omitted). 404 maps to
+   * `null` so the component renders the "no profile" state without
+   * subscribing to an error path.
+   */
+  listMine(year?: number): Observable<AthletePayment[] | null> {
+    let params = new HttpParams();
+    if (year !== undefined) params = params.set('year', year.toString());
+    return this.http
+      .get<AthletePaymentListResponse>(`${environment.apiBase}/api/v1/me/payments`, { params })
+      .pipe(
+        map((res) => res.data),
+        catchError((err: HttpErrorResponse) =>
+          err.status === 404 ? of<AthletePayment[] | null>(null) : throwError(() => err),
+        ),
+      );
+  }
+
+  /**
    * List the athlete's payments for a calendar year, ordered by month
    * ascending. Used by the per-athlete payments tab (#182 Surface 2).
    * Months without a row are absent from the response — the absence

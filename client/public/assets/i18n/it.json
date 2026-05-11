@@ -204,7 +204,8 @@
       "profile": "Profilo",
       "feed": "Feed",
       "academy": "Academy",
-      "attendance": "Presenze"
+      "attendance": "Presenze",
+      "payments": "Pagamenti"
     },
     "profile": {
       "title": "Il tuo profilo",
@@ -261,6 +262,12 @@
       "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
       "errorBody": "Non siamo riusciti a caricare le tue presenze. Aggiorna la pagina e riprova.",
       "last30Days": "sessioni negli ultimi 30 giorni"
+    },
+    "payments": {
+      "title": "I tuoi pagamenti",
+      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
+      "errorBody": "Non siamo riusciti a caricare i tuoi pagamenti. Aggiorna la pagina e riprova.",
+      "unpaid": "Non pagato"
     }
   },
   "notifications": {
