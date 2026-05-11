@@ -50,6 +50,13 @@ class GetCommunityFeedAction
                 // `avatar_path` is serialized (Copilot review on #613).
                 'createdBy:id,first_name,last_name,handle,avatar_path,updated_at',
                 'createdBy.athlete:id,user_id,belt',
+                // Constrained eager-load — pull only the caller's own
+                // reaction on each post. One extra query for the whole
+                // page (not N+1). The CommunityPostResource reads the
+                // first row to surface `your_reaction` so the SPA's
+                // reaction buttons render the active state on first
+                // paint without a follow-up roundtrip (#617, PR-C2).
+                'reactions' => fn ($q) => $q->where('user_id', $user->id),
             ])
             ->withCount(['reactions', 'comments', 'rsvps'])
             ->paginate($perPage);
