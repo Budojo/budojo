@@ -387,4 +387,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
         Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
     });
+
+    // Community reactions (#603, M9 PR-C). Sits adjacent to the
+    // feed/posts routes added in #613 — both surfaces sit under
+    // /api/v1/community/. When #613 merges first, the develop-into-
+    // branch merge consolidates the two prefix blocks; routes don't
+    // overlap so there's no real conflict.
+    Route::prefix('community')->group(function (): void {
+        Route::post(
+            'posts/{post}/react',
+            [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
+        );
+    });
 });
