@@ -32,7 +32,7 @@
       @for (rec of records(); track rec.id) {
         <li class="my-attendance__row" [attr.data-cy]="'attendance-' + rec.id">
           <time [dateTime]="rec.attended_on" class="my-attendance__date">
-            {{ rec.attended_on | date: 'fullDate' }}
+            {{ toLocalDate(rec.attended_on) | date: 'fullDate' }}
           </time>
           @if (rec.notes) {
             <p class="my-attendance__notes">{{ rec.notes }}</p>

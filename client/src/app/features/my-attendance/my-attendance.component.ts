@@ -44,13 +44,37 @@ export class MyAttendanceComponent implements OnInit {
    * Last-30-days session count — a single number under the page
    * title that gives the athlete a quick "am I training consistently?"
    * answer without reading the whole list.
+   *
+   * The cutoff string is built from LOCAL date components, not
+   * `toISOString().slice(0,10)` — the latter converts to UTC and
+   * can shift the calendar day by one in non-UTC timezones (Copilot
+   * review on PR #622).
    */
   protected readonly last30Count = computed(() => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const cutoffStr = this.toLocalIsoDate(cutoff);
     return this.records().filter((r) => r.attended_on >= cutoffStr).length;
   });
+
+  /**
+   * Parse the wire's `YYYY-MM-DD` string as a LOCAL date — bypasses
+   * the JS engine's default UTC interpretation of date-only strings,
+   * which would shift the rendered calendar day in non-UTC TZs
+   * (Copilot review on PR #622). Splitting on `-` and feeding the
+   * year/month/day to the Date constructor keeps the day stable.
+   */
+  protected toLocalDate(value: string): Date {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  private toLocalIsoDate(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
 
   ngOnInit(): void {
     this.attendanceService

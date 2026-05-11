@@ -85,13 +85,28 @@ it('returns 404 for an owner caller (no personal attendance history)', function 
         ->assertExactJson(['message' => 'No athlete profile found.']);
 });
 
-it('returns 404 for an athlete-role user with no linked athletes row', function (): void {
+it('returns 404 with the canonical envelope for an athlete-role user with no linked athletes row', function (): void {
     /** @var User $orphan */
     $orphan = User::factory()->create(['role' => 'athlete']);
 
     $this->actingAs($orphan)
         ->getJson('/api/v1/me/attendance')
-        ->assertStatus(404);
+        ->assertStatus(404)
+        ->assertExactJson(['message' => 'No athlete profile found.']);
+});
+
+it('rejects a malformed from / to with 422 (previously silently swallowed)', function (): void {
+    [$user] = authedAthleteUser($this->academy);
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/me/attendance?from=not-a-date')
+        ->assertStatus(422)
+        ->assertExactJson(['message' => 'Invalid date range.']);
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/me/attendance?to=2026-13-99')
+        ->assertStatus(422)
+        ->assertExactJson(['message' => 'Invalid date range.']);
 });
 
 it('rejects an invalid date range (from > to) with 422', function (): void {
