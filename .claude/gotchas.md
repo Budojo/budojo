@@ -62,7 +62,7 @@ Format: `→` separates the symptom from the action.
 
 ## Pre-push gate scripts
 
-- `./.claude/scripts/test-client.sh quick` SKIPS `prettier --write` (intended for mid-session re-runs after you've already formatted). On the **first** commit of a newly-written spec file the script will pass locally (lint+vitest only) but CI's `prettier --check` job FAILS. **Rule:** use the full `./.claude/scripts/test-client.sh` (no `quick`) when adding a new file; `quick` only on re-runs of a file that's already been touched by `--write` this session. Same applies to `test-server.sh quick` for cs-fixer.
+- `./.claude/scripts/test-client.sh quick` SKIPS `prettier --write` (intended for mid-session re-runs after you've already formatted). On the **first** commit of a newly-written spec file the script can pass locally (lint+vitest only) but CI's `✨ Angular Format (Prettier)` job — which runs `npm run format:check` (a `prettier --check` wrapper) — FAILS. **Rule:** use the full `./.claude/scripts/test-client.sh` (no `quick`) when adding a new file; `quick` only on re-runs of a file that's already been touched by `--write` this session. Same applies to `./.claude/scripts/test-server.sh quick` for cs-fixer.
 
 ## Git hygiene
 
