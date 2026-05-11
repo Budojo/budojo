@@ -47,12 +47,12 @@ return new class () extends Migration {
 
             // One reaction per (user, post) — toggling to a different
             // emoji replaces the row in a single transaction (the
-            // Action layer handles the swap).
+            // Action layer handles the swap). The UNIQUE index on
+            // (post_id, user_id) also serves as the lookup index for
+            // post_id-only queries (leftmost-prefix); no separate
+            // index needed. Same convention as `addresses` (see
+            // 2026_04_27_120000_create_addresses_table.php).
             $table->unique(['post_id', 'user_id']);
-
-            // Aggregation queries (`SELECT count(*) GROUP BY post_id`)
-            // run on the feed roundtrip — index covers it.
-            $table->index(['post_id']);
         });
     }
 

@@ -41,12 +41,12 @@ return new class () extends Migration {
             $table->timestamps();
 
             // One RSVP per (user, event). Toggling between `going`
-            // and `maybe` updates the existing row in place.
+            // and `maybe` updates the existing row in place. The
+            // UNIQUE on (post_id, user_id) also serves as the lookup
+            // index for post_id-only aggregation (leftmost-prefix);
+            // no separate index needed. Same convention as
+            // `addresses` (see 2026_04_27_120000_create_addresses_table.php).
             $table->unique(['post_id', 'user_id']);
-
-            // Aggregation queries (`count GROUP BY post_id, response`)
-            // run on the feed roundtrip for events with RSVPs.
-            $table->index(['post_id']);
         });
     }
 
