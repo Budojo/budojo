@@ -112,20 +112,39 @@ export const routes: Routes = [
     // Athlete-side landing surface (#445, M7 PR-D minimal). The full
     // athlete dashboard with own attendance / payments / documents
     // ships in PR-E next milestone; this route + the welcome
-    // placeholder keep an athlete who's just accepted their invite
-    // from bouncing through owner-only guards. roleAthleteGuard
-    // bounces an owner who manually navigates here back to
-    // /dashboard so the URL space stays segmented per persona.
+    // Legacy athlete-portal tree (#445 PR-D minimal). The proper
+    // athlete shell now lives under `/dashboard/me/*` (#610, M7 PR-D
+    // slice 1). Both children below are kept as redirects so any
+    // bookmark or in-flight invite-accept link that lands here still
+    // routes the user to the new shell — drop the whole `athlete-portal`
+    // block in a follow-up slice once the access logs confirm zero
+    // hits over a stable beta window.
     path: 'athlete-portal',
     canActivate: [authGuard, roleAthleteGuard],
     children: [
-      { path: '', redirectTo: 'welcome', pathMatch: 'full' },
+      { path: '', redirectTo: '/dashboard/me/profile', pathMatch: 'full' },
+      { path: 'welcome', redirectTo: '/dashboard/me/profile', pathMatch: 'full' },
+    ],
+  },
+  {
+    // Athlete-side dashboard tree (#610, M7 PR-D slice 1). Sibling of
+    // the owner-side `/dashboard/*` shell but guarded by
+    // `roleAthleteGuard` instead of `roleOwnerGuard + hasAcademyGuard`
+    // — an athlete user has no academy by definition. Subsequent
+    // slices expand the children list (academy, attendance, payments,
+    // documents).
+    path: 'dashboard/me',
+    canActivate: [authGuard, roleAthleteGuard],
+    loadComponent: () =>
+      import('./features/athlete-dashboard/athlete-dashboard.component').then(
+        (m) => m.AthleteDashboardComponent,
+      ),
+    children: [
+      { path: '', redirectTo: 'profile', pathMatch: 'full' },
       {
-        path: 'welcome',
+        path: 'profile',
         loadComponent: () =>
-          import('./features/athlete-portal/welcome/athlete-portal-welcome.component').then(
-            (m) => m.AthletePortalWelcomeComponent,
-          ),
+          import('./features/me-profile/me-profile.component').then((m) => m.MeProfileComponent),
       },
     ],
   },

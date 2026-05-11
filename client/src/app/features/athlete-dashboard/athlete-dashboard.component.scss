@@ -1,0 +1,228 @@
+// Athlete-side dashboard shell (#610). Same shape as the owner shell
+// (mobile topbar + off-canvas drawer below 768px, fixed sidebar above)
+// but stripped of owner-only chrome (search palette, notification bell,
+// language toggle, version stamp). M9 PR-F will add the notification
+// bell back specifically for the athlete-relevant feed events.
+//
+// When a 2nd athlete page lands (Slice 2: MyAcademyComponent) the
+// sidebar nav list grows. Keep this file lean — heavy chrome belongs
+// in shared partials, not in per-feature SCSS.
+
+$sidebar-breakpoint: 768px;
+$sidebar-width: 16rem;
+$topbar-height: 3.5rem;
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--p-surface-50);
+  position: relative;
+
+  @media (min-width: $sidebar-breakpoint) {
+    flex-direction: row;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--p-mask-background);
+  z-index: 40;
+
+  @media (min-width: $sidebar-breakpoint) {
+    display: none;
+  }
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  min-height: $topbar-height;
+  background: var(--p-surface-900);
+  color: var(--p-surface-0);
+  border-bottom: 1px solid var(--p-surface-700);
+  position: sticky;
+  top: 0;
+  z-index: 60;
+
+  @media (min-width: $sidebar-breakpoint) {
+    display: none;
+  }
+
+  &__hamburger {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--p-border-radius-md);
+    cursor: pointer;
+
+    i {
+      font-size: 1.25rem;
+    }
+  }
+
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+    margin-right: auto;
+  }
+
+  &__logo {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: $sidebar-width;
+  background: var(--p-surface-900);
+  color: var(--p-surface-0);
+  padding: 1rem 0;
+
+  // Mobile: off-canvas drawer.
+  @media (max-width: $sidebar-breakpoint - 1) {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 240ms cubic-bezier(0.2, 0, 0, 1);
+
+    &--open {
+      transform: translateX(0);
+    }
+  }
+
+  @media (min-width: $sidebar-breakpoint) {
+    flex: 0 0 $sidebar-width;
+    height: 100dvh;
+  }
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.5rem 1rem;
+    font-weight: 600;
+    font-size: 1.125rem;
+
+    @media (max-width: $sidebar-breakpoint - 1) {
+      display: none;
+    }
+  }
+
+  &__logo {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--p-surface-700);
+    margin-bottom: 1rem;
+  }
+
+  &__user-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__user-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: var(--p-surface-0);
+  }
+
+  &__user-handle {
+    font-size: 0.825rem;
+    color: var(--p-surface-300);
+  }
+
+  &__nav {
+    flex: 1;
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    color: var(--p-surface-200);
+    text-decoration: none;
+
+    i {
+      font-size: 1rem;
+    }
+
+    &:hover {
+      background: var(--p-surface-800);
+      color: var(--p-surface-0);
+    }
+
+    &--active {
+      background: var(--p-surface-800);
+      color: var(--p-surface-0);
+      border-left: 3px solid var(--p-primary-500);
+    }
+  }
+
+  &__footer {
+    border-top: 1px solid var(--p-surface-700);
+    padding: 0.5rem 0.5rem 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  &__signout {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: var(--p-surface-200);
+    cursor: pointer;
+    border-radius: var(--p-border-radius-md);
+
+    &:hover {
+      background: var(--p-surface-800);
+      color: var(--p-surface-0);
+    }
+  }
+}
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--budojo-page-padding-y) var(--budojo-page-padding-x);
+
+  @media (min-width: $sidebar-breakpoint) {
+    height: 100dvh;
+  }
+}
