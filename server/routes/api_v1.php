@@ -237,6 +237,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->where('id', '[0-9]+');
     Route::delete('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'destroyOthers']);
 
+    // Web Push subscriptions (#419). One row per device the user has
+    // explicitly granted push permission on. The SPA POSTs the
+    // PushSubscription envelope from `PushManager.subscribe()`;
+    // server-side fanout uses minishlink/web-push to send pushes to
+    // every row tied to a target user.
+    Route::get('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'index']);
+    Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store']);
+    Route::delete('/me/push-subscriptions/{id}', [\App\Http\Controllers\User\PushSubscriptionController::class, 'destroy'])
+        ->where('id', '[0-9]+');
+
     // API tokens (#431). Long-lived, user-named, abilities-scoped
     // Sanctum tokens for integrations (export scripts, automation
     // hooks). Same `personal_access_tokens` table as session tokens
