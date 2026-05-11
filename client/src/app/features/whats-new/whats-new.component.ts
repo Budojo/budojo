@@ -59,6 +59,69 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.6.0',
+      date: '2026-05-11',
+      headline:
+        'A double-feature release: stronger sign-in security and a calmer dashboard surface. Two-factor authentication (TOTP + 8 single-use backup codes) is now opt-in from /dashboard/profile — scan a QR with any authenticator app, type the 6-digit code on next sign-in. A new bell icon in the dashboard topbar opens a 20-row notification inbox (each row deep-links to its source and flips read in one tap; "Mark all read" bulk-flips). A first-run "Getting started" checklist (5 steps: add athlete / log attendance / mark payment / upload document / view stats) lands on /dashboard/athletes for brand-new owners — self-dismisses when every step is ticked, or one-click dismiss with a confirm popup. New API tokens panel on /dashboard/profile lets you mint long-lived bearer tokens for scripts (abilities-scoped, optional expiry 1-730 days, plaintext shown ONCE with a copy + "save it now" gate). Compliance: medical certificates are now encrypted at rest with AES-256-GCM (separate key, rotatable independently of APP_KEY; pre-existing plaintext rows still readable), and a daily 03:15 Europe/Rome cron auto-purges any medical cert whose expires_at is more than 24 months in the past (DPIA § R6 enforced — same code path the athlete-removal cascade uses, file bytes + DB row both go). Behind the scenes: server-side Web Push subscription plumbing (push_subscriptions table + 3 endpoints + VAPID config) — the SPA toggle + delivery integration land in a focused follow-up.',
+      sections: [
+        {
+          heading: '🛡️ Two-factor authentication',
+          bullets: [
+            'New "Two-factor authentication" panel on /dashboard/profile. Scan a QR with Google Authenticator / 1Password / Authy / any TOTP app, type the 6-digit code it shows, and 2FA is on. From the next login forward the password screen now asks for the code AFTER the password.',
+            'You also receive 8 single-use backup codes on enrolment (XXXX-XXXX format, ambiguous-char-free alphabet). Save them in a password manager — each one works once if you lose your phone. The panel surfaces how many remain and lets you regenerate the set whenever you want.',
+            "Disabling 2FA requires your current password (defense in depth — a stolen session can't strip 2FA from you).",
+          ],
+        },
+        {
+          heading: '✨ "Getting started" checklist on the dashboard',
+          bullets: [
+            'Brand-new owners landing after academy setup now see a 5-step checklist at the top of /dashboard/athletes: add an athlete, log attendance, mark a payment, upload a document, view stats.',
+            'Each row has a "Show me" CTA that navigates to the right feature AND ticks the step done in one tap.',
+            'The checklist self-dismisses once every step is ticked. There\'s also a small "Dismiss" link in the corner — one click + confirm and it\'s gone for good.',
+          ],
+        },
+        {
+          heading: '🔔 In-app notification center',
+          bullets: [
+            'A bell icon arrives in the dashboard topbar. Unread count badges on the bell; tapping it opens a 20-row panel with the latest notifications.',
+            'Each row deep-links to the originating object (the athlete whose certificate is expiring, the payment month you haven\'t ticked yet) and flips to "read" in the same click. A "Mark all read" CTA at the top bulk-flips.',
+            'The inbox surface ships today; the actual reminder fan-out (medical-cert expiry, unpaid-athletes digest) gets wired into the bell in a focused follow-up.',
+          ],
+        },
+        {
+          heading: '🔧 API tokens — scripted access to your data',
+          bullets: [
+            'New "API tokens" panel on /dashboard/profile lets you mint long-lived bearer tokens for scripts and integrations.',
+            'Each token gets a name, a scoped subset of abilities (athletes:read, documents:write, payments:read, attendance:write, …), and an optional expiry (1–730 days).',
+            'The plaintext bearer is shown ONCE at creation with a copy button and a clear "save it now, you won\'t see it again" gate. Lost a token? Generate a new one and revoke the old.',
+          ],
+        },
+        {
+          heading: '🛡️ Medical certificates encrypted at rest',
+          bullets: [
+            'Medical certificates are special-category health data under GDPR Art. 9. From v2.6.0 every new medical-cert upload is encrypted with AES-256-GCM before the bytes ever touch disk; decryption happens in memory at download time.',
+            'The encryption key is separate from the app secret and rotatable independently — losing the document key without a backup means the encrypted files are permanently unrecoverable, so the runbook in docs/infra/production-deployment.md documents the procedure.',
+            "Existing medical certificates uploaded before v2.6.0 stay plaintext and still serve correctly; we'll re-encrypt them in a future maintenance window.",
+          ],
+        },
+        {
+          heading: '🛡️ Auto-purge of expired medical certificates',
+          bullets: [
+            'The DPIA on medical certificates set a 24-month retention window. A new daily cron (03:15 Europe/Rome) sweeps every medical certificate whose expires_at is more than 24 months in the past and removes BOTH the database row and the file on disk.',
+            'Federation registrations and ID copies are not touched — they have different retention rules.',
+            'GDPR Art. 5 § 1 (e) ("kept for no longer than necessary") is now enforced by automation, not by a footnote.',
+          ],
+        },
+        {
+          heading: '🔧 Behind the scenes — browser push plumbing',
+          bullets: [
+            'Server-side: a push_subscriptions table + three endpoints on /me/push-subscriptions + VAPID config wiring. When the follow-up Profile toggle ships, the SPA will call PushManager.subscribe() and POST the envelope here.',
+            'No user-visible surface yet — the bell icon is the channel users see today; browser push is an additional fan-out path for time-sensitive nudges like "medical certificate expires tomorrow" without forcing the tab to stay open.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.5.0',
       date: '2026-05-10',
       headline:
