@@ -84,6 +84,17 @@ class AppServiceProvider extends ServiceProvider
             $request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown',
         ));
 
+        // Community reactions (#603, M9 PR-C). Sixty toggles per
+        // minute per authenticated user — generous enough that a
+        // session of enthusiastic clap-spamming over a fresh feed
+        // is never throttled, tight enough that a script can't blast
+        // the endpoint and create avoidable DB load. Falls back to
+        // IP only as a defensive default — the route is auth-gated
+        // so this branch shouldn't trigger in normal operation.
+        RateLimiter::for('community-react', fn (Request $request): Limit => Limit::perMinute(60)->by(
+            $request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown',
+        ));
+
         // Reshape the password-reset URL embedded in the email to
         // point at the SPA's `/auth/reset-password` route instead of
         // a server-rendered Laravel page. Same APP_URL → CLIENT_URL

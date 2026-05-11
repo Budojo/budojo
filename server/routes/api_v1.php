@@ -388,13 +388,24 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
     });
 
-    // Community feed (#612, M9 PR-B server). Athletes + owners read the
-    // same paginated /community/feed (tenant-scoped by the Action via
-    // the user's role → academy resolution). DELETE is owner-only —
-    // the FormRequest authorize() gate enforces both the role check
-    // and the cross-academy isolation. SPA wiring follows in PR-B2.
+    // Community (M9). Owners + athletes share the same /api/v1/community
+    // namespace — tenant isolation is per-Action (feed) or per-FormRequest
+    // gate (DELETE / react). Each method is scoped on the comment line
+    // that introduces it.
     Route::prefix('community')->group(function (): void {
+        // PR-B server (#612): athletes + owners read the same paginated
+        // feed; DELETE is owner-only via the FormRequest authorize() gate.
         Route::get('feed', [\App\Http\Controllers\Community\CommunityFeedController::class, 'index']);
         Route::delete('posts/{post}', [\App\Http\Controllers\Community\CommunityFeedController::class, 'destroy']);
+
+        // PR-C server (#603): toggle the caller's emoji reaction on a
+        // post. Same-emoji toggles off; different emoji swaps in place.
+        // Rate-limited at 60 / minute / user via the `community-react`
+        // named limiter (see AppServiceProvider) — PRD acceptance
+        // criterion + Copilot review on PR #616.
+        Route::post(
+            'posts/{post}/reactions',
+            [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
+        )->middleware('throttle:community-react');
     });
 });
