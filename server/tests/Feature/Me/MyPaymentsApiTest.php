@@ -33,7 +33,7 @@ function paymentAthlete(Academy $academy): array
     return [$user, $athlete];
 }
 
-it('returns the athletes own payments for the requested year', function (): void {
+it("returns the athlete's own payments for the requested year", function (): void {
     [$user, $athlete] = paymentAthlete($this->academy);
 
     AthletePayment::factory()->for($athlete)->create([
@@ -102,13 +102,14 @@ it('returns 404 with the canonical envelope for an owner caller', function (): v
         ->assertExactJson(['message' => 'No athlete profile found.']);
 });
 
-it('returns 404 for an athlete-role user without a linked athletes row', function (): void {
+it('returns 404 with the canonical envelope for an athlete-role user without a linked athletes row', function (): void {
     /** @var User $orphan */
     $orphan = User::factory()->create(['role' => 'athlete']);
 
     $this->actingAs($orphan)
         ->getJson('/api/v1/me/payments')
-        ->assertStatus(404);
+        ->assertStatus(404)
+        ->assertExactJson(['message' => 'No athlete profile found.']);
 });
 
 it('rejects unauthenticated callers with 401', function (): void {

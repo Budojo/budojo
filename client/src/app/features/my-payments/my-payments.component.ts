@@ -7,11 +7,13 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AthletePayment, PaymentService } from '../../core/services/payment.service';
+import { LanguageService } from '../../core/services/language.service';
+import { localeFor } from '../../shared/utils/locale';
 
 /**
  * Athlete-portal monthly payments page (M7 PR-D slice 4). Read-only
@@ -25,7 +27,7 @@ import { AthletePayment, PaymentService } from '../../core/services/payment.serv
 @Component({
   selector: 'app-my-payments',
   standalone: true,
-  imports: [TranslatePipe, DatePipe, DecimalPipe, SkeletonModule],
+  imports: [TranslatePipe, DatePipe, SkeletonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-payments.component.html',
   styleUrl: './my-payments.component.scss',
@@ -33,6 +35,7 @@ import { AthletePayment, PaymentService } from '../../core/services/payment.serv
 export class MyPaymentsComponent implements OnInit {
   private readonly paymentService = inject(PaymentService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly languageService = inject(LanguageService);
 
   protected readonly payments = signal<readonly AthletePayment[]>([]);
   protected readonly loading = signal(true);
@@ -84,5 +87,27 @@ export class MyPaymentsComponent implements OnInit {
    */
   protected localMonthDate(month: number): Date {
     return new Date(this.year(), month - 1, 1);
+  }
+
+  /**
+   * Locale-aware currency display — mirrors `PaymentsListComponent.formatAmount`
+   * (the owner-side payments tab). Reads the SPA's runtime language
+   * toggle so the decimal separator matches user expectations
+   * (`5,00 €` in IT vs `€5.00` in EN). Copilot review on PR #624.
+   */
+  protected formatAmount(cents: number): string {
+    const locale = localeFor(this.languageService.currentLang());
+    return (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
+  }
+
+  /**
+   * Calendar-date-only display for `paid_at` — slices the YYYY-MM-DD
+   * prefix from the ISO timestamp instead of piping through `DatePipe`
+   * which (a) parses the ISO as UTC and can shift the day, (b) shows
+   * the time-of-day which is noise for a payment ledger. Mirrors
+   * `PaymentsListComponent.formatPaidAt` (Copilot review on #624).
+   */
+  protected formatPaidAt(iso: string): string {
+    return iso.slice(0, 10);
   }
 }

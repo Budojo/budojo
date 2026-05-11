@@ -39,6 +39,13 @@ function setup() {
 }
 
 describe('MyPaymentsComponent (M7 PR-D slice 4)', () => {
+  it('shows the loading skeleton while the request is in flight', () => {
+    const { el, http, year } = setup();
+    expect(el.querySelector('[data-cy="my-payments-loading"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="my-payments-grid"]')).toBeNull();
+    http.expectOne(`${environment.apiBase}/api/v1/me/payments?year=${year}`).flush({ data: [] });
+  });
+
   it('renders 12 month rows even when zero payments are returned', () => {
     const { fixture, el, http, year } = setup();
     http.expectOne(`${environment.apiBase}/api/v1/me/payments?year=${year}`).flush({ data: [] });

@@ -34,10 +34,8 @@
             {{ localMonthDate(row.month) | date: 'LLLL' }}
           </time>
           @if (row.payment; as p) {
-            <span class="my-payments__amount"> €{{ p.amount_cents / 100 | number: '1.2-2' }} </span>
-            <span class="my-payments__paid-on">
-              {{ p.paid_at | date: 'mediumDate' }}
-            </span>
+            <span class="my-payments__amount">{{ formatAmount(p.amount_cents) }}</span>
+            <span class="my-payments__paid-on">{{ formatPaidAt(p.paid_at) }}</span>
           } @else {
             <span class="my-payments__unpaid">
               {{ 'athletePortal.payments.unpaid' | translate }}
