@@ -68,6 +68,10 @@ class CommunityPostResource extends JsonResource
             // render the reaction buttons in the active state on first
             // paint, without a follow-up roundtrip.
             'your_reaction' => $post->reactions->first()?->emoji->value,
+            // Same shape for RSVPs on event-type posts (M9 PR-E2).
+            // Null on non-event posts (no row to find) or when the
+            // caller hasn't responded.
+            'your_rsvp' => $post->rsvps->first()?->response->value,
         ];
     }
 }

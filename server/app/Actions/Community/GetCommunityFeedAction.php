@@ -57,6 +57,11 @@ class GetCommunityFeedAction
                 // reaction buttons render the active state on first
                 // paint without a follow-up roundtrip (#617, PR-C2).
                 'reactions' => fn ($q) => $q->where('user_id', $user->id),
+                // Same pattern for the caller's own RSVP on event-type
+                // posts (M9 PR-E2). One extra query per page; the
+                // resource surfaces `your_rsvp` so the SPA's RSVP
+                // buttons render the active state on first paint.
+                'rsvps' => fn ($q) => $q->where('user_id', $user->id),
             ])
             ->withCount(['reactions', 'comments', 'rsvps'])
             ->paginate($perPage);

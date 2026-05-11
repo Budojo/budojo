@@ -24,6 +24,7 @@ import type { Belt } from './athlete.service';
 export type CommunityPostType = 'belt_promotion' | 'event' | 'owner_announcement';
 export type CommunityPostVisibility = 'academy' | 'public';
 export type ReactionEmoji = 'clap' | 'pray';
+export type RsvpResponse = 'going' | 'maybe';
 
 export interface CommunityPostAuthor {
   readonly id: number;
@@ -46,6 +47,7 @@ export interface CommunityPost {
   readonly comments_count: number;
   readonly rsvps_count: number;
   readonly your_reaction: ReactionEmoji | null;
+  readonly your_rsvp: RsvpResponse | null;
 }
 
 export interface ReactionToggleResponse {
@@ -53,6 +55,14 @@ export interface ReactionToggleResponse {
   readonly counts: {
     readonly clap: number;
     readonly pray: number;
+  };
+}
+
+export interface RsvpToggleResponse {
+  readonly your_rsvp: RsvpResponse | null;
+  readonly counts: {
+    readonly going: number;
+    readonly maybe: number;
   };
 }
 
@@ -144,5 +154,15 @@ export class CommunityService {
    */
   deleteComment(commentId: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/comments/${commentId}`);
+  }
+
+  /**
+   * Toggle the caller's RSVP on an event-type post (#605, PR-E2).
+   * Same-response toggles off, different-response swaps in place.
+   * Returns the resulting state for SPA optimistic-update
+   * reconciliation.
+   */
+  toggleRsvp(postId: number, response: RsvpResponse): Observable<RsvpToggleResponse> {
+    return this.http.post<RsvpToggleResponse>(`${this.base}/posts/${postId}/rsvp`, { response });
   }
 }
