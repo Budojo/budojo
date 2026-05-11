@@ -227,7 +227,12 @@
       "pagination": "Impaginazione feed",
       "pageOf": "Pagina {{current}} di {{total}}",
       "previous": "Precedente",
-      "next": "Successiva"
+      "next": "Successiva",
+      "reactClap": "Applauso",
+      "reactClapAria": "Reagisci con un applauso",
+      "reactPray": "Rispetto",
+      "reactPrayAria": "Reagisci con rispetto",
+      "reactToastError": "Non siamo riusciti ad aggiornare la tua reazione. Riprova."
     },
     "academy": {
       "title": "La tua academy",

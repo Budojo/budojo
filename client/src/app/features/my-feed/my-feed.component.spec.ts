@@ -78,6 +78,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reactions_count: 0,
           comments_count: 0,
           rsvps_count: 0,
+          your_reaction: null,
         },
       ],
       meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
@@ -117,6 +118,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reactions_count: 0,
           comments_count: 0,
           rsvps_count: 0,
+          your_reaction: null,
         },
       ],
       meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
@@ -142,6 +144,104 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     expect(el.querySelector('[data-cy="my-feed-error"]')).not.toBeNull();
   });
 
+  it('clap-button click optimistically marks the button active + fires the API, reconciles on response', () => {
+    const { fixture, el, http } = setup();
+
+    const postId = 99;
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          id: postId,
+          type: 'owner_announcement',
+          visibility: 'academy',
+          payload: { body: 'A post' },
+          created_at: '2026-05-10T08:00:00Z',
+          created_by: {
+            id: 1,
+            first_name: 'O',
+            last_name: 'O',
+            full_name: 'O O',
+            handle: null,
+            avatar_url: null,
+            belt: null,
+          },
+          reactions_count: 0,
+          comments_count: 0,
+          rsvps_count: 0,
+          your_reaction: null,
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const btn = el.querySelector(`[data-cy="react-clap-${postId}"]`) as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+
+    btn.click();
+    fixture.detectChanges();
+
+    // Optimistic flip — button shows as active before the response.
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+
+    // Server confirms with canonical state.
+    http
+      .expectOne(`${environment.apiBase}/api/v1/community/posts/${postId}/reactions`)
+      .flush({ your_reaction: 'clap', counts: { clap: 1, pray: 0 } });
+    fixture.detectChanges();
+
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    expect(
+      el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`)?.textContent,
+    ).toContain('1');
+  });
+
+  it('rolls back the optimistic reaction when the API call fails', () => {
+    const { fixture, el, http } = setup();
+
+    const postId = 77;
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          id: postId,
+          type: 'owner_announcement',
+          visibility: 'academy',
+          payload: { body: 'A post' },
+          created_at: '2026-05-10T08:00:00Z',
+          created_by: {
+            id: 1,
+            first_name: 'O',
+            last_name: 'O',
+            full_name: 'O O',
+            handle: null,
+            avatar_url: null,
+            belt: null,
+          },
+          reactions_count: 0,
+          comments_count: 0,
+          rsvps_count: 0,
+          your_reaction: null,
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const btn = el.querySelector(`[data-cy="react-clap-${postId}"]`) as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+
+    http
+      .expectOne(`${environment.apiBase}/api/v1/community/posts/${postId}/reactions`)
+      .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    // Rolled back to inactive.
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+  });
+
   it('navigates to the next page when the next button is clicked', () => {
     const { fixture, el, http } = setup();
 
@@ -165,6 +265,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reactions_count: 0,
           comments_count: 0,
           rsvps_count: 0,
+          your_reaction: null,
         },
       ],
       meta: { current_page: 1, per_page: 20, total: 25, last_page: 2 },

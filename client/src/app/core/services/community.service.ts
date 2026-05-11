@@ -23,6 +23,7 @@ import type { Belt } from './athlete.service';
  */
 export type CommunityPostType = 'belt_promotion' | 'event' | 'owner_announcement';
 export type CommunityPostVisibility = 'academy' | 'public';
+export type ReactionEmoji = 'clap' | 'pray';
 
 export interface CommunityPostAuthor {
   readonly id: number;
@@ -44,6 +45,15 @@ export interface CommunityPost {
   readonly reactions_count: number;
   readonly comments_count: number;
   readonly rsvps_count: number;
+  readonly your_reaction: ReactionEmoji | null;
+}
+
+export interface ReactionToggleResponse {
+  readonly your_reaction: ReactionEmoji | null;
+  readonly counts: {
+    readonly clap: number;
+    readonly pray: number;
+  };
 }
 
 export interface CommunityFeedPage {
@@ -68,5 +78,17 @@ export class CommunityService {
 
   deletePost(postId: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/posts/${postId}`);
+  }
+
+  /**
+   * Toggle the authenticated user's emoji reaction on a post (#617,
+   * PR-C2). The server runs same-emoji-toggles-off / different-emoji-
+   * swaps-in-place semantics and returns the resulting state, which
+   * the caller uses to reconcile its optimistic update.
+   */
+  toggleReaction(postId: number, emoji: ReactionEmoji): Observable<ReactionToggleResponse> {
+    return this.http.post<ReactionToggleResponse>(`${this.base}/posts/${postId}/reactions`, {
+      emoji,
+    });
   }
 }

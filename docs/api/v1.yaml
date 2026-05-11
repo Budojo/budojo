@@ -5177,7 +5177,7 @@ components:
 
     CommunityPost:
       type: object
-      required: [id, type, visibility, payload, created_at, created_by, reactions_count, comments_count, rsvps_count]
+      required: [id, type, visibility, payload, created_at, created_by, reactions_count, comments_count, rsvps_count, your_reaction]
       properties:
         id: { type: integer, format: int64 }
         type: { $ref: '#/components/schemas/CommunityPostType' }
@@ -5191,9 +5191,14 @@ components:
             JSON in the database; surfaced verbatim.
         created_at: { type: string, format: date-time }
         created_by: { $ref: '#/components/schemas/CommunityPostAuthor' }
-        reactions_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_reactions`. Zero in V1; populated by PR-C.' }
+        reactions_count: { type: integer, minimum: 0, description: 'Aggregated total reaction count from `post_reactions`. Always non-negative; may be zero if no users have reacted yet.' }
         comments_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_comments`. Zero in V1; populated by PR-D.' }
         rsvps_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_rsvps`. Zero in V1; populated by PR-E.' }
+        your_reaction:
+          type: string
+          enum: [clap, pray]
+          nullable: true
+          description: 'The caller''s own reaction on this post (PR-C2). Null when the caller has not reacted. Used by the SPA to render reaction buttons in active state on first paint.'
 
 security:
   - bearerAuth: []

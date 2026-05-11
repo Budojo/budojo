@@ -141,6 +141,33 @@ it('includes reactions_count / comments_count / rsvps_count zeroed for a fresh p
         ->and($response->json('data.0.rsvps_count'))->toBe(0);
 });
 
+it('surfaces the caller\'s your_reaction on each item when they have reacted', function (): void {
+    /** @var CommunityPost $post */
+    $post = CommunityPost::factory()->for($this->academy)->create();
+
+    \App\Models\PostReaction::create([
+        'post_id' => $post->id,
+        'user_id' => $this->owner->id,
+        'emoji' => \App\Enums\ReactionEmoji::Clap,
+    ]);
+
+    $response = $this->actingAs($this->owner)
+        ->getJson('/api/v1/community/feed')
+        ->assertOk();
+
+    expect($response->json('data.0.your_reaction'))->toBe('clap');
+});
+
+it('surfaces your_reaction=null when the caller has not reacted', function (): void {
+    CommunityPost::factory()->for($this->academy)->create();
+
+    $response = $this->actingAs($this->owner)
+        ->getJson('/api/v1/community/feed')
+        ->assertOk();
+
+    expect($response->json('data.0.your_reaction'))->toBeNull();
+});
+
 it('rejects unauthenticated requests with 401', function (): void {
     $this->getJson('/api/v1/community/feed')->assertStatus(401);
 });
