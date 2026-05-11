@@ -5,12 +5,59 @@ declare(strict_types=1);
 namespace App\Observers;
 
 use App\Actions\Document\DeleteDocumentAction;
+use App\Enums\CommunityPostType;
+use App\Enums\CommunityPostVisibility;
 use App\Models\Athlete;
+use App\Models\CommunityPost;
+use Illuminate\Support\Facades\Auth;
 
 class AthleteObserver
 {
     public function __construct(private readonly DeleteDocumentAction $deleteDocument)
     {
+    }
+
+    /**
+     * Auto-create a `belt_promotion` community post when an athlete's
+     * belt column changes (#608, M9 PR-A2). Fires only on updates —
+     * initial belt assignment at create time is not a promotion. Skips
+     * in console / seeder context where there's no authenticated user
+     * to attribute (`Auth::id()` is null).
+     *
+     * The post creation is inline here for V1; if/when M9 PR-F adds
+     * push-notification fan-out (with per-user opt-in gating), this
+     * logic moves to a dedicated `CreateBeltPromotionPostAction`. For
+     * the simple insert path the observer is the right home.
+     */
+    public function updated(Athlete $athlete): void
+    {
+        if (! $athlete->wasChanged('belt')) {
+            return;
+        }
+
+        $userId = Auth::id();
+        if ($userId === null) {
+            // No authenticated user — likely a console seeder or a
+            // queue worker bumping a belt programmatically. Skip the
+            // celebration post; the audit log (#429, future) will
+            // capture the belt change separately.
+            return;
+        }
+
+        $originalBelt = $athlete->getOriginal('belt');
+
+        CommunityPost::create([
+            'academy_id' => $athlete->academy_id,
+            'type' => CommunityPostType::BeltPromotion,
+            'visibility' => CommunityPostVisibility::Academy,
+            'payload' => [
+                'athlete_id' => $athlete->id,
+                'old_belt' => $originalBelt instanceof \BackedEnum ? $originalBelt->value : $originalBelt,
+                'new_belt' => $athlete->belt->value,
+                'promoted_at' => now()->toISOString(),
+            ],
+            'created_by_user_id' => $userId,
+        ]);
     }
 
     /**
