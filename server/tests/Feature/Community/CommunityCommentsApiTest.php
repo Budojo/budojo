@@ -205,6 +205,26 @@ it('rejects a different-academy owner trying to delete with 403', function (): v
         ->assertStatus(403);
 });
 
+it('owner can still moderate-delete a comment whose parent post is soft-deleted', function (): void {
+    $athlete = commentAuthorAthlete($this->academy);
+    /** @var PostComment $comment */
+    $comment = PostComment::factory()->for($this->post, 'post')->for($athlete)->create();
+
+    // Owner soft-deletes the parent post first.
+    $this->post->delete();
+
+    // The comment still exists in the DB (cascade soft-delete is
+    // not configured — comments survive their parent's soft-delete);
+    // the owner should still be able to delete it (Copilot review
+    // on PR #621 — pre-fix, the `belongsTo` returned null and the
+    // endpoint 500ed).
+    $this->actingAs($this->owner)
+        ->deleteJson("/api/v1/community/comments/{$comment->id}")
+        ->assertNoContent();
+
+    expect(PostComment::query()->where('id', $comment->id)->exists())->toBeFalse();
+});
+
 it('rejects unauthenticated requests with 401 on all three verbs', function (): void {
     $this->getJson("/api/v1/community/posts/{$this->post->id}/comments")->assertStatus(401);
     $this->postJson("/api/v1/community/posts/{$this->post->id}/comments", ['body' => 'x'])

@@ -38,7 +38,12 @@ class ListCommentsAction
                 'user:id,first_name,last_name,handle,avatar_path,updated_at',
                 'user.athlete:id,user_id,belt',
             ])
+            // Stable sort: secondary `id` tiebreaker prevents
+            // pagination drift when multiple comments share the
+            // exact same `created_at` (a batch insert in tests,
+            // a fast double-tap) — Copilot review on PR #621.
             ->orderBy('created_at')
+            ->orderBy('id')
             ->paginate($perPage);
     }
 }

@@ -53,7 +53,17 @@ class DeleteCommentRequest extends FormRequest
             return false;
         }
 
-        return $comment->post->academy_id === $ownedAcademyId;
+        // `withTrashed()` because the parent post may have been
+        // soft-deleted (PR-B's owner moderation surface) while its
+        // comments still exist. Without this the default
+        // `belongsTo` returns null on a trashed post and
+        // `->academy_id` would 500 — Copilot review on PR #621.
+        $post = $comment->post()->withTrashed()->first();
+        if ($post === null) {
+            return false;
+        }
+
+        return $post->academy_id === $ownedAcademyId;
     }
 
     /** @return array<string, mixed> */
