@@ -61,6 +61,14 @@ tags:
       Server-side aggregations for the /dashboard/stats charts.
       Endpoints return pre-bucketed data so the frontend never N+1s
       through the athletes or payments tables.
+  - name: community
+    description: |
+      Academy-scoped social feed (M9). Owners and athletes from the same
+      academy see the same posts — belt-promotion celebrations, owner
+      announcements, scheduled events. Owner-only soft-delete for
+      moderation. Reactions, comments, and RSVPs land in subsequent
+      slices (PR-C/D/E); today the feed surfaces the read path + the
+      moderation endpoint.
 
 paths:
 
@@ -3467,6 +3475,83 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
 
+  /community/feed:
+    get:
+      tags: [community]
+      summary: Read the authenticated user's academy timeline
+      description: |
+        Returns a paginated, descending-created-at list of community
+        posts visible to the authenticated user's academy. Owners and
+        athletes from the same academy see the same set. Posts from
+        other academies are filtered out at the query level (tenant
+        isolation rule — M9 PRD § Hard rules).
+
+        Each item carries a `created_by` identity flair envelope so the
+        SPA can render the "Mario Rossi · @mariobjj · 🟦 Blue" line.
+        `belt` is null for owner-authored posts.
+
+        `reactions_count`, `comments_count`, and `rsvps_count` are
+        zeroed in V1 — PR-C and PR-D will start populating them.
+      operationId: getCommunityFeed
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+          description: 1-based page index. 20 items per page.
+      responses:
+        '200':
+          description: Paginated feed (page-size 20).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/CommunityPost' }
+                  meta:
+                    type: object
+                    properties:
+                      current_page: { type: integer, minimum: 1 }
+                      per_page: { type: integer, example: 20 }
+                      total: { type: integer, minimum: 0 }
+                      last_page: { type: integer, minimum: 1 }
+        '401': { description: Unauthenticated }
+
+  /community/posts/{post}:
+    delete:
+      tags: [community]
+      summary: Soft-delete a community post (owner-only)
+      description: |
+        Owner-only moderation surface. The FormRequest authorize() gate
+        rejects (403) any caller who is not the owner of the post's
+        academy. Successful soft-delete (`deleted_at` set; row remains
+        recoverable) returns 204 and the post immediately disappears
+        from `/community/feed`.
+
+        V1 has no athlete-side delete-my-own-post surface — that lands
+        with M9 PR-D when comments/posts gain inline edit + delete on
+        the author's own rows.
+      operationId: deleteCommunityPost
+      parameters:
+        - in: path
+          name: post
+          required: true
+          schema: { type: integer, minimum: 1 }
+          description: Community post id.
+      responses:
+        '204': { description: Post soft-deleted. }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — caller is not an owner OR the post belongs to a different academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '404': { description: Post not found (already hard-deleted or invalid id). }
+
 components:
 
   securitySchemes:
@@ -4971,6 +5056,69 @@ components:
         created_at:
           type: string
           format: date-time
+
+    CommunityPostType:
+      type: string
+      enum: [belt_promotion, event, owner_announcement]
+      description: |
+        Discriminator on `payload` shape. Today V1 ships these three:
+        - `belt_promotion` — emitted by the AthleteObserver when an
+          athlete's belt column changes. Payload: `{ athlete_id,
+          old_belt, new_belt, promoted_at }`.
+        - `event` — owner-authored open mat / seminar / grading.
+          Payload carries title + start time + optional location
+          (text address, lat, lon nullable).
+        - `owner_announcement` — generic owner-side broadcast (also
+          the factory default).
+
+    CommunityPostVisibility:
+      type: string
+      enum: [academy, public]
+      description: |
+        V1 always emits `academy` (post visible only to the owning
+        academy's users). The `public` value is reserved for V2's
+        cross-academy timeline; baked into the enum today so the V2
+        migration is non-destructive.
+
+    CommunityPostAuthor:
+      type: object
+      description: |
+        Identity flair surfaced on every feed item. Belt comes from
+        the linked athlete row; for owner-authored posts it's null and
+        the SPA renders the owner variant of `<app-user-flair>`.
+      required: [id, first_name, last_name]
+      properties:
+        id: { type: integer, format: int64 }
+        first_name: { type: string }
+        last_name: { type: string }
+        full_name: { type: string, description: 'Computed accessor — trimmed `first_name + " " + last_name`.' }
+        handle: { type: string, nullable: true, description: 'Instagram-style @handle, lowercase letters/numbers/underscore.' }
+        avatar_url: { type: string, format: uri, nullable: true }
+        belt:
+          allOf:
+            - $ref: '#/components/schemas/Belt'
+          nullable: true
+          description: 'Athlete belt color. Null for owner-authored posts.'
+
+    CommunityPost:
+      type: object
+      required: [id, type, visibility, payload, created_at, created_by, reactions_count, comments_count, rsvps_count]
+      properties:
+        id: { type: integer, format: int64 }
+        type: { $ref: '#/components/schemas/CommunityPostType' }
+        visibility: { $ref: '#/components/schemas/CommunityPostVisibility' }
+        payload:
+          type: object
+          additionalProperties: true
+          description: |
+            Type-discriminated payload. Concrete shape depends on
+            `type` — see `CommunityPostType` description. Stored as
+            JSON in the database; surfaced verbatim.
+        created_at: { type: string, format: date-time }
+        created_by: { $ref: '#/components/schemas/CommunityPostAuthor' }
+        reactions_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_reactions`. Zero in V1; populated by PR-C.' }
+        comments_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_comments`. Zero in V1; populated by PR-D.' }
+        rsvps_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_rsvps`. Zero in V1; populated by PR-E.' }
 
 security:
   - bearerAuth: []
