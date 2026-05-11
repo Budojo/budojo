@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
+import { VerifyPageComponent } from '../../../shared/components/verify-page/verify-page.component';
 
 const AUTO_REDIRECT_MS = 3000;
 
@@ -14,10 +15,9 @@ const AUTO_REDIRECT_MS = 3000;
 @Component({
   selector: 'app-verify-success',
   standalone: true,
-  imports: [ButtonModule, TranslatePipe],
+  imports: [ButtonModule, TranslatePipe, VerifyPageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './verify-success.component.html',
-  styleUrl: './verify-success.component.scss',
 })
 export class VerifySuccessComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);

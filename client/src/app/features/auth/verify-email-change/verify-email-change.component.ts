@@ -3,15 +3,16 @@ import {
   Component,
   OnDestroy,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
+import { VerifyPageComponent } from '../../../shared/components/verify-page/verify-page.component';
 
 const AUTO_REDIRECT_MS = 2000;
 
@@ -44,10 +45,9 @@ type ViewState = 'loading' | 'success' | 'error';
 @Component({
   selector: 'app-verify-email-change',
   standalone: true,
-  imports: [ButtonModule, ProgressSpinnerModule, RouterLink, TranslatePipe],
+  imports: [ButtonModule, RouterLink, TranslatePipe, VerifyPageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './verify-email-change.component.html',
-  styleUrl: './verify-email-change.component.scss',
 })
 export class VerifyEmailChangeComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -66,6 +66,42 @@ export class VerifyEmailChangeComponent implements OnInit, OnDestroy {
    * doesn't change the destination.
    */
   protected readonly errorBackTarget = signal<'/dashboard/profile' | '/auth/login'>('/auth/login');
+
+  protected readonly titleKey = computed(() => {
+    const s = this.state();
+    if (s === 'loading') return 'account.emailChange.verify.loadingTitle';
+    if (s === 'success') return 'account.emailChange.verify.successTitle';
+    return 'account.emailChange.verify.errorTitle';
+  });
+
+  protected readonly titleDataCy = computed(() => {
+    const s = this.state();
+    if (s === 'loading') return 'verify-email-change-loading';
+    if (s === 'success') return 'verify-email-change-success';
+    return 'verify-email-change-error';
+  });
+
+  protected readonly iconClass = computed(() => {
+    const s = this.state();
+    if (s === 'loading') return null;
+    if (s === 'success') return 'pi pi-check-circle';
+    return 'pi pi-times-circle';
+  });
+
+  protected readonly messageKey = computed(() => {
+    const s = this.state();
+    if (s === 'success') return 'account.emailChange.verify.successMessage';
+    if (s === 'error') return 'account.emailChange.verify.errorMessage';
+    return null;
+  });
+
+  protected readonly hintKey = computed(() =>
+    this.state() === 'success' ? 'account.emailChange.verify.successRedirectHint' : null,
+  );
+
+  protected readonly hintDataCy = computed(() =>
+    this.state() === 'success' ? 'verify-email-change-redirect-hint' : null,
+  );
 
   private redirectTimeout: ReturnType<typeof setTimeout> | null = null;
 

@@ -1,0 +1,28 @@
+<div class="verify-page">
+  @if (isLoading()) {
+    <div class="verify-page__icon" aria-hidden="true">
+      <p-progress-spinner styleClass="verify-page__spinner" strokeWidth="3" />
+    </div>
+  } @else if (iconClass()) {
+    <div
+      class="verify-page__icon"
+      [class.verify-page__icon--success]="state() === 'success'"
+      [class.verify-page__icon--warning]="state() === 'warning'"
+      [class.verify-page__icon--error]="state() === 'error'"
+    >
+      <i [class]="iconClass()" aria-hidden="true"></i>
+    </div>
+  }
+  <h1 class="verify-page__title" [attr.data-cy]="titleDataCy()">
+    {{ titleKey() | translate }}
+  </h1>
+  @if (messageKey()) {
+    <p class="verify-page__message">{{ messageKey() | translate }}</p>
+  }
+  @if (hintKey()) {
+    <p class="verify-page__hint" [attr.data-cy]="hintDataCy()">
+      {{ hintKey() | translate }}
+    </p>
+  }
+  <ng-content />
+</div>
