@@ -388,12 +388,18 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
     });
 
-    // Community reactions (#603, M9 PR-C). Sits adjacent to the
-    // feed/posts routes added in #613 — both surfaces sit under
-    // /api/v1/community/. When #613 merges first, the develop-into-
-    // branch merge consolidates the two prefix blocks; routes don't
-    // overlap so there's no real conflict.
+    // Community (M9). Owners + athletes share the same /api/v1/community
+    // namespace — tenant isolation is per-Action (feed) or per-FormRequest
+    // gate (DELETE / react). Each method is scoped on the comment line
+    // that introduces it.
     Route::prefix('community')->group(function (): void {
+        // PR-B server (#612): athletes + owners read the same paginated
+        // feed; DELETE is owner-only via the FormRequest authorize() gate.
+        Route::get('feed', [\App\Http\Controllers\Community\CommunityFeedController::class, 'index']);
+        Route::delete('posts/{post}', [\App\Http\Controllers\Community\CommunityFeedController::class, 'destroy']);
+
+        // PR-C server (#603): toggle the caller's emoji reaction on a
+        // post. Same-emoji toggles off; different emoji swaps in place.
         Route::post(
             'posts/{post}/react',
             [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
