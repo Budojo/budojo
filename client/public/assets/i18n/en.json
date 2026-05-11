@@ -204,7 +204,8 @@
       "profile": "Profile",
       "feed": "Feed",
       "academy": "Academy",
-      "attendance": "Attendance"
+      "attendance": "Attendance",
+      "payments": "Payments"
     },
     "profile": {
       "title": "Your profile",
@@ -261,6 +262,12 @@
       "noProfileBody": "We couldn't find your athlete profile. Contact your academy owner.",
       "errorBody": "We couldn't load your attendance. Refresh the page and try again.",
       "last30Days": "sessions in the last 30 days"
+    },
+    "payments": {
+      "title": "Your payments",
+      "noProfileBody": "We couldn't find your athlete profile. Contact your academy owner.",
+      "errorBody": "We couldn't load your payments. Refresh the page and try again.",
+      "unpaid": "Unpaid"
     }
   },
   "notifications": {

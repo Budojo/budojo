@@ -160,6 +160,11 @@ export const routes: Routes = [
             (m) => m.MyAttendanceComponent,
           ),
       },
+      {
+        path: 'payments',
+        loadComponent: () =>
+          import('./features/my-payments/my-payments.component').then((m) => m.MyPaymentsComponent),
+      },
     ],
   },
   {

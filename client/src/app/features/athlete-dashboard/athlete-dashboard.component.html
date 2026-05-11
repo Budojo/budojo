@@ -107,6 +107,18 @@
         </li>
         <li>
           <a
+            routerLink="/dashboard/me/payments"
+            routerLinkActive="sidebar__link--active"
+            class="sidebar__link"
+            (click)="closeSidebar()"
+            data-cy="nav-me-payments"
+          >
+            <i class="pi pi-wallet" aria-hidden="true"></i>
+            <span>{{ 'athletePortal.nav.payments' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
             routerLink="/dashboard/me/profile"
             routerLinkActive="sidebar__link--active"
             class="sidebar__link"
