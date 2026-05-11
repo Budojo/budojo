@@ -9,11 +9,13 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
-function setup(opts: {
-  token?: string | null;
-  previewResponse?: AthleteInvitePreview | 'invalid';
-  acceptResponse?: 'ok' | 'invite_revoked' | 'unknown_error_shape';
-} = {}) {
+function setup(
+  opts: {
+    token?: string | null;
+    previewResponse?: AthleteInvitePreview | 'invalid';
+    acceptResponse?: 'ok' | 'invite_revoked' | 'unknown_error_shape';
+  } = {},
+) {
   const previewValue: AthleteInvitePreview = {
     first_name: 'Mario',
     last_name: 'Rossi',
