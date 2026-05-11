@@ -11,6 +11,7 @@
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
+        "minishlink/web-push": "^10.0",
         "pragmarx/google2fa": "^8.0",
         "resend/resend-php": "^1.3"
     },

@@ -39,5 +39,15 @@
             test runner, but DON'T use this in any other environment.
         -->
         <env name="DOCUMENT_ENCRYPTION_KEY" value="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="/>
+        <!--
+            Deterministic VAPID keys (#419) so the push-subscriptions
+            controller responds 201 instead of 503 in the PEST suite.
+            These are FIXED throwaway test values — never used to sign
+            a real push since the suite never reaches the fanout
+            stage. Production sets real keys via env (see
+            `docs/infra/production-deployment.md` § Web Push).
+        -->
+        <env name="VAPID_PUBLIC_KEY" value="BJ_-test_public_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"/>
+        <env name="VAPID_PRIVATE_KEY" value="test_private_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"/>
     </php>
 </phpunit>
