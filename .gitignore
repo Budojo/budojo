@@ -72,6 +72,10 @@ db_data/
 # personal worker artifacts, not codebase truth.
 docs/superpowers/
 
+# Graphify — knowledge-graph artefacts produced by the /graphify skill.
+# Local agent tooling, regenerated on demand, NOT codebase truth.
+graphify-out/
+
 # OS
 .DS_Store
 Thumbs.db
