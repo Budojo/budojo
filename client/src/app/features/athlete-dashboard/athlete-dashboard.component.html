@@ -119,6 +119,18 @@
         </li>
         <li>
           <a
+            routerLink="/dashboard/me/documents"
+            routerLinkActive="sidebar__link--active"
+            class="sidebar__link"
+            (click)="closeSidebar()"
+            data-cy="nav-me-documents"
+          >
+            <i class="pi pi-file" aria-hidden="true"></i>
+            <span>{{ 'athletePortal.nav.documents' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
             routerLink="/dashboard/me/profile"
             routerLinkActive="sidebar__link--active"
             class="sidebar__link"

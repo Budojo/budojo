@@ -78,6 +78,7 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
     expect(root.querySelector('[data-cy="nav-me-academy"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-me-attendance"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-me-payments"]')).not.toBeNull();
+    expect(root.querySelector('[data-cy="nav-me-documents"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-me-profile"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-sign-out"]')).not.toBeNull();
   });

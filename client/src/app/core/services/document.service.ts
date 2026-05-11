@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export type DocumentType = 'id_card' | 'medical_certificate' | 'insurance' | 'other';
@@ -89,6 +89,22 @@ export class DocumentService {
     return this.http
       .get<{ data: ExpiringDocument[] }>(`${this.base}/documents/expiring`, { params })
       .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Athlete-portal read-only document list (M7 PR-D slice 5). Returns
+   * the auth athlete's documents (or `null` on 404 — no athlete
+   * profile linked, which the component renders as the no-profile
+   * state without subscribing to an error path).
+   */
+  listMine(): Observable<DocumentListResponse | null> {
+    return this.http
+      .get<DocumentListResponse>(`${this.base}/me/documents`)
+      .pipe(
+        catchError((err: HttpErrorResponse) =>
+          err.status === 404 ? of<DocumentListResponse | null>(null) : throwError(() => err),
+        ),
+      );
   }
 
   list(athleteId: number, options: DocumentListOptions = {}): Observable<DocumentListResponse> {

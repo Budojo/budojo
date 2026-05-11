@@ -205,7 +205,8 @@
       "feed": "Feed",
       "academy": "Academy",
       "attendance": "Presenze",
-      "payments": "Pagamenti"
+      "payments": "Pagamenti",
+      "documents": "Documenti"
     },
     "profile": {
       "title": "Il tuo profilo",
@@ -268,6 +269,14 @@
       "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
       "errorBody": "Non siamo riusciti a caricare i tuoi pagamenti. Aggiorna la pagina e riprova.",
       "unpaid": "Non pagato"
+    },
+    "documents": {
+      "title": "I tuoi documenti",
+      "emptyBody": "Nessun documento caricato per ora — la tua academy li caricherà man mano che li raccoglie.",
+      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
+      "errorBody": "Non siamo riusciti a caricare i tuoi documenti. Aggiorna la pagina e riprova.",
+      "expiresAt": "Scade il",
+      "expired": "Scaduto"
     }
   },
   "notifications": {

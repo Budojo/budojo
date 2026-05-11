@@ -1,0 +1,93 @@
+// MyDocumentsComponent — athlete-portal documents list (M7 PR-D
+// slice 5). Same Apple-minimal language as MyAttendance / MyPayments.
+
+.my-documents {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__card {
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 10rem 1fr auto;
+    gap: 0.5rem 1rem;
+    align-items: baseline;
+    padding: 0.875rem 1.25rem;
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+
+    &--expired {
+      border-color: var(--p-red-300, #fca5a5);
+    }
+  }
+
+  &__type {
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+    text-transform: capitalize;
+  }
+
+  &__name {
+    color: var(--p-text-color);
+    word-break: break-word;
+  }
+
+  &__expiry {
+    color: var(--p-text-color-secondary);
+    font-size: 0.8125rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--p-red-50, #fef2f2);
+    color: var(--p-red-700, #b91c1c);
+    border: 1px solid var(--p-red-200, #fecaca);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  &__empty {
+    color: var(--p-text-color-secondary);
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+}
