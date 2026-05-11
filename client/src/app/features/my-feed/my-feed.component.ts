@@ -1,7 +1,16 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
+import { Subject, catchError, of, switchMap } from 'rxjs';
 import {
   CommunityFeedPage,
   CommunityPost,
@@ -39,6 +48,7 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
 })
 export class MyFeedComponent implements OnInit {
   private readonly communityService = inject(CommunityService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly posts = signal<readonly CommunityPost[]>([]);
   protected readonly loading = signal(true);
@@ -46,26 +56,49 @@ export class MyFeedComponent implements OnInit {
   protected readonly lastPage = signal(1);
   protected readonly loadError = signal(false);
 
+  /**
+   * Pagination request stream piped through `switchMap` so a rapid
+   * prev / next click cancels the in-flight HTTP request and only the
+   * latest response wins. Without this, a slow network can reorder
+   * responses and overwrite a newer page with stale data (Copilot
+   * review on #614).
+   */
+  private readonly pageRequests = new Subject<number>();
+
   ngOnInit(): void {
+    // `catchError` inside `switchMap` keeps the outer stream alive
+    // when a single request fails — otherwise the first HTTP error
+    // would terminate the subscription and break every subsequent
+    // page-change click.
+    this.pageRequests
+      .pipe(
+        switchMap((page) =>
+          this.communityService
+            .getFeed(page)
+            .pipe(catchError(() => of<CommunityFeedPage | null>(null))),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((response) => {
+        if (response === null) {
+          this.posts.set([]);
+          this.loading.set(false);
+          this.loadError.set(true);
+          return;
+        }
+        this.posts.set(response.data);
+        this.currentPage.set(response.meta.current_page);
+        this.lastPage.set(response.meta.last_page);
+        this.loading.set(false);
+      });
+
     this.load(1);
   }
 
   protected load(page: number): void {
     this.loading.set(true);
     this.loadError.set(false);
-    this.communityService.getFeed(page).subscribe({
-      next: (response: CommunityFeedPage) => {
-        this.posts.set(response.data);
-        this.currentPage.set(response.meta.current_page);
-        this.lastPage.set(response.meta.last_page);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.posts.set([]);
-        this.loading.set(false);
-        this.loadError.set(true);
-      },
-    });
+    this.pageRequests.next(page);
   }
 
   protected nextPage(): void {
