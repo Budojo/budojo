@@ -5191,7 +5191,7 @@ components:
             JSON in the database; surfaced verbatim.
         created_at: { type: string, format: date-time }
         created_by: { $ref: '#/components/schemas/CommunityPostAuthor' }
-        reactions_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_reactions`. Zero in V1; populated by PR-C.' }
+        reactions_count: { type: integer, minimum: 0, description: 'Aggregated total reaction count from `post_reactions`. Always non-negative; may be zero if no users have reacted yet.' }
         comments_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_comments`. Zero in V1; populated by PR-D.' }
         rsvps_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_rsvps`. Zero in V1; populated by PR-E.' }
         your_reaction:
