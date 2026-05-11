@@ -85,9 +85,9 @@ class EmailVerificationController extends Controller
     {
         try {
             $this->confirmEmailChange->execute($token);
-        } catch (EmailChangeTokenInvalidException) {
+        } catch (EmailChangeTokenInvalidException $e) {
             return response()->json(
-                ['message' => 'invalid_or_expired_link'],
+                ['message' => $e->getMessage()],
                 SymfonyResponse::HTTP_GONE,
             );
         }

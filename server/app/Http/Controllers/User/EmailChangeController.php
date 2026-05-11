@@ -26,8 +26,8 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 class EmailChangeController extends Controller
 {
     public function __construct(
-        private readonly RequestEmailChangeAction $request,
-        private readonly CancelPendingEmailChangeAction $cancel,
+        private readonly RequestEmailChangeAction $requestAction,
+        private readonly CancelPendingEmailChangeAction $cancelAction,
     ) {
     }
 
@@ -36,7 +36,7 @@ class EmailChangeController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $this->request->execute($user, $request->string('email')->toString());
+        $this->requestAction->execute($user, $request->string('email')->toString());
 
         // 202 Accepted — the change has been LOGGED but not APPLIED.
         // Mirrors the password-reset response shape: the user has more
@@ -54,7 +54,7 @@ class EmailChangeController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $this->cancel->execute($user);
+        $this->cancelAction->execute($user);
 
         return response()->noContent();
     }
