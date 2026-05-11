@@ -45,7 +45,7 @@ describe('AthletePortalWelcomeComponent (#445 M7 PR-D minimal)', () => {
       '[data-cy="athlete-welcome-title"]',
     ) as HTMLElement;
     // No trailing ", " when userName() is empty.
-    expect(title.textContent).not.toContain(',');
+    expect(title.textContent).not.toContain(', ');
   });
 
   it('signOut() logs the user out and navigates to /auth/login', () => {
