@@ -86,9 +86,45 @@
               </div>
             }
           }
+
+          <footer class="feed__reactions" data-cy="post-reactions">
+            <button
+              type="button"
+              class="feed__react-btn"
+              [class.feed__react-btn--active]="post.your_reaction === 'clap'"
+              [attr.aria-pressed]="post.your_reaction === 'clap'"
+              [attr.aria-label]="'athletePortal.feed.reactClapAria' | translate"
+              (click)="toggleReaction(post, 'clap')"
+              [attr.data-cy]="'react-clap-' + post.id"
+            >
+              <span aria-hidden="true">👏</span>
+              <span class="feed__react-label">{{
+                'athletePortal.feed.reactClap' | translate
+              }}</span>
+              @if (post.reactions_count > 0) {
+                <span class="feed__react-count">{{ post.reactions_count }}</span>
+              }
+            </button>
+            <button
+              type="button"
+              class="feed__react-btn"
+              [class.feed__react-btn--active]="post.your_reaction === 'pray'"
+              [attr.aria-pressed]="post.your_reaction === 'pray'"
+              [attr.aria-label]="'athletePortal.feed.reactPrayAria' | translate"
+              (click)="toggleReaction(post, 'pray')"
+              [attr.data-cy]="'react-pray-' + post.id"
+            >
+              <span aria-hidden="true">🙏</span>
+              <span class="feed__react-label">{{
+                'athletePortal.feed.reactPray' | translate
+              }}</span>
+            </button>
+          </footer>
         </li>
       }
     </ul>
+
+    <p-toast position="bottom-center" />
 
     @if (lastPage() > 1) {
       <nav class="feed__pagination" [attr.aria-label]="'athletePortal.feed.pagination' | translate">

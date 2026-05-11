@@ -61,6 +61,13 @@ class CommunityPostResource extends JsonResource
             'reactions_count' => $post->reactions_count ?? 0,
             'comments_count' => $post->comments_count ?? 0,
             'rsvps_count' => $post->rsvps_count ?? 0,
+            // Caller's own reaction on this post (#617, PR-C2). The
+            // Action eager-loads the constrained `reactions` relation
+            // limited to the authenticated user, so the first row (if
+            // any) IS the caller's reaction. The SPA uses this to
+            // render the reaction buttons in the active state on first
+            // paint, without a follow-up roundtrip.
+            'your_reaction' => $post->reactions->first()?->emoji->value,
         ];
     }
 }

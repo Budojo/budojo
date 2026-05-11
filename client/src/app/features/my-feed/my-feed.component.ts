@@ -11,10 +11,15 @@ import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Subject, catchError, of, switchMap } from 'rxjs';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
+import { TranslateService } from '@ngx-translate/core';
 import {
   CommunityFeedPage,
   CommunityPost,
   CommunityService,
+  ReactionEmoji,
+  ReactionToggleResponse,
 } from '../../core/services/community.service';
 import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
@@ -41,14 +46,24 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
 @Component({
   selector: 'app-my-feed',
   standalone: true,
-  imports: [TranslatePipe, DatePipe, SkeletonModule, BeltBadgeComponent, UserAvatarComponent],
+  imports: [
+    TranslatePipe,
+    DatePipe,
+    SkeletonModule,
+    ToastModule,
+    BeltBadgeComponent,
+    UserAvatarComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [MessageService],
   templateUrl: './my-feed.component.html',
   styleUrl: './my-feed.component.scss',
 })
 export class MyFeedComponent implements OnInit {
   private readonly communityService = inject(CommunityService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly messageService = inject(MessageService);
+  private readonly translateService = inject(TranslateService);
 
   protected readonly posts = signal<readonly CommunityPost[]>([]);
   protected readonly loading = signal(true);
@@ -141,5 +156,115 @@ export class MyFeedComponent implements OnInit {
   protected announcementBody(post: CommunityPost): string {
     const raw = post.payload['body'];
     return typeof raw === 'string' ? raw : '';
+  }
+
+  /**
+   * Per-post toggle streams (#617, PR-C2). Rapid clicks on the SAME
+   * post are serialized through `switchMap` so only the latest
+   * request wins — without this, a fast clap→pray→clap can land out
+   * of order and leave the SPA reflecting the wrong emoji (Copilot
+   * review on PR #619). Different posts get independent Subjects
+   * (they don't share a race surface), kept in this map.
+   */
+  private readonly reactionStreams = new Map<
+    number,
+    {
+      readonly subject: Subject<{ emoji: ReactionEmoji; rollback: () => void }>;
+    }
+  >();
+
+  /**
+   * Optimistic reaction toggle (#617, PR-C2). Updates the local
+   * signal immediately so the user sees feedback in < 100ms (Doherty
+   * threshold), then fires the API call through the per-post
+   * `switchMap` stream. On error, rolls back to the pre-click state
+   * and shows a toast. On success, reconciles to the server's
+   * canonical state in case our optimistic prediction diverged
+   * (e.g., another tab in the same session toggled in between).
+   */
+  protected toggleReaction(post: CommunityPost, emoji: ReactionEmoji): void {
+    const previousReaction = post.your_reaction;
+    const previousCount = post.reactions_count;
+
+    const optimistic = this.predictNextState(post, emoji);
+    this.replacePost(post.id, optimistic);
+
+    const stream = this.streamFor(post.id);
+    stream.next({
+      emoji,
+      rollback: () => {
+        this.replacePost(post.id, {
+          your_reaction: previousReaction,
+          reactions_count: previousCount,
+        });
+      },
+    });
+  }
+
+  private streamFor(postId: number): Subject<{ emoji: ReactionEmoji; rollback: () => void }> {
+    const existing = this.reactionStreams.get(postId);
+    if (existing) {
+      return existing.subject;
+    }
+
+    const subject = new Subject<{ emoji: ReactionEmoji; rollback: () => void }>();
+    subject
+      .pipe(
+        // switchMap cancels any in-flight HTTP for the same post when
+        // a new click arrives — only the latest response can update
+        // the signal, so out-of-order arrivals can't poison the state.
+        switchMap(({ emoji, rollback }) =>
+          this.communityService.toggleReaction(postId, emoji).pipe(
+            catchError(() => {
+              rollback();
+              this.messageService.add({
+                severity: 'error',
+                summary: this.translateService.instant('athletePortal.feed.reactToastError'),
+                life: 3000,
+              });
+              return of<ReactionToggleResponse | null>(null);
+            }),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((response) => {
+        if (response === null) return;
+        const total = response.counts.clap + response.counts.pray;
+        this.replacePost(postId, {
+          your_reaction: response.your_reaction,
+          reactions_count: total,
+        });
+      });
+
+    this.reactionStreams.set(postId, { subject });
+    return subject;
+  }
+
+  private predictNextState(
+    post: CommunityPost,
+    emoji: ReactionEmoji,
+  ): { your_reaction: ReactionEmoji | null; reactions_count: number } {
+    if (post.your_reaction === null) {
+      return { your_reaction: emoji, reactions_count: post.reactions_count + 1 };
+    }
+    if (post.your_reaction === emoji) {
+      return { your_reaction: null, reactions_count: Math.max(0, post.reactions_count - 1) };
+    }
+    // Different emoji — swap in place; count unchanged.
+    return { your_reaction: emoji, reactions_count: post.reactions_count };
+  }
+
+  private replacePost(
+    postId: number,
+    patch: { your_reaction: ReactionEmoji | null; reactions_count: number },
+  ): void {
+    this.posts.update((list) =>
+      list.map((p) =>
+        p.id === postId
+          ? { ...p, your_reaction: patch.your_reaction, reactions_count: patch.reactions_count }
+          : p,
+      ),
+    );
   }
 }

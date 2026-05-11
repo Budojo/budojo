@@ -226,7 +226,12 @@
       "pagination": "Feed pagination",
       "pageOf": "Page {{current}} of {{total}}",
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "reactClap": "Clap",
+      "reactClapAria": "React with a clap",
+      "reactPray": "Respect",
+      "reactPrayAria": "React with respect",
+      "reactToastError": "Couldn't update your reaction. Try again."
     }
   },
   "notifications": {
