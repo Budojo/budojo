@@ -148,6 +148,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/my-feed/my-feed.component').then((m) => m.MyFeedComponent),
       },
+      {
+        path: 'academy',
+        loadComponent: () =>
+          import('./features/my-academy/my-academy.component').then((m) => m.MyAcademyComponent),
+      },
     ],
   },
   {

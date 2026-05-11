@@ -202,7 +202,8 @@
     },
     "nav": {
       "profile": "Profile",
-      "feed": "Feed"
+      "feed": "Feed",
+      "academy": "Academy"
     },
     "profile": {
       "title": "Your profile",
@@ -232,6 +233,16 @@
       "reactPray": "Respect",
       "reactPrayAria": "React with respect",
       "reactToastError": "Couldn't update your reaction. Try again."
+    },
+    "academy": {
+      "title": "Your academy",
+      "emptyBody": "You're not currently linked to an academy. Contact your academy owner if you think that's wrong.",
+      "errorBody": "We couldn't load your academy. Refresh the page and try again.",
+      "logoAlt": "{{name}} logo",
+      "addressLabel": "Address",
+      "phoneLabel": "Phone",
+      "websiteLabel": "Website",
+      "ownerSection": "Owner"
     }
   },
   "notifications": {

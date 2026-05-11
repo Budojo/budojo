@@ -83,6 +83,18 @@
         </li>
         <li>
           <a
+            routerLink="/dashboard/me/academy"
+            routerLinkActive="sidebar__link--active"
+            class="sidebar__link"
+            (click)="closeSidebar()"
+            data-cy="nav-me-academy"
+          >
+            <i class="pi pi-building" aria-hidden="true"></i>
+            <span>{{ 'athletePortal.nav.academy' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
             routerLink="/dashboard/me/profile"
             routerLinkActive="sidebar__link--active"
             class="sidebar__link"
