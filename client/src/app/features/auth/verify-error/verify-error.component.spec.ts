@@ -70,7 +70,8 @@ describe('VerifyErrorComponent (#580 + #585)', () => {
     cmp.resend();
 
     expect(resendVerificationEmail).toHaveBeenCalledOnce();
-    expect(navigateByUrl).toHaveBeenCalledExactlyOnceWith('/dashboard/profile');
+    expect(navigateByUrl).toHaveBeenCalledOnce();
+    expect(navigateByUrl).toHaveBeenCalledWith('/dashboard/profile');
     expect((cmp as unknown as { sending: () => boolean }).sending()).toBe(false);
   });
 
@@ -89,7 +90,8 @@ describe('VerifyErrorComponent (#580 + #585)', () => {
 
     cmp.resend();
 
-    expect(navigateByUrl).toHaveBeenCalledExactlyOnceWith('/auth/login');
+    expect(navigateByUrl).toHaveBeenCalledOnce();
+    expect(navigateByUrl).toHaveBeenCalledWith('/auth/login');
     expect(messageAdd).not.toHaveBeenCalled();
   });
 
@@ -147,6 +149,7 @@ describe('VerifyErrorComponent (#580 + #585)', () => {
 
     cmp.goToLogin();
 
-    expect(navigateByUrl).toHaveBeenCalledExactlyOnceWith('/auth/login');
+    expect(navigateByUrl).toHaveBeenCalledOnce();
+    expect(navigateByUrl).toHaveBeenCalledWith('/auth/login');
   });
 });
