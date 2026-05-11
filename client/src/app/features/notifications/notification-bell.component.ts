@@ -91,9 +91,14 @@ export class NotificationBellComponent implements OnInit {
   }
 
   /**
-   * Refresh the list when the panel re-opens — covers the case where
-   * a notification was sent server-side between visits. Cheap (one
-   * indexed query) and avoids stale data without polling.
+   * Refresh the list when the user switches BACK to this tab —
+   * `document:visibilitychange` firing with `visibilityState ===
+   * 'visible'` is the standard "tab is active again" signal. Covers
+   * the case where a notification was sent server-side while the tab
+   * was inactive; one indexed query, no background polling. Note:
+   * this is NOT a popover onShow hook — re-opening the bell popover
+   * within the same focused tab reads the in-memory state without an
+   * extra fetch, which is the right cost trade-off.
    */
   @HostListener('document:visibilitychange')
   onVisibilityChange(): void {

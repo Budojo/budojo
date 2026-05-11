@@ -79,10 +79,17 @@ class DocumentController extends Controller
         }
 
         // Encrypted (#224 — medical certs only): read ciphertext from
-        // disk, decrypt in memory, stream the plaintext bytes with the
-        // original Content-Type. We never write the plaintext back to
-        // disk; the response body IS the only plaintext copy that
-        // exists, and it leaves with the HTTP response.
+        // disk, decrypt fully in memory, return the plaintext as the
+        // response body with the original Content-Type. We never write
+        // the plaintext back to disk; the response body IS the only
+        // plaintext copy that exists, and it leaves with the HTTP
+        // response. Not a true StreamedResponse — the full decrypted
+        // payload is buffered (medical certs are capped at 10 MB so
+        // this is bounded). Streaming the decrypt would require a
+        // CTR-mode-friendly cipher; GCM verifies the auth tag only
+        // after consuming the full ciphertext, so a streaming variant
+        // would surface tag-mismatch errors mid-response — strictly
+        // worse than the buffered shape.
         if ($document->is_encrypted) {
             $blob = Storage::disk('local')->get($document->file_path);
             if (! \is_string($blob)) {

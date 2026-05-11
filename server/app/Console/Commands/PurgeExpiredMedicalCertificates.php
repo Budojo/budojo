@@ -78,7 +78,7 @@ class PurgeExpiredMedicalCertificates extends Command
         // of the other purge-* commands (#430, #476, #223).
         $totalExpected = Document::query()
             ->where('type', DocumentType::MedicalCertificate->value)
-            ->whereDate('expires_at', '<', $cutoff)
+            ->where('expires_at', '<', $cutoff->toDateString())
             ->count();
 
         if ($totalExpected === 0) {
@@ -102,7 +102,7 @@ class PurgeExpiredMedicalCertificates extends Command
         /** @var \Illuminate\Database\Eloquent\Collection<int, Document> $rows */
         $rows = Document::query()
             ->where('type', DocumentType::MedicalCertificate->value)
-            ->whereDate('expires_at', '<', $cutoff)
+            ->where('expires_at', '<', $cutoff->toDateString())
             ->limit(self::DELETE_CAP)
             ->get();
 
