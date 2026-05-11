@@ -60,6 +60,10 @@ Format: `→` separates the symptom from the action.
 - Used `POST /rulesets` to re-apply an already-existing ruleset → creates a duplicate. Updates use `PUT /rulesets/{id}` or `PATCH`.
 - Expected `gh api .../requested_reviewers -f reviewers[]=Copilot` to assign Copilot → REST API returns 200 but silently drops the reviewer. Use the repo Settings → Code review → "Automatically request Copilot code review" toggle. Bot logins return 422 "not a collaborator".
 
+## Pre-push gate scripts
+
+- `./.claude/scripts/test-client.sh quick` SKIPS `prettier --write` (intended for mid-session re-runs after you've already formatted). On the **first** commit of a newly-written spec file the script can pass locally (lint+vitest only) but CI's `✨ Angular Format (Prettier)` job — which runs `npm run format:check` (a `prettier --check` wrapper) — FAILS. **Rule:** use the full `./.claude/scripts/test-client.sh` (no `quick`) when adding a new file; `quick` only on re-runs of a file that's already been touched by `--write` this session. Same applies to `./.claude/scripts/test-server.sh quick` for cs-fixer.
+
 ## Git hygiene
 
 - `prettier --write` over a broad glob (`"**/*.ts"`) → normalises CRLF↔LF on files outside your intended scope. **Run `git diff --stat` before staging**; revert files showing `0 insertions(+), 0 deletions(-)` with `git checkout --`.
@@ -94,6 +98,10 @@ Format: `→` separates the symptom from the action.
 ## SCSS — same-element classes vs descendant selectors
 
 - Wrote `<fieldset class="field address-group">` and put the `.address-group` rules NESTED under `.field` in SCSS (`.field { .address-group { … } }`). The compiled selector is `.field .address-group` — a *descendant* combinator that does NOT match same-element classes. The fieldset fell back to browser defaults (2px groove border, `min-width: min-content`) which threw the surrounding flex layout off and pushed the form actions out of the 1000-px Cypress viewport, surfacing as 3 unrelated `expected to be visible` failures (cancel button, validation error, message banner). Fix: hoist `.address-group` to the top level so it matches the element directly, OR use SCSS's `&.address-group` for compound matching. Also: always add `min-width: 0` to a `<fieldset>` you put `display: flex` on — its default `min-width: min-content` can otherwise force the parent wider than viewport.
+
+## Refactor / extracting shared components
+
+- Extracted `<app-verify-page>` chrome from `verify-success` (green), `verify-error` (**amber**), and `verify-email-change` (red) and collapsed all three coloured-icon variants to a single `--error` modifier in the shared SCSS → silently changed `verify-error`'s icon from amber to red. Visual regression Copilot caught on PR #582 (#580 refactor). Fix: introduced a dedicated `'warning'` state with the amber colour; `verify-error` now uses `state="warning"`, `verify-email-change` keeps `state="error"` for terminal-token red. **Rule:** when factorising N similar components into one shared component, sweep the per-instance customisations (colour tokens, animation timings, copy variations) into named states or explicit inputs, not into a "default that happens to match the first consumer I read". Three diffs → three side-by-side reads before designing the API.
 
 ## Design system / PrimeNG precedence
 

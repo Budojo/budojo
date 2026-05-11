@@ -265,8 +265,10 @@ gh project item-list 2 --owner Budojo --format json
 5. **Project board** — add the PR, set to `In Progress`.
 6. **No AI attribution — ever** — do NOT add "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic/AI text anywhere: PR bodies, commit messages, code comments, docs.
 
-> **PR body formatting:** Always write the body to `.claude/pr-body.md` and pass it with
-> `gh pr create --body-file .claude/pr-body.md` or `gh pr edit <N> --body-file .claude/pr-body.md`.
+> **PR body formatting:** Always write the body to a **per-PR file** under
+> `.claude/pr-bodies/<branch-or-pr>.md` and pass it with
+> `gh pr create --body-file .claude/pr-bodies/<file>.md` or `gh pr edit <N> --body-file .claude/pr-bodies/<file>.md`.
+> Per-PR files (not a single shared `pr-body.md`) so concurrent PRs don't overwrite each other.
 > Never use `--body "..."` or a bash heredoc — special characters get mangled.
 
 #### Type labels (one per PR)
@@ -522,3 +524,4 @@ Cross-cutting rules. For backend-only rules (Uncle Bob canon, pre-push PHP gates
 9. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere.
 10. **Keep `docs/` in sync** — every PR that changes a migration, an enum, an API route, a request/response shape, or a business rule must update the relevant file in `docs/entities/` or `docs/api/v1.yaml` in the same commit history. See the "Documentation discipline" section for what counts as "substantial" and what doesn't. Internal refactors, formatting, and dependency bumps are exempt.
 11. **Respect the local canon.** When you write backend code, apply the Uncle Bob rules in `server/CLAUDE.md`. When you write frontend code, apply the UX canon in `client/CLAUDE.md`. A reviewer's citation of any book or law in those canons is a valid critique on its own — push back only with a specific pragmatic reason, never with taste.
+12. **Consult the graphify knowledge graph before touching unfamiliar code.** If `graphify-out/graph.json` exists, run `graphify explain "<EntityOrClass>"` or `graphify query "what touches <X>"` **before the first edit** when an issue lands you in an area you haven't worked on recently. The graph surfaces semantic links `grep -r` misses (a `Mailable` triggered by an `Action` two layers down, an Angular widget consumed by a feature on the other side of the SPA, a foreign key crossing entity files). Cost: ~6k tokens per query vs. several minutes of grep + the risk of missing a caller. The graph stays auto-fresh for code: a post-commit hook + post-checkout hook rebuild the AST layer in the background after every `git commit` / `git checkout`. Run `graphify --update` manually only after `docs/`, migrations, or new specs land (the LLM layer is not auto-refreshed — would cost tokens on every commit). Skip the query entirely for one-line typos, formatting-only PRs, or files you've edited in the last hour.

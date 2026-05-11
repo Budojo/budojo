@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\Account;
+namespace App\Actions\User;
 
 use App\Mail\EmailChangeNotificationMail;
 use App\Mail\EmailChangeVerificationMail;
@@ -17,7 +17,7 @@ use Illuminate\Validation\ValidationException;
  * Request an email change on a user account (#476). Used by both:
  *
  * - The owner self-edit path on `/dashboard/profile` → calls directly
- *   from `EmailChangeController::request()`.
+ *   from `User\EmailChangeController::requestChange()`.
  * - The athlete-detail state-C path → wrapped by
  *   `ChangeAthleteEmailAction::execute()` when the athlete has a
  *   linked `users` row.
