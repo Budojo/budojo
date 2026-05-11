@@ -11,6 +11,7 @@
       type="button"
       severity="primary"
       [label]="'auth.verifyError.resendCta' | translate"
+      [loading]="sending()"
       (onClick)="resend()"
       data-cy="verify-error-resend"
     />
