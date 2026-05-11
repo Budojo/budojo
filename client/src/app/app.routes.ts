@@ -165,6 +165,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/my-payments/my-payments.component').then((m) => m.MyPaymentsComponent),
       },
+      {
+        path: 'documents',
+        loadComponent: () =>
+          import('./features/my-documents/my-documents.component').then(
+            (m) => m.MyDocumentsComponent,
+          ),
+      },
     ],
   },
   {

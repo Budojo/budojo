@@ -205,7 +205,8 @@
       "feed": "Feed",
       "academy": "Academy",
       "attendance": "Attendance",
-      "payments": "Payments"
+      "payments": "Payments",
+      "documents": "Documents"
     },
     "profile": {
       "title": "Your profile",
@@ -268,6 +269,14 @@
       "noProfileBody": "We couldn't find your athlete profile. Contact your academy owner.",
       "errorBody": "We couldn't load your payments. Refresh the page and try again.",
       "unpaid": "Unpaid"
+    },
+    "documents": {
+      "title": "Your documents",
+      "emptyBody": "No documents on file yet — your academy will upload them as they collect them.",
+      "noProfileBody": "We couldn't find your athlete profile. Contact your academy owner.",
+      "errorBody": "We couldn't load your documents. Refresh the page and try again.",
+      "expiresAt": "Expires",
+      "expired": "Expired"
     }
   },
   "notifications": {
