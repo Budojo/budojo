@@ -1,6 +1,6 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -110,6 +110,28 @@ export class AttendanceService {
         { params },
       )
       .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Athlete-portal attendance history (M7 PR-D slice 3). Returns the
+   * authenticated athlete's records — descending by `attended_on`,
+   * filtered by the optional `from`/`to` window. Returns `null` on
+   * 404 (no linked athlete row → orphan user surface), so the
+   * component can render the empty state without subscribing to an
+   * error path.
+   */
+  getMine(range: { from?: string; to?: string } = {}): Observable<AttendanceRecord[] | null> {
+    let params = new HttpParams();
+    if (range.from) params = params.set('from', range.from);
+    if (range.to) params = params.set('to', range.to);
+    return this.http
+      .get<AttendanceListResponse>(`${environment.apiBase}/api/v1/me/attendance`, { params })
+      .pipe(
+        map((res) => res.data),
+        catchError((err: HttpErrorResponse) =>
+          err.status === 404 ? of<AttendanceRecord[] | null>(null) : throwError(() => err),
+        ),
+      );
   }
 
   /**

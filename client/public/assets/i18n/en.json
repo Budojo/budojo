@@ -203,7 +203,8 @@
     "nav": {
       "profile": "Profile",
       "feed": "Feed",
-      "academy": "Academy"
+      "academy": "Academy",
+      "attendance": "Attendance"
     },
     "profile": {
       "title": "Your profile",
@@ -243,6 +244,13 @@
       "phoneLabel": "Phone",
       "websiteLabel": "Website",
       "ownerSection": "Owner"
+    },
+    "attendance": {
+      "title": "Your attendance",
+      "emptyBody": "No training sessions logged yet — your academy will record them as you train.",
+      "noProfileBody": "We couldn't find your athlete profile. Contact your academy owner.",
+      "errorBody": "We couldn't load your attendance. Refresh the page and try again.",
+      "last30Days": "sessions in the last 30 days"
     }
   },
   "notifications": {

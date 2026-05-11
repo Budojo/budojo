@@ -203,7 +203,8 @@
     "nav": {
       "profile": "Profilo",
       "feed": "Feed",
-      "academy": "Academy"
+      "academy": "Academy",
+      "attendance": "Presenze"
     },
     "profile": {
       "title": "Il tuo profilo",
@@ -243,6 +244,13 @@
       "phoneLabel": "Telefono",
       "websiteLabel": "Sito web",
       "ownerSection": "Owner"
+    },
+    "attendance": {
+      "title": "Le tue presenze",
+      "emptyBody": "Nessuna sessione di allenamento registrata — la tua academy le segnerà man mano che ti alleni.",
+      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
+      "errorBody": "Non siamo riusciti a caricare le tue presenze. Aggiorna la pagina e riprova.",
+      "last30Days": "sessioni negli ultimi 30 giorni"
     }
   },
   "notifications": {
