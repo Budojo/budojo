@@ -58,9 +58,12 @@ export class MyDocumentsComponent implements OnInit {
 
   /**
    * Whether `expires_at` is on or before today (in local time).
-   * Builds the comparison from local YYYY-MM-DD components rather
-   * than relying on Date arithmetic to avoid UTC day shift in
-   * non-UTC TZs (same lesson as MyAttendance).
+   * `<=` makes the comparison inclusive — a document whose expiry
+   * date IS today is treated as expired (Copilot review on PR #625;
+   * the previous `<` made the badge off-by-one on the boundary).
+   * Builds today's `YYYY-MM-DD` from local date components rather
+   * than relying on Date arithmetic to avoid UTC day shift in non-
+   * UTC TZs (same lesson as MyAttendance).
    */
   protected isExpired(expiresAt: string | null): boolean {
     if (expiresAt === null) return false;
@@ -69,7 +72,7 @@ export class MyDocumentsComponent implements OnInit {
       `${today.getFullYear()}-` +
       `${String(today.getMonth() + 1).padStart(2, '0')}-` +
       `${String(today.getDate()).padStart(2, '0')}`;
-    return expiresAt.slice(0, 10) < todayStr;
+    return expiresAt.slice(0, 10) <= todayStr;
   }
 
   /**

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MyDocumentsComponent } from './my-documents.component';
 import type { Document } from '../../core/services/document.service';
 import { environment } from '../../../environments/environment';
@@ -80,6 +81,38 @@ describe('MyDocumentsComponent (M7 PR-D slice 5)', () => {
     const row = el.querySelector('[data-cy="document-1"]');
     expect(row?.classList.contains('my-documents__row--expired')).toBe(true);
     expect(el.querySelector('[data-cy="document-expired-badge"]')).not.toBeNull();
+  });
+
+  describe('inclusive boundary (Copilot review on #625)', () => {
+    beforeEach(() => {
+      // Pin system time so "today" matches the fixture date below.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 4, 15, 10, 0, 0));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('marks a document whose expires_at IS today as expired', () => {
+      const { fixture, el, http } = setup();
+      http.expectOne(`${environment.apiBase}/api/v1/me/documents`).flush({
+        data: [doc({ id: 1, expires_at: '2026-05-15' })],
+      });
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="document-expired-badge"]')).not.toBeNull();
+    });
+
+    it('does NOT mark a document whose expires_at is tomorrow', () => {
+      const { fixture, el, http } = setup();
+      http.expectOne(`${environment.apiBase}/api/v1/me/documents`).flush({
+        data: [doc({ id: 1, expires_at: '2026-05-16' })],
+      });
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="document-expired-badge"]')).toBeNull();
+    });
   });
 
   it('renders the no-profile state on 404', () => {
