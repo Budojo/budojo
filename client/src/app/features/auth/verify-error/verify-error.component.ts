@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
+import { VerifyPageComponent } from '../../../shared/components/verify-page/verify-page.component';
 
 /**
  * Public landing page hit by the backend's `verification.verify` failure
@@ -16,10 +17,9 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   selector: 'app-verify-error',
   standalone: true,
-  imports: [ButtonModule, TranslatePipe],
+  imports: [ButtonModule, TranslatePipe, VerifyPageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './verify-error.component.html',
-  styleUrl: './verify-error.component.scss',
 })
 export class VerifyErrorComponent {
   private readonly router = inject(Router);
