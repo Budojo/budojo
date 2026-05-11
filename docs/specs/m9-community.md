@@ -39,7 +39,7 @@ Adults-only by design: minors are blocked at athlete-portal registration (birthd
 ## Hard rules (non-negotiable in V1)
 
 1. **Adults only.** Athlete-portal registration rejects birthdates that make the athlete < 18 on the date of acceptance. The owner can still manage minors via the dashboard; minors just don't get a portal account.
-2. **Single-academy scope.** Every community-layer query is `WHERE academy_id = ?`. No cross-academy data leaks possible in V1.
+2. **Single-academy scope.** Every read query on `community_posts` is `WHERE academy_id = ?`. The child tables (`post_reactions` / `post_comments` / `post_rsvps`) do NOT carry their own `academy_id` column — they join back to the parent post for tenant scoping. Every write endpoint that takes a `post_id` MUST verify the authenticated user's academy matches `community_posts.academy_id` via a FormRequest `authorize()` gate. Action-layer queries inherit the gate by accepting a pre-validated `CommunityPost` model rather than a raw id.
 3. **Owner is sole moderator.** Owner can soft-delete any post or comment in their academy. No flag-and-review queue, no auto-moderation, no third-party content scanning.
 4. **No DMs.** All conversation surface is post-anchored (a comment under a community post). No private channels.
 5. **Identity card is system-rendered.** Handle + first/last name + belt come from `users` + `athletes` joins. The athlete cannot pick a separate "social name" or hide their belt.
@@ -50,10 +50,10 @@ Adults-only by design: minors are blocked at athlete-portal registration (birthd
 
 ### Athletes
 
-- As a logged-in adult athlete, when I open `/portal/feed`, I see a chronological timeline of recent posts in my academy (grading celebrations + events the owner created).
+- As a logged-in adult athlete, when I open `/dashboard/me/feed`, I see a chronological timeline of recent posts in my academy (grading celebrations + events the owner created).
 - As an athlete, I can react to a post with one of `clap` (👏) or `pray` (🙌) — one reaction per athlete per post; tapping the same emoji again removes it.
 - As an athlete, I can post a 1-level comment under any post (≤ 500 chars). My comment shows my handle + first/last name + belt flair.
-- As an athlete, I receive a push notification (subject to my M5 preferences) when (a) someone replies under a comment thread I started, OR (b) the owner creates a new event in my academy.
+- As an athlete, I receive a push notification (subject to my M5 preferences) when (a) any other user posts a NEW comment under a post I've previously commented on (V1's notion of "reply" — with 1-level comments there is no parent_comment_id, so the trigger is "new sibling comment under a post I already engaged with"), OR (b) the owner creates a new event in my academy.
 - As an athlete, when I RSVP to an event post (`going` / `maybe`), the RSVP count on the post updates and other athletes see I'm going.
 
 ### Owners
@@ -95,7 +95,7 @@ post_comments
   - id (uuid pk)
   - post_id (FK, INDEX)
   - user_id (FK)
-  - body (varchar 500)
+  - body (text)                                                  -- 500-char limit enforced via FormRequest validation, not in SQL DDL (keeps the migration portable across MySQL / SQLite-in-tests)
   - created_at, deleted_at
   - INDEX (post_id, deleted_at, created_at)
 
@@ -132,7 +132,7 @@ Edge cases:
 
 ### Athlete portal feed page
 
-- **Route**: `/portal/feed` — lives under the athlete-portal shell (M7 PR-D), NOT the owner dashboard.
+- **Route**: `/dashboard/me/feed` — lives under the athlete-portal shell (M7 PR-D), NOT the owner dashboard.
 - **Default landing**: athletes go straight here on portal login (vs the placeholder welcome page).
 - **Paging**: 20 posts per page, server-paginated, infinite-scroll on mobile, button-paginated on desktop.
 - **Ordering**: `created_at DESC`. Sticky "Today's events" banner if any event has `starts_at >= today AND starts_at < today + 24h`.
@@ -140,7 +140,7 @@ Edge cases:
 
 ### Performance
 
-- Feed query: `community_posts JOIN users JOIN athletes` for author flair on each post; `LEFT JOIN (SELECT post_id, count(*) FROM post_reactions GROUP BY post_id)` for reaction counts; same for comments. One SQL roundtrip per feed page.
+- Feed query: `community_posts JOIN users LEFT JOIN athletes ON athletes.user_id = users.id` for author flair (LEFT JOIN — owner-created event posts have no `athletes` row since `users.role = 'owner'` doesn't carry one); the SPA flair component receives `athlete` as a nullable field and falls back to an owner-flagged variant when null. `LEFT JOIN (SELECT post_id, count(*) FROM post_reactions GROUP BY post_id)` for reaction counts; same for comments. One SQL roundtrip per feed page.
 - Comments lazy-loaded under each post: server returns the 3 most recent + total count; SPA shows a "show more" link that opens a modal/expansion with the full thread.
 - If feed perf becomes an issue, denormalise `reactions_count` + `comments_count` columns on `community_posts` + Eloquent observer increment/decrement. Not V1.
 
@@ -154,7 +154,7 @@ Three new categories added to the M5 opt-out matrix:
 | `community_event_new` | Owner creates a new event in the academy | ✅ on |
 | `community_belt_celebration` | Someone in the academy is promoted | ❌ off — could be noisy in big academies |
 
-Athletes manage these from `/dashboard/profile` § Notifications (existing UI from M5; just adds 3 rows).
+Athletes manage these from `/dashboard/me/profile` § Notifications (the M7 athlete shell route — distinct from the owner-side `/dashboard/profile`). M5's matrix originally governs email-delivery opt-outs; M9 extends the same matrix to gate **push notifications** for the 3 new categories (push delivery infrastructure already shipped in v2.5.0). Email vs push vs in-app surface is per-category: belt celebrations only fire in-app (no email + no push by default), event creation fires push, comment replies fire push. The matrix UI in `/dashboard/me/profile` § Notifications shows one toggle per category × delivery channel.
 
 ## Scope by PR
 
@@ -163,10 +163,10 @@ V1 ships as 6 sequential PRs after M7 lands. Each PR should be reviewable in ≤
 | # | Title | Scope |
 |---|---|---|
 | A | `feat(community): schema + models` | All 4 migrations + factories + Eloquent models + observer wiring. No HTTP, no UI. PEST factory + model tests. |
-| B | `feat(community): belt-promotion auto-post + feed read API` | Observer on `Athlete::belt` change → creates `belt_promotion` post. Endpoint `GET /api/v1/community/feed` (paginated). Owner endpoint `DELETE /api/v1/community/posts/:id`. SPA `/portal/feed` page (read-only). |
-| C | `feat(community): reactions` | `POST /community/posts/:id/reactions` (toggle), `DELETE`. Backend rate limit (60/min/user). SPA reaction buttons + signal-driven counts. |
+| B | `feat(community): belt-promotion auto-post + feed read API` | Observer on `Athlete::belt` change → creates `belt_promotion` post. Endpoint `GET /api/v1/community/feed` (paginated). Owner endpoint `DELETE /api/v1/community/posts/:id`. SPA `/dashboard/me/feed` page (read-only). |
+| C | `feat(community): reactions` | `POST /api/v1/community/posts/:id/reactions` (toggle), `DELETE /api/v1/community/posts/:id/reactions/:emoji`. Backend rate limit (60/min/user). SPA reaction buttons + signal-driven counts. |
 | D | `feat(community): comments` | CRUD endpoints. Identity flair component implemented in this PR (reusable downstream). Owner can delete any comment. Comment thread component in SPA. |
-| E | `feat(community): events + RSVP` | Owner CRUD for events (`POST /community/events`, etc.) — server-side creates the corresponding `event` community_post. RSVP endpoint. SPA event card with date/location/RSVP buttons. Owner dashboard view `/dashboard/community` with event list + create form. |
+| E | `feat(community): events + RSVP` | Owner CRUD for events (`POST /api/v1/community/events`, `PATCH /api/v1/community/events/:id`, `DELETE /api/v1/community/events/:id`) — server-side creates the corresponding `event` community_post. RSVP endpoint `POST /api/v1/community/posts/:id/rsvp`. SPA event card with date/location/RSVP buttons. Owner dashboard view `/dashboard/community` with event list + create form. |
 | F | `feat(community): push integration` | Wire `community_reply` / `community_event_new` / `community_belt_celebration` into M5's notification system. Backend `Notification` classes + delivery via existing WebPush stack. SPA: 3 new rows in `/dashboard/profile § Notifications`. |
 
 Realistic timeline (post-M7): 3-4 weeks of focused work end-to-end.
@@ -176,7 +176,7 @@ Realistic timeline (post-M7): 3-4 weeks of focused work end-to-end.
 ### V2 — Cross-academy + map
 
 - Cross-academy event visibility (`visibility = 'public'`).
-- Map view at `/portal/map` showing public events from other academies with a configurable radius (e.g. 50 km).
+- Map view at `/dashboard/me/map` showing public events from other academies with a configurable radius (e.g. 50 km).
 - Athlete profile pages (`/u/@handle`) viewable by other-academy athletes (limited info: handle + belt + academy name).
 - "Follow academy" subscription (an academy's public posts appear in a follower's feed).
 - Lat/lon geocoding pipeline for event addresses (V1 captures address text only; V2 geocodes on save via a server-side queue job).
@@ -195,7 +195,7 @@ Realistic timeline (post-M7): 3-4 weeks of focused work end-to-end.
 
 V1 is "working" when, on academies with ≥10 portal-registered adult athletes:
 
-- 50%+ of registered adult athletes open `/portal/feed` at least once per month.
+- 50%+ of registered adult athletes open `/dashboard/me/feed` at least once per month.
 - 30%+ react to at least one post per month.
 - 10%+ comment on at least one post per month.
 - 0 minor accounts on the portal (registration gate works 100%).
