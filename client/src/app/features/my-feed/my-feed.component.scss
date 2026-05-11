@@ -1,0 +1,152 @@
+// MyFeedComponent — athlete-portal community timeline (#614, M9 PR-B2).
+// Mobile-first card list. Page padding inherited from the dashboard
+// shell `.main` per the design canon — no padding declared here.
+
+.feed {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__card {
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    &--skeleton {
+      gap: 0.5rem;
+    }
+  }
+
+  &__author {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__author-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__author-name {
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__author-handle {
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+  }
+
+  &__time {
+    color: var(--p-text-color-secondary);
+    font-size: 0.8125rem;
+    margin-left: auto;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__celebrate {
+    font-size: 1.5rem;
+  }
+
+  &__belt-line {
+    margin: 0;
+    color: var(--p-text-color);
+  }
+
+  &__belt-transition {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__event-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__event-time,
+  &__event-location {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 0.9375rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__announcement {
+    margin: 0;
+    color: var(--p-text-color);
+    white-space: pre-line;
+  }
+
+  &__empty {
+    color: var(--p-text-color-secondary);
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+
+  &__pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  &__page-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--p-content-border-color);
+    background: transparent;
+    color: var(--p-text-color);
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__page-label {
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+  }
+}

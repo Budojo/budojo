@@ -1,0 +1,184 @@
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { MyFeedComponent } from './my-feed.component';
+import type { CommunityFeedPage } from '../../core/services/community.service';
+import { environment } from '../../../environments/environment';
+import { provideI18nTesting } from '../../../test-utils/i18n-test';
+
+function emptyPage(): CommunityFeedPage {
+  return {
+    data: [],
+    meta: { current_page: 1, per_page: 20, total: 0, last_page: 1 },
+  };
+}
+
+function setup() {
+  TestBed.configureTestingModule({
+    imports: [MyFeedComponent],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideRouter([]),
+      ...provideI18nTesting(),
+    ],
+  });
+
+  const fixture = TestBed.createComponent(MyFeedComponent);
+  const http = TestBed.inject(HttpTestingController);
+  fixture.detectChanges();
+  return { fixture, el: fixture.nativeElement as HTMLElement, http };
+}
+
+describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
+  it('shows the loading skeleton while the first feed request is in flight', () => {
+    const { el, http } = setup();
+
+    expect(el.querySelector('[data-cy="my-feed-loading"]')).not.toBeNull();
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush(emptyPage());
+  });
+
+  it('shows the empty state when the feed has zero posts', () => {
+    const { fixture, el, http } = setup();
+
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush(emptyPage());
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="my-feed-empty"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="my-feed-list"]')).toBeNull();
+  });
+
+  it('renders a belt-promotion post with athlete name and the belt transition', () => {
+    const { fixture, el, http } = setup();
+
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          id: 42,
+          type: 'belt_promotion',
+          visibility: 'academy',
+          payload: {
+            athlete_id: 7,
+            athlete_name: 'Mario Rossi',
+            old_belt: 'white',
+            new_belt: 'blue',
+            promoted_at: '2026-05-10T08:00:00Z',
+          },
+          created_at: '2026-05-10T08:00:00Z',
+          created_by: {
+            id: 1,
+            first_name: 'Owner',
+            last_name: 'One',
+            full_name: 'Owner One',
+            handle: null,
+            avatar_url: null,
+            belt: null,
+          },
+          reactions_count: 0,
+          comments_count: 0,
+          rsvps_count: 0,
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const card = el.querySelector('[data-cy="my-feed-post-42"]');
+    expect(card).not.toBeNull();
+    expect(card?.querySelector('[data-cy="post-belt-promotion"]')).not.toBeNull();
+    expect(card?.querySelector('.feed__belt-line')?.textContent).toContain('Mario Rossi');
+  });
+
+  it('renders an event post with title and starts-at time', () => {
+    const { fixture, el, http } = setup();
+
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          id: 51,
+          type: 'event',
+          visibility: 'academy',
+          payload: {
+            title: 'Open mat — Saturday',
+            starts_at: '2026-05-17T10:00:00Z',
+            location_text: 'Via Roma 10, Milano',
+          },
+          created_at: '2026-05-10T08:00:00Z',
+          created_by: {
+            id: 1,
+            first_name: 'Owner',
+            last_name: 'One',
+            full_name: 'Owner One',
+            handle: null,
+            avatar_url: null,
+            belt: null,
+          },
+          reactions_count: 0,
+          comments_count: 0,
+          rsvps_count: 0,
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const card = el.querySelector('[data-cy="my-feed-post-51"]');
+    expect(card?.querySelector('[data-cy="post-event"]')).not.toBeNull();
+    expect(card?.querySelector('.feed__event-title')?.textContent).toContain('Open mat — Saturday');
+    expect(card?.querySelector('.feed__event-location')?.textContent).toContain(
+      'Via Roma 10, Milano',
+    );
+  });
+
+  it('shows the error state when the API call fails', () => {
+    const { fixture, el, http } = setup();
+
+    http
+      .expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`)
+      .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="my-feed-error"]')).not.toBeNull();
+  });
+
+  it('navigates to the next page when the next button is clicked', () => {
+    const { fixture, el, http } = setup();
+
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          id: 1,
+          type: 'owner_announcement',
+          visibility: 'academy',
+          payload: { body: 'First post' },
+          created_at: '2026-05-10T08:00:00Z',
+          created_by: {
+            id: 1,
+            first_name: 'O',
+            last_name: 'O',
+            full_name: 'O O',
+            handle: null,
+            avatar_url: null,
+            belt: null,
+          },
+          reactions_count: 0,
+          comments_count: 0,
+          rsvps_count: 0,
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 25, last_page: 2 },
+    });
+    fixture.detectChanges();
+
+    const nextBtn = el.querySelector('[data-cy="my-feed-next"]') as HTMLButtonElement | null;
+    expect(nextBtn).not.toBeNull();
+    nextBtn?.click();
+
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=2`).flush({
+      data: [],
+      meta: { current_page: 2, per_page: 20, total: 25, last_page: 2 },
+    });
+    fixture.detectChanges();
+  });
+});
