@@ -13,11 +13,13 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Wire shape for `GET /api/v1/me/academy` (#618, M7 PR-D slice 2).
  *
- * Same fields as `AcademyResource` plus an `owner` block carrying the
- * academy owner's public contact info — first_name, last_name, email.
- * Athletes use this to know whom to reach out to about training,
- * payments, schedule changes. V1 owner persona is single per
- * academy; multi-owner academies (V2) would surface a list.
+ * Subset of `AcademyResource` minus owner-private fields
+ * (`monthly_fee_cents` doesn't surface here — athletes don't see
+ * the academy's fee column), plus an `owner` block carrying public
+ * contact info (first_name, last_name, email) so athletes know
+ * whom to reach out to about training, payments, schedule changes.
+ * V1 owner persona is single per academy; multi-owner academies
+ * (V2) would surface a list.
  */
 class MeAcademyResource extends JsonResource
 {

@@ -33,7 +33,7 @@ it('returns the owned academy with the owner contact block for an owner caller',
         ->and($response->json('data.owner.email'))->toBe($this->owner->email);
 });
 
-it('returns the athletes own academy with the owner contact block for an athlete caller', function (): void {
+it("returns the athlete's own academy with the owner contact block for an athlete caller", function (): void {
     /** @var Athlete $athlete */
     $athlete = Athlete::factory()->for($this->academy)->create(['user_id' => null]);
     /** @var User $athleteUser */

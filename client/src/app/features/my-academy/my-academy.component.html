@@ -44,7 +44,7 @@
           <div class="my-academy__row">
             <dt>{{ 'athletePortal.academy.phoneLabel' | translate }}</dt>
             <dd>
-              <a [href]="'tel:' + phone" data-cy="my-academy-phone">{{ phone }}</a>
+              <a [href]="phoneHref(a)" data-cy="my-academy-phone">{{ phone }}</a>
             </dd>
           </div>
         }

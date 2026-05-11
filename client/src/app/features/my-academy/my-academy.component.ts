@@ -76,13 +76,26 @@ export class MyAcademyComponent implements OnInit {
   }
 
   /**
-   * Formats the phone pair into a single E.164-ish display string.
-   * Null when neither side is filled — the row collapses.
+   * Formats the phone pair into a single E.164-ish display string
+   * (with a separating space for readability). Null when neither side
+   * is filled — the row collapses.
    */
   protected phoneLine(academy: MeAcademy): string | null {
     if (academy.phone_country_code === null || academy.phone_national_number === null) {
       return null;
     }
     return `${academy.phone_country_code} ${academy.phone_national_number}`;
+  }
+
+  /**
+   * Builds the `tel:` URI from the raw phone parts — no space between
+   * country code and national number, since spaces are invalid inside
+   * tel URIs (RFC 3966). Same null-guard as `phoneLine`.
+   */
+  protected phoneHref(academy: MeAcademy): string | null {
+    if (academy.phone_country_code === null || academy.phone_national_number === null) {
+      return null;
+    }
+    return `tel:${academy.phone_country_code}${academy.phone_national_number}`;
   }
 }
