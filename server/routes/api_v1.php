@@ -97,7 +97,7 @@ Route::post('/athlete-invite/{token}/accept', [\App\Http\Controllers\Auth\Athlet
 // `EmailChangeTokenInvalidException` and renders 410 Gone with a
 // stable string body — same shape on unknown / consumed / expired
 // tokens (no signal leak between the three).
-Route::post('/email-change/{token}/verify', [\App\Http\Controllers\Account\EmailChangeController::class, 'verify'])
+Route::post('/email-change/{token}/verify', [\App\Http\Controllers\Auth\EmailVerificationController::class, 'verifyChange'])
     ->where('token', '[A-Za-z0-9]{64}');
 
 // Account-deletion cancel by token (#545) — public endpoint, the click
@@ -145,9 +145,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     //
     // Throttle 5/hour PER USER — see `email-change-request` limiter
     // in `AppServiceProvider::boot()`.
-    Route::post('/me/email-change', [\App\Http\Controllers\Account\EmailChangeController::class, 'requestChange'])
+    Route::post('/me/email-change', [\App\Http\Controllers\User\EmailChangeController::class, 'requestChange'])
         ->middleware('throttle:email-change-request');
-    Route::delete('/me/email-change', [\App\Http\Controllers\Account\EmailChangeController::class, 'cancel']);
+    Route::delete('/me/email-change', [\App\Http\Controllers\User\EmailChangeController::class, 'cancel']);
 
     // In-app password change (#409). Throttled to 5 requests per minute
     // (Laravel's default IP-based key) — same shape as `/auth/login` and
