@@ -19,6 +19,10 @@
       color: var(--p-green-600, #16a34a);
     }
 
+    &--warning {
+      color: var(--p-amber-700, #b45309);
+    }
+
     &--error {
       color: var(--p-red-500, #ef4444);
     }

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TranslatePipe } from '@ngx-translate/core';
 
-export type VerifyPageState = 'loading' | 'success' | 'error' | 'neutral';
+export type VerifyPageState = 'loading' | 'success' | 'error' | 'warning' | 'neutral';
 
 /**
  * Shared chrome for the three token-verification landing pages (#580):
@@ -12,11 +12,19 @@ export type VerifyPageState = 'loading' | 'success' | 'error' | 'neutral';
  * hint. The CTA(s) are projected via `<ng-content>` so each consumer keeps
  * its own state machine and routing logic.
  *
- * Three of the four states map to a coloured pi-icon:
+ * Four of the five states map to a coloured pi-icon:
  *
- * - `success` → `--success` modifier (green)
- * - `error`   → `--error` modifier (red)
+ * - `success` → `--success` modifier (green)  — positive terminal state
+ * - `warning` → `--warning` modifier (amber)  — recoverable failure (resend / retry)
+ * - `error`   → `--error` modifier (red)      — terminal failure (dead token)
  * - `neutral` → no modifier (uses the inherited text colour)
+ *
+ * Why warning AND error: `verify-error` (the primary email-verify link
+ * failure) is recoverable — the user can request a fresh link. The
+ * `error` branch of `verify-email-change` is terminal at this exact link
+ * (token dead, must restart the flow). Different visual weight on
+ * purpose: amber vs red. (Pre-#580 the colours were per-component;
+ * #580 preserves them via this state distinction.)
  *
  * `loading` renders a `<p-progress-spinner>` instead of a pi icon and
  * ignores `iconClass`. `neutral` + `iconClass: null` omits the icon block

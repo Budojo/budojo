@@ -19,7 +19,7 @@ import { provideI18nTesting } from '../../../../test-utils/i18n-test';
   </app-verify-page>`,
 })
 class HostComponent {
-  state: 'loading' | 'success' | 'error' | 'neutral' = 'success';
+  state: 'loading' | 'success' | 'error' | 'warning' | 'neutral' = 'success';
   iconClass: string | null = 'pi pi-check-circle';
   titleKey = 'shared.verifyPage.title';
   titleDataCy: string | null = null;
@@ -60,6 +60,13 @@ describe('VerifyPageComponent (shared chrome for auth verify flows, #580)', () =
     const icon = el.querySelector('.verify-page__icon');
     expect(icon?.classList.contains('verify-page__icon--error')).toBe(true);
     expect(el.querySelector('.verify-page__icon i')?.className).toContain('pi-times-circle');
+  });
+
+  it('renders a pi icon with the warning modifier when state is warning (amber, recoverable)', () => {
+    const { el } = setup({ state: 'warning', iconClass: 'pi pi-times-circle' });
+    const icon = el.querySelector('.verify-page__icon');
+    expect(icon?.classList.contains('verify-page__icon--warning')).toBe(true);
+    expect(icon?.classList.contains('verify-page__icon--error')).toBe(false);
   });
 
   it('omits the icon block entirely when state is neutral and iconClass is null', () => {
