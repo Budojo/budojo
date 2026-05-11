@@ -265,8 +265,10 @@ gh project item-list 2 --owner Budojo --format json
 5. **Project board** — add the PR, set to `In Progress`.
 6. **No AI attribution — ever** — do NOT add "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic/AI text anywhere: PR bodies, commit messages, code comments, docs.
 
-> **PR body formatting:** Always write the body to `.claude/pr-body.md` and pass it with
-> `gh pr create --body-file .claude/pr-body.md` or `gh pr edit <N> --body-file .claude/pr-body.md`.
+> **PR body formatting:** Always write the body to a **per-PR file** under
+> `.claude/pr-bodies/<branch-or-pr>.md` and pass it with
+> `gh pr create --body-file .claude/pr-bodies/<file>.md` or `gh pr edit <N> --body-file .claude/pr-bodies/<file>.md`.
+> Per-PR files (not a single shared `pr-body.md`) so concurrent PRs don't overwrite each other.
 > Never use `--body "..."` or a bash heredoc — special characters get mangled.
 
 #### Type labels (one per PR)
