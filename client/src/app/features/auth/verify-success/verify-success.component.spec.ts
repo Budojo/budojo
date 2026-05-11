@@ -53,14 +53,16 @@ describe('VerifySuccessComponent (#174 + #580)', () => {
     vi.advanceTimersByTime(2999);
     expect(navigateByUrl).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
-    expect(navigateByUrl).toHaveBeenCalledExactlyOnceWith('/dashboard/athletes');
+    expect(navigateByUrl).toHaveBeenCalledOnce();
+    expect(navigateByUrl).toHaveBeenCalledWith('/dashboard/athletes');
   });
 
   it('cancels the auto-redirect timer when goToDashboard fires manually (#173)', () => {
     const { cmp, navigateByUrl } = setup();
 
     cmp.goToDashboard();
-    expect(navigateByUrl).toHaveBeenCalledExactlyOnceWith('/dashboard/athletes');
+    expect(navigateByUrl).toHaveBeenCalledOnce();
+    expect(navigateByUrl).toHaveBeenCalledWith('/dashboard/athletes');
 
     // The pending 3s timer should now be disarmed — letting it fire would
     // re-invoke navigateByUrl AND yank the user back to /dashboard/athletes
