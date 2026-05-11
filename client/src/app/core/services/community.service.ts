@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type { Belt } from './athlete.service';
 
@@ -66,6 +66,30 @@ export interface CommunityFeedPage {
   };
 }
 
+/**
+ * 1-level comment on a community post (M9 PR-D). Mirrors
+ * `PostCommentResource` server-side. `created_by` carries the same
+ * identity flair shape as posts, so the SPA routes both surfaces
+ * through `<app-user-flair>`.
+ */
+export interface PostComment {
+  readonly id: number;
+  readonly post_id: number;
+  readonly body: string;
+  readonly created_at: string;
+  readonly created_by: CommunityPostAuthor;
+}
+
+export interface CommentsPage {
+  readonly data: readonly PostComment[];
+  readonly meta: {
+    readonly current_page: number;
+    readonly per_page: number;
+    readonly total: number;
+    readonly last_page: number;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class CommunityService {
   private readonly http = inject(HttpClient);
@@ -90,5 +114,35 @@ export class CommunityService {
     return this.http.post<ReactionToggleResponse>(`${this.base}/posts/${postId}/reactions`, {
       emoji,
     });
+  }
+
+  /**
+   * List the comments under a post (#604, M9 PR-D2 client). 50/page,
+   * ascending-created-at — the natural thread read order.
+   */
+  listComments(postId: number, page = 1): Observable<CommentsPage> {
+    const params = new HttpParams().set('page', page.toString());
+    return this.http.get<CommentsPage>(`${this.base}/posts/${postId}/comments`, { params });
+  }
+
+  /**
+   * Post a 1-level comment under a post. Body is trimmed + capped at
+   * 500 chars server-side; the SPA defensively re-trims before
+   * sending.
+   */
+  createComment(postId: number, body: string): Observable<PostComment> {
+    return this.http
+      .post<{ data: PostComment }>(`${this.base}/posts/${postId}/comments`, {
+        body: body.trim(),
+      })
+      .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Soft-delete a comment. Server authorizes when the caller is the
+   * author OR the owner of the post's academy.
+   */
+  deleteComment(commentId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/comments/${commentId}`);
   }
 }

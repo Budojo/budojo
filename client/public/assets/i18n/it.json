@@ -233,7 +233,17 @@
       "reactClapAria": "Reagisci con un applauso",
       "reactPray": "Rispetto",
       "reactPrayAria": "Reagisci con rispetto",
-      "reactToastError": "Non siamo riusciti ad aggiornare la tua reazione. Riprova."
+      "reactToastError": "Non siamo riusciti ad aggiornare la tua reazione. Riprova.",
+      "commentsToggle": "Commenti",
+      "commentsLoading": "Caricamento commenti…",
+      "commentsEmpty": "Nessun commento per ora — sii il primo.",
+      "commentsLoadError": "Non siamo riusciti a caricare i commenti. Riapri la card e riprova.",
+      "commentsLoadMore": "Carica altri",
+      "commentPlaceholder": "Scrivi un commento…",
+      "commentSubmit": "Pubblica",
+      "commentSubmitError": "Non siamo riusciti a pubblicare il tuo commento. Riprova.",
+      "commentDeleteAria": "Elimina questo commento",
+      "commentDeleteError": "Non siamo riusciti a eliminare il tuo commento. Riprova."
     },
     "academy": {
       "title": "La tua academy",

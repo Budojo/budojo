@@ -1,0 +1,75 @@
+<section class="thread" [attr.id]="'thread-' + postId()" [attr.data-cy]="'thread-' + postId()">
+  @if (loading() && comments().length === 0) {
+    <p class="thread__hint" data-cy="thread-loading">
+      {{ 'athletePortal.feed.commentsLoading' | translate }}
+    </p>
+  } @else if (loadError()) {
+    <p class="thread__hint" data-cy="thread-error">
+      {{ 'athletePortal.feed.commentsLoadError' | translate }}
+    </p>
+  } @else {
+    @if (comments().length === 0) {
+      <p class="thread__hint thread__hint--empty" data-cy="thread-empty">
+        {{ 'athletePortal.feed.commentsEmpty' | translate }}
+      </p>
+    } @else {
+      <ul class="thread__list">
+        @for (c of comments(); track c.id) {
+          <li class="thread__row" [attr.data-cy]="'comment-' + c.id">
+            <app-user-flair [user]="c.created_by" [compact]="true" />
+            <p class="thread__body">{{ c.body }}</p>
+            <time class="thread__time" [dateTime]="c.created_at">
+              {{ c.created_at | date: 'medium' }}
+            </time>
+            @if (canDelete(c)) {
+              <button
+                type="button"
+                class="thread__delete"
+                [attr.aria-label]="'athletePortal.feed.commentDeleteAria' | translate"
+                (click)="deleteComment(c)"
+                [attr.data-cy]="'comment-delete-' + c.id"
+              >
+                <i class="pi pi-trash" aria-hidden="true"></i>
+              </button>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (hasMore()) {
+        <button
+          type="button"
+          class="thread__more"
+          (click)="loadMore()"
+          [disabled]="loading()"
+          data-cy="thread-load-more"
+        >
+          {{ 'athletePortal.feed.commentsLoadMore' | translate }}
+        </button>
+      }
+    }
+
+    <form class="thread__composer" (submit)="submitComment(); $event.preventDefault()">
+      <textarea
+        pTextarea
+        rows="2"
+        [attr.maxlength]="MAX_BODY"
+        [ngModel]="draft()"
+        (ngModelChange)="draft.set($event)"
+        [ngModelOptions]="{ standalone: true }"
+        [placeholder]="'athletePortal.feed.commentPlaceholder' | translate"
+        class="thread__textarea"
+        data-cy="comment-input"
+      ></textarea>
+      <button
+        type="submit"
+        pButton
+        [disabled]="!canSubmit()"
+        class="thread__submit"
+        data-cy="comment-submit"
+      >
+        {{ 'athletePortal.feed.commentSubmit' | translate }}
+      </button>
+    </form>
+  }
+</section>
