@@ -7,8 +7,10 @@ namespace App\Actions\Document;
 use App\Enums\DocumentType;
 use App\Models\Athlete;
 use App\Models\Document;
+use App\Support\DocumentEncryption;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class UploadDocumentAction
 {
@@ -21,6 +23,13 @@ class UploadDocumentAction
      * MIME type is read via the server-side fileinfo (`$file->getMimeType()`),
      * not the client-advertised `Content-Type`, to prevent spoofing the value
      * we later echo in the download `Content-Type` header.
+     *
+     * **Encryption at rest (#224)** — when `$type === MedicalCertificate`
+     * the bytes are AES-256-GCM encrypted via `DocumentEncryption` before
+     * landing on disk; no plaintext is persisted. Other document types
+     * stay plaintext (not special-category data under GDPR Art. 9).
+     * Caller-side this is transparent — the row's `is_encrypted` flag
+     * tells the download path how to read it back.
      */
     public function execute(
         Athlete $athlete,
@@ -30,10 +39,39 @@ class UploadDocumentAction
         ?string $expiresAt = null,
         ?string $notes = null,
     ): Document {
-        $path = $file->store('documents', 'local');
+        $configKey = config('documents.encryption_key');
+        $shouldEncrypt = $type === DocumentType::MedicalCertificate
+            && \is_string($configKey)
+            && $configKey !== '';
 
-        if ($path === false) {
-            throw new \RuntimeException('Failed to store uploaded document.');
+        if ($shouldEncrypt) {
+            // Encrypt the bytes in memory then write the ciphertext
+            // directly. We can't $file->store() first and re-write —
+            // that would leave plaintext on disk between the two
+            // operations, violating the "no plaintext ever persists"
+            // contract from the issue.
+            $plaintext = $file->get();
+            if (! \is_string($plaintext)) {
+                throw new \RuntimeException('Failed to read uploaded document bytes.');
+            }
+            $encryption = new DocumentEncryption();
+            $ciphertext = $encryption->encrypt($plaintext);
+            $path = 'documents/' . Str::random(40) . '.enc';
+            // `put` returns false on disk-write failure. Without
+            // checking we'd create a DB row pointing at a missing /
+            // partial file — the download path would 404 and the
+            // user has no signal that something went wrong on
+            // upload. Throw so the controller surfaces a 500 instead.
+            $written = Storage::disk('local')->put($path, $ciphertext);
+            if ($written !== true) {
+                throw new \RuntimeException('Failed to store encrypted document.');
+            }
+        } else {
+            $stored = $file->store('documents', 'local');
+            if ($stored === false) {
+                throw new \RuntimeException('Failed to store uploaded document.');
+            }
+            $path = $stored;
         }
 
         try {
@@ -43,6 +81,7 @@ class UploadDocumentAction
                 'original_name' => $file->getClientOriginalName(),
                 'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
                 'size_bytes' => $file->getSize() ?: 0,
+                'is_encrypted' => $shouldEncrypt,
                 'issued_at' => $issuedAt,
                 'expires_at' => $expiresAt,
                 'notes' => $notes,

@@ -504,6 +504,46 @@ worth carrying forward:
     device tokens — refreshing on Windows does not propagate to the Linux
     session and vice versa.
 
+## Document encryption key rotation (#224)
+
+Medical certificates uploaded after #224 are encrypted at-rest with
+`DOCUMENT_ENCRYPTION_KEY` (AES-256-GCM via `App\Support\DocumentEncryption`).
+The key is set in Forge's environment editor — never committed to git
+and SEPARATE from `APP_KEY` so it can be rotated independently.
+
+**Generate a fresh key**:
+
+```bash
+php -r "echo base64_encode(random_bytes(32)), \"\\n\";"
+```
+
+**Key rotation procedure** (one-time, when the existing key is
+considered compromised or as part of a scheduled cadence):
+
+1. Generate the new key with the command above; keep both old + new in
+   hand.
+2. **Pause uploads** — there's no UI gate today, but communicate the
+   short maintenance window to academy owners. Live uploads during
+   the swap would be encrypted with whichever key is live at the
+   moment of the request, and the re-encryption batch (step 4) might
+   miss them.
+3. **Swap `DOCUMENT_ENCRYPTION_KEY` in Forge env** to the new value.
+   Restart `php-fpm`. New uploads now use the new key. Old rows are
+   no longer decryptable until step 4 completes.
+4. **Re-encryption batch**: a future artisan command (not yet
+   implemented) will iterate every `documents.is_encrypted = true` row,
+   decrypt with the OLD key, re-encrypt with the NEW key, write back.
+   The day rotation is actually required, that command lands as a
+   focused issue. Until then, key rotation requires a backup-restore
+   plan, not a hot swap.
+5. **Backup the old key** in a sealed envelope / 1Password vault for
+   the recovery window — even after rotation it's the only way to
+   recover a backup taken before the swap.
+
+**WARNING.** Losing `DOCUMENT_ENCRYPTION_KEY` without a backup means
+EVERY encrypted document on disk is permanently unrecoverable. Treat
+this key like a long-term root credential.
+
 ## What this doc deliberately does NOT cover
 
 - **Backups** — currently zero strategy. Filed as future ops work; needs a
