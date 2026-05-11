@@ -67,7 +67,7 @@ export class WhatsNewComponent {
         {
           heading: "🐛 Email verify — resend button now shows you it's working",
           bullets: [
-            'If a verification email link expired or got mis-clicked and you landed on the "Verification failed" page, clicking Resend used to give you no visible feedback for the full duration of the request — the button stayed bright and clickable, the page stayed put. Annoying enough that some people clicked twice; the back-end silently caught the double-fire.',
+            'If a verification email link expired or got mis-clicked and you landed on the "Verification failed" page, clicking Resend used to give you no visible feedback for the full duration of the request — the button stayed bright and clickable, the page stayed put. Annoying enough that some people clicked twice; the app already ignored the second click via an internal re-entrancy guard, but from the screen you couldn\'t tell.',
             'Now: the button shows a spinner and disables itself for the whole duration of the resend request. Standard "your click registered, sit tight" feedback.',
           ],
         },
