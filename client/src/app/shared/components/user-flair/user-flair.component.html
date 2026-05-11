@@ -1,9 +1,9 @@
 <div class="flair" [class.flair--compact]="compact()">
   @if (!compact()) {
-    <app-user-avatar [name]="user().full_name" [url]="user().avatar_url" />
+    <app-user-avatar [name]="displayName()" [url]="user().avatar_url" />
   }
   <div class="flair__meta">
-    <span class="flair__name">{{ user().full_name }}</span>
+    <span class="flair__name">{{ displayName() }}</span>
     <div class="flair__row">
       @if (user().handle) {
         <span class="flair__handle">&#64;{{ user().handle }}</span>

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { BeltBadgeComponent } from '../belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../user-avatar/user-avatar.component';
 import type { Belt } from '../../../core/services/athlete.service';
@@ -46,4 +46,23 @@ export interface UserFlairShape {
 export class UserFlairComponent {
   readonly user = input.required<UserFlairShape>();
   readonly compact = input<boolean>(false);
+
+  /**
+   * Displayed name. When the user has a handle, the canonical
+   * public identifier IS the handle, so the name row stays as
+   * `full_name`. When there is no handle, we fall back to
+   * "first-name + last-initial" (`Mario R.`) — privacy-leaning
+   * per M9 PRD § Component spec, "No handle" fallback. Trailing
+   * full-stop on the initial keeps the visual cue that it's
+   * truncated.
+   */
+  readonly displayName = computed<string>(() => {
+    const u = this.user();
+    if (u.handle !== null && u.handle !== '') {
+      return u.full_name;
+    }
+    const last = (u.last_name ?? '').trim();
+    const initial = last.length > 0 ? `${last.charAt(0).toUpperCase()}.` : '';
+    return [u.first_name, initial].filter((s) => s.length > 0).join(' ');
+  });
 }

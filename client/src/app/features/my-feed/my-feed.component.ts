@@ -295,4 +295,18 @@ export class MyFeedComponent implements OnInit {
       return next;
     });
   }
+
+  /**
+   * Patches the parent feed's `comments_count` for a single post
+   * when a child thread emits a create / delete delta — keeps the
+   * counter pill on the feed card honest without re-fetching the
+   * whole feed (Copilot review on PR #623).
+   */
+  protected onCommentCountDelta(postId: number, delta: number): void {
+    this.posts.update((list) =>
+      list.map((p) =>
+        p.id === postId ? { ...p, comments_count: Math.max(0, p.comments_count + delta) } : p,
+      ),
+    );
+  }
 }

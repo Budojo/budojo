@@ -139,7 +139,10 @@
           </footer>
 
           @if (isThreadOpen(post.id)) {
-            <app-comments-thread [postId]="post.id" />
+            <app-comments-thread
+              [postId]="post.id"
+              (commentCountDelta)="onCommentCountDelta(post.id, $event)"
+            />
           }
         </li>
       }

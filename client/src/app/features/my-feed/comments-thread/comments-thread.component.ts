@@ -5,6 +5,7 @@ import {
   OnInit,
   inject,
   input,
+  output,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -26,12 +27,18 @@ import { UserFlairComponent } from '../../../shared/components/user-flair/user-f
  *
  * Three interactions today:
  *
- * - List (paginated 50/page; V1 only shows page 1 — Load-more
- *   button appears when meta.last_page > 1).
- * - Create (textarea + send; 500-char cap mirrors the server).
- * - Delete-own (a comment by the current user gets an inline
- *   trash icon; clicking optimistically removes it + fires the
- *   API; rollback on error).
+ * - List (paginated 50/page; a "Load more" button appends the next
+ *   page in place — subsequent pages add to the existing list
+ *   rather than replacing it, the natural thread-grows-over-time UX).
+ * - Create (textarea + send; 500-char cap mirrors the server). On
+ *   success, emits `commentCountDelta = +1` so the parent feed
+ *   card's counter pill stays accurate without re-fetching the feed.
+ * - Delete-own (a comment by the current user gets an inline trash
+ *   icon; clicking optimistically removes it + fires the API;
+ *   surgical rollback on error — re-inserts just the deleted row
+ *   at its previous index so concurrent inserts/deletes from other
+ *   in-flight calls aren't clobbered). On success, emits
+ *   `commentCountDelta = -1`.
  */
 @Component({
   selector: 'app-comments-thread',
@@ -49,6 +56,14 @@ export class CommentsThreadComponent implements OnInit {
   private readonly translateService = inject(TranslateService);
 
   readonly postId = input.required<number>();
+
+  /**
+   * Net change to the parent post's `comments_count` since the
+   * thread opened — +1 per successful create, -1 per successful
+   * delete. Emitted as a delta (not absolute) so the parent can
+   * apply it to the most recent value without coupling.
+   */
+  readonly commentCountDelta = output<number>();
 
   protected readonly comments = signal<readonly PostComment[]>([]);
   protected readonly loading = signal(true);
@@ -114,6 +129,7 @@ export class CommentsThreadComponent implements OnInit {
           this.comments.update((list) => [...list, created]);
           this.draft.set('');
           this.submitting.set(false);
+          this.commentCountDelta.emit(1);
         },
         error: () => {
           this.submitting.set(false);
@@ -128,19 +144,33 @@ export class CommentsThreadComponent implements OnInit {
 
   /**
    * Optimistic delete — pull the comment from the local list, fire
-   * the API. On error, restore and toast. Server is the source of
-   * truth on the next page refresh.
+   * the API. On success, emit the count-delta. On error, re-insert
+   * the removed comment at its previous index so concurrent
+   * inserts (a successful new post in flight, another delete) are
+   * preserved — clobbering the whole snapshot would erase those.
    */
   protected deleteComment(comment: PostComment): void {
-    const snapshot = this.comments();
+    const before = this.comments();
+    const previousIndex = before.findIndex((c) => c.id === comment.id);
+    if (previousIndex === -1) return;
+
     this.comments.update((list) => list.filter((c) => c.id !== comment.id));
 
     this.communityService
       .deleteComment(comment.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
+        next: () => this.commentCountDelta.emit(-1),
         error: () => {
-          this.comments.set(snapshot);
+          this.comments.update((list) => {
+            // Re-insertion is a no-op if a concurrent path already
+            // happens to contain the comment (defensive).
+            if (list.some((c) => c.id === comment.id)) return list;
+            const next = [...list];
+            const clampedIndex = Math.min(previousIndex, next.length);
+            next.splice(clampedIndex, 0, comment);
+            return next;
+          });
           this.messageService.add({
             severity: 'error',
             summary: this.translateService.instant('athletePortal.feed.commentDeleteError'),

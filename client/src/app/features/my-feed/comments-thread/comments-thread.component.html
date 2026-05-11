@@ -1,4 +1,4 @@
-<section class="thread" [attr.data-cy]="'thread-' + postId()">
+<section class="thread" [attr.id]="'thread-' + postId()" [attr.data-cy]="'thread-' + postId()">
   @if (loading() && comments().length === 0) {
     <p class="thread__hint" data-cy="thread-loading">
       {{ 'athletePortal.feed.commentsLoading' | translate }}
