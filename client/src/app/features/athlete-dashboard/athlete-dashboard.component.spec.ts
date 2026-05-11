@@ -74,6 +74,7 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
 
     const root = fixture.nativeElement as HTMLElement;
     expect(root.querySelector('[data-cy="topbar-hamburger"]')).not.toBeNull();
+    expect(root.querySelector('[data-cy="nav-me-feed"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-me-profile"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-sign-out"]')).not.toBeNull();
   });

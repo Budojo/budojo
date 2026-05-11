@@ -201,7 +201,8 @@
       "signOut": "Esci"
     },
     "nav": {
-      "profile": "Profilo"
+      "profile": "Profilo",
+      "feed": "Feed"
     },
     "profile": {
       "title": "Il tuo profilo",
@@ -214,6 +215,18 @@
       "unverified": "Non verificata",
       "editHint": "La modifica del profilo arriva nella prossima release.",
       "loading": "Caricamento del profilo…"
+    },
+    "feed": {
+      "title": "Il feed della tua academy",
+      "emptyBody": "Nessun post per ora — le promozioni di cintura e gli eventi della tua academy compariranno qui.",
+      "errorBody": "Non siamo riusciti a caricare il feed. Aggiorna la pagina e riprova.",
+      "beltPromotion": {
+        "text": "{{name}} ha appena conquistato una nuova cintura!"
+      },
+      "pagination": "Impaginazione feed",
+      "pageOf": "Pagina {{current}} di {{total}}",
+      "previous": "Precedente",
+      "next": "Successiva"
     }
   },
   "notifications": {

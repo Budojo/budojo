@@ -71,6 +71,18 @@
       <ul>
         <li>
           <a
+            routerLink="/dashboard/me/feed"
+            routerLinkActive="sidebar__link--active"
+            class="sidebar__link"
+            (click)="closeSidebar()"
+            data-cy="nav-me-feed"
+          >
+            <i class="pi pi-comments" aria-hidden="true"></i>
+            <span>{{ 'athletePortal.nav.feed' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
             routerLink="/dashboard/me/profile"
             routerLinkActive="sidebar__link--active"
             class="sidebar__link"
