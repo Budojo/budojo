@@ -3552,7 +3552,7 @@ paths:
               example: { message: Forbidden. }
         '404': { description: Post not found (already hard-deleted or invalid id). }
 
-  /community/posts/{post}/react:
+  /community/posts/{post}/reactions:
     post:
       tags: [community]
       summary: Toggle the authenticated user's emoji reaction on a post
@@ -3615,6 +3615,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ValidationErrorBody' }
+        '429':
+          description: Rate-limit exceeded (60 reactions / minute / user).
 
 components:
 

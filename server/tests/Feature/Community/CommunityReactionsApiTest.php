@@ -44,7 +44,7 @@ function authedAthlete(Academy $academy): User
 
 it('inserts a new reaction when the user has none yet', function (): void {
     $response = $this->actingAs($this->owner)
-        ->postJson("/api/v1/community/posts/{$this->post->id}/react", ['emoji' => 'clap'])
+        ->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'clap'])
         ->assertOk();
 
     expect($response->json('your_reaction'))->toBe('clap')
@@ -68,7 +68,7 @@ it('removes the reaction when the user re-reacts with the same emoji', function 
     ]);
 
     $response = $this->actingAs($this->owner)
-        ->postJson("/api/v1/community/posts/{$this->post->id}/react", ['emoji' => 'clap'])
+        ->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'clap'])
         ->assertOk();
 
     expect($response->json('your_reaction'))->toBeNull()
@@ -91,7 +91,7 @@ it('swaps the row in place when the user reacts with a different emoji', functio
     ]);
 
     $response = $this->actingAs($this->owner)
-        ->postJson("/api/v1/community/posts/{$this->post->id}/react", ['emoji' => 'pray'])
+        ->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'pray'])
         ->assertOk();
 
     expect($response->json('your_reaction'))->toBe('pray')
@@ -111,7 +111,7 @@ it('aggregates counts across users on the same post', function (): void {
     PostReaction::create(['post_id' => $this->post->id, 'user_id' => $athleteB->id, 'emoji' => ReactionEmoji::Pray]);
 
     $response = $this->actingAs($this->owner)
-        ->postJson("/api/v1/community/posts/{$this->post->id}/react", ['emoji' => 'clap'])
+        ->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'clap'])
         ->assertOk();
 
     expect($response->json('counts.clap'))->toBe(2)
@@ -124,7 +124,7 @@ it('allows an athlete in the same academy to react', function (): void {
     $athlete = authedAthlete($this->academy);
 
     $this->actingAs($athlete)
-        ->postJson("/api/v1/community/posts/{$this->post->id}/react", ['emoji' => 'pray'])
+        ->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'pray'])
         ->assertOk()
         ->assertJsonPath('your_reaction', 'pray');
 });
@@ -135,7 +135,7 @@ it('rejects a reaction from a user in a different academy with 403 envelope', fu
     $otherOwner = userWithAcademy();
 
     $this->actingAs($otherOwner)
-        ->postJson("/api/v1/community/posts/{$this->post->id}/react", ['emoji' => 'clap'])
+        ->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'clap'])
         ->assertStatus(403)
         ->assertExactJson(['message' => 'Forbidden.']);
 
@@ -144,11 +144,29 @@ it('rejects a reaction from a user in a different academy with 403 envelope', fu
 
 it('rejects an unknown emoji value with 422', function (): void {
     $this->actingAs($this->owner)
-        ->postJson("/api/v1/community/posts/{$this->post->id}/react", ['emoji' => 'fire'])
+        ->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'fire'])
         ->assertStatus(422);
 });
 
 it('rejects an unauthenticated request with 401', function (): void {
-    $this->postJson("/api/v1/community/posts/{$this->post->id}/react", ['emoji' => 'clap'])
+    $this->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'clap'])
         ->assertStatus(401);
+});
+
+// ── Rate limit (60 / minute / user) ───────────────────────────────────────
+
+it('returns 429 when the user exceeds 60 reactions per minute', function (): void {
+    // Hit the limit exactly — 60 toggles flip the row between insert /
+    // delete; the 61st must return 429. Acting as the owner so the
+    // FormRequest authorize() gate (academy match) passes on every
+    // attempt; the limiter is keyed on the user id.
+    for ($i = 0; $i < 60; $i++) {
+        $this->actingAs($this->owner)
+            ->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'clap'])
+            ->assertOk();
+    }
+
+    $this->actingAs($this->owner)
+        ->postJson("/api/v1/community/posts/{$this->post->id}/reactions", ['emoji' => 'clap'])
+        ->assertStatus(429);
 });

@@ -400,9 +400,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         // PR-C server (#603): toggle the caller's emoji reaction on a
         // post. Same-emoji toggles off; different emoji swaps in place.
+        // Rate-limited at 60 / minute / user via the `community-react`
+        // named limiter (see AppServiceProvider) — PRD acceptance
+        // criterion + Copilot review on PR #616.
         Route::post(
-            'posts/{post}/react',
+            'posts/{post}/reactions',
             [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
-        );
+        )->middleware('throttle:community-react');
     });
 });
