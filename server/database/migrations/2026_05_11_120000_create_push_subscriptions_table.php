@@ -28,8 +28,11 @@ use Illuminate\Support\Facades\Schema;
  * The endpoint string is the unique device identifier the push
  * service hands out; the same browser re-subscribing reuses the URL.
  * UNIQUE on the full `endpoint` would push the index size over
- * MySQL's 3072-byte InnoDB limit; we hash and unique on the prefix
- * + user_id instead.
+ * MySQL's 3072-byte InnoDB limit, so we store a SHA-256 hex of the
+ * full endpoint in `endpoint_hash` and UNIQUE on
+ * `(user_id, endpoint_hash)` — a 32+64-byte composite that stays
+ * comfortably under the limit while preserving the per-device
+ * uniqueness contract.
  */
 return new class extends Migration
 {

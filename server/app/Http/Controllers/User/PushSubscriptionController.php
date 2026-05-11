@@ -38,27 +38,25 @@ class PushSubscriptionController extends Controller
         return response()->json([
             'data' => $rows->map(static fn (PushSubscription $s): array => [
                 'id' => $s->id,
-                // Show only the host + path prefix — the full
-                // endpoint is sensitive (it's the bearer credential
-                // the push vendor uses to route messages). The user
-                // recognises "Chrome on macOS — fcm.googleapis.com"
-                // well enough.
+                // Show only the host — the full endpoint is
+                // sensitive (it's the bearer credential the push
+                // vendor uses to route messages). The user recognises
+                // "fcm.googleapis.com" / "updates.push.services.mozilla.com"
+                // well enough to identify the device they want to revoke.
                 'endpoint_host' => parse_url($s->endpoint, PHP_URL_HOST) ?: 'unknown',
                 'last_seen_at' => $s->last_seen_at?->toIso8601String(),
                 'created_at' => $s->created_at->toIso8601String(),
             ])->all(),
             'meta' => [
                 'vapid_public_key' => config('push.vapid.public_key'),
-                'enabled' => \is_string(config('push.vapid.public_key'))
-                    && config('push.vapid.public_key') !== '',
+                'enabled' => self::vapidConfigured(),
             ],
         ]);
     }
 
     public function store(Request $request): JsonResponse
     {
-        $vapidPublic = config('push.vapid.public_key');
-        if (! \is_string($vapidPublic) || $vapidPublic === '') {
+        if (! self::vapidConfigured()) {
             return response()->json(
                 ['message' => 'Web Push is not configured on this server.'],
                 503,
@@ -67,11 +65,24 @@ class PushSubscriptionController extends Controller
 
         /** @var User $user */
         $user = $request->user();
+        // `endpoint` is constrained to `https://` so a malformed
+        // PushSubscription envelope can't shape-shift into an SSRF
+        // vector once server-side fanout is wired — the fanout
+        // worker POSTs back to this URL with a JWT signed by our
+        // VAPID private key, and accepting arbitrary http/internal/
+        // loopback URLs would let an authenticated user point the
+        // worker at internal services. The `https_url` validator
+        // accepts only well-formed https URLs.
+        //
+        // `keys.p256dh` / `keys.auth` carry the base64url shape from
+        // the W3C PushSubscription serialisation — the `regex` rule
+        // rejects anything that isn't [A-Za-z0-9_-]+ so garbage rows
+        // can't slip in and fail later at signing time.
         $validated = $request->validate([
-            'endpoint' => ['required', 'string', 'url', 'max:1024'],
+            'endpoint' => ['required', 'string', 'max:1024', 'regex:/^https:\/\//', 'url'],
             'keys' => ['required', 'array'],
-            'keys.p256dh' => ['required', 'string', 'max:255'],
-            'keys.auth' => ['required', 'string', 'max:64'],
+            'keys.p256dh' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9_\-]+$/'],
+            'keys.auth' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_\-]+$/'],
         ]);
 
         /** @var string $endpoint */
@@ -116,5 +127,24 @@ class PushSubscriptionController extends Controller
         }
 
         return response()->json(['data' => ['revoked' => true]]);
+    }
+
+    /**
+     * "Web Push is fully configured" is BOTH keys + a subject set.
+     * Checking only the public key (the early shape of this gate)
+     * would let the SPA subscribe successfully but every server-side
+     * push would fail at signing — the wrong place for the user-
+     * visible error to surface. All three pieces gate the meta.enabled
+     * flag AND the store() 503 branch.
+     */
+    private static function vapidConfigured(): bool
+    {
+        $pub = config('push.vapid.public_key');
+        $priv = config('push.vapid.private_key');
+        $sub = config('push.vapid.subject');
+
+        return \is_string($pub) && $pub !== ''
+            && \is_string($priv) && $priv !== ''
+            && \is_string($sub) && $sub !== '';
     }
 }
