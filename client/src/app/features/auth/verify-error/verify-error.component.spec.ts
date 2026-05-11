@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { EMPTY, of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { VerifyErrorComponent } from './verify-error.component';
 import { AuthService } from '../../../core/services/auth.service';
@@ -114,9 +114,9 @@ describe('VerifyErrorComponent (#580 + #585)', () => {
   });
 
   it('resend() is a no-op while a previous resend is in flight (re-entrancy guard)', () => {
-    // Use EMPTY so the first call neither completes nor errors during the test.
+    // Use NEVER so the first resend() observable stays pending — neither emits, completes, nor errors. This keeps `sending()` set so the re-entrancy guard fires on the 2nd and 3rd calls.
     const getToken = vi.fn(() => 'tok');
-    const resendVerificationEmail = vi.fn(() => EMPTY);
+    const resendVerificationEmail = vi.fn(() => NEVER);
     const navigateByUrl = vi.fn(() => Promise.resolve(true));
     const messageAdd = vi.fn();
 
