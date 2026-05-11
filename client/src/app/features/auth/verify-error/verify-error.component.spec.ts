@@ -7,10 +7,12 @@ import { VerifyErrorComponent } from './verify-error.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 
-function setup(opts: {
-  hasToken?: boolean;
-  resendResponse?: 'ok' | '429' | '401' | 'generic';
-} = {}) {
+function setup(
+  opts: {
+    hasToken?: boolean;
+    resendResponse?: 'ok' | '429' | '401' | 'generic';
+  } = {},
+) {
   const getToken = vi.fn(() => (opts.hasToken === false ? null : 'tok'));
 
   const resendVerificationEmail = vi.fn(() => {
