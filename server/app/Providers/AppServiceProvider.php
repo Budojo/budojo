@@ -106,6 +106,17 @@ class AppServiceProvider extends ServiceProvider
             ),
         );
 
+        // Community RSVP toggle (#605, M9 PR-E). Thirty per minute
+        // per authenticated user — RSVPs are intent-toggles, not
+        // create-once; the cap mirrors `community-react`'s shape
+        // (positive interaction, low intrinsic value to spam).
+        RateLimiter::for(
+            'community-rsvp',
+            fn (Request $request): Limit => Limit::perMinute(30)->by(
+                $request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown',
+            ),
+        );
+
         // Reshape the password-reset URL embedded in the email to
         // point at the SPA's `/auth/reset-password` route instead of
         // a server-rendered Laravel page. Same APP_URL → CLIENT_URL
