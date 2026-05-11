@@ -20,6 +20,7 @@
     "open": "Open navigation",
     "close": "Close navigation",
     "homeAriaLabel": "Budojo — go to dashboard home",
+    "sidebarAriaLabel": "Primary navigation",
     "profileAriaLabel": "Open your profile",
     "academy": "Academy",
     "athletes": "Athletes",
@@ -198,6 +199,21 @@
       "title": "Welcome to Budojo",
       "body": "Your athlete account is ready. The pages where you'll see your own attendance history, payments, and documents are coming in the next release — for now, sit tight, your academy will let you know when there's more here.",
       "signOut": "Sign out"
+    },
+    "nav": {
+      "profile": "Profile"
+    },
+    "profile": {
+      "title": "Your profile",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "handle": "Username",
+      "noHandle": "No username set yet",
+      "email": "Email",
+      "verified": "Verified",
+      "unverified": "Not verified",
+      "editHint": "Editing your profile is coming in the next release.",
+      "loading": "Loading your profile…"
     }
   },
   "notifications": {
