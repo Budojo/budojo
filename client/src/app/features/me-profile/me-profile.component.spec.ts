@@ -1,7 +1,5 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { MeProfileComponent } from './me-profile.component';
@@ -16,8 +14,6 @@ function setup(opts: { user?: Partial<User> | null } = {}) {
   TestBed.configureTestingModule({
     imports: [MeProfileComponent],
     providers: [
-      provideHttpClient(),
-      provideHttpClientTesting(),
       MessageService,
       {
         provide: AuthService,

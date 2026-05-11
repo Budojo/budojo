@@ -213,7 +213,7 @@
       "firstName": "First name",
       "lastName": "Last name",
       "handle": "Username",
-      "handleHint": "Lowercase letters, numbers, underscore. Leave empty to clear.",
+      "handleHint": "Lowercase letters, numbers, dots, underscores. 3–30 characters; must start with a letter. Leave empty to clear.",
       "noHandle": "No username set yet",
       "email": "Email",
       "verified": "Verified",

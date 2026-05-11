@@ -1,6 +1,13 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -24,6 +31,16 @@ import { AuthService } from '../../core/services/auth.service';
  * Email change is intentionally NOT in this form — it has its own
  * dedicated verify-by-token flow at `/me/email-change` (#476).
  */
+const noConsecutiveDots: ValidatorFn = (control: AbstractControl): ValidationErrors | null =>
+  typeof control.value === 'string' && control.value.includes('..')
+    ? { handleConsecutiveDots: true }
+    : null;
+
+const noTrailingDot: ValidatorFn = (control: AbstractControl): ValidationErrors | null =>
+  typeof control.value === 'string' && control.value.endsWith('.')
+    ? { handleTrailingDot: true }
+    : null;
+
 @Component({
   selector: 'app-me-profile',
   standalone: true,
@@ -44,14 +61,26 @@ export class MeProfileComponent {
   protected readonly editing = signal(false);
   protected readonly submitting = signal(false);
 
+  /**
+   * Form validators mirror the server's `UpdateProfileRequest` rules
+   * (Copilot review on PR #626):
+   *
+   * - first_name / last_name: required, min 2, max 100 chars (per
+   *   `'min:2', 'max:100'` server-side).
+   * - handle: optional (empty string → null server-side). When set,
+   *   matches the server's `HandleFormat` rule — first char [a-z],
+   *   remaining 2-29 chars [a-z0-9._], total 3-30 chars, no
+   *   consecutive dots, no leading / trailing dot. The pattern is
+   *   the canonical server regex with the consecutive-dot guard
+   *   added as a second regex (lookahead is hard to read).
+   */
   protected readonly form = this.fb.nonNullable.group({
-    first_name: ['', [Validators.required, Validators.maxLength(50)]],
-    last_name: ['', [Validators.required, Validators.maxLength(50)]],
-    // Handle is optional — empty string in the form means "clear it"
-    // server-side (sent as null). The server enforces lowercase /
-    // uniqueness / 30-char cap; the SPA-side maxLength is a UX
-    // pre-check, not the canonical validation.
-    handle: ['', [Validators.maxLength(30), Validators.pattern(/^[a-z0-9_]*$/)]],
+    first_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+    last_name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+    handle: [
+      '',
+      [Validators.pattern(/^$|^[a-z][a-z0-9._]{2,29}$/), noConsecutiveDots, noTrailingDot],
+    ],
   });
 
   protected startEdit(): void {
@@ -104,11 +133,21 @@ export class MeProfileComponent {
       });
   }
 
+  /**
+   * Whether the 422 response specifically signals `handle_taken`
+   * (the dedicated UNIQUE-constraint code from the server's
+   * UpdateProfileRequest messages map). The previous shape returned
+   * `true` for ANY error under `errors.handle`, which incorrectly
+   * surfaced the "username is already taken" toast on a
+   * `handle_invalid_format` failure (Copilot review on PR #626).
+   */
   private isHandleTaken(err: unknown): boolean {
     if (typeof err !== 'object' || err === null) return false;
     const status = (err as { status?: unknown }).status;
     if (status !== 422) return false;
     const errorBody = (err as { error?: { errors?: Record<string, unknown> } }).error;
-    return errorBody?.errors !== undefined && 'handle' in errorBody.errors;
+    const handleErrors = errorBody?.errors?.['handle'];
+    if (!Array.isArray(handleErrors) || handleErrors.length === 0) return false;
+    return handleErrors[0] === 'handle_taken';
   }
 }

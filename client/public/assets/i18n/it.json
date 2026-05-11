@@ -213,7 +213,7 @@
       "firstName": "Nome",
       "lastName": "Cognome",
       "handle": "Username",
-      "handleHint": "Lettere minuscole, numeri, underscore. Lascia vuoto per rimuoverlo.",
+      "handleHint": "Lettere minuscole, numeri, punti, underscore. 3–30 caratteri; deve iniziare con una lettera. Lascia vuoto per rimuoverlo.",
       "noHandle": "Username non ancora impostato",
       "email": "Email",
       "verified": "Verificata",
