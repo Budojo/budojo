@@ -59,6 +59,32 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.6.1',
+      date: '2026-05-11',
+      headline:
+        'A polish release. One small visible fix in the email-verification flow: the "Resend verification email" button on /auth/verify-error now shows a spinner and disables itself for the duration of the request (previously you clicked and got no feedback until the redirect / toast arrived at the end). The rest is behind-the-scenes — extracted a shared <app-verify-page> chrome across the three verify landing pages, dropped the leftover one-resident `Account/` namespace on the backend (controllers, actions, and form request all redistributed by consumer to Auth/User/), added Vitest coverage on five previously-untested Angular components (35+ new tests pinning state machines + error paths), and a /graphify knowledge-graph integration that surfaced the namespace-cleanup issues in this release as part of its diagnostic pass. Nothing visible in the dashboard from the internal work, but cleaner foundation for the next milestone.',
+      sections: [
+        {
+          heading: "🐛 Email verify — resend button now shows you it's working",
+          bullets: [
+            'If a verification email link expired or got mis-clicked and you landed on the "Verification failed" page, clicking Resend used to give you no visible feedback for the full duration of the request — the button stayed bright and clickable, the page stayed put. Annoying enough that some people clicked twice; the app already ignored the second click via an internal re-entrancy guard, but from the screen you couldn\'t tell.',
+            'Now: the button shows a spinner and disables itself for the whole duration of the resend request. Standard "your click registered, sit tight" feedback.',
+          ],
+        },
+        {
+          heading:
+            '🔧 Behind the scenes — auth-chrome refactor + first test coverage on a stale corner',
+          bullets: [
+            "The three landing pages users hit after clicking a verification email (verify-success, verify-error, verify-email-change) used to ship three near-identical copies of the page chrome. Centred icon, title, message, CTA all live in one shared <app-verify-page> component now, with state-coloured icon variants. When the M7 athlete-invite verification link lands, it'll be a 5-line consumer of the same component instead of a fourth copy.",
+            'PHP-side: the `App\\Http\\Controllers\\Account\\` namespace had exactly one controller in it (EmailChangeController) — left over from earlier rapid feature shipping. Split it so request + cancel (authenticated /me/* actions) live under User/, and verify (public token-based) lives next to the existing primary-email verify under Auth/. The Actions/Account/ namespace followed its controllers the same way. URLs unchanged.',
+            "Five previously-untested Angular components got proper Vitest specs: VerifySuccess, VerifyError, AthletePortalWelcome, NotificationBell, AthleteInvite — 35+ new tests pinning their state machines, lifecycle hooks, branching logic, and error paths. They were Cypress-only before; now a future refactor can't silently regress them at the unit level.",
+            'New /graphify slash command in the repo — it builds a navigable graph of the codebase (3.7k nodes, 4.6k edges) and the agent consults it before touching unfamiliar code. A post-commit hook keeps the graph current. Pure agent-side tooling, but it actually surfaced the two namespace-cleanup issues in this release.',
+            "Project board hygiene pass alongside: 30 issues re-assigned to the right owner, every stale test-plan checkbox on closed PRs ticked or cleaned, two new entries added to the team gotchas file so the same trips don't happen twice.",
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.6.0',
       date: '2026-05-11',
       headline:
