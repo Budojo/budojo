@@ -22,10 +22,12 @@ function makeRow(overrides: Partial<InboxNotification> = {}): InboxNotification 
   } as InboxNotification;
 }
 
-function setup(opts: {
-  unread?: number;
-  loadResponse?: 'ok' | 'error';
-} = {}) {
+function setup(
+  opts: {
+    unread?: number;
+    loadResponse?: 'ok' | 'error';
+  } = {},
+) {
   const unreadSig = signal(opts.unread ?? 0);
   const rowsSig = signal<readonly InboxNotification[]>([]);
   const hasUnreadSig = computed(() => unreadSig() > 0);
