@@ -1,34 +1,13 @@
-<div class="verify-page" data-cy="verify-email-change">
-  @if (state() === 'loading') {
-    <div class="verify-page__icon" aria-hidden="true">
-      <p-progress-spinner styleClass="verify-page__spinner" strokeWidth="3" />
-    </div>
-    <h1 class="verify-page__title" data-cy="verify-email-change-loading">
-      {{ 'account.emailChange.verify.loadingTitle' | translate }}
-    </h1>
-  } @else if (state() === 'success') {
-    <div class="verify-page__icon verify-page__icon--success">
-      <i class="pi pi-check-circle" aria-hidden="true"></i>
-    </div>
-    <h1 class="verify-page__title" data-cy="verify-email-change-success">
-      {{ 'account.emailChange.verify.successTitle' | translate }}
-    </h1>
-    <p class="verify-page__message">
-      {{ 'account.emailChange.verify.successMessage' | translate }}
-    </p>
-    <p class="verify-page__hint" data-cy="verify-email-change-redirect-hint">
-      {{ 'account.emailChange.verify.successRedirectHint' | translate }}
-    </p>
-  } @else {
-    <div class="verify-page__icon verify-page__icon--error">
-      <i class="pi pi-times-circle" aria-hidden="true"></i>
-    </div>
-    <h1 class="verify-page__title" data-cy="verify-email-change-error">
-      {{ 'account.emailChange.verify.errorTitle' | translate }}
-    </h1>
-    <p class="verify-page__message">
-      {{ 'account.emailChange.verify.errorMessage' | translate }}
-    </p>
+<app-verify-page
+  [state]="state()"
+  [iconClass]="iconClass()"
+  [titleKey]="titleKey()"
+  [titleDataCy]="titleDataCy()"
+  [messageKey]="messageKey()"
+  [hintKey]="hintKey()"
+  [hintDataCy]="hintDataCy()"
+>
+  @if (state() === 'error') {
     @if (errorBackTarget() === '/dashboard/profile') {
       <p-button
         type="button"
@@ -49,4 +28,4 @@
       />
     }
   }
-</div>
+</app-verify-page>
