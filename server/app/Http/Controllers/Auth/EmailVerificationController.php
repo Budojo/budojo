@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
-use App\Actions\Account\ConfirmEmailChangeAction;
+use App\Actions\Auth\ConfirmEmailChangeAction;
 use App\Exceptions\EmailChangeTokenInvalidException;
 use App\Http\Controllers\Controller;
 use App\Models\User;
