@@ -451,5 +451,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
             'comments/{comment}',
             [\App\Http\Controllers\Community\CommunityCommentsController::class, 'destroy'],
         );
+
+        // PR-E server (#605): RSVP toggle on event-type posts.
+        // Same-response toggles off, different-response swaps in
+        // place. Only `type=event` posts accept RSVPs (FormRequest
+        // gate). Rate-limited at 30/min/user via `community-rsvp`.
+        Route::post(
+            'posts/{post}/rsvp',
+            [\App\Http\Controllers\Community\CommunityRsvpController::class, 'toggle'],
+        )->middleware('throttle:community-rsvp');
     });
 });

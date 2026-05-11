@@ -3760,6 +3760,71 @@ paths:
               example: { message: Forbidden. }
         '404': { description: Comment not found. }
 
+  /community/posts/{post}/rsvp:
+    post:
+      tags: [community]
+      summary: Toggle an RSVP on an event-type post
+      description: |
+        Toggle the caller's RSVP on an event-type community post.
+        Same-response toggles off, different-response swaps in
+        place (Going ↔ Maybe). Only `type=event` posts accept
+        RSVPs — other types surface as 422 with the
+        `rsvp_not_event_post` error key. Rate-limited at 30/min/user
+        via the `community-rsvp` named limiter.
+
+        Response carries the resulting state so the SPA can
+        reconcile its optimistic update in one roundtrip.
+      operationId: toggleCommunityRsvp
+      parameters:
+        - in: path
+          name: post
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [response]
+              properties:
+                response: { $ref: '#/components/schemas/RsvpResponse' }
+      responses:
+        '200':
+          description: RSVP state after toggle.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [your_rsvp, counts]
+                properties:
+                  your_rsvp:
+                    type: string
+                    enum: [going, maybe]
+                    nullable: true
+                    description: 'The caller''s RSVP after the toggle. Null when toggled off.'
+                  counts:
+                    type: object
+                    required: [going, maybe]
+                    properties:
+                      going: { type: integer, minimum: 0 }
+                      maybe: { type: integer, minimum: 0 }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — caller belongs to a different academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '404': { description: Post not found. }
+        '422':
+          description: Unknown response value OR post is not an event (error key `rsvp_not_event_post`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationErrorBody' }
+        '429':
+          description: Rate-limit exceeded (30 RSVPs / minute / user).
+
 components:
 
   securitySchemes:
@@ -5316,6 +5381,15 @@ components:
         short positive-only set — `clap` for "ben fatto" + `pray` for
         "rispetto / namaste". V2 may extend if 2+ academies request
         different defaults (PRD open question).
+
+    RsvpResponse:
+      type: string
+      enum: [going, maybe]
+      description: |
+        RSVP response on an event-type community post (M9 PR-E). Two
+        explicit positive values. The absence of a row means "no
+        answer" — there is no explicit Declined value (V1 only tracks
+        who is coming).
 
     CommunityPost:
       type: object
