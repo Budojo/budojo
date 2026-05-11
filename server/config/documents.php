@@ -18,9 +18,12 @@ return [
     |
     | An empty / missing value disables encryption — the upload path
     | falls back to writing plaintext + setting `is_encrypted = false`.
-    | The dev / test environments use a deterministic key when
-    | DOCUMENT_ENCRYPTION_KEY is unset so PEST + Cypress runs don't
-    | need to provision their own secret.
+    |
+    | **Production MUST set this** — DocumentEncryption refuses to
+    | construct when the key is empty, which is the safe default
+    | (encryption off, plaintext writes). The PEST suite provisions
+    | a deterministic test key via `phpunit.xml` so feature tests
+    | exercise the encryption path without per-test setup.
     */
     'encryption_key' => env('DOCUMENT_ENCRYPTION_KEY'),
 ];

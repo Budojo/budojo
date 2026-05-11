@@ -57,7 +57,15 @@ class UploadDocumentAction
             $encryption = new DocumentEncryption();
             $ciphertext = $encryption->encrypt($plaintext);
             $path = 'documents/' . Str::random(40) . '.enc';
-            Storage::disk('local')->put($path, $ciphertext);
+            // `put` returns false on disk-write failure. Without
+            // checking we'd create a DB row pointing at a missing /
+            // partial file — the download path would 404 and the
+            // user has no signal that something went wrong on
+            // upload. Throw so the controller surfaces a 500 instead.
+            $written = Storage::disk('local')->put($path, $ciphertext);
+            if ($written !== true) {
+                throw new \RuntimeException('Failed to store encrypted document.');
+            }
         } else {
             $stored = $file->store('documents', 'local');
             if ($stored === false) {

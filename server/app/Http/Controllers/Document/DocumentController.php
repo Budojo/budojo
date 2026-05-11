@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -95,11 +96,20 @@ class DocumentController extends Controller
 
                 return response()->json(['message' => 'Failed to decrypt document.'], 500);
             }
-            $filename = $document->original_name;
+            // `original_name` is user-controlled — Symfony's
+            // HeaderUtils::makeDisposition handles the RFC 6266
+            // serialisation including the UTF-8 filename* parameter
+            // and quotes/CRLF escaping. Rolling our own with
+            // addslashes was a header-injection foot-gun.
+            $disposition = HeaderUtils::makeDisposition(
+                HeaderUtils::DISPOSITION_ATTACHMENT,
+                $document->original_name,
+                self::sanitizeAsciiFilename($document->original_name),
+            );
 
             return response($plaintext, 200, [
                 'Content-Type' => $document->mime_type,
-                'Content-Disposition' => 'attachment; filename="' . addslashes($filename) . '"',
+                'Content-Disposition' => $disposition,
                 'Content-Length' => (string) \strlen($plaintext),
             ]);
         }
@@ -143,5 +153,21 @@ class DocumentController extends Controller
         return $user->academy !== null
             && $document->athlete !== null
             && $document->athlete->academy_id === $user->academy->id;
+    }
+
+    /**
+     * ASCII fallback used as the legacy `filename=` parameter on
+     * Content-Disposition. RFC 6266 specifies the modern `filename*`
+     * carries the UTF-8 value; older user agents that ignore it fall
+     * back to this. Strip every non-ASCII char and replace any
+     * quote / control / line-break with `_` so the fallback can't
+     * inject headers regardless of upstream validation.
+     */
+    private static function sanitizeAsciiFilename(string $name): string
+    {
+        $ascii = (string) preg_replace('/[^\x20-\x7E]/', '', $name);
+        $ascii = (string) preg_replace('/["\\\\\r\n]/', '_', $ascii);
+
+        return $ascii === '' ? 'document' : $ascii;
     }
 }
