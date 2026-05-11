@@ -3552,6 +3552,70 @@ paths:
               example: { message: Forbidden. }
         '404': { description: Post not found (already hard-deleted or invalid id). }
 
+  /community/posts/{post}/react:
+    post:
+      tags: [community]
+      summary: Toggle the authenticated user's emoji reaction on a post
+      description: |
+        Toggle the caller's emoji reaction on the given community post.
+        One row per `(post_id, user_id)` per the PR-A UNIQUE index — same-
+        emoji toggles off, different-emoji swaps in place. Owners and
+        athletes in the post's academy both react via this endpoint;
+        cross-academy → 403 with the canonical `{"message":"Forbidden."}`
+        envelope.
+
+        Response carries the resulting state so the SPA can reconcile
+        its optimistic update without a second fetch.
+      operationId: toggleCommunityReaction
+      parameters:
+        - in: path
+          name: post
+          required: true
+          schema: { type: integer, minimum: 1 }
+          description: Community post id.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emoji]
+              properties:
+                emoji: { $ref: '#/components/schemas/ReactionEmoji' }
+      responses:
+        '200':
+          description: Reaction state after toggle.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [your_reaction, counts]
+                properties:
+                  your_reaction:
+                    type: string
+                    enum: [clap, pray]
+                    nullable: true
+                    description: 'The caller''s reaction after toggling. Null when the toggle was off.'
+                  counts:
+                    type: object
+                    required: [clap, pray]
+                    properties:
+                      clap: { type: integer, minimum: 0 }
+                      pray: { type: integer, minimum: 0 }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — caller belongs to a different academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '404': { description: Post not found. }
+        '422':
+          description: Unknown emoji value.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationErrorBody' }
+
 components:
 
   securitySchemes:
@@ -5099,6 +5163,15 @@ components:
             - $ref: '#/components/schemas/Belt'
           nullable: true
           description: 'Athlete belt color. Null for owner-authored posts.'
+
+    ReactionEmoji:
+      type: string
+      enum: [clap, pray]
+      description: |
+        Allowed emoji on `post_reactions` (M9 PR-C). V1 hard-codes a
+        short positive-only set — `clap` for "ben fatto" + `pray` for
+        "rispetto / namaste". V2 may extend if 2+ academies request
+        different defaults (PRD open question).
 
     CommunityPost:
       type: object
