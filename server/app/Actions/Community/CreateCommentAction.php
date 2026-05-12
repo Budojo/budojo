@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\CommunityReplyNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -83,6 +84,24 @@ class CreateCommentAction
             return;
         }
 
-        Notification::send($eligible, new CommunityReplyNotification($newComment, $author));
+        // Best-effort fanout: if the inbox INSERT throws (DB hiccup,
+        // deadlock, exotic driver error) the comment write has
+        // already committed; the controller's 201 path should
+        // remain. Logging preserves the audit trail without
+        // surfacing a 500 to the caller — the docblock above
+        // promises this shape; previously the unwrapped
+        // `Notification::send` could 500 after a successful insert
+        // (Copilot review on PR #629).
+        try {
+            Notification::send($eligible, new CommunityReplyNotification($newComment, $author));
+        } catch (\Throwable $e) {
+            Log::warning('community_reply notification fanout failed', [
+                'post_id' => $newComment->post_id,
+                'comment_id' => $newComment->id,
+                'recipient_count' => $eligible->count(),
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

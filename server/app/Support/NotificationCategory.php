@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Support;
 
 /**
- * Catalogue of toggleable email-notification categories (#416).
+ * Catalogue of toggleable notification categories (#416, extended
+ * for in-app inbox + push channels by M9 PR-F).
  *
  * Each constant is the JSON key under `users.notification_preferences`
- * for that category. The dispatchers (Artisan commands + Mailable
- * sites) consult `NotificationPreferences::isEnabled` keyed by these
- * strings before queueing a digest / reminder email.
+ * for that category. The dispatchers (Artisan commands for email
+ * digests, Action-layer fanout for inbox-channel notifications, the
+ * future Web Push worker) consult `NotificationPreferences::isEnabled`
+ * keyed by these strings before delivering. Originally email-only
+ * (M5); now multi-channel — each constant's docblock spells out
+ * which channel it ships on.
  *
  * **Not listed here**: transactional emails — `welcome`,
  * `password-reset`, `email-verification`,

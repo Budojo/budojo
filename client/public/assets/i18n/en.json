@@ -722,8 +722,8 @@
       "genericError": "Couldn't update your password. Please try again."
     },
     "notifications": {
-      "title": "Email notifications",
-      "subtitle": "Choose which non-essential emails you want to receive.",
+      "title": "Notifications",
+      "subtitle": "Choose which notifications you want to receive. Each row lists how it's delivered (email digest, inbox, …).",
       "medicalCertReminders": {
         "label": "Medical certificate expiring reminders",
         "description": "Daily digest at 09:00 listing athletes whose medical certificate expires in 30, 7, or 0 days."

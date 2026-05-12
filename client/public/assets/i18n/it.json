@@ -722,8 +722,8 @@
       "genericError": "Non è stato possibile aggiornare la password. Riprova."
     },
     "notifications": {
-      "title": "Notifiche email",
-      "subtitle": "Scegli quali email non essenziali vuoi ricevere.",
+      "title": "Notifiche",
+      "subtitle": "Scegli quali notifiche vuoi ricevere. Ogni riga indica come viene consegnata (digest email, inbox, …).",
       "medicalCertReminders": {
         "label": "Promemoria scadenza certificato medico",
         "description": "Digest giornaliero alle 09:00 con gli atleti il cui certificato medico scade tra 30, 7 o 0 giorni."
