@@ -6,9 +6,15 @@ namespace App\Actions\Community;
 
 use App\Enums\CommunityPostType;
 use App\Enums\CommunityPostVisibility;
+use App\Models\Athlete;
 use App\Models\CommunityPost;
 use App\Models\User;
+use App\Notifications\CommunityEventNewNotification;
+use App\Support\NotificationCategory;
+use App\Support\NotificationPreferences;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Create an event-type community post on behalf of an academy owner.
@@ -34,6 +40,12 @@ use Carbon\CarbonImmutable;
  * created post can't have either yet, so the eager-load is a cheap
  * "always-empty collection" placeholder that lets the Resource read
  * `$post->reactions->first()` without an extra lazy-load query.
+ *
+ * **Fanout (M9 PR-F slice 2, #606)**: after inserting, the Action
+ * notifies every academy user EXCEPT the editor whose
+ * `community_event_new` preference is enabled (default-on). The
+ * fanout is best-effort — failures are logged and DO NOT roll back
+ * the event-post write.
  *
  * @phpstan-type EventPayload array{
  *   title: string,
@@ -92,6 +104,61 @@ class CreateEventAction
             'rsvps' => fn ($q) => $q->where('user_id', $author->id),
         ]);
 
+        $this->fanoutEventNew($post, $author, $academyId);
+
         return $post;
+    }
+
+    /**
+     * Notify every academy user (athletes linked to a user_id) whose
+     * `community_event_new` preference is enabled, excluding the
+     * editor. Default-on category — absent-key recipients receive the
+     * notification.
+     *
+     * Best-effort like the other PR-F fanouts: failures are captured
+     * via `Log::warning` so the controller's 201 path is unaffected
+     * by a DB / driver hiccup on the inbox INSERT.
+     */
+    private function fanoutEventNew(CommunityPost $post, User $editor, int $academyId): void
+    {
+        // Athletes in the academy with a linked user (invited-but-
+        // not-accepted rows have user_id NULL and are skipped).
+        // Excludes the editor. DISTINCT at the SQL layer (matches
+        // CreateCommentAction's pattern) — cheaper than PHP-side
+        // dedup on academies with many athletes (Copilot review #634).
+        $recipientIds = Athlete::query()
+            ->where('academy_id', $academyId)
+            ->whereNotNull('user_id')
+            ->where('user_id', '!=', $editor->id)
+            ->distinct()
+            ->pluck('user_id')
+            ->all();
+
+        if ($recipientIds === []) {
+            return;
+        }
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, User> $recipients */
+        $recipients = User::query()->whereIn('id', $recipientIds)->get();
+
+        $eligible = $recipients->filter(
+            fn (User $u) => NotificationPreferences::isEnabled($u, NotificationCategory::COMMUNITY_EVENT_NEW),
+        );
+
+        if ($eligible->isEmpty()) {
+            return;
+        }
+
+        try {
+            Notification::send($eligible, new CommunityEventNewNotification($post));
+        } catch (\Throwable $e) {
+            Log::warning('community_event_new notification fanout failed', [
+                'post_id' => $post->id,
+                'academy_id' => $academyId,
+                'recipient_count' => $eligible->count(),
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

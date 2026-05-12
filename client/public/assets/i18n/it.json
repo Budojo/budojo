@@ -740,6 +740,10 @@
         "label": "Promozioni di cintura dei compagni",
         "description": "Notifica in inbox quando un compagno della tua academy conquista una nuova cintura. Disattivata di default — attivala se vuoi ricevere ogni promozione."
       },
+      "communityEventNew": {
+        "label": "Nuovi eventi della tua academy",
+        "description": "Notifica in inbox quando l'owner della tua academy pubblica un nuovo evento — open mat, stage, gare interne."
+      },
       "alwaysSentTitle": "Sempre inviate",
       "alwaysSentSubtitle": "Email transazionali — necessarie al funzionamento del servizio, inviate indipendentemente dalle scelte sopra.",
       "transactional": {
