@@ -41,6 +41,14 @@ final class NotificationCategory
     public const string UNPAID_ATHLETES_DIGEST = 'unpaid_athletes_digest';
 
     /**
+     * Inbox notification fired when someone posts a sibling comment
+     * under a community post that you previously commented on
+     * (M9 PR-F slice 1, #606). The author of the new comment is
+     * never notified. Default-on like the rest of M5's matrix.
+     */
+    public const string COMMUNITY_REPLY = 'community_reply';
+
+    /**
      * Every category, in the order the SPA panel renders them.
      *
      * @return array<int, string>
@@ -50,6 +58,7 @@ final class NotificationCategory
         return [
             self::MEDICAL_CERT_EXPIRY_REMINDERS,
             self::UNPAID_ATHLETES_DIGEST,
+            self::COMMUNITY_REPLY,
         ];
     }
 }

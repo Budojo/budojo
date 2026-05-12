@@ -39,6 +39,11 @@ const CATEGORIES: readonly ToggleableCategory[] = [
     i18nLabel: 'profile.notifications.unpaidAthletesDigest.label',
     i18nDescription: 'profile.notifications.unpaidAthletesDigest.description',
   },
+  {
+    key: 'community_reply',
+    i18nLabel: 'profile.notifications.communityReply.label',
+    i18nDescription: 'profile.notifications.communityReply.description',
+  },
 ];
 
 const TRANSACTIONAL_KEYS: readonly string[] = [

@@ -732,6 +732,10 @@
         "label": "Unpaid athletes monthly digest",
         "description": "Once a month on the 16th, a list of athletes who haven't paid the monthly fee for the current month."
       },
+      "communityReply": {
+        "label": "New reply on your community thread",
+        "description": "Inbox notification when someone replies to a community post you previously commented on."
+      },
       "alwaysSentTitle": "Always sent",
       "alwaysSentSubtitle": "Transactional emails — required for the service to work, sent regardless of the toggles above.",
       "transactional": {
