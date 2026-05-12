@@ -8,7 +8,6 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -34,6 +33,8 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
 import { UserFlairComponent } from '../../shared/components/user-flair/user-flair.component';
 import { CommentsThreadComponent } from './comments-thread/comments-thread.component';
 import { EventComposerComponent } from './event-composer/event-composer.component';
+import { EventDatePipe } from '../../shared/pipes/event-date.pipe';
+import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
 
 /**
  * Athlete-portal community timeline (#614, M9 PR-B2). Consumes the
@@ -58,7 +59,6 @@ import { EventComposerComponent } from './event-composer/event-composer.componen
   standalone: true,
   imports: [
     TranslatePipe,
-    DatePipe,
     ButtonModule,
     SkeletonModule,
     ToastModule,
@@ -69,6 +69,8 @@ import { EventComposerComponent } from './event-composer/event-composer.componen
     UserFlairComponent,
     CommentsThreadComponent,
     EventComposerComponent,
+    RelativeTimePipe,
+    EventDatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [MessageService, ConfirmationService],
