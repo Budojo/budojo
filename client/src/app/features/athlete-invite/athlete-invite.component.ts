@@ -121,11 +121,13 @@ export class AthleteInviteComponent implements OnInit {
           // login flow uses, so the SPA's auth state hydrates from
           // here onwards (the user object, role-aware redirect, etc.).
           this.auth.adoptIssuedToken(data.token);
-          // Athletes always land in the athlete portal welcome shell
-          // (PR-D #456). The dashboard is owner-shaped — its sidebar
-          // and guards assume an academy + role=owner, both of which
-          // an athlete user lacks by definition.
-          this.router.navigate(['/athlete-portal/welcome']);
+          // Athletes land on /dashboard/me/profile — the athlete-side
+          // dashboard shell landed in #610 (M7 PR-D slice 1). The
+          // owner-side /dashboard tree is guarded by `roleOwnerGuard`
+          // and `hasAcademyGuard`, both of which would bounce an
+          // athlete who lacks an academy by definition. /dashboard/me/*
+          // is `roleAthleteGuard`-gated instead.
+          this.router.navigate(['/dashboard/me/profile']);
         },
         error: (err) => {
           this.state.set('error');

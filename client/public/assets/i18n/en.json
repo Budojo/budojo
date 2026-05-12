@@ -20,6 +20,7 @@
     "open": "Open navigation",
     "close": "Close navigation",
     "homeAriaLabel": "Budojo — go to dashboard home",
+    "sidebarAriaLabel": "Primary navigation",
     "profileAriaLabel": "Open your profile",
     "academy": "Academy",
     "athletes": "Athletes",
@@ -198,6 +199,95 @@
       "title": "Welcome to Budojo",
       "body": "Your athlete account is ready. The pages where you'll see your own attendance history, payments, and documents are coming in the next release — for now, sit tight, your academy will let you know when there's more here.",
       "signOut": "Sign out"
+    },
+    "nav": {
+      "profile": "Profile",
+      "feed": "Feed",
+      "academy": "Academy",
+      "attendance": "Attendance",
+      "payments": "Payments",
+      "documents": "Documents"
+    },
+    "profile": {
+      "title": "Your profile",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "handle": "Username",
+      "handleHint": "Lowercase letters, numbers, dots, underscores. 3–30 characters; must start with a letter. Leave empty to clear.",
+      "noHandle": "No username set yet",
+      "email": "Email",
+      "verified": "Verified",
+      "unverified": "Not verified",
+      "loading": "Loading your profile…",
+      "editButton": "Edit profile",
+      "saveButton": "Save",
+      "cancelButton": "Cancel",
+      "editSavedToast": "Profile updated.",
+      "editHandleTakenToast": "That username is already taken — pick another.",
+      "editErrorToast": "Couldn't save your profile. Try again."
+    },
+    "feed": {
+      "title": "Your academy's feed",
+      "emptyBody": "No posts yet — grading celebrations and events from your academy will show up here.",
+      "errorBody": "We couldn't load the feed. Refresh the page and try again.",
+      "beltPromotion": {
+        "text": "{{name}} just earned a new belt!"
+      },
+      "pagination": "Feed pagination",
+      "pageOf": "Page {{current}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next",
+      "reactClap": "Clap",
+      "reactClapAria": "React with a clap",
+      "reactPray": "Respect",
+      "reactPrayAria": "React with respect",
+      "reactToastError": "Couldn't update your reaction. Try again.",
+      "rsvpGoing": "Going",
+      "rsvpGoingAria": "Mark yourself as going",
+      "rsvpMaybe": "Maybe",
+      "rsvpMaybeAria": "Mark yourself as maybe",
+      "rsvpToastError": "Couldn't update your RSVP. Try again.",
+      "commentsToggle": "Comments",
+      "commentsLoading": "Loading comments…",
+      "commentsEmpty": "No comments yet — be the first.",
+      "commentsLoadError": "Couldn't load comments. Try opening this card again.",
+      "commentsLoadMore": "Load more",
+      "commentPlaceholder": "Write a comment…",
+      "commentSubmit": "Post",
+      "commentSubmitError": "Couldn't post your comment. Try again.",
+      "commentDeleteAria": "Delete this comment",
+      "commentDeleteError": "Couldn't delete your comment. Try again."
+    },
+    "academy": {
+      "title": "Your academy",
+      "emptyBody": "You're not currently linked to an academy. Contact your academy owner if you think that's wrong.",
+      "errorBody": "We couldn't load your academy. Refresh the page and try again.",
+      "logoAlt": "{{name}} logo",
+      "addressLabel": "Address",
+      "phoneLabel": "Phone",
+      "websiteLabel": "Website",
+      "ownerSection": "Owner"
+    },
+    "attendance": {
+      "title": "Your attendance",
+      "emptyBody": "No training sessions logged yet — your academy will record them as you train.",
+      "noProfileBody": "We couldn't find your athlete profile. Contact your academy owner.",
+      "errorBody": "We couldn't load your attendance. Refresh the page and try again.",
+      "last30Days": "sessions in the last 30 days"
+    },
+    "payments": {
+      "title": "Your payments",
+      "noProfileBody": "We couldn't find your athlete profile. Contact your academy owner.",
+      "errorBody": "We couldn't load your payments. Refresh the page and try again.",
+      "unpaid": "Unpaid"
+    },
+    "documents": {
+      "title": "Your documents",
+      "emptyBody": "No documents on file yet — your academy will upload them as they collect them.",
+      "noProfileBody": "We couldn't find your athlete profile. Contact your academy owner.",
+      "errorBody": "We couldn't load your documents. Refresh the page and try again.",
+      "expiresAt": "Expires",
+      "expired": "Expired"
     }
   },
   "notifications": {
@@ -632,8 +722,8 @@
       "genericError": "Couldn't update your password. Please try again."
     },
     "notifications": {
-      "title": "Email notifications",
-      "subtitle": "Choose which non-essential emails you want to receive.",
+      "title": "Notifications",
+      "subtitle": "Choose which notifications you want to receive. Each row lists how it's delivered (email digest, inbox, …).",
       "medicalCertReminders": {
         "label": "Medical certificate expiring reminders",
         "description": "Daily digest at 09:00 listing athletes whose medical certificate expires in 30, 7, or 0 days."
@@ -641,6 +731,18 @@
       "unpaidAthletesDigest": {
         "label": "Unpaid athletes monthly digest",
         "description": "Once a month on the 16th, a list of athletes who haven't paid the monthly fee for the current month."
+      },
+      "communityReply": {
+        "label": "New reply on your community thread",
+        "description": "Inbox notification when someone replies to a community post you previously commented on."
+      },
+      "communityBeltCelebration": {
+        "label": "Teammate belt promotions",
+        "description": "Inbox notification when a teammate at your academy earns a new belt. Off by default — opt in to receive every promotion."
+      },
+      "communityEventNew": {
+        "label": "New academy events",
+        "description": "Inbox notification when your academy owner posts a new event — open mats, seminars, in-house tournaments."
       },
       "alwaysSentTitle": "Always sent",
       "alwaysSentSubtitle": "Transactional emails — required for the service to work, sent regardless of the toggles above.",

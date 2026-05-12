@@ -66,9 +66,9 @@ describe('role guards (#445, M7 PR-D)', () => {
       expect(await runGuard(roleOwnerGuard, authStub({ role: 'owner' } as User))).toBe(true);
     });
 
-    it('redirects an athlete to /athlete-portal/welcome (cached user)', async () => {
+    it('redirects an athlete to /dashboard/me/profile (cached user)', async () => {
       const r = (await runGuard(roleOwnerGuard, authStub({ role: 'athlete' } as User))) as UrlTree;
-      expect(TestBed.inject(Router).serializeUrl(r)).toBe('/athlete-portal/welcome');
+      expect(TestBed.inject(Router).serializeUrl(r)).toBe('/dashboard/me/profile');
     });
 
     it('treats a missing role as owner (backwards compat with cached envelopes)', async () => {
@@ -79,7 +79,7 @@ describe('role guards (#445, M7 PR-D)', () => {
       const stub = authStub(null, { role: 'athlete' } as User);
       const r = (await runGuard(roleOwnerGuard, stub)) as UrlTree;
       expect(stub.loadCurrentUser).toHaveBeenCalledTimes(1);
-      expect(TestBed.inject(Router).serializeUrl(r)).toBe('/athlete-portal/welcome');
+      expect(TestBed.inject(Router).serializeUrl(r)).toBe('/dashboard/me/profile');
     });
 
     it('redirects to /auth/login when /me returns 401 (stale token)', async () => {

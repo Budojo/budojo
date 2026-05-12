@@ -1,0 +1,135 @@
+// MeProfileComponent — read-only profile page for the athlete portal
+// (#610, M7 PR-D slice 1). Apple-minimal — hairline borders, one card
+// per logical group, no decorative chrome. Page-padding inherited
+// from the dashboard shell `.main` (canon).
+
+.profile {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__card {
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__fields {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    gap: 1rem;
+    align-items: baseline;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+
+    dt {
+      color: var(--p-text-color-secondary);
+      font-size: 0.875rem;
+      margin: 0;
+    }
+
+    dd {
+      margin: 0;
+      color: var(--p-text-color);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+  }
+
+  &__placeholder {
+    color: var(--p-text-color-secondary);
+    font-style: italic;
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+
+    i {
+      font-size: 0.875rem;
+    }
+
+    &--verified {
+      color: var(--p-green-700, #15803d);
+      background: var(--p-green-50, #f0fdf4);
+      border-color: var(--p-green-200, #bbf7d0);
+    }
+
+    &--unverified {
+      color: var(--p-amber-700, #b45309);
+      background: var(--p-amber-50, #fffbeb);
+      border-color: var(--p-amber-200, #fde68a);
+    }
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+  }
+
+  &__loading {
+    color: var(--p-text-color-secondary);
+  }
+
+  &__edit-btn {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+  }
+
+  &__form {
+    gap: 1.25rem;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+
+    input {
+      width: 100%;
+    }
+  }
+
+  &__label {
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+}

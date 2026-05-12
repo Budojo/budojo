@@ -20,6 +20,7 @@
     "open": "Apri navigazione",
     "close": "Chiudi navigazione",
     "homeAriaLabel": "Budojo — torna alla dashboard",
+    "sidebarAriaLabel": "Navigazione principale",
     "profileAriaLabel": "Apri il tuo profilo",
     "academy": "Accademia",
     "athletes": "Atleti",
@@ -198,6 +199,95 @@
       "title": "Benvenuto in Budojo",
       "body": "Il tuo account atleta è pronto. Le pagine dove vedrai la tua presenza, i tuoi pagamenti e i tuoi documenti arrivano nella prossima release — per ora aspetta, la tua academy ti farà sapere quando ci sarà di più qui.",
       "signOut": "Esci"
+    },
+    "nav": {
+      "profile": "Profilo",
+      "feed": "Feed",
+      "academy": "Academy",
+      "attendance": "Presenze",
+      "payments": "Pagamenti",
+      "documents": "Documenti"
+    },
+    "profile": {
+      "title": "Il tuo profilo",
+      "firstName": "Nome",
+      "lastName": "Cognome",
+      "handle": "Username",
+      "handleHint": "Lettere minuscole, numeri, punti, underscore. 3–30 caratteri; deve iniziare con una lettera. Lascia vuoto per rimuoverlo.",
+      "noHandle": "Username non ancora impostato",
+      "email": "Email",
+      "verified": "Verificata",
+      "unverified": "Non verificata",
+      "loading": "Caricamento del profilo…",
+      "editButton": "Modifica profilo",
+      "saveButton": "Salva",
+      "cancelButton": "Annulla",
+      "editSavedToast": "Profilo aggiornato.",
+      "editHandleTakenToast": "Questo username è già preso — scegline un altro.",
+      "editErrorToast": "Non siamo riusciti a salvare il profilo. Riprova."
+    },
+    "feed": {
+      "title": "Il feed della tua academy",
+      "emptyBody": "Nessun post per ora — le promozioni di cintura e gli eventi della tua academy compariranno qui.",
+      "errorBody": "Non siamo riusciti a caricare il feed. Aggiorna la pagina e riprova.",
+      "beltPromotion": {
+        "text": "{{name}} ha appena conquistato una nuova cintura!"
+      },
+      "pagination": "Impaginazione feed",
+      "pageOf": "Pagina {{current}} di {{total}}",
+      "previous": "Precedente",
+      "next": "Successiva",
+      "reactClap": "Applauso",
+      "reactClapAria": "Reagisci con un applauso",
+      "reactPray": "Rispetto",
+      "reactPrayAria": "Reagisci con rispetto",
+      "reactToastError": "Non siamo riusciti ad aggiornare la tua reazione. Riprova.",
+      "rsvpGoing": "Ci sarò",
+      "rsvpGoingAria": "Segnati come presente",
+      "rsvpMaybe": "Forse",
+      "rsvpMaybeAria": "Segnati come forse",
+      "rsvpToastError": "Non siamo riusciti ad aggiornare il tuo RSVP. Riprova.",
+      "commentsToggle": "Commenti",
+      "commentsLoading": "Caricamento commenti…",
+      "commentsEmpty": "Nessun commento per ora — sii il primo.",
+      "commentsLoadError": "Non siamo riusciti a caricare i commenti. Riapri la card e riprova.",
+      "commentsLoadMore": "Carica altri",
+      "commentPlaceholder": "Scrivi un commento…",
+      "commentSubmit": "Pubblica",
+      "commentSubmitError": "Non siamo riusciti a pubblicare il tuo commento. Riprova.",
+      "commentDeleteAria": "Elimina questo commento",
+      "commentDeleteError": "Non siamo riusciti a eliminare il tuo commento. Riprova."
+    },
+    "academy": {
+      "title": "La tua academy",
+      "emptyBody": "Al momento non sei collegato a nessuna academy. Contatta il tuo academy owner se pensi che sia un errore.",
+      "errorBody": "Non siamo riusciti a caricare la tua academy. Aggiorna la pagina e riprova.",
+      "logoAlt": "Logo {{name}}",
+      "addressLabel": "Indirizzo",
+      "phoneLabel": "Telefono",
+      "websiteLabel": "Sito web",
+      "ownerSection": "Owner"
+    },
+    "attendance": {
+      "title": "Le tue presenze",
+      "emptyBody": "Nessuna sessione di allenamento registrata — la tua academy le segnerà man mano che ti alleni.",
+      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
+      "errorBody": "Non siamo riusciti a caricare le tue presenze. Aggiorna la pagina e riprova.",
+      "last30Days": "sessioni negli ultimi 30 giorni"
+    },
+    "payments": {
+      "title": "I tuoi pagamenti",
+      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
+      "errorBody": "Non siamo riusciti a caricare i tuoi pagamenti. Aggiorna la pagina e riprova.",
+      "unpaid": "Non pagato"
+    },
+    "documents": {
+      "title": "I tuoi documenti",
+      "emptyBody": "Nessun documento caricato per ora — la tua academy li caricherà man mano che li raccoglie.",
+      "noProfileBody": "Non siamo riusciti a trovare il tuo profilo atleta. Contatta il tuo academy owner.",
+      "errorBody": "Non siamo riusciti a caricare i tuoi documenti. Aggiorna la pagina e riprova.",
+      "expiresAt": "Scade il",
+      "expired": "Scaduto"
     }
   },
   "notifications": {
@@ -632,8 +722,8 @@
       "genericError": "Non è stato possibile aggiornare la password. Riprova."
     },
     "notifications": {
-      "title": "Notifiche email",
-      "subtitle": "Scegli quali email non essenziali vuoi ricevere.",
+      "title": "Notifiche",
+      "subtitle": "Scegli quali notifiche vuoi ricevere. Ogni riga indica come viene consegnata (digest email, inbox, …).",
       "medicalCertReminders": {
         "label": "Promemoria scadenza certificato medico",
         "description": "Digest giornaliero alle 09:00 con gli atleti il cui certificato medico scade tra 30, 7 o 0 giorni."
@@ -641,6 +731,18 @@
       "unpaidAthletesDigest": {
         "label": "Digest mensile atleti non paganti",
         "description": "Una volta al mese, il giorno 16, l'elenco degli atleti che non hanno pagato la quota del mese corrente."
+      },
+      "communityReply": {
+        "label": "Nuova risposta in un tuo thread community",
+        "description": "Notifica in inbox quando qualcuno risponde a un post community su cui hai già commentato."
+      },
+      "communityBeltCelebration": {
+        "label": "Promozioni di cintura dei compagni",
+        "description": "Notifica in inbox quando un compagno della tua academy conquista una nuova cintura. Disattivata di default — attivala se vuoi ricevere ogni promozione."
+      },
+      "communityEventNew": {
+        "label": "Nuovi eventi della tua academy",
+        "description": "Notifica in inbox quando l'owner della tua academy pubblica un nuovo evento — open mat, stage, gare interne."
       },
       "alwaysSentTitle": "Sempre inviate",
       "alwaysSentSubtitle": "Email transazionali — necessarie al funzionamento del servizio, inviate indipendentemente dalle scelte sopra.",

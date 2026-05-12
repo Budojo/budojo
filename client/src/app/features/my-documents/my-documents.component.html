@@ -1,0 +1,47 @@
+<div class="my-documents">
+  <h1 class="my-documents__title">{{ 'athletePortal.documents.title' | translate }}</h1>
+
+  @if (loading()) {
+    <div class="my-documents__card" data-cy="my-documents-loading">
+      <p-skeleton width="40%" height="1.25rem" />
+      <p-skeleton width="100%" height="0.875rem" styleClass="mt-3" />
+      <p-skeleton width="100%" height="0.875rem" styleClass="mt-2" />
+    </div>
+  } @else if (loadError()) {
+    <p class="my-documents__empty" data-cy="my-documents-error">
+      {{ 'athletePortal.documents.errorBody' | translate }}
+    </p>
+  } @else if (noProfile()) {
+    <p class="my-documents__empty" data-cy="my-documents-no-profile">
+      {{ 'athletePortal.documents.noProfileBody' | translate }}
+    </p>
+  } @else if (documents().length === 0) {
+    <p class="my-documents__empty" data-cy="my-documents-empty">
+      {{ 'athletePortal.documents.emptyBody' | translate }}
+    </p>
+  } @else {
+    <ul class="my-documents__list" data-cy="my-documents-list">
+      @for (doc of documents(); track doc.id) {
+        <li
+          class="my-documents__row"
+          [class.my-documents__row--expired]="isExpired(doc.expires_at)"
+          [attr.data-cy]="'document-' + doc.id"
+        >
+          <span class="my-documents__type">{{ 'documents.types.' + doc.type | translate }}</span>
+          <span class="my-documents__name">{{ doc.original_name }}</span>
+          @if (doc.expires_at; as exp) {
+            <span class="my-documents__expiry">
+              {{ 'athletePortal.documents.expiresAt' | translate }}
+              {{ toLocalDate(exp.slice(0, 10)) | date: 'mediumDate' }}
+              @if (isExpired(exp)) {
+                <span class="my-documents__badge" data-cy="document-expired-badge">{{
+                  'athletePortal.documents.expired' | translate
+                }}</span>
+              }
+            </span>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>

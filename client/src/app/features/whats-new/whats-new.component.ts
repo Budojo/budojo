@@ -59,6 +59,80 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.7.0',
+      date: '2026-05-12',
+      headline:
+        "The biggest release since v2.0. Two new product surfaces land together: the athlete portal (every athlete can now sign in and see their own attendance / payments / documents / profile, plus a 'My academy' card) and the community feed (a Facebook-style timeline of academy life — auto-posted belt promotions, owner-posted events, reactions, comments, RSVPs). Three new community inbox notifications tie them together: community_reply (default-on, fires when someone replies to a thread you're in), community_event_new (default-on, fires when the owner posts a new event), and community_belt_celebration (default-OFF — wider blast radius, opt-in on /dashboard/profile). The owner-side dashboard is unchanged; the portal is purely additive — athletes you've already invited will see their version of the data starting next sign-in. Behind the scenes: race-safe reaction toggle on the (post_id, user_id, emoji) unique constraint, per-post Subject + switchMap as the canonical optimistic-UI pattern (reactions, RSVPs, comments all share the shape), belt-promotion auto-post via an #[ObservedBy] observer that skips console / seeder context, and a new defaultOff() mechanism on NotificationPreferences for opt-in categories.",
+      sections: [
+        {
+          heading: '✨ The athlete portal — every athlete now signs in',
+          bullets: [
+            'Every invited athlete now has their own login and lands on /dashboard/me/profile — name, avatar, handle, belt, contact details. Edit mode (gear top-right) opens a clean reactive form with the same handle validation the owner-side uses (@mariobjj, lowercase, no consecutive / trailing dots).',
+            "/dashboard/me/academy is a read-only 'My academy' card with the school name, owner, location, and the athlete's own membership status (joined date, current belt).",
+            '/dashboard/me/attendance shows the athlete their own attendance log — month-by-month grid of training days, percentage attended, streak indicator.',
+            "/dashboard/me/payments shows the athlete their own payment history, in the language's currency format (€1.234,56 for IT, €1,234.56 for EN), friendly month label, status pill.",
+            '/dashboard/me/documents shows the athlete their own medical certificates and other documents with the expiry status pill (Valid / Expiring soon / Expired). The expired-today boundary is inclusive — a cert expiring today shows expired.',
+            '/dashboard/me/feed is the new community feed (see below).',
+            'The owner-side dashboard is unchanged. The portal is purely additive — athletes you already invited will see their version on next sign-in.',
+          ],
+        },
+        {
+          heading: '🎉 The community feed',
+          bullets: [
+            "/dashboard/me/feed is a timeline of academy life. Three kinds of post today: belt promotions (auto-created when an owner changes an athlete's belt — the celebration card carries the athlete's name + old belt → new belt, and is auto-deleted if you ever delete the athlete), events (open mats, seminars, in-house tournaments — owner-posted from a new API endpoint, with the SPA composer landing in a focused follow-up), and the foundation for free-form announcements.",
+            "Every post carries the author badge — name, avatar, handle, and belt — using the same identity-line you see across the dashboard, with a short-fallback ('Mario R.') when no handle is set.",
+          ],
+        },
+        {
+          heading: '👏 Reactions',
+          bullets: [
+            'Tap 👏 Clap or 🙏 Pray at the bottom of any post. The button flips to its active state immediately (optimistic UI) and the count on the post updates.',
+            'Tap the same emoji again to remove your reaction. Tap the other emoji to switch.',
+            'Quick double-clicks are serialized server-side via a transaction + shared lock on the (post_id, user_id, emoji) unique constraint, so the row never ends up in a half-toggled state.',
+          ],
+        },
+        {
+          heading: '💬 Comments',
+          bullets: [
+            'Each post has a one-level Comments section that expands on tap. Write a comment (up to 500 chars), see it appear in the list, delete your own with the trash icon.',
+            "The post's comment count updates inline as comments arrive or are deleted — no full refresh needed.",
+          ],
+        },
+        {
+          heading: '📅 Event RSVPs',
+          bullets: [
+            'Event posts carry three RSVP buttons: Yes / Maybe / No. Tap to commit, tap again to clear, tap a different one to switch.',
+            'The headcount on the event card updates in real time as RSVPs flow in (optimistic locally, race-safe server-side).',
+          ],
+        },
+        {
+          heading: '🔔 New inbox notifications — community-flavoured',
+          bullets: [
+            "Someone replied to a thread you're in — community_reply, default-ON. When you comment on a post and someone else later comments on the same post, you get an inbox row pointing back to the thread. The author of the new comment never gets notified about their own post.",
+            "Your academy posted a new event — community_event_new, default-ON. When the owner posts a new event to the feed, every athlete in the academy gets an inbox row deep-linking to the event card. The owner who posted it isn't notified.",
+            'A teammate earned a new belt — community_belt_celebration, default-OFF. The every-athlete blast radius is wide enough that you have to opt in explicitly on /dashboard/profile → Notifications. Once on, every belt promotion in your academy lands as an inbox row (except for the one you recorded yourself).',
+            'All three are gated server-side and surfaced as toggles in /dashboard/profile → Notifications, with the off-by-default one carrying a clear hint in the description copy. Toggles persist instantly with optimistic UI.',
+          ],
+        },
+        {
+          heading: '🔧 Owner-side event creation',
+          bullets: [
+            'Owners can now create events programmatically against a new API endpoint (the SPA composer lands in a focused follow-up). V1 ships create only — edit / cancel surfaces are V2. The endpoint accepts title (required, 1-120 chars), description (optional, max 2000), start date-time (required ISO 8601, normalised to canonical UTC), optional location text + lat / lon (V2 map view-ready), and max attendees. Only academy owners can post; athletes get a polite refusal.',
+          ],
+        },
+        {
+          heading: '🔧 Behind the scenes',
+          bullets: [
+            'Race-safe reaction toggle: read-then-upsert on the unique (post_id, user_id, emoji) constraint now runs inside a DB transaction with a shared lock + caught QueryException on concurrent races. Worth knowing for anyone wiring similar UI primitives.',
+            'Optimistic UI as the canonical pattern: every interaction in the new feed (reactions, RSVPs, comments) is wired through a per-post Subject + switchMap that serializes rapid clicks and rolls back the UI on server error. Same shape across all three flows.',
+            'Belt-promotion observer skips console / seeder context (no authenticated user to attribute), so seeded belt changes during db:seed never generate stale celebration posts.',
+            "Default-off notification categories: the preferences system grew a new defaultOff() mechanism (consulted by NotificationPreferences::isEnabled for the absent-key fallback). community_belt_celebration uses it — absent-key recipients are NOT notified until they explicitly opt in. The SPA panel surfaces it with an 'Off by default' hint.",
+            'Stable payload key set: community_posts.payload now carries a fixed shape per post type, pinned by a schema test. Adding a new post type or a new payload field touches both the factory and the schema test in the same diff.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.6.1',
       date: '2026-05-11',
       headline:

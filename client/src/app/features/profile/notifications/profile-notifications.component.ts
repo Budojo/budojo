@@ -39,6 +39,21 @@ const CATEGORIES: readonly ToggleableCategory[] = [
     i18nLabel: 'profile.notifications.unpaidAthletesDigest.label',
     i18nDescription: 'profile.notifications.unpaidAthletesDigest.description',
   },
+  {
+    key: 'community_reply',
+    i18nLabel: 'profile.notifications.communityReply.label',
+    i18nDescription: 'profile.notifications.communityReply.description',
+  },
+  {
+    key: 'community_belt_celebration',
+    i18nLabel: 'profile.notifications.communityBeltCelebration.label',
+    i18nDescription: 'profile.notifications.communityBeltCelebration.description',
+  },
+  {
+    key: 'community_event_new',
+    i18nLabel: 'profile.notifications.communityEventNew.label',
+    i18nDescription: 'profile.notifications.communityEventNew.description',
+  },
 ];
 
 const TRANSACTIONAL_KEYS: readonly string[] = [

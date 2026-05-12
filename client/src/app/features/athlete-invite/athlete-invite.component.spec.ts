@@ -135,7 +135,7 @@ describe('AthleteInviteComponent (#445 M7 PR-C)', () => {
     expect(cmp.form.errors?.['mismatch']).toBe(true);
   });
 
-  it('submit() on success adopts the issued token and navigates to /athlete-portal/welcome', () => {
+  it('submit() on success adopts the issued token and navigates to /dashboard/me/profile', () => {
     const { cmp, accept, adoptIssuedToken, navigate } = setup();
 
     cmp.form.patchValue({
@@ -151,7 +151,7 @@ describe('AthleteInviteComponent (#445 M7 PR-C)', () => {
     expect(adoptIssuedToken).toHaveBeenCalledOnce();
     expect(adoptIssuedToken).toHaveBeenCalledWith('new-sanctum-token');
     expect(navigate).toHaveBeenCalledOnce();
-    expect(navigate).toHaveBeenCalledWith(['/athlete-portal/welcome']);
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/me/profile']);
   });
 
   it('submit() on a server error surfaces the precise error code', () => {

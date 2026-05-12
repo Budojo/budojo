@@ -1,0 +1,216 @@
+<div class="feed">
+  <h1 class="feed__title">{{ 'athletePortal.feed.title' | translate }}</h1>
+
+  @if (loading()) {
+    <ul class="feed__list" data-cy="my-feed-loading">
+      @for (i of [1, 2, 3]; track i) {
+        <li class="feed__card feed__card--skeleton">
+          <p-skeleton width="100%" height="1rem" />
+          <p-skeleton width="60%" height="1rem" styleClass="mt-2" />
+          <p-skeleton width="40%" height="0.875rem" styleClass="mt-2" />
+        </li>
+      }
+    </ul>
+  } @else if (loadError()) {
+    <p class="feed__empty" data-cy="my-feed-error">
+      {{ 'athletePortal.feed.errorBody' | translate }}
+    </p>
+  } @else if (posts().length === 0) {
+    <p class="feed__empty" data-cy="my-feed-empty">
+      {{ 'athletePortal.feed.emptyBody' | translate }}
+    </p>
+  } @else {
+    <ul class="feed__list" data-cy="my-feed-list">
+      @for (post of posts(); track post.id) {
+        <li class="feed__card" [attr.data-cy]="'my-feed-post-' + post.id">
+          <header class="feed__author">
+            <app-user-avatar
+              [name]="post.created_by.full_name"
+              [url]="post.created_by.avatar_url"
+            />
+            <div class="feed__author-meta">
+              <span class="feed__author-name">{{ post.created_by.full_name }}</span>
+              @if (post.created_by.handle) {
+                <span class="feed__author-handle">&#64;{{ post.created_by.handle }}</span>
+              }
+              @if (post.created_by.belt) {
+                <app-belt-badge [belt]="post.created_by.belt" />
+              }
+            </div>
+            <time class="feed__time" [dateTime]="post.created_at">
+              {{ post.created_at | date: 'medium' }}
+            </time>
+          </header>
+
+          @switch (post.type) {
+            @case ('belt_promotion') {
+              <div class="feed__body" data-cy="post-belt-promotion">
+                <span class="feed__celebrate" aria-hidden="true">🎉</span>
+                <p class="feed__belt-line">
+                  {{
+                    'athletePortal.feed.beltPromotion.text'
+                      | translate: { name: athleteNameOf(post) || post.created_by.full_name }
+                  }}
+                </p>
+                <div class="feed__belt-transition">
+                  @if (beltOf(post, 'old_belt'); as old) {
+                    <app-belt-badge [belt]="old" />
+                  }
+                  <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                  @if (beltOf(post, 'new_belt'); as fresh) {
+                    <app-belt-badge [belt]="fresh" />
+                  }
+                </div>
+              </div>
+            }
+            @case ('event') {
+              <div class="feed__body" data-cy="post-event">
+                <h2 class="feed__event-title">{{ eventTitle(post) }}</h2>
+                @if (eventStartsAt(post); as startsAt) {
+                  <p class="feed__event-time">
+                    <i class="pi pi-calendar" aria-hidden="true"></i>
+                    {{ startsAt | date: 'medium' }}
+                  </p>
+                }
+                @if (eventLocation(post); as location) {
+                  <p class="feed__event-location">
+                    <i class="pi pi-map-marker" aria-hidden="true"></i>
+                    {{ location }}
+                  </p>
+                }
+                <div class="feed__rsvp" data-cy="post-rsvp">
+                  <button
+                    type="button"
+                    class="feed__react-btn"
+                    [class.feed__react-btn--active]="post.your_rsvp === 'going'"
+                    [attr.aria-pressed]="post.your_rsvp === 'going'"
+                    [attr.aria-label]="'athletePortal.feed.rsvpGoingAria' | translate"
+                    (click)="toggleRsvp(post, 'going')"
+                    [attr.data-cy]="'rsvp-going-' + post.id"
+                  >
+                    <i class="pi pi-check-circle" aria-hidden="true"></i>
+                    <span class="feed__react-label">{{
+                      'athletePortal.feed.rsvpGoing' | translate
+                    }}</span>
+                    @if (post.rsvps_count > 0) {
+                      <span class="feed__react-count">{{ post.rsvps_count }}</span>
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="feed__react-btn"
+                    [class.feed__react-btn--active]="post.your_rsvp === 'maybe'"
+                    [attr.aria-pressed]="post.your_rsvp === 'maybe'"
+                    [attr.aria-label]="'athletePortal.feed.rsvpMaybeAria' | translate"
+                    (click)="toggleRsvp(post, 'maybe')"
+                    [attr.data-cy]="'rsvp-maybe-' + post.id"
+                  >
+                    <i class="pi pi-question-circle" aria-hidden="true"></i>
+                    <span class="feed__react-label">{{
+                      'athletePortal.feed.rsvpMaybe' | translate
+                    }}</span>
+                  </button>
+                </div>
+              </div>
+            }
+            @case ('owner_announcement') {
+              <div class="feed__body" data-cy="post-announcement">
+                <p class="feed__announcement">{{ announcementBody(post) }}</p>
+              </div>
+            }
+          }
+
+          <footer class="feed__reactions" data-cy="post-reactions">
+            <button
+              type="button"
+              class="feed__react-btn"
+              [class.feed__react-btn--active]="post.your_reaction === 'clap'"
+              [attr.aria-pressed]="post.your_reaction === 'clap'"
+              [attr.aria-label]="'athletePortal.feed.reactClapAria' | translate"
+              (click)="toggleReaction(post, 'clap')"
+              [attr.data-cy]="'react-clap-' + post.id"
+            >
+              <span aria-hidden="true">👏</span>
+              <span class="feed__react-label">{{
+                'athletePortal.feed.reactClap' | translate
+              }}</span>
+              @if (post.reactions_count > 0) {
+                <span class="feed__react-count">{{ post.reactions_count }}</span>
+              }
+            </button>
+            <button
+              type="button"
+              class="feed__react-btn"
+              [class.feed__react-btn--active]="post.your_reaction === 'pray'"
+              [attr.aria-pressed]="post.your_reaction === 'pray'"
+              [attr.aria-label]="'athletePortal.feed.reactPrayAria' | translate"
+              (click)="toggleReaction(post, 'pray')"
+              [attr.data-cy]="'react-pray-' + post.id"
+            >
+              <span aria-hidden="true">🙏</span>
+              <span class="feed__react-label">{{
+                'athletePortal.feed.reactPray' | translate
+              }}</span>
+            </button>
+            <button
+              type="button"
+              class="feed__react-btn"
+              [class.feed__react-btn--active]="isThreadOpen(post.id)"
+              [attr.aria-expanded]="isThreadOpen(post.id)"
+              [attr.aria-controls]="'thread-' + post.id"
+              (click)="toggleThread(post.id)"
+              [attr.data-cy]="'toggle-comments-' + post.id"
+            >
+              <i class="pi pi-comment" aria-hidden="true"></i>
+              <span class="feed__react-label">{{
+                'athletePortal.feed.commentsToggle' | translate
+              }}</span>
+              @if (post.comments_count > 0) {
+                <span class="feed__react-count">{{ post.comments_count }}</span>
+              }
+            </button>
+          </footer>
+
+          @if (isThreadOpen(post.id)) {
+            <app-comments-thread
+              [postId]="post.id"
+              (commentCountDelta)="onCommentCountDelta(post.id, $event)"
+            />
+          }
+        </li>
+      }
+    </ul>
+
+    <p-toast position="bottom-center" />
+
+    @if (lastPage() > 1) {
+      <nav class="feed__pagination" [attr.aria-label]="'athletePortal.feed.pagination' | translate">
+        <button
+          type="button"
+          class="feed__page-btn"
+          [disabled]="currentPage() === 1"
+          (click)="previousPage()"
+          data-cy="my-feed-prev"
+        >
+          <i class="pi pi-chevron-left" aria-hidden="true"></i>
+          <span>{{ 'athletePortal.feed.previous' | translate }}</span>
+        </button>
+        <span class="feed__page-label">
+          {{
+            'athletePortal.feed.pageOf' | translate: { current: currentPage(), total: lastPage() }
+          }}
+        </span>
+        <button
+          type="button"
+          class="feed__page-btn"
+          [disabled]="currentPage() === lastPage()"
+          (click)="nextPage()"
+          data-cy="my-feed-next"
+        >
+          <span>{{ 'athletePortal.feed.next' | translate }}</span>
+          <i class="pi pi-chevron-right" aria-hidden="true"></i>
+        </button>
+      </nav>
+    }
+  }
+</div>

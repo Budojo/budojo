@@ -166,6 +166,30 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me/export', \App\Http\Controllers\User\ExportController::class)
         ->middleware('throttle:1,1');
 
+    // Athlete-portal read onto the caller's academy (#618, M7 PR-D
+    // slice 2). Role-agnostic — owners read their owned academy,
+    // athletes read the academy on their linked athlete row.
+    Route::get('/me/academy', [\App\Http\Controllers\Me\MyAcademyController::class, 'show']);
+
+    // Athlete-portal attendance history (M7 PR-D slice 3). Returns
+    // the authenticated athlete's attendance records in the optional
+    // `[from, to]` window. Owners hit a 404 (they're not students;
+    // the owner-side `/athletes/{id}/attendance` is the right surface
+    // for any athlete's history).
+    Route::get('/me/attendance', [\App\Http\Controllers\Me\MyAttendanceController::class, 'index']);
+
+    // Athlete-portal monthly payment history (M7 PR-D slice 4).
+    // Returns the auth athlete's payment rows for the given
+    // calendar year (defaults to current). Owners 404 — they don't
+    // have a personal payment ledger.
+    Route::get('/me/payments', [\App\Http\Controllers\Me\MyPaymentsController::class, 'index']);
+
+    // Athlete-portal documents (M7 PR-D slice 5). Read-only — owners
+    // remain the only upload entry point in V1 (athlete-side upload
+    // policy is a V2 question). 50/page, descending-created-at.
+    // Owners and orphan users 404.
+    Route::get('/me/documents', [\App\Http\Controllers\Me\MyDocumentsController::class, 'index']);
+
     // GDPR Art. 17 (right-to-erasure) — request hard-deletion of the
     // account and all academy + athlete data tied to it (#223). POST
     // enters a 30-day grace window; DELETE cancels during that window.
@@ -386,5 +410,65 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('attendance/daily', [StatsController::class, 'attendanceDaily']);
         Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
         Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
+    });
+
+    // Community (M9). Owners + athletes share the same /api/v1/community
+    // namespace — tenant isolation is per-Action (feed) or per-FormRequest
+    // gate (DELETE / reactions). Each method is scoped on the comment line
+    // that introduces it.
+    Route::prefix('community')->group(function (): void {
+        // PR-B server (#612): athletes + owners read the same paginated
+        // feed; DELETE is owner-only via the FormRequest authorize() gate.
+        Route::get('feed', [\App\Http\Controllers\Community\CommunityFeedController::class, 'index']);
+        Route::delete('posts/{post}', [\App\Http\Controllers\Community\CommunityFeedController::class, 'destroy']);
+
+        // PR-C server (#603): toggle the caller's emoji reaction on a
+        // post. Same-emoji toggles off; different emoji swaps in place.
+        // Rate-limited at 60 / minute / user via the `community-react`
+        // named limiter (see AppServiceProvider) — PRD acceptance
+        // criterion + Copilot review on PR #616.
+        Route::post(
+            'posts/{post}/reactions',
+            [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
+        )->middleware('throttle:community-react');
+
+        // PR-D server (#604): 1-level comments under a post.
+        //   GET    /posts/{post}/comments — list (paginated, 50/page)
+        //   POST   /posts/{post}/comments — create (500-char body cap)
+        //   DELETE /comments/{comment}    — soft-delete (author OR
+        //                                    post's academy owner)
+        // Create is rate-limited at 30/min/user via the
+        // `community-comment-create` named limiter.
+        Route::get(
+            'posts/{post}/comments',
+            [\App\Http\Controllers\Community\CommunityCommentsController::class, 'index'],
+        );
+        Route::post(
+            'posts/{post}/comments',
+            [\App\Http\Controllers\Community\CommunityCommentsController::class, 'store'],
+        )->middleware('throttle:community-comment-create');
+        Route::delete(
+            'comments/{comment}',
+            [\App\Http\Controllers\Community\CommunityCommentsController::class, 'destroy'],
+        );
+
+        // PR-E server (#605): RSVP toggle on event-type posts.
+        // Same-response toggles off, different-response swaps in
+        // place. Only `type=event` posts accept RSVPs (FormRequest
+        // gate). Rate-limited at 30/min/user via `community-rsvp`.
+        Route::post(
+            'posts/{post}/rsvp',
+            [\App\Http\Controllers\Community\CommunityRsvpController::class, 'toggle'],
+        )->middleware('throttle:community-rsvp');
+
+        // Owner-facing event creation. Unblocks PR-F slice 2's
+        // community_event_new notification trigger and adds genuine
+        // V1 value — until this lands, events came only from the
+        // factory in tests. Authorize gate requires isOwner() + a
+        // linked academy.
+        Route::post(
+            'events',
+            [\App\Http\Controllers\Community\CommunityEventsController::class, 'store'],
+        );
     });
 });

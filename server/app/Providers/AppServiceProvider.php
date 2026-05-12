@@ -84,6 +84,39 @@ class AppServiceProvider extends ServiceProvider
             $request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown',
         ));
 
+        // Community reactions (#603, M9 PR-C). Sixty toggles per
+        // minute per authenticated user — generous enough that a
+        // session of enthusiastic clap-spamming over a fresh feed
+        // is never throttled, tight enough that a script can't blast
+        // the endpoint and create avoidable DB load. Falls back to
+        // IP only as a defensive default — the route is auth-gated
+        // so this branch shouldn't trigger in normal operation.
+        RateLimiter::for('community-react', fn (Request $request): Limit => Limit::perMinute(60)->by(
+            $request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown',
+        ));
+
+        // Community comment creation (#604, M9 PR-D). Thirty new
+        // comments per minute per authenticated user — covers a
+        // motivated thread-watcher rattling off replies, blocks a
+        // spam loop. Same fallback / keying as `community-react`.
+        RateLimiter::for(
+            'community-comment-create',
+            fn (Request $request): Limit => Limit::perMinute(30)->by(
+                $request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown',
+            ),
+        );
+
+        // Community RSVP toggle (#605, M9 PR-E). Thirty per minute
+        // per authenticated user — RSVPs are intent-toggles, not
+        // create-once; the cap mirrors `community-react`'s shape
+        // (positive interaction, low intrinsic value to spam).
+        RateLimiter::for(
+            'community-rsvp',
+            fn (Request $request): Limit => Limit::perMinute(30)->by(
+                $request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown',
+            ),
+        );
+
         // Reshape the password-reset URL embedded in the email to
         // point at the SPA's `/auth/reset-password` route instead of
         // a server-rendered Laravel page. Same APP_URL → CLIENT_URL

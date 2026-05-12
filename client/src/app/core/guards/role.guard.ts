@@ -8,12 +8,17 @@ import { AuthService, User } from '../services/auth.service';
  * Role-based route gate (#445, M7 PR-D).
  *
  * - `roleOwnerGuard` blocks athlete users from owner-side routes (the
- *   whole `/dashboard` tree + the `/setup` wizard). Athletes get
- *   redirected to `/athlete-portal/welcome` instead — the dedicated
- *   shell where they can self-serve. Without this guard an athlete
- *   visiting `/dashboard` would hit `hasAcademyGuard`, which 404s on
- *   their (non-existent) academy and bounces them to `/setup` — a
- *   page that's hard-coded for owners creating their first academy.
+ *   whole `/dashboard` tree minus `/dashboard/me/*` + the `/setup`
+ *   wizard). Athletes get redirected to `/dashboard/me/profile`
+ *   instead — the athlete portal shell where they self-serve. Without
+ *   this guard an athlete visiting `/dashboard` would hit
+ *   `hasAcademyGuard`, which 404s on their (non-existent) academy and
+ *   bounces them to `/setup` — a page that's hard-coded for owners
+ *   creating their first academy.
+ *
+ *   Note: the legacy `/athlete-portal/welcome` redirect target was
+ *   replaced with `/dashboard/me/profile` in #610 (M7 PR-D slice 1)
+ *   once the proper athlete dashboard shell landed.
  *
  * - `roleAthleteGuard` is the inverse: blocks owners from athlete-only
  *   routes.
@@ -65,7 +70,7 @@ export const roleOwnerGuard: CanActivateFn = () => {
       // envelope from before v1.18.0). Real role values are always
       // owner|athlete; the helper preserves backwards compat.
       const role = result.user.role ?? 'owner';
-      return role === 'owner' ? true : router.createUrlTree(['/athlete-portal/welcome']);
+      return role === 'owner' ? true : router.createUrlTree(['/dashboard/me/profile']);
     }),
   );
 };
