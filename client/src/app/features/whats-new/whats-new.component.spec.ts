@@ -28,7 +28,7 @@ describe('WhatsNewComponent (#254)', () => {
     // version we've shipped; when we ship a new version and forget
     // to prepend instead of append, this fails.
     const firstRelease = root.querySelector('.whats-new__release');
-    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v2.8.1');
+    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v2.9.0');
   });
 
   it('renders every shipped release in newest-first order', () => {
@@ -43,7 +43,7 @@ describe('WhatsNewComponent (#254)', () => {
       (el as HTMLElement).querySelector('.whats-new__version')?.textContent?.trim(),
     );
     expect(versions).toEqual([
-      'v2.8.1',
+      'v2.9.0',
       'v2.8.0',
       'v2.7.0',
       'v2.6.1',

@@ -59,7 +59,7 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
-      version: 'v2.8.1',
+      version: 'v2.9.0',
       date: '2026-05-12',
       headline:
         "A polish-and-fix follow-up to v2.8.0, all reported within hours of the v2.8.0 ship on the community feed. Three changes: notification toggles on /dashboard/profile no longer render the white knob overflowing the green track (iOS-shape: 1.5rem track + 1.25rem knob + 0.125rem gap, knob sits inside the pill in light + dark mode). Community feed dates flipped from formal 'May 12, 2026, 20:57:49' to locale-aware human formats — post + comment timestamps read 'now' / '5 min ago' / 'yesterday' / 'Sat at 10:30' / 'May 12' depending on age (it: 'adesso' / '5 min fa' / 'ieri' / 'sab alle 10:30' / '12 mag'); event start times read 'Today at 10:00' / 'Tomorrow at 10:00' / 'Saturday at 10:00' / 'May 16 at 10:00' depending on distance (24-hour time across both locales). Reaction counter rendered on the wrong button when a post had only 🙏 prays — fixed by exposing per-emoji counts from the server (clap_reactions_count + pray_reactions_count) and rendering each next to its own button.",
