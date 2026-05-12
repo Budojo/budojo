@@ -73,7 +73,7 @@ final class NotificationCategory
      * are every academy user — athletes linked to a `user_id` (invite-
      * pending rows skipped) PLUS the academy owner — minus the editor.
      * Owner-side participation in the community surface landed in
-     * #638. Default-on: events are deliberate, relatively rare, and
+     * #639. Default-on: events are deliberate, relatively rare, and
      * the academy roster opted in by joining the academy.
      */
     public const string COMMUNITY_EVENT_NEW = 'community_event_new';
