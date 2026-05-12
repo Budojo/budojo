@@ -736,6 +736,10 @@
         "label": "Nuova risposta in un tuo thread community",
         "description": "Notifica in inbox quando qualcuno risponde a un post community su cui hai già commentato."
       },
+      "communityBeltCelebration": {
+        "label": "Promozioni di cintura dei compagni",
+        "description": "Notifica in inbox quando un compagno della tua academy conquista una nuova cintura. Disattivata di default — attivala se vuoi ricevere ogni promozione."
+      },
       "alwaysSentTitle": "Sempre inviate",
       "alwaysSentSubtitle": "Email transazionali — necessarie al funzionamento del servizio, inviate indipendentemente dalle scelte sopra.",
       "transactional": {

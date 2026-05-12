@@ -736,6 +736,10 @@
         "label": "New reply on your community thread",
         "description": "Inbox notification when someone replies to a community post you previously commented on."
       },
+      "communityBeltCelebration": {
+        "label": "Teammate belt promotions",
+        "description": "Inbox notification when a teammate at your academy earns a new belt. Off by default — opt in to receive every promotion."
+      },
       "alwaysSentTitle": "Always sent",
       "alwaysSentSubtitle": "Transactional emails — required for the service to work, sent regardless of the toggles above.",
       "transactional": {
