@@ -76,15 +76,25 @@ class MyAttendanceController extends Controller
 
     /**
      * `true` only when the raw input is *present* but cannot be parsed
-     * as `YYYY-MM-DD`. Missing / empty inputs are NOT invalid — they
-     * fall through to the unbounded window. Copilot review on PR
-     * #622: the previous shape silently swallowed parse errors and
-     * treated `?from=garbage` as "no filter", which masked client
-     * bugs.
+     * as `YYYY-MM-DD`. Missing / null inputs are NOT invalid — they
+     * fall through to the unbounded window. Non-null non-string inputs
+     * (arrays from `?from[]=2026-01-01`, numeric coercions) ARE invalid
+     * — the previous shape let them slip through as "no filter", which
+     * masked client bugs (Copilot review on #636). Empty strings stay
+     * "not invalid" to keep the unbounded-window default working when
+     * the SPA sends `?from=` with no value.
      */
     private function isInvalidDateInput(mixed $raw): bool
     {
-        if (! \is_string($raw) || $raw === '') {
+        if ($raw === null) {
+            return false;
+        }
+
+        if (! \is_string($raw)) {
+            return true;
+        }
+
+        if ($raw === '') {
             return false;
         }
 

@@ -15,7 +15,7 @@ use Illuminate\Http\JsonResponse;
 /**
  * Reactions surface (#603, M9 PR-C server).
  *
- * `POST /api/v1/community/posts/{post}/react` — toggle the
+ * `POST /api/v1/community/posts/{post}/reactions` — toggle the
  * authenticated user's emoji reaction on the given post. The body
  * payload is `{"emoji": "clap"|"pray"}`. The response carries the
  * resulting state so the SPA can reconcile its optimistic update in

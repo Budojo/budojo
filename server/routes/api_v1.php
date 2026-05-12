@@ -414,7 +414,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     // Community (M9). Owners + athletes share the same /api/v1/community
     // namespace — tenant isolation is per-Action (feed) or per-FormRequest
-    // gate (DELETE / react). Each method is scoped on the comment line
+    // gate (DELETE / reactions). Each method is scoped on the comment line
     // that introduces it.
     Route::prefix('community')->group(function (): void {
         // PR-B server (#612): athletes + owners read the same paginated

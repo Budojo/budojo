@@ -27,7 +27,12 @@ use Illuminate\Support\Facades\Notification;
  * notifies every prior sibling commenter under the same post who
  * has the `community_reply` category enabled, excluding the new
  * comment's author. The fanout is best-effort — failures are
- * isolated per recipient and DO NOT roll back the comment write.
+ * isolated FROM THE COMMENT WRITE (the comment row commits even if
+ * the inbox insert fails) but not per-recipient: `Notification::send`
+ * batches the recipients inside a single try/catch, so a database
+ * hiccup mid-batch surfaces as a single warning entry rather than
+ * per-row. Acceptable for V1 — the inbox row is best-effort UX, not
+ * a delivery guarantee.
  */
 class CreateCommentAction
 {
