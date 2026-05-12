@@ -70,13 +70,11 @@ final class NotificationCategory
     /**
      * Inbox notification fired when the academy owner creates a new
      * event-type community post (M9 PR-F slice 2, #606). Recipients
-     * are athletes in the academy with a linked `user_id` (invite-
-     * pending rows skipped); the editor is always excluded. Owner-
-     * only users without an athlete row in their own academy are
-     * not currently in the recipient set — the owner is the editor
-     * in the only callsite today (Copilot review on #634). Default-
-     * on: events are deliberate, relatively rare, and the academy
-     * roster opted in by joining the academy.
+     * are every academy user — athletes linked to a `user_id` (invite-
+     * pending rows skipped) PLUS the academy owner — minus the editor.
+     * Owner-side participation in the community surface landed in
+     * #638. Default-on: events are deliberate, relatively rare, and
+     * the academy roster opted in by joining the academy.
      */
     public const string COMMUNITY_EVENT_NEW = 'community_event_new';
 

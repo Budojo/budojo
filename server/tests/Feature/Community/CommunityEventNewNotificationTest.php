@@ -72,6 +72,32 @@ it('does NOT notify the editor who created the event', function (): void {
     Notification::assertNotSentTo($this->owner, CommunityEventNewNotification::class);
 });
 
+it('notifies the academy owner when a non-owner user creates the event (owner social, #639)', function (): void {
+    // Models the multi-owner future the owner-side community surface
+    // anticipates: someone OTHER than the academy's primary owner
+    // posts an event under the academy. The recipient set must
+    // include the primary owner; the editing user must be excluded.
+    //
+    // The endpoint's authorize() gate is exercised in the dedicated
+    // CommunityCreateEventApiTest spec (athlete 403, no-academy 403);
+    // here we invoke the Action directly to keep the assertion
+    // focused on fanout behaviour, not on the HTTP boundary
+    // (Copilot review on #639).
+    Notification::fake();
+
+    /** @var User $editor */
+    $editor = User::factory()->create(['role' => 'owner']);
+
+    $action = app(\App\Actions\Community\CreateEventAction::class);
+    $action->execute($editor, $this->academy->id, [
+        'title' => 'Direct-action event',
+        'starts_at' => '2026-06-13T10:00:00Z',
+    ]);
+
+    Notification::assertSentTo($this->owner, CommunityEventNewNotification::class);
+    Notification::assertNotSentTo($editor, CommunityEventNewNotification::class);
+});
+
 it('default-on: a user with no preference set DOES receive the event notification', function (): void {
     Notification::fake();
 

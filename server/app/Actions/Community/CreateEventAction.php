@@ -6,6 +6,7 @@ namespace App\Actions\Community;
 
 use App\Enums\CommunityPostType;
 use App\Enums\CommunityPostVisibility;
+use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\CommunityPost;
 use App\Models\User;
@@ -110,10 +111,15 @@ class CreateEventAction
     }
 
     /**
-     * Notify every academy user (athletes linked to a user_id) whose
-     * `community_event_new` preference is enabled, excluding the
-     * editor. Default-on category — absent-key recipients receive the
-     * notification.
+     * Notify every academy user — athletes linked to a `user_id` PLUS
+     * the academy owner — whose `community_event_new` preference is
+     * enabled, excluding the editor. Default-on category — absent-key
+     * recipients receive the notification. The owner is pulled even
+     * when they have no athlete row in their own academy (the common
+     * V1 shape: one owner per academy, no self-roster entry); today
+     * the owner is also the editor in 100% of callsites so this
+     * branch no-ops, but it closes the gap for the multi-owner future
+     * the owner-side community surface (#638) anticipates.
      *
      * Best-effort like the other PR-F fanouts: failures are captured
      * via `Log::warning` so the controller's 201 path is unaffected
@@ -126,13 +132,25 @@ class CreateEventAction
         // Excludes the editor. DISTINCT at the SQL layer (matches
         // CreateCommentAction's pattern) — cheaper than PHP-side
         // dedup on academies with many athletes (Copilot review #634).
-        $recipientIds = Athlete::query()
+        $athleteUserIds = Athlete::query()
             ->where('academy_id', $academyId)
             ->whereNotNull('user_id')
             ->where('user_id', '!=', $editor->id)
             ->distinct()
             ->pluck('user_id')
             ->all();
+
+        // Owner id — scalar lookup, no model hydration (Copilot review
+        // on #639). `value()` returns `mixed`; we narrow to int|null
+        // via an is_numeric guard so PHPStan level 9 stays happy.
+        $ownerIdRaw = Academy::query()->whereKey($academyId)->value('user_id');
+        $ownerId = is_numeric($ownerIdRaw) ? (int) $ownerIdRaw : null;
+        /** @var array<int, int> $recipientIds */
+        $recipientIds = $athleteUserIds;
+        if ($ownerId !== null && $ownerId !== $editor->id) {
+            $recipientIds[] = $ownerId;
+            $recipientIds = array_values(array_unique($recipientIds, \SORT_NUMERIC));
+        }
 
         if ($recipientIds === []) {
             return;
