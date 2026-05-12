@@ -388,9 +388,27 @@
   letter-spacing: -0.003em;
 }
 
-// Toggle switch — iOS-green when on
-.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider {
+// Toggle switch — iOS-green when on. PrimeNG renders TWO color
+// surfaces (track + handle); the Material preset's checked state
+// turns the track light-indigo AND the handle full-indigo. Without
+// overriding BOTH, the green track + indigo handle render produces
+// the "half-purple, half-green" split visible on /dashboard/profile
+// (reported on v2.7.0). iOS-style: green track + white handle, full
+// stop, including on hover.
+.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider,
+.p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover).p-toggleswitch-checked
+  .p-toggleswitch-slider {
   background: var(--budojo-success);
+  border-color: var(--budojo-success);
+}
+.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-handle,
+.p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover).p-toggleswitch-checked
+  .p-toggleswitch-handle {
+  // Literal white in both light + dark — iOS toggles keep a white
+  // knob on the green track regardless of system theme (HIG § Controls).
+  // `--p-surface-0` flips to near-black in dark mode, which produced
+  // a black knob on green track; rejected by Copilot review on #638.
+  background: #ffffff;
 }
 .p-toggleswitch .p-toggleswitch-slider {
   border-radius: var(--p-border-radius-full);
