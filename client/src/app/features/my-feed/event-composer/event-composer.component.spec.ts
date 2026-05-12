@@ -11,6 +11,7 @@ import { EventComposerComponent } from './event-composer.component';
 // Host component models the production parent: pass [visible] as a
 // model binding + listen to the `created` output.
 @Component({
+  standalone: true,
   imports: [EventComposerComponent],
   template: ` <app-event-composer [(visible)]="visible" (created)="lastCreated.set($event)" /> `,
 })

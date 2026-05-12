@@ -27,10 +27,16 @@
 
     @media (max-width: 768px) {
       flex-direction: column-reverse;
-
-      :host ::ng-deep .p-button {
-        width: 100%;
-      }
     }
+  }
+}
+
+// :host needs to be the selector root — when nested inside a class
+// it compiles to `.event-composer__actions :host ...` which doesn't
+// match anything. Top-level rule, scoped via the action container.
+// Copilot review on #640.
+@media (max-width: 768px) {
+  :host ::ng-deep .event-composer__actions .p-button {
+    width: 100%;
   }
 }

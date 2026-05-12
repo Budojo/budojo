@@ -174,14 +174,35 @@ export class CommunityService {
    * the standard `community_posts.payload` shape, including
    * `location_address: null` for the V2 map view.
    *
+   * Normalisation happens HERE so every caller (today the composer,
+   * tomorrow an admin tool / automated import) gets the same wire
+   * shape: trim every string, convert blank-after-trim optionals to
+   * `null`. Copilot review on #640 flagged the duplication risk.
+   *
    * The endpoint returns the full `CommunityPostResource` so the SPA
    * can prepend it to the local feed without a follow-up roundtrip.
    */
   createEvent(payload: CreateEventPayload): Observable<CommunityPost> {
+    const normalised: CreateEventPayload = {
+      title: payload.title.trim(),
+      starts_at: payload.starts_at,
+      description: blankToNull(payload.description),
+      location_text: blankToNull(payload.location_text),
+      location_lat: payload.location_lat ?? null,
+      location_lon: payload.location_lon ?? null,
+      max_attendees: payload.max_attendees ?? null,
+    };
     return this.http
-      .post<{ data: CommunityPost }>(`${this.base}/events`, payload)
+      .post<{ data: CommunityPost }>(`${this.base}/events`, normalised)
       .pipe(map((res) => res.data));
   }
+}
+
+/** Trim + collapse empty / whitespace-only strings to `null`. */
+function blankToNull(raw: string | null | undefined): string | null {
+  if (raw === null || raw === undefined) return null;
+  const trimmed = raw.trim();
+  return trimmed === '' ? null : trimmed;
 }
 
 /**

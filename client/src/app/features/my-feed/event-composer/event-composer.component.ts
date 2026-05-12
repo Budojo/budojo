@@ -1,5 +1,15 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { type MonoTypeOperatorFunction, finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -56,6 +66,7 @@ export class EventComposerComponent {
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly visible = input<boolean>(false);
   readonly visibleChange = output<boolean>();
@@ -71,9 +82,8 @@ export class EventComposerComponent {
     max_attendees: [null as number | null, [Validators.min(1), Validators.max(10000)]],
   });
 
-  protected onClose(): void {
-    if (this.submitting()) return;
-    this.visibleChange.emit(false);
+  /** Reset the form to its empty state — shared by close + post-submit. */
+  private resetForm(): void {
     this.form.reset({
       title: '',
       starts_at: null,
@@ -83,35 +93,57 @@ export class EventComposerComponent {
     });
   }
 
+  /**
+   * Local-state reset hook fired by `<p-dialog (onHide)>`. p-dialog
+   * has already emitted `visibleChange(false)` itself; emitting again
+   * here would produce a duplicate flip on the parent (Copilot review
+   * on #640). Just wipe the form so a future re-open lands clean.
+   */
+  protected onHide(): void {
+    if (this.submitting()) return;
+    this.resetForm();
+  }
+
+  /** Explicit close from the Cancel button — we DO own the emit here. */
+  protected onClose(): void {
+    if (this.submitting()) return;
+    this.visibleChange.emit(false);
+    this.resetForm();
+  }
+
   protected onSubmit(): void {
     if (this.form.invalid || this.submitting()) return;
     const raw = this.form.getRawValue();
     if (raw.starts_at === null) return;
 
     this.submitting.set(true);
+    // `takeUntilDestroyed` cancels the request if the user navigates
+    // away mid-flight (no ghost `created` emit or stale toast).
+    // `finalize` guarantees `submitting` is cleared on every exit
+    // path — success, error, OR cancellation (Copilot review on
+    // #640).
     this.communityService
       .createEvent({
-        title: raw.title.trim(),
-        // Send the local-tz ISO string; the server re-parses through
-        // Carbon and re-serialises to canonical UTC, so the wire-side
-        // is always the same regardless of where the form ran.
+        title: raw.title,
+        // `Date#toISOString()` is always UTC (`...Z`); the server
+        // re-parses through Carbon and writes back canonical UTC.
+        // Trim + null-on-blank for the three optional strings lives
+        // in CommunityService.createEvent so every caller gets the
+        // same wire shape (Copilot review on #640).
         starts_at: raw.starts_at.toISOString(),
-        description: raw.description.trim() === '' ? null : raw.description.trim(),
-        location_text: raw.location_text.trim() === '' ? null : raw.location_text.trim(),
+        description: raw.description,
+        location_text: raw.location_text,
         max_attendees: raw.max_attendees,
       })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef) as MonoTypeOperatorFunction<CommunityPost>,
+        finalize(() => this.submitting.set(false)),
+      )
       .subscribe({
         next: (post) => {
           this.created.emit(post);
-          this.submitting.set(false);
           this.visibleChange.emit(false);
-          this.form.reset({
-            title: '',
-            starts_at: null,
-            description: '',
-            location_text: '',
-            max_attendees: null,
-          });
+          this.resetForm();
           this.messageService.add({
             severity: 'success',
             summary: this.translate.instant('community.composer.successSummary'),
@@ -120,7 +152,6 @@ export class EventComposerComponent {
           });
         },
         error: () => {
-          this.submitting.set(false);
           this.messageService.add({
             severity: 'error',
             summary: this.translate.instant('community.composer.errorSummary'),
