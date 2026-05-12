@@ -195,6 +195,27 @@
       "unknown_error": "Something went wrong. Please try again in a moment."
     }
   },
+  "community": {
+    "composer": {
+      "openButton": "Post event",
+      "title": "Post a new event",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Open mat — Saturday",
+      "startsAtLabel": "When",
+      "locationLabel": "Where (optional)",
+      "locationPlaceholder": "Via Roma 10, Milano",
+      "descriptionLabel": "Details (optional)",
+      "descriptionPlaceholder": "All belts welcome — bring your gi.",
+      "maxAttendeesLabel": "Max attendees (optional)",
+      "maxAttendeesPlaceholder": "Leave empty for no cap",
+      "cancel": "Cancel",
+      "submit": "Post event",
+      "successSummary": "Event posted",
+      "successDetail": "Everyone in your academy will see it on the feed.",
+      "errorSummary": "Couldn't post the event",
+      "errorDetail": "Something went wrong on our side. Try again in a moment."
+    }
+  },
   "athletePortal": {
     "welcome": {
       "title": "Welcome to Budojo",

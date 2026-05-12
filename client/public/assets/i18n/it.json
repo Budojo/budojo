@@ -195,6 +195,27 @@
       "unknown_error": "Qualcosa è andato storto. Riprova tra un momento."
     }
   },
+  "community": {
+    "composer": {
+      "openButton": "Pubblica evento",
+      "title": "Pubblica un nuovo evento",
+      "titleLabel": "Titolo",
+      "titlePlaceholder": "Open mat — sabato",
+      "startsAtLabel": "Quando",
+      "locationLabel": "Dove (facoltativo)",
+      "locationPlaceholder": "Via Roma 10, Milano",
+      "descriptionLabel": "Dettagli (facoltativo)",
+      "descriptionPlaceholder": "Aperto a tutte le cinture — porta il tuo gi.",
+      "maxAttendeesLabel": "Posti massimi (facoltativo)",
+      "maxAttendeesPlaceholder": "Lascia vuoto per nessun limite",
+      "cancel": "Annulla",
+      "submit": "Pubblica evento",
+      "successSummary": "Evento pubblicato",
+      "successDetail": "Tutti nella tua academy lo vedranno sul feed.",
+      "errorSummary": "Non è stato possibile pubblicare l'evento",
+      "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
+    }
+  },
   "athletePortal": {
     "welcome": {
       "title": "Benvenuto in Budojo",

@@ -1,0 +1,42 @@
+.event-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+
+    &--narrow {
+      max-width: 12rem;
+    }
+  }
+
+  &__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-color);
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+
+    @media (max-width: 768px) {
+      flex-direction: column-reverse;
+    }
+  }
+}
+
+// :host needs to be the selector root — when nested inside a class
+// it compiles to `.event-composer__actions :host ...` which doesn't
+// match anything. Top-level rule, scoped via the action container.
+// Copilot review on #640.
+@media (max-width: 768px) {
+  :host ::ng-deep .event-composer__actions .p-button {
+    width: 100%;
+  }
+}

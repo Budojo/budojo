@@ -9,6 +9,14 @@
   flex-direction: column;
   gap: 1.5rem;
 
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
   &__title {
     margin: 0;
     font-size: 1.5rem;
