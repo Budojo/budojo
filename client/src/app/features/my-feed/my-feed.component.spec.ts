@@ -64,6 +64,7 @@ function postFixture(overrides: Partial<CommunityPost> = {}): CommunityPost {
       belt: null,
     },
     reactions_count: 0,
+    reaction_counts: { clap: 0, pray: 0 },
     comments_count: 0,
     rsvps_count: 0,
     your_reaction: null,
@@ -117,6 +118,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
             belt: null,
           },
           reactions_count: 0,
+          reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
@@ -158,6 +160,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
             belt: null,
           },
           reactions_count: 0,
+          reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
@@ -209,6 +212,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
             belt: null,
           },
           reactions_count: 0,
+          reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
@@ -241,6 +245,91 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     ).toContain('1');
   });
 
+  it('renders the per-emoji count next to the right button (clap-only post)', () => {
+    const { fixture, el, http } = setup();
+    const postId = 90;
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          ...postFixture({ id: postId }),
+          reactions_count: 2,
+          reaction_counts: { clap: 2, pray: 0 },
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const clapCount = el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`);
+    const prayCount = el.querySelector(`[data-cy="react-pray-${postId}"] .feed__react-count`);
+    expect(clapCount?.textContent).toContain('2');
+    // Pray button has no counter span when its count is 0.
+    expect(prayCount).toBeNull();
+  });
+
+  it('renders the per-emoji count next to the right button (pray-only post — #647)', () => {
+    // This is the regression we shipped — the previous shape dumped
+    // the total on the Clap button regardless of which emoji had
+    // been used. Pin the inverted shape.
+    const { fixture, el, http } = setup();
+    const postId = 91;
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          ...postFixture({ id: postId }),
+          reactions_count: 2,
+          reaction_counts: { clap: 0, pray: 2 },
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const clapCount = el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`);
+    const prayCount = el.querySelector(`[data-cy="react-pray-${postId}"] .feed__react-count`);
+    expect(prayCount?.textContent).toContain('2');
+    expect(clapCount).toBeNull();
+  });
+
+  it('clap → pray swap updates per-emoji counts without changing the total', () => {
+    const { fixture, el, http } = setup();
+    const postId = 92;
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          ...postFixture({ id: postId }),
+          reactions_count: 1,
+          reaction_counts: { clap: 1, pray: 0 },
+          your_reaction: 'clap',
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    // Tap the Pray button — swap in place (clap−1, pray+1, total=1).
+    const prayBtn = el.querySelector(`[data-cy="react-pray-${postId}"]`) as HTMLButtonElement;
+    prayBtn.click();
+    fixture.detectChanges();
+
+    // Optimistic: clap counter gone, pray shows 1.
+    expect(el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`)).toBeNull();
+    expect(
+      el.querySelector(`[data-cy="react-pray-${postId}"] .feed__react-count`)?.textContent,
+    ).toContain('1');
+
+    // Server reconciles to the same shape.
+    http
+      .expectOne(`${environment.apiBase}/api/v1/community/posts/${postId}/reactions`)
+      .flush({ your_reaction: 'pray', counts: { clap: 0, pray: 1 } });
+    fixture.detectChanges();
+
+    expect(prayBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(el.querySelector(`[data-cy="react-clap-${postId}"]`)?.getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+  });
+
   it('rolls back the optimistic reaction when the API call fails', () => {
     const { fixture, el, http } = setup();
 
@@ -263,6 +352,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
             belt: null,
           },
           reactions_count: 0,
+          reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
@@ -313,6 +403,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
             belt: null,
           },
           reactions_count: 0,
+          reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
@@ -364,6 +455,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
             belt: null,
           },
           reactions_count: 0,
+          reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,
@@ -408,6 +500,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
             belt: null,
           },
           reactions_count: 0,
+          reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
           your_reaction: null,

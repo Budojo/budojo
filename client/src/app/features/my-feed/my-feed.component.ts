@@ -288,6 +288,7 @@ export class MyFeedComponent implements OnInit {
   protected toggleReaction(post: CommunityPost, emoji: ReactionEmoji): void {
     const previousReaction = post.your_reaction;
     const previousCount = post.reactions_count;
+    const previousBreakdown = post.reaction_counts;
 
     const optimistic = this.predictNextState(post, emoji);
     this.replacePost(post.id, optimistic);
@@ -299,6 +300,7 @@ export class MyFeedComponent implements OnInit {
         this.replacePost(post.id, {
           your_reaction: previousReaction,
           reactions_count: previousCount,
+          reaction_counts: previousBreakdown,
         });
       },
     });
@@ -337,6 +339,10 @@ export class MyFeedComponent implements OnInit {
         this.replacePost(postId, {
           your_reaction: response.your_reaction,
           reactions_count: total,
+          reaction_counts: {
+            clap: response.counts.clap,
+            pray: response.counts.pray,
+          },
         });
       });
 
@@ -347,28 +353,42 @@ export class MyFeedComponent implements OnInit {
   private predictNextState(
     post: CommunityPost,
     emoji: ReactionEmoji,
-  ): { your_reaction: ReactionEmoji | null; reactions_count: number } {
-    if (post.your_reaction === null) {
-      return { your_reaction: emoji, reactions_count: post.reactions_count + 1 };
+  ): {
+    your_reaction: ReactionEmoji | null;
+    reactions_count: number;
+    reaction_counts: { clap: number; pray: number };
+  } {
+    const prev = post.your_reaction;
+    const total = post.reactions_count;
+    const breakdown = { clap: post.reaction_counts.clap, pray: post.reaction_counts.pray };
+
+    if (prev === null) {
+      // Adding a fresh reaction — bump the per-emoji counter + total.
+      breakdown[emoji] = breakdown[emoji] + 1;
+      return { your_reaction: emoji, reactions_count: total + 1, reaction_counts: breakdown };
     }
-    if (post.your_reaction === emoji) {
-      return { your_reaction: null, reactions_count: Math.max(0, post.reactions_count - 1) };
+    if (prev === emoji) {
+      // Same emoji clicked again — toggle off; decrement the per-emoji
+      // counter + total (floor 0 in case the server diverged).
+      breakdown[emoji] = Math.max(0, breakdown[emoji] - 1);
+      return {
+        your_reaction: null,
+        reactions_count: Math.max(0, total - 1),
+        reaction_counts: breakdown,
+      };
     }
-    // Different emoji — swap in place; count unchanged.
-    return { your_reaction: emoji, reactions_count: post.reactions_count };
+    // Different emoji — swap in place: decrement the old, increment
+    // the new, total unchanged.
+    breakdown[prev] = Math.max(0, breakdown[prev] - 1);
+    breakdown[emoji] = breakdown[emoji] + 1;
+    return { your_reaction: emoji, reactions_count: total, reaction_counts: breakdown };
   }
 
   private replacePost(
     postId: number,
-    patch: { your_reaction: ReactionEmoji | null; reactions_count: number },
+    patch: Partial<Pick<CommunityPost, 'your_reaction' | 'reactions_count' | 'reaction_counts'>>,
   ): void {
-    this.posts.update((list) =>
-      list.map((p) =>
-        p.id === postId
-          ? { ...p, your_reaction: patch.your_reaction, reactions_count: patch.reactions_count }
-          : p,
-      ),
-    );
+    this.posts.update((list) => list.map((p) => (p.id === postId ? { ...p, ...patch } : p)));
   }
 
   /**
