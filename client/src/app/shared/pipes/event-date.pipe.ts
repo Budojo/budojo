@@ -1,5 +1,6 @@
 import { Pipe, type PipeTransform, inject } from '@angular/core';
 import { LanguageService } from '../../core/services/language.service';
+import { localeFor } from '../utils/locale';
 
 /**
  * Renders an event `starts_at` as a human-friendly future-tense
@@ -39,7 +40,11 @@ export class EventDatePipe implements PipeTransform {
     if (Number.isNaN(date.getTime())) return '';
 
     const lang = this.languageService.currentLang();
-    const locale = lang === 'it' ? 'it-IT' : 'en-US';
+    // Central locale helper — `en` → `en-GB` per repo policy
+    // (Copilot review on #646). All format strings here use long
+    // month names, so the `en-GB` "Sept" abbreviation foot-gun
+    // documented in shared/utils/locale.ts doesn't apply.
+    const locale = localeFor(lang);
     const time = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
     const today = startOfDay(new Date());

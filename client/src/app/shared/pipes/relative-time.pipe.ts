@@ -1,5 +1,6 @@
 import { Pipe, type PipeTransform, inject } from '@angular/core';
 import { LanguageService } from '../../core/services/language.service';
+import { localeFor } from '../utils/locale';
 
 /**
  * Renders a past timestamp as a human-friendly relative string
@@ -39,7 +40,12 @@ export class RelativeTimePipe implements PipeTransform {
     if (Number.isNaN(date.getTime())) return '';
 
     const lang = this.languageService.currentLang();
-    const locale = lang === 'it' ? 'it-IT' : 'en-US';
+    // Central locale helper — `en` → `en-GB` per repo policy
+    // (Copilot review on #646; consistent with the rest of the SPA's
+    // Intl.* call sites). The format strings here are not fixed-width
+    // so the `en-GB` choice doesn't risk the "September abbreviation"
+    // foot-gun documented in shared/utils/locale.ts.
+    const locale = localeFor(lang);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffSec = Math.round(diffMs / 1000);
