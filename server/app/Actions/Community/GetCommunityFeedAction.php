@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Community;
 
+use App\Enums\ReactionEmoji;
 use App\Models\CommunityPost;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -73,8 +74,16 @@ class GetCommunityFeedAction
                 // a pray-only post showed "2" on the Clap button).
                 // Aliased so Eloquent populates them as
                 // $post->clap_reactions_count / $post->pray_reactions_count.
-                'reactions as clap_reactions_count' => fn ($q) => $q->where('emoji', 'clap'),
-                'reactions as pray_reactions_count' => fn ($q) => $q->where('emoji', 'pray'),
+                // Enum cases (not literal strings) so a future rename
+                // of the values trips at compile/static-analysis time.
+                'reactions as clap_reactions_count' => fn ($q) => $q->where(
+                    'emoji',
+                    ReactionEmoji::Clap->value,
+                ),
+                'reactions as pray_reactions_count' => fn ($q) => $q->where(
+                    'emoji',
+                    ReactionEmoji::Pray->value,
+                ),
             ])
             ->paginate($perPage);
     }
