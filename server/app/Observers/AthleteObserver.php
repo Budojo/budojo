@@ -122,8 +122,11 @@ class AthleteObserver
      *
      * Best-effort like the comment-reply fanout: the celebration
      * post insert has already committed, and the controller's 200
-     * path on the underlying PATCH must remain — failures land in
-     * the audit log without surfacing to the caller.
+     * path on the underlying PATCH must remain — failures are
+     * captured via `Log::warning` and swallowed so they never
+     * surface to the caller. There's no durable audit table here;
+     * the application log (Sentry / file driver in prod) is the
+     * only trail.
      */
     private function fanoutBeltCelebration(
         Athlete $athlete,

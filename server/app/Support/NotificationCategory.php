@@ -24,9 +24,13 @@ namespace App\Support;
  * are NEVER gated by `notification_preferences`.
  *
  * **Adding a new category**: append a constant here, surface it on
- * the SPA preferences panel, and gate the dispatching site. The
- * default for any new category is "enabled" — `isEnabled` returns
- * true unless the JSON explicitly carries the key set to `false`.
+ * the SPA preferences panel, and gate the dispatching site. By
+ * default `isEnabled` returns `true` for absent keys (GDPR soft-
+ * opt-in posture). Categories with a wider blast radius —
+ * e.g. every-academy broadcasts — can flip the absent-key
+ * fallback to `false` by adding their key to the
+ * `defaultOff()` list; the SPA panel surfaces them with an
+ * "Off by default" cue in the description copy.
  */
 final class NotificationCategory
 {
