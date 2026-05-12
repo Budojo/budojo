@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
@@ -18,6 +17,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { CommunityService, PostComment } from '../../../core/services/community.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserFlairComponent } from '../../../shared/components/user-flair/user-flair.component';
+import { RelativeTimePipe } from '../../../shared/pipes/relative-time.pipe';
 
 /**
  * Comments thread mounted under each feed card (#604, M9 PR-D2
@@ -43,7 +43,14 @@ import { UserFlairComponent } from '../../../shared/components/user-flair/user-f
 @Component({
   selector: 'app-comments-thread',
   standalone: true,
-  imports: [FormsModule, DatePipe, TranslatePipe, ButtonModule, TextareaModule, UserFlairComponent],
+  imports: [
+    FormsModule,
+    TranslatePipe,
+    ButtonModule,
+    TextareaModule,
+    UserFlairComponent,
+    RelativeTimePipe,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './comments-thread.component.html',
   styleUrl: './comments-thread.component.scss',

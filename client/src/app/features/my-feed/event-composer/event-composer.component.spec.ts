@@ -45,6 +45,7 @@ const POST: CommunityPost = {
     belt: null,
   },
   reactions_count: 0,
+  reaction_counts: { clap: 0, pray: 0 },
   comments_count: 0,
   rsvps_count: 0,
   your_reaction: null,

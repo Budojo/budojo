@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Community;
 
+use App\Enums\ReactionEmoji;
 use App\Models\CommunityPost;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -63,7 +64,27 @@ class GetCommunityFeedAction
                 // buttons render the active state on first paint.
                 'rsvps' => fn ($q) => $q->where('user_id', $user->id),
             ])
-            ->withCount(['reactions', 'comments', 'rsvps'])
+            ->withCount([
+                'reactions',
+                'comments',
+                'rsvps',
+                // Per-emoji breakdown so the feed card can render the
+                // count next to the right button instead of a single
+                // total dumped on the first one (reported post-v2.8.0:
+                // a pray-only post showed "2" on the Clap button).
+                // Aliased so Eloquent populates them as
+                // $post->clap_reactions_count / $post->pray_reactions_count.
+                // Enum cases (not literal strings) so a future rename
+                // of the values trips at compile/static-analysis time.
+                'reactions as clap_reactions_count' => fn ($q) => $q->where(
+                    'emoji',
+                    ReactionEmoji::Clap->value,
+                ),
+                'reactions as pray_reactions_count' => fn ($q) => $q->where(
+                    'emoji',
+                    ReactionEmoji::Pray->value,
+                ),
+            ])
             ->paginate($perPage);
     }
 

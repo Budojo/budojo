@@ -44,6 +44,16 @@ export interface CommunityPost {
   readonly created_at: string;
   readonly created_by: CommunityPostAuthor;
   readonly reactions_count: number;
+  /**
+   * Per-emoji breakdown so the SPA renders the right count next to
+   * each reaction button. Total of `clap + pray` equals
+   * `reactions_count`. Server populates from aliased withCount;
+   * defaults to `{ clap: 0, pray: 0 }` on a freshly-created post.
+   */
+  readonly reaction_counts: {
+    readonly clap: number;
+    readonly pray: number;
+  };
   readonly comments_count: number;
   readonly rsvps_count: number;
   readonly your_reaction: ReactionEmoji | null;
