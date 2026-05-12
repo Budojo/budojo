@@ -43,7 +43,15 @@ class CommunityEventsController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        /** @var array{title: string, starts_at: string} $payload */
+        /** @var array{
+         *     title: string,
+         *     starts_at: string,
+         *     description?: string|null,
+         *     location_text?: string|null,
+         *     location_lat?: float|null,
+         *     location_lon?: float|null,
+         *     max_attendees?: int|null,
+         * } $payload */
         $payload = $request->validated();
         $post = $this->createEvent->execute($user, $academy->id, $payload);
 
