@@ -20,6 +20,10 @@
     />
   }
 
+  @if (canModerate()) {
+    <p-confirmdialog />
+  }
+
   @if (loading()) {
     <ul class="feed__list" data-cy="my-feed-loading">
       @for (i of [1, 2, 3]; track i) {
@@ -59,6 +63,18 @@
             <time class="feed__time" [dateTime]="post.created_at">
               {{ post.created_at | date: 'medium' }}
             </time>
+            @if (canModerate()) {
+              <button
+                type="button"
+                class="feed__delete-btn"
+                [attr.aria-label]="'community.moderation.deletePostAria' | translate"
+                [pTooltip]="'community.moderation.deletePostTooltip' | translate"
+                (click)="confirmDeletePost(post)"
+                [attr.data-cy]="'delete-post-' + post.id"
+              >
+                <i class="pi pi-trash" aria-hidden="true"></i>
+              </button>
+            }
           </header>
 
           @switch (post.type) {

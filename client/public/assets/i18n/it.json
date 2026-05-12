@@ -214,6 +214,16 @@
       "successDetail": "Tutti nella tua academy lo vedranno sul feed.",
       "errorSummary": "Non è stato possibile pubblicare l'evento",
       "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
+    },
+    "moderation": {
+      "deletePostAria": "Elimina questo post",
+      "deletePostTooltip": "Elimina post",
+      "deletePostTitle": "Eliminare questo post?",
+      "deletePostMessage": "Il post e tutti i suoi commenti spariranno dal feed. L'azione non è ripristinabile dalla dashboard.",
+      "deleteAccept": "Elimina",
+      "deleteReject": "Annulla",
+      "postDeletedSummary": "Post eliminato",
+      "postDeleteError": "Non è stato possibile eliminare il post. Riprova tra un momento."
     }
   },
   "athletePortal": {
