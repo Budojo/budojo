@@ -72,6 +72,35 @@ it('does NOT notify the editor who created the event', function (): void {
     Notification::assertNotSentTo($this->owner, CommunityEventNewNotification::class);
 });
 
+it('notifies the academy owner when ANOTHER user creates the event (owner social, #638)', function (): void {
+    Notification::fake();
+
+    // Build a second user with the owner role attached to the same
+    // academy (e.g. a future co-owner). They're the editor; the
+    // primary owner of the academy should receive the inbox row.
+    /** @var User $coOwner */
+    $coOwner = User::factory()->create(['role' => 'owner']);
+
+    test()->actingAs($coOwner)->postJson('/api/v1/community/events', [
+        'title' => 'Open mat — Saturday',
+        'starts_at' => '2026-06-13T10:00:00Z',
+        // The endpoint reads $user->academy, so for this multi-owner
+        // case we go straight to the Action with the academy id.
+    ])->assertStatus(403); // co-owner has no linked academy → 403
+
+    // Direct Action invocation models the multi-owner case the
+    // endpoint will support later. The owner of the academy is the
+    // intended recipient; the editor (co-owner) is excluded.
+    $action = app(\App\Actions\Community\CreateEventAction::class);
+    $action->execute($coOwner, $this->academy->id, [
+        'title' => 'Direct-action event',
+        'starts_at' => '2026-06-13T10:00:00Z',
+    ]);
+
+    Notification::assertSentTo($this->owner, CommunityEventNewNotification::class);
+    Notification::assertNotSentTo($coOwner, CommunityEventNewNotification::class);
+});
+
 it('default-on: a user with no preference set DOES receive the event notification', function (): void {
     Notification::fake();
 

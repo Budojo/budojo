@@ -6,6 +6,7 @@ namespace App\Actions\Community;
 
 use App\Enums\CommunityPostType;
 use App\Enums\CommunityPostVisibility;
+use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\CommunityPost;
 use App\Models\User;
@@ -126,13 +127,30 @@ class CreateEventAction
         // Excludes the editor. DISTINCT at the SQL layer (matches
         // CreateCommentAction's pattern) — cheaper than PHP-side
         // dedup on academies with many athletes (Copilot review #634).
-        $recipientIds = Athlete::query()
+        $athleteUserIds = Athlete::query()
             ->where('academy_id', $academyId)
             ->whereNotNull('user_id')
             ->where('user_id', '!=', $editor->id)
             ->distinct()
             ->pluck('user_id')
             ->all();
+
+        // Academy owner — includes them even when they have no athlete
+        // row (the common case: one owner per academy, no self-roster
+        // entry). The owner-only social surface (#638) is the consumer.
+        // Today the owner is also the editor in 100% of the callsites,
+        // so this filter no-ops; the explicit include is forward-
+        // looking for a multi-owner future and keeps the docblock
+        // claim ("every academy user except the editor") true.
+        /** @var Academy|null $academy */
+        $academy = Academy::query()->find($academyId);
+        $ownerId = $academy?->user_id;
+        /** @var array<int, int> $recipientIds */
+        $recipientIds = $athleteUserIds;
+        if ($ownerId !== null && $ownerId !== $editor->id) {
+            $recipientIds[] = $ownerId;
+            $recipientIds = array_values(array_unique($recipientIds, \SORT_NUMERIC));
+        }
 
         if ($recipientIds === []) {
             return;
