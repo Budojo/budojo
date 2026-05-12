@@ -118,6 +118,26 @@ it('rejects an invalid date range (from > to) with 422', function (): void {
         ->assertExactJson(['message' => 'Invalid date range.']);
 });
 
+it('rejects array-valued from / to query params with 422 (Copilot review on #636)', function (): void {
+    // `?from[]=2026-01-01` arrives as an array on $request->query.
+    // Previously the controller's `isInvalidDateInput()` returned
+    // false for any non-string (the early return short-circuited
+    // before validation), silently dropping the filter to the
+    // unbounded window. Now any non-null, non-string value is
+    // treated as invalid.
+    [$user] = authedAthleteUser($this->academy);
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/me/attendance?from[]=2026-01-01')
+        ->assertStatus(422)
+        ->assertExactJson(['message' => 'Invalid date range.']);
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/me/attendance?to[]=2026-04-30')
+        ->assertStatus(422)
+        ->assertExactJson(['message' => 'Invalid date range.']);
+});
+
 it('rejects unauthenticated callers with 401', function (): void {
     $this->getJson('/api/v1/me/attendance')->assertStatus(401);
 });

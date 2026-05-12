@@ -13,7 +13,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rules\Enum;
 
 /**
- * Authorize + validate `POST /api/v1/community/posts/{post}/react`
+ * Authorize + validate `POST /api/v1/community/posts/{post}/reactions`
  * (#603, M9 PR-C).
  *
  * Authorization gate: the authenticated user must belong to the
