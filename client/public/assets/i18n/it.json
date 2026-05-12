@@ -25,6 +25,7 @@
     "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
+    "community": "Community",
     "profile": "Profilo",
     "whatsNew": "Novità",
     "support": "Contatta il supporto",
@@ -192,6 +193,37 @@
       "invite_expired": "Questo invito è scaduto. Chiedi al titolare della tua academy di inviartene uno nuovo.",
       "email_already_registered": "Esiste già un account con questa email. Prova ad accedere.",
       "unknown_error": "Qualcosa è andato storto. Riprova tra un momento."
+    }
+  },
+  "community": {
+    "composer": {
+      "openButton": "Pubblica evento",
+      "title": "Pubblica un nuovo evento",
+      "titleLabel": "Titolo",
+      "titlePlaceholder": "Open mat — sabato",
+      "startsAtLabel": "Quando",
+      "locationLabel": "Dove (facoltativo)",
+      "locationPlaceholder": "Via Roma 10, Milano",
+      "descriptionLabel": "Dettagli (facoltativo)",
+      "descriptionPlaceholder": "Aperto a tutte le cinture — porta il tuo gi.",
+      "maxAttendeesLabel": "Posti massimi (facoltativo)",
+      "maxAttendeesPlaceholder": "Lascia vuoto per nessun limite",
+      "cancel": "Annulla",
+      "submit": "Pubblica evento",
+      "successSummary": "Evento pubblicato",
+      "successDetail": "Tutti nella tua academy lo vedranno sul feed.",
+      "errorSummary": "Non è stato possibile pubblicare l'evento",
+      "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
+    },
+    "moderation": {
+      "deletePostAria": "Elimina questo post",
+      "deletePostTooltip": "Elimina post",
+      "deletePostTitle": "Eliminare questo post?",
+      "deletePostMessage": "Il post e tutti i suoi commenti spariranno dal feed. L'azione non è ripristinabile dalla dashboard.",
+      "deleteAccept": "Elimina",
+      "deleteReject": "Annulla",
+      "postDeletedSummary": "Post eliminato",
+      "postDeleteError": "Non è stato possibile eliminare il post. Riprova tra un momento."
     }
   },
   "athletePortal": {

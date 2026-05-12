@@ -9,6 +9,14 @@
   flex-direction: column;
   gap: 1.5rem;
 
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
   &__title {
     margin: 0;
     font-size: 1.5rem;
@@ -44,6 +52,23 @@
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
+  }
+
+  &__delete-btn {
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: 0.5rem;
+    margin-inline-start: auto;
+    cursor: pointer;
+    color: var(--p-text-muted-color);
+    border-radius: 8px;
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+      color: var(--p-red-500, #dc2626);
+    }
   }
 
   &__author-meta {

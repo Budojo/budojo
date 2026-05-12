@@ -2,8 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { ConfirmationService } from 'primeng/api';
 import { MyFeedComponent } from './my-feed.component';
-import type { CommunityFeedPage } from '../../core/services/community.service';
+import type { CommunityFeedPage, CommunityPost } from '../../core/services/community.service';
+import { AuthService, type UserRole } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
@@ -14,7 +16,7 @@ function emptyPage(): CommunityFeedPage {
   };
 }
 
-function setup() {
+function setup(opts: { role?: UserRole } = {}) {
   TestBed.configureTestingModule({
     imports: [MyFeedComponent],
     providers: [
@@ -25,10 +27,49 @@ function setup() {
     ],
   });
 
+  if (opts.role !== undefined) {
+    TestBed.inject(AuthService).user.set({
+      id: 1,
+      first_name: 'Test',
+      last_name: 'User',
+      full_name: 'Test User',
+      handle: null,
+      email: 'test@example.com',
+      email_verified_at: null,
+      avatar_url: null,
+      role: opts.role,
+    });
+  }
+
   const fixture = TestBed.createComponent(MyFeedComponent);
   const http = TestBed.inject(HttpTestingController);
   fixture.detectChanges();
   return { fixture, el: fixture.nativeElement as HTMLElement, http };
+}
+
+function postFixture(overrides: Partial<CommunityPost> = {}): CommunityPost {
+  return {
+    id: 42,
+    type: 'event',
+    visibility: 'academy',
+    payload: { title: 'Open mat', starts_at: '2026-06-13T10:00:00Z' },
+    created_at: '2026-05-10T08:00:00Z',
+    created_by: {
+      id: 99,
+      first_name: 'Other',
+      last_name: 'User',
+      full_name: 'Other User',
+      handle: null,
+      avatar_url: null,
+      belt: null,
+    },
+    reactions_count: 0,
+    comments_count: 0,
+    rsvps_count: 0,
+    your_reaction: null,
+    your_rsvp: null,
+    ...overrides,
+  };
 }
 
 describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
@@ -386,5 +427,87 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
       meta: { current_page: 2, per_page: 20, total: 25, last_page: 2 },
     });
     fixture.detectChanges();
+  });
+
+  describe('owner moderation (#641)', () => {
+    function flushFeed(http: HttpTestingController, post: CommunityPost) {
+      http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+        data: [post],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+      });
+    }
+
+    it('does NOT render the trash icon for athletes', () => {
+      const { fixture, el, http } = setup({ role: 'athlete' });
+      flushFeed(http, postFixture({ id: 42 }));
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="delete-post-42"]')).toBeNull();
+    });
+
+    it('does NOT render the trash icon when no user is signed in', () => {
+      // Defensive — the guards make this unreachable in production, but
+      // the gate must not break in the absence of a user.
+      const { fixture, el, http } = setup();
+      flushFeed(http, postFixture({ id: 42 }));
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="delete-post-42"]')).toBeNull();
+    });
+
+    it('renders the trash icon on every feed card for owners', () => {
+      const { fixture, el, http } = setup({ role: 'owner' });
+      flushFeed(http, postFixture({ id: 42 }));
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="delete-post-42"]')).not.toBeNull();
+    });
+
+    it('clicks the trash → confirm → DELETE /community/posts/<id> → removes the card', () => {
+      const { fixture, el, http } = setup({ role: 'owner' });
+      flushFeed(http, postFixture({ id: 42 }));
+      fixture.detectChanges();
+
+      // Auto-accept the confirm dialog so the click flows straight to
+      // the DELETE call. ConfirmationService is component-scoped (the
+      // MyFeed providers array), so we pull it from the fixture's
+      // injector rather than the root TestBed.
+      const confirm = fixture.debugElement.injector.get(ConfirmationService);
+      vi.spyOn(confirm, 'confirm').mockImplementation((opts) => {
+        opts.accept?.();
+        return confirm;
+      });
+
+      const btn = el.querySelector('[data-cy="delete-post-42"]') as HTMLButtonElement;
+      btn.click();
+      const req = http.expectOne(`${environment.apiBase}/api/v1/community/posts/42`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="my-feed-post-42"]')).toBeNull();
+    });
+
+    it('keeps the post in place when the DELETE request fails', () => {
+      const { fixture, el, http } = setup({ role: 'owner' });
+      flushFeed(http, postFixture({ id: 42 }));
+      fixture.detectChanges();
+
+      const confirm = fixture.debugElement.injector.get(ConfirmationService);
+      vi.spyOn(confirm, 'confirm').mockImplementation((opts) => {
+        opts.accept?.();
+        return confirm;
+      });
+
+      const btn = el.querySelector('[data-cy="delete-post-42"]') as HTMLButtonElement;
+      btn.click();
+      const req = http.expectOne(`${environment.apiBase}/api/v1/community/posts/42`);
+      req.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+      fixture.detectChanges();
+
+      // No optimistic removal — the card stays so the user sees the
+      // operation didn't take.
+      expect(el.querySelector('[data-cy="my-feed-post-42"]')).not.toBeNull();
+    });
   });
 });

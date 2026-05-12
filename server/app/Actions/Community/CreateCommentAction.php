@@ -26,13 +26,14 @@ use Illuminate\Support\Facades\Notification;
  * **Fanout (M9 PR-F slice 1, #606)**: after inserting, the Action
  * notifies every prior sibling commenter under the same post who
  * has the `community_reply` category enabled, excluding the new
- * comment's author. The fanout is best-effort — failures are
- * isolated FROM THE COMMENT WRITE (the comment row commits even if
- * the inbox insert fails) but not per-recipient: `Notification::send`
- * batches the recipients inside a single try/catch, so a database
- * hiccup mid-batch surfaces as a single warning entry rather than
- * per-row. Acceptable for V1 — the inbox row is best-effort UX, not
- * a delivery guarantee.
+ * comment's author. The fanout is best-effort: `Notification::send`
+ * is invoked once for the full eligible collection, wrapped in a
+ * single try/catch on the Action's side. So a failure on the inbox
+ * insert is logged and swallowed (the comment row has already
+ * committed), but the recipients are NOT processed one-by-one — a
+ * database hiccup mid-batch surfaces as a single warning entry, not
+ * one per recipient. Acceptable for V1: the inbox row is best-effort
+ * UX, not a delivery guarantee.
  */
 class CreateCommentAction
 {

@@ -74,12 +74,21 @@ export class CommentsThreadComponent implements OnInit {
 
   protected readonly draft = signal('');
   protected readonly currentUserId = signal<number | null>(null);
+  /**
+   * Owner-moderation flag (#641, follow-up to the M9 community
+   * surface). When true, every comment carries a delete affordance —
+   * not just the user's own. The DeleteCommentRequest authorize gate
+   * has supported the owner-deletes-any path since M9 PR-D server,
+   * the SPA just hadn't surfaced it.
+   */
+  protected readonly isOwner = signal(false);
 
   protected readonly MAX_BODY = 500;
 
   ngOnInit(): void {
     const user = this.authService.user();
     this.currentUserId.set(user?.id ?? null);
+    this.isOwner.set(user?.role === 'owner');
     this.loadPage(1);
   }
 
@@ -182,6 +191,10 @@ export class CommentsThreadComponent implements OnInit {
 
   protected canDelete(comment: PostComment): boolean {
     const me = this.currentUserId();
-    return me !== null && me === comment.created_by.id;
+    if (me === null) return false;
+    // Author always wins; owners get the moderation hook even when
+    // they aren't the author. Server-side DeleteCommentRequest
+    // matches the same two paths (#604) so this gate stays honest.
+    return me === comment.created_by.id || this.isOwner();
   }
 }

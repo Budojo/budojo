@@ -1,5 +1,28 @@
 <div class="feed">
-  <h1 class="feed__title">{{ 'athletePortal.feed.title' | translate }}</h1>
+  <header class="feed__header">
+    <h1 class="feed__title">{{ 'athletePortal.feed.title' | translate }}</h1>
+    @if (canPostEvents()) {
+      <p-button
+        [label]="'community.composer.openButton' | translate"
+        icon="pi pi-plus"
+        size="small"
+        (onClick)="openComposer()"
+        data-cy="my-feed-open-composer"
+      />
+    }
+  </header>
+
+  @if (canPostEvents()) {
+    <app-event-composer
+      [visible]="composerOpen()"
+      (visibleChange)="composerOpen.set($event)"
+      (created)="onEventCreated($event)"
+    />
+  }
+
+  @if (canModerate()) {
+    <p-confirmdialog />
+  }
 
   @if (loading()) {
     <ul class="feed__list" data-cy="my-feed-loading">
@@ -40,6 +63,18 @@
             <time class="feed__time" [dateTime]="post.created_at">
               {{ post.created_at | date: 'medium' }}
             </time>
+            @if (canModerate()) {
+              <button
+                type="button"
+                class="feed__delete-btn"
+                [attr.aria-label]="'community.moderation.deletePostAria' | translate"
+                [pTooltip]="'community.moderation.deletePostTooltip' | translate"
+                (click)="confirmDeletePost(post)"
+                [attr.data-cy]="'delete-post-' + post.id"
+              >
+                <i class="pi pi-trash" aria-hidden="true"></i>
+              </button>
+            }
           </header>
 
           @switch (post.type) {

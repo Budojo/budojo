@@ -3,16 +3,20 @@ import {
   Component,
   DestroyRef,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
+import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Subject, catchError, of, switchMap } from 'rxjs';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
 import { TranslateService } from '@ngx-translate/core';
 import {
   CommunityFeedPage,
@@ -23,11 +27,13 @@ import {
   RsvpResponse,
   RsvpToggleResponse,
 } from '../../core/services/community.service';
+import { AuthService } from '../../core/services/auth.service';
 import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { UserFlairComponent } from '../../shared/components/user-flair/user-flair.component';
 import { CommentsThreadComponent } from './comments-thread/comments-thread.component';
+import { EventComposerComponent } from './event-composer/event-composer.component';
 
 /**
  * Athlete-portal community timeline (#614, M9 PR-B2). Consumes the
@@ -53,15 +59,19 @@ import { CommentsThreadComponent } from './comments-thread/comments-thread.compo
   imports: [
     TranslatePipe,
     DatePipe,
+    ButtonModule,
     SkeletonModule,
     ToastModule,
+    TooltipModule,
+    ConfirmDialog,
     BeltBadgeComponent,
     UserAvatarComponent,
     UserFlairComponent,
     CommentsThreadComponent,
+    EventComposerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   templateUrl: './my-feed.component.html',
   styleUrl: './my-feed.component.scss',
 })
@@ -70,6 +80,27 @@ export class MyFeedComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly messageService = inject(MessageService);
   private readonly translateService = inject(TranslateService);
+  private readonly authService = inject(AuthService);
+  private readonly confirmationService = inject(ConfirmationService);
+
+  protected readonly composerOpen = signal(false);
+
+  /**
+   * Owners see a "Post event" affordance at the top of the feed; the
+   * server-side endpoint is owner-gated (athletes get a 403 envelope)
+   * so this gate is purely UI — hide the button athletes can't use
+   * (Norman § Constraints) rather than let them click into a 403.
+   */
+  protected readonly canPostEvents = computed(() => this.authService.user()?.role === 'owner');
+
+  /**
+   * Owner-side moderation affordances (trash icon on each feed card,
+   * trash icon on others' comments). Same gate as canPostEvents — the
+   * server-side DeleteCommunityPostRequest / DeleteCommentRequest
+   * both require `isOwner()` + the post's academy match. Hide UI
+   * athletes can't use rather than let them click into a 403.
+   */
+  protected readonly canModerate = computed(() => this.authService.user()?.role === 'owner');
 
   protected readonly posts = signal<readonly CommunityPost[]>([]);
   protected readonly loading = signal(true);
@@ -114,6 +145,70 @@ export class MyFeedComponent implements OnInit {
       });
 
     this.load(1);
+  }
+
+  /**
+   * Open the event composer dialog. Owner-only — the template hides
+   * the trigger when `canPostEvents()` is false, but the method
+   * stays guarded so a programmatic open from an athlete context
+   * is a no-op rather than a 403 at submit time.
+   */
+  protected openComposer(): void {
+    if (!this.canPostEvents()) return;
+    this.composerOpen.set(true);
+  }
+
+  /**
+   * Composer success callback: prepend the new event to the local
+   * feed so it appears at the top without a refresh. The server
+   * returns the same `CommunityPostResource` shape the feed reads,
+   * so the inserted row is indistinguishable from one fetched via
+   * pagination.
+   */
+  protected onEventCreated(post: CommunityPost): void {
+    this.posts.update((existing) => [post, ...existing]);
+  }
+
+  /**
+   * Owner-only — opens a confirm dialog, then DELETE /community/posts/{id}.
+   * Server soft-deletes the row (preserves auditability); the SPA
+   * removes the card from the local feed immediately on success.
+   * On error the toast surfaces but the post stays — no optimistic
+   * shape since the user already paid for the confirm tap.
+   */
+  protected confirmDeletePost(post: CommunityPost): void {
+    if (!this.canModerate()) return;
+    this.confirmationService.confirm({
+      header: this.translateService.instant('community.moderation.deletePostTitle'),
+      message: this.translateService.instant('community.moderation.deletePostMessage'),
+      acceptLabel: this.translateService.instant('community.moderation.deleteAccept'),
+      rejectLabel: this.translateService.instant('community.moderation.deleteReject'),
+      acceptButtonProps: { severity: 'danger' },
+      accept: () => this.deletePost(post.id),
+    });
+  }
+
+  private deletePost(postId: number): void {
+    this.communityService
+      .deletePost(postId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.posts.update((existing) => existing.filter((p) => p.id !== postId));
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translateService.instant('community.moderation.postDeletedSummary'),
+            life: 3000,
+          });
+        },
+        error: () => {
+          this.messageService.add({
+            severity: 'error',
+            summary: this.translateService.instant('community.moderation.postDeleteError'),
+            life: 5000,
+          });
+        },
+      });
   }
 
   protected load(page: number): void {

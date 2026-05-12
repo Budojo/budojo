@@ -25,6 +25,7 @@
     "academy": "Academy",
     "athletes": "Athletes",
     "attendance": "Attendance",
+    "community": "Community",
     "profile": "Profile",
     "whatsNew": "What's new",
     "support": "Contact support",
@@ -192,6 +193,37 @@
       "invite_expired": "This invitation has expired. Ask your academy owner to send you a new one.",
       "email_already_registered": "An account already exists for this email. Please sign in instead.",
       "unknown_error": "Something went wrong. Please try again in a moment."
+    }
+  },
+  "community": {
+    "composer": {
+      "openButton": "Post event",
+      "title": "Post a new event",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Open mat — Saturday",
+      "startsAtLabel": "When",
+      "locationLabel": "Where (optional)",
+      "locationPlaceholder": "Via Roma 10, Milano",
+      "descriptionLabel": "Details (optional)",
+      "descriptionPlaceholder": "All belts welcome — bring your gi.",
+      "maxAttendeesLabel": "Max attendees (optional)",
+      "maxAttendeesPlaceholder": "Leave empty for no cap",
+      "cancel": "Cancel",
+      "submit": "Post event",
+      "successSummary": "Event posted",
+      "successDetail": "Everyone in your academy will see it on the feed.",
+      "errorSummary": "Couldn't post the event",
+      "errorDetail": "Something went wrong on our side. Try again in a moment."
+    },
+    "moderation": {
+      "deletePostAria": "Delete this post",
+      "deletePostTooltip": "Delete post",
+      "deletePostTitle": "Delete this post?",
+      "deletePostMessage": "The post and all its comments will be removed from the feed. This action can't be undone from the dashboard.",
+      "deleteAccept": "Delete",
+      "deleteReject": "Cancel",
+      "postDeletedSummary": "Post deleted",
+      "postDeleteError": "Couldn't delete the post. Try again in a moment."
     }
   },
   "athletePortal": {

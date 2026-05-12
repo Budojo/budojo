@@ -425,6 +425,31 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('community link in sidebar nav (#638)', () => {
+    it('renders a routerLink="community" entry with the comments icon above the profile link', () => {
+      // Owner-side social access (#638). Reuses MyFeedComponent on a
+      // new owner-shell route; the sidebar entry slots between
+      // Stats and Profile so the social affordance lives near
+      // identity, not lifecycle.
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="nav-community"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.tagName).toBe('A');
+      expect(link!.textContent).toContain('Community');
+      expect(link!.querySelector('i.pi-comments')).not.toBeNull();
+
+      const profile = fixture.nativeElement.querySelector(
+        '[data-cy="nav-profile"]',
+      ) as HTMLAnchorElement;
+      // DOCUMENT_POSITION_FOLLOWING = 4 — community must come before profile.
+      expect(link!.compareDocumentPosition(profile) & 4).toBe(4);
+    });
+  });
+
   describe("what's new link in sidebar footer (#254)", () => {
     it('renders a routerLink="whats-new" entry above the Sign out button', () => {
       const fixture = TestBed.createComponent(DashboardComponent);

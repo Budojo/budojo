@@ -30,11 +30,11 @@ function authorComment(over: Partial<PostComment> = {}): PostComment {
   };
 }
 
-function setup(opts: { currentUserId?: number | null } = {}) {
+function setup(opts: { currentUserId?: number | null; role?: 'owner' | 'athlete' } = {}) {
   const user = signal<User | null>(
     opts.currentUserId === undefined
       ? null
-      : ({ id: opts.currentUserId } as unknown as User | null),
+      : ({ id: opts.currentUserId, role: opts.role ?? 'athlete' } as unknown as User | null),
   );
 
   TestBed.configureTestingModule({
@@ -57,6 +57,37 @@ function setup(opts: { currentUserId?: number | null } = {}) {
 }
 
 describe('CommentsThreadComponent (#604, M9 PR-D2 client)', () => {
+  describe('owner moderation — canDelete on others comments (#641)', () => {
+    it('hides the trash icon on a comment by another user when the caller is an athlete', () => {
+      // Caller id 42 — the factory builds comments authored by user 7,
+      // so the author-path branch of canDelete returns false. An
+      // athlete with no owner role must not get the moderation path.
+      const { fixture, el, http } = setup({ currentUserId: 42, role: 'athlete' });
+      http.expectOne(`${environment.apiBase}/api/v1/community/posts/99/comments?page=1`).flush({
+        data: [authorComment({ id: 1, body: 'Not mine' })],
+        meta: { current_page: 1, per_page: 50, total: 1, last_page: 1 },
+      });
+      fixture.detectChanges();
+
+      const row = el.querySelector('[data-cy="comment-1"]');
+      expect(row).not.toBeNull();
+      expect(row?.querySelector('[data-cy="comment-delete-1"]')).toBeNull();
+    });
+
+    it('renders the trash icon on a comment by another user when the caller is the owner', () => {
+      const { fixture, el, http } = setup({ currentUserId: 42, role: 'owner' });
+      http.expectOne(`${environment.apiBase}/api/v1/community/posts/99/comments?page=1`).flush({
+        data: [authorComment({ id: 1, body: 'Not mine' })],
+        meta: { current_page: 1, per_page: 50, total: 1, last_page: 1 },
+      });
+      fixture.detectChanges();
+
+      const row = el.querySelector('[data-cy="comment-1"]');
+      expect(row).not.toBeNull();
+      expect(row?.querySelector('[data-cy="comment-delete-1"]')).not.toBeNull();
+    });
+  });
+
   it('renders the empty state when the API returns zero comments', () => {
     const { fixture, el, http } = setup();
     http.expectOne(`${environment.apiBase}/api/v1/community/posts/99/comments?page=1`).flush({
