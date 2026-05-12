@@ -313,9 +313,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     fixture.detectChanges();
 
     // Optimistic: clap counter gone, pray shows 1.
-    expect(
-      el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`),
-    ).toBeNull();
+    expect(el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`)).toBeNull();
     expect(
       el.querySelector(`[data-cy="react-pray-${postId}"] .feed__react-count`)?.textContent,
     ).toContain('1');
@@ -327,9 +325,9 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     fixture.detectChanges();
 
     expect(prayBtn.getAttribute('aria-pressed')).toBe('true');
-    expect(
-      el.querySelector(`[data-cy="react-clap-${postId}"]`)?.getAttribute('aria-pressed'),
-    ).toBe('false');
+    expect(el.querySelector(`[data-cy="react-clap-${postId}"]`)?.getAttribute('aria-pressed')).toBe(
+      'false',
+    );
   });
 
   it('rolls back the optimistic reaction when the API call fails', () => {
