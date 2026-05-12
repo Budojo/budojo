@@ -79,8 +79,8 @@ export class WhatsNewComponent {
         {
           heading: '🎉 The community feed',
           bullets: [
-            "/dashboard/me/feed is a timeline of academy life. Three kinds of post today: belt promotions (auto-created when an owner changes an athlete's belt — the celebration card carries the athlete's name + old belt → new belt, and is auto-deleted if you ever delete the athlete), events (open mats, seminars, in-house tournaments — owner-posted from the new POST /community/events endpoint, with the SPA composer landing in a focused follow-up), and the foundation for free-form announcements.",
-            "Every post carries the author flair — name, avatar, handle, and belt badge via the same <app-user-flair> component you'll see across the SPA, with a short-fallback ('Mario R.') when no handle is set.",
+            "/dashboard/me/feed is a timeline of academy life. Three kinds of post today: belt promotions (auto-created when an owner changes an athlete's belt — the celebration card carries the athlete's name + old belt → new belt, and is auto-deleted if you ever delete the athlete), events (open mats, seminars, in-house tournaments — owner-posted from a new API endpoint, with the SPA composer landing in a focused follow-up), and the foundation for free-form announcements.",
+            "Every post carries the author badge — name, avatar, handle, and belt — using the same identity-line you see across the dashboard, with a short-fallback ('Mario R.') when no handle is set.",
           ],
         },
         {
@@ -115,9 +115,9 @@ export class WhatsNewComponent {
           ],
         },
         {
-          heading: '🔧 Owner-side event creation endpoint',
+          heading: '🔧 Owner-side event creation',
           bullets: [
-            'POST /api/v1/community/events is now a real endpoint — owners can create events programmatically (or via the upcoming SPA composer in a focused follow-up). V1 ships create only; edit / cancel surfaces are V2. Body shape: title (required, 1–120 chars), description (optional, max 2000), starts_at (required ISO 8601 date-time, re-serialised to canonical UTC), optional location text + lat / lon (V2 map view-ready) + max attendees. Athletes get a 403 envelope; owners with no linked academy also 403.',
+            'Owners can now create events programmatically against a new API endpoint (the SPA composer lands in a focused follow-up). V1 ships create only — edit / cancel surfaces are V2. The endpoint accepts title (required, 1-120 chars), description (optional, max 2000), start date-time (required ISO 8601, normalised to canonical UTC), optional location text + lat / lon (V2 map view-ready), and max attendees. Only academy owners can post; athletes get a polite refusal.',
           ],
         },
         {
