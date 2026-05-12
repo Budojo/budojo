@@ -119,7 +119,7 @@ class CreateEventAction
      * V1 shape: one owner per academy, no self-roster entry); today
      * the owner is also the editor in 100% of callsites so this
      * branch no-ops, but it closes the gap for the multi-owner future
-     * the owner-side community surface (#638) anticipates.
+     * the owner-side community surface (#639) anticipates.
      *
      * Best-effort like the other PR-F fanouts: failures are captured
      * via `Log::warning` so the controller's 201 path is unaffected

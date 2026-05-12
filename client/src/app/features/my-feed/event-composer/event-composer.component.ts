@@ -8,7 +8,13 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  type AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  type ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { type MonoTypeOperatorFunction, finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -44,6 +50,19 @@ import { CommunityPost, CommunityService } from '../../../core/services/communit
  * On error: keep the dialog open, show a toast, restore the submit
  * button so the user can retry without re-typing.
  */
+
+/**
+ * Block whitespace-only titles client-side. Replaces the previous
+ * `Validators.minLength(1)` which let `'   '` through — the server
+ * trims + enforces min:1 and 422s, so we'd reliably ship a confusing
+ * "Couldn't post" toast with no inline hint. Copilot review on #643.
+ */
+function nonBlankValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value;
+  if (typeof value !== 'string') return null;
+  return value.trim().length === 0 ? { nonBlank: true } : null;
+}
+
 @Component({
   selector: 'app-event-composer',
   standalone: true,
@@ -75,7 +94,7 @@ export class EventComposerComponent {
   protected readonly submitting = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
-    title: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(120)]],
+    title: ['', [Validators.required, Validators.maxLength(120), nonBlankValidator]],
     starts_at: [null as Date | null, [Validators.required]],
     description: ['', [Validators.maxLength(2000)]],
     location_text: ['', [Validators.maxLength(200)]],
