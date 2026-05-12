@@ -44,6 +44,11 @@ const CATEGORIES: readonly ToggleableCategory[] = [
     i18nLabel: 'profile.notifications.communityReply.label',
     i18nDescription: 'profile.notifications.communityReply.description',
   },
+  {
+    key: 'community_belt_celebration',
+    i18nLabel: 'profile.notifications.communityBeltCelebration.label',
+    i18nDescription: 'profile.notifications.communityBeltCelebration.description',
+  },
 ];
 
 const TRANSACTIONAL_KEYS: readonly string[] = [

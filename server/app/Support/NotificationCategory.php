@@ -24,9 +24,13 @@ namespace App\Support;
  * are NEVER gated by `notification_preferences`.
  *
  * **Adding a new category**: append a constant here, surface it on
- * the SPA preferences panel, and gate the dispatching site. The
- * default for any new category is "enabled" — `isEnabled` returns
- * true unless the JSON explicitly carries the key set to `false`.
+ * the SPA preferences panel, and gate the dispatching site. By
+ * default `isEnabled` returns `true` for absent keys (GDPR soft-
+ * opt-in posture). Categories with a wider blast radius —
+ * e.g. every-academy broadcasts — can flip the absent-key
+ * fallback to `false` by adding their key to the
+ * `defaultOff()` list; the SPA panel surfaces them with an
+ * "Off by default" cue in the description copy.
  */
 final class NotificationCategory
 {
@@ -53,6 +57,17 @@ final class NotificationCategory
     public const string COMMUNITY_REPLY = 'community_reply';
 
     /**
+     * Inbox notification fired when ANY athlete in the user's
+     * academy is promoted to a new belt (M9 PR-F slice 3, #606).
+     * The editor who recorded the promotion is excluded from the
+     * fanout. Default-**off** per the PRD — the every-athlete
+     * blast radius is wide enough that an explicit opt-in is the
+     * right posture; the SPA panel surfaces it with a clear
+     * "Off by default" hint.
+     */
+    public const string COMMUNITY_BELT_CELEBRATION = 'community_belt_celebration';
+
+    /**
      * Every category, in the order the SPA panel renders them.
      *
      * @return array<int, string>
@@ -63,6 +78,20 @@ final class NotificationCategory
             self::MEDICAL_CERT_EXPIRY_REMINDERS,
             self::UNPAID_ATHLETES_DIGEST,
             self::COMMUNITY_REPLY,
+            self::COMMUNITY_BELT_CELEBRATION,
         ];
+    }
+
+    /**
+     * Categories that DEFAULT to off — the user has to opt in. Every
+     * other category defaults to enabled (the M5 GDPR soft-opt-in
+     * posture). Used by `NotificationPreferences::isEnabled` to
+     * decide the absent-key fallback.
+     *
+     * @return array<int, string>
+     */
+    public static function defaultOff(): array
+    {
+        return [self::COMMUNITY_BELT_CELEBRATION];
     }
 }
