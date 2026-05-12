@@ -126,3 +126,28 @@ it('persists the event notification to the inbox with the expected wire shape', 
         ->and($data['link'])->toStartWith('/dashboard/me/feed#post-')
         ->and($data['post_id'])->toBeInt();
 });
+
+it('falls back to a bare "New event" title when the payload title is missing or blank', function (): void {
+    // Hit the notification class directly with a hand-built post that
+    // has no title in its payload — the HTTP endpoint requires title,
+    // so this exercises the defensive fallback the notification
+    // carries for malformed / legacy rows (Copilot review on #634).
+    /** @var App\Models\CommunityPost $post */
+    $post = App\Models\CommunityPost::create([
+        'academy_id' => $this->academy->id,
+        'type' => App\Enums\CommunityPostType::Event,
+        'visibility' => App\Enums\CommunityPostVisibility::Academy,
+        'payload' => [
+            'title' => '   ',
+            'description' => null,
+            'starts_at' => '2026-06-13T10:00:00Z',
+        ],
+        'created_by_user_id' => $this->owner->id,
+    ]);
+
+    $notification = new App\Notifications\CommunityEventNewNotification($post);
+    /** @var array<string, mixed> $data */
+    $data = $notification->toDatabase((object) []);
+
+    expect($data['title'])->toBe('New event');
+});

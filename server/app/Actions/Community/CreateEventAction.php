@@ -123,14 +123,15 @@ class CreateEventAction
     {
         // Athletes in the academy with a linked user (invited-but-
         // not-accepted rows have user_id NULL and are skipped).
-        // Excludes the editor.
+        // Excludes the editor. DISTINCT at the SQL layer (matches
+        // CreateCommentAction's pattern) — cheaper than PHP-side
+        // dedup on academies with many athletes (Copilot review #634).
         $recipientIds = Athlete::query()
             ->where('academy_id', $academyId)
             ->whereNotNull('user_id')
             ->where('user_id', '!=', $editor->id)
+            ->distinct()
             ->pluck('user_id')
-            ->unique()
-            ->values()
             ->all();
 
         if ($recipientIds === []) {
