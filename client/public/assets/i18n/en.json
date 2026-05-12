@@ -740,6 +740,10 @@
         "label": "Teammate belt promotions",
         "description": "Inbox notification when a teammate at your academy earns a new belt. Off by default — opt in to receive every promotion."
       },
+      "communityEventNew": {
+        "label": "New academy events",
+        "description": "Inbox notification when your academy owner posts a new event — open mats, seminars, in-house tournaments."
+      },
       "alwaysSentTitle": "Always sent",
       "alwaysSentSubtitle": "Transactional emails — required for the service to work, sent regardless of the toggles above.",
       "transactional": {
