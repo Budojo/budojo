@@ -460,5 +460,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
             'posts/{post}/rsvp',
             [\App\Http\Controllers\Community\CommunityRsvpController::class, 'toggle'],
         )->middleware('throttle:community-rsvp');
+
+        // Owner-facing event creation. Unblocks PR-F slice 2's
+        // community_event_new notification trigger and adds genuine
+        // V1 value — until this lands, events came only from the
+        // factory in tests. Authorize gate requires isOwner() + a
+        // linked academy.
+        Route::post(
+            'events',
+            [\App\Http\Controllers\Community\CommunityEventsController::class, 'store'],
+        );
     });
 });

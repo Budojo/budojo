@@ -3825,6 +3825,59 @@ paths:
         '429':
           description: Rate-limit exceeded (30 RSVPs / minute / user).
 
+  /community/events:
+    post:
+      tags: [community]
+      summary: Create a community event post (owner only)
+      description: |
+        Create an event-type community post in the caller's owned
+        academy. Owner-only — athletes get a 403 envelope. The post
+        flows into the same feed as belt-promotion / announcement
+        posts; the SPA renders title + start time + optional
+        location text on the event card.
+
+        V1 ships create only — edit / cancel surfaces are V2. The
+        nullable `location_lat` / `location_lon` columns are baked
+        in so the V2 map view doesn't need a destructive migration.
+      operationId: createCommunityEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, starts_at]
+              properties:
+                title: { type: string, minLength: 1, maxLength: 120 }
+                description: { type: string, nullable: true, maxLength: 2000 }
+                starts_at: { type: string, format: date-time, description: 'ISO 8601 date-time (any TZ; stored canonical).' }
+                location_text: { type: string, nullable: true, maxLength: 200 }
+                location_lat: { type: number, format: float, nullable: true, minimum: -90, maximum: 90 }
+                location_lon: { type: number, format: float, nullable: true, minimum: -180, maximum: 180 }
+                max_attendees: { type: integer, nullable: true, minimum: 1, maximum: 10000 }
+      responses:
+        '201':
+          description: Event post created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/CommunityPost' }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — caller is not an owner OR has no linked academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '422':
+          description: Malformed payload (empty title, invalid date, out-of-range lat/lon, …).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationErrorBody' }
+
 components:
 
   securitySchemes:
