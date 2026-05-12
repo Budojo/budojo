@@ -169,8 +169,8 @@
               <span class="feed__react-label">{{
                 'athletePortal.feed.reactClap' | translate
               }}</span>
-              @if (post.reactions_count > 0) {
-                <span class="feed__react-count">{{ post.reactions_count }}</span>
+              @if (post.reaction_counts.clap > 0) {
+                <span class="feed__react-count">{{ post.reaction_counts.clap }}</span>
               }
             </button>
             <button
@@ -186,6 +186,9 @@
               <span class="feed__react-label">{{
                 'athletePortal.feed.reactPray' | translate
               }}</span>
+              @if (post.reaction_counts.pray > 0) {
+                <span class="feed__react-count">{{ post.reaction_counts.pray }}</span>
+              }
             </button>
             <button
               type="button"

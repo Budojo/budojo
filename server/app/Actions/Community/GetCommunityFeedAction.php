@@ -63,7 +63,19 @@ class GetCommunityFeedAction
                 // buttons render the active state on first paint.
                 'rsvps' => fn ($q) => $q->where('user_id', $user->id),
             ])
-            ->withCount(['reactions', 'comments', 'rsvps'])
+            ->withCount([
+                'reactions',
+                'comments',
+                'rsvps',
+                // Per-emoji breakdown so the feed card can render the
+                // count next to the right button instead of a single
+                // total dumped on the first one (reported post-v2.8.0:
+                // a pray-only post showed "2" on the Clap button).
+                // Aliased so Eloquent populates them as
+                // $post->clap_reactions_count / $post->pray_reactions_count.
+                'reactions as clap_reactions_count' => fn ($q) => $q->where('emoji', 'clap'),
+                'reactions as pray_reactions_count' => fn ($q) => $q->where('emoji', 'pray'),
+            ])
             ->paginate($perPage);
     }
 

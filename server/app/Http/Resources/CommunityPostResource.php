@@ -59,6 +59,16 @@ class CommunityPostResource extends JsonResource
                 'belt' => $author->athlete?->belt?->value,
             ],
             'reactions_count' => $post->reactions_count ?? 0,
+            // Per-emoji breakdown so the SPA renders the count next
+            // to the right reaction button (post-v2.8.0 fix). The
+            // values come from withCount aliased counts in
+            // GetCommunityFeedAction; on a freshly-created post (e.g.
+            // CreateEventAction's 201 path) the relation isn't
+            // hydrated so both default to 0, which is correct.
+            'reaction_counts' => [
+                'clap' => $post->clap_reactions_count ?? 0,
+                'pray' => $post->pray_reactions_count ?? 0,
+            ],
             'comments_count' => $post->comments_count ?? 0,
             'rsvps_count' => $post->rsvps_count ?? 0,
             // Caller's own reaction on this post (#617, PR-C2). The
