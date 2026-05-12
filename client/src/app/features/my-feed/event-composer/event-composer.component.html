@@ -1,0 +1,116 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="visibleChange.emit($event)"
+  [modal]="true"
+  [closable]="!submitting()"
+  [closeOnEscape]="!submitting()"
+  [draggable]="false"
+  [resizable]="false"
+  [breakpoints]="{ '768px': '92vw' }"
+  styleClass="event-composer__dialog"
+  [style]="{ width: '32rem' }"
+  (onHide)="onClose()"
+  [header]="'community.composer.title' | translate"
+  data-cy="event-composer-dialog"
+>
+  <form
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+    class="event-composer"
+    novalidate
+    data-cy="event-composer-form"
+  >
+    <label class="event-composer__field">
+      <span class="event-composer__label">{{ 'community.composer.titleLabel' | translate }}</span>
+      <input
+        type="text"
+        pInputText
+        formControlName="title"
+        maxlength="120"
+        autocomplete="off"
+        [placeholder]="'community.composer.titlePlaceholder' | translate"
+        data-cy="event-composer-title"
+      />
+    </label>
+
+    <div class="event-composer__field">
+      <label for="event-composer-starts-at" class="event-composer__label">{{
+        'community.composer.startsAtLabel' | translate
+      }}</label>
+      <p-datepicker
+        inputId="event-composer-starts-at"
+        formControlName="starts_at"
+        [showTime]="true"
+        [hourFormat]="'24'"
+        [showIcon]="true"
+        [dateFormat]="'dd/mm/yy'"
+        [touchUI]="true"
+        appendTo="body"
+        data-cy="event-composer-starts-at"
+      />
+    </div>
+
+    <label class="event-composer__field">
+      <span class="event-composer__label">{{
+        'community.composer.locationLabel' | translate
+      }}</span>
+      <input
+        type="text"
+        pInputText
+        formControlName="location_text"
+        maxlength="200"
+        autocomplete="off"
+        [placeholder]="'community.composer.locationPlaceholder' | translate"
+        data-cy="event-composer-location"
+      />
+    </label>
+
+    <label class="event-composer__field">
+      <span class="event-composer__label">{{
+        'community.composer.descriptionLabel' | translate
+      }}</span>
+      <textarea
+        pTextarea
+        formControlName="description"
+        rows="3"
+        maxlength="2000"
+        [placeholder]="'community.composer.descriptionPlaceholder' | translate"
+        data-cy="event-composer-description"
+      ></textarea>
+    </label>
+
+    <div class="event-composer__field event-composer__field--narrow">
+      <label for="event-composer-max-attendees" class="event-composer__label">{{
+        'community.composer.maxAttendeesLabel' | translate
+      }}</label>
+      <p-inputnumber
+        inputId="event-composer-max-attendees"
+        formControlName="max_attendees"
+        [min]="1"
+        [max]="10000"
+        [showButtons]="false"
+        [placeholder]="'community.composer.maxAttendeesPlaceholder' | translate"
+        data-cy="event-composer-max-attendees"
+      />
+    </div>
+
+    <footer class="event-composer__actions">
+      <p-button
+        type="button"
+        [label]="'community.composer.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        [disabled]="submitting()"
+        (onClick)="onClose()"
+        data-cy="event-composer-cancel"
+      />
+      <p-button
+        type="submit"
+        [label]="'community.composer.submit' | translate"
+        [loading]="submitting()"
+        [disabled]="form.invalid || submitting()"
+        data-cy="event-composer-submit"
+      />
+    </footer>
+  </form>
+</p-dialog>

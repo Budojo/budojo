@@ -165,4 +165,36 @@ export class CommunityService {
   toggleRsvp(postId: number, response: RsvpResponse): Observable<RsvpToggleResponse> {
     return this.http.post<RsvpToggleResponse>(`${this.base}/posts/${postId}/rsvp`, { response });
   }
+
+  /**
+   * Create an event-type community post (M9 PR-G client, owner-only).
+   * Mirrors the body shape of `POST /api/v1/community/events`:
+   * `title` + `starts_at` required, the rest optional. The server
+   * re-serialises `starts_at` to canonical UTC ISO 8601 and writes
+   * the standard `community_posts.payload` shape, including
+   * `location_address: null` for the V2 map view.
+   *
+   * The endpoint returns the full `CommunityPostResource` so the SPA
+   * can prepend it to the local feed without a follow-up roundtrip.
+   */
+  createEvent(payload: CreateEventPayload): Observable<CommunityPost> {
+    return this.http
+      .post<{ data: CommunityPost }>(`${this.base}/events`, payload)
+      .pipe(map((res) => res.data));
+  }
+}
+
+/**
+ * Wire shape for `POST /api/v1/community/events`. Mirrors the server-
+ * side `CreateEventRequest` rules; the SPA composer is the only
+ * caller today (`POST` exposed since v2.7.0).
+ */
+export interface CreateEventPayload {
+  readonly title: string;
+  readonly starts_at: string;
+  readonly description?: string | null;
+  readonly location_text?: string | null;
+  readonly location_lat?: number | null;
+  readonly location_lon?: number | null;
+  readonly max_attendees?: number | null;
 }
