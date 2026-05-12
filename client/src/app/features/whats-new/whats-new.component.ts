@@ -59,6 +59,54 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.8.0',
+      date: '2026-05-12',
+      headline:
+        "A focused follow-up to v2.7.0: the community feed is now first-class for academy owners too. New /dashboard/community entry in the sidebar (chat-bubbles icon, between Stats and Profile) opens the same feed athletes see — belt promotions, events, comments, RSVPs. A 'Post event' composer button at the top lets owners post a new event in 5 fields (title required 1–120 chars; when via calendar + 24-hour time picker; where, details, max attendees all optional); the card lands at the top of the feed immediately and every academy member except the editor gets the new-event inbox notification. Owner moderation: a trash icon appears on every post (owners only — athletes don't see it) and on every comment (regardless of author). Tap → red Delete confirm → removed for everyone. Notification recipient fix: community_event_new now reaches the academy owner too (was silently skipping non-editor owners, vestige of the 'owner always IS the editor' assumption). One visible bug: the notification toggles on /dashboard/profile were half-purple / half-green on iOS Safari — fixed to a white knob on green track in both light and dark mode (matches the iOS Settings shape).",
+      sections: [
+        {
+          heading: '✨ Owners now have the community feed in their sidebar',
+          bullets: [
+            'New Community entry in the dashboard sidebar between Stats and Profile (chat-bubbles icon). Tap it and you arrive on the same /dashboard/community feed your athletes see — belt-promotion celebrations, owner-posted events, comments, RSVPs.',
+            'Owners can do everything an athlete can on the feed: 👏 Clap / 🙏 Pray reactions, write and delete their own comments, Yes / Maybe / No RSVPs on event posts.',
+            'The athlete-portal feed under /dashboard/me/feed is unchanged. The two routes share the same backing component; the API has always been role-agnostic, the owner just hadn’t had a route into it before.',
+          ],
+        },
+        {
+          heading: '✨ "Post event" composer',
+          bullets: [
+            'Right above the feed, owners now see a "Post event" button. Tap it and a dialog opens with five fields: Title (required, 1–120 chars), When (calendar with a 24-hour time picker), Where (optional, up to 200 chars), Details (optional, up to 2000 chars), Max attendees (optional — leave empty for no cap).',
+            'Hit "Post event" and the new event card lands at the top of the feed immediately. Every other academy member receives an inbox notification — the editor (you) is excluded, since you already see your own post in the feed. Default-on; opt-out lives on /dashboard/profile → Notifications.',
+            'V1 ships create only — editing or cancelling an event is V2. Plan accordingly until then. If you mistype, delete the post via the new trash affordance (next section) and re-post.',
+          ],
+        },
+        {
+          heading: "✨ Owner moderation — delete posts and others' comments",
+          bullets: [
+            "A trash icon appears on every post header on the feed (visible only to owners — athletes don't see it).",
+            'A trash icon also appears on every comment in every thread, regardless of who wrote it. The author had always been able to delete their own; owners now get the same affordance across the board.',
+            'Tap the trash and you get a confirmation dialog with a red Delete button (Krug § Forgiveness for mistakes — no accidents). On confirm the post / comment is removed from the feed for everyone, and from your local view immediately.',
+            "This was already the server-side rule (the owner has always been authorized to moderate their academy) — the dashboard just hadn't surfaced the affordance until now.",
+          ],
+        },
+        {
+          heading: '✨ Owners now receive the community_event_new notification',
+          bullets: [
+            'Until v2.8.0 the community_event_new inbox notification only reached athletes with a linked user account. Owners who weren\'t the editor of the event were silently skipped — a vestige of the "the owner always IS the editor" assumption.',
+            'Recipient set is now "every academy user except the editor" — so in the multi-owner future the owner-side community surface is built for, every owner reads the inbox row about an event their co-owner posted.',
+            "Owners still don't get notified about events they posted themselves (correct exclusion: the editor sees the new post they just made appear in their own feed).",
+          ],
+        },
+        {
+          heading: '🐛 Notification toggles — green track + white handle, no more split colour',
+          bullets: [
+            "The toggle switches on /dashboard/profile → Notifications were rendering with a half-purple, half-green split visible on iOS Safari: the track flipped to green correctly when on, but the round knob stayed full indigo from the Material preset's default.",
+            "iOS toggles use a white knob on a green track regardless of system theme — that's the shape you'll see now, in light and dark mode (Apple HIG § Controls).",
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.7.0',
       date: '2026-05-12',
       headline:
