@@ -722,8 +722,8 @@
       "genericError": "Non è stato possibile aggiornare la password. Riprova."
     },
     "notifications": {
-      "title": "Notifiche email",
-      "subtitle": "Scegli quali email non essenziali vuoi ricevere.",
+      "title": "Notifiche",
+      "subtitle": "Scegli quali notifiche vuoi ricevere. Ogni riga indica come viene consegnata (digest email, inbox, …).",
       "medicalCertReminders": {
         "label": "Promemoria scadenza certificato medico",
         "description": "Digest giornaliero alle 09:00 con gli atleti il cui certificato medico scade tra 30, 7 o 0 giorni."
@@ -731,6 +731,10 @@
       "unpaidAthletesDigest": {
         "label": "Digest mensile atleti non paganti",
         "description": "Una volta al mese, il giorno 16, l'elenco degli atleti che non hanno pagato la quota del mese corrente."
+      },
+      "communityReply": {
+        "label": "Nuova risposta in un tuo thread community",
+        "description": "Notifica in inbox quando qualcuno risponde a un post community su cui hai già commentato."
       },
       "alwaysSentTitle": "Sempre inviate",
       "alwaysSentSubtitle": "Email transazionali — necessarie al funzionamento del servizio, inviate indipendentemente dalle scelte sopra.",

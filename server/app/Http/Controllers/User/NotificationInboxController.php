@@ -48,6 +48,7 @@ class NotificationInboxController extends Controller
                 $title = $data['title'] ?? '';
                 $body = $data['body'] ?? '';
                 $link = $data['link'] ?? null;
+                $kind = $data['kind'] ?? null;
 
                 return [
                     'id' => $n->id,
@@ -55,6 +56,12 @@ class NotificationInboxController extends Controller
                     'title' => \is_string($title) ? $title : '',
                     'body' => \is_string($body) ? $body : '',
                     'link' => \is_string($link) ? $link : null,
+                    // Surface the stable `kind` discriminator so the
+                    // SPA can render category-specific icons / styling
+                    // without parsing the title (M9 PR-F slice 1).
+                    // Notifications without a `kind` (legacy rows
+                    // from before this field landed) surface as null.
+                    'kind' => \is_string($kind) ? $kind : null,
                     'read_at' => $n->read_at?->toIso8601String(),
                     'created_at' => $n->created_at?->toIso8601String(),
                 ];
