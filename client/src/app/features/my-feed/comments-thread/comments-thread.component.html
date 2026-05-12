@@ -19,7 +19,7 @@
             <app-user-flair [user]="c.created_by" [compact]="true" />
             <p class="thread__body">{{ c.body }}</p>
             <time class="thread__time" [dateTime]="c.created_at">
-              {{ c.created_at | date: 'medium' }}
+              {{ c.created_at | relativeTime }}
             </time>
             @if (canDelete(c)) {
               <button

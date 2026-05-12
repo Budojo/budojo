@@ -395,11 +395,28 @@
 // the "half-purple, half-green" split visible on /dashboard/profile
 // (reported on v2.7.0). iOS-style: green track + white handle, full
 // stop, including on hover.
+//
+// Track sizing: the Material preset shipped a 1rem-tall track with a
+// 1.5rem knob — the knob overhangs the track top + bottom AND its
+// right edge gets clipped past the track right edge (as reported
+// post-v2.8.0). iOS shape: a 1.5rem-tall track with a 1.25rem knob
+// + 0.125rem gap so the knob sits INSIDE the pill-shaped track with
+// a small margin all around. We override the design tokens via the
+// PrimeNG-Material CSS-layer hooks so the change is local to our
+// scope without forking the preset.
+.p-toggleswitch {
+  --p-toggleswitch-height: 1.5rem;
+  --p-toggleswitch-handle-size: 1.25rem;
+  --p-toggleswitch-gap: 0.125rem;
+}
 .p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider,
 .p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover).p-toggleswitch-checked
   .p-toggleswitch-slider {
   background: var(--budojo-success);
-  border-color: var(--budojo-success);
+  // No border-color override — the Material preset keeps the border
+  // transparent on the checked state. Setting it to --budojo-success
+  // made the 1px track border visible and visually clipped the knob
+  // past the track's right edge on iOS Safari (post-v2.8.0 report).
 }
 .p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-handle,
 .p-toggleswitch:not(.p-disabled):has(.p-toggleswitch-input:hover).p-toggleswitch-checked
