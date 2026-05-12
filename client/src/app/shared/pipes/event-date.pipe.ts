@@ -7,10 +7,11 @@ import { localeFor } from '../utils/locale';
  * string — replaces the `DatePipe: 'medium'` shape that read like a
  * server log on the community event cards (#646, post-v2.8.0).
  *
- * Locale-aware via `LanguageService.currentLang()`:
- * - English: "Today at 10:00 AM" / "Tomorrow at 10:00 AM" /
- *   "Saturday at 10:00 AM" / "May 16 at 10:00 AM" / "May 16, 2027
- *   at 10:00 AM"
+ * Locale-aware via `LanguageService.currentLang()`. 24-hour time
+ * across both locales (en-GB convention per `localeFor('en')`,
+ * Copilot review on #649):
+ * - English: "Today at 10:00" / "Tomorrow at 10:00" /
+ *   "Saturday at 10:00" / "May 16 at 10:00" / "May 16, 2027 at 10:00"
  * - Italian: "Oggi alle 10:00" / "Domani alle 10:00" / "Sabato alle
  *   10:00" / "16 maggio alle 10:00" / "16 maggio 2027 alle 10:00"
  *

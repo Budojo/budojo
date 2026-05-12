@@ -92,6 +92,12 @@ describe('EventComposerComponent', () => {
       expect(composer['form'].controls.title.hasError('maxlength')).toBe(true);
     });
 
+    it('rejects a whitespace-only title (Copilot review on #643)', () => {
+      const { composer } = mount();
+      composer['form'].controls.title.setValue('   ');
+      expect(composer['form'].controls.title.hasError('nonBlank')).toBe(true);
+    });
+
     it('rejects a description longer than 2000 chars', () => {
       const { composer } = mount();
       composer['form'].controls.description.setValue('x'.repeat(2001));

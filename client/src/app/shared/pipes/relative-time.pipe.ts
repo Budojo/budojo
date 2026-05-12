@@ -41,45 +41,64 @@ export class RelativeTimePipe implements PipeTransform {
 
     const lang = this.languageService.currentLang();
     // Central locale helper — `en` → `en-GB` per repo policy
-    // (Copilot review on #646; consistent with the rest of the SPA's
-    // Intl.* call sites). The format strings here are not fixed-width
-    // so the `en-GB` choice doesn't risk the "September abbreviation"
-    // foot-gun documented in shared/utils/locale.ts.
+    // (Copilot review on #646). The format strings here are not
+    // fixed-width so the `en-GB` choice doesn't risk the "September
+    // abbreviation" foot-gun documented in shared/utils/locale.ts.
     const locale = localeFor(lang);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffSec = Math.round(diffMs / 1000);
-    const diffMin = Math.round(diffSec / 60);
-    const diffHour = Math.round(diffMin / 60);
-    const diffDay = Math.round(diffHour / 24);
+
+    // Future timestamps (rare clock-skew or a server clock ahead of
+    // the client) shouldn't render as past-tense — "5 min ago" on a
+    // future date is nonsense. Clamp tiny skew to "now"; fall back to
+    // an absolute short date for genuine future dates (Copilot review
+    // on #649).
+    if (diffMs < 0) {
+      if (diffMs > -60_000) {
+        return lang === 'it' ? 'adesso' : 'now';
+      }
+      const sameYear = date.getFullYear() === now.getFullYear();
+      return date.toLocaleDateString(
+        locale,
+        sameYear
+          ? { month: 'short', day: 'numeric' }
+          : { month: 'short', day: 'numeric', year: 'numeric' },
+      );
+    }
+
+    // Math.floor (integer division) on each bucket so 59m59s reads
+    // "59 min ago", not "1 hour ago" — Math.round would push the
+    // value over the next threshold (Copilot review on #649).
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
 
     // < 60s — "now"
-    if (Math.abs(diffSec) < 60) {
+    if (diffSec < 60) {
       return lang === 'it' ? 'adesso' : 'now';
     }
 
-    // < 60m — "Xm" / "X min fa"
-    if (Math.abs(diffMin) < 60) {
-      const n = Math.abs(diffMin);
-      return lang === 'it' ? `${n} min fa` : `${n} min ago`;
+    // < 60m — "X min ago"
+    if (diffMin < 60) {
+      return lang === 'it' ? `${diffMin} min fa` : `${diffMin} min ago`;
     }
 
-    // < 24h — "Xh" / "X ore fa"
-    if (Math.abs(diffHour) < 24) {
-      const n = Math.abs(diffHour);
+    // < 24h — "X hours ago"
+    if (diffHour < 24) {
       if (lang === 'it') {
-        return n === 1 ? '1 ora fa' : `${n} ore fa`;
+        return diffHour === 1 ? '1 ora fa' : `${diffHour} ore fa`;
       }
-      return n === 1 ? '1 hour ago' : `${n} hours ago`;
+      return diffHour === 1 ? '1 hour ago' : `${diffHour} hours ago`;
     }
 
-    // < 48h — "yesterday" / "ieri"
-    if (Math.abs(diffDay) < 2) {
+    // < 48h — "yesterday"
+    if (diffDay < 2) {
       return lang === 'it' ? 'ieri' : 'yesterday';
     }
 
-    // < 7d — short weekday + time
-    if (Math.abs(diffDay) < 7) {
+    // < 7d — short weekday + time (24-hour via en-GB)
+    if (diffDay < 7) {
       const weekday = date.toLocaleDateString(locale, { weekday: 'short' });
       const time = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
       return lang === 'it' ? `${weekday} alle ${time}` : `${weekday} at ${time}`;

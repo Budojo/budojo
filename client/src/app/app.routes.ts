@@ -280,11 +280,12 @@ export const routes: Routes = [
           import('./features/profile/profile.component').then((m) => m.ProfileComponent),
       },
       {
-        // Owner-side community surface (#638). Reuses MyFeedComponent
+        // Owner-side community surface (#639). Reuses MyFeedComponent
         // — the API at `/api/v1/community/feed` is role-agnostic, the
-        // owner just hasn't had a route into it before. Read, react,
-        // comment, RSVP, post events; moderation hooks (delete others'
-        // comments) stay on roadmap.
+        // owner just hadn't had a route into it before. Owners read,
+        // react, comment, RSVP, post events (#640 composer), AND
+        // moderate posts + others' comments (#641 — trash icons with
+        // confirm).
         path: 'community',
         loadComponent: () =>
           import('./features/my-feed/my-feed.component').then((m) => m.MyFeedComponent),
