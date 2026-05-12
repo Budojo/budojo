@@ -398,10 +398,10 @@
 //
 // Track sizing: the Material preset shipped a 1rem-tall track with a
 // 1.5rem knob — the knob overhangs the track top + bottom AND its
-// right edge gets clipped past the track right edge (visible
-// reported post-v2.8.0). iOS shape: track height matches knob height
-// (1.5rem each) with a tiny gap so the knob sits INSIDE the
-// pill-shaped track. We override the design tokens via the
+// right edge gets clipped past the track right edge (as reported
+// post-v2.8.0). iOS shape: a 1.5rem-tall track with a 1.25rem knob
+// + 0.125rem gap so the knob sits INSIDE the pill-shaped track with
+// a small margin all around. We override the design tokens via the
 // PrimeNG-Material CSS-layer hooks so the change is local to our
 // scope without forking the preset.
 .p-toggleswitch {
