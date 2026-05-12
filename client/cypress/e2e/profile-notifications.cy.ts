@@ -50,7 +50,12 @@ describe('Email notification preferences (#416)', () => {
       'be.visible',
     );
     cy.get('[data-cy="profile-notifications-row-unpaid_athletes_digest"]').should('be.visible');
-    cy.get('[data-cy="profile-notifications-transactional"]').should('be.visible');
+    // M9 PR-F added three more toggleable rows (community_reply,
+    // community_belt_celebration, community_event_new), which pushes
+    // the transactional section below the default Cypress viewport.
+    // Scroll-then-visible preserves the intent ("the block renders")
+    // without coupling to the page's overall height.
+    cy.get('[data-cy="profile-notifications-transactional"]').scrollIntoView().should('be.visible');
   });
 
   it('toggles a category off → PATCH fires → switch reflects the new value', () => {
