@@ -59,6 +59,36 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.8.1',
+      date: '2026-05-12',
+      headline:
+        "A polish-and-fix follow-up to v2.8.0, all reported within hours of the v2.8.0 ship on the community feed. Three changes: notification toggles on /dashboard/profile no longer render the white knob overflowing the green track (iOS-shape: 1.5rem track + 1.25rem knob + 0.125rem gap, knob sits inside the pill in light + dark mode). Community feed dates flipped from formal 'May 12, 2026, 8:57:49 PM' to locale-aware human formats — post + comment timestamps read 'now' / '5 min ago' / 'yesterday' / 'Sat at 10:30' / 'May 12' depending on age (it: 'adesso' / '5 min fa' / 'ieri' / 'sab alle 10:30' / '12 mag'); event start times read 'Today at 10:00' / 'Tomorrow at 10:00' / 'Saturday at 10:00' / 'May 16 at 10:00' depending on distance. Reaction counter rendered on the wrong button when a post had only 🙏 prays — fixed by exposing per-emoji counts from the server (clap_reactions_count + pray_reactions_count) and rendering each next to its own button.",
+      sections: [
+        {
+          heading: '🐛 Notification toggles — knob inside the track',
+          bullets: [
+            'The toggle switches on /dashboard/profile → Notifications rendered with the white knob overflowing the green track on iOS Safari: the knob clipped past the right edge AND overhung the top + bottom of the pill.',
+            "Two coupled regressions from v2.8.0's checked-state border + the Material preset's mismatched track / knob proportions. Fixed to an iOS-shape: 1.5rem track + 1.25rem knob + 0.125rem gap — the knob now sits inside the green pill with a small margin all around, in both light and dark mode.",
+          ],
+        },
+        {
+          heading: '✨ Human-friendly dates on the community feed',
+          bullets: [
+            "Post and comment timestamps no longer read like 'May 12, 2026, 8:57:49 PM' — locale-aware buckets: 'now' / '5 min ago' / '3 hours ago' / 'yesterday' / 'Sat at 10:30' / 'May 12' / 'May 12, 2025' (it: 'adesso' / '5 min fa' / '3 ore fa' / 'ieri' / 'sab alle 10:30' / '12 mag' / '12 mag 2025').",
+            "Event start times read 'Today at 10:00 AM' / 'Tomorrow at 10:00 AM' / 'Saturday at 10:00 AM' / 'May 16 at 10:00 AM' / 'May 16, 2027 at 10:00 AM' (it: 'Oggi alle 10:00' / 'Domani alle 10:00' / 'Sabato alle 10:00' / '16 maggio alle 10:00' / '16 maggio 2027 alle 10:00').",
+            'Both flip live when you toggle the sidebar language.',
+          ],
+        },
+        {
+          heading: '🐛 Reaction count on the right button',
+          bullets: [
+            "A community post with two 🙏 prays + zero 👏 claps rendered the '2' counter on the Clap button — the wrong one. Cause: the feed only carried a single reactions_count total, attached to whichever button rendered first.",
+            'Fixed by surfacing per-emoji counts from the server (clap_reactions_count / pray_reactions_count) and rendering each count next to its own button. Clap → Pray swaps update both buckets without a refresh.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.8.0',
       date: '2026-05-12',
       headline:
