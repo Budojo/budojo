@@ -61,7 +61,7 @@
               }
             </div>
             <time class="feed__time" [dateTime]="post.created_at">
-              {{ post.created_at | date: 'medium' }}
+              {{ post.created_at | relativeTime }}
             </time>
             @if (canModerate()) {
               <button
@@ -104,7 +104,7 @@
                 @if (eventStartsAt(post); as startsAt) {
                   <p class="feed__event-time">
                     <i class="pi pi-calendar" aria-hidden="true"></i>
-                    {{ startsAt | date: 'medium' }}
+                    {{ startsAt | eventDate }}
                   </p>
                 }
                 @if (eventLocation(post); as location) {
