@@ -64,6 +64,7 @@ db_data/
 !.claude/scripts/
 !.claude/scripts/**
 !.claude/pr-bodies/
+.claude/pr-bodies/*
 !.claude/pr-bodies/.gitkeep
 !.claude/commands/
 !.claude/commands/**
