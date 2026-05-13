@@ -18,7 +18,10 @@ use Illuminate\Support\Facades\Schema;
  *   `from_belt` is null on the athlete's first belt assignment (no
  *   prior belt to record).
  * - `stripe`: `from_stripes` + `to_stripes` populated; belt columns
- *   null. Stripes are 0–4 per Athlete::stripes column.
+ *   null. Stripes are 0–6 globally (Athlete::stripes column), with a
+ *   per-belt sub-cap enforced in StoreAthleteRequest +
+ *   UpdateAthleteRequest via the ValidatesStripesAgainstBelt trait:
+ *   black allows graus 1°–6° (0–6); every other belt caps at 0–4.
  *
  * `recorded_by_user_id` carries the editor (owner who recorded the
  * promotion via the athletes form). On console / seeder context the
