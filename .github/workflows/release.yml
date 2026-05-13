@@ -82,9 +82,9 @@ jobs:
       - name: Detect newly-created stable tag at HEAD
         id: detect-stable-tag
         # Only meaningful on `main` — develop produces beta tags
-        # (v*-beta.N) which we never sweep. On other branches this
-        # step still runs but writes an empty output and the sweep
-        # job's `if:` guard short-circuits it.
+        # (v*-beta.N) which we never sweep. The `if:` below skips
+        # this step entirely on other branches; the sweep job's own
+        # `if:` guard still short-circuits when the output is unset.
         if: github.ref == 'refs/heads/main'
         run: |
           # semantic-release ran in the SAME checkout in the SAME job —
