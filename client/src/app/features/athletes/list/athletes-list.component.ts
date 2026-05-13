@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  ViewChild,
   computed,
   inject,
   signal,
@@ -20,8 +21,11 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmPopup } from 'primeng/confirmpopup';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Menu, MenuModule } from 'primeng/menu';
+import { PaginatorModule } from 'primeng/paginator';
 import { Tooltip } from 'primeng/tooltip';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
@@ -66,6 +70,9 @@ interface SelectOption<T extends string> {
     TagModule,
     ToastModule,
     ConfirmPopup,
+    ConfirmDialog,
+    MenuModule,
+    PaginatorModule,
     Tooltip,
     TranslatePipe,
     AgeBadgeComponent,
@@ -319,9 +326,16 @@ export class AthletesListComponent implements OnInit {
     this.load();
   }
 
-  onPageChange(event: { first: number; rows: number }): void {
-    this.page = Math.floor(event.first / event.rows) + 1;
-    this.first.set(event.first);
+  onPageChange(event: { first?: number; rows?: number }): void {
+    // The <p-table>'s `(onPage)` and the <p-paginator>'s `(onPageChange)`
+    // both emit `{ first, rows, page, pageCount }`. The PrimeNG typing
+    // for the paginator declares `first` / `rows` as optional, so we
+    // accept the broader shape and defensively default to 0/20 if a
+    // future emitter ever omits them.
+    const first = event.first ?? 0;
+    const rows = event.rows ?? 20;
+    this.page = Math.floor(first / rows) + 1;
+    this.first.set(first);
     this.load();
   }
 
@@ -493,6 +507,54 @@ export class AthletesListComponent implements OnInit {
 
   goToEdit(athlete: Athlete): void {
     void this.router.navigate(['/dashboard/athletes', athlete.id, 'edit']);
+  }
+
+  // ── Mobile card 3-dot menu (#670) ──────────────────────────────────────
+  //
+  // The mobile card layout collapses the inline pencil + trash buttons into
+  // a single 3-dot menu trigger (Apple-minimalist pattern). Tapping the
+  // trigger opens a popup `<p-menu>` whose model is built per-athlete each
+  // time. Delete from the menu routes to a centered `<p-confirmDialog>`
+  // instead of the desktop confirm-popup (no good anchor on mobile).
+  @ViewChild('cardMenu') protected cardMenu?: Menu;
+  protected readonly cardMenuItems = signal<MenuItem[]>([]);
+
+  protected openCardMenu(event: Event, athlete: Athlete): void {
+    this.cardMenuItems.set([
+      {
+        label: this.translate.instant('athletes.list.tooltip.edit'),
+        icon: 'pi pi-pencil',
+        command: () => this.goToEdit(athlete),
+      },
+      {
+        label: this.translate.instant('athletes.list.tooltip.delete'),
+        icon: 'pi pi-trash',
+        styleClass: 'menu-item--danger',
+        command: () => this.confirmDeleteFromCardMenu(athlete),
+      },
+    ]);
+    this.cardMenu?.toggle(event);
+  }
+
+  /**
+   * Mobile-card delete confirmation. Routes through the same
+   * `delete(athlete)` handler as the desktop popup-anchored flow, but
+   * uses a centered `<p-confirmDialog>` (keyed `athlete-delete-mobile`)
+   * instead of `<p-confirmpopup>` because the menu item that triggers
+   * this has no good anchor on a phone — the popup would render
+   * offscreen or clipped.
+   */
+  protected confirmDeleteFromCardMenu(athlete: Athlete): void {
+    this.confirmationService.confirm({
+      key: 'athlete-delete-mobile',
+      message: this.translate.instant('athletes.list.confirm.deleteMessage', {
+        name: `${athlete.first_name} ${athlete.last_name}`,
+      }),
+      acceptLabel: this.translate.instant('athletes.list.confirm.deleteAccept'),
+      rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
+      acceptButtonProps: { severity: 'danger' },
+      accept: () => this.delete(athlete),
+    });
   }
 
   confirmDelete(event: Event, athlete: Athlete): void {

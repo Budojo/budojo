@@ -352,3 +352,182 @@
     color: var(--p-primary-color);
   }
 }
+
+// ── Mobile cards layout (#670) ─────────────────────────────────────────
+//
+// Two parallel renders coexist in the template: the desktop <p-table>
+// (above 768px) and a mobile cards list (below). CSS toggles which one
+// is visible at each breakpoint. The convention follows the design canon:
+// list-heavy views prefer cards on mobile, scroll-tables stay on desktop.
+
+$athletes-mobile-breakpoint: 768px;
+
+.athletes-page__mobile-list {
+  display: none;
+
+  @media (max-width: $athletes-mobile-breakpoint - 1px) {
+    display: block;
+  }
+}
+
+.athletes-page__table-wrapper {
+  @media (max-width: $athletes-mobile-breakpoint - 1px) {
+    display: none;
+  }
+}
+
+.athletes-page__mobile-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.athletes-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+// Apple-minimalist card: name + 3-dot on top, belt + status + paid on a
+// chip row, optional socials below. Whole card surface (except the
+// 3-dot button) is the navigation target for the athlete detail page —
+// the name anchor is what officially carries the routerLink, the rest
+// of the visual padding is "around" it.
+.athlete-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 12px;
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:active {
+    background: var(--p-content-hover-background);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2.5rem; // visual rhythm with the 48px chip rule
+  }
+
+  &__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--p-text-color);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    min-width: 0; // allows the name text to ellipsis without pushing the menu off
+    flex: 1;
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-400);
+      outline-offset: 2px;
+      border-radius: var(--p-border-radius-sm);
+    }
+  }
+
+  &__name-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // 48 × 48 tap target — Fitts. The visible 3-dot icon is smaller but the
+  // surrounding padding hits the full 48px touch box.
+  &__menu-btn {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    color: var(--p-text-muted-color);
+    cursor: pointer;
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+    flex-shrink: 0;
+
+    i {
+      font-size: 1.125rem;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: var(--p-content-hover-background);
+      color: var(--p-text-color);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-400);
+      outline-offset: 2px;
+    }
+  }
+
+  &__badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__socials {
+    display: flex;
+    gap: 0.625rem;
+    margin-top: 0.125rem;
+  }
+
+  &__social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    color: var(--p-text-muted-color);
+    text-decoration: none;
+    transition:
+      background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+      color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    i {
+      font-size: 1rem;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: var(--p-content-hover-background);
+      color: var(--p-primary-color);
+    }
+  }
+}
+
+// Mobile paginator: centred under the cards list, simple style.
+:host ::ng-deep .athletes-page__mobile-paginator {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  background: transparent;
+}
+
+// Mobile-card menu Delete row turns red — affordance for destructive action
+// per the design canon (`<p-confirmpopup>` already exists for desktop, this
+// styles the menu link that opens the mobile confirm-dialog).
+:host ::ng-deep .menu-item--danger > a {
+  color: var(--p-red-500);
+
+  &:hover {
+    color: var(--p-red-600);
+  }
+}
