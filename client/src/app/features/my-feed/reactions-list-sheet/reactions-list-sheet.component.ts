@@ -3,7 +3,6 @@ import {
   Component,
   DestroyRef,
   computed,
-  effect,
   inject,
   input,
   output,
@@ -69,18 +68,28 @@ export class ReactionsListSheetComponent {
 
   protected readonly hasMore = computed(() => this.currentPage() < this.lastPage());
 
-  constructor() {
-    // Re-fetch every time the sheet opens for a new post. `effect`
-    // tracks both `visible` and `postId`; closing-then-reopening
-    // refreshes too so a third user's reaction added in between
-    // shows up.
-    effect(() => {
-      const isOpen = this.visible();
-      const id = this.postId();
-      if (isOpen && id !== null) {
-        this.load(id, 1, true);
-      }
-    });
+  /**
+   * Monotonically-increasing token bumped on every fresh open. A
+   * response whose token doesn't match the latest one is dropped,
+   * so a fast open(A) → open(B) sequence can't render A's data
+   * over B's (Copilot review on #655).
+   */
+  private requestToken = 0;
+
+  /**
+   * Public entry point — parent calls this when opening the sheet
+   * for a new post. Resets the tab + the reactions list and starts
+   * a fresh fetch. Imperative (not an effect on `visible`) because
+   * effects writing signals during the same CD pass trigger
+   * ExpressionChangedAfterItHasBeenCheckedError on the parent's
+   * two-way input bindings (PrimeNG p-dialog amplifies it).
+   */
+  reload(postId: number): void {
+    this.activeTab.set('all');
+    this.reactions.set([]);
+    this.currentPage.set(1);
+    this.lastPage.set(1);
+    this.load(postId, 1, true);
   }
 
   protected onClose(): void {
@@ -98,6 +107,8 @@ export class ReactionsListSheetComponent {
   }
 
   private load(postId: number, page: number, replace: boolean): void {
+    this.requestToken += 1;
+    const token = this.requestToken;
     this.loading.set(true);
     this.loadError.set(false);
     this.communityService
@@ -105,12 +116,16 @@ export class ReactionsListSheetComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (resp) => {
+          // Stale-response guard — if a fresher load() started in
+          // between this fetch's emit and now, drop this response.
+          if (token !== this.requestToken) return;
           this.reactions.update((list) => (replace ? resp.data : [...list, ...resp.data]));
           this.currentPage.set(resp.meta.current_page);
           this.lastPage.set(resp.meta.last_page);
           this.loading.set(false);
         },
         error: () => {
+          if (token !== this.requestToken) return;
           this.loadError.set(true);
           this.loading.set(false);
         },

@@ -433,14 +433,18 @@ Route::middleware('auth:sanctum')->group(function (): void {
             [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
         )->middleware('throttle:community-react');
 
-        // Post-v2.9.0 (#TBD): list every reaction on a post with the
+        // Post-v2.9.0 (#655): list every reaction on a post with the
         // reactor's identity flair. The SPA opens a bottom-sheet /
         // dialog on tap of the count next to the 👏 / 🙏 buttons.
-        // Same academy-scope gate; paginated 20/page.
+        // Same academy-scope gate; paginated 20/page. Throttled at
+        // 60/min/user via the same `community-react` limiter as the
+        // toggle endpoint — the sheet's "Load more" can fire several
+        // reads in quick succession on a big post (Copilot review on
+        // #655).
         Route::get(
             'posts/{post}/reactions',
             [\App\Http\Controllers\Community\CommunityPostReactionsListController::class, 'index'],
-        );
+        )->middleware('throttle:community-react');
 
         // PR-D server (#604): 1-level comments under a post.
         //   GET    /posts/{post}/comments — list (paginated, 50/page)

@@ -25,10 +25,17 @@ class PostReactionResource extends JsonResource
         $reaction = $this->resource;
         $user = $reaction->user;
 
+        // `created_at` is non-null in practice — Eloquent stamps it
+        // on insert and the column is NOT NULL at the schema level.
+        // Drop the nullsafe arrow to match the OpenAPI contract
+        // (Copilot review on #655: client-side type says `string`,
+        // server should always return a string).
+        $createdAt = $reaction->created_at;
+
         return [
             'id' => $reaction->id,
             'emoji' => $reaction->emoji->value,
-            'created_at' => $reaction->created_at?->toIso8601String(),
+            'created_at' => $createdAt !== null ? $createdAt->toIso8601String() : null,
             'user' => [
                 'id' => $user->id,
                 'first_name' => $user->first_name,

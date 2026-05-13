@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   OnInit,
+  ViewChild,
   computed,
   inject,
   signal,
@@ -185,11 +186,17 @@ export class MyFeedComponent implements OnInit {
     this.posts.update((existing) => [post, ...existing]);
   }
 
+  @ViewChild(ReactionsListSheetComponent)
+  private readonly reactionsSheet?: ReactionsListSheetComponent;
+
   /** Open the reactions-list sheet for a post. */
   protected openReactionsSheet(post: CommunityPost): void {
     this.reactionsSheetPostId.set(post.id);
     this.reactionsSheetClapCount.set(post.reaction_counts.clap);
     this.reactionsSheetPrayCount.set(post.reaction_counts.pray);
+    // Imperative reload — avoids the change-detection race the
+    // effect-based shape triggered (Copilot review on #655).
+    queueMicrotask(() => this.reactionsSheet?.reload(post.id));
   }
 
   protected onReactionsSheetVisibleChange(visible: boolean): void {

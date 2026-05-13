@@ -235,7 +235,12 @@ function blankToNull(raw: string | null | undefined): string | null {
 export interface PostReactionItem {
   readonly id: number;
   readonly emoji: ReactionEmoji;
-  readonly created_at: string;
+  /**
+   * `created_at` is stamped by Eloquent on insert and the column is
+   * NOT NULL at the schema level; nullable here only as a defensive
+   * type guard for the unlikely model-without-timestamp case.
+   */
+  readonly created_at: string | null;
   readonly user: CommunityPostAuthor;
 }
 
