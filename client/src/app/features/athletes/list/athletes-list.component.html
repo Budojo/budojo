@@ -1,5 +1,17 @@
 <p-toast position="top-right" />
 <p-confirmpopup />
+<!-- Mobile card 3-dot menu (#670). One shared <p-menu> instance whose model
+     is rebuilt per athlete each time a card's "⋯" button is tapped. Kept
+     here at the page root (not inside the *ngFor) so we ship one menu
+     element regardless of athlete count. -->
+<p-menu #cardMenu [popup]="true" [model]="cardMenuItems()" appendTo="body" />
+<!-- Mobile delete confirmation. Routed by key from confirmDeleteFromCardMenu()
+     so it doesn't compete with the desktop's anchored <p-confirmpopup>. -->
+<p-confirmDialog
+  key="athlete-delete-mobile"
+  [breakpoints]="{ '768px': '92vw' }"
+  [style]="{ width: '28rem' }"
+/>
 
 <div class="athletes-page">
   <!--
@@ -338,5 +350,112 @@
         </tr>
       </ng-template>
     </p-table>
+  </div>
+
+  <!-- Mobile card layout (#670). Hidden ≥ 768px via SCSS; the <p-table>
+       above is hidden < 768px. Each athlete renders as a tappable card
+       (name+age → detail nav), with a 3-dot menu carrying Edit + Delete.
+       Apple-minimalist look per the design system. -->
+  <div class="athletes-page__mobile-list" data-cy="athletes-mobile-list">
+    @if (loading()) {
+      <div class="athletes-page__mobile-skeletons" data-cy="athletes-mobile-loading">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <p-skeleton height="5rem" styleClass="mb-2" />
+        }
+      </div>
+    } @else if (athletes().length === 0) {
+      <div class="empty-state" data-cy="athletes-mobile-empty">
+        <i class="pi pi-users empty-state__icon"></i>
+        <p class="empty-state__text">{{ 'athletes.list.empty.title' | translate }}</p>
+        @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
+          <p class="empty-state__hint">{{ 'athletes.list.empty.filteredHint' | translate }}</p>
+        }
+      </div>
+    } @else {
+      <ul class="athletes-cards">
+        @for (athlete of athletes(); track athlete.id) {
+          <li class="athlete-card" [attr.data-cy]="'athlete-card-' + athlete.id">
+            <header class="athlete-card__header">
+              <a
+                class="athlete-card__name athlete-card__stretched-link"
+                [routerLink]="['/dashboard/athletes', athlete.id]"
+                [attr.data-cy]="'athlete-card-name-' + athlete.id"
+              >
+                <span class="athlete-card__name-text"
+                  >{{ athlete.first_name }} {{ athlete.last_name }}</span
+                >
+                <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
+              </a>
+              <button
+                type="button"
+                class="athlete-card__menu-btn"
+                [attr.aria-label]="
+                  'athletes.list.tooltip.openMenuAria'
+                    | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                "
+                [attr.data-cy]="'athlete-card-menu-' + athlete.id"
+                (click)="openCardMenu($event, athlete)"
+              >
+                <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
+              </button>
+            </header>
+            <div class="athlete-card__badges">
+              <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
+              <p-tag
+                [value]="statusLabel(athlete.status)"
+                [severity]="statusSeverity(athlete.status)"
+                [rounded]="true"
+              />
+              @if (hasMonthlyFee() && athlete.paid_current_month !== undefined) {
+                <app-paid-badge
+                  [paid]="athlete.paid_current_month"
+                  [clickable]="true"
+                  (paidToggle)="confirmTogglePaid($event, athlete)"
+                />
+              }
+            </div>
+            @if (athlete.facebook || athlete.instagram) {
+              <div class="athlete-card__socials">
+                @if (athlete.facebook) {
+                  <a
+                    class="athlete-card__social-link"
+                    [href]="athlete.facebook"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [attr.aria-label]="'athletes.list.social.facebookLabel' | translate"
+                    [attr.data-cy]="'athlete-card-social-facebook-' + athlete.id"
+                  >
+                    <i class="pi pi-facebook" aria-hidden="true"></i>
+                  </a>
+                }
+                @if (athlete.instagram) {
+                  <a
+                    class="athlete-card__social-link"
+                    [href]="athlete.instagram"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [attr.aria-label]="'athletes.list.social.instagramLabel' | translate"
+                    [attr.data-cy]="'athlete-card-social-instagram-' + athlete.id"
+                  >
+                    <i class="pi pi-instagram" aria-hidden="true"></i>
+                  </a>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (totalRecords() > 20) {
+        <p-paginator
+          [rows]="20"
+          [totalRecords]="totalRecords()"
+          [first]="first()"
+          (onPageChange)="onPageChange($event)"
+          styleClass="athletes-page__mobile-paginator"
+          data-cy="athletes-mobile-paginator"
+        />
+      }
+    }
   </div>
 </div>

@@ -644,4 +644,89 @@ describe('AthletesListComponent', () => {
       }
     });
   });
+
+  // ── Mobile card 3-dot menu (#670) ────────────────────────────────────
+  //
+  // The mobile card layout collapses Edit + Delete into a single 3-dot
+  // menu. The menu's model is rebuilt per-athlete each time the button
+  // is tapped — these specs cover that build + the dedicated delete flow
+  // that routes through <p-confirmDialog key="athlete-delete-mobile">
+  // instead of the desktop anchored popup.
+
+  describe('mobile card 3-dot menu (#670)', () => {
+    function makeAthlete(over: Partial<Athlete> = {}): Athlete {
+      return {
+        id: 42,
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        email: null,
+        phone_country_code: null,
+        phone_national_number: null,
+        address: null,
+        date_of_birth: null,
+        belt: 'white',
+        stripes: 0,
+        status: 'active',
+        joined_at: '2026-01-01',
+        created_at: '2026-01-01T00:00:00Z',
+        ...over,
+      } as Athlete;
+    }
+
+    it('openCardMenu populates cardMenuItems with Edit + Delete (danger styled)', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance as unknown as {
+        openCardMenu: (event: Event, athlete: Athlete) => void;
+        cardMenuItems: () => Array<{ label?: string; icon?: string; styleClass?: string }>;
+        cardMenu?: { toggle: Mock };
+      };
+      // Provide a fake p-menu so the component doesn't try to use the
+      // un-instantiated ViewChild reference (we render the host without
+      // the menu hooking into the DOM in unit tests).
+      component.cardMenu = { toggle: vi.fn() };
+
+      component.openCardMenu({ stopPropagation: vi.fn() } as unknown as Event, makeAthlete());
+
+      const items = component.cardMenuItems();
+      expect(items).toHaveLength(2);
+      expect(items[0]?.icon).toBe('pi pi-pencil');
+      expect(items[1]?.icon).toBe('pi pi-trash');
+      expect(items[1]?.styleClass).toBe('menu-item--danger');
+      expect(component.cardMenu?.toggle).toHaveBeenCalledTimes(1);
+    });
+
+    it('confirmDeleteFromCardMenu routes through ConfirmationService with the mobile dialog key', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      // ConfirmationService is declared in the component's `providers: []`
+      // (component-scoped), so resolve it through the component's element
+      // injector rather than the TestBed root.
+      const confirmationService = fixture.debugElement.injector.get(ConfirmationService);
+      const confirmSpy = vi.spyOn(confirmationService, 'confirm');
+
+      const component = fixture.componentInstance as unknown as {
+        confirmDeleteFromCardMenu: (athlete: Athlete) => void;
+      };
+
+      component.confirmDeleteFromCardMenu(makeAthlete({ id: 99, first_name: 'Anna' }));
+
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      const config = confirmSpy.mock.calls[0]![0] as {
+        key?: string;
+        message?: string;
+        acceptButtonProps?: { severity?: string };
+        accept?: () => void;
+      };
+      expect(config.key).toBe('athlete-delete-mobile');
+      expect(config.message).toContain('Anna');
+      expect(config.acceptButtonProps?.severity).toBe('danger');
+
+      // The accept callback must reach the same delete(athlete) path the
+      // desktop popup uses; assert via the AthleteService spy.
+      const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+      config.accept?.();
+      expect(athleteService.delete).toHaveBeenCalledTimes(1);
+    });
+  });
 });
