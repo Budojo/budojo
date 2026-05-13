@@ -358,6 +358,53 @@ describe('DashboardComponent', () => {
       // Accessible label flips based on open state.
       expect(hamburger!.getAttribute('aria-label')).toBe('Open navigation');
     });
+
+    // ── Body scroll-lock (#671) ────────────────────────────────────────
+    //
+    // When the drawer opens, the dashboard component must add
+    // `app-drawer-open` to <body> so the global rule in styles.scss can
+    // lock body scrolling (iOS Safari touch bleed-through fix). When the
+    // drawer closes — or the component itself is destroyed mid-drawer-
+    // open — the class must come back off so the next page isn't stuck
+    // with perma-locked scroll.
+
+    it('adds `app-drawer-open` to <body> when the drawer opens, removes it on close', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance as unknown as {
+        toggleSidebar: () => void;
+        closeSidebar: () => void;
+      };
+
+      expect(document.body.classList.contains('app-drawer-open')).toBe(false);
+
+      component.toggleSidebar();
+      fixture.detectChanges();
+      expect(document.body.classList.contains('app-drawer-open')).toBe(true);
+
+      component.closeSidebar();
+      fixture.detectChanges();
+      expect(document.body.classList.contains('app-drawer-open')).toBe(false);
+    });
+
+    it('strips `app-drawer-open` from <body> on destroy even if the drawer was open', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance as unknown as {
+        toggleSidebar: () => void;
+      };
+
+      component.toggleSidebar();
+      fixture.detectChanges();
+      expect(document.body.classList.contains('app-drawer-open')).toBe(true);
+
+      // Route change / hard navigation / error redirect — anything that
+      // destroys the dashboard while the drawer is open. Without the
+      // DestroyRef cleanup, the class would persist and lock scroll on
+      // every subsequent page.
+      fixture.destroy();
+      expect(document.body.classList.contains('app-drawer-open')).toBe(false);
+    });
   });
 
   describe('app version footer (#160)', () => {
