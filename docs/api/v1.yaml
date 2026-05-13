@@ -3598,6 +3598,51 @@ paths:
         '404': { description: Post not found (already hard-deleted or invalid id). }
 
   /community/posts/{post}/reactions:
+    get:
+      tags: [community]
+      summary: List every reaction on a community post
+      description: |
+        Paginated (20/page) list of every reaction on a post with the
+        reactor's identity flair (post-v2.9.0 feature: "voglio vedere
+        chi ha messo cosa come Facebook"). Ordered by `created_at DESC,
+        id DESC` for deterministic pagination. Same academy-scope gate
+        as the toggle endpoint (owner OR athlete in the post's academy
+        → 200; cross-academy → 403). Throttled via the shared
+        `community-react` limiter (60/min/user).
+      operationId: listCommunityPostReactions
+      parameters:
+        - in: path
+          name: post
+          required: true
+          schema: { type: integer, minimum: 1 }
+          description: Community post id.
+        - in: query
+          name: page
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        '200':
+          description: Paginated list of reactions on the post.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/PostReaction' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — caller belongs to a different academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '404': { description: Post not found. }
+        '429':
+          description: Rate-limit exceeded (60 / minute / user, shared `community-react` limiter).
     post:
       tags: [community]
       summary: Toggle the authenticated user's emoji reaction on a post
@@ -4179,19 +4224,17 @@ components:
         id: { type: integer, format: int64 }
         kind: { type: string, enum: [belt, stripe] }
         from_belt:
-          type: string
-          enum: [white, blue, purple, brown, black]
+          allOf:
+            - $ref: '#/components/schemas/Belt'
           nullable: true
         to_belt:
-          type: string
-          enum: [white, blue, purple, brown, black]
+          allOf:
+            - $ref: '#/components/schemas/Belt'
           nullable: true
-        from_stripes: { type: integer, minimum: 0, maximum: 4, nullable: true }
-        to_stripes: { type: integer, minimum: 0, maximum: 4, nullable: true }
+        from_stripes: { type: integer, minimum: 0, maximum: 6, nullable: true }
+        to_stripes: { type: integer, minimum: 0, maximum: 6, nullable: true }
         belt_at_event:
-          type: string
-          enum: [white, blue, purple, brown, black]
-          nullable: true
+          $ref: '#/components/schemas/Belt'
         recorded_at: { type: string, format: date-time }
         recorded_by:
           type: object
@@ -5518,6 +5561,43 @@ components:
         short positive-only set — `clap` for "ben fatto" + `pray` for
         "rispetto / namaste". V2 may extend if 2+ academies request
         different defaults (PRD open question).
+
+    PostReaction:
+      type: object
+      description: |
+        One reaction row on a community post — used by the reactions-
+        list endpoint (post-v2.9.0). Carries the reactor's identity
+        flair so the SPA can render `<app-user-flair>` without a
+        second fetch. `user.belt` is null for owner reactions
+        (owners don't have athlete rows); the SPA switches to the
+        owner flair variant on null.
+      required: [id, emoji, created_at, user]
+      properties:
+        id: { type: integer, format: int64 }
+        emoji: { $ref: '#/components/schemas/ReactionEmoji' }
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        user:
+          type: object
+          required: [id, first_name, last_name, full_name, handle, avatar_url, belt]
+          properties:
+            id: { type: integer, format: int64 }
+            first_name: { type: string }
+            last_name: { type: string }
+            full_name: { type: string }
+            handle:
+              type: string
+              nullable: true
+            avatar_url:
+              type: string
+              format: uri
+              nullable: true
+            belt:
+              allOf:
+                - $ref: '#/components/schemas/Belt'
+              nullable: true
 
     RsvpResponse:
       type: string

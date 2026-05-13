@@ -134,6 +134,12 @@ export class CommunityService {
    * swaps-in-place semantics and returns the resulting state, which
    * the caller uses to reconcile its optimistic update.
    */
+  toggleReaction(postId: number, emoji: ReactionEmoji): Observable<ReactionToggleResponse> {
+    return this.http.post<ReactionToggleResponse>(`${this.base}/posts/${postId}/reactions`, {
+      emoji,
+    });
+  }
+
   /**
    * List every reaction on a post with the reactor's identity flair
    * (post-v2.9.0, "voglio vedere chi ha messo cosa"). The SPA opens
@@ -143,12 +149,6 @@ export class CommunityService {
   listReactions(postId: number, page = 1): Observable<PostReactionsPage> {
     const params = new HttpParams().set('page', page.toString());
     return this.http.get<PostReactionsPage>(`${this.base}/posts/${postId}/reactions`, { params });
-  }
-
-  toggleReaction(postId: number, emoji: ReactionEmoji): Observable<ReactionToggleResponse> {
-    return this.http.post<ReactionToggleResponse>(`${this.base}/posts/${postId}/reactions`, {
-      emoji,
-    });
   }
 
   /**
