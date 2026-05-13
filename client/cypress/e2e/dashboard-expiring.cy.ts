@@ -104,8 +104,15 @@ describe('Expiring documents widget + deep-link', () => {
     cy.visitAuthenticated('/dashboard/documents/expiring');
     cy.wait(['@academy', '@getExpiring']);
 
+    // [data-cy=expiring-list-empty] is the desktop empty state inside
+    // the table; the mobile container has its own empty-title <p>. At
+    // viewport ≥ 768px the mobile list is display:none, so cy.contains
+    // would match the hidden mobile copy first by DOM order — scope
+    // to the desktop empty cell instead.
     cy.get('[data-cy="expiring-list-empty"]').should('be.visible');
-    cy.contains('All documents up to date').should('be.visible');
+    cy.get('[data-cy="expiring-list-empty"]')
+      .contains('All documents up to date')
+      .should('be.visible');
   });
 
   it('athlete name link on the list page deep-links to the athlete documents page', () => {
