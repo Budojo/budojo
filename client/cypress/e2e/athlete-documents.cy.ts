@@ -63,11 +63,16 @@ describe('Athlete documents page', () => {
 
     cy.get('h1').should('contain', 'Mario Rossi');
     cy.contains('Documents').should('be.visible');
+    // The empty-state copy now lives in BOTH render paths (mobile cards
+    // + desktop table); scope to the desktop wrapper so cy.contains
+    // doesn't match the hidden mobile <li> at viewport ≥ 768px. Then
     // `.scrollIntoView()` defends against the dashboard shell's
-    // overflow:auto container clipping the empty-state copy now that
-    // the page is taller post-#467 (athlete-detail invitation card)
-    // — gotchas § Cypress / overflow:auto.
-    cy.contains('No documents yet').scrollIntoView().should('be.visible');
+    // overflow:auto container clipping the empty-state copy — gotchas
+    // § Cypress / overflow:auto.
+    cy.get('[data-cy="documents-table"]')
+      .contains('No documents yet')
+      .scrollIntoView()
+      .should('be.visible');
     // Post-M3.3: the Add button is enabled when the athlete id is known.
     // p-button wraps an inner <button>; the disabled pseudo-class lives there,
     // not on the custom element.
@@ -119,7 +124,10 @@ describe('Athlete documents page', () => {
     cy.wait('@getDocs');
 
     cy.get('[data-cy="documents-table"] tbody tr').should('have.length', 2);
-    cy.contains('Cancelled on 2026-04-20').should('be.visible');
+    // Scope the visibility check to the desktop table — the mobile
+    // card list also carries the cancelled tag but is display:none at
+    // viewport ≥ 768px (cypress default).
+    cy.get('[data-cy="documents-table"]').contains('Cancelled on 2026-04-20').should('be.visible');
     // Tombstone row has no action buttons (Norman constraint).
     cy.contains('td', 'old.pdf').parent().find('[data-cy="download-btn"]').should('not.exist');
     cy.contains('td', 'old.pdf').parent().find('[data-cy="delete-btn"]').should('not.exist');
