@@ -68,14 +68,16 @@ it('creates a post on every subsequent belt change for the same athlete', functi
         ->and($payloads[1]['old_belt'])->toBe('blue')->and($payloads[1]['new_belt'])->toBe('purple');
 });
 
-it('does NOT create a post when a non-belt field changes', function (): void {
+it('does NOT create a post when a non-belt and non-stripes field changes', function (): void {
     /** @var Athlete $athlete */
     $athlete = Athlete::factory()->for($this->academy)->create(['belt' => Belt::Blue]);
 
     $this->actingAs($this->owner);
 
     $athlete->update(['first_name' => 'Renamed']);
-    $athlete->update(['stripes' => 3]);
+    // NOTE: stripes change now DOES create a stripe_promotion post —
+    // see the dedicated stripe-promotion test file. This test only
+    // pins the "no post on unrelated columns" rule.
 
     expect(CommunityPost::query()->count())->toBe(0);
 });

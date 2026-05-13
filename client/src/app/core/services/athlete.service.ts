@@ -317,6 +317,40 @@ export class AthleteService {
       })
       .pipe(map((res) => res.data));
   }
+
+  /**
+   * Belt + stripe promotion history for the owner-facing timeline
+   * (post-v2.9.0). Paginated 20/page, newest-first. Wire shape
+   * mirrors `AthletePromotion` in docs/api/v1.yaml.
+   */
+  promotions(athleteId: number, page = 1): Observable<AthletePromotionPage> {
+    const params = new HttpParams().set('page', page.toString());
+    return this.http.get<AthletePromotionPage>(`${this.base}/${athleteId}/promotions`, { params });
+  }
+}
+
+export interface AthletePromotion {
+  readonly id: number;
+  readonly kind: 'belt' | 'stripe';
+  readonly from_belt: Belt | null;
+  readonly to_belt: Belt | null;
+  readonly from_stripes: number | null;
+  readonly to_stripes: number | null;
+  readonly recorded_at: string;
+  readonly recorded_by: {
+    readonly id: number;
+    readonly full_name: string;
+  };
+}
+
+export interface AthletePromotionPage {
+  readonly data: readonly AthletePromotion[];
+  readonly meta: {
+    readonly current_page: number;
+    readonly per_page: number;
+    readonly total: number;
+    readonly last_page: number;
+  };
 }
 
 /**

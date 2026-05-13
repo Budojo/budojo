@@ -265,6 +265,9 @@
       "beltPromotion": {
         "text": "{{name}} just earned a new belt!"
       },
+      "stripePromotion": {
+        "text": "{{name}} just got a new stripe — {{from}} → {{to}}"
+      },
       "pagination": "Feed pagination",
       "pageOf": "Page {{current}} of {{total}}",
       "previous": "Previous",
@@ -1445,12 +1448,20 @@
         "documents": "Documents",
         "attendance": "Attendance",
         "payments": "Payments",
+        "promotions": "Promotions",
         "edit": "Edit"
       },
       "contactLinks": {
         "website": "Website",
         "facebook": "Facebook",
         "instagram": "Instagram"
+      },
+      "promotions": {
+        "errorBody": "Couldn't load promotion history. Try again in a moment.",
+        "emptyBody": "No promotions yet. Bump a belt or stripes and it lands here.",
+        "firstBelt": "First belt",
+        "stripes": "stripes",
+        "recordedBy": "Recorded by {{name}}"
       },
       "attendance": {
         "eyebrow": "Attendance",

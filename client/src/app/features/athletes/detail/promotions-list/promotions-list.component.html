@@ -1,0 +1,84 @@
+<section class="promotions">
+  @if (loading()) {
+    <ul class="promotions__list" data-cy="promotions-loading">
+      @for (i of [1, 2, 3]; track i) {
+        <li class="promotions__row promotions__row--skeleton">
+          <p-skeleton width="6rem" height="0.875rem" />
+          <p-skeleton width="60%" height="1.125rem" styleClass="mt-2" />
+          <p-skeleton width="40%" height="0.75rem" styleClass="mt-2" />
+        </li>
+      }
+    </ul>
+  } @else if (loadError()) {
+    <p class="promotions__empty" data-cy="promotions-error">
+      {{ 'athletes.promotions.errorBody' | translate }}
+    </p>
+  } @else if (promotions().length === 0) {
+    <p class="promotions__empty" data-cy="promotions-empty">
+      {{ 'athletes.promotions.emptyBody' | translate }}
+    </p>
+  } @else {
+    <ul class="promotions__list" data-cy="promotions-list">
+      @for (p of promotions(); track p.id) {
+        <li class="promotions__row" [attr.data-cy]="'promotion-' + p.id">
+          <time class="promotions__date" [dateTime]="p.recorded_at">
+            {{ p.recorded_at | date: 'mediumDate' }}
+          </time>
+          @switch (p.kind) {
+            @case ('belt') {
+              <div class="promotions__transition" data-cy="promotion-belt">
+                @if (p.from_belt) {
+                  <app-belt-badge [belt]="p.from_belt" />
+                } @else {
+                  <span class="promotions__first-belt">{{
+                    'athletes.promotions.firstBelt' | translate
+                  }}</span>
+                }
+                <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                @if (p.to_belt) {
+                  <app-belt-badge [belt]="p.to_belt" />
+                }
+              </div>
+            }
+            @case ('stripe') {
+              <div class="promotions__transition" data-cy="promotion-stripe">
+                <span class="promotions__stripe-count">
+                  {{ p.from_stripes }} <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                  {{ p.to_stripes }}
+                </span>
+                <span class="promotions__stripe-label">
+                  {{ 'athletes.promotions.stripes' | translate }}
+                </span>
+              </div>
+            }
+          }
+          <span class="promotions__editor">
+            {{ 'athletes.promotions.recordedBy' | translate: { name: p.recorded_by.full_name } }}
+          </span>
+        </li>
+      }
+    </ul>
+
+    @if (lastPage() > 1) {
+      <nav class="promotions__pager" data-cy="promotions-pager">
+        <p-button
+          severity="secondary"
+          [text]="true"
+          icon="pi pi-chevron-left"
+          [disabled]="currentPage() <= 1"
+          (onClick)="previousPage()"
+          data-cy="promotions-prev"
+        />
+        <span class="promotions__pager-label">{{ currentPage() }} / {{ lastPage() }}</span>
+        <p-button
+          severity="secondary"
+          [text]="true"
+          icon="pi pi-chevron-right"
+          [disabled]="currentPage() >= lastPage()"
+          (onClick)="nextPage()"
+          data-cy="promotions-next"
+        />
+      </nav>
+    }
+  }
+</section>

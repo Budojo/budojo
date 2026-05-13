@@ -238,6 +238,16 @@ export const routes: Routes = [
                 (m) => m.PaymentsListComponent,
               ),
           },
+          {
+            // Belt + stripe promotion history (post-v2.9.0). Owner-
+            // facing timeline; date-descending list of every
+            // belt/stripe change with the editor + date snapshot.
+            path: 'promotions',
+            loadComponent: () =>
+              import('./features/athletes/detail/promotions-list/promotions-list.component').then(
+                (m) => m.PromotionsListComponent,
+              ),
+          },
           // Edit form moved INSIDE the detail (#281) so the athlete
           // header (name, belt, status) stays visible while editing
           // and the form belongs visually to "this athlete" instead
