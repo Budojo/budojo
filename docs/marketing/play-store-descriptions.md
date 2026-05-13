@@ -19,12 +19,14 @@ spot-checks the listing.
 
 ## Short description (80 char max)
 
-**IT** (66 char):
+Both strings fit under the 80-char Play Console limit. Verify with `wc -m <(printf '%s' "<string>")` before pasting — char count drift across edits is the easy way to overshoot.
+
+**IT**:
 ```
 Gestisci la tua academy di BJJ: atleti, cinture, presenze, pagamenti.
 ```
 
-**EN** (72 char):
+**EN**:
 ```
 Run your BJJ academy: athletes, belts, attendance, payments, community.
 ```

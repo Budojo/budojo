@@ -19,8 +19,8 @@ Best practice: assetlinks.json carries **both** SHAs so devices accept either si
 SHA-256: 1E:BA:F7:6A:00:6D:3A:64:19:90:D1:35:FB:6C:67:D6:2E:6F:3F:C4:C6:F7:58:7F:EE:63:4F:71:2D:88:5C:3B
 ```
 
-- **Generated**: 2026-05-13 via `bubblewrap init` in `~/PhpstormProjects/budojo-twa/`
-- **Keystore file**: `~/PhpstormProjects/budojo-twa/android.keystore` (NOT in repo — local only, backed up to 1Password + email + USB)
+- **Generated**: 2026-05-13 via `bubblewrap init` in the local TWA project directory (convention: `<workspace>/budojo-twa/` — outside this repo)
+- **Keystore file**: `android.keystore` at the TWA project root (NOT in repo — local only, see Backup checklist below)
 - **Alias**: `budojo-upload`
 - **DN**: CN=Matteo Bonanno, OU=Dev, O=Budojo, C=IT
 - **Validity**: 50 years (Bubblewrap default)
@@ -55,11 +55,11 @@ SHA-256: 91:88:45:AA:3C:37:53:87:22:D0:12:3D:ED:EF:24:53:26:8B:1F:8B:9A:71:C6:59
 
 The upload keystore is irreplaceable. Verify before first AAB upload:
 
-- [ ] `android.keystore` attached to 1Password vault entry "Budojo Android — keystore"
-- [ ] `android.keystore` emailed to self with subject "DO NOT DELETE — Budojo Android upload key"
-- [ ] Keystore password stored in 1Password
-- [ ] Alias password stored in 1Password
-- [ ] (Optional) USB / encrypted cloud backup
+- [ ] `android.keystore` attached to a vetted secret manager (e.g. 1Password) under the entry "Budojo Android — keystore"
+- [ ] **Second offline copy** on an encrypted medium (encrypted USB stick, GPG-encrypted file, or Telegram Saved Messages — all end-to-end secured). Avoid plain email: regular SMTP / IMAP storage is unencrypted at rest and a single account compromise leaks the upload key
+- [ ] Keystore password stored in the secret manager (NEVER same vault entry as the keystore file in case the entry is shared)
+- [ ] Alias password stored in the secret manager
+- [ ] **Recovery rehearsal**: at least once, restore the keystore from the backup and re-run `keytool -list -v -keystore android.keystore -alias budojo-upload` to confirm the SHA-256 matches the one recorded above
 
 If the upload keystore is ever lost again, recovery via Play Console:
 1. Generate a new upload key (`bubblewrap update --signing-key` or fresh `bubblewrap init`)

@@ -39,4 +39,4 @@ When uploading a new AAB to the Play Console:
 
 - **App icons** (`icon-192`, `icon-512`, `icon-maskable-512`, `apple-touch-icon`) — they're in `client/public/icons/` because the PWA needs them at runtime. Don't duplicate; reference from there.
 - **Digital Asset Links** — `client/public/.well-known/assetlinks.json` is also in the SPA tree because Cloudflare Pages must serve it at `https://budojo.it/.well-known/assetlinks.json` for the TWA to drop the browser chrome.
-- **TWA build artefacts** (`*.aab`, `*.apk`, the `.keystore`) — these live OUTSIDE the repo, under `~/PhpstormProjects/budojo-twa/`. The keystore is irreplaceable; back it up to a password manager BEFORE the first AAB upload to Play Console.
+- **TWA build artefacts** (`*.aab`, `*.apk`, the `.keystore`) — these live OUTSIDE this repo, in a local Bubblewrap project directory (convention: `<workspace>/budojo-twa/`, sibling to this repo). The keystore is irreplaceable; back it up to a secret manager BEFORE the first AAB upload to Play Console. See [`twa-keys.md`](./twa-keys.md) § Backup checklist.
