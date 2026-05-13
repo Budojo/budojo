@@ -273,7 +273,23 @@ $attendance-mobile-breakpoint: 768px;
   gap: 0.5rem;
 }
 
+// <li> wrapper — keeps the implicit `listitem` ARIA role so screen
+// readers still announce list position / length. The interactive
+// surface is the <button.attendance-card> nested inside.
+.attendance-card-item {
+  display: block;
+}
+
 .attendance-card {
+  // Neutralise <button>'s default chrome (font, border, padding,
+  // colour) so it renders as a flat card.
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -283,7 +299,11 @@ $attendance-mobile-breakpoint: 768px;
   border-radius: 12px;
   cursor: pointer;
   user-select: none;
-  // Same transitions the desktop row carries (background + transform).
+  // Animates the same two properties as the visual present-state delta
+  // below (background + border-colour). The desktop row uses a softer
+  // background-only transition because it has no border affordance; the
+  // card has both, so both shift on the same motion token to stay in
+  // visual sync (#677 Copilot review).
   transition:
     background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
     border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);

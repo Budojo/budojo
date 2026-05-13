@@ -188,35 +188,39 @@
     } @else {
       <ul class="attendance-cards">
         @for (athlete of athletes(); track athlete.id) {
-          <li
-            class="attendance-card"
-            [class.attendance-card--present]="isPresent(athlete.id)"
-            [class.attendance-card--inflight]="isInflight(athlete.id)"
-            [attr.aria-pressed]="isPresent(athlete.id)"
-            [attr.aria-busy]="isInflight(athlete.id)"
-            [attr.aria-disabled]="isInflight(athlete.id) ? 'true' : null"
-            tabindex="0"
-            role="button"
-            (click)="togglePresent(athlete)"
-            (keydown.enter)="togglePresent(athlete)"
-            (keydown.space)="togglePresent(athlete); $event.preventDefault()"
-            [attr.data-cy]="'attendance-card-' + athlete.id"
-          >
-            <div class="attendance-card__main">
-              <span class="attendance-card__name"
-                >{{ athlete.first_name }} {{ athlete.last_name }}</span
-              >
-              <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
-            </div>
-            <span class="attendance-card__indicator" aria-hidden="true">
-              @if (isPresent(athlete.id)) {
-                <i
-                  class="pi pi-check-circle attendance-indicator attendance-indicator--present"
-                ></i>
-              } @else {
-                <i class="pi pi-circle attendance-indicator"></i>
-              }
-            </span>
+          <li class="attendance-card-item">
+            <!-- Real <button> inside the <li> so the list preserves its
+                 `listitem` semantics for screen readers (#677 Copilot
+                 review). The button fills the card and carries all the
+                 interaction state (aria-pressed mirrors visual state,
+                 aria-busy during the in-flight write). -->
+            <button
+              type="button"
+              class="attendance-card"
+              [class.attendance-card--present]="isPresent(athlete.id)"
+              [class.attendance-card--inflight]="isInflight(athlete.id)"
+              [attr.aria-pressed]="isPresent(athlete.id)"
+              [attr.aria-busy]="isInflight(athlete.id)"
+              [disabled]="isInflight(athlete.id)"
+              (click)="togglePresent(athlete)"
+              [attr.data-cy]="'attendance-card-' + athlete.id"
+            >
+              <div class="attendance-card__main">
+                <span class="attendance-card__name"
+                  >{{ athlete.first_name }} {{ athlete.last_name }}</span
+                >
+                <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
+              </div>
+              <span class="attendance-card__indicator" aria-hidden="true">
+                @if (isPresent(athlete.id)) {
+                  <i
+                    class="pi pi-check-circle attendance-indicator attendance-indicator--present"
+                  ></i>
+                } @else {
+                  <i class="pi pi-circle attendance-indicator"></i>
+                }
+              </span>
+            </button>
           </li>
         }
       </ul>
