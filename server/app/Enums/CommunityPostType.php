@@ -11,6 +11,11 @@ namespace App\Enums;
  *
  * - `belt_promotion` — auto-generated when an athlete's belt changes
  *   (PR-B). Payload: `{ athlete_id, old_belt, new_belt, promoted_at }`.
+ * - `stripe_promotion` — auto-generated when an athlete's stripes
+ *   count changes (post-v2.9.0). Payload: `{ athlete_id, belt,
+ *   old_stripes, new_stripes, promoted_at }`. Renders as a more
+ *   modest card than belt_promotion — stripes are mid-belt
+ *   milestones, not graduations, so the celebration is dialed down.
  * - `event` — owner-created event post (PR-E). Payload carries title,
  *   description, starts_at, ends_at, location_text, location_address,
  *   location_lat, location_lon (the last two nullable in V1, populated
@@ -22,6 +27,7 @@ namespace App\Enums;
 enum CommunityPostType: string
 {
     case BeltPromotion = 'belt_promotion';
+    case StripePromotion = 'stripe_promotion';
     case Event = 'event';
     case OwnerAnnouncement = 'owner_announcement';
 }

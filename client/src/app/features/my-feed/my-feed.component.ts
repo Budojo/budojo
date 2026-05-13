@@ -265,9 +265,14 @@ export class MyFeedComponent implements OnInit {
     }
   }
 
-  protected beltOf(post: CommunityPost, field: 'old_belt' | 'new_belt'): Belt | null {
+  protected beltOf(post: CommunityPost, field: 'old_belt' | 'new_belt' | 'belt'): Belt | null {
     const raw = post.payload[field];
     return typeof raw === 'string' ? (raw as Belt) : null;
+  }
+
+  protected stripesOf(post: CommunityPost, field: 'old_stripes' | 'new_stripes'): number {
+    const raw = post.payload[field];
+    return typeof raw === 'number' ? raw : 0;
   }
 
   protected athleteNameOf(post: CommunityPost): string {

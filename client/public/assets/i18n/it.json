@@ -273,6 +273,9 @@
       "beltPromotion": {
         "text": "{{name}} ha appena conquistato una nuova cintura!"
       },
+      "stripePromotion": {
+        "text": "{{name}} ha preso una striscetta — {{from}} → {{to}}"
+      },
       "pagination": "Impaginazione feed",
       "pageOf": "Pagina {{current}} di {{total}}",
       "previous": "Precedente",
@@ -1453,12 +1456,20 @@
         "documents": "Documenti",
         "attendance": "Presenze",
         "payments": "Pagamenti",
+        "promotions": "Promozioni",
         "edit": "Modifica"
       },
       "contactLinks": {
         "website": "Sito web",
         "facebook": "Facebook",
         "instagram": "Instagram"
+      },
+      "promotions": {
+        "errorBody": "Impossibile caricare lo storico promozioni. Riprova tra un momento.",
+        "emptyBody": "Nessuna promozione registrata. Cambia cintura o striscette e qui apparirà la riga.",
+        "firstBelt": "Prima cintura",
+        "stripes": "striscette",
+        "recordedBy": "Registrato da {{name}}"
       },
       "attendance": {
         "eyebrow": "Presenze",

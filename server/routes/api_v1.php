@@ -354,6 +354,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Documents — read access stays open (browsing + downloading); writes are
     // gated. Listing per-athlete is a read; uploading is a write.
     Route::get('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'index']);
+    // Promotion history — owner reads belt + stripe events for a
+    // specific athlete (post-v2.9.0). Same academy-scope gate as
+    // documents; lives in the controller's first line.
+    Route::get('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'index']);
     // Documents — flat routes for operations that target a single document.
     // `/expiring` must come before `/{document}` routes or Laravel tries to
     // bind the literal "expiring" as a document id.

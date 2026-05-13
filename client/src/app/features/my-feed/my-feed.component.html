@@ -106,6 +106,27 @@
                 </div>
               </div>
             }
+            @case ('stripe_promotion') {
+              <div class="feed__body" data-cy="post-stripe-promotion">
+                <span class="feed__celebrate" aria-hidden="true">⭐</span>
+                <p class="feed__belt-line">
+                  {{
+                    'athletePortal.feed.stripePromotion.text'
+                      | translate
+                        : {
+                            name: athleteNameOf(post) || post.created_by.full_name,
+                            from: stripesOf(post, 'old_stripes'),
+                            to: stripesOf(post, 'new_stripes'),
+                          }
+                  }}
+                </p>
+                @if (beltOf(post, 'belt'); as currentBelt) {
+                  <div class="feed__belt-transition">
+                    <app-belt-badge [belt]="currentBelt" />
+                  </div>
+                }
+              </div>
+            }
             @case ('event') {
               <div class="feed__body" data-cy="post-event">
                 <h2 class="feed__event-title">{{ eventTitle(post) }}</h2>
