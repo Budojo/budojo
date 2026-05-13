@@ -191,6 +191,17 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
       visibility 0s linear 0s;
   }
 
+  // During a swipe-to-close drag the transform is bound inline from the
+  // component (`[style.transform]`) so the drawer follows the finger 1:1.
+  // Stripping the CSS transition here removes the easing curve that would
+  // otherwise add ~200ms of lag behind the finger on every pointermove. On
+  // release the `--dragging` class is removed and the rule above takes over
+  // again, animating either the snap-back-to-open or the snap-to-closed in
+  // the canon's 200ms decelerate.
+  &--dragging {
+    transition: none;
+  }
+
   // Desktop: static, always visible — drops the off-canvas visibility logic.
   @media (min-width: $sidebar-breakpoint) {
     position: static;

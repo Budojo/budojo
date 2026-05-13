@@ -116,6 +116,108 @@ export class DashboardComponent implements OnInit {
     this.sidebarOpen.set(false);
   }
 
+  // ── Swipe-to-close drawer ────────────────────────────────────────────────
+  //
+  // Standard Android nav-drawer dismissal gesture: drag the open drawer to
+  // the left, snap to closed if dragged past ~40% of width OR released with
+  // a leftward fling. Below the threshold the drawer animates back to fully
+  // open. The design canon allows gesture interactions where the business
+  // flow genuinely benefits (`client/CLAUDE.md` § Mobile-first → Gesture-
+  // based interactions); a nav drawer dismiss is exactly that case — every
+  // user who's used an Android app expects it.
+  //
+  // Implementation notes:
+  // - Pointer events (no Hammer.js dependency); intent detection (X vs Y
+  //   delta) so vertical scrolling inside the drawer isn't hijacked.
+  // - During the drag, `[style.transform]` is bound inline so the drawer
+  //   follows the finger 1:1. The `--dragging` class strips the CSS
+  //   transition so there's no animation lag against the finger.
+  // - On release the inline transform is cleared; the SCSS rule re-takes
+  //   over and animates the snap-close / snap-open in 200ms decelerate.
+  // - Desktop viewports early-return — the drawer is `position: static`
+  //   there and we don't want inline transforms competing with the layout.
+  private static readonly SIDEBAR_BREAKPOINT_PX = 768;
+  private static readonly DRAG_INTENT_THRESHOLD_PX = 10;
+  private static readonly DRAG_CLOSE_RATIO = 0.4;
+  private static readonly FLING_VELOCITY_PX_PER_MS = 0.5;
+
+  private dragStartX: number | null = null;
+  private dragStartY: number | null = null;
+  private dragStartTimeMs = 0;
+  private isHorizontalDrag = false;
+  private sidebarWidthPx = 0;
+
+  protected readonly dragOffsetPx = signal(0);
+  protected readonly isDragging = signal(false);
+
+  protected onSidebarPointerDown(event: PointerEvent): void {
+    if (!this.sidebarOpen()) return;
+    if (!event.isPrimary) return;
+    if (window.innerWidth >= DashboardComponent.SIDEBAR_BREAKPOINT_PX) return;
+
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    this.dragStartTimeMs = event.timeStamp;
+    this.isHorizontalDrag = false;
+    this.sidebarWidthPx = (event.currentTarget as HTMLElement).offsetWidth;
+    this.dragOffsetPx.set(0);
+  }
+
+  protected onSidebarPointerMove(event: PointerEvent): void {
+    if (this.dragStartX === null || this.dragStartY === null) return;
+
+    const deltaX = event.clientX - this.dragStartX;
+    const deltaY = event.clientY - this.dragStartY;
+    const threshold = DashboardComponent.DRAG_INTENT_THRESHOLD_PX;
+
+    if (!this.isHorizontalDrag && (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold)) {
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        this.isHorizontalDrag = true;
+        this.isDragging.set(true);
+        (event.currentTarget as Element).setPointerCapture(event.pointerId);
+      } else {
+        // Vertical scroll wins — abort gesture entirely so the drawer's
+        // internal overflow-y handles the scroll natively.
+        this.dragStartX = null;
+        this.dragStartY = null;
+        return;
+      }
+    }
+
+    if (this.isHorizontalDrag) {
+      // Clamp to negative (left) only: the drawer can't move further than
+      // fully open, so positive deltaX is pinned at 0.
+      this.dragOffsetPx.set(Math.min(0, deltaX));
+    }
+  }
+
+  protected onSidebarPointerUp(event: PointerEvent): void {
+    if (this.dragStartX === null || !this.isHorizontalDrag) {
+      this.resetDrag();
+      return;
+    }
+
+    const deltaX = event.clientX - this.dragStartX;
+    const elapsedMs = Math.max(1, event.timeStamp - this.dragStartTimeMs);
+    const velocity = Math.abs(deltaX) / elapsedMs;
+
+    const draggedFarEnough = -deltaX > this.sidebarWidthPx * DashboardComponent.DRAG_CLOSE_RATIO;
+    const flungLeft = deltaX < 0 && velocity > DashboardComponent.FLING_VELOCITY_PX_PER_MS;
+
+    if (draggedFarEnough || flungLeft) {
+      this.closeSidebar();
+    }
+    this.resetDrag();
+  }
+
+  private resetDrag(): void {
+    this.dragStartX = null;
+    this.dragStartY = null;
+    this.isHorizontalDrag = false;
+    this.isDragging.set(false);
+    this.dragOffsetPx.set(0);
+  }
+
   private logout(): void {
     // `AuthService.logout()` already invalidates the academy cache
     // (see AcademyService.clear() — epoch-bumped invalidation from #41),

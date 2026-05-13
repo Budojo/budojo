@@ -62,7 +62,17 @@
        when off-canvas on mobile, and always visible on desktop. No JS viewport
        detection needed — the media query inside the SCSS handles both states.
        See dashboard.component.scss § .sidebar for the visibility transitions. -->
-  <aside id="app-sidebar" class="sidebar" [class.sidebar--open]="sidebarOpen()">
+  <aside
+    id="app-sidebar"
+    class="sidebar"
+    [class.sidebar--open]="sidebarOpen()"
+    [class.sidebar--dragging]="isDragging()"
+    [style.transform]="isDragging() ? 'translateX(' + dragOffsetPx() + 'px)' : null"
+    (pointerdown)="onSidebarPointerDown($event)"
+    (pointermove)="onSidebarPointerMove($event)"
+    (pointerup)="onSidebarPointerUp($event)"
+    (pointercancel)="onSidebarPointerUp($event)"
+  >
     <!--
       Brand area is non-interactive (#166). Previously this was a button that
       toggled a single-item dropdown ("Sign out"); the bottom-of-sidebar Sign
