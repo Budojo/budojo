@@ -59,13 +59,20 @@
  * "Academy Gracie Milano" academy.
  */
 
-const VIEWPORTS = [
-  { slug: 'phone', width: 1080, height: 2400 },
-  { slug: 'tablet-7', width: 1080, height: 1440 },
-  { slug: 'tablet-10', width: 1600, height: 2560 },
-] as const;
+import { PLAY_STORE_VIEWPORTS } from '../support/viewports';
 
-type ViewportSlot = (typeof VIEWPORTS)[number];
+// Re-shape the shared `Viewport` records into the `slug/width/height`
+// triple this spec uses. The slug is the per-viewport output folder
+// name (`phone/`, `tablet-7/`, `tablet-10/`) — derived from the
+// canonical `play-store-*` name in viewports.ts by stripping the
+// prefix, so the dimensions stay single-sourced.
+const VIEWPORT_SLOTS = PLAY_STORE_VIEWPORTS.map((vp) => ({
+  slug: vp.name.replace(/^play-store-/, ''),
+  width: vp.width,
+  height: vp.height,
+}));
+
+type ViewportSlot = (typeof VIEWPORT_SLOTS)[number];
 
 // Cached Sanctum token from the one-time real login. Hoisted to module
 // scope so the `before()` hook below can populate it once and every
@@ -84,7 +91,7 @@ let AUTH_TOKEN = '';
  * design inventory replaced (see its rationale comment).
  */
 function captureAtAllViewports(route: string, slug: string, readySelector: string): void {
-  VIEWPORTS.forEach((vp: ViewportSlot) => {
+  VIEWPORT_SLOTS.forEach((vp: ViewportSlot) => {
     it(`${slug} @ ${vp.slug} (${vp.width}×${vp.height})`, () => {
       cy.viewport(vp.width, vp.height);
       // Reuse `cy.visitAuthenticated`'s localStorage scaffolding

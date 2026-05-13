@@ -80,9 +80,11 @@ export const ALL_VIEWPORTS: readonly Viewport[] = [
  * 1080-7680 tablet-10), with phone bumped to 1080 wide so the resulting
  * PNG clears the "promotable" carousel threshold.
  *
- * Used exclusively by `cypress/marketing/play-store-screenshots.cy.ts`
- * — not part of the regular spec base. Re-exported here so the capture
- * spec and any future tooling read from the same source of truth.
+ * Consumed by `cypress/marketing/play-store-screenshots.cy.ts` via the
+ * `PLAY_STORE_VIEWPORTS` export below — the spec re-shapes each entry
+ * into a `{slug, width, height}` triple (the slug is the canonical
+ * `name` with the `play-store-` prefix stripped). Single source of
+ * truth: change the dimensions here and the capture run picks them up.
  */
 export const VIEWPORT_PLAY_STORE_PHONE: Viewport = {
   name: 'play-store-phone',

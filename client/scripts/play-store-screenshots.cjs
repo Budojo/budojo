@@ -21,13 +21,19 @@
  *
  * ## Why the post-run move instead of `--config screenshotsFolder=...`
  *
- * On Cypress 15.14 the `--config screenshotsFolder=...` override is
- * silently ignored when passed via the comma-separated CLI shorthand —
- * screenshots land in the project-default `cypress/screenshots/` no
- * matter what we pass. The cleanest workaround is to let Cypress write
- * to its default, then move the success PNGs (skipping the auto-saved
- * `(failed).png` artefacts) under `docs/marketing/screenshots/play-store/`
- * where the rest of the marketing folder lives.
+ * `scripts/design-inventory.cjs` uses the same Cypress 15.14.2 image
+ * and successfully routes screenshots via `--config screenshotsFolder=...`
+ * passed in the comma-separated shorthand. The override is not broken
+ * in isolation — it stops applying specifically when combined with
+ * `--config-file`. This script needs the config file (for the
+ * `before:browser:launch` hook that sizes the Chrome window — see
+ * `cypress.marketing.config.ts`), so the override path isn't available
+ * here. The cleanest workaround in that combination is to let Cypress
+ * write to its default and move the success PNGs (skipping the
+ * auto-saved `(failed).png` artefacts) under
+ * `docs/marketing/screenshots/play-store/` where the rest of the
+ * marketing folder lives. A follow-up could fold `screenshotsFolder`
+ * INTO `cypress.marketing.config.ts` and drop the move.
  *
  * ## Why wipe before run
  *
@@ -59,6 +65,23 @@ const CYPRESS_OUTPUT_DIR = path.join(
 // Where we want them to end up, alongside the other marketing assets.
 const TARGET_DIR = path.join(REPO_ROOT, 'docs', 'marketing', 'screenshots', 'play-store');
 
+// Run a docker command and abort the script with a clear message if
+// it didn't exit cleanly. Used for the wipe + chown helpers below,
+// each of which is a pre/post-condition the rest of the script
+// silently relies on — if the wipe failed we'd commit stale PNGs, if
+// the chown failed the rename loop would `EACCES` halfway through.
+function runDocker(args, label) {
+  const result = spawnSync('docker', args, { stdio: 'inherit' });
+  if (result.error) {
+    console.error(`✖ ${label} failed: ${result.error.message}`);
+    process.exit(127);
+  }
+  if ((result.status ?? 1) !== 0) {
+    console.error(`✖ ${label} exited with status ${result.status}`);
+    process.exit(result.status ?? 1);
+  }
+}
+
 // 1) Wipe BOTH locations before run so stale artefacts (a previous
 //    failure's auto-saved `(failed).png`, or a renamed screen leaving
 //    its old slug behind) never sneak into the committed library.
@@ -70,8 +93,7 @@ const TARGET_DIR = path.join(REPO_ROOT, 'docs', 'marketing', 'screenshots', 'pla
 //    Letting the docker daemon do the delete sidesteps the ownership
 //    mismatch without touching the cypress image config.
 console.log('→ wiping previous artefacts');
-spawnSync(
-  'docker',
+runDocker(
   [
     'run',
     '--rm',
@@ -83,7 +105,7 @@ spawnSync(
     '/repo/client/cypress/screenshots/play-store-screenshots.cy.ts',
     '/repo/docs/marketing/screenshots/play-store',
   ],
-  { stdio: 'inherit' },
+  'wipe step',
 );
 
 // 2) Run Cypress in `cypress/included`. Chrome headless (not Electron)
@@ -138,8 +160,7 @@ if (cypressResult.error) {
 console.log('');
 console.log('→ chowning cypress output to host user');
 const { uid, gid } = require('node:os').userInfo();
-spawnSync(
-  'docker',
+runDocker(
   [
     'run',
     '--rm',
@@ -151,7 +172,7 @@ spawnSync(
     `${uid}:${gid}`,
     '/repo/client/cypress/screenshots',
   ],
-  { stdio: 'inherit' },
+  'chown step',
 );
 
 // 4) Move the success screenshots into the marketing folder. Skip the
