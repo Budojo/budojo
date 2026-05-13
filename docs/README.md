@@ -13,6 +13,7 @@ docs/
 │   ├── academy.md
 │   ├── athlete.md
 │   ├── athlete-payment.md
+│   ├── athlete-promotion.md           # belt + stripe history audit log (v2.10.0, #654)
 │   ├── address.md                     # polymorphic, owned by Academy + Athlete (#72)
 │   ├── document.md
 │   └── support-ticket.md              # support form submission (#423)
