@@ -38,22 +38,26 @@
  * we add a second 412×915 capture pass under `phone-mobile-ux/` and
  * pick per-slot at upload time.
  *
- * Deterministic intercepts + frozen clock — re-running without a UI
- * change produces zero git diff on the committed PNGs.
+ * ## Data strategy: real DB, not mocks
+ *
+ * An earlier draft of this spec mocked every endpoint via
+ * `cy.intercept()`. Across the breadth of API surfaces the SPA touches
+ * (auth/me, academy, athletes paginated, documents, attendance,
+ * attendance/summary, community/feed, stats overview, stats/attendance/daily,
+ * stats/payments/monthly, notification prefs, onboarding, ...) the
+ * mock-map became fragile: a missing intercept or a fixture-shape
+ * drift produced empty tables, blank charts, and perpetual skeletons
+ * in the resulting PNGs. The spec now logs in against the dev DB
+ * (seeded via `php artisan db:seed` — the existing AdminSeeder +
+ * DemoAcademy* chain) and lets the SPA hit the real Laravel API.
+ * Response shapes are then guaranteed by the API resources, not by
+ * hand-rolled fixtures.
+ *
+ * Login credentials match what `AdminSeeder` produces with
+ * `LOCAL_ADMIN_PASSWORD=password`. The DemoAcademy* seeders create
+ * 40 athletes, ~4k attendance records, and ~400 payments under the
+ * "Academy Gracie Milano" academy.
  */
-import {
-  PS_ACADEMY,
-  PS_ATHLETE_DETAIL,
-  PS_ATHLETE_PROMOTIONS,
-  PS_ATHLETES_LIST,
-  PS_ATTENDANCE_TODAY,
-  PS_COMMUNITY_FEED,
-  PS_DOCUMENTS_EXPIRING,
-  PS_FROZEN_NOW,
-  PS_STATS_ATTENDANCE_DAILY,
-  PS_STATS_OVERVIEW,
-  PS_STATS_PAYMENTS_MONTHLY,
-} from '../support/play-store-fixtures';
 
 const VIEWPORTS = [
   { slug: 'phone', width: 1080, height: 2400 },
@@ -63,123 +67,11 @@ const VIEWPORTS = [
 
 type ViewportSlot = (typeof VIEWPORTS)[number];
 
-function seedIntercepts(): void {
-  // Order matters in cy.intercept: matchers are evaluated in REVERSE
-  // registration order — the LAST-DECLARED wins for any request that
-  // multiple matchers match. We declare the catch-all FIRST so the
-  // specific intercepts below it override per endpoint, and any URL
-  // we forgot still gets a benign empty-data 200 (instead of crashing
-  // the page with a 404 from the real backend).
-  cy.intercept({ method: 'GET', pathname: '/api/v1/**' }, {
-    statusCode: 200,
-    body: { data: [], meta: { current_page: 1, last_page: 1, per_page: 20, total: 0 } },
-  });
-
-  // Auth/me — needed because the SPA's bootstrap hits this to hydrate
-  // the current-user signal. Without it the dashboard renders empty
-  // (no academy name, no current-user flair on community posts).
-  cy.intercept({ method: 'GET', pathname: '/api/v1/auth/me' }, {
-    statusCode: 200,
-    body: {
-      data: {
-        id: 1,
-        first_name: 'João',
-        last_name: 'Almeida',
-        name: 'João Almeida',
-        email: 'joao@graciemilano.it',
-        role: 'owner',
-        avatar_url: null,
-        has_academy: true,
-        language: 'en',
-        two_factor_enabled: false,
-        notification_preferences: {},
-        onboarding_dismissed: true,
-        terms_accepted_at: '2025-01-01T00:00:00+00:00',
-      },
-    },
-  });
-
-  // All intercepts use `pathname` — most robust matcher because it
-  // ignores both query string AND base URL (so `apiBase = 'http://
-  // localhost:8000'` doesn't break the match).
-  cy.intercept({ method: 'GET', pathname: '/api/v1/academy' }, {
-    statusCode: 200,
-    body: { data: PS_ACADEMY },
-  });
-
-  // Order matters: cy.intercept matches LAST-DECLARED first, so the
-  // most-specific patterns (athletes/1/...) must come AFTER the broad
-  // athletes-list intercept to take precedence.
-  cy.intercept({ method: 'GET', pathname: '/api/v1/athletes' }, {
-    statusCode: 200,
-    body: PS_ATHLETES_LIST,
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/athletes/1' }, {
-    statusCode: 200,
-    body: PS_ATHLETE_DETAIL,
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/athletes/1/promotions' }, {
-    statusCode: 200,
-    body: PS_ATHLETE_PROMOTIONS,
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/athletes/1/documents' }, {
-    statusCode: 200,
-    body: { data: [] },
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/athletes/1/payments' }, {
-    statusCode: 200,
-    body: { data: [] },
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/athletes/1/attendance' }, {
-    statusCode: 200,
-    body: { data: [] },
-  });
-
-  cy.intercept({ method: 'GET', pathname: '/api/v1/documents/expiring' }, {
-    statusCode: 200,
-    body: PS_DOCUMENTS_EXPIRING,
-  });
-
-  cy.intercept({ method: 'GET', pathname: '/api/v1/attendance' }, {
-    statusCode: 200,
-    body: PS_ATTENDANCE_TODAY,
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/attendance/summary' }, {
-    statusCode: 200,
-    body: { data: [] },
-  });
-
-  cy.intercept({ method: 'GET', pathname: '/api/v1/community/feed' }, {
-    statusCode: 200,
-    body: PS_COMMUNITY_FEED,
-  });
-
-  cy.intercept({ method: 'GET', pathname: '/api/v1/stats/overview' }, {
-    statusCode: 200,
-    body: PS_STATS_OVERVIEW,
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/stats/attendance/daily' }, {
-    statusCode: 200,
-    body: PS_STATS_ATTENDANCE_DAILY,
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/stats/payments/monthly' }, {
-    statusCode: 200,
-    body: PS_STATS_PAYMENTS_MONTHLY,
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/stats/athletes/age-bands' }, {
-    statusCode: 200,
-    body: { data: [] },
-  });
-
-  cy.intercept({ method: 'GET', pathname: '/api/v1/me/onboarding' }, {
-    statusCode: 200,
-    body: { data: { dismissed: true, steps: [] } },
-  });
-  cy.intercept({ method: 'GET', pathname: '/api/v1/me/notification-preferences' }, {
-    statusCode: 200,
-    body: { data: { categories: {} } },
-  });
-}
+// Cached Sanctum token from the one-time real login. Hoisted to module
+// scope so the `before()` hook below can populate it once and every
+// `it()` block reuses it — login throttling never trips, and the
+// login form never appears on a screenshot.
+let AUTH_TOKEN = '';
 
 /**
  * Capture one route at every Play Store viewport. Filename pattern:
@@ -195,13 +87,18 @@ function captureAtAllViewports(route: string, slug: string, readySelector: strin
   VIEWPORTS.forEach((vp: ViewportSlot) => {
     it(`${slug} @ ${vp.slug} (${vp.width}×${vp.height})`, () => {
       cy.viewport(vp.width, vp.height);
-      seedIntercepts();
-      cy.visitAuthenticated(route, undefined, {
-        onBeforeLoad(win) {
-          win.Date.now = () => PS_FROZEN_NOW;
-        },
-      });
-      cy.get(readySelector, { timeout: 10_000 }).should('be.visible');
+      // Reuse `cy.visitAuthenticated`'s localStorage scaffolding
+      // (cookie consent, language pin) — pass the REAL Sanctum token
+      // captured in `before()` so the SPA's `authGuard` accepts the
+      // session.
+      cy.visitAuthenticated(route, AUTH_TOKEN);
+      cy.get(readySelector, { timeout: 15_000 }).should('be.visible');
+      // Small post-render wait — chart libs (apex/echarts/ngx-charts)
+      // animate slice entry over ~300ms; pinning the screenshot 800ms
+      // after the container is visible lets the animation settle.
+      // Without this stats-belt-chart container exists but the SVG
+      // path slices haven't drawn yet.
+      cy.wait(800);
       // `viewport` over `fullPage` — Play Store slots show the
       // top-of-page (the hero), not an infinitely tall composite. The
       // resulting PNG dimensions match the viewport CSS pixels 1:1, so
@@ -216,30 +113,43 @@ function captureAtAllViewports(route: string, slug: string, readySelector: strin
 }
 
 describe('Play Store screenshots — capture run', () => {
-  // Ready selectors are picked from data-cys that render WHEN THE PAGE
-  // HAS LOADED AND THE INTERCEPTED API RETURNED — not on the shell
-  // itself. A shell-level selector would let Cypress fire `screenshot`
-  // mid-bootstrap, producing a half-rendered hero image.
-  captureAtAllViewports('/dashboard/athletes', 'athletes-list', '[data-cy="add-athlete-btn"]');
-  // The back-arrow link is the first hero element the athlete-detail
-  // component renders unconditionally — earlier than the tabs row
-  // (which only mounts once the athlete query resolves).
+  before(() => {
+    // Real login against the seeded dev DB. Credentials match the
+    // AdminSeeder default (LOCAL_ADMIN_PASSWORD=password). The
+    // resulting Sanctum token is reused by every `it()` block.
+    cy.request({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      body: { email: 'admin@example.it', password: 'password' },
+      failOnStatusCode: true,
+    }).then((response) => {
+      AUTH_TOKEN = response.body.token;
+      expect(AUTH_TOKEN, 'Sanctum auth token').to.be.a('string').and.have.length.greaterThan(20);
+    });
+  });
+
+  // Ready selectors target ROW-LEVEL elements that only render once
+  // the API returned actual data — not the page-shell buttons which
+  // appear during loading. Earlier iterations waited on the shell
+  // and screenshotted half-loaded pages (empty tables, skeleton
+  // attendance widget).
+  captureAtAllViewports('/dashboard/athletes', 'athletes-list', '[data-cy="athlete-name-link"]');
   captureAtAllViewports(
-    '/dashboard/athletes/1/promotions',
+    '/dashboard/athletes/32/promotions',
     'athlete-promotions',
-    '[data-cy="athlete-detail-back"]',
+    '[data-cy="athlete-tabs"]',
   );
-  // The attendance section wrapper is rendered as soon as the route
-  // mounts; the rest of the dashboard hydrates after.
-  captureAtAllViewports('/dashboard/attendance', 'attendance-daily', '[data-cy="attendance-page"]');
-  // The community feed renders three terminal states (`my-feed-list`,
-  // `my-feed-empty`, `my-feed-error`); waiting on the list-success
-  // selector specifically also asserts the intercepted feed payload
-  // matched the SPA's expected shape.
+  // attendance-th-name is the table column header that only renders
+  // after the academy + attendance lists resolve (the shell wraps the
+  // whole page in `@if (loaded()) { ... }` style guards).
+  captureAtAllViewports(
+    '/dashboard/attendance',
+    'attendance-daily',
+    '[data-cy="attendance-th-name"]',
+  );
   captureAtAllViewports('/dashboard/community', 'community-feed', '[data-cy="my-feed-list"]');
-  // The stats overview also has three terminal states. `stats-total`
-  // wins over the empty + error states because the SPA aggregates from
-  // the intercepted athletes list — landing in success is the only
-  // visually meaningful state for a marketing screenshot.
-  captureAtAllViewports('/dashboard/stats', 'stats-overview', '[data-cy="stats-total"]');
+  // stats-belt-chart is the chart container — `stats-total` renders
+  // earlier (just text), but waiting for the chart container ensures
+  // the chart library has mounted before we capture the viewport.
+  captureAtAllViewports('/dashboard/stats', 'stats-overview', '[data-cy="stats-belt-chart"]');
 });
