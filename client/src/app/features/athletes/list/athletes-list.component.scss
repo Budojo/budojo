@@ -392,11 +392,14 @@ $athletes-mobile-breakpoint: 768px;
 }
 
 // Apple-minimalist card: name + 3-dot on top, belt + status + paid on a
-// chip row, optional socials below. Whole card surface (except the
-// 3-dot button) is the navigation target for the athlete detail page —
-// the name anchor is what officially carries the routerLink, the rest
-// of the visual padding is "around" it.
+// chip row, optional socials below. The whole card surface (except the
+// 3-dot button + social links) is a tap target for the athlete detail
+// page via a "stretched link" pseudo-element (#670 Copilot review): the
+// name anchor carries a `::after` that expands to fill the card. The
+// menu button and social links sit on a higher z-index so their own
+// tap targets still win against the stretched link.
 .athlete-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
@@ -408,6 +411,15 @@ $athletes-mobile-breakpoint: 768px;
 
   &:active {
     background: var(--p-content-hover-background);
+  }
+
+  // Stretched link — expand the name anchor's tap target to the whole
+  // card. Pure CSS, no JS click handler on the host element.
+  &__stretched-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
   }
 
   &__header {
@@ -444,10 +456,14 @@ $athletes-mobile-breakpoint: 768px;
   }
 
   // 48 × 48 tap target — Fitts. The visible 3-dot icon is smaller but the
-  // surrounding padding hits the full 48px touch box.
+  // surrounding padding hits the full 48px touch box. `position: relative`
+  // + `z-index: 2` puts the button above the stretched-link pseudo-element
+  // so taps on it don't trigger the card navigation.
   &__menu-btn {
     all: unset;
     box-sizing: border-box;
+    position: relative;
+    z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -488,7 +504,12 @@ $athletes-mobile-breakpoint: 768px;
     margin-top: 0.125rem;
   }
 
+  // Social links sit on a higher z-index than the stretched name link
+  // so tapping a Facebook/Instagram icon opens the social URL instead
+  // of navigating into the athlete detail.
   &__social-link {
+    position: relative;
+    z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;

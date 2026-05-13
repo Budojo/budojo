@@ -377,7 +377,7 @@
           <li class="athlete-card" [attr.data-cy]="'athlete-card-' + athlete.id">
             <header class="athlete-card__header">
               <a
-                class="athlete-card__name"
+                class="athlete-card__name athlete-card__stretched-link"
                 [routerLink]="['/dashboard/athletes', athlete.id]"
                 [attr.data-cy]="'athlete-card-name-' + athlete.id"
               >
