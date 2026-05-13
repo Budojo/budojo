@@ -113,3 +113,82 @@
     padding: 0.5rem 1rem;
   }
 }
+
+// ── Mobile cards layout (audit row 9) ──────────────────────────────────
+//
+// Below 768px the desktop <p-table> is hidden and replaced with a card
+// list. One card per doc: athlete name (link) + download affordance on
+// top, doc type middle, expiry status badge bottom. Tap the name to
+// jump to that athlete's documents tab (same route as the desktop link).
+
+$expiring-mobile-breakpoint: 768px;
+
+.expiring-page__mobile-list {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  @media (max-width: $expiring-mobile-breakpoint - 1px) {
+    display: flex;
+  }
+}
+
+.expiring-page__table-wrapper {
+  @media (max-width: $expiring-mobile-breakpoint - 1px) {
+    display: none;
+  }
+}
+
+.expiring-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 12px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+  }
+
+  &__athlete-link {
+    color: var(--p-text-color);
+    text-decoration: none;
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--p-primary-color);
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-400);
+      outline-offset: 2px;
+      border-radius: var(--p-border-radius-sm);
+    }
+  }
+
+  &__type {
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+  }
+}
