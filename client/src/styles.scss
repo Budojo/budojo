@@ -32,3 +32,21 @@ body {
   height: 100%;
   font-family: var(--p-font-family, system-ui, sans-serif);
 }
+
+// Body scroll lock when the mobile sidebar drawer is open (#671). Without
+// this iOS Safari + Android Chrome let touches inside the open drawer leak
+// through to scroll the page underneath; the drawer also visually bounces
+// (rubber-banding) on touch-and-drag. Toggled by the dashboard component's
+// effect() on sidebarOpen — applied only on viewports below the 768px
+// sidebar breakpoint because the desktop sidebar is `position: static`
+// (always visible, no scroll lock needed).
+body.app-drawer-open {
+  @media (max-width: 767px) {
+    overflow: hidden;
+    // Belt-and-braces: even with `overflow: hidden`, iOS Safari can still
+    // catch touch-drag at the document level and rubber-band the viewport.
+    // `touch-action: none` here only affects the body itself — the fixed-
+    // position .sidebar above gets its own gestures.
+    touch-action: none;
+  }
+}

@@ -160,6 +160,13 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   background: var(--p-surface-900);
   color: var(--p-surface-0);
   overflow-y: auto;
+  // `overscroll-behavior: contain` stops iOS Safari + Android Chrome from
+  // rubber-banding the drawer when the user drags inside it past the
+  // scrollable bounds. Combined with the body scroll-lock toggle in
+  // styles.scss (`body.app-drawer-open { overflow: hidden }`), this kills
+  // the "drawer bounces up and down + page underneath scrolls" bug pair
+  // that landed in v2.10.1.
+  overscroll-behavior: contain;
 
   // Mobile: off-canvas drawer. Fixed position, slides in from left when
   // `.sidebar--open` is applied. Sits above the backdrop, below the topbar.

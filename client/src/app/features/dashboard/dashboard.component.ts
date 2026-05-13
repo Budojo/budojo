@@ -2,10 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  Renderer2,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AcademyService } from '../../core/services/academy.service';
@@ -38,6 +41,26 @@ export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly languageService = inject(LanguageService);
   private readonly router = inject(Router);
+  private readonly renderer = inject(Renderer2);
+  private readonly document = inject(DOCUMENT);
+
+  constructor() {
+    // Body scroll lock while the mobile drawer is open. Without this iOS
+    // Safari + Android Chrome let touches inside the open drawer leak
+    // through to the underlying page, plus the drawer itself rubber-bands
+    // on touch-drag. The class hook is consumed by a media-gated rule in
+    // `client/src/styles.scss` so desktop (where the sidebar is always
+    // visible and never "open") is unaffected.
+    effect(() => {
+      const open = this.sidebarOpen();
+      const cls = 'app-drawer-open';
+      if (open) {
+        this.renderer.addClass(this.document.body, cls);
+      } else {
+        this.renderer.removeClass(this.document.body, cls);
+      }
+    });
+  }
 
   /** Bound by the sidebar language toggle (#273). Read of `currentLang`
    *  drives the active-state styling; `setLang()` writes through the
