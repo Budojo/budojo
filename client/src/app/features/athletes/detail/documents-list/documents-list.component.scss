@@ -147,10 +147,12 @@ $documents-mobile-breakpoint: 768px;
   }
 }
 
-// Hide the PrimeNG table wrapper below the breakpoint. styleClass on
-// <p-table> applies inside the host, so the existing
-// `.documents-list__table` selector targets the inner element correctly.
-:host ::ng-deep .documents-list__table {
+// Hide the desktop table below the breakpoint via a real wrapper div
+// (`.documents-list__table-wrapper`) — same pattern as
+// `attendance/summary/monthly-summary.component.scss`. Component-scoped
+// selector, no ::ng-deep leakage, no PrimeNG-internal coupling
+// (Copilot review on #679).
+.documents-list__table-wrapper {
   @media (max-width: $documents-mobile-breakpoint - 1px) {
     display: none;
   }
