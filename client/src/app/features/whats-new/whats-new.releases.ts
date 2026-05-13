@@ -28,6 +28,55 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.11.0',
+    date: '2026-05-13',
+    headline:
+      "A mobile-first overhaul: six list-heavy pages (athletes, daily attendance, monthly summary, athlete documents, athlete payments, expiring documents) now render as Apple-minimalist cards below 768px instead of horizontally-scrolling tables — every card is a thumb-friendly tap target with the same data and the same actions as the desktop row, just rearranged so the operator on the mat doesn't have to side-swipe. The mobile sidebar drawer gained the standard Android gestures: swipe-left dismisses it, tap-outside-when-open no longer scrolls the page underneath, and the drawer no longer rubber-bands on a vertical drag. The two-factor and API-tokens dialogs on /dashboard/profile now carry [breakpoints]={ '768px': '92vw' } so they fit phone viewports correctly instead of the old maxWidth: 90vw workaround. For the TWA APK on the Play Store: splash background is now #0A0A0B (matches the icon's black square) instead of the previous white that put a jarring black square in the middle of a bright screen — requires a Bubblewrap rebuild + reinstall to see. Audit roadmap docs/design/mobile-ux-audit.md tracks 17/20 mobile gaps now flipped 🟢; the remaining 3 (filter bottom-sheet, offline fallback) are queued for v2.12.0.",
+    sections: [
+      {
+        heading: '✨ Sei elenchi diventano card sul telefono',
+        bullets: [
+          'Sotto i 768px le tabelle che facevano scroll orizzontale ora sono cards. Stessa informazione, ma il pollice scorre verticale.',
+          "Atleti (/dashboard/atleti) — card Apple-style: nome+età grandi, badge cintura + stato + pagato in una riga, menu 3-puntini per Modifica/Elimina. Tap sulla card → detail dell'atleta.",
+          'Presenze giornaliere — un card per atleta, tap-toggle per marcare presente (stesso tasto del web, accessibile via tastiera).',
+          'Riepilogo mensile — un card per atleta, conteggio + percentuale sulla destra.',
+          "Documenti dell'atleta — tipo documento + scarica/elimina in testa, nome file in mezzo, badge scadenza in fondo.",
+          "Pagamenti dell'atleta — un card per mese, badge Pagato/Non pagato + importo + data, tasto ✓/× per cambiare stato.",
+          "Documenti in scadenza — nome atleta linkato (tap → tab documenti di quell'atleta) + tasto scarica, badge scadenza in fondo.",
+          'Il layout desktop (sopra 768px) resta identico — solo il telefono cambia.',
+        ],
+      },
+      {
+        heading: '✨ Drawer laterale + gesture native',
+        bullets: [
+          "Swipe-left per chiudere — trascini il drawer aperto verso sinistra e si chiude (gesture standard Android, finalmente c'è anche qui).",
+          'Niente più scroll della pagina sotto quando il drawer è aperto — iOS Safari + Chrome Android avevano questo bug di default.',
+          'Drawer non rimbalza più — il "rubber-band" su/giù quando trascinavi dentro al drawer è risolto.',
+        ],
+      },
+      {
+        heading: '✨ Dialog del profilo — fit corretto su telefono',
+        bullets: [
+          'I dialog "Autenticazione a due fattori" e "Token API" su /dashboard/profile ora si dimensionano correttamente sotto i 768px (92% larghezza viewport invece di sforare).',
+        ],
+      },
+      {
+        heading: "🐛 Splash dell'app Android",
+        bullets: [
+          "Lo splash all'avvio dell'APK ora ha sfondo scuro #0A0A0B che matcha l'icona, invece del bianco di default che metteva un quadrato nero sospetto in mezzo a uno sfondo luminoso.",
+          "Per vedere il fix devi reinstallare la nuova versione dell'APK — è solo un cambio di config TWA, niente codice.",
+        ],
+      },
+      {
+        heading: '📐 Roadmap mobile UX pubblicata',
+        bullets: [
+          'Nuovo doc docs/design/mobile-ux-audit.md traccia ogni gap mobile riga per riga.',
+          'Cose in attesa per le prossime release: filtri (cintura/stato/pagato) in bottom-sheet, schermata offline custom invece del "Impossibile raggiungere il sito" di Chrome.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.10.1',
     date: '2026-05-13',
     headline:
