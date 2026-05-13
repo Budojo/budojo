@@ -71,8 +71,14 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     it('renders the page + the date picker + the roster without horizontal overflow', () => {
       cy.get('[data-cy="attendance-page"]').should('be.visible');
       cy.get('[data-cy="attendance-date"]').should('be.visible');
-      cy.get('[data-cy="attendance-list"]').should('be.visible');
-      cy.get('[data-cy="attendance-row-1"]').should('be.visible').and('contain.text', 'Mario');
+
+      // Below 768px the desktop <p-table> (`attendance-list`) is
+      // display:none and the mobile card list (`attendance-mobile-list`)
+      // renders the roster instead — same togglePresent handler, same
+      // aria semantics, different DOM. Audit row 5 shipped this in PR
+      // #677 (audit doc: docs/design/mobile-ux-audit.md).
+      cy.get('[data-cy="attendance-mobile-list"]').should('be.visible');
+      cy.get('[data-cy="attendance-card-1"]').should('be.visible').and('contain.text', 'Mario');
 
       cy.document().then((doc) => {
         const root = doc.documentElement;
