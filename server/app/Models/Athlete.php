@@ -128,6 +128,27 @@ class Athlete extends Model implements HasAddress
     }
 
     /**
+     * Owner-facing log of every belt + stripe promotion this athlete
+     * has received. Written by the AthleteObserver in lock-step with
+     * the CommunityPost belt_promotion / stripe_promotion creation
+     * (post-v2.9.0 feature: "voglio ricordarmi quando ho dato la
+     * striscia a chi"). Descending-date order is the natural read
+     * shape — newest first.
+     *
+     * @return HasMany<AthletePromotion, $this>
+     */
+    public function promotions(): HasMany
+    {
+        // Stable order — `recorded_at DESC, id DESC` tiebreaks two
+        // events written in the same second (belt + stripe in a single
+        // save), so the API and the UI render the same row first on
+        // every call (Copilot review on #654).
+        return $this->hasMany(AthletePromotion::class)
+            ->orderByDesc('recorded_at')
+            ->orderByDesc('id');
+    }
+
+    /**
      * Polymorphic address (#72b). Same shape and same enforcement as Academy:
      * `morphOne` is read-side, the 1:1 invariant is carried by the UNIQUE
      * index on `(addressable_type, addressable_id)` plus
