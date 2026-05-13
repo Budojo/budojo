@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   Renderer2,
   computed,
@@ -43,6 +44,8 @@ export class DashboardComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly renderer = inject(Renderer2);
   private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+  private static readonly BODY_DRAWER_OPEN_CLASS = 'app-drawer-open';
 
   constructor() {
     // Body scroll lock while the mobile drawer is open. Without this iOS
@@ -53,12 +56,21 @@ export class DashboardComponent implements OnInit {
     // visible and never "open") is unaffected.
     effect(() => {
       const open = this.sidebarOpen();
-      const cls = 'app-drawer-open';
+      const cls = DashboardComponent.BODY_DRAWER_OPEN_CLASS;
       if (open) {
         this.renderer.addClass(this.document.body, cls);
       } else {
         this.renderer.removeClass(this.document.body, cls);
       }
+    });
+
+    // Defensive teardown: if the component is destroyed while the drawer
+    // is still open (route change / hard navigation / error redirect),
+    // the body class would otherwise persist and lock scroll on subsequent
+    // pages (Copilot review on PR #672). The effect above stops running
+    // on destroy, so the class would never get removed naturally.
+    this.destroyRef.onDestroy(() => {
+      this.renderer.removeClass(this.document.body, DashboardComponent.BODY_DRAWER_OPEN_CLASS);
     });
   }
 
