@@ -10,7 +10,7 @@ Living roadmap of mobile-ux gaps found in the SPA, prioritised against the desig
 |---|---|---|---|
 | 1 | Open drawer + drag inside it → page below scrolls (touch bleed-through) | 🟢 | #671 → #672 (body scroll-lock + `overscroll-behavior: contain`) |
 | 2 | Open drawer rubber-bands up/down on touch-drag | 🟢 | same: `overscroll-behavior: contain` |
-| 3 | No swipe-left-to-dismiss on the drawer (Android nav-standard gesture) | 🟡 | #668 → #669 (CI green, awaiting merge) |
+| 3 | No swipe-left-to-dismiss on the drawer (Android nav-standard gesture) | 🟢 | #669 shipped |
 
 ## ── List-heavy views (table vs cards on mobile)
 
