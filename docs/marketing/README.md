@@ -39,14 +39,20 @@ When uploading a new AAB to the Play Console:
 
 ## Rebuilding the TWA project from scratch
 
-After this repo is cloned to a fresh machine (e.g. new dev box, recovering after a disk loss), the Bubblewrap project directory does not exist locally — only `twa-manifest.json` and the SHA registry live in the repo. To rebuild:
+After this repo is cloned to a fresh machine (e.g. new dev box, recovering after a disk loss), the Bubblewrap project directory does not exist locally — only `twa-manifest.json` and the SHA registry live in the repo. To rebuild, set two shell variables for the paths, then run the procedure:
 
 ```bash
-# 1. Restore the upload keystore from the secret manager (1Password attachment)
-#    Save as ./android.keystore in the TWA workspace dir.
+# Set these for your machine:
+WORKSPACE="$HOME/PhpstormProjects"            # parent dir for both repos
+BUDOJO_REPO="$WORKSPACE/budojo"               # this repo's clone
+TWA_DIR="$WORKSPACE/budojo-twa"               # sibling for the TWA build artefacts
 
-mkdir <workspace>/budojo-twa && cd <workspace>/budojo-twa
-cp <budojo-repo>/docs/marketing/twa-manifest.json .
+# 1. Restore the upload keystore from the secret manager (1Password attachment)
+#    and save it as $TWA_DIR/android.keystore — the manifest in this repo
+#    references it as a relative path './android.keystore'.
+
+mkdir -p "$TWA_DIR" && cd "$TWA_DIR"
+cp "$BUDOJO_REPO/docs/marketing/twa-manifest.json" .
 # restore android.keystore here from 1Password attachment
 
 # 2. Regenerate the Android project from the manifest.
@@ -57,10 +63,12 @@ bubblewrap build
 # prompts for keystore + alias passwords (also in 1Password)
 ```
 
-When `twa-manifest.json` changes (most commonly: `appVersionCode` + `appVersionName` bump for a new release), edit the **repo copy** (`docs/marketing/twa-manifest.json`) first, then copy it back into the TWA workspace and re-run `bubblewrap update` + `bubblewrap build`. This keeps the version-controlled config as the source of truth.
+> **Why a sibling directory and not `<repo>/mobile-android/`** (the older convention floated in [`docs/mobile/twa-runbook.md`](../mobile/twa-runbook.md)): keeping Bubblewrap's project tree OUTSIDE this repo means the generated Android sources, build outputs (~100MB), and the keystore can't accidentally land in a commit. The runbook predates this convention; treat the marketing-folder workflow as current.
+
+When `twa-manifest.json` changes (most commonly: `appVersionCode` + `appVersionName` bump for a new release), edit the **repo copy** (`docs/marketing/twa-manifest.json`) first, then copy it back into `$TWA_DIR` and re-run `bubblewrap update` + `bubblewrap build`. This keeps the version-controlled config as the source of truth.
 
 ## Not in this folder
 
 - **App icons** (`icon-192`, `icon-512`, `icon-maskable-512`, `apple-touch-icon`) — they're in `client/public/icons/` because the PWA needs them at runtime. Don't duplicate; reference from there.
 - **Digital Asset Links** — `client/public/.well-known/assetlinks.json` is also in the SPA tree because Cloudflare Pages must serve it at `https://budojo.it/.well-known/assetlinks.json` for the TWA to drop the browser chrome.
-- **TWA build artefacts** (`*.aab`, `*.apk`, the `.keystore`) — these live OUTSIDE this repo, in a local Bubblewrap project directory (convention: `<workspace>/budojo-twa/`, sibling to this repo). The keystore is irreplaceable; back it up to a secret manager BEFORE the first AAB upload to Play Console. See [`twa-keys.md`](./twa-keys.md) § Backup checklist.
+- **TWA build artefacts** (`*.aab`, `*.apk`, the `.keystore`) — these live OUTSIDE this repo, in a local Bubblewrap project directory. Convention used by the active workflow: a sibling directory at `$WORKSPACE/budojo-twa/`. The keystore is irreplaceable; back it up to a secret manager BEFORE the first AAB upload to Play Console. See [`twa-keys.md`](./twa-keys.md) § Backup checklist.
