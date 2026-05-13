@@ -35,8 +35,8 @@ Per `client/CLAUDE.md` § Mobile-first: "Tables either wrap in a scrollable cont
 | 11 | `search-palette` | 🟢 | `[breakpoints]` set |
 | 12 | `event-composer` | 🟢 | `[breakpoints]` set |
 | 13 | `cookie-banner` | ⚪ | Not a dialog visually — sticky strip |
-| 14 | `profile-two-factor` (enrolment + backup-codes flows) | 🔴 | Missing `[breakpoints]` — needs `{ '768px': '92vw' }` |
-| 15 | `profile-api-tokens` (create token flow) | 🔴 | Missing `[breakpoints]` — needs `{ '768px': '92vw' }` |
+| 14 | `profile-two-factor` (enrolment + backup-codes flows) | 🟢 | Both dialogs now carry `[breakpoints]="{ '768px': '92vw' }"`, replacing the inline `maxWidth: '90vw'` workaround |
+| 15 | `profile-api-tokens` (create + plaintext token flows) | 🟢 | Both dialogs now carry `[breakpoints]="{ '768px': '92vw' }"` |
 
 ## ── Filter clusters (cramped on narrow viewports)
 
