@@ -433,6 +433,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
             [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
         )->middleware('throttle:community-react');
 
+        // Post-v2.9.0 (#TBD): list every reaction on a post with the
+        // reactor's identity flair. The SPA opens a bottom-sheet /
+        // dialog on tap of the count next to the 👏 / 🙏 buttons.
+        // Same academy-scope gate; paginated 20/page.
+        Route::get(
+            'posts/{post}/reactions',
+            [\App\Http\Controllers\Community\CommunityPostReactionsListController::class, 'index'],
+        );
+
         // PR-D server (#604): 1-level comments under a post.
         //   GET    /posts/{post}/comments — list (paginated, 50/page)
         //   POST   /posts/{post}/comments — create (500-char body cap)

@@ -35,6 +35,7 @@ import { CommentsThreadComponent } from './comments-thread/comments-thread.compo
 import { EventComposerComponent } from './event-composer/event-composer.component';
 import { EventDatePipe } from '../../shared/pipes/event-date.pipe';
 import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
+import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-list-sheet.component';
 
 /**
  * Athlete-portal community timeline (#614, M9 PR-B2). Consumes the
@@ -69,6 +70,7 @@ import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
     UserFlairComponent,
     CommentsThreadComponent,
     EventComposerComponent,
+    ReactionsListSheetComponent,
     RelativeTimePipe,
     EventDatePipe,
   ],
@@ -86,6 +88,18 @@ export class MyFeedComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
 
   protected readonly composerOpen = signal(false);
+
+  /**
+   * Reactions-list sheet state. Open on tap of a post's reactions
+   * summary line; the sheet reads `/posts/{id}/reactions` and lists
+   * every reactor with the same identity flair the feed uses.
+   * `reactionsSheetPostId` is the post under the sheet — also used
+   * as the "currently open" signal for the SPA.
+   */
+  protected readonly reactionsSheetPostId = signal<number | null>(null);
+  protected readonly reactionsSheetClapCount = signal(0);
+  protected readonly reactionsSheetPrayCount = signal(0);
+  protected readonly reactionsSheetVisible = computed(() => this.reactionsSheetPostId() !== null);
 
   /**
    * Owners see a "Post event" affordance at the top of the feed; the
@@ -169,6 +183,19 @@ export class MyFeedComponent implements OnInit {
    */
   protected onEventCreated(post: CommunityPost): void {
     this.posts.update((existing) => [post, ...existing]);
+  }
+
+  /** Open the reactions-list sheet for a post. */
+  protected openReactionsSheet(post: CommunityPost): void {
+    this.reactionsSheetPostId.set(post.id);
+    this.reactionsSheetClapCount.set(post.reaction_counts.clap);
+    this.reactionsSheetPrayCount.set(post.reaction_counts.pray);
+  }
+
+  protected onReactionsSheetVisibleChange(visible: boolean): void {
+    if (!visible) {
+      this.reactionsSheetPostId.set(null);
+    }
   }
 
   /**

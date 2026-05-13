@@ -196,6 +196,14 @@
     }
   },
   "community": {
+    "reactionsList": {
+      "title": "Reazioni",
+      "openAria": "Vedi chi ha reagito",
+      "allTab": "Tutti",
+      "loadMore": "Carica altri",
+      "errorBody": "Non siamo riusciti a caricare le reazioni. Riprova tra un momento.",
+      "emptyBody": "Nessuna reazione per ora — sii il primo."
+    },
     "composer": {
       "openButton": "Pubblica evento",
       "title": "Pubblica un nuovo evento",
