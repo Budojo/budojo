@@ -22,8 +22,8 @@ Per `client/CLAUDE.md` § Mobile-first: "Tables either wrap in a scrollable cont
 | 5 | Daily attendance (`/dashboard/attendance`) | `<p-table>` | Tap-to-toggle cards (name + belt + present indicator, whole-card tap target, aria-pressed) | 🟢 | #677 shipped |
 | 6 | Monthly summary (`/dashboard/attendance/summary`) | `<p-table>` | Cards (one per athlete) — name left, count/percent right | 🟢 | #678 shipped |
 | 7 | Athlete documents tab | `<p-table>` | Apple-minimalist cards: type + actions header, filename, expiry/cancelled status badge | 🟢 | #679 shipped |
-| 8 | Athlete payments tab | `<p-table>` | Cards (one per month, status tag + amount + paid-on date + mark/unmark affordance) | 🟢 | shipping in this PR |
-| 9 | Expiring documents list (`/dashboard/documents/expiring`) | `<p-table>` | Cards: athlete name link + download header, doc type middle, expiry status badge bottom | 🟢 | shipping in this PR |
+| 8 | Athlete payments tab | `<p-table>` | Cards (one per month, status tag + amount + paid-on date + mark/unmark affordance) | 🟢 | #680 shipped |
+| 9 | Expiring documents list (`/dashboard/documents/expiring`) | `<p-table>` | Cards: athlete name link + download header, doc type middle, expiry status badge bottom | 🟢 | #681 shipped |
 
 ## ── Dialogs missing mobile breakpoints
 
