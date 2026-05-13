@@ -160,6 +160,12 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   background: var(--p-surface-900);
   color: var(--p-surface-0);
   overflow-y: auto;
+  // `touch-action: pan-y` tells the browser to keep handling native vertical
+  // scrolling on the drawer's overflow-y, but to leave horizontal gestures
+  // to our pointer handlers (swipe-to-close, #669). Without this hint some
+  // browsers preemptively cancel pointermove on horizontal touches because
+  // they think we want native horizontal pan, making the swipe unreliable.
+  touch-action: pan-y;
 
   // Mobile: off-canvas drawer. Fixed position, slides in from left when
   // `.sidebar--open` is applied. Sits above the backdrop, below the topbar.

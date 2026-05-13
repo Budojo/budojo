@@ -146,6 +146,8 @@ export class DashboardComponent implements OnInit {
   private dragStartTimeMs = 0;
   private isHorizontalDrag = false;
   private sidebarWidthPx = 0;
+  private capturedPointerId: number | null = null;
+  private capturedPointerElement: Element | null = null;
 
   protected readonly dragOffsetPx = signal(0);
   protected readonly isDragging = signal(false);
@@ -161,6 +163,18 @@ export class DashboardComponent implements OnInit {
     this.isHorizontalDrag = false;
     this.sidebarWidthPx = (event.currentTarget as HTMLElement).offsetWidth;
     this.dragOffsetPx.set(0);
+
+    // Capture the pointer immediately (Copilot review on PR #669). Without
+    // capture, a user who started inside the drawer but releases on the
+    // backdrop never delivers pointerup/cancel to the drawer element, and
+    // the drag state stays stale (next pointerdown compounds the bug). With
+    // `touch-action: pan-y` on the .sidebar, the browser still handles
+    // native vertical scroll on its overflow-y, so capture doesn't disable
+    // scrolling — it just guarantees we receive every pointerup/cancel.
+    const target = event.currentTarget as Element;
+    target.setPointerCapture(event.pointerId);
+    this.capturedPointerId = event.pointerId;
+    this.capturedPointerElement = target;
   }
 
   protected onSidebarPointerMove(event: PointerEvent): void {
@@ -174,10 +188,11 @@ export class DashboardComponent implements OnInit {
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
         this.isHorizontalDrag = true;
         this.isDragging.set(true);
-        (event.currentTarget as Element).setPointerCapture(event.pointerId);
       } else {
-        // Vertical scroll wins — abort gesture entirely so the drawer's
-        // internal overflow-y handles the scroll natively.
+        // Vertical scroll wins — release the pointer so the drawer's
+        // internal overflow-y handles the scroll natively, and abort the
+        // gesture state.
+        this.releaseCapturedPointer();
         this.dragStartX = null;
         this.dragStartY = null;
         return;
@@ -210,12 +225,26 @@ export class DashboardComponent implements OnInit {
     this.resetDrag();
   }
 
+  private releaseCapturedPointer(): void {
+    if (this.capturedPointerElement !== null && this.capturedPointerId !== null) {
+      try {
+        this.capturedPointerElement.releasePointerCapture(this.capturedPointerId);
+      } catch {
+        // Pointer may already have been released by the browser on
+        // pointerup — swallow the "Invalid pointer id" DOMException.
+      }
+    }
+    this.capturedPointerId = null;
+    this.capturedPointerElement = null;
+  }
+
   private resetDrag(): void {
     this.dragStartX = null;
     this.dragStartY = null;
     this.isHorizontalDrag = false;
     this.isDragging.set(false);
     this.dragOffsetPx.set(0);
+    this.releaseCapturedPointer();
   }
 
   private logout(): void {
