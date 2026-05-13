@@ -165,8 +165,14 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   // scrollable bounds. Combined with the body scroll-lock toggle in
   // styles.scss (`body.app-drawer-open { overflow: hidden }`), this kills
   // the "drawer bounces up and down + page underneath scrolls" bug pair
-  // that landed in v2.10.1.
+  // that landed in v2.10.1 (#671).
   overscroll-behavior: contain;
+  // `touch-action: pan-y` tells the browser to keep handling native vertical
+  // scrolling on the drawer's overflow-y, but to leave horizontal gestures
+  // to our pointer handlers (swipe-to-close, #668). Without this hint some
+  // browsers preemptively cancel pointermove on horizontal touches because
+  // they think we want native horizontal pan, making the swipe unreliable.
+  touch-action: pan-y;
 
   // Mobile: off-canvas drawer. Fixed position, slides in from left when
   // `.sidebar--open` is applied. Sits above the backdrop, below the topbar.
@@ -196,6 +202,17 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     transition:
       transform 200ms cubic-bezier(0.2, 0, 0, 1),
       visibility 0s linear 0s;
+  }
+
+  // During a swipe-to-close drag the transform is bound inline from the
+  // component (`[style.transform]`) so the drawer follows the finger 1:1.
+  // Stripping the CSS transition here removes the easing curve that would
+  // otherwise add ~200ms of lag behind the finger on every pointermove. On
+  // release the `--dragging` class is removed and the rule above takes over
+  // again, animating either the snap-back-to-open or the snap-to-closed in
+  // the canon's 200ms decelerate.
+  &--dragging {
+    transition: none;
   }
 
   // Desktop: static, always visible — drops the off-canvas visibility logic.
