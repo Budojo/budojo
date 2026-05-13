@@ -336,11 +336,14 @@ export interface AthletePromotion {
   readonly to_belt: Belt | null;
   readonly from_stripes: number | null;
   readonly to_stripes: number | null;
+  /** Belt at the moment of the event — lets the SPA render context on stripe rows. */
+  readonly belt_at_event: Belt | null;
   readonly recorded_at: string;
+  /** Nullable to defend against hard-deleted User rows (rare; User soft-deletes only). */
   readonly recorded_by: {
     readonly id: number;
     readonly full_name: string;
-  };
+  } | null;
 }
 
 export interface AthletePromotionPage {

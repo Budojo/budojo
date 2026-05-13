@@ -139,7 +139,13 @@ class Athlete extends Model implements HasAddress
      */
     public function promotions(): HasMany
     {
-        return $this->hasMany(AthletePromotion::class)->latest('recorded_at');
+        // Stable order — `recorded_at DESC, id DESC` tiebreaks two
+        // events written in the same second (belt + stripe in a single
+        // save), so the API and the UI render the same row first on
+        // every call (Copilot review on #654).
+        return $this->hasMany(AthletePromotion::class)
+            ->orderByDesc('recorded_at')
+            ->orderByDesc('id');
     }
 
     /**

@@ -4168,8 +4168,13 @@ components:
         One row of an athlete's belt or stripe promotion history.
         `kind` discriminates the populated columns: `belt` →
         `from_belt`/`to_belt` set, stripes null. `stripe` →
-        `from_stripes`/`to_stripes` set, belts null.
-      required: [id, kind, from_belt, to_belt, from_stripes, to_stripes, recorded_at, recorded_by]
+        `from_stripes`/`to_stripes` set, belts null. `belt_at_event`
+        is the snapshot of the athlete's belt at the moment of the
+        promotion — populated on both kinds, lets the SPA render the
+        belt-badge context on stripe rows without joining back to the
+        (possibly belt-changed-since) athlete. `recorded_by` is
+        nullable as a defensive guard against hard-deleted User rows.
+      required: [id, kind, from_belt, to_belt, from_stripes, to_stripes, belt_at_event, recorded_at, recorded_by]
       properties:
         id: { type: integer, format: int64 }
         kind: { type: string, enum: [belt, stripe] }
@@ -4183,9 +4188,14 @@ components:
           nullable: true
         from_stripes: { type: integer, minimum: 0, maximum: 4, nullable: true }
         to_stripes: { type: integer, minimum: 0, maximum: 4, nullable: true }
+        belt_at_event:
+          type: string
+          enum: [white, blue, purple, brown, black]
+          nullable: true
         recorded_at: { type: string, format: date-time }
         recorded_by:
           type: object
+          nullable: true
           required: [id, full_name]
           properties:
             id: { type: integer, format: int64 }

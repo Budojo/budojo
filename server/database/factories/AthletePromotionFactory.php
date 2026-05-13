@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\Belt;
 use App\Models\Athlete;
 use App\Models\AthletePromotion;
 use App\Models\User;
@@ -31,6 +32,7 @@ class AthletePromotionFactory extends Factory
             'to_belt' => null,
             'from_stripes' => 0,
             'to_stripes' => 1,
+            'belt_at_event' => Belt::White,
             'recorded_at' => now(),
             'recorded_by_user_id' => User::factory(),
         ];

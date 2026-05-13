@@ -64,7 +64,13 @@ class AthleteObserver
             $this->handleBeltChange($athlete, (int) $userId);
         }
         if ($stripesChanged) {
-            $this->handleStripesChange($athlete, (int) $userId);
+            // When belt ALSO changed, the stripe reset is a side-effect
+            // of the belt promotion (BJJ convention: new belt → 0
+            // stripes). Skip the standalone stripe_promotion feed post
+            // so the feed reads one celebration, not two. The audit
+            // log row still records the event for traceability
+            // (Copilot review on #654).
+            $this->handleStripesChange($athlete, (int) $userId, $beltChanged);
         }
     }
 
@@ -114,6 +120,7 @@ class AthleteObserver
             'to_belt' => $newBeltString,
             'from_stripes' => null,
             'to_stripes' => null,
+            'belt_at_event' => $newBeltString,
             'recorded_at' => now(),
             'recorded_by_user_id' => $userId,
         ]);
@@ -144,7 +151,7 @@ class AthleteObserver
         $this->fanoutBeltCelebration($athlete, $post, $userId, $oldBeltString, $newBeltString);
     }
 
-    private function handleStripesChange(Athlete $athlete, int $userId): void
+    private function handleStripesChange(Athlete $athlete, int $userId, bool $beltAlsoChanged): void
     {
         $oldStripesRaw = $athlete->getOriginal('stripes');
         // `getOriginal` returns mixed; narrow with is_numeric so the
@@ -154,6 +161,9 @@ class AthleteObserver
         $oldStripes = is_numeric($oldStripesRaw) ? (int) $oldStripesRaw : 0;
         $newStripes = $athlete->stripes;
 
+        // Always log the event — even a decrease (4 → 0 on belt
+        // promotion, or a manual correction) is owner-relevant data
+        // for the audit trail.
         AthletePromotion::create([
             'athlete_id' => $athlete->id,
             'kind' => 'stripe',
@@ -161,9 +171,20 @@ class AthleteObserver
             'to_belt' => null,
             'from_stripes' => $oldStripes,
             'to_stripes' => $newStripes,
+            'belt_at_event' => $athlete->belt->value,
             'recorded_at' => now(),
             'recorded_by_user_id' => $userId,
         ]);
+
+        // Feed CommunityPost only fires on a genuine new-stripe event:
+        // increase + not coupled with a belt change. A 4 → 0 reset
+        // alongside a belt change would otherwise render as "got a
+        // new stripe — 4 → 0" which is misleading; a manual decrease
+        // (typo correction) shouldn't broadcast either. Copilot
+        // review on #654.
+        if ($beltAlsoChanged || $newStripes <= $oldStripes) {
+            return;
+        }
 
         CommunityPost::create([
             'academy_id' => $athlete->academy_id,

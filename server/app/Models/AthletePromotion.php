@@ -34,12 +34,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property Belt|null                     $to_belt
  * @property int|null                      $from_stripes
  * @property int|null                      $to_stripes
+ * @property Belt                          $belt_at_event
  * @property \Illuminate\Support\Carbon    $recorded_at
  * @property int                           $recorded_by_user_id
  * @property \Illuminate\Support\Carbon    $created_at
  * @property \Illuminate\Support\Carbon    $updated_at
  * @property-read Athlete                  $athlete
- * @property-read User                     $recordedBy
+ * @property-read User|null                $recordedBy
  */
 #[Fillable([
     'athlete_id',
@@ -48,6 +49,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'to_belt',
     'from_stripes',
     'to_stripes',
+    'belt_at_event',
     'recorded_at',
     'recorded_by_user_id',
 ])]
@@ -78,6 +80,7 @@ class AthletePromotion extends Model
             'to_belt' => Belt::class,
             'from_stripes' => 'integer',
             'to_stripes' => 'integer',
+            'belt_at_event' => Belt::class,
             'recorded_at' => 'datetime',
         ];
     }

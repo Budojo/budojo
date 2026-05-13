@@ -42,6 +42,9 @@
             }
             @case ('stripe') {
               <div class="promotions__transition" data-cy="promotion-stripe">
+                @if (p.belt_at_event) {
+                  <app-belt-badge [belt]="p.belt_at_event" />
+                }
                 <span class="promotions__stripe-count">
                   {{ p.from_stripes }} <i class="pi pi-arrow-right" aria-hidden="true"></i>
                   {{ p.to_stripes }}
@@ -52,9 +55,11 @@
               </div>
             }
           }
-          <span class="promotions__editor">
-            {{ 'athletes.promotions.recordedBy' | translate: { name: p.recorded_by.full_name } }}
-          </span>
+          @if (p.recorded_by; as editor) {
+            <span class="promotions__editor">
+              {{ 'athletes.promotions.recordedBy' | translate: { name: editor.full_name } }}
+            </span>
+          }
         </li>
       }
     </ul>

@@ -42,6 +42,13 @@ return new class extends Migration
             $table->string('to_belt', 16)->nullable();
             $table->unsignedTinyInteger('from_stripes')->nullable();
             $table->unsignedTinyInteger('to_stripes')->nullable();
+            // Belt snapshot at the moment of the event. On belt rows
+            // it equals `to_belt`; on stripe rows it gives the SPA the
+            // visual context ("at what belt did this stripe happen")
+            // without joining back to the athlete (which may have
+            // belt-changed since). Required, not nullable — every
+            // promotion event happens at some belt.
+            $table->string('belt_at_event', 16);
             $table->timestamp('recorded_at');
             $table->foreignId('recorded_by_user_id')->constrained('users')->restrictOnDelete();
             $table->timestamps();

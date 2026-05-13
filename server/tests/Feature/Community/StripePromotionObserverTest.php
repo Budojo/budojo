@@ -86,7 +86,7 @@ it('writes an AthletePromotion(kind: belt) row on belt change', function (): voi
         ->and($row->to_stripes)->toBeNull();
 });
 
-it('creates BOTH a belt_promotion and a stripe_promotion post when both columns change together', function (): void {
+it('emits ONLY a belt_promotion post when belt + stripes change together (stripe reset is a side-effect)', function (): void {
     /** @var Athlete $athlete */
     $athlete = Athlete::factory()->for($this->academy)->create([
         'belt' => Belt::White,
@@ -96,13 +96,34 @@ it('creates BOTH a belt_promotion and a stripe_promotion post when both columns 
     $this->actingAs($this->owner);
 
     // Common BJJ promotion: bumping to the next belt resets the
-    // stripe counter — both columns change in one save.
+    // stripe counter — both columns change in one save. The feed
+    // should read as ONE celebration ("got the blue belt"), not
+    // "got a new stripe — 4 → 0" alongside it. The audit log row
+    // is still written for traceability (Copilot review on #654).
     $athlete->update(['belt' => Belt::Blue, 'stripes' => 0]);
 
-    expect(CommunityPost::query()->count())->toBe(2)
+    expect(CommunityPost::query()->count())->toBe(1)
         ->and(CommunityPost::query()->where('type', CommunityPostType::BeltPromotion)->count())->toBe(1)
-        ->and(CommunityPost::query()->where('type', CommunityPostType::StripePromotion)->count())->toBe(1)
+        ->and(CommunityPost::query()->where('type', CommunityPostType::StripePromotion)->count())->toBe(0)
+        // Both log rows still written so the timeline shows the stripe reset.
         ->and(AthletePromotion::query()->count())->toBe(2);
+});
+
+it('does NOT emit a stripe_promotion post on a stripe decrease (manual correction)', function (): void {
+    /** @var Athlete $athlete */
+    $athlete = Athlete::factory()->for($this->academy)->create([
+        'belt' => Belt::Blue,
+        'stripes' => 3,
+    ]);
+
+    $this->actingAs($this->owner);
+
+    // Owner fixes a typo on the athletes form: thought it was 3 stripes,
+    // actually 2. No feed celebration; the audit log still records.
+    $athlete->update(['stripes' => 2]);
+
+    expect(CommunityPost::query()->count())->toBe(0)
+        ->and(AthletePromotion::query()->count())->toBe(1);
 });
 
 it('skips ALL writes when no authenticated user (console seeder context)', function (): void {
