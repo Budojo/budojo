@@ -374,6 +374,22 @@ describe('DashboardComponent', () => {
       } as unknown as PointerEvent;
     }
 
+    // Save the original window.innerWidth in beforeEach and restore in
+    // afterEach so the mobile-viewport stub doesn't leak into tests that
+    // run after this block (Copilot review on #683 — without restoration
+    // a future swipe-to-close spec would silently break unrelated tests
+    // by leaving `innerWidth = 390` set on `window`).
+    let originalInnerWidth: number;
+    beforeEach(() => {
+      originalInnerWidth = window.innerWidth;
+    });
+    afterEach(() => {
+      Object.defineProperty(window, 'innerWidth', {
+        value: originalInnerWidth,
+        configurable: true,
+      });
+    });
+
     function ensureMobileViewport(): void {
       Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
     }

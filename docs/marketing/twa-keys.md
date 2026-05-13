@@ -56,7 +56,7 @@ SHA-256: 91:88:45:AA:3C:37:53:87:22:D0:12:3D:ED:EF:24:53:26:8B:1F:8B:9A:71:C6:59
 The upload keystore is irreplaceable. Verify before first AAB upload:
 
 - [ ] `android.keystore` attached to a vetted secret manager (e.g. 1Password) under the entry "Budojo Android — keystore"
-- [ ] **Second offline copy** on an encrypted medium (encrypted USB stick, GPG-encrypted file, or Telegram Saved Messages — all end-to-end secured). Avoid plain email: regular SMTP / IMAP storage is unencrypted at rest and a single account compromise leaks the upload key
+- [ ] **Second offline copy** on a medium that's encrypted at rest. Suitable options: encrypted USB stick, GPG-encrypted file on cloud storage, or password-managed encrypted archive. Avoid plain email: regular SMTP / IMAP storage is unencrypted at rest and a single account compromise leaks the upload key. **Note:** Telegram cloud chats (including Saved Messages) are NOT end-to-end encrypted — only Telegram Secret Chats are. If using Telegram for an offline copy, the keystore should be wrapped in a password-protected archive (e.g. 7z/AES) first
 - [ ] Keystore password stored in the secret manager (NEVER same vault entry as the keystore file in case the entry is shared)
 - [ ] Alias password stored in the secret manager
 - [ ] **Recovery rehearsal**: at least once, restore the keystore from the backup and re-run `keytool -list -v -keystore android.keystore -alias budojo-upload` to confirm the SHA-256 matches the one recorded above

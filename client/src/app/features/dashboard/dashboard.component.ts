@@ -198,18 +198,14 @@ export class DashboardComponent implements OnInit {
     this.isHorizontalDrag = false;
     this.sidebarWidthPx = (event.currentTarget as HTMLElement).offsetWidth;
     this.dragOffsetPx.set(0);
-
-    // Capture the pointer immediately (Copilot review on PR #669). Without
-    // capture, a user who started inside the drawer but releases on the
-    // backdrop never delivers pointerup/cancel to the drawer element, and
-    // the drag state stays stale (next pointerdown compounds the bug). With
-    // `touch-action: pan-y` on the .sidebar, the browser still handles
-    // native vertical scroll on its overflow-y, so capture doesn't disable
-    // scrolling — it just guarantees we receive every pointerup/cancel.
-    const target = event.currentTarget as Element;
-    target.setPointerCapture(event.pointerId);
-    this.capturedPointerId = event.pointerId;
-    this.capturedPointerElement = target;
+    // No setPointerCapture() on pointerdown — capturing the pointer here
+    // would retarget subsequent events away from the drawer's nav-link
+    // children, breaking <a routerLink> taps that should propagate
+    // through to the browser's click handling (Copilot review on #683).
+    // Capture only kicks in once horizontal-drag intent is confirmed in
+    // onSidebarPointerMove below; the edge case of "user releases outside
+    // the drawer before intent threshold" is harmless — drag state
+    // auto-resets on the next pointerdown.
   }
 
   protected onSidebarPointerMove(event: PointerEvent): void {
@@ -223,11 +219,18 @@ export class DashboardComponent implements OnInit {
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
         this.isHorizontalDrag = true;
         this.isDragging.set(true);
+        // NOW capture — horizontal-drag intent is confirmed, we want every
+        // subsequent pointerup/cancel regardless of where the finger lands
+        // (even outside the drawer). Nav-link clicks below this point are
+        // intentionally inert: the user is in the middle of a gesture, not
+        // a tap.
+        const target = event.currentTarget as Element;
+        target.setPointerCapture(event.pointerId);
+        this.capturedPointerId = event.pointerId;
+        this.capturedPointerElement = target;
       } else {
-        // Vertical scroll wins — release the pointer so the drawer's
-        // internal overflow-y handles the scroll natively, and abort the
-        // gesture state.
-        this.releaseCapturedPointer();
+        // Vertical scroll wins — abort the gesture state (no pointer was
+        // captured yet, so nothing to release).
         this.dragStartX = null;
         this.dragStartY = null;
         return;
