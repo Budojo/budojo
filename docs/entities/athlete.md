@@ -36,6 +36,7 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 - `hasOne(AthleteInvitation::class)` via `latestActiveInvitation()` — the single row the SPA's athlete-detail card (#467, M7 PR-B-UI) renders. Returns the most recent **pending or accepted** invitation; revoked + expired audit rows are deliberately filtered out (the owner re-invites by sending a new invite, not by reading terminal history). Eager-loaded by `AthleteController::show` so `AthleteResource` can emit the `invitation` block without an extra query.
 - `hasMany(Document::class)` — athlete's uploaded documents (ID, medical cert, etc.). See [`document.md`](./document.md).
 - `morphOne(Address::class, 'addressable')` — structured address (#72b), see [`address.md`](./address.md).
+- `hasMany(AthletePromotion::class)` — append-only belt + stripe history audit log (v2.10.0, #654), ordered `recorded_at DESC, id DESC`. See [`athlete-promotion.md`](./athlete-promotion.md).
 
 ## Indexes
 
