@@ -406,6 +406,26 @@ export const routes: Routes = [
         (m) => m.PrivacyPolicyItComponent,
       ),
   },
+  // /account-deletion (#688). Public — Google Play Data Safety form
+  // requires this URL during policy review, and the deletion-
+  // confirmation email links here. EN canonical at /account-deletion,
+  // IT translation at /account-deletion/it. Same three-artefact lock-
+  // step rule as /privacy{,/it}: edits to `docs/legal/account-deletion.md`,
+  // the EN component, and the IT component MUST land in the same PR.
+  {
+    path: 'account-deletion',
+    loadComponent: () =>
+      import('./features/account-deletion/account-deletion.component').then(
+        (m) => m.AccountDeletionComponent,
+      ),
+  },
+  {
+    path: 'account-deletion/it',
+    loadComponent: () =>
+      import('./features/account-deletion/it/account-deletion-it.component').then(
+        (m) => m.AccountDeletionItComponent,
+      ),
+  },
   // /terms — public Terms-of-Service page (#420). EN canonical at
   // /terms, IT translation at /terms/it. Same lock-step rule as
   // /privacy{,/it}: the markdown source, the EN component, and the IT
