@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" role="img" aria-label="Budojo — Run your BJJ academy from your phone">
+  <title>Budojo — Run your BJJ academy from your phone</title>
+
+  <!-- Play Store feature graphic (EN). 1024x500 per Play Console spec. -->
+
+  <rect width="1024" height="500" fill="#0a0a0b"/>
+
+  <defs>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#5b6cff" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#5b6cff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="900" cy="250" r="320" fill="url(#glow)"/>
+
+  <g transform="translate(90, 130) scale(2.5)" stroke="#5b6cff" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 10 L32 38 L32 54" stroke-width="5"/>
+    <path d="M50 10 L32 38" stroke-width="5"/>
+    <path d="M16 40 L48 40" stroke-width="6"/>
+    <path d="M29 38 L29 44 L35 44 L35 38" stroke-width="4"/>
+  </g>
+
+  <text x="300" y="245" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="84" font-weight="700" letter-spacing="-2" fill="#ffffff">Budojo</text>
+  <text x="300" y="295" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="26" font-weight="400" letter-spacing="-0.4" fill="#a3a3a3">Run your BJJ academy from your phone.</text>
+
+  <g transform="translate(300, 340)">
+    <rect x="0"   y="0" width="36" height="10" rx="2" fill="#5b6cff"/>
+    <rect x="44"  y="0" width="36" height="10" rx="2" fill="#5b6cff" opacity="0.7"/>
+    <rect x="88"  y="0" width="36" height="10" rx="2" fill="#5b6cff" opacity="0.45"/>
+    <rect x="132" y="0" width="36" height="10" rx="2" fill="#5b6cff" opacity="0.25"/>
+  </g>
+
+  <text x="990" y="475" text-anchor="end" font-family="Inter, sans-serif" font-size="13" font-weight="500" letter-spacing="0.4" fill="#525252">budojo.it</text>
+</svg>
