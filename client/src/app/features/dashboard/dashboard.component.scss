@@ -160,9 +160,16 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   background: var(--p-surface-900);
   color: var(--p-surface-0);
   overflow-y: auto;
+  // `overscroll-behavior: contain` stops iOS Safari + Android Chrome from
+  // rubber-banding the drawer when the user drags inside it past the
+  // scrollable bounds. Combined with the body scroll-lock toggle in
+  // styles.scss (`body.app-drawer-open { overflow: hidden }`), this kills
+  // the "drawer bounces up and down + page underneath scrolls" bug pair
+  // that landed in v2.10.1 (#671).
+  overscroll-behavior: contain;
   // `touch-action: pan-y` tells the browser to keep handling native vertical
   // scrolling on the drawer's overflow-y, but to leave horizontal gestures
-  // to our pointer handlers (swipe-to-close, #669). Without this hint some
+  // to our pointer handlers (swipe-to-close, #668). Without this hint some
   // browsers preemptively cancel pointermove on horizontal touches because
   // they think we want native horizontal pan, making the swipe unreliable.
   touch-action: pan-y;

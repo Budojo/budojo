@@ -1,11 +1,15 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
+  Renderer2,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AcademyService } from '../../core/services/academy.service';
@@ -38,6 +42,37 @@ export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly languageService = inject(LanguageService);
   private readonly router = inject(Router);
+  private readonly renderer = inject(Renderer2);
+  private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+  private static readonly BODY_DRAWER_OPEN_CLASS = 'app-drawer-open';
+
+  constructor() {
+    // Body scroll lock while the mobile drawer is open. Without this iOS
+    // Safari + Android Chrome let touches inside the open drawer leak
+    // through to the underlying page, plus the drawer itself rubber-bands
+    // on touch-drag. The class hook is consumed by a media-gated rule in
+    // `client/src/styles.scss` so desktop (where the sidebar is always
+    // visible and never "open") is unaffected.
+    effect(() => {
+      const open = this.sidebarOpen();
+      const cls = DashboardComponent.BODY_DRAWER_OPEN_CLASS;
+      if (open) {
+        this.renderer.addClass(this.document.body, cls);
+      } else {
+        this.renderer.removeClass(this.document.body, cls);
+      }
+    });
+
+    // Defensive teardown: if the component is destroyed while the drawer
+    // is still open (route change / hard navigation / error redirect),
+    // the body class would otherwise persist and lock scroll on subsequent
+    // pages (Copilot review on PR #672). The effect above stops running
+    // on destroy, so the class would never get removed naturally.
+    this.destroyRef.onDestroy(() => {
+      this.renderer.removeClass(this.document.body, DashboardComponent.BODY_DRAWER_OPEN_CLASS);
+    });
+  }
 
   /** Bound by the sidebar language toggle (#273). Read of `currentLang`
    *  drives the active-state styling; `setLang()` writes through the
