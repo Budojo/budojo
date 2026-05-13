@@ -108,3 +108,66 @@
     font-weight: 400;
   }
 }
+
+// ── Mobile cards layout (audit row 6) ──────────────────────────────────
+//
+// Below 768px the desktop table is hidden and a card list renders the
+// same name + count payload — wide cards, two-line layout, percentage
+// chip on the right. Each card is non-interactive (the page is
+// read-only; tapping a row doesn't do anything in the desktop layout
+// either) so it's a plain <li>, no role=button wrapper.
+
+$summary-mobile-breakpoint: 768px;
+
+.summary-page__mobile-list {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  @media (max-width: $summary-mobile-breakpoint - 1px) {
+    display: flex;
+  }
+}
+
+.summary-page__table-wrapper {
+  @media (max-width: $summary-mobile-breakpoint - 1px) {
+    display: none;
+  }
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 12px;
+
+  &__name {
+    font-weight: 600;
+    color: var(--p-text-color);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__count {
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    color: var(--p-text-color);
+  }
+
+  &__pct {
+    color: var(--p-text-muted-color);
+    font-weight: 400;
+    margin-left: 0.25rem;
+  }
+}
