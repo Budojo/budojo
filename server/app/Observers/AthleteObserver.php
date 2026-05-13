@@ -8,6 +8,7 @@ use App\Actions\Document\DeleteDocumentAction;
 use App\Enums\CommunityPostType;
 use App\Enums\CommunityPostVisibility;
 use App\Models\Athlete;
+use App\Models\AthletePromotion;
 use App\Models\CommunityPost;
 use App\Models\User;
 use App\Notifications\CommunityBeltCelebrationNotification;
@@ -24,61 +25,53 @@ class AthleteObserver
     }
 
     /**
-     * Auto-create a `belt_promotion` community post when an athlete's
-     * belt column changes (#608, M9 PR-A2). Fires only on updates —
-     * initial belt assignment at create time is not a promotion. Skips
-     * in console / seeder context where there's no authenticated user
-     * to attribute (`Auth::id()` is null).
+     * Auto-react to belt or stripes changes (#608 + post-v2.9.0
+     * feature: owner wants a queryable promotion history). Two paths:
      *
-     * The post creation is inline here for V1; if/when M9 PR-F adds
-     * push-notification fan-out (with per-user opt-in gating), this
-     * logic moves to a dedicated `CreateBeltPromotionPostAction`. For
-     * the simple insert path the observer is the right home.
+     * 1. **Belt change** → writes an `AthletePromotion(kind: belt)`
+     *    row to the queryable log AND emits a `belt_promotion`
+     *    CommunityPost. Same fanout to `community_belt_celebration`
+     *    inbox subscribers.
+     * 2. **Stripes change** → writes an `AthletePromotion(kind:
+     *    stripe)` row AND emits a `stripe_promotion` CommunityPost.
+     *    No notification fanout (stripes are frequent — the post on
+     *    the feed is enough; opt-in notification could come later
+     *    as `community_stripe_celebration` if requested).
+     *
+     * Both paths skip in console / seeder context (Auth::id() null)
+     * because there's no editor to attribute. The seeder running
+     * `Athlete::factory()->create(['belt' => Belt::Blue])` doesn't
+     * generate a celebration post.
      */
     public function updated(Athlete $athlete): void
     {
-        if (! $athlete->wasChanged('belt')) {
+        $beltChanged = $athlete->wasChanged('belt');
+        $stripesChanged = $athlete->wasChanged('stripes');
+        if (! $beltChanged && ! $stripesChanged) {
             return;
         }
 
         $userId = Auth::id();
         if ($userId === null) {
             // No authenticated user — likely a console seeder or a
-            // queue worker bumping a belt programmatically. Skip the
-            // celebration post; the audit log (#429, future) will
-            // capture the belt change separately.
+            // queue worker bumping a belt / stripes programmatically.
+            // Skip the celebration post AND the AthletePromotion
+            // log row; there's no editor to attribute.
             return;
         }
 
-        $originalBelt = $athlete->getOriginal('belt');
-        $oldBeltRaw = $originalBelt instanceof \BackedEnum ? $originalBelt->value : $originalBelt;
-        $oldBeltString = \is_string($oldBeltRaw) ? $oldBeltRaw : '';
-        $newBeltString = $athlete->belt->value;
-
-        /** @var CommunityPost $post */
-        $post = CommunityPost::create([
-            'academy_id' => $athlete->academy_id,
-            'type' => CommunityPostType::BeltPromotion,
-            'visibility' => CommunityPostVisibility::Academy,
-            'payload' => [
-                'athlete_id' => $athlete->id,
-                // Snapshot the athlete's name at promotion time so the
-                // feed can render the celebration line without joining
-                // back to the athletes table on every render (and
-                // without the cascade-delete of the athlete erasing
-                // the historical record). `created_by_user_id` carries
-                // the EDITOR (often the owner), not the athlete, so
-                // the SPA can't derive the athlete name from that
-                // field — Copilot review on PR #615.
-                'athlete_name' => trim($athlete->first_name . ' ' . $athlete->last_name),
-                'old_belt' => $oldBeltString,
-                'new_belt' => $newBeltString,
-                'promoted_at' => now()->toISOString(),
-            ],
-            'created_by_user_id' => $userId,
-        ]);
-
-        $this->fanoutBeltCelebration($athlete, $post, (int) $userId, $oldBeltString, $newBeltString);
+        if ($beltChanged) {
+            $this->handleBeltChange($athlete, (int) $userId);
+        }
+        if ($stripesChanged) {
+            // When belt ALSO changed, the stripe reset is a side-effect
+            // of the belt promotion (BJJ convention: new belt → 0
+            // stripes). Skip the standalone stripe_promotion feed post
+            // so the feed reads one celebration, not two. The audit
+            // log row still records the event for traceability
+            // (Copilot review on #654).
+            $this->handleStripesChange($athlete, (int) $userId, $beltChanged);
+        }
     }
 
     /**
@@ -111,6 +104,110 @@ class AthleteObserver
     public function forceDeleted(Athlete $athlete): void
     {
         $athlete->address()->delete();
+    }
+
+    private function handleBeltChange(Athlete $athlete, int $userId): void
+    {
+        $originalBelt = $athlete->getOriginal('belt');
+        $oldBeltRaw = $originalBelt instanceof \BackedEnum ? $originalBelt->value : $originalBelt;
+        $oldBeltString = \is_string($oldBeltRaw) ? $oldBeltRaw : '';
+        $newBeltString = $athlete->belt->value;
+
+        AthletePromotion::create([
+            'athlete_id' => $athlete->id,
+            'kind' => 'belt',
+            'from_belt' => $oldBeltString !== '' ? $oldBeltString : null,
+            'to_belt' => $newBeltString,
+            'from_stripes' => null,
+            'to_stripes' => null,
+            'belt_at_event' => $newBeltString,
+            'recorded_at' => now(),
+            'recorded_by_user_id' => $userId,
+        ]);
+
+        /** @var CommunityPost $post */
+        $post = CommunityPost::create([
+            'academy_id' => $athlete->academy_id,
+            'type' => CommunityPostType::BeltPromotion,
+            'visibility' => CommunityPostVisibility::Academy,
+            'payload' => [
+                'athlete_id' => $athlete->id,
+                // Snapshot the athlete's name at promotion time so the
+                // feed can render the celebration line without joining
+                // back to the athletes table on every render (and
+                // without the cascade-delete of the athlete erasing
+                // the historical record). `created_by_user_id` carries
+                // the EDITOR (often the owner), not the athlete, so
+                // the SPA can't derive the athlete name from that
+                // field — Copilot review on PR #615.
+                'athlete_name' => trim($athlete->first_name . ' ' . $athlete->last_name),
+                'old_belt' => $oldBeltString,
+                'new_belt' => $newBeltString,
+                'promoted_at' => now()->toISOString(),
+            ],
+            'created_by_user_id' => $userId,
+        ]);
+
+        $this->fanoutBeltCelebration($athlete, $post, $userId, $oldBeltString, $newBeltString);
+    }
+
+    private function handleStripesChange(Athlete $athlete, int $userId, bool $beltAlsoChanged): void
+    {
+        $oldStripesRaw = $athlete->getOriginal('stripes');
+        // `getOriginal` returns mixed; narrow with is_numeric so the
+        // cast is PHPStan level 9 safe. Falls back to 0 if the
+        // original is somehow not a number — shouldn't happen in
+        // practice (the column is `unsignedTinyInteger`).
+        $oldStripes = is_numeric($oldStripesRaw) ? (int) $oldStripesRaw : 0;
+        $newStripes = $athlete->stripes;
+
+        // Always log the event — even a decrease (4 → 0 on belt
+        // promotion, or a manual correction) is owner-relevant data
+        // for the audit trail.
+        AthletePromotion::create([
+            'athlete_id' => $athlete->id,
+            'kind' => 'stripe',
+            'from_belt' => null,
+            'to_belt' => null,
+            'from_stripes' => $oldStripes,
+            'to_stripes' => $newStripes,
+            'belt_at_event' => $athlete->belt->value,
+            'recorded_at' => now(),
+            'recorded_by_user_id' => $userId,
+        ]);
+
+        // Feed CommunityPost only fires on a genuine new-stripe event:
+        // increase + not coupled with a belt change. A 4 → 0 reset
+        // alongside a belt change would otherwise render as "got a
+        // new stripe — 4 → 0" which is misleading; a manual decrease
+        // (typo correction) shouldn't broadcast either. Copilot
+        // review on #654.
+        if ($beltAlsoChanged || $newStripes <= $oldStripes) {
+            return;
+        }
+
+        CommunityPost::create([
+            'academy_id' => $athlete->academy_id,
+            'type' => CommunityPostType::StripePromotion,
+            'visibility' => CommunityPostVisibility::Academy,
+            'payload' => [
+                'athlete_id' => $athlete->id,
+                'athlete_name' => trim($athlete->first_name . ' ' . $athlete->last_name),
+                // Belt is unchanged on a stripe-only event — snapshot
+                // for the card render so a future belt change doesn't
+                // backdate this post's visual.
+                'belt' => $athlete->belt->value,
+                'old_stripes' => $oldStripes,
+                'new_stripes' => $newStripes,
+                'promoted_at' => now()->toISOString(),
+            ],
+            'created_by_user_id' => $userId,
+        ]);
+
+        // No notification fanout for stripes — they're frequent
+        // (typically 0→1→2→3→4 within a single belt year). The feed
+        // card is the surface. An opt-in `community_stripe_celebration`
+        // category lands later if requested.
     }
 
     /**

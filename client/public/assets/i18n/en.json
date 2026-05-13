@@ -196,6 +196,14 @@
     }
   },
   "community": {
+    "reactionsList": {
+      "title": "Reactions",
+      "openAria": "See who reacted",
+      "allTab": "All",
+      "loadMore": "Load more",
+      "errorBody": "Couldn't load the reactions. Try again in a moment.",
+      "emptyBody": "No one reacted yet — be the first."
+    },
     "composer": {
       "openButton": "Post event",
       "title": "Post a new event",
@@ -264,6 +272,9 @@
       "errorBody": "We couldn't load the feed. Refresh the page and try again.",
       "beltPromotion": {
         "text": "{{name}} just earned a new belt!"
+      },
+      "stripePromotion": {
+        "text": "{{name}} just got a new stripe — {{from}} → {{to}}"
       },
       "pagination": "Feed pagination",
       "pageOf": "Page {{current}} of {{total}}",
@@ -1445,12 +1456,20 @@
         "documents": "Documents",
         "attendance": "Attendance",
         "payments": "Payments",
+        "promotions": "Promotions",
         "edit": "Edit"
       },
       "contactLinks": {
         "website": "Website",
         "facebook": "Facebook",
         "instagram": "Instagram"
+      },
+      "promotions": {
+        "errorBody": "Couldn't load promotion history. Try again in a moment.",
+        "emptyBody": "No promotions yet. Bump a belt or stripes and it lands here.",
+        "firstBelt": "First belt",
+        "stripes": "stripes",
+        "recordedBy": "Recorded by {{name}}"
       },
       "attendance": {
         "eyebrow": "Attendance",

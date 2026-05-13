@@ -354,6 +354,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Documents — read access stays open (browsing + downloading); writes are
     // gated. Listing per-athlete is a read; uploading is a write.
     Route::get('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'index']);
+    // Promotion history — owner reads belt + stripe events for a
+    // specific athlete (post-v2.9.0). Same academy-scope gate as
+    // documents; lives in the controller's first line.
+    Route::get('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'index']);
     // Documents — flat routes for operations that target a single document.
     // `/expiring` must come before `/{document}` routes or Laravel tries to
     // bind the literal "expiring" as a document id.
@@ -431,6 +435,19 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post(
             'posts/{post}/reactions',
             [\App\Http\Controllers\Community\CommunityReactionsController::class, 'toggle'],
+        )->middleware('throttle:community-react');
+
+        // Post-v2.9.0 (#655): list every reaction on a post with the
+        // reactor's identity flair. The SPA opens a bottom-sheet /
+        // dialog on tap of the count next to the 👏 / 🙏 buttons.
+        // Same academy-scope gate; paginated 20/page. Throttled at
+        // 60/min/user via the same `community-react` limiter as the
+        // toggle endpoint — the sheet's "Load more" can fire several
+        // reads in quick succession on a big post (Copilot review on
+        // #655).
+        Route::get(
+            'posts/{post}/reactions',
+            [\App\Http\Controllers\Community\CommunityPostReactionsListController::class, 'index'],
         )->middleware('throttle:community-react');
 
         // PR-D server (#604): 1-level comments under a post.
