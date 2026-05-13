@@ -59,6 +59,29 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.10.1',
+      date: '2026-05-13',
+      headline:
+        "Same-day polish patch for two issues reported on the live feed right after v2.10.0 shipped. Promotions tab on /dashboard/athletes/{id} was rendering the raw i18n key (athletes.promotions.emptyBody) instead of the translated copy for any athlete with no recorded promotions yet — caused by the template referencing 'athletes.promotions.*' while the keys live under 'athletes.detail.promotions.*' in the translation files; ngx-translate's silent-key-fallback meant the bug shipped past every gate and only surfaced on the empty-state branch on prod. Fixed: empty + error states, 'First belt' label, 'stripes' suffix, and 'Recorded by {name}' line all render translated copy now. Reactions list polish: a middot separator between the 👏 and 🙏 counts in the summary pill so the counts read as distinct items, and the reactions sheet now dismisses naturally on tap-outside (the redundant X is gone; Esc still dismisses).",
+      sections: [
+        {
+          heading: '🐛 Promotions tab: translated copy instead of the raw key',
+          bullets: [
+            "Opening an athlete's Promozioni tab on /dashboard/athletes/{id} showed the literal text 'athletes.promotions.emptyBody' for any athlete with no recorded promotions yet (i.e. anyone promoted before v2.10.0 shipped the history table).",
+            "Cause: the template referenced 'athletes.promotions.*' but the keys live under 'athletes.detail.promotions.*' in the translation files — ngx-translate falls back to the raw key when the path doesn't resolve, so it shipped past every gate and surfaced on the empty-state branch only.",
+            "Fixed: the empty state, error state, 'First belt' label, 'stripes' suffix, and 'Recorded by {name}' line now all render the EN / IT translated copy correctly.",
+          ],
+        },
+        {
+          heading: '✨ Reactions list — small polish',
+          bullets: [
+            "Middot separator between the 👏 and 🙏 counts in the summary pill ('👏 1 · 🙏 2') so the two counts read as distinct items, not one tight run-on.",
+            'The reactions sheet now dismisses naturally on tap-outside (backdrop tap), and the now-redundant X button is gone. Esc still dismisses.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.10.0',
       date: '2026-05-13',
       headline:
