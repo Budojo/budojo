@@ -52,6 +52,11 @@
                 {{ formatPaidAt(row.payment.paid_at) }}
               </time>
             } @else {
+              <!-- Two dashes (one for amount + one for paid-on date)
+                   mirror the paid layout '{amount} · {date}' so the
+                   row keeps the same visual grid in both states. -->
+              <span class="payment-card__dash" aria-hidden="true">—</span>
+              <span class="payment-card__sep" aria-hidden="true">·</span>
               <span class="payment-card__dash" aria-hidden="true">—</span>
             }
             @if (row.canEdit) {

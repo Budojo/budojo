@@ -20,8 +20,8 @@ Per `client/CLAUDE.md` § Mobile-first: "Tables either wrap in a scrollable cont
 |---|---|---|---|---|---|
 | 4 | Athletes list (`/dashboard/athletes`) | `<p-table>` w/ `responsiveLayout="scroll"` | Apple-minimalist cards w/ 3-dot menu, name+badges+socials | 🟢 | #674 shipped |
 | 5 | Daily attendance (`/dashboard/attendance`) | `<p-table>` | Tap-to-toggle cards (name + belt + present indicator, whole-card tap target, aria-pressed) | 🟢 | #677 shipped |
-| 6 | Monthly summary (`/dashboard/attendance/summary`) | `<p-table>` | Cards (one per athlete) — name left, count/percent right | 🟢 | shipping in this PR |
-| 7 | Athlete documents tab | `<p-table>` | Apple-minimalist cards: type + actions header, filename, expiry/cancelled status badge | 🟢 | shipping in this PR |
+| 6 | Monthly summary (`/dashboard/attendance/summary`) | `<p-table>` | Cards (one per athlete) — name left, count/percent right | 🟢 | #678 shipped |
+| 7 | Athlete documents tab | `<p-table>` | Apple-minimalist cards: type + actions header, filename, expiry/cancelled status badge | 🟢 | #679 shipped |
 | 8 | Athlete payments tab | `<p-table>` | Cards (one per month, status tag + amount + paid-on date + mark/unmark affordance) | 🟢 | shipping in this PR |
 | 9 | Expiring documents list (`/dashboard/documents/expiring`) | `<p-table>` | Cards (athlete + doc + expiry chip) | 🔴 | — |
 
