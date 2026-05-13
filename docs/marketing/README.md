@@ -31,7 +31,12 @@ When uploading a new AAB to the Play Console:
 1. **Listing copy** — drop the title / short / full from `play-store-descriptions.md` into Play Console → Main store listing → IT and EN tabs.
 2. **App icon** — 512×512 PNG. Re-use `client/public/icons/icon-512.png` (the same icon the PWA installs from).
 3. **Feature graphic** — 1024×500 PNG. Upload `feature-graphic.png` (English default locale); if the store offers a per-locale slot, upload `feature-graphic-it.png` for IT.
-4. **Screenshots** — capture 2-8 phone screenshots from a real device or Chrome DevTools (9:16, min 320px short side). Recommended flow: dashboard → athletes list → athlete detail → community feed → attendance. Save under `docs/marketing/screenshots/{en,it}/` once captured.
+4. **Screenshots** — regenerate via the Cypress capture spec (#690):
+   ```bash
+   docker compose up -d client      # if not already running
+   cd client && npm run play-store:screenshots
+   ```
+   Output: 15 PNGs at `docs/marketing/screenshots/play-store/{phone,tablet-7,tablet-10}/` (5 hero screens × 3 viewports) — exactly the Play Console slot dimensions (phone 1080×2400, tablet-7 1080×1440, tablet-10 1600×2560). All deterministic; re-running without an SPA layout change produces zero git diff. Hero screen list + viewport rationale: `client/cypress/marketing/play-store-screenshots.cy.ts`.
 5. **Privacy policy URL** — `https://budojo.it/privacy/it` (IT listing) / `https://budojo.it/privacy` (EN listing).
 6. **Category** — Sports (primary), Productivity (fallback).
 7. **Data safety form** — answers in `play-store-descriptions.md` § "Privacy + data safety".
