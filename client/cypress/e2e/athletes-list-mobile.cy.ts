@@ -86,8 +86,16 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.visitAuthenticated('/dashboard/athletes');
       cy.wait(['@academy', '@athletes']);
 
-      cy.contains('Mario').should('be.visible');
-      cy.contains('Luigi').should('be.visible');
+      // Below 768px the desktop <p-table> is `display: none` and the
+      // mobile card list (`.athletes-page__mobile-list`) renders the
+      // athletes instead (#670). Scope the visibility assertion to the
+      // mobile container so we don't accidentally select the hidden
+      // table's <a.athlete-name__text> which `cy.contains` matches by
+      // DOM order (the table comes first in the markup).
+      cy.get('[data-cy="athletes-mobile-list"]').within(() => {
+        cy.contains('Mario').should('be.visible');
+        cy.contains('Luigi').should('be.visible');
+      });
     });
   });
 });

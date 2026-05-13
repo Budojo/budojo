@@ -125,3 +125,94 @@
     opacity: 0.7;
   }
 }
+
+// ── Mobile cards layout (audit row 7) ──────────────────────────────────
+//
+// Below 768px the desktop <p-table> is hidden and replaced with an
+// Apple-minimalist card list. Each card carries type primary + actions
+// inline, filename secondary, status badge bottom.
+
+$documents-mobile-breakpoint: 768px;
+
+.documents-list__mobile-list {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  @media (max-width: $documents-mobile-breakpoint - 1px) {
+    display: flex;
+  }
+}
+
+// Hide the desktop table below the breakpoint via a real wrapper div
+// (`.documents-list__table-wrapper`) — same pattern as
+// `attendance/summary/monthly-summary.component.scss`. Component-scoped
+// selector, no ::ng-deep leakage, no PrimeNG-internal coupling
+// (Copilot review on #679).
+.documents-list__table-wrapper {
+  @media (max-width: $documents-mobile-breakpoint - 1px) {
+    display: none;
+  }
+}
+
+.documents-list__mobile-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.document-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 12px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+  }
+
+  &__type {
+    font-weight: 600;
+    color: var(--p-text-color);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    flex-shrink: 0;
+  }
+
+  &__filename {
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__status {
+    display: flex;
+    align-items: center;
+  }
+
+  &--cancelled {
+    opacity: 0.7;
+  }
+}

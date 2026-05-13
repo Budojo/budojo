@@ -32,80 +32,135 @@
       </p>
     </div>
   } @else {
-    <p-table
-      [value]="documents()"
-      [loading]="loading()"
-      responsiveLayout="scroll"
-      styleClass="p-datatable-sm expiring-page__table"
-      data-cy="expiring-table"
-    >
-      <ng-template pTemplate="header">
-        <tr>
-          <th>{{ 'documents.expiringList.table.athlete' | translate }}</th>
-          <th>{{ 'documents.expiringList.table.type' | translate }}</th>
-          <th>{{ 'documents.expiringList.table.expires' | translate }}</th>
-          <th>{{ 'documents.expiringList.table.status' | translate }}</th>
-          <th style="width: 4rem"></th>
-        </tr>
-      </ng-template>
+    <!-- Mobile card list (audit row 9). Below 768px the desktop table is
+         display:none and this <ul> renders instead. One card per doc:
+         athlete name (link) + download affordance on top, doc type in
+         the middle, expiry/status badge at the bottom. -->
+    <ul class="expiring-page__mobile-list" data-cy="expiring-mobile-list">
+      @if (loading()) {
+        <li class="expiring-page__skeleton" data-cy="expiring-mobile-loading">
+          @for (i of [1, 2, 3]; track i) {
+            <p-skeleton height="5rem" styleClass="mb-2" />
+          }
+        </li>
+      } @else if (documents().length === 0) {
+        <li class="expiring-page__empty-state" data-cy="expiring-mobile-empty">
+          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          <p class="expiring-page__empty-title">
+            {{ 'documents.expiringList.empty.title' | translate }}
+          </p>
+          <p class="expiring-page__empty-hint">
+            {{ 'documents.expiringList.empty.hint' | translate }}
+          </p>
+        </li>
+      } @else {
+        @for (doc of documents(); track doc.id) {
+          <li class="expiring-card" [attr.data-cy]="'expiring-card-' + doc.id">
+            <header class="expiring-card__header">
+              <a
+                [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
+                class="expiring-card__athlete-link"
+                [attr.data-cy]="'expiring-card-athlete-' + doc.id"
+              >
+                {{ athleteNameFor(doc) }}
+              </a>
+              <p-button
+                icon="pi pi-download"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                (onClick)="download(doc)"
+                [ariaLabel]="
+                  'documents.expiringList.downloadAria' | translate: { filename: doc.original_name }
+                "
+                [attr.data-cy]="'expiring-card-download-' + doc.id"
+              />
+            </header>
+            <span class="expiring-card__type">{{ typeKeyFor(doc) | translate }}</span>
+            <div class="expiring-card__status">
+              <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
+            </div>
+          </li>
+        }
+      }
+    </ul>
 
-      <ng-template pTemplate="body" let-doc>
-        <tr>
-          <td>
-            <a
-              [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
-              class="expiring-page__athlete-link"
-              data-cy="athlete-link"
-            >
-              {{ athleteNameFor(doc) }}
-            </a>
-          </td>
-          <td>{{ typeKeyFor(doc) | translate }}</td>
-          <td>{{ doc.expires_at ?? '—' }}</td>
-          <td>
-            <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
-          </td>
-          <td>
-            <p-button
-              icon="pi pi-download"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              (onClick)="download(doc)"
-              [ariaLabel]="
-                'documents.expiringList.downloadAria' | translate: { filename: doc.original_name }
-              "
-              [pTooltip]="'documents.expiringList.download' | translate"
-              tooltipPosition="left"
-              data-cy="download-btn"
-            />
-          </td>
-        </tr>
-      </ng-template>
+    <div class="expiring-page__table-wrapper">
+      <p-table
+        [value]="documents()"
+        [loading]="loading()"
+        responsiveLayout="scroll"
+        styleClass="p-datatable-sm expiring-page__table"
+        data-cy="expiring-table"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>{{ 'documents.expiringList.table.athlete' | translate }}</th>
+            <th>{{ 'documents.expiringList.table.type' | translate }}</th>
+            <th>{{ 'documents.expiringList.table.expires' | translate }}</th>
+            <th>{{ 'documents.expiringList.table.status' | translate }}</th>
+            <th style="width: 4rem"></th>
+          </tr>
+        </ng-template>
 
-      <ng-template pTemplate="emptymessage">
-        <tr>
-          <td colspan="5" class="expiring-page__empty">
-            @if (loading()) {
-              <div class="expiring-page__skeleton">
-                <p-skeleton height="1.5rem" styleClass="mb-2"></p-skeleton>
-                <p-skeleton height="1.5rem" styleClass="mb-2"></p-skeleton>
-                <p-skeleton height="1.5rem"></p-skeleton>
-              </div>
-            } @else {
-              <div class="expiring-page__empty-state" data-cy="expiring-list-empty">
-                <i class="pi pi-check-circle" aria-hidden="true"></i>
-                <p class="expiring-page__empty-title">
-                  {{ 'documents.expiringList.empty.title' | translate }}
-                </p>
-                <p class="expiring-page__empty-hint">
-                  {{ 'documents.expiringList.empty.hint' | translate }}
-                </p>
-              </div>
-            }
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
+        <ng-template pTemplate="body" let-doc>
+          <tr>
+            <td>
+              <a
+                [routerLink]="['/dashboard/athletes', doc.athlete_id, 'documents']"
+                class="expiring-page__athlete-link"
+                data-cy="athlete-link"
+              >
+                {{ athleteNameFor(doc) }}
+              </a>
+            </td>
+            <td>{{ typeKeyFor(doc) | translate }}</td>
+            <td>{{ doc.expires_at ?? '—' }}</td>
+            <td>
+              <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
+            </td>
+            <td>
+              <p-button
+                icon="pi pi-download"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                (onClick)="download(doc)"
+                [ariaLabel]="
+                  'documents.expiringList.downloadAria' | translate: { filename: doc.original_name }
+                "
+                [pTooltip]="'documents.expiringList.download' | translate"
+                tooltipPosition="left"
+                data-cy="download-btn"
+              />
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5" class="expiring-page__empty">
+              @if (loading()) {
+                <div class="expiring-page__skeleton">
+                  <p-skeleton height="1.5rem" styleClass="mb-2"></p-skeleton>
+                  <p-skeleton height="1.5rem" styleClass="mb-2"></p-skeleton>
+                  <p-skeleton height="1.5rem"></p-skeleton>
+                </div>
+              } @else {
+                <div class="expiring-page__empty-state" data-cy="expiring-list-empty">
+                  <i class="pi pi-check-circle" aria-hidden="true"></i>
+                  <p class="expiring-page__empty-title">
+                    {{ 'documents.expiringList.empty.title' | translate }}
+                  </p>
+                  <p class="expiring-page__empty-hint">
+                    {{ 'documents.expiringList.empty.hint' | translate }}
+                  </p>
+                </div>
+              }
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
   }
 </section>

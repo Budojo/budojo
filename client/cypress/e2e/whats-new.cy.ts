@@ -47,7 +47,7 @@ describe("What's new page (#254)", () => {
 
     // The latest release sits at the top — assert it's actually
     // visible without scrolling (the user sees it on landing).
-    cy.get('[data-cy="whats-new-release-v2.10.1"]').should('be.visible');
+    cy.get('[data-cy="whats-new-release-v2.11.0"]').should('be.visible');
 
     // Older releases are below the fold of the default Cypress
     // viewport (1280×720) — the dashboard shell's `.main` container

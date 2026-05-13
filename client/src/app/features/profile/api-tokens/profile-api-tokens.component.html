@@ -100,7 +100,8 @@
   [draggable]="false"
   [resizable]="false"
   [closable]="!creating()"
-  [style]="{ width: '32rem', maxWidth: '90vw' }"
+  [style]="{ width: '32rem' }"
+  [breakpoints]="{ '768px': '92vw' }"
   [header]="'profile.apiTokens.createDialog.title' | translate"
   data-cy="profile-api-tokens-create-dialog"
 >
@@ -197,7 +198,8 @@
   [closable]="false"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: '34rem', maxWidth: '90vw' }"
+  [style]="{ width: '34rem' }"
+  [breakpoints]="{ '768px': '92vw' }"
   [header]="'profile.apiTokens.plaintextDialog.title' | translate"
   data-cy="profile-api-tokens-plaintext-dialog"
 >

@@ -345,6 +345,124 @@ describe('DashboardComponent', () => {
       expect(component.sidebarOpen()).toBe(false);
     });
 
+    // ── Swipe-to-close drawer (#668) ──────────────────────────────────
+    //
+    // The drawer drag-to-dismiss gesture. We exercise the component
+    // handlers directly with mock PointerEvent shapes — full DOM
+    // pointer-event simulation in vitest is more flake than it's
+    // worth, and the handlers themselves don't depend on browser
+    // internals (the actual transform binding is template-only).
+
+    function fakePointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent {
+      const noop = vi.fn();
+      const target = {
+        offsetWidth: 200,
+        setPointerCapture: noop,
+        releasePointerCapture: noop,
+      };
+      return {
+        pointerId: 1,
+        isPrimary: true,
+        clientX: 0,
+        clientY: 0,
+        timeStamp: 0,
+        target,
+        currentTarget: target,
+        preventDefault: noop,
+        stopPropagation: noop,
+        ...overrides,
+      } as unknown as PointerEvent;
+    }
+
+    // Save the original window.innerWidth in beforeEach and restore in
+    // afterEach so the mobile-viewport stub doesn't leak into tests that
+    // run after this block (Copilot review on #683 — without restoration
+    // a future swipe-to-close spec would silently break unrelated tests
+    // by leaving `innerWidth = 390` set on `window`).
+    let originalInnerWidth: number;
+    beforeEach(() => {
+      originalInnerWidth = window.innerWidth;
+    });
+    afterEach(() => {
+      Object.defineProperty(window, 'innerWidth', {
+        value: originalInnerWidth,
+        configurable: true,
+      });
+    });
+
+    function ensureMobileViewport(): void {
+      Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+    }
+
+    it('swipe past 40% of width closes the drawer', () => {
+      ensureMobileViewport();
+      const fixture = TestBed.createComponent(DashboardComponent);
+      const component = fixture.componentInstance as unknown as {
+        toggleSidebar: () => void;
+        sidebarOpen: () => boolean;
+        onSidebarPointerDown: (e: PointerEvent) => void;
+        onSidebarPointerMove: (e: PointerEvent) => void;
+        onSidebarPointerUp: (e: PointerEvent) => void;
+      };
+      component.toggleSidebar();
+
+      // Start drag at x=200, finger moves left to x=50 — that's 150px of
+      // 200px width = 75%, well above the 40% close threshold.
+      component.onSidebarPointerDown(fakePointerEvent({ clientX: 200, clientY: 100 }));
+      component.onSidebarPointerMove(fakePointerEvent({ clientX: 150, clientY: 105 }));
+      component.onSidebarPointerMove(fakePointerEvent({ clientX: 50, clientY: 105 }));
+      component.onSidebarPointerUp(fakePointerEvent({ clientX: 50, clientY: 105, timeStamp: 200 }));
+
+      expect(component.sidebarOpen()).toBe(false);
+    });
+
+    it('short swipe (<40% of width, slow release) snaps the drawer back open', () => {
+      ensureMobileViewport();
+      const fixture = TestBed.createComponent(DashboardComponent);
+      const component = fixture.componentInstance as unknown as {
+        toggleSidebar: () => void;
+        sidebarOpen: () => boolean;
+        onSidebarPointerDown: (e: PointerEvent) => void;
+        onSidebarPointerMove: (e: PointerEvent) => void;
+        onSidebarPointerUp: (e: PointerEvent) => void;
+      };
+      component.toggleSidebar();
+
+      // Start at 200, finger ends at 180 — 20px of 200 = 10%, below
+      // the 40% threshold. Slow release (200ms) keeps velocity below
+      // fling threshold (0.5 px/ms ⇒ 0.1 here).
+      component.onSidebarPointerDown(fakePointerEvent({ clientX: 200, clientY: 100 }));
+      component.onSidebarPointerMove(fakePointerEvent({ clientX: 190, clientY: 105 }));
+      component.onSidebarPointerMove(fakePointerEvent({ clientX: 180, clientY: 105 }));
+      component.onSidebarPointerUp(
+        fakePointerEvent({ clientX: 180, clientY: 105, timeStamp: 200 }),
+      );
+
+      expect(component.sidebarOpen()).toBe(true);
+    });
+
+    it('vertical-dominant first move aborts the gesture entirely (no drawer close on later horizontal moves)', () => {
+      ensureMobileViewport();
+      const fixture = TestBed.createComponent(DashboardComponent);
+      const component = fixture.componentInstance as unknown as {
+        toggleSidebar: () => void;
+        sidebarOpen: () => boolean;
+        onSidebarPointerDown: (e: PointerEvent) => void;
+        onSidebarPointerMove: (e: PointerEvent) => void;
+        onSidebarPointerUp: (e: PointerEvent) => void;
+      };
+      component.toggleSidebar();
+
+      component.onSidebarPointerDown(fakePointerEvent({ clientX: 200, clientY: 100 }));
+      // First move past threshold is vertical-dominant (deltaY > deltaX) →
+      // intent abort, gesture is dead even if later moves are horizontal.
+      component.onSidebarPointerMove(fakePointerEvent({ clientX: 205, clientY: 150 }));
+      component.onSidebarPointerMove(fakePointerEvent({ clientX: 30, clientY: 200 }));
+      component.onSidebarPointerUp(fakePointerEvent({ clientX: 30, clientY: 200, timeStamp: 300 }));
+
+      expect(component.sidebarOpen()).toBe(true);
+    });
+
     it('hamburger button exposes aria-expanded and aria-controls pointing at the sidebar', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
@@ -357,6 +475,53 @@ describe('DashboardComponent', () => {
       expect(hamburger!.getAttribute('aria-controls')).toBe('app-sidebar');
       // Accessible label flips based on open state.
       expect(hamburger!.getAttribute('aria-label')).toBe('Open navigation');
+    });
+
+    // ── Body scroll-lock (#671) ────────────────────────────────────────
+    //
+    // When the drawer opens, the dashboard component must add
+    // `app-drawer-open` to <body> so the global rule in styles.scss can
+    // lock body scrolling (iOS Safari touch bleed-through fix). When the
+    // drawer closes — or the component itself is destroyed mid-drawer-
+    // open — the class must come back off so the next page isn't stuck
+    // with perma-locked scroll.
+
+    it('adds `app-drawer-open` to <body> when the drawer opens, removes it on close', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance as unknown as {
+        toggleSidebar: () => void;
+        closeSidebar: () => void;
+      };
+
+      expect(document.body.classList.contains('app-drawer-open')).toBe(false);
+
+      component.toggleSidebar();
+      fixture.detectChanges();
+      expect(document.body.classList.contains('app-drawer-open')).toBe(true);
+
+      component.closeSidebar();
+      fixture.detectChanges();
+      expect(document.body.classList.contains('app-drawer-open')).toBe(false);
+    });
+
+    it('strips `app-drawer-open` from <body> on destroy even if the drawer was open', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance as unknown as {
+        toggleSidebar: () => void;
+      };
+
+      component.toggleSidebar();
+      fixture.detectChanges();
+      expect(document.body.classList.contains('app-drawer-open')).toBe(true);
+
+      // Route change / hard navigation / error redirect — anything that
+      // destroys the dashboard while the drawer is open. Without the
+      // DestroyRef cleanup, the class would persist and lock scroll on
+      // every subsequent page.
+      fixture.destroy();
+      expect(document.body.classList.contains('app-drawer-open')).toBe(false);
     });
   });
 

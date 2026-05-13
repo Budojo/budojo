@@ -1308,6 +1308,7 @@
         "delete": "Delete",
         "editAria": "Edit {{name}}",
         "deleteAria": "Delete {{name}}",
+        "openMenuAria": "Open menu for {{name}}",
         "paid": "Paid",
         "unpaid": "Unpaid"
       },

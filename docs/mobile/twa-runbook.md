@@ -1,5 +1,7 @@
 # TWA Android — first APK runbook (M9)
 
+> **⚠️ Superseded — historical reference.** This runbook was drafted during M9 planning and uses a hand-rolled `keytool genkeypair` + `mobile-android/` in-repo directory convention. The **active workflow** since 2026-05-13 uses Bubblewrap's integrated key gen + a sibling `$WORKSPACE/budojo-twa/` directory, with `twa-manifest.json` checked into [`docs/marketing/`](../marketing/README.md#rebuilding-the-twa-project-from-scratch) as the rebuild recipe. Use the marketing-folder workflow for any new build; keep this file only as a reference for the M9 planning context (notably the keytool flag set + sideload-vs-bundle distinction).
+
 End-to-end procedure for generating the first signed Budojo APK via the Trusted Web Activity (TWA) wrapper. Goal: a sideloadable APK on your laptop, then a Play Store internal-testing track.
 
 This runbook is the **executable companion** to milestone M9's issues — each section maps to one or more `/Budojo/budojo/issues` ticket. Steps that need interactive input (passwords, signing keys, Play Console UI) are marked **(manual)**; everything else is shell-friendly.

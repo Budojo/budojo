@@ -210,4 +210,87 @@ describe('DocumentsListComponent', () => {
     expect(cmp.cancelledOn(makeDoc({ deleted_at: null }))).toBe(null);
     httpMock.verify();
   });
+
+  // ── Mobile cards (#679, audit row 7) ──────────────────────────────────
+  //
+  // The desktop table is always in the DOM and toggled via CSS, so unit
+  // tests run against the desktop spec by default. The mobile card list
+  // is a sibling render path that lives in the same component template;
+  // assert the markup is in the DOM regardless of viewport (CSS handles
+  // visibility) so the conditional branches (loading, empty, per-doc,
+  // tombstone-gated actions) don't drift on a future refactor.
+
+  describe('mobile card list', () => {
+    it('renders one .document-card per loaded document with the type label and the filename', () => {
+      const httpMock = setupTestBed();
+      const fixture = TestBed.createComponent(DocumentsListComponent);
+      fixture.detectChanges();
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/athletes/42/documents')
+        .flush({
+          data: [
+            makeDoc({ id: 7, type: 'medical_certificate', original_name: 'medical-2026.pdf' }),
+            makeDoc({ id: 8, type: 'id_card', original_name: 'id-card.pdf' }),
+          ],
+        });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      // Tag-scope to <li> so the selector matches only the card hosts,
+      // not the child action buttons (`document-card-download-N`,
+      // `document-card-delete-N`) that share the prefix.
+      const cards = root.querySelectorAll('li[data-cy^="document-card-"]');
+      expect(cards.length).toBe(2);
+
+      const medical = root.querySelector('[data-cy="document-card-7"]') as HTMLElement;
+      expect(medical).not.toBeNull();
+      expect(medical.querySelector('.document-card__filename')?.textContent?.trim()).toBe(
+        'medical-2026.pdf',
+      );
+      httpMock.verify();
+    });
+
+    it('hides download + delete actions on a tombstone (deleted_at != null)', () => {
+      const httpMock = setupTestBed();
+      const fixture = TestBed.createComponent(DocumentsListComponent);
+      // Toggle on so the cancelled doc renders.
+      fixture.componentInstance.showCancelled.set(true);
+      fixture.detectChanges();
+      httpMock
+        .expectOne((r) => r.url.includes('/api/v1/athletes/42/documents'))
+        .flush({
+          data: [
+            makeDoc({ id: 9, deleted_at: '2026-04-20T10:00:00+00:00', original_name: 'old.pdf' }),
+            makeDoc({ id: 10, deleted_at: null, original_name: 'live.pdf' }),
+          ],
+        });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+
+      // Cancelled doc: no download or delete inline (Norman §
+      // affordance — absent rather than disabled with error).
+      expect(root.querySelector('[data-cy="document-card-download-9"]')).toBeNull();
+      expect(root.querySelector('[data-cy="document-card-delete-9"]')).toBeNull();
+      // Live doc: both affordances present.
+      expect(root.querySelector('[data-cy="document-card-download-10"]')).not.toBeNull();
+      expect(root.querySelector('[data-cy="document-card-delete-10"]')).not.toBeNull();
+      httpMock.verify();
+    });
+
+    it('shows the mobile empty state when the loaded list is empty', () => {
+      const httpMock = setupTestBed();
+      const fixture = TestBed.createComponent(DocumentsListComponent);
+      fixture.detectChanges();
+      httpMock.expectOne((r) => r.url === '/api/v1/athletes/42/documents').flush({ data: [] });
+      fixture.detectChanges();
+
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-cy="documents-mobile-empty"]')).not.toBeNull();
+      // No card hosts in the empty case (tag-scoped to <li> for the
+      // same reason as the previous spec).
+      expect(root.querySelector('li[data-cy^="document-card-"]')).toBeNull();
+      httpMock.verify();
+    });
+  });
 });

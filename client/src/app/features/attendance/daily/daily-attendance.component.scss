@@ -234,3 +234,126 @@
     outline-offset: 2px;
   }
 }
+
+// ── Mobile cards layout (#670 audit row 5) ─────────────────────────────
+//
+// Below 768px the desktop <p-table> is hidden and replaced with a card
+// list — same per-row tap-to-toggle semantics, optimised for thumb
+// reach + scannability. The whole card is the tap target (role=button,
+// aria-pressed/aria-busy mirror the visual state on screen readers).
+
+$attendance-mobile-breakpoint: 768px;
+
+.attendance__mobile-list {
+  display: none;
+
+  @media (max-width: $attendance-mobile-breakpoint - 1px) {
+    display: block;
+  }
+}
+
+.attendance__table-wrapper {
+  @media (max-width: $attendance-mobile-breakpoint - 1px) {
+    display: none;
+  }
+}
+
+.attendance__mobile-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.attendance-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+// <li> wrapper — keeps the implicit `listitem` ARIA role so screen
+// readers still announce list position / length. The interactive
+// surface is the <button.attendance-card> nested inside.
+.attendance-card-item {
+  display: block;
+}
+
+.attendance-card {
+  // Neutralise <button>'s default chrome (font, border, padding,
+  // colour) so it renders as a flat card.
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  // Animates the same two properties as the visual present-state delta
+  // below (background + border-colour). The desktop row uses a softer
+  // background-only transition because it has no border affordance; the
+  // card has both, so both shift on the same motion token to stay in
+  // visual sync (#677 Copilot review).
+  transition:
+    background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__indicator {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  // Present state — soft tint pulls from the same color-mix the desktop
+  // row uses, so the palette stays in sync if --p-primary-color ever
+  // shifts (esp. dark mode).
+  &--present {
+    background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+    border-color: color-mix(in srgb, var(--p-primary-color) 30%, var(--p-content-border-color));
+  }
+
+  &--inflight {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  &:active:not(.attendance-card--inflight) {
+    background: color-mix(in srgb, var(--p-primary-color) 4%, var(--p-content-hover-background));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}
