@@ -29,14 +29,14 @@ Per `client/CLAUDE.md` § Mobile-first: "Tables either wrap in a scrollable cont
 
 `<p-dialog>` instances must carry `[breakpoints]="{ '768px': '92vw' }"` (or `100vw`) so they never overflow on phone screens. Audit:
 
-| # | Component | Has `breakpoints`? | Status |
+| # | Component | Status | Notes |
 |---|---|---|---|
-| 10 | `upload-document-dialog` | ✅ | — |
-| 11 | `search-palette` | ✅ | — |
-| 12 | `event-composer` | ✅ | — |
-| 13 | `cookie-banner` | (not a dialog visually — sticky strip) | — |
-| 14 | `profile-two-factor` (enrolment + backup-codes flows) | ❌ | 🔴 |
-| 15 | `profile-api-tokens` (create token flow) | ❌ | 🔴 |
+| 10 | `upload-document-dialog` | 🟢 | `[breakpoints]` set |
+| 11 | `search-palette` | 🟢 | `[breakpoints]` set |
+| 12 | `event-composer` | 🟢 | `[breakpoints]` set |
+| 13 | `cookie-banner` | ⚪ | Not a dialog visually — sticky strip |
+| 14 | `profile-two-factor` (enrolment + backup-codes flows) | 🔴 | Missing `[breakpoints]` — needs `{ '768px': '92vw' }` |
+| 15 | `profile-api-tokens` (create token flow) | 🔴 | Missing `[breakpoints]` — needs `{ '768px': '92vw' }` |
 
 ## ── Filter clusters (cramped on narrow viewports)
 
@@ -50,8 +50,8 @@ The athletes-list filter bar shows three `<p-select>` dropdowns + a search field
 
 | # | Surface | Status | Notes |
 |---|---|---|---|
-| 17 | All `<p-button icon="..." [text]="true">` inline action buttons (Edit / Delete / etc.) | Existing audit by design system | Already 40+ px with default PrimeNG sizing; spot-check on 320px viewport when porting each list to cards |
-| 18 | Topbar hamburger + avatar | ✅ | 48 × 48 (#411) |
+| 17 | All `<p-button icon="..." [text]="true">` inline action buttons (Edit / Delete / etc.) | 🟢 | Already 40+ px with default PrimeNG sizing per the design system audit; spot-check on 320px viewport when porting each list to cards |
+| 18 | Topbar hamburger + avatar | 🟢 | 48 × 48 (#411) |
 
 ## ── Forms
 
@@ -66,7 +66,7 @@ Spot-check existing `*.scss` files:
 | # | Gap | Status | Notes |
 |---|---|---|---|
 | 19 | Installed PWA without cache + offline shows Chrome's "ERR_CONNECTION_ABORTED" page instead of our `/offline` route | 🔴 | Cache strategy `prefetch` for app shell should already handle this; investigate why the SW's offline fallback didn't fire on the user's session (Telegram in-app browser may bypass the SW) |
-| 20 | Service worker auto-update on new version (#305) | ✅ | Working — verified in audit chat |
+| 20 | Service worker auto-update on new version (#305) | 🟢 | Working — verified in audit chat |
 
 ## Methodology
 
