@@ -1,0 +1,97 @@
+<p-dialog
+  [visible]="visible()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [breakpoints]="{ '768px': '100vw' }"
+  styleClass="reactions-sheet__dialog"
+  [style]="{ width: '32rem' }"
+  position="center"
+  [header]="'community.reactionsList.title' | translate"
+  (onHide)="onClose()"
+  data-cy="reactions-list-sheet"
+>
+  <div class="reactions-sheet">
+    <nav class="reactions-sheet__tabs" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        class="reactions-sheet__tab"
+        [class.reactions-sheet__tab--active]="activeTab() === 'all'"
+        [attr.aria-selected]="activeTab() === 'all'"
+        (click)="setTab('all')"
+        data-cy="reactions-tab-all"
+      >
+        {{ 'community.reactionsList.allTab' | translate }}
+        <span class="reactions-sheet__tab-count">{{ clapCount() + prayCount() }}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="reactions-sheet__tab"
+        [class.reactions-sheet__tab--active]="activeTab() === 'clap'"
+        [attr.aria-selected]="activeTab() === 'clap'"
+        (click)="setTab('clap')"
+        data-cy="reactions-tab-clap"
+      >
+        <span aria-hidden="true">👏</span>
+        <span class="reactions-sheet__tab-count">{{ clapCount() }}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="reactions-sheet__tab"
+        [class.reactions-sheet__tab--active]="activeTab() === 'pray'"
+        [attr.aria-selected]="activeTab() === 'pray'"
+        (click)="setTab('pray')"
+        data-cy="reactions-tab-pray"
+      >
+        <span aria-hidden="true">🙏</span>
+        <span class="reactions-sheet__tab-count">{{ prayCount() }}</span>
+      </button>
+    </nav>
+
+    @if (loading() && reactions().length === 0) {
+      <ul class="reactions-sheet__list" data-cy="reactions-loading">
+        @for (i of [1, 2, 3]; track i) {
+          <li class="reactions-sheet__row reactions-sheet__row--skeleton">
+            <p-skeleton shape="circle" size="2rem" />
+            <p-skeleton width="60%" height="1rem" />
+          </li>
+        }
+      </ul>
+    } @else if (loadError()) {
+      <p class="reactions-sheet__empty" data-cy="reactions-error">
+        {{ 'community.reactionsList.errorBody' | translate }}
+      </p>
+    } @else if (filteredReactions().length === 0) {
+      <p class="reactions-sheet__empty" data-cy="reactions-empty">
+        {{ 'community.reactionsList.emptyBody' | translate }}
+      </p>
+    } @else {
+      <ul class="reactions-sheet__list" data-cy="reactions-list">
+        @for (r of filteredReactions(); track r.id) {
+          <li class="reactions-sheet__row" [attr.data-cy]="'reaction-row-' + r.id">
+            <app-user-flair [user]="r.user" [compact]="true" />
+            <span class="reactions-sheet__emoji" aria-hidden="true">
+              {{ r.emoji === 'clap' ? '👏' : '🙏' }}
+            </span>
+          </li>
+        }
+      </ul>
+
+      @if (hasMore()) {
+        <div class="reactions-sheet__more">
+          <p-button
+            severity="secondary"
+            [text]="true"
+            [label]="'community.reactionsList.loadMore' | translate"
+            [loading]="loading()"
+            (onClick)="loadMore()"
+            data-cy="reactions-load-more"
+          />
+        </div>
+      }
+    }
+  </div>
+</p-dialog>

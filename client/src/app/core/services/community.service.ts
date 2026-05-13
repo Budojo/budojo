@@ -134,6 +134,17 @@ export class CommunityService {
    * swaps-in-place semantics and returns the resulting state, which
    * the caller uses to reconcile its optimistic update.
    */
+  /**
+   * List every reaction on a post with the reactor's identity flair
+   * (post-v2.9.0, "voglio vedere chi ha messo cosa"). The SPA opens
+   * a bottom-sheet (mobile) / dialog (desktop) on tap of the count
+   * next to the 👏 / 🙏 buttons. Paginated 20/page.
+   */
+  listReactions(postId: number, page = 1): Observable<PostReactionsPage> {
+    const params = new HttpParams().set('page', page.toString());
+    return this.http.get<PostReactionsPage>(`${this.base}/posts/${postId}/reactions`, { params });
+  }
+
   toggleReaction(postId: number, emoji: ReactionEmoji): Observable<ReactionToggleResponse> {
     return this.http.post<ReactionToggleResponse>(`${this.base}/posts/${postId}/reactions`, {
       emoji,
@@ -224,6 +235,29 @@ function blankToNull(raw: string | null | undefined): string | null {
  * side `CreateEventRequest` rules; the SPA composer is the only
  * caller today (`POST` exposed since v2.7.0).
  */
+/** Wire shape for one row in the post-reactions list (post-v2.9.0). */
+export interface PostReactionItem {
+  readonly id: number;
+  readonly emoji: ReactionEmoji;
+  /**
+   * `created_at` is stamped by Eloquent on insert and the column is
+   * NOT NULL at the schema level; nullable here only as a defensive
+   * type guard for the unlikely model-without-timestamp case.
+   */
+  readonly created_at: string | null;
+  readonly user: CommunityPostAuthor;
+}
+
+export interface PostReactionsPage {
+  readonly data: readonly PostReactionItem[];
+  readonly meta: {
+    readonly current_page: number;
+    readonly per_page: number;
+    readonly total: number;
+    readonly last_page: number;
+  };
+}
+
 export interface CreateEventPayload {
   readonly title: string;
   readonly starts_at: string;

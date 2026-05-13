@@ -196,6 +196,14 @@
     }
   },
   "community": {
+    "reactionsList": {
+      "title": "Reactions",
+      "openAria": "See who reacted",
+      "allTab": "All",
+      "loadMore": "Load more",
+      "errorBody": "Couldn't load the reactions. Try again in a moment.",
+      "emptyBody": "No one reacted yet — be the first."
+    },
     "composer": {
       "openButton": "Post event",
       "title": "Post a new event",

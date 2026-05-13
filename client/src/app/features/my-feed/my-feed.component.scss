@@ -189,6 +189,34 @@
     color: var(--p-text-color-secondary);
     font-size: 0.8125rem;
     margin-left: 0.125rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // "X reacted with 👏 and 🙏" pill that opens the reactions-list
+  // sheet. Sits inline with the toggle buttons; styled as a subtle
+  // text-button (not a primary CTA) so it doesn't compete visually
+  // with the emoji buttons next to it.
+  &__reactions-summary {
+    appearance: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: 8px;
+    color: var(--p-text-muted-color);
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+    margin-inline-start: auto;
+
+    &:hover {
+      background: var(--p-content-hover-background);
+      color: var(--p-text-color);
+    }
   }
 
   &__pagination {

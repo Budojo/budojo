@@ -240,12 +240,14 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     fixture.detectChanges();
 
     expect(btn.getAttribute('aria-pressed')).toBe('true');
-    expect(
-      el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`)?.textContent,
-    ).toContain('1');
+    // Per-emoji count now sits on the reactions-summary button next
+    // to the toggle buttons (post-v2.9.0 — opens the reactions-list
+    // sheet on tap). Total count assertion via the summary's
+    // textContent.
+    expect(el.querySelector(`[data-cy="reactions-summary-${postId}"]`)?.textContent).toContain('1');
   });
 
-  it('renders the per-emoji count next to the right button (clap-only post)', () => {
+  it('renders the per-emoji count on the reactions summary button (clap-only post)', () => {
     const { fixture, el, http } = setup();
     const postId = 90;
     http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
@@ -260,17 +262,14 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     });
     fixture.detectChanges();
 
-    const clapCount = el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`);
-    const prayCount = el.querySelector(`[data-cy="react-pray-${postId}"] .feed__react-count`);
-    expect(clapCount?.textContent).toContain('2');
-    // Pray button has no counter span when its count is 0.
-    expect(prayCount).toBeNull();
+    const summary = el.querySelector(`[data-cy="reactions-summary-${postId}"]`);
+    expect(summary?.textContent).toContain('2');
+    // Pray side hidden when its count is 0: there's exactly one
+    // emoji span in the summary (the clap).
+    expect(summary?.querySelectorAll('.feed__react-count').length).toBe(1);
   });
 
-  it('renders the per-emoji count next to the right button (pray-only post — #647)', () => {
-    // This is the regression we shipped — the previous shape dumped
-    // the total on the Clap button regardless of which emoji had
-    // been used. Pin the inverted shape.
+  it('renders the per-emoji count on the reactions summary button (pray-only post — #647)', () => {
     const { fixture, el, http } = setup();
     const postId = 91;
     http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
@@ -285,10 +284,9 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     });
     fixture.detectChanges();
 
-    const clapCount = el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`);
-    const prayCount = el.querySelector(`[data-cy="react-pray-${postId}"] .feed__react-count`);
-    expect(prayCount?.textContent).toContain('2');
-    expect(clapCount).toBeNull();
+    const summary = el.querySelector(`[data-cy="reactions-summary-${postId}"]`);
+    expect(summary?.textContent).toContain('2');
+    expect(summary?.querySelectorAll('.feed__react-count').length).toBe(1);
   });
 
   it('clap → pray swap updates per-emoji counts without changing the total', () => {
@@ -312,11 +310,10 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     prayBtn.click();
     fixture.detectChanges();
 
-    // Optimistic: clap counter gone, pray shows 1.
-    expect(el.querySelector(`[data-cy="react-clap-${postId}"] .feed__react-count`)).toBeNull();
-    expect(
-      el.querySelector(`[data-cy="react-pray-${postId}"] .feed__react-count`)?.textContent,
-    ).toContain('1');
+    // Optimistic: summary now reads "🙏 1" (single pill, not two).
+    const summary = el.querySelector(`[data-cy="reactions-summary-${postId}"]`);
+    expect(summary?.querySelectorAll('.feed__react-count').length).toBe(1);
+    expect(summary?.textContent).toContain('1');
 
     // Server reconciles to the same shape.
     http
