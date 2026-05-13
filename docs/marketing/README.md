@@ -11,6 +11,8 @@ Source of truth for everything that ends up on a public app-store listing or mar
 | `feature-graphic-it.svg` | IT feature graphic source | Hand-authored SVG |
 | `feature-graphic.png` | EN PNG render for Play Console upload | `magick -density 200 -background none feature-graphic.svg -resize 1024x500 feature-graphic.png` |
 | `feature-graphic-it.png` | IT PNG render for Play Console upload | Same command on `-it.svg` |
+| `twa-keys.md` | SHA-256 fingerprint registry (upload key, App Signing key, deprecated) + backup checklist | Hand-edited; update after every Bubblewrap key event |
+| `twa-manifest.json` | TWA project config — package name, theme, splash, signing-key alias. The "ricetta" for rebuilding the Android wrapper from scratch | Sync from `<workspace>/budojo-twa/twa-manifest.json` after every Bubblewrap update; sanitise `signingKey.path` to `./android.keystore` (relative) |
 
 ## Regenerating PNGs
 
@@ -34,6 +36,28 @@ When uploading a new AAB to the Play Console:
 6. **Category** — Sports (primary), Productivity (fallback).
 7. **Data safety form** — answers in `play-store-descriptions.md` § "Privacy + data safety".
 8. **Content rating questionnaire** — answers in same file § "Content rating".
+
+## Rebuilding the TWA project from scratch
+
+After this repo is cloned to a fresh machine (e.g. new dev box, recovering after a disk loss), the Bubblewrap project directory does not exist locally — only `twa-manifest.json` and the SHA registry live in the repo. To rebuild:
+
+```bash
+# 1. Restore the upload keystore from the secret manager (1Password attachment)
+#    Save as ./android.keystore in the TWA workspace dir.
+
+mkdir <workspace>/budojo-twa && cd <workspace>/budojo-twa
+cp <budojo-repo>/docs/marketing/twa-manifest.json .
+# restore android.keystore here from 1Password attachment
+
+# 2. Regenerate the Android project from the manifest.
+bubblewrap update
+
+# 3. Build the AAB + APK.
+bubblewrap build
+# prompts for keystore + alias passwords (also in 1Password)
+```
+
+When `twa-manifest.json` changes (most commonly: `appVersionCode` + `appVersionName` bump for a new release), edit the **repo copy** (`docs/marketing/twa-manifest.json`) first, then copy it back into the TWA workspace and re-run `bubblewrap update` + `bubblewrap build`. This keeps the version-controlled config as the source of truth.
 
 ## Not in this folder
 
