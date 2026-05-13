@@ -84,3 +84,92 @@
     border: 0;
   }
 }
+
+// ── Mobile cards layout (audit row 8) ──────────────────────────────────
+//
+// Below 768px the desktop <p-table> is hidden and replaced with a
+// card list. One card per month, mirroring the same data: month +
+// status tag on top, amount + paid-on date inline, mark/unmark
+// affordance on the right when canEdit. Same handler as the desktop
+// row (confirmToggleRow).
+
+$payments-mobile-breakpoint: 768px;
+
+.payments-list__mobile-list {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  @media (max-width: $payments-mobile-breakpoint - 1px) {
+    display: flex;
+  }
+}
+
+.payments-list__table-wrapper {
+  @media (max-width: $payments-mobile-breakpoint - 1px) {
+    display: none;
+  }
+}
+
+.payment-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 12px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  &__month {
+    font-weight: 600;
+    color: var(--p-text-color);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+    flex-wrap: wrap;
+  }
+
+  &__amount {
+    color: var(--p-text-color);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__sep {
+    color: var(--p-text-muted-color);
+  }
+
+  &__paid-at {
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__dash {
+    color: var(--p-text-muted-color);
+  }
+
+  &__actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+  }
+}

@@ -20,38 +20,16 @@
       <p-skeleton width="100%" height="3rem" />
     </div>
   } @else {
-    <p-table
-      [value]="monthRows()"
-      [tableStyle]="{ 'min-width': '32rem' }"
-      responsiveLayout="scroll"
-      styleClass="payments-list__table"
-      data-cy="payments-list"
-    >
-      <ng-template #header>
-        <tr>
-          <th scope="col" class="payments-list__th-month">
-            {{ 'athletes.detail.payments.columns.month' | translate }}
-          </th>
-          <th scope="col" class="payments-list__th-status">
-            {{ 'athletes.detail.payments.columns.status' | translate }}
-          </th>
-          <th scope="col" class="payments-list__th-amount">
-            {{ 'athletes.detail.payments.columns.amount' | translate }}
-          </th>
-          <th scope="col" class="payments-list__th-paid-at">
-            {{ 'athletes.detail.payments.columns.paidOn' | translate }}
-          </th>
-          <th scope="col" class="payments-list__th-actions">
-            <span class="payments-list__sr">
-              {{ 'athletes.detail.payments.columns.actions' | translate }}
-            </span>
-          </th>
-        </tr>
-      </ng-template>
-      <ng-template #body let-row>
-        <tr [attr.data-cy]="'payment-row-' + row.month">
-          <td>{{ row.labelKey | translate }}</td>
-          <td>
+    <!-- Mobile card list (audit row 8). Below 768px the desktop table is
+         display:none and this <ul> renders instead. One card per month:
+         month + status tag on top, amount + paid-on date inline, mark/
+         unmark affordance on the right when canEdit. Same handler as
+         the desktop row, so business logic is shared. -->
+    <ul class="payments-list__mobile-list" data-cy="payments-mobile-list">
+      @for (row of monthRows(); track row.month) {
+        <li class="payment-card" [attr.data-cy]="'payment-card-' + row.month">
+          <header class="payment-card__header">
+            <span class="payment-card__month">{{ row.labelKey | translate }}</span>
             @if (row.payment) {
               <p-tag
                 [value]="'shared.paidBadge.paid' | translate"
@@ -65,58 +43,148 @@
                 [rounded]="true"
               />
             }
-          </td>
-          <td>
+          </header>
+          <div class="payment-card__meta">
             @if (row.payment) {
-              {{ formatAmount(row.payment.amount_cents) }}
+              <span class="payment-card__amount">{{ formatAmount(row.payment.amount_cents) }}</span>
+              <span class="payment-card__sep" aria-hidden="true">·</span>
+              <time class="payment-card__paid-at" [attr.datetime]="row.payment.paid_at">
+                {{ formatPaidAt(row.payment.paid_at) }}
+              </time>
             } @else {
-              <span class="payments-list__dash">—</span>
+              <span class="payment-card__dash" aria-hidden="true">—</span>
             }
-          </td>
-          <td>
-            @if (row.payment) {
-              <time [attr.datetime]="row.payment.paid_at">{{
-                formatPaidAt(row.payment.paid_at)
-              }}</time>
-            } @else {
-              <span class="payments-list__dash">—</span>
-            }
-          </td>
-          <td class="payments-list__actions">
             @if (row.canEdit) {
+              <div class="payment-card__actions">
+                @if (row.payment) {
+                  <p-button
+                    type="button"
+                    icon="pi pi-times"
+                    severity="secondary"
+                    [text]="true"
+                    size="small"
+                    (onClick)="confirmToggleRow($event, row)"
+                    [ariaLabel]="'athletes.detail.payments.button.unmarkPaid' | translate"
+                    [attr.data-cy]="'payment-card-unmark-' + row.month"
+                  />
+                } @else {
+                  <p-button
+                    type="button"
+                    icon="pi pi-check"
+                    severity="primary"
+                    [text]="true"
+                    size="small"
+                    (onClick)="confirmToggleRow($event, row)"
+                    [ariaLabel]="'athletes.detail.payments.button.markPaid' | translate"
+                    [attr.data-cy]="'payment-card-mark-' + row.month"
+                  />
+                }
+              </div>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+
+    <div class="payments-list__table-wrapper">
+      <p-table
+        [value]="monthRows()"
+        [tableStyle]="{ 'min-width': '32rem' }"
+        responsiveLayout="scroll"
+        styleClass="payments-list__table"
+        data-cy="payments-list"
+      >
+        <ng-template #header>
+          <tr>
+            <th scope="col" class="payments-list__th-month">
+              {{ 'athletes.detail.payments.columns.month' | translate }}
+            </th>
+            <th scope="col" class="payments-list__th-status">
+              {{ 'athletes.detail.payments.columns.status' | translate }}
+            </th>
+            <th scope="col" class="payments-list__th-amount">
+              {{ 'athletes.detail.payments.columns.amount' | translate }}
+            </th>
+            <th scope="col" class="payments-list__th-paid-at">
+              {{ 'athletes.detail.payments.columns.paidOn' | translate }}
+            </th>
+            <th scope="col" class="payments-list__th-actions">
+              <span class="payments-list__sr">
+                {{ 'athletes.detail.payments.columns.actions' | translate }}
+              </span>
+            </th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-row>
+          <tr [attr.data-cy]="'payment-row-' + row.month">
+            <td>{{ row.labelKey | translate }}</td>
+            <td>
               @if (row.payment) {
-                <p-button
-                  type="button"
-                  icon="pi pi-times"
-                  severity="secondary"
-                  [text]="true"
-                  size="small"
-                  (onClick)="confirmToggleRow($event, row)"
-                  [ariaLabel]="'athletes.detail.payments.button.unmarkPaid' | translate"
-                  [pTooltip]="'athletes.detail.payments.button.unmarkPaid' | translate"
-                  tooltipPosition="left"
-                  [attr.data-cy]="'payment-unmark-' + row.month"
+                <p-tag
+                  [value]="'shared.paidBadge.paid' | translate"
+                  severity="success"
+                  [rounded]="true"
                 />
               } @else {
-                <p-button
-                  type="button"
-                  icon="pi pi-check"
-                  severity="primary"
-                  [text]="true"
-                  size="small"
-                  (onClick)="confirmToggleRow($event, row)"
-                  [ariaLabel]="'athletes.detail.payments.button.markPaid' | translate"
-                  [pTooltip]="'athletes.detail.payments.button.markPaid' | translate"
-                  tooltipPosition="left"
-                  [attr.data-cy]="'payment-mark-' + row.month"
+                <p-tag
+                  [value]="'shared.paidBadge.unpaid' | translate"
+                  severity="warn"
+                  [rounded]="true"
                 />
               }
-            } @else {
-              <span class="payments-list__dash" aria-hidden="true">—</span>
-            }
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
+            </td>
+            <td>
+              @if (row.payment) {
+                {{ formatAmount(row.payment.amount_cents) }}
+              } @else {
+                <span class="payments-list__dash">—</span>
+              }
+            </td>
+            <td>
+              @if (row.payment) {
+                <time [attr.datetime]="row.payment.paid_at">{{
+                  formatPaidAt(row.payment.paid_at)
+                }}</time>
+              } @else {
+                <span class="payments-list__dash">—</span>
+              }
+            </td>
+            <td class="payments-list__actions">
+              @if (row.canEdit) {
+                @if (row.payment) {
+                  <p-button
+                    type="button"
+                    icon="pi pi-times"
+                    severity="secondary"
+                    [text]="true"
+                    size="small"
+                    (onClick)="confirmToggleRow($event, row)"
+                    [ariaLabel]="'athletes.detail.payments.button.unmarkPaid' | translate"
+                    [pTooltip]="'athletes.detail.payments.button.unmarkPaid' | translate"
+                    tooltipPosition="left"
+                    [attr.data-cy]="'payment-unmark-' + row.month"
+                  />
+                } @else {
+                  <p-button
+                    type="button"
+                    icon="pi pi-check"
+                    severity="primary"
+                    [text]="true"
+                    size="small"
+                    (onClick)="confirmToggleRow($event, row)"
+                    [ariaLabel]="'athletes.detail.payments.button.markPaid' | translate"
+                    [pTooltip]="'athletes.detail.payments.button.markPaid' | translate"
+                    tooltipPosition="left"
+                    [attr.data-cy]="'payment-mark-' + row.month"
+                  />
+                }
+              } @else {
+                <span class="payments-list__dash" aria-hidden="true">—</span>
+              }
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
   }
 </div>
