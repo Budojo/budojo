@@ -59,6 +59,45 @@ export class WhatsNewComponent {
 
   protected readonly releases: readonly Release[] = [
     {
+      version: 'v2.10.0',
+      date: '2026-05-13',
+      headline:
+        "Two feature drops and one production fix, all driven by ideas sent back after v2.9.0 shipped. Reactions list: tap the count line under a post on the community feed and a sheet slides up listing every reactor with their name, handle, belt, and the emoji they picked (bottom-sheet on phones, centered dialog on desktop, tabs to filter just 👏 or just 🙏). Promotion history: every belt change AND every stripe change now records a dated row in the athlete's profile — open an athlete → Promotions tab and see the full ladder back to the first row, with who recorded each change. Stripe promotions also post to the community feed now (until now, only belt changes celebrated; stripe drops on a belt-up still don't celebrate because the belt-promotion post already covers it). Sidebar version on production now reads the actual release tag (e.g. 'v2.9.0') instead of 'Dev' — Cloudflare Pages' depth=1 clone was blinding git describe to the release tag, fixed by unshallowing in the build step.",
+      sections: [
+        {
+          heading: '✨ Reactions list — see who reacted with what',
+          bullets: [
+            'When a post on the community feed has 👏 claps and 🙏 prays, the count next to each button tells you how many — but not who. Tap the count line under the post and a sheet slides up listing every reactor with their name, handle, and belt, plus the emoji they picked.',
+            'Tabs at the top let you filter to just 👏 or just 🙏. On phones it lands as a bottom-sheet you can flick down to dismiss; on desktop it opens as a centered dialog.',
+            "Reported by you as 'voglio vedere chi ha messo cosa come Facebook'.",
+          ],
+        },
+        {
+          heading: '✨ Promotion history per athlete',
+          bullets: [
+            "Every belt change AND every stripe change now records a dated row in the athlete's profile. Open an athlete → Promotions tab and you see the full ladder: 'White → Blue · 2025-09-14', 'Blue 0 → 1 stripes · 2026-02-03', 'Blue 3 → 4 stripes · 2026-04-21', all the way back to the first row.",
+            'Each entry shows who recorded the change.',
+            "Reported by you as 'vorrei che per ogni atleta ci si ricordasse di questi passaggi (giorno per lo meno) nella sezione profilo... cosi io owner ricordo quando ho dato la striscia a chi'.",
+          ],
+        },
+        {
+          heading: '✨ Stripe promotions also post to the feed',
+          bullets: [
+            "Until now, only belt changes auto-posted a celebration to the community feed. Stripe bumps were silent. Now a stripe increase fires its own feed post — separate from the belt-promotion post-type so the celebration text reads differently ('X earned their Nth stripe on the Y belt' vs. 'X earned a new belt').",
+            "Stripe drops (4 → 0 when a belt goes up) deliberately don't celebrate — the existing belt-promotion post already covers it.",
+            "Reported by you as 'vorrei mettere gli aggiornamenti/promozione di cintura nuova anche per le striscette'.",
+          ],
+        },
+        {
+          heading: '🐛 Sidebar version on production',
+          bullets: [
+            "The version label in the sidebar read 'Dev' instead of 'v2.9.0' on budojo.it production. Cloudflare Pages clones the repo with depth=1 by default, which made `git describe` blind to the release tag and fall back to the dev placeholder.",
+            'Fixed by unshallowing the clone in the build step — the sidebar now shows the real version on every deploy.',
+          ],
+        },
+      ],
+    },
+    {
       version: 'v2.9.0',
       date: '2026-05-12',
       headline:
