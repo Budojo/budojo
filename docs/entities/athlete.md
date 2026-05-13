@@ -2,7 +2,7 @@
 
 ## Purpose
 
-An `Athlete` represents a student enrolled at an `Academy`. This is the core roster record: first/last name, contact info, belt rank and stripes, enrollment status, and join date. Athletes are what instructors track day-to-day — future milestones (M3 documents, M4 attendance, M6 promotions) all hang off this entity.
+An `Athlete` represents a student enrolled at an `Academy`. This is the core roster record: first/last name, contact info, belt rank and stripes, enrollment status, and join date. Athletes are what instructors track day-to-day — past + future milestones (M3 documents, M4 attendance, v2.10.0 promotion history) all hang off this entity.
 
 ## Schema — `athletes`
 
@@ -106,4 +106,3 @@ Covers the full **IBJJF rank scale** on a single linear axis:
 ## Future
 
 - **M4** will add an `attendance` table with `athlete_id` FK.
-- **M6** — Belt promotion history (changes to `belt` / `stripes` recorded in a dedicated table instead of just mutating the athlete row).
