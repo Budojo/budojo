@@ -11,11 +11,11 @@
     </ul>
   } @else if (loadError()) {
     <p class="promotions__empty" data-cy="promotions-error">
-      {{ 'athletes.promotions.errorBody' | translate }}
+      {{ 'athletes.detail.promotions.errorBody' | translate }}
     </p>
   } @else if (promotions().length === 0) {
     <p class="promotions__empty" data-cy="promotions-empty">
-      {{ 'athletes.promotions.emptyBody' | translate }}
+      {{ 'athletes.detail.promotions.emptyBody' | translate }}
     </p>
   } @else {
     <ul class="promotions__list" data-cy="promotions-list">
@@ -31,7 +31,7 @@
                   <app-belt-badge [belt]="p.from_belt" />
                 } @else {
                   <span class="promotions__first-belt">{{
-                    'athletes.promotions.firstBelt' | translate
+                    'athletes.detail.promotions.firstBelt' | translate
                   }}</span>
                 }
                 <i class="pi pi-arrow-right" aria-hidden="true"></i>
@@ -50,14 +50,14 @@
                   {{ p.to_stripes }}
                 </span>
                 <span class="promotions__stripe-label">
-                  {{ 'athletes.promotions.stripes' | translate }}
+                  {{ 'athletes.detail.promotions.stripes' | translate }}
                 </span>
               </div>
             }
           }
           @if (p.recorded_by; as editor) {
             <span class="promotions__editor">
-              {{ 'athletes.promotions.recordedBy' | translate: { name: editor.full_name } }}
+              {{ 'athletes.detail.promotions.recordedBy' | translate: { name: editor.full_name } }}
             </span>
           }
         </li>
