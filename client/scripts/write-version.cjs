@@ -73,13 +73,13 @@ function resolveTag() {
   //    `git fetch --tags` is a no-op because the local repo has no
   //    history beyond the HEAD commit — fetch can't anchor the tags
   //    to anything, so it silently does nothing. The fix is to
-  //    UNSHALLOW first: `git fetch --unshallow --tags` (or `--deepen`
-  //    on already-deepened repos). We try both shapes — if the repo
-  //    is already complete, `--unshallow` errors out and we fall
-  //    through to a plain `--tags` fetch.
-  //    Stdout fully ignored — we only care that the fetch updates
-  //    the local tag refs, not its output. See #653 for the v2.9.0
-  //    "tag reads 'dev-<sha>' on production" bug this branch fixes.
+  //    UNSHALLOW first: `git fetch --unshallow --tags`. If the repo
+  //    is already complete (local dev case), that command errors
+  //    out and we fall back to a plain `git fetch --tags`. We stop
+  //    on the first command that succeeds — no need to spend the
+  //    second network call once one of them worked (Copilot review
+  //    on #653). Stdout fully ignored — we only care that the
+  //    fetch updates the local tag refs, not its output.
   if (!raw || SHA_ONLY.test(raw)) {
     const fetchAttempts = [
       'git fetch --unshallow --tags --quiet',
@@ -88,6 +88,7 @@ function resolveTag() {
     for (const cmd of fetchAttempts) {
       try {
         execSync(cmd, { stdio: ['ignore', 'ignore', 'ignore'] });
+        break;
       } catch {
         // Either `--unshallow` errored (repo is already complete)
         // or there's genuinely no remote access. Try the next form.
