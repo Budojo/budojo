@@ -53,6 +53,92 @@
     />
   }
 
+  <!-- Mobile card list (audit row 7). Below 768px the desktop table is
+       display:none and this <ul> renders instead. Apple-minimalist card
+       per document: type primary at the top with download + delete
+       affordances on the right, filename + expiry/cancelled status
+       below. Issued date drops on mobile (rarely scanned; the expiry
+       badge tells the operational story). -->
+  <ul class="documents-list__mobile-list" data-cy="documents-mobile-list">
+    @if (loading()) {
+      <li class="documents-list__mobile-skeletons" data-cy="documents-mobile-loading">
+        @for (i of [1, 2, 3]; track i) {
+          <p-skeleton height="5rem" styleClass="mb-2" />
+        }
+      </li>
+    } @else if (documents().length === 0) {
+      <li class="documents-list__empty-state" data-cy="documents-mobile-empty">
+        <i class="pi pi-folder-open"></i>
+        <p class="documents-list__empty-title">
+          @if (showCancelled()) {
+            {{ 'athletes.detail.documents.empty.withCancelled' | translate }}
+          } @else {
+            {{ 'athletes.detail.documents.empty.default' | translate }}
+          }
+        </p>
+        <p
+          class="documents-list__empty-hint"
+          [innerHTML]="'athletes.detail.documents.empty.hint' | translate"
+        ></p>
+      </li>
+    } @else {
+      @for (doc of documents(); track doc.id) {
+        <li
+          class="document-card"
+          [class.document-card--cancelled]="!!doc.deleted_at"
+          [attr.data-cy]="'document-card-' + doc.id"
+        >
+          <header class="document-card__header">
+            <span class="document-card__type">{{ labelKeyFor(doc) | translate }}</span>
+            @if (!doc.deleted_at) {
+              <div class="document-card__actions">
+                <p-button
+                  icon="pi pi-download"
+                  severity="secondary"
+                  [text]="true"
+                  size="small"
+                  (onClick)="download(doc)"
+                  [ariaLabel]="
+                    'athletes.detail.documents.button.downloadAria'
+                      | translate: { name: doc.original_name }
+                  "
+                  [attr.data-cy]="'document-card-download-' + doc.id"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  size="small"
+                  (onClick)="confirmDelete($event, doc)"
+                  [ariaLabel]="
+                    'athletes.detail.documents.button.deleteAria'
+                      | translate: { name: doc.original_name }
+                  "
+                  [attr.data-cy]="'document-card-delete-' + doc.id"
+                />
+              </div>
+            }
+          </header>
+          <span class="document-card__filename">{{ doc.original_name }}</span>
+          <div class="document-card__status">
+            @if (doc.deleted_at) {
+              <p-tag
+                severity="danger"
+                [rounded]="true"
+                [value]="
+                  'athletes.detail.documents.status.cancelledOn'
+                    | translate: { date: cancelledOn(doc) }
+                "
+              />
+            } @else {
+              <app-expiry-status-badge [expiresAt]="doc.expires_at" [type]="doc.type" />
+            }
+          </div>
+        </li>
+      }
+    }
+  </ul>
+
   <p-table
     [value]="documents()"
     [loading]="loading()"
