@@ -77,10 +77,14 @@
     <!-- Mobile card list (audit row 6). Below 768px the desktop table
          is display:none and this <ul> renders instead. Each row carries
          the same name + count/percent payload, optimised for thumb-
-         scrolling rather than horizontal column inspection. -->
+         scrolling rather than horizontal column inspection.
+
+         `scheduledCount()` is invariant across rows for the current
+         month so it's hoisted outside the @for — one signal read per
+         render instead of N (Copilot review on #678). -->
+    @let mobileScheduled = scheduledCount();
     <ul class="summary-page__mobile-list" data-cy="monthly-summary-mobile-list">
       @for (row of displayRows(); track row.athlete_id) {
-        @let mobileScheduled = scheduledCount();
         @let mobilePercent = ratePercent(row.count);
         <li class="summary-card" [attr.data-cy]="'monthly-summary-mobile-row-' + row.athlete_id">
           <span class="summary-card__name">{{ row.first_name }} {{ row.last_name }}</span>

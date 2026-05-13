@@ -1,3 +1,8 @@
+// Single source of truth for the desktop/mobile boundary on this page,
+// per `client/CLAUDE.md` § Mobile-first breakpoint tokens. Used by both
+// the gap-bump at the page level and the table-vs-card toggle below.
+$summary-mobile-breakpoint: 768px;
+
 .summary-page {
   // Page chrome (max-width + side padding) comes from the dashboard
   // shell tokens — see `styles/budojo-theme.scss` and `.main` in the
@@ -10,7 +15,7 @@
   flex-direction: column;
   gap: 1rem;
 
-  @media (min-width: 768px) {
+  @media (min-width: $summary-mobile-breakpoint) {
     gap: 1.5rem;
   }
 
@@ -111,13 +116,12 @@
 
 // ── Mobile cards layout (audit row 6) ──────────────────────────────────
 //
-// Below 768px the desktop table is hidden and a card list renders the
-// same name + count payload — wide cards, two-line layout, percentage
-// chip on the right. Each card is non-interactive (the page is
-// read-only; tapping a row doesn't do anything in the desktop layout
-// either) so it's a plain <li>, no role=button wrapper.
-
-$summary-mobile-breakpoint: 768px;
+// Below the $summary-mobile-breakpoint (declared at the top of the
+// file) the desktop table is hidden and a card list renders the same
+// name + count payload — wide cards, two-line layout, percentage chip
+// on the right. Each card is non-interactive (the page is read-only;
+// tapping a row doesn't do anything in the desktop layout either) so
+// it's a plain <li>, no role=button wrapper.
 
 .summary-page__mobile-list {
   display: none;
