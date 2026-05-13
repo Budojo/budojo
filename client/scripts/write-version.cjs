@@ -67,23 +67,35 @@ function resolveTag() {
   //    no extra latency on every `npm run build`.
   let raw = tryGit('git describe --tags --always');
 
-  // 2. Bare-SHA result OR describe failed: best-effort `git fetch
-  //    --tags` and re-describe. Cloudflare Pages (and most CI defaults)
-  //    ship a shallow clone with no tags, which falls into this branch.
-  //    Stdout is fully ignored — we only care that the fetch updates
-  //    the local tag refs, not its output.
+  // 2. Bare-SHA result OR describe failed: best-effort recover the
+  //    tags from the remote and re-describe. Cloudflare Pages ships
+  //    a shallow clone (default `--depth 1`) AND its first-run-with-
+  //    `git fetch --tags` is a no-op because the local repo has no
+  //    history beyond the HEAD commit — fetch can't anchor the tags
+  //    to anything, so it silently does nothing. The fix is to
+  //    UNSHALLOW first: `git fetch --unshallow --tags` (or `--deepen`
+  //    on already-deepened repos). We try both shapes — if the repo
+  //    is already complete, `--unshallow` errors out and we fall
+  //    through to a plain `--tags` fetch.
+  //    Stdout fully ignored — we only care that the fetch updates
+  //    the local tag refs, not its output. See #653 for the v2.9.0
+  //    "tag reads 'dev-<sha>' on production" bug this branch fixes.
   if (!raw || SHA_ONLY.test(raw)) {
-    try {
-      execSync('git fetch --tags --quiet', {
-        stdio: ['ignore', 'ignore', 'ignore'],
-      });
-      const refetched = tryGit('git describe --tags --always');
-      if (refetched) {
-        raw = refetched;
+    const fetchAttempts = [
+      'git fetch --unshallow --tags --quiet',
+      'git fetch --tags --quiet',
+    ];
+    for (const cmd of fetchAttempts) {
+      try {
+        execSync(cmd, { stdio: ['ignore', 'ignore', 'ignore'] });
+      } catch {
+        // Either `--unshallow` errored (repo is already complete)
+        // or there's genuinely no remote access. Try the next form.
       }
-    } catch {
-      // No remote access (offline build, auth prompt, no remote at all)
-      // — proceed with whatever the first describe produced.
+    }
+    const refetched = tryGit('git describe --tags --always');
+    if (refetched) {
+      raw = refetched;
     }
   }
 
