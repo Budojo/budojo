@@ -164,6 +164,65 @@
     </p-table>
   </div>
 
+  <!-- Mobile card layout (#670 audit row 5). Hidden ≥ 768px via SCSS;
+       the <p-table> above is hidden < 768px. Each card is a tap target
+       on the whole surface — same togglePresent handler as the desktop
+       row, same aria semantics (role=button, aria-pressed, aria-busy)
+       so screen readers + keyboard nav read identically. -->
+  <div class="attendance__mobile-list" data-cy="attendance-mobile-list">
+    @if (loading()) {
+      <div class="attendance__mobile-skeletons" data-cy="attendance-mobile-loading">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <p-skeleton height="4.5rem" styleClass="mb-2" />
+        }
+      </div>
+    } @else if (athletes().length === 0) {
+      <div class="attendance__empty" data-cy="attendance-mobile-empty">
+        <i class="pi pi-users" aria-hidden="true"></i>
+        @if (searchTerm() || selectedBelt()) {
+          <p>{{ 'attendance.daily.empty.filtered' | translate }}</p>
+        } @else {
+          <p>{{ 'attendance.daily.empty.noAthletes' | translate }}</p>
+        }
+      </div>
+    } @else {
+      <ul class="attendance-cards">
+        @for (athlete of athletes(); track athlete.id) {
+          <li
+            class="attendance-card"
+            [class.attendance-card--present]="isPresent(athlete.id)"
+            [class.attendance-card--inflight]="isInflight(athlete.id)"
+            [attr.aria-pressed]="isPresent(athlete.id)"
+            [attr.aria-busy]="isInflight(athlete.id)"
+            [attr.aria-disabled]="isInflight(athlete.id) ? 'true' : null"
+            tabindex="0"
+            role="button"
+            (click)="togglePresent(athlete)"
+            (keydown.enter)="togglePresent(athlete)"
+            (keydown.space)="togglePresent(athlete); $event.preventDefault()"
+            [attr.data-cy]="'attendance-card-' + athlete.id"
+          >
+            <div class="attendance-card__main">
+              <span class="attendance-card__name"
+                >{{ athlete.first_name }} {{ athlete.last_name }}</span
+              >
+              <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
+            </div>
+            <span class="attendance-card__indicator" aria-hidden="true">
+              @if (isPresent(athlete.id)) {
+                <i
+                  class="pi pi-check-circle attendance-indicator attendance-indicator--present"
+                ></i>
+              } @else {
+                <i class="pi pi-circle attendance-indicator"></i>
+              }
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
   @if (!loading() && athletes().length > 0 && totalActiveAthletes() > athletes().length) {
     <p class="attendance__pagination-hint">
       {{

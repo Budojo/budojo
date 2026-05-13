@@ -18,8 +18,8 @@ Per `client/CLAUDE.md` § Mobile-first: "Tables either wrap in a scrollable cont
 
 | # | View | Current | Mobile target | Status | PR / Issue |
 |---|---|---|---|---|---|
-| 4 | Athletes list (`/dashboard/athletes`) | `<p-table>` w/ `responsiveLayout="scroll"` | Apple-minimalist cards w/ 3-dot menu, name+badges+socials | 🟡 | #670 (branch started) |
-| 5 | Daily attendance (`/dashboard/attendance`) | `<p-table>` | TBD — list-heavy: prefer cards | 🔴 | — |
+| 4 | Athletes list (`/dashboard/athletes`) | `<p-table>` w/ `responsiveLayout="scroll"` | Apple-minimalist cards w/ 3-dot menu, name+badges+socials | 🟢 | #674 shipped |
+| 5 | Daily attendance (`/dashboard/attendance`) | `<p-table>` | Tap-to-toggle cards (name + belt + present indicator, whole-card tap target, aria-pressed) | 🟢 | shipping in this PR |
 | 6 | Monthly summary (`/dashboard/attendance/summary`) | `<p-table>` | Likely cards (one per athlete) | 🔴 | — |
 | 7 | Athlete documents tab | `<p-table>` | Cards (one per document, file-type icon + expiry chip) | 🔴 | — |
 | 8 | Athlete payments tab | `<p-table>` | Cards (one per month, paid/unpaid badge) | 🔴 | — |
