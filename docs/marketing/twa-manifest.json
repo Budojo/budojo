@@ -10,7 +10,7 @@
   "navigationColorDark": "#000000",
   "navigationDividerColor": "#000000",
   "navigationDividerColorDark": "#000000",
-  "backgroundColor": "#FFFFFF",
+  "backgroundColor": "#0A0A0B",
   "enableNotifications": true,
   "startUrl": "/dashboard/athletes",
   "iconUrl": "https://budojo.it/icons/icon-512.png",
@@ -20,8 +20,8 @@
     "path": "./android.keystore",
     "alias": "budojo-upload"
   },
-  "appVersionName": "1",
-  "appVersionCode": 1,
+  "appVersionName": "2",
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://budojo.it/manifest.webmanifest",
@@ -47,5 +47,5 @@
     "minimal-ui",
     "browser"
   ],
-  "appVersion": "1"
+  "appVersion": "2"
 }
