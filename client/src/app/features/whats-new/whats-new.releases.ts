@@ -28,6 +28,29 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.12.0',
+    date: '2026-05-14',
+    headline:
+      "A short release focused on two things: a new public page at /account-deletion (and /account-deletion/it for Italian) that documents exactly how to delete your Budojo account — how to request it, what data is removed, what is retained for accounting / legal reasons, and the 30-day grace window during which you can cancel — added so the Play Store data-safety form has a public URL to point at. Nothing about the deletion machinery itself changed: the email-request flow, 30-day grace, and hourly purge cron have been live for several releases; the page just documents what already happens in plain language. Plus two small community-feed polish items reported on the v2.11.0 Android internal-testing build: explicit 0.5 / 0.75 rem 8dp-grid spacing on the RSVP and reactions button rows so they don't feel cramped on phone widths, and the lightest Fitzpatrick skin-tone modifier appended to every reaction emoji so 👏🏻 and 🙏🏻 render consistently across iOS / Android / the in-app WebView instead of falling back to the platform-default yellow.",
+    sections: [
+      {
+        heading: '📜 New page: Account deletion',
+        bullets: [
+          'New public page at /account-deletion (English) and /account-deletion/it (Italian) explains how to delete your Budojo account: how to request it, what data is removed, what is retained for accounting / legal reasons, and the 30-day grace window.',
+          'Mirrors the layout of /privacy and /sub-processors; not behind login — anyone can read it, including Play Store reviewers who need a public URL during policy review.',
+          'The deletion machinery itself (email-request flow, 30-day grace, hourly purge cron) has been live for several releases — the page just documents what already happens.',
+        ],
+      },
+      {
+        heading: '✨ Community feed — small polish',
+        bullets: [
+          'More breathing room between the RSVP buttons (Going / Maybe) and between the reaction buttons (👏 / 🙏) on phone widths — they sit on the same 8-pixel grid as the rest of the design now.',
+          'Light skin-tone modifier on the reaction emojis (👏🏻 and 🙏🏻) so they render consistently across iOS, Android, and the in-app WebView instead of falling back to the platform-default yellow.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.11.0',
     date: '2026-05-13',
     headline:
