@@ -96,6 +96,43 @@ it('queues a push per subscription and bumps last_seen_at on success', function 
     expect($sub->fresh()->last_seen_at)->not->toBeNull();
 });
 
+it('reshapes the toWebPush() payload into the Angular SW envelope (#702)', function (): void {
+    $author = User::factory()->create();
+    $recipient = userWithAcademy();
+    $sub = PushSubscription::factory()->for($recipient)->create();
+
+    $capturedPayload = null;
+    /** @var WebPush&\Mockery\MockInterface $webPush */
+    $webPush = m::mock(WebPush::class);
+    $webPush->shouldReceive('queueNotification')
+        ->once()
+        ->andReturnUsing(function ($subscription, $payload) use (&$capturedPayload) {
+            $capturedPayload = $payload;
+        });
+    $webPush->shouldReceive('flush')->once()->andReturnUsing(function () use ($sub) {
+        yield fakeReport($sub->endpoint, true);
+    });
+
+    $channel = new WebPushChannel($webPush);
+    $channel->send($recipient->fresh()->load('pushSubscriptions'), fakeCommunityReplyNotification($author));
+
+    $decoded = json_decode($capturedPayload, true, flags: JSON_THROW_ON_ERROR);
+
+    // Top-level envelope shape — Angular SwPush expects 'notification'
+    // with title / body / data. Without this nesting the OS-level
+    // notification never renders.
+    expect($decoded)->toHaveKey('notification');
+    expect($decoded['notification'])->toHaveKeys(['title', 'body', 'data']);
+    // The reply payload's kind / post_id / comment_id / link survive the
+    // reshape and ride under `notification.data`.
+    expect($decoded['notification']['data'])->toHaveKey('kind', 'community_reply');
+    expect($decoded['notification']['data'])->toHaveKey('link');
+    // The flat-shape title / body keys MUST NOT leak alongside the
+    // envelope — Copilot review on #702 pinned this.
+    expect($decoded)->not->toHaveKey('title');
+    expect($decoded)->not->toHaveKey('body');
+});
+
 it('deletes a subscription row when the vendor returns 410 Gone', function (): void {
     $author = User::factory()->create();
     $recipient = userWithAcademy();

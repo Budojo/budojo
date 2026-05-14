@@ -1315,7 +1315,8 @@
     "all": "All statuses",
     "active": "Active",
     "suspended": "Suspended",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "trashed": "Deleted"
   },
   "athletes": {
     "list": {
@@ -1353,7 +1354,9 @@
         "deleteAria": "Delete {{name}}",
         "openMenuAria": "Open menu for {{name}}",
         "paid": "Paid",
-        "unpaid": "Unpaid"
+        "unpaid": "Unpaid",
+        "restore": "Restore",
+        "restoreAria": "Restore {{name}}"
       },
       "social": {
         "facebookLabel": "Open Facebook profile",
@@ -1377,13 +1380,23 @@
         "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}"
       },
       "confirm": {
-        "deleteMessage": "Delete {{name}}?",
+        "deleteMessage": "Delete {{name}}? Their documents will be permanently deleted and cannot be restored — only the athlete row itself can be undone.",
         "deleteAccept": "Delete",
         "markPaidMessage": "Mark {{name}} paid for {{month}}?",
         "markPaidAccept": "Mark paid",
         "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?",
         "markUnpaidAccept": "Mark unpaid",
         "cancel": "Cancel"
+      },
+      "restoreConfirm": {
+        "message": "Restore {{name}}?",
+        "accept": "Restore",
+        "reject": "Cancel"
+      },
+      "restoreToast": {
+        "successSummary": "Athlete restored",
+        "errorSummary": "Could not restore",
+        "errorDetail": "Something went wrong. Try again in a moment."
       }
     },
     "invitation": {
@@ -1683,6 +1696,12 @@
       "countMany": "athletes still owe",
       "viewAll": "View all {{count}} →",
       "viewList": "View on the athletes list →"
+    },
+    "filterSheet": {
+      "filters": "Filters",
+      "apply": "Apply",
+      "reset": "Reset",
+      "close": "Close"
     }
   },
   "stats": {

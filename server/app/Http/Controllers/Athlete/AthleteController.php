@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Athlete;
 
 use App\Actions\Address\SyncAddressAction;
+use App\Actions\Athlete\RestoreAthleteAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Athlete\StoreAthleteRequest;
 use App\Http\Requests\Athlete\UpdateAthleteRequest;
@@ -43,6 +44,7 @@ class AthleteController extends Controller
 
     public function __construct(
         private readonly SyncAddressAction $syncAddress,
+        private readonly RestoreAthleteAction $restoreAthlete,
     ) {
     }
 
@@ -71,7 +73,16 @@ class AthleteController extends Controller
 
         $paid = $request->input('paid');
 
+        // `?status=trashed` (#700) is a special list mode: it surfaces
+        // ONLY soft-deleted athletes (the restore picker UI). Detect it
+        // upfront so the regular `->where('status', $value)` filter below
+        // doesn't trigger — `trashed` is not a column value but a query-
+        // scope toggle. Any other status value (active/injured/etc.) falls
+        // through to the normal filter.
+        $trashedMode = $request->input('status') === 'trashed';
+
         $query = $user->academy->athletes()
+            ->when($trashedMode, fn ($q) => $q->onlyTrashed())
             // Eager-load only the current-month payments slice so the
             // `paid_current_month` derivation in AthleteResource doesn't fan
             // out into N+1 queries on a 20-row page (#104). One extra query
@@ -82,7 +93,10 @@ class AthleteController extends Controller
             // instead of 20.
             ->with('address')
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
+            ->when(
+                ! $trashedMode && $request->filled('status'),
+                fn ($q) => $q->where('status', $request->input('status')),
+            )
             // ?paid=yes|no — filter on whether the athlete has a payment
             // record for the current calendar month (#105). Unrecognised
             // values are silently ignored (no filter applied) — same shape
@@ -216,6 +230,32 @@ class AthleteController extends Controller
         $athlete->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Bring a soft-deleted athlete back into the active roster (#700).
+     * The route's `->withTrashed()` binding resolves both trashed and
+     * non-trashed ids; we 404 on the non-trashed branch so the action
+     * stays idempotent semantically (no "already restored" toggle).
+     * Ownership is the same gate as `destroy()` — owner of the
+     * academy the athlete belongs to.
+     */
+    public function restore(Request $request, Athlete $athlete): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $this->userOwns($user, $athlete)) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        if (! $athlete->trashed()) {
+            return response()->json(['message' => 'Athlete is not deleted.'], 404);
+        }
+
+        $fresh = $this->restoreAthlete->execute($athlete);
+
+        return response()->json(['data' => new AthleteResource($fresh)]);
     }
 
     /**

@@ -15,6 +15,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService, SupportedLanguage } from '../../core/services/language.service';
+import { WebPushHandlerService } from '../../core/services/web-push-handler.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { SearchPaletteComponent } from '../search/search-palette.component';
@@ -45,6 +46,7 @@ export class DashboardComponent implements OnInit {
   private readonly renderer = inject(Renderer2);
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly webPushHandler = inject(WebPushHandlerService);
   private static readonly BODY_DRAWER_OPEN_CLASS = 'app-drawer-open';
 
   constructor() {
@@ -94,6 +96,13 @@ export class DashboardComponent implements OnInit {
     if (this.authService.getToken() && this.authService.user() === null) {
       this.authService.loadCurrentUser().subscribe({ error: () => undefined });
     }
+
+    // Wire the Web Push event streams (#702). Only authenticated users
+    // reach the dashboard shell, so this is the right scope: the
+    // `notificationClicks` → router navigation handler fires only when
+    // someone's signed in, and the foreground in-app toast lifecycle
+    // ends on sign-out (the destroyRef closes the subscriptions).
+    this.webPushHandler.initialize(this.destroyRef);
   }
 
   /**

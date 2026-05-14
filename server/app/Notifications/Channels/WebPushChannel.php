@@ -47,10 +47,12 @@ use Minishlink\WebPush\WebPush;
  *
  * Laravel's notification dispatcher auto-resolves the channel class
  * from the `via()` array via the container — no manifest, no manual
- * `Channel::extend()` registration. `WebPush` itself is bound
- * per-request in `AppServiceProvider` (not singleton — it carries
- * queued-payload state; a singleton would let concurrent
- * notifications cross-contaminate their queues).
+ * `Channel::extend()` registration. `WebPush` itself is registered
+ * via `bind()` in `AppServiceProvider` so a fresh instance is built
+ * on each container resolution (not `singleton()` — `WebPush` carries
+ * per-instance queued-payload state, and sharing it across concurrent
+ * notifications or across queue-worker job boundaries would let
+ * payloads cross-contaminate).
  */
 class WebPushChannel
 {
@@ -92,7 +94,27 @@ class WebPushChannel
 
         /** @var array<string, mixed> $payload */
         $payload = $notification->toWebPush($notifiable);
-        $payloadJson = json_encode($payload, JSON_THROW_ON_ERROR);
+
+        // Reshape into the wire envelope Angular's `SwPush` expects
+        // (#702): a top-level `notification: { title, body, data }`
+        // key. With this shape the browser's service worker renders
+        // the OS-level notification automatically and emits to
+        // `SwPush.notificationClicks` on tap; the rest of our payload
+        // (link, kind, post_id, ...) rides under `data` and the SPA's
+        // click handler reads `data.link` to deep-link the user. A
+        // flat `{title, body, link, ...}` payload would only fire
+        // `SwPush.messages` (foreground), never the OS notification.
+        $title = \is_string($payload['title'] ?? null) ? $payload['title'] : 'Budojo';
+        $body = \is_string($payload['body'] ?? null) ? $payload['body'] : '';
+        unset($payload['title'], $payload['body']);
+
+        $payloadJson = json_encode([
+            'notification' => [
+                'title' => $title,
+                'body' => $body,
+                'data' => $payload,
+            ],
+        ], JSON_THROW_ON_ERROR);
 
         // Build a lookup map upfront so the per-report reconciliation
         // below is O(reports) instead of O(reports × subscriptions).

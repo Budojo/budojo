@@ -317,6 +317,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
             ->only(['store', 'update', 'destroy']);
 
+        // Athlete restore (#700). Brings a soft-deleted athlete back into
+        // the active roster. `->withTrashed()` lets the route-model binding
+        // resolve a soft-deleted id; without it the binding would 404
+        // before the controller could even check ownership.
+        Route::post('/athletes/{athlete}/restore', [\App\Http\Controllers\Athlete\AthleteController::class, 'restore'])
+            ->withTrashed();
+
         // Athlete invitations — owner-side (#445, M7 PR-B). The owner of
         // an academy invites a roster athlete to log into the SPA. The
         // FormRequest's authorize() carries both the role:owner check

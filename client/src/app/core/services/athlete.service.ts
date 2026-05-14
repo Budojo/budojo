@@ -48,6 +48,15 @@ export const MAX_STRIPES_PER_BELT: Record<Belt, number> = {
 };
 export type AthleteStatus = 'active' | 'suspended' | 'inactive';
 
+/**
+ * Filter token for the athletes-list `?status=` query (#700). Extends
+ * `AthleteStatus` with the special-cased `'trashed'` value that the
+ * server resolves into a `->onlyTrashed()` query scope (the restore
+ * picker UI). Lives separately from `AthleteStatus` because trashed
+ * is NEVER a stored value on `athletes.status` — it's a view mode.
+ */
+export type AthleteListStatus = AthleteStatus | 'trashed';
+
 export interface Athlete {
   id: number;
   first_name: string;
@@ -124,7 +133,7 @@ export type AthletePaidFilter = 'yes' | 'no';
 
 export interface AthleteFilters {
   belt?: Belt;
-  status?: AthleteStatus;
+  status?: AthleteListStatus;
   page?: number;
   sortBy?: AthleteSortField;
   sortOrder?: AthleteSortOrder;
@@ -258,6 +267,19 @@ export class AthleteService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  /**
+   * Restore a previously soft-deleted athlete (#700). Returns the
+   * refreshed `Athlete` so the caller can swap the row back into the
+   * list without a refetch. Backend 404s on a non-trashed id, so the
+   * UI flow that triggers this only ever fires from the trashed-list
+   * surface.
+   */
+  restore(id: number): Observable<Athlete> {
+    return this.http
+      .post<AthleteResponse>(`${this.base}/${id}/restore`, {})
+      .pipe(map((res) => res.data));
   }
 
   /**

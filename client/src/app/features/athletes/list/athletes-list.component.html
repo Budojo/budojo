@@ -70,36 +70,91 @@
         data-cy="athletes-search-input"
       />
     </p-iconfield>
-    <p-select
-      [options]="beltOptions()"
-      [ngModel]="selectedBelt()"
-      (ngModelChange)="onBeltChange($event)"
-      optionLabel="label"
-      optionValue="value"
-      [placeholder]="'athletes.list.beltPlaceholder' | translate"
-      styleClass="filter-select"
-    />
-    <p-select
-      [options]="statusOptions()"
-      [ngModel]="selectedStatus()"
-      (ngModelChange)="onStatusChange($event)"
-      optionLabel="label"
-      optionValue="value"
-      [placeholder]="'athletes.list.statusPlaceholder' | translate"
-      styleClass="filter-select"
-    />
-    @if (hasMonthlyFee()) {
+
+    <!--
+      Desktop: inline filter row. Hidden below 768px via the SCSS
+      `.athletes-page__filters-inline` media query so the chip+sheet
+      pattern below takes over on phone widths (#704).
+    -->
+    <div class="athletes-page__filters-inline" data-cy="athletes-filters-inline">
       <p-select
-        [options]="paidOptions()"
-        [ngModel]="selectedPaid()"
-        (ngModelChange)="onPaidChange($event)"
+        [options]="beltOptions()"
+        [ngModel]="selectedBelt()"
+        (ngModelChange)="onBeltChange($event)"
         optionLabel="label"
         optionValue="value"
-        [placeholder]="'athletes.list.paidPlaceholder' | translate"
+        [placeholder]="'athletes.list.beltPlaceholder' | translate"
         styleClass="filter-select"
-        data-cy="athletes-paid-filter"
       />
-    }
+      <p-select
+        [options]="statusOptions()"
+        [ngModel]="selectedStatus()"
+        (ngModelChange)="onStatusChange($event)"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="'athletes.list.statusPlaceholder' | translate"
+        styleClass="filter-select"
+      />
+      @if (hasMonthlyFee()) {
+        <p-select
+          [options]="paidOptions()"
+          [ngModel]="selectedPaid()"
+          (ngModelChange)="onPaidChange($event)"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'athletes.list.paidPlaceholder' | translate"
+          styleClass="filter-select"
+          data-cy="athletes-paid-filter"
+        />
+      }
+    </div>
+
+    <!--
+      Mobile: chip + slide-up sheet hosting the same controls. The
+      host SCSS shows this only below 768px; the inline row above is
+      hidden in the inverse range. Same signals back both rendering
+      paths so picking a value in either updates the list identically.
+    -->
+    <app-filter-sheet
+      class="athletes-page__filters-sheet"
+      [activeCount]="activeFilterCount()"
+      (apply)="noop()"
+      (resetClick)="resetFilters()"
+      data-cy="athletes-filters-sheet"
+    >
+      <p-select
+        [options]="beltOptions()"
+        [ngModel]="selectedBelt()"
+        (ngModelChange)="onBeltChange($event)"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="'athletes.list.beltPlaceholder' | translate"
+        styleClass="filter-select"
+        appendTo="body"
+      />
+      <p-select
+        [options]="statusOptions()"
+        [ngModel]="selectedStatus()"
+        (ngModelChange)="onStatusChange($event)"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="'athletes.list.statusPlaceholder' | translate"
+        styleClass="filter-select"
+        appendTo="body"
+      />
+      @if (hasMonthlyFee()) {
+        <p-select
+          [options]="paidOptions()"
+          [ngModel]="selectedPaid()"
+          (ngModelChange)="onPaidChange($event)"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'athletes.list.paidPlaceholder' | translate"
+          styleClass="filter-select"
+          appendTo="body"
+        />
+      }
+    </app-filter-sheet>
   </div>
 
   <!-- Table -->
@@ -285,34 +340,54 @@
             <!-- Folder icon dropped (#281) — was a redundant route into
                  the detail (default tab is Documents anyway) and broke
                  self-evident UI per Krug. Pencil + trash kept as the
-                 fast paths to "edit" and "delete this athlete". -->
-            <p-button
-              icon="pi pi-pencil"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              (onClick)="goToEdit(athlete)"
-              [ariaLabel]="
-                'athletes.list.tooltip.editAria'
-                  | translate: { name: athlete.first_name + ' ' + athlete.last_name }
-              "
-              [pTooltip]="'athletes.list.tooltip.edit' | translate"
-              tooltipPosition="left"
-              data-cy="edit-btn"
-            />
-            <p-button
-              icon="pi pi-trash"
-              severity="danger"
-              [text]="true"
-              size="small"
-              (onClick)="confirmDelete($event, athlete)"
-              [ariaLabel]="
-                'athletes.list.tooltip.deleteAria'
-                  | translate: { name: athlete.first_name + ' ' + athlete.last_name }
-              "
-              [pTooltip]="'athletes.list.tooltip.delete' | translate"
-              tooltipPosition="left"
-            />
+                 fast paths to "edit" and "delete this athlete".
+
+                 Trashed mode (#700) collapses to a single Restore CTA —
+                 Edit / Delete don't apply to a soft-deleted athlete. -->
+            @if (isTrashedMode()) {
+              <p-button
+                icon="pi pi-replay"
+                severity="primary"
+                [text]="true"
+                size="small"
+                (onClick)="confirmRestore($event, athlete)"
+                [ariaLabel]="
+                  'athletes.list.tooltip.restoreAria'
+                    | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                "
+                [pTooltip]="'athletes.list.tooltip.restore' | translate"
+                tooltipPosition="left"
+                data-cy="restore-btn"
+              />
+            } @else {
+              <p-button
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                (onClick)="goToEdit(athlete)"
+                [ariaLabel]="
+                  'athletes.list.tooltip.editAria'
+                    | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                "
+                [pTooltip]="'athletes.list.tooltip.edit' | translate"
+                tooltipPosition="left"
+                data-cy="edit-btn"
+              />
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [text]="true"
+                size="small"
+                (onClick)="confirmDelete($event, athlete)"
+                [ariaLabel]="
+                  'athletes.list.tooltip.deleteAria'
+                    | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                "
+                [pTooltip]="'athletes.list.tooltip.delete' | translate"
+                tooltipPosition="left"
+              />
+            }
           </td>
         </tr>
       </ng-template>

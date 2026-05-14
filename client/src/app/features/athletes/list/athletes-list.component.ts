@@ -32,6 +32,7 @@ import { LanguageService } from '../../../core/services/language.service';
 import {
   Athlete,
   AthleteFilters,
+  AthleteListStatus,
   AthletePaidFilter,
   AthleteSortField,
   AthleteSortOrder,
@@ -42,6 +43,7 @@ import {
 import { PaymentService } from '../../../core/services/payment.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
+import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
 import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/expiring-documents-widget/expiring-documents-widget.component';
 import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
 import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpaid-this-month-widget/unpaid-this-month-widget.component';
@@ -76,6 +78,7 @@ interface SelectOption<T extends string> {
     Tooltip,
     TranslatePipe,
     AgeBadgeComponent,
+    FilterSheetComponent,
     BeltBadgeComponent,
     ExpiringDocumentsWidgetComponent,
     MonthlySummaryWidgetComponent,
@@ -103,7 +106,7 @@ export class AthletesListComponent implements OnInit {
   readonly loading = signal(true);
 
   selectedBelt = signal<Belt | ''>('');
-  selectedStatus = signal<AthleteStatus | ''>('');
+  selectedStatus = signal<AthleteListStatus | ''>('');
   selectedPaid = signal<AthletePaidFilter | ''>('');
   readonly sortField = signal<AthleteSortField | null>(null);
   readonly sortOrder = signal<AthleteSortOrder>('desc');
@@ -240,22 +243,27 @@ export class AthletesListComponent implements OnInit {
     }));
   });
 
-  // Same exhaustiveness pattern as belts. AthleteStatus is the load-bearing
-  // type — adding a new status case fails TS until a matching key is added.
-  private readonly statusLabelKeys: Record<AthleteStatus, string> = {
+  // Same exhaustiveness pattern as belts. AthleteListStatus is the
+  // load-bearing type — adding a new status case fails TS until a
+  // matching key is added. The 'trashed' entry is a query-scope
+  // toggle (server resolves it to `->onlyTrashed()`), not a stored
+  // value on `athletes.status`.
+  private readonly statusLabelKeys: Record<AthleteListStatus, string> = {
     active: 'statuses.active',
     suspended: 'statuses.suspended',
     inactive: 'statuses.inactive',
+    trashed: 'statuses.trashed',
   };
 
-  private readonly statusOrder: readonly (AthleteStatus | '')[] = [
+  private readonly statusOrder: readonly (AthleteListStatus | '')[] = [
     '',
     'active',
     'suspended',
     'inactive',
+    'trashed',
   ];
 
-  readonly statusOptions = computed<SelectOption<AthleteStatus>[]>(() => {
+  readonly statusOptions = computed<SelectOption<AthleteListStatus>[]>(() => {
     this.languageService.currentLang();
     return this.statusOrder.map((value) => ({
       label:
@@ -264,6 +272,26 @@ export class AthletesListComponent implements OnInit {
           : this.translate.instant(this.statusLabelKeys[value]),
       value,
     }));
+  });
+
+  /**
+   * True when the user picked "Cancellati" / "Deleted" in the status
+   * filter — the list is in restore-picker mode and per-row actions
+   * collapse to a single Restore CTA (#700).
+   */
+  readonly isTrashedMode = computed<boolean>(() => this.selectedStatus() === 'trashed');
+
+  /**
+   * Count of currently-active filters for the mobile filter-sheet
+   * badge (#704). Excludes the free-text search — that one is
+   * keyboard-driven and not collapsed into the sheet.
+   */
+  readonly activeFilterCount = computed<number>(() => {
+    let count = 0;
+    if (this.selectedBelt() !== '') count += 1;
+    if (this.selectedStatus() !== '') count += 1;
+    if (this.selectedPaid() !== '') count += 1;
+    return count;
   });
 
   readonly paidOptions = computed<SelectOption<AthletePaidFilter>[]>(() => {
@@ -295,14 +323,83 @@ export class AthletesListComponent implements OnInit {
     this.load();
   }
 
-  onStatusChange(status: AthleteStatus | ''): void {
+  onStatusChange(status: AthleteListStatus | ''): void {
     this.selectedStatus.set(status);
     this.resetPage();
     this.load();
   }
 
+  /**
+   * Confirm + execute a single-athlete restore (#700). Mirrors the
+   * destroy confirm-popover pattern; copy is intentionally lighter
+   * (no document-loss warning) because restore is non-destructive —
+   * the popover exists to absorb a misclick.
+   */
+  confirmRestore(event: Event, athlete: Athlete): void {
+    this.confirmationService.confirm({
+      target: event.currentTarget as HTMLElement,
+      message: this.translate.instant('athletes.list.restoreConfirm.message', {
+        name: `${athlete.first_name} ${athlete.last_name}`.trim(),
+      }),
+      acceptLabel: this.translate.instant('athletes.list.restoreConfirm.accept'),
+      rejectLabel: this.translate.instant('athletes.list.restoreConfirm.reject'),
+      acceptButtonProps: { severity: 'primary' },
+      accept: () => this.restore(athlete),
+    });
+  }
+
+  private restore(athlete: Athlete): void {
+    this.athleteService.restore(athlete.id).subscribe({
+      next: () => {
+        // Drop the athlete from the trashed list — they're now active
+        // and would no longer match the `?status=trashed` scope on a
+        // fresh load. The toast confirms the action; the user can
+        // switch the filter back to "All" / "Active" to see them.
+        this.athletes.update((list) => list.filter((a) => a.id !== athlete.id));
+        this.messageService.add({
+          severity: 'success',
+          summary: this.translate.instant('athletes.list.restoreToast.successSummary'),
+          life: 2500,
+        });
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('athletes.list.restoreToast.errorSummary'),
+          detail: this.translate.instant('athletes.list.restoreToast.errorDetail'),
+          life: 4000,
+        });
+      },
+    });
+  }
+
   onPaidChange(paid: AthletePaidFilter | ''): void {
     this.selectedPaid.set(paid);
+    this.resetPage();
+    this.load();
+  }
+
+  /**
+   * No-op handler bound to `(apply)` on the mobile filter-sheet (#704).
+   * The sheet's `on*Change` handlers already fire a load on every
+   * dropdown change, so "Apply" effectively means "close" — the
+   * component's internal `onApply()` calls `closeSheet()` after
+   * emitting. We still bind the output so Copilot doesn't flag an
+   * unused emitter (and the contract stays explicit at the call site).
+   */
+  protected noop(): void {
+    // intentionally empty — see method docblock
+  }
+
+  /**
+   * "Reset" action on the mobile filter-sheet (#704). Clears every
+   * dropdown in one shot and re-runs the load. The free-text search
+   * box stays untouched — clearing it is its own dedicated affordance.
+   */
+  resetFilters(): void {
+    this.selectedBelt.set('');
+    this.selectedStatus.set('');
+    this.selectedPaid.set('');
     this.resetPage();
     this.load();
   }

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Models\Academy;
 use App\Models\Athlete;
+use App\Models\CommunityPost;
 use App\Models\User;
+use App\Notifications\Channels\WebPushChannel;
 use App\Notifications\CommunityEventNewNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
@@ -176,4 +178,20 @@ it('falls back to a bare "New event" title when the payload title is missing or 
     $data = $notification->toDatabase((object) []);
 
     expect($data['title'])->toBe('New event');
+});
+
+it('via() includes the WebPushChannel and toWebPush() mirrors the database shape (#702)', function (): void {
+    /** @var CommunityPost $post */
+    $post = CommunityPost::factory()->for($this->academy)->create([
+        'payload' => [
+            'title' => 'Open mat',
+            'starts_at' => '2026-06-01T18:00:00+00:00',
+            'location_text' => 'Academy Gracie Milano',
+        ],
+    ]);
+    $notification = new CommunityEventNewNotification($post);
+
+    expect($notification->via(new \stdClass()))->toContain(WebPushChannel::class);
+    expect($notification->toWebPush(new \stdClass()))
+        ->toMatchArray($notification->toDatabase(new \stdClass()));
 });

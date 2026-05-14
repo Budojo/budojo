@@ -51,6 +51,33 @@
     flex-wrap: wrap;
   }
 
+  // Desktop inline row (#704). Hidden on phone widths; the chip+sheet
+  // pattern below takes over. The breakpoint matches the dashboard
+  // shell's mobile boundary (`client/CLAUDE.md` § Mobile-first
+  // breakpoints).
+  &__filters-inline {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    @media (max-width: 767px) {
+      display: none;
+    }
+  }
+
+  // Mobile chip+sheet. Inverse of `__filters-inline` — visible only
+  // below 768px. The component itself absorbs the OS-level safe area
+  // (env(safe-area-inset-bottom)) so the apply CTA stays above the
+  // Android nav-bar / iOS home indicator.
+  &__filters-sheet {
+    display: none;
+
+    @media (max-width: 767px) {
+      display: inline-block;
+    }
+  }
+
   // Flat surface-0 card with a hairline border — canon § Card anatomy
   // ("Flat surface-0 background, 1px hairline border, 12px radius, no
   // shadow"). The old box-shadow was Material-style elevation, wrong

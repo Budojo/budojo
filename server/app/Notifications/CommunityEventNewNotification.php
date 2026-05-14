@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\CommunityPost;
+use App\Notifications\Channels\WebPushChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -16,9 +17,14 @@ use Illuminate\Notifications\Notification;
  * the editor and gates recipients on the `community_event_new`
  * opt-in.
  *
- * Channel: `database` only in V1, surfaces via the bell-dropdown
- * (#418). Default-**on** — events are deliberate and relatively rare,
- * and joining the academy is the implicit opt-in.
+ * Channels:
+ *   - `database` — always on; surfaces via the bell-dropdown (#418).
+ *   - `WebPushChannel` (#702) — browser push for every device the
+ *     user opted in from. No-op when the user has zero subscriptions.
+ *
+ * Default-**on** — events are deliberate and relatively rare, and
+ * joining the academy is the implicit opt-in. The single
+ * `community_event_new` gate covers both channels.
  *
  * Carries the event title + start time + post id on the wire so the
  * inbox row reads "New event: Open mat — Saturday" without the SPA
@@ -40,13 +46,29 @@ class CommunityEventNewNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', WebPushChannel::class];
     }
 
     /**
      * @return array<string, mixed>
      */
     public function toDatabase(object $notifiable): array
+    {
+        return $this->payload();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toWebPush(object $notifiable): array
+    {
+        return $this->payload();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payload(): array
     {
         /** @var array<string, mixed> $payload */
         $payload = $this->post->payload ?? [];

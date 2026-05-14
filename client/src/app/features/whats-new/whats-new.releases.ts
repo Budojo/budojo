@@ -28,6 +28,46 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.14.0',
+    date: '2026-05-14',
+    headline:
+      "Push notifications now actually fire end-to-end: three notification types (community reply, belt celebration, new event) deliver to your browser, tapping the OS notification deep-links you to the post in question, and a foreground push shows an in-app toast so the signal isn't lost when a Budojo tab is already open. The athletes list gains an undo: a new 'Cancellati' filter shows previously-deleted athletes with a one-tap Restore button — the athlete + their payment / attendance / promotion history comes back exactly as before; documents stay deleted (file wiped on delete, policy from v1.0) and the delete confirm now warns about that explicitly. On phone widths the three filter dropdowns on /dashboard/athletes collapse into a 'Filtri' chip + bottom-sheet, recovering ~80px of vertical space for the actual roster. And the offline experience finally lands you on our /offline page (with a Retry CTA + auto-recovery when connectivity returns) instead of Chrome's white error page — plus a 1-hour cache on the most-read endpoints so a flaky connection gives you stale-but-recent data instead of a hard failure.",
+    sections: [
+      {
+        heading: '🔔 Push notifications now deliver and deep-link',
+        bullets: [
+          'Three notification types now fire a browser push (in addition to the inbox): community reply, athlete belt celebration, new academy event. Same opt-out gates from /dashboard/profile → Notifications cover BOTH channels.',
+          'Tap the OS notification → the SPA opens or focuses an existing tab on /dashboard/me/feed#post-{id}.',
+          'Foreground push (Budojo already open) → in-app PrimeNG toast instead of a system notification (browser convention to avoid double notice).',
+        ],
+      },
+      {
+        heading: '↩️ Restore a deleted athlete',
+        bullets: [
+          "New 'Cancellati' / 'Deleted' filter on /dashboard/athletes shows previously-deleted athletes with a one-tap Restore button per row.",
+          'Restore brings back the athlete row + their payment / attendance / promotion history exactly as before.',
+          'Documents are NOT restored — the file is wiped from disk on delete (policy unchanged from v1.0). The delete confirm now warns about this prominently so the trade-off is obvious before you tap.',
+        ],
+      },
+      {
+        heading: '🎛️ Mobile filter cluster: bottom-sheet',
+        bullets: [
+          'On phone widths the three dropdowns on /dashboard/athletes (Belt / Status / Paid) collapse into a "Filtri" chip with a badge showing how many filters are active.',
+          'Tap the chip → a sheet slides up from the bottom with the dropdowns inside + Apply / Reset.',
+          'Recovers ~80px of vertical space for the actual roster. Desktop (≥ 768px) layout unchanged.',
+        ],
+      },
+      {
+        heading: '📶 Offline experience: less Chrome, more Budojo',
+        bullets: [
+          'Network drops → you land on our /offline page (with a Retry CTA) instead of Chrome\'s "ERR_CONNECTION_ABORTED" white page.',
+          'Connectivity comes back → the SPA auto-redirects to wherever you were trying to go.',
+          'A short list of read-only endpoints (athletes list, your academy, community feed) keeps a 1-hour cache so a flaky connection gives stale-but-recent data instead of a hard failure.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.13.0',
     date: '2026-05-14',
     headline:
