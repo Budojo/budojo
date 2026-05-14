@@ -6,6 +6,7 @@ namespace App\Notifications;
 
 use App\Models\Athlete;
 use App\Models\CommunityPost;
+use App\Notifications\Channels\WebPushChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -15,9 +16,14 @@ use Illuminate\Notifications\Notification;
  * non-editor academy user receives one — the trigger callsite is
  * responsible for excluding the editor.
  *
- * Channel: `database` only in V1, surfaces via the bell-dropdown
- * (#418). Default-off — recipients must explicitly opt in on the
- * preferences panel before the fanout reaches them.
+ * Channels:
+ *   - `database` — always on; surfaces via the bell-dropdown (#418).
+ *   - `WebPushChannel` (#702) — browser push for every device the
+ *     user opted in from. No-op when the user has zero subscriptions.
+ *
+ * Default-off — recipients must explicitly opt in on the
+ * `community_belt_celebration` toggle before the fanout reaches either
+ * channel. The single gate covers both.
  *
  * Carries the athlete name on the wire so the inbox row reads
  * "Mario Rossi just earned the blue belt!" without the SPA having
@@ -40,13 +46,29 @@ class CommunityBeltCelebrationNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', WebPushChannel::class];
     }
 
     /**
      * @return array<string, mixed>
      */
     public function toDatabase(object $notifiable): array
+    {
+        return $this->payload();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toWebPush(object $notifiable): array
+    {
+        return $this->payload();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payload(): array
     {
         $athleteName = trim($this->athlete->first_name . ' ' . $this->athlete->last_name);
 

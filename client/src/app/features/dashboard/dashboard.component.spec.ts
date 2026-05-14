@@ -3,7 +3,9 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
-import { of } from 'rxjs';
+import { SwPush } from '@angular/service-worker';
+import { MessageService } from 'primeng/api';
+import { Subject, of } from 'rxjs';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { VERSION } from '../../../environments/version';
@@ -50,6 +52,19 @@ describe('DashboardComponent', () => {
         provideHttpClientTesting(),
         ...provideI18nTesting(),
         { provide: AuthService, useClass: FakeAuthService },
+        // DashboardComponent wires the WebPushHandlerService (#702),
+        // which injects SwPush + MessageService. Provide minimal
+        // stubs so the spec doesn't have to know about the push
+        // pipeline.
+        MessageService,
+        {
+          provide: SwPush,
+          useValue: {
+            isEnabled: false,
+            notificationClicks: new Subject(),
+            messages: new Subject(),
+          },
+        },
       ],
     });
     router = TestBed.inject(Router);

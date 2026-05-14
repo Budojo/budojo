@@ -1,0 +1,87 @@
+import { DestroyRef, inject, Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
+import { SwPush } from '@angular/service-worker';
+import { MessageService } from 'primeng/api';
+
+/**
+ * Subscribes the SPA to Angular's `SwPush` event streams so a delivered
+ * web push (#702):
+ *
+ *  - **Click on the OS notification** (`notificationClicks`) →
+ *    `router.navigateByUrl(data.link)` so the user lands on the post
+ *    they came from. The service worker focuses an existing Budojo
+ *    tab if one is open; otherwise the click opens a fresh one and
+ *    THIS subscription handles the post-bootstrap navigation.
+ *
+ *  - **Foreground push** (`messages`) → push arrived while a Budojo
+ *    tab is in the foreground; the OS doesn't pop a system
+ *    notification (browser convention to avoid double notice). We
+ *    surface an in-app PrimeNG toast linking to the same place
+ *    instead, so the user still sees the signal.
+ *
+ * The service is initialised by the dashboard shell (only authenticated
+ * users opted in to push subscriptions could ever receive a message);
+ * `takeUntilDestroyed(destroyRef)` ties the lifecycle to the shell so
+ * logging out unwires both subscriptions.
+ */
+interface WebPushNotificationData {
+  readonly link?: string;
+  readonly kind?: string;
+}
+
+interface WebPushMessage {
+  readonly notification?: {
+    readonly title?: string;
+    readonly body?: string;
+    readonly data?: WebPushNotificationData;
+  };
+}
+
+@Injectable({ providedIn: 'root' })
+export class WebPushHandlerService {
+  private readonly swPush = inject(SwPush);
+  private readonly router = inject(Router);
+  private readonly messageService = inject(MessageService);
+
+  /**
+   * Wire the two `SwPush` event streams. Safe to call when the SW is
+   * disabled (`SwPush.isEnabled === false`, i.e. `ng serve` dev mode)
+   * — the underlying observables stay silent and the method is a
+   * no-op without throwing.
+   */
+  initialize(destroyRef: DestroyRef): void {
+    if (!this.swPush.isEnabled) {
+      return;
+    }
+
+    this.swPush.notificationClicks
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe(({ notification }) => {
+        const link = (notification as { data?: WebPushNotificationData })?.data?.link;
+        if (typeof link === 'string' && link.length > 0) {
+          this.router.navigateByUrl(link);
+        }
+      });
+
+    this.swPush.messages.pipe(takeUntilDestroyed(destroyRef)).subscribe((rawMessage) => {
+      const message = rawMessage as WebPushMessage;
+      const title = message.notification?.title;
+      const body = message.notification?.body;
+      if (typeof title !== 'string' || title.length === 0) {
+        return;
+      }
+      this.messageService.add({
+        severity: 'info',
+        summary: title,
+        detail: typeof body === 'string' && body.length > 0 ? body : undefined,
+        life: 6000,
+        // Tag the toast so a future "click to open" affordance can hook
+        // back into `notification.data.link`; not wired today because
+        // PrimeNG's toast doesn't expose click events natively, but
+        // adding the data here keeps the spike short when we do.
+        data: message.notification?.data,
+      });
+    });
+  }
+}
