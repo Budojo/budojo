@@ -380,6 +380,18 @@ export class AthletesListComponent implements OnInit {
   }
 
   /**
+   * No-op handler bound to `(apply)` on the mobile filter-sheet (#704).
+   * The sheet's `on*Change` handlers already fire a load on every
+   * dropdown change, so "Apply" effectively means "close" — the
+   * component's internal `onApply()` calls `closeSheet()` after
+   * emitting. We still bind the output so Copilot doesn't flag an
+   * unused emitter (and the contract stays explicit at the call site).
+   */
+  protected noop(): void {
+    // intentionally empty — see method docblock
+  }
+
+  /**
    * "Reset" action on the mobile filter-sheet (#704). Clears every
    * dropdown in one shot and re-runs the load. The free-text search
    * box stays untouched — clearing it is its own dedicated affordance.
