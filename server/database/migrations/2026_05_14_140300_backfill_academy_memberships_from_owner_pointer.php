@@ -29,31 +29,54 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $now = DB::raw('NOW()');
+        // PHP-side loop instead of a raw SQL INSERT IGNORE — the
+        // INSERT IGNORE / INSERT OR IGNORE syntax is vendor-specific
+        // (MySQL vs SQLite vs Postgres), and the CI suite runs against
+        // SQLite while dev / prod run MySQL. Using the query builder
+        // with the obvious INSERT-or-skip pattern keeps the migration
+        // portable across all three. The loop is O(academies) and
+        // runs once per environment — operationally cheap.
+        $now = now();
 
-        // 1. Membership rows — every academy that has a user_id pointer.
-        DB::statement(
-            'INSERT IGNORE INTO academy_memberships
-             (user_id, academy_id, role, joined_at, created_at, updated_at)
-             SELECT user_id, id, ?, created_at, ?, ?
-             FROM academies
-             WHERE user_id IS NOT NULL',
-            ['owner', now(), now()],
-        );
+        DB::table('academies')
+            ->whereNotNull('user_id')
+            ->orderBy('id')
+            ->each(function (object $academy) use ($now): void {
+                $exists = DB::table('academy_memberships')
+                    ->where('user_id', $academy->user_id)
+                    ->where('academy_id', $academy->id)
+                    ->exists();
+                if ($exists) {
+                    return;
+                }
 
-        // 2. Each user's active academy pointer. Only update users who
-        //    own an academy AND don't already have a value set.
-        DB::statement(
-            'UPDATE users u
-             JOIN academies a ON a.user_id = u.id
-             SET u.active_academy_id = a.id
-             WHERE u.active_academy_id IS NULL',
-        );
+                DB::table('academy_memberships')->insert([
+                    'user_id' => $academy->user_id,
+                    'academy_id' => $academy->id,
+                    'role' => 'owner',
+                    'joined_at' => $academy->created_at ?? $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            });
 
-        // Quiet the unused variable warning for the `$now` raw we kept
-        // around in case a future iteration wants to write a literal
-        // timestamp instead of the named-binding now() value.
-        unset($now);
+        // Each user's active-academy pointer. Cross-vendor: an UPDATE
+        // FROM / JOIN syntax differs between MySQL and SQLite, so we
+        // walk the users table the same way — one UPDATE per owner.
+        DB::table('users')
+            ->whereNull('active_academy_id')
+            ->orderBy('id')
+            ->each(function (object $user): void {
+                $academyId = DB::table('academies')
+                    ->where('user_id', $user->id)
+                    ->value('id');
+                if ($academyId === null) {
+                    return;
+                }
+                DB::table('users')
+                    ->where('id', $user->id)
+                    ->update(['active_academy_id' => $academyId]);
+            });
     }
 
     public function down(): void
