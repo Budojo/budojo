@@ -118,6 +118,7 @@
     <app-filter-sheet
       class="athletes-page__filters-sheet"
       [activeCount]="activeFilterCount()"
+      (apply)="noop()"
       (resetClick)="resetFilters()"
       data-cy="athletes-filters-sheet"
     >
