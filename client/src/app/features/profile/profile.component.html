@@ -686,6 +686,17 @@
     </section>
 
     <!--
+      Browser push notifications panel (#694). Closes the client half
+      of the Web Push pipeline shipped in #419: the server already
+      exposes `/me/push-subscriptions` and stores VAPID-signed
+      subscriptions; this section lets the user opt in on each
+      device + revoke individual subscriptions.
+    -->
+    <section class="profile-page__card">
+      <app-profile-browser-notifications />
+    </section>
+
+    <!--
       Login history panel (#430). Read-only list of the most recent 50
       attempts (success + failure), pairs with the active-sessions
       panel above — sessions covers LIVE tokens, history covers

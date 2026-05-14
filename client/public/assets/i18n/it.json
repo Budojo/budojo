@@ -803,6 +803,49 @@
         "detail": "Qualcosa è andato storto. Riprova tra un momento."
       }
     },
+    "browserNotifications": {
+      "title": "Notifiche del browser",
+      "subtitle": "Ricevi una notifica dal browser nel momento esatto in cui succede qualcosa — anche se Budojo non è aperto.",
+      "errorMessage": "Non è stato possibile caricare lo stato delle iscrizioni. Riprova tra un momento.",
+      "retry": "Riprova",
+      "unsupported": "Questo browser non supporta le notifiche push. Prova con una versione recente di Chrome, Edge, Firefox o Safari 16.4+.",
+      "serverDisabled": "Le notifiche push non sono configurate su questo server Budojo. L'amministratore deve impostare le chiavi VAPID.",
+      "permissionDenied": "Hai bloccato le notifiche per Budojo. Per riattivarle, apri le impostazioni del sito nel tuo browser e ri-abilita le notifiche.",
+      "offDescription": "Le notifiche push sono spente su questo dispositivo. Clicca Attiva e accetta il prompt del browser.",
+      "onDescription": "Le notifiche push sono attive. Puoi aggiungere un altro dispositivo o revocare le singole iscrizioni qui sotto.",
+      "enable": "Attiva su questo dispositivo",
+      "addDevice": "Aggiungi un altro dispositivo",
+      "revoke": "Revoca",
+      "deviceAdded": "Aggiunto",
+      "enabledToast": {
+        "summary": "Notifiche attivate su questo dispositivo"
+      },
+      "revokedToast": {
+        "summary": "Dispositivo revocato"
+      },
+      "revokeErrorToast": {
+        "summary": "Impossibile revocare il dispositivo",
+        "detail": "Qualcosa è andato storto. Riprova tra un momento."
+      },
+      "errors": {
+        "not_supported": {
+          "summary": "Le notifiche push non sono supportate qui",
+          "detail": "Al browser mancano le API service worker o PushManager."
+        },
+        "permission_denied": {
+          "summary": "Hai bloccato le notifiche",
+          "detail": "Apri le impostazioni del sito nel browser per ri-abilitare le notifiche di Budojo."
+        },
+        "server_not_configured": {
+          "summary": "Push non configurato su questo server",
+          "detail": "L'amministratore deve impostare le chiavi VAPID."
+        },
+        "subscribe_failed": {
+          "summary": "Impossibile attivare le notifiche",
+          "detail": "Il servizio push del browser ha rifiutato la richiesta. Riprova tra un momento."
+        }
+      }
+    },
     "loginHistory": {
       "title": "Cronologia accessi",
       "subtitle": "Gli ultimi 50 tentativi di accesso sul tuo account, riusciti e falliti.",
