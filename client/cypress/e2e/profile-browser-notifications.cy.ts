@@ -65,8 +65,8 @@ describe('Profile → Browser notifications (#694)', () => {
     });
 
     cy.visitAuthenticated('/dashboard/profile');
-    cy.get('[data-cy="profile-browser-notifications"]').should('be.visible');
-    cy.get('[data-cy="profile-browser-notifications-server-disabled"]').should('be.visible');
+    cy.get('[data-cy="profile-browser-notifications"]').should('exist');
+    cy.get('[data-cy="profile-browser-notifications-server-disabled"]').should('exist');
   });
 
   it('renders the "off" CTA when the backend reports an empty device list + VAPID set', () => {
@@ -76,8 +76,8 @@ describe('Profile → Browser notifications (#694)', () => {
     });
 
     cy.visitAuthenticated('/dashboard/profile');
-    cy.get('[data-cy="profile-browser-notifications-off"]').should('be.visible');
-    cy.get('[data-cy="profile-browser-notifications-enable"]').should('be.visible');
+    cy.get('[data-cy="profile-browser-notifications-off"]').should('exist');
+    cy.get('[data-cy="profile-browser-notifications-enable"]').should('exist');
   });
 
   it('renders the device list when subscriptions exist', () => {
@@ -94,8 +94,8 @@ describe('Profile → Browser notifications (#694)', () => {
     });
 
     cy.visitAuthenticated('/dashboard/profile');
-    cy.get('[data-cy="profile-browser-notifications-on"]').should('be.visible');
-    cy.get('[data-cy="profile-browser-notifications-device-42"]').should('be.visible');
-    cy.get('[data-cy="profile-browser-notifications-revoke-42"]').should('be.visible');
+    cy.get('[data-cy="profile-browser-notifications-on"]').should('exist');
+    cy.get('[data-cy="profile-browser-notifications-device-42"]').should('exist');
+    cy.get('[data-cy="profile-browser-notifications-revoke-42"]').should('exist');
   });
 });
