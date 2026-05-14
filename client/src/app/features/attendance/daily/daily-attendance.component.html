@@ -61,16 +61,39 @@
         data-cy="attendance-search-input"
       />
     </p-iconfield>
-    <p-select
-      [options]="beltOptions()"
-      [ngModel]="selectedBelt()"
-      (ngModelChange)="onBeltChange($event)"
-      optionLabel="label"
-      optionValue="value"
-      [placeholder]="'attendance.daily.beltPlaceholder' | translate"
-      styleClass="attendance__filter-select"
-      data-cy="attendance-belt-filter"
-    />
+    <!-- Desktop inline filter row (#711). Hidden below 768px. -->
+    <div class="attendance__filters-inline" data-cy="attendance-filters-inline">
+      <p-select
+        [options]="beltOptions()"
+        [ngModel]="selectedBelt()"
+        (ngModelChange)="onBeltChange($event)"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="'attendance.daily.beltPlaceholder' | translate"
+        styleClass="attendance__filter-select"
+        data-cy="attendance-belt-filter"
+      />
+    </div>
+
+    <!-- Mobile chip + slide-up sheet hosting the same Belt control. -->
+    <app-filter-sheet
+      class="attendance__filters-sheet"
+      [activeCount]="activeFilterCount()"
+      (apply)="noop()"
+      (resetClick)="resetFilters()"
+      data-cy="attendance-filters-sheet"
+    >
+      <p-select
+        [options]="beltOptions()"
+        [ngModel]="selectedBelt()"
+        (ngModelChange)="onBeltChange($event)"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="'attendance.daily.beltPlaceholder' | translate"
+        styleClass="attendance__filter-select"
+        appendTo="body"
+      />
+    </app-filter-sheet>
   </div>
 
   <div class="attendance__table-wrapper">
