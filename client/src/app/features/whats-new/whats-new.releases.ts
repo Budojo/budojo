@@ -28,6 +28,24 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.13.0',
+    date: '2026-05-14',
+    headline:
+      'Browser push notifications land. A new "Browser notifications" section on /dashboard/profile lets you opt in per device — click Enable on this device, accept the browser prompt, and from then on Budojo dings you with a system-level push the moment something happens, even with the app closed in another tab. The first notification type wired to the channel is the community-reply (someone replied to a post you previously commented on); more types — belt celebrations, new academy events — follow in the next release on the same opt-in surface. Devices you opt in from are listed in the panel and revocable individually, so you can sign in from a friend\'s computer once without locking yourself out of future pushes there. Works inside the installed Android app (Play Store install or Add to Home Screen); Safari requires 16.4+ and a PWA install.',
+    sections: [
+      {
+        heading: '🔔 New: Browser push notifications',
+        bullets: [
+          'New "Browser notifications" section on /dashboard/profile — click Enable on this device, accept the browser prompt, get system-level pushes from then on.',
+          'First wired notification: someone replies to a community post you previously commented on. More types (belt celebrations, academy events) follow.',
+          "Each device opted in is listed and revocable individually — sign in from a friend's machine once without locking yourself out of future pushes there.",
+          'Works inside the installed Android app (Play Store / Add to Home Screen). Safari requires 16.4+ AND a PWA install — older Safari sees a "not supported" notice instead of the toggle.',
+          "Browser permission denial is non-recoverable from the SPA — re-enable from your browser's site settings if you clicked Block.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.12.0',
     date: '2026-05-14',
     headline:
