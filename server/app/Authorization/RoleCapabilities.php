@@ -19,11 +19,19 @@ use App\Enums\MembershipRole;
  * makes the matrix definition the only thing a reviewer needs to read
  * to know what's allowed where.
  *
- * **Drift protection**: `RoleCapabilitiesTest` walks PRD § 4 row by
- * row and asserts every cell matches; the meta-test also fails when
- * a `Capability` case isn't covered in the matrix or when a non-
- * `MembershipRole` key sneaks in. Updating the matrix without
- * updating the spec (or vice-versa) fails CI.
+ * **Drift protection** (code-level only): `RoleCapabilitiesTest`
+ * compares `self::MATRIX` against a hand-mirrored copy of PRD § 4
+ * declared in the test file, plus meta-tests for orphan capabilities
+ * and orphan role keys. This catches:
+ *
+ *   - Adding a `Capability` case without granting it to any role.
+ *   - Editing `self::MATRIX` without updating the test mirror (and
+ *     vice-versa).
+ *
+ * It does NOT catch a markdown-only edit to PRD § 4 — the
+ * `docs/specs/multi-user.md` file isn't parsed by the test suite.
+ * Spec-vs-code consistency review stays a reviewer responsibility
+ * when only one side moves.
  */
 final class RoleCapabilities
 {

@@ -7,10 +7,17 @@ use App\Authorization\RoleCapabilities;
 use App\Enums\MembershipRole;
 
 /**
- * (#427 / #428 / #716) Walks the capability matrix in PRD § 4 row by
- * row and asserts every cell matches. A drift between the spec table
- * and `RoleCapabilities::MATRIX` fails the spec — the spec lines
- * below are deliberately a verbatim copy of the matrix's "✓" cells.
+ * (#427 / #428 / #716) Code-level drift protection for the capability
+ * matrix. Compares `RoleCapabilities::MATRIX` against
+ * `prdExpectedMatrix()` below — a hand-mirrored PHP copy of PRD § 4.
+ * Two sides; the comparison fails when either drifts without the
+ * other.
+ *
+ * **What this test does NOT catch**: a markdown-only edit to
+ * `docs/specs/multi-user.md` § 4 that doesn't also touch
+ * `prdExpectedMatrix()`. We don't parse the markdown; spec-vs-code
+ * consistency review stays a reviewer responsibility when only one
+ * side moves.
  */
 
 /**
@@ -65,7 +72,7 @@ function prdExpectedMatrix(): array
     ];
 }
 
-it('matches the PRD § 4 matrix row by row', function (): void {
+it('matches the hand-mirrored expected matrix row by row (code-level drift check)', function (): void {
     foreach (MembershipRole::cases() as $role) {
         $expected = prdExpectedMatrix()[$role->value];
         foreach (Capability::cases() as $capability) {

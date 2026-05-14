@@ -16,8 +16,12 @@ namespace App\Authorization;
  *      `RoleCapabilities::MATRIX`,
  *   3. update PRD § 4 in the same commit.
  *
- * The `RoleCapabilitiesTest` meta-test fails when any of those three
- * sides drift.
+ * The `RoleCapabilitiesTest` test catches code-level drift (a new
+ * `Capability` case without a `MATRIX` entry, or a `MATRIX` row that
+ * disagrees with the test's own hard-coded mirror of PRD § 4).
+ * Updating the markdown table without also updating the test's
+ * mirror is NOT caught automatically — we don't parse the markdown
+ * — so the spec-vs-code review burden stays on the reviewer.
  *
  * **Naming convention**: `NounAction` (PascalCase enum case),
  * `noun_action` (backing string). The grouping noun is plural
