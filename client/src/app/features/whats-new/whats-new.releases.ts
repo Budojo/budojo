@@ -28,6 +28,67 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.16.0',
+    date: '2026-05-14',
+    headline:
+      'Notifications expand massively. Phase A of the multi-month notifications epic (#729) lands ten new triggers across the matrix — five for academy owners (an athlete completed signup, training-today push reminder, three community-author leaves), and five athlete-personal lifecycle (medical-cert at T-30/T-7/T-0, congrats-on-promotion, payment-marked-paid receipt, payment-overdue reminder, welcome-to-academy email) — plus the quiet-hours foundation: a per-user time window (default off) that suppresses out-of-tab pushes overnight without losing the inbox row. Two smaller fixes ride along: the public /auth/register page now reads as the entry point for gym owners specifically (with an inline notice diverting athletes to the instructor-invitation flow — closes the orphan-account class of mistake an alpha tester reported), and a TWA cold-start white-screen recovery that catches the synchronous <script> load failure that escaped the existing stale-chunk handler.',
+    sections: [
+      {
+        heading: '🔔 Ten new notification triggers + quiet hours',
+        bullets: [
+          'Owner-side: athlete_signed_up (someone you invited completed signup), community_comment_on_your_post (your post got a comment), community_reaction_on_your_post (your post got a clap/pray), community_new_post (any new post in your academy — superset of the legacy event-only category).',
+          'Athlete-side: athlete_training_today (07:00 push on training days unless you already checked in), athlete_medical_cert_expiring (your own cert at T-30/T-7/T-0), athlete_promoted (you got the belt), athlete_payment_marked_paid (receipt), athlete_payment_overdue (gentle reminder on day 6).',
+          'Quiet hours: set start + end hour on /dashboard/profile → Notifications. Inside the window push delivery is suppressed; inbox writes still happen so you catch up when the window ends. Default off — opt-in. Crosses midnight legally (e.g. 22 → 8).',
+        ],
+      },
+      {
+        heading: "📝 Register page: clarify who it's for",
+        bullets: [
+          '/auth/register now reads "Open your academy account" with an inline aside diverting athletes to ask their instructor for an invitation.',
+          'Two alpha testers had self-registered there as gym owners and ended up as orphan accounts (no academy, no athlete row). This closes the loop in copy + visual hierarchy so the mistake is harder to make.',
+        ],
+      },
+      {
+        heading: '🩹 TWA cold-start: synchronous <script> recovery',
+        bullets: [
+          'A stale service worker pointing the boot index.html at a deleted main-XXX.js bundle now triggers the same single-reload self-heal as a dynamic-import failure.',
+          'The bug surfaced as a white screen after the TWA splash on first launch; the workaround was a manual pull-to-refresh. With this in place the SPA self-heals on the first error event from the failing <script> element.',
+        ],
+      },
+    ],
+  },
+  {
+    version: 'v2.15.0',
+    date: '2026-05-14',
+    headline:
+      "The multi-user epic foundation lands — the architectural prep that lets a single academy be operated by an owner + admin + instructors + assistants instead of a one-person account. Four of nine sub-issues ship in this release: the schema (academy_memberships, academy_invitations, users.active_academy_id), the capability matrix that drives every authz check across the API, the GET/PATCH /me/active-academy endpoints, and the FormRequest layer rewrite that gates every write surface on a per-role capability instead of the legacy 'do you own this academy' check. The invite flow + frontend switcher follow in the next release. Alongside the epic prep, the attendance page gets the same filter bottom-sheet pattern the athletes list shipped in v2.14.0, and a TWA-fix unblocks the closed-test track on Play Store (the assetlinks.json now carries the Play App Signing fingerprint, which was missing — the TWA was rendering inside a Chrome Custom Tab instead of full-screen).",
+    sections: [
+      {
+        heading: '🧱 Multi-user foundation',
+        bullets: [
+          "New tables: `academy_memberships` (role-per-user-per-academy, supports owner/admin/instructor/assistant), `academy_invitations` (pending invites by email + token), `users.active_academy_id` (which academy you're currently switched to).",
+          'Capability matrix: 22 capability tokens (AthletesCreateUpdate, PaymentsMarkUnpaid, CommunityPostEvent, …) mapped per role. Owners can do everything; admins everything-but-team; instructors do day-to-day rostering; assistants are mostly read + record-attendance + mark-paid.',
+          'New endpoints: GET /me/active-academy returns {academy, role, capabilities}; PATCH /me/active-academy switches to another academy you belong to. SPA topbar switcher ships in the next release.',
+          'FormRequest layer: every write FormRequest now uses canInAcademy(academy_id, Capability::X) instead of "$user has an academy". The capability matrix is now the single source of truth for who can do what.',
+        ],
+      },
+      {
+        heading: '🎛️ Attendance page: filter bottom-sheet',
+        bullets: [
+          'The "Class / Belt" cluster on /dashboard/attendance now collapses into a "Filtri" chip + bottom-sheet on phone widths, same pattern as athletes-list shipped in v2.14.0.',
+          'Recovers vertical space for the actual attendance grid on phone.',
+        ],
+      },
+      {
+        heading: '📱 TWA closed-test fix: assetlinks Play App Signing',
+        bullets: [
+          'assetlinks.json now carries the SHA-256 fingerprint of the Play App Signing certificate alongside the upload-key one. The TWA was rendering inside a Chrome Custom Tab (URL bar + X close button) instead of full-screen because Digital Asset Links verification was failing on the published track.',
+          'Fix shipped to Cloudflare Pages — on next clear-data the installed app launches as a proper full-screen TWA.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.14.0',
     date: '2026-05-14',
     headline:
