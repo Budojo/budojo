@@ -66,6 +66,18 @@ Artisan::command('inspire', function (): void {
     ->timezone('Europe/Rome')
     ->withoutOverlapping(60);
 
+// Daily engagement-signal push to academy owners when an active
+// athlete has missed the last 3 scheduled trainings (#729 C3). Same
+// daily 09:30 Europe/Rome window the medical-cert digest runs in.
+// The command's internal 14-day de-dup prevents spamming the owner
+// daily for the same athlete; once the streak is acknowledged, the
+// next ping waits until either the athlete trains again (resets the
+// streak) or another 14 days pass.
+\Illuminate\Support\Facades\Schedule::command('budojo:send-athlete-missed-streak-pushes')
+    ->dailyAt('09:30')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(60);
+
 // Daily 07:00 Europe/Rome push reminder to athletes whose academy
 // trains today and who have NOT been marked present yet (#729 A2).
 // Per-athlete gate on `athlete_training_today` notification category

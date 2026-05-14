@@ -801,6 +801,18 @@
         "label": "Monthly fee still unpaid",
         "description": "Push reminder on the 6th if your current-month fee isn't marked paid yet."
       },
+      "ownerAthleteDocUploaded": {
+        "label": "An athlete uploaded a document",
+        "description": "Inbox + push when an athlete uploads a new document (e.g. updated medical certificate)."
+      },
+      "ownerEventRsvp": {
+        "label": "Someone RSVPed to your event",
+        "description": "Inbox + push when an academy member RSVPs to an event you posted."
+      },
+      "ownerAthleteMissedStreak": {
+        "label": "Athlete missed several trainings",
+        "description": "Inbox + push when an active athlete misses the last 3 scheduled trainings consecutively."
+      },
       "communityReply": {
         "label": "New reply on your community thread",
         "description": "Inbox notification when someone replies to a community post you previously commented on."

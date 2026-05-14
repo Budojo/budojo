@@ -113,11 +113,6 @@ class SendAthleteTrainingTodayPushes extends Command
                 continue;
             }
             if ($this->alreadyNotifiedToday($user, $today)) {
-                // De-dup against a same-day re-run (manual rerun,
-                // mis-scheduling, redeploy quirk) — checks the user's
-                // own inbox for a kind=athlete_training_today row
-                // created since midnight local. Copilot review on
-                // #730.
                 continue;
             }
             $user->notify(new AthleteTrainingTodayNotification($academy));
