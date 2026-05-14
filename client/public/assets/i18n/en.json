@@ -785,6 +785,22 @@
         "label": "Today is training day",
         "description": "Push reminder at 07:00 on days your academy trains — only if you haven't been marked present yet."
       },
+      "athleteMedicalCertExpiring": {
+        "label": "Your medical certificate expires soon",
+        "description": "Push reminder at 30, 7, and 0 days before your own certificate expires."
+      },
+      "athletePromoted": {
+        "label": "You've been promoted",
+        "description": "Push when your instructor records a new belt for you."
+      },
+      "athletePaymentMarkedPaid": {
+        "label": "Payment received",
+        "description": "Push confirmation when your instructor marks your monthly fee as paid."
+      },
+      "athletePaymentOverdue": {
+        "label": "Monthly fee still unpaid",
+        "description": "Push reminder on the 6th if your current-month fee isn't marked paid yet."
+      },
       "communityReply": {
         "label": "New reply on your community thread",
         "description": "Inbox notification when someone replies to a community post you previously commented on."

@@ -9,9 +9,13 @@ use App\Mail\MedicalCertificateExpiringMail;
 use App\Models\Academy;
 use App\Models\Document;
 use App\Models\NotificationLog;
+use App\Notifications\AthleteMedicalCertExpiringNotification;
+use App\Support\NotificationCategory;
+use App\Support\NotificationPreferences;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -151,6 +155,15 @@ class SendMedicalCertExpiryReminders extends Command
 
                             Mail::to($academy->owner)->queue(new MedicalCertificateExpiringMail($academy, $documents));
 
+                            // Athlete-side direct push (#729 B1). Same
+                            // T-30 / T-7 / T-0 trigger that drives the
+                            // owner digest — but for the diretto
+                            // interessato. Per-athlete gated on the
+                            // user's category preference.
+                            foreach ($documents as $doc) {
+                                $this->notifyAthlete($doc, $today);
+                            }
+
                             return true;
                         });
 
@@ -184,6 +197,42 @@ class SendMedicalCertExpiryReminders extends Command
         ));
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * Athlete-side notification path (#729 B1). Skipped when the
+     * athlete row has no linked user_id (invite-pending) or the user
+     * opted out of `athlete_medical_cert_expiring`. Failures don't
+     * stop the digest send — same best-effort posture as the rest of
+     * the M5 dispatch surfaces (Log::warning + continue).
+     */
+    private function notifyAthlete(Document $document, Carbon $today): void
+    {
+        $athlete = $document->athlete;
+        if ($athlete === null) {
+            return;
+        }
+        $user = $athlete->user;
+        if ($user === null) {
+            return;
+        }
+        if (! NotificationPreferences::isEnabled($user, NotificationCategory::ATHLETE_MEDICAL_CERT_EXPIRING)) {
+            return;
+        }
+
+        $expiresAt = $document->expires_at;
+        $daysToExpiry = $expiresAt !== null ? (int) $today->diffInDays($expiresAt, false) : 0;
+
+        try {
+            $user->notify(new AthleteMedicalCertExpiringNotification($document, $daysToExpiry));
+        } catch (\Throwable $e) {
+            Log::warning('athlete_medical_cert_expiring notification failed', [
+                'document_id' => $document->id,
+                'athlete_id' => $athlete->id,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

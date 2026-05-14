@@ -11,6 +11,7 @@ use App\Models\Athlete;
 use App\Models\AthletePromotion;
 use App\Models\CommunityPost;
 use App\Models\User;
+use App\Notifications\AthletePromotedNotification;
 use App\Notifications\CommunityBeltCelebrationNotification;
 use App\Notifications\CommunityNewPostNotification;
 use App\Support\NotificationCategory;
@@ -151,6 +152,40 @@ class AthleteObserver
 
         $this->fanoutBeltCelebration($athlete, $post, $userId, $oldBeltString, $newBeltString);
         $this->fanoutCommunityNewPost($post, $userId);
+        $this->notifyPromotedAthlete($athlete, $oldBeltString, $newBeltString);
+    }
+
+    /**
+     * Direct push to the athlete who was just promoted (#729 B2).
+     * Distinct from the community-fanout: those notify OTHERS about
+     * the promotion; this is the personal "congratulations" ping
+     * to the affected athlete. Skipped when the athlete has no
+     * linked user_id (invitation pending).
+     */
+    private function notifyPromotedAthlete(Athlete $athlete, string $oldBelt, string $newBelt): void
+    {
+        $userId = $athlete->user_id;
+        if ($userId === null) {
+            return;
+        }
+        $user = User::query()->find($userId);
+        if ($user === null) {
+            return;
+        }
+        if (! NotificationPreferences::isEnabled($user, NotificationCategory::ATHLETE_PROMOTED)) {
+            return;
+        }
+
+        try {
+            $user->notify(new AthletePromotedNotification($athlete, $oldBelt, $newBelt));
+        } catch (\Throwable $e) {
+            Log::warning('athlete_promoted notification failed', [
+                'athlete_id' => $athlete->id,
+                'user_id' => $user->id,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function handleStripesChange(Athlete $athlete, int $userId, bool $beltAlsoChanged): void

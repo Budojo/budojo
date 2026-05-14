@@ -55,6 +55,16 @@ Artisan::command('inspire', function (): void {
     ->timezone('Europe/Rome')
     ->withoutOverlapping(60);
 
+// Athlete-side overdue payment push (#729 B4). 09:00 Europe/Rome on
+// the 6th — past the typical month-start payment window, well before
+// the owner's day-16 digest, so the athlete has time to settle the
+// fee before it becomes a chase-list item for the instructor. Same
+// "Active athletes only + linked user_id + category opt-in" gates
+// the SendAthleteTrainingTodayPushes command uses.
+\Illuminate\Support\Facades\Schedule::command('budojo:send-athlete-payment-overdue-pushes')
+    ->monthlyOn(6, '09:00')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(60);
 
 // Daily 07:00 Europe/Rome push reminder to athletes whose academy
 // trains today and who have NOT been marked present yet (#729 A2).

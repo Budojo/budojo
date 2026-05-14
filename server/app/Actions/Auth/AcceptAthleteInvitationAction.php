@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Actions\Auth;
 
 use App\Enums\UserRole;
+use App\Mail\AthleteWelcomeToAcademyMail;
 use App\Models\AthleteInvitation;
 use App\Models\User;
 use App\Notifications\AthleteSignedUpNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
 
@@ -145,6 +147,14 @@ class AcceptAthleteInvitationAction
                 $athlete->forceFill(['user_id' => $user->id])->save();
 
                 $lockedInvitation->forceFill(['accepted_at' => now()])->save();
+
+                // Athlete-side welcome email (#729 B5). Transactional —
+                // no opt-out gate. Queued so a Resend brown-out doesn't
+                // bubble back into the accept-invitation HTTP response.
+                $academy = $athlete->academy;
+                if ($academy !== null) {
+                    Mail::to($user)->queue(new AthleteWelcomeToAcademyMail($user->fresh() ?? $user, $academy));
+                }
 
                 // Owner-side athlete_signed_up notification (#729 A1).
                 // Fanout to the academy owner — gated by their personal
