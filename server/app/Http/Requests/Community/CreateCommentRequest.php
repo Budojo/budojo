@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Community;
 
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\CommunityPost;
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -13,36 +14,25 @@ use Illuminate\Http\Exceptions\HttpResponseException;
  * Authorize + validate `POST /api/v1/community/posts/{post}/comments`
  * (#604, M9 PR-D server).
  *
- * - Authorization: caller's academy must match the post's academy.
+ * - Authorization: staff need `CommunityFeedInteract` in the post's
+ *   academy; athletes need to belong to it.
  * - Validation: `body` required, trimmed, 1-500 chars. The 500 cap
  *   matches the PRD's "short-form, conversational" intent — long
  *   replies belong in DMs (V2 surface) or events.
  */
 class CreateCommentRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        /** @var User|null $user */
-        $user = $this->user();
-        if ($user === null) {
-            return false;
-        }
-
         /** @var CommunityPost|null $post */
         $post = $this->route('post');
         if (! $post instanceof CommunityPost) {
             return false;
         }
 
-        $callerAcademyId = $user->isOwner()
-            ? $user->academy?->id
-            : $user->athlete?->academy_id;
-
-        if ($callerAcademyId === null) {
-            return false;
-        }
-
-        return $callerAcademyId === $post->academy_id;
+        return $this->authorizeAcademyMembership($post->academy_id, Capability::CommunityFeedInteract);
     }
 
     /** @return array<string, mixed> */

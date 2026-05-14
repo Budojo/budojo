@@ -136,7 +136,11 @@ it('Academy::memberships() + invitations() relations resolve', function (): void
     AcademyMembership::factory()->for($academy)->count(3)->create();
     AcademyInvitation::factory()->for($academy)->count(2)->create();
 
-    expect($academy->memberships()->count())->toBe(3);
+    // 4 memberships = 3 explicit + 1 auto-bootstrapped by
+    // `AcademyObserver::created()` for the academy's `user_id` owner.
+    // The observer is what guarantees every academy has an owner row
+    // in `academy_memberships`; tests inherit that invariant.
+    expect($academy->memberships()->count())->toBe(4);
     expect($academy->invitations()->count())->toBe(2);
 });
 

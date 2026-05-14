@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
  *
  * **Tenant isolation rule (M9 PRD § Hard rules):** every read of the
  * feed surface is scoped via `WHERE academy_id = ?`. Owner reads
- * `$user->academy->id`; athletes read `$user->athlete->academy_id`.
+ * `$user->activeAcademyId()`; athletes read `$user->athlete->academy_id`.
  * A user without an academy (rare — pre-setup owners or a malformed
  * athlete state) gets an empty paginator instead of a 500.
  *
@@ -99,7 +99,7 @@ class GetCommunityFeedAction
     private function resolveAcademyId(User $user): ?int
     {
         if ($user->isOwner()) {
-            return $user->academy?->id;
+            return $user->activeAcademyId();
         }
 
         // Athlete persona — academy is on the linked athlete row.

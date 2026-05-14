@@ -4,32 +4,33 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Payment;
 
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class StoreAthletePaymentRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     /**
-     * Cross-academy ownership gate. The `{athlete}` route parameter is
-     * resolved by Laravel's implicit route-model binding before this fires;
-     * we just verify the athlete belongs to the caller's academy. Failed
-     * authorization returns 403 with the canonical `{"message":"Forbidden."}`
-     * envelope (see `failedAuthorization()` below).
+     * Capability gate (`PaymentsMarkPaid` in the athlete's academy).
+     * The `{athlete}` route parameter is resolved by Laravel's implicit
+     * route-model binding before this fires; the capability check
+     * runs against the athlete's academy, not the caller's active
+     * academy — so switching active academy doesn't accidentally allow
+     * cross-tenant writes. Failed authorization returns 403 with the
+     * canonical `{"message":"Forbidden."}` envelope.
      */
     public function authorize(): bool
     {
-        $user = $this->user();
-        if ($user === null || $user->academy === null) {
-            return false;
-        }
-
         $athlete = $this->route('athlete');
         if (! $athlete instanceof Athlete) {
             return false;
         }
 
-        return $athlete->academy_id === $user->academy->id;
+        return $this->authorizeInAcademy($athlete->academy_id, Capability::PaymentsMarkPaid);
     }
 
     /**

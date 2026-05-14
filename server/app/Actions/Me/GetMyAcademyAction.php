@@ -13,22 +13,21 @@ use App\Models\User;
  *
  * Returns the **caller's own academy** regardless of role:
  *
- * - **Owner**: their owned academy (via `User->academy`).
+ * - **Staff** (Owner persona — i.e. anyone with at least one
+ *   AcademyMembership): the user's active academy resolved via
+ *   `User::activeAcademy()`. Honours the multi-user
+ *   `users.active_academy_id` pointer with the legacy single-
+ *   membership fallback baked into the helper.
  * - **Athlete**: the academy on their linked `athletes` row (via
  *   `User->athlete->academy`).
  * - **No academy**: returns `null` — the controller renders 404.
- *
- * This is a deliberately separate read-path from `AcademyController::show`
- * which is owner-only (assumes `User->academy` is non-null). Athletes
- * never own an academy, so the controller couldn't be shared without a
- * branching flag — easier to keep two slim entry points.
  */
 class GetMyAcademyAction
 {
     public function execute(User $user): ?Academy
     {
         if ($user->isOwner()) {
-            return $user->academy;
+            return $user->activeAcademy();
         }
 
         return $user->athlete?->academy;

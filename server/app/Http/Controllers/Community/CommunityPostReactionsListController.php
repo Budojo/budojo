@@ -37,7 +37,7 @@ class CommunityPostReactionsListController extends Controller
         $user = $request->user();
 
         $callerAcademyId = $user->isOwner()
-            ? $user->academy?->id
+            ? $user->activeAcademyId()
             : $user->athlete?->academy_id;
 
         if ($callerAcademyId === null || $post->academy_id !== $callerAcademyId) {

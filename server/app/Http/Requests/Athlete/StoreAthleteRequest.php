@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Athlete;
 
+use App\Authorization\Capability;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
 use App\Http\Requests\Concerns\ValidatesStripesAgainstBelt;
@@ -16,15 +18,14 @@ use Illuminate\Validation\Rule;
 
 class StoreAthleteRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
     use ValidatesAddress;
     use ValidatesPhonePair;
     use ValidatesStripesAgainstBelt;
 
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        return $user !== null && $user->academy !== null;
+        return $this->authorizeActiveAcademy(Capability::AthletesCreateUpdate);
     }
 
     /**
@@ -32,7 +33,12 @@ class StoreAthleteRequest extends FormRequest
      */
     public function rules(): array
     {
-        $academyId = $this->user()?->academy?->id;
+        // Use activeAcademyId() — same helper backing the
+        // authorize() check — so the fallback to first-active-
+        // membership for users with null pointer also reaches the
+        // unique-email scope here. Otherwise duplicates in the
+        // resolved academy would slip past validation.
+        $academyId = $this->user()?->activeAcademyId();
 
         return [
             'first_name' => ['required', 'string', 'max:100'],

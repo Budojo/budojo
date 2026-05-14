@@ -4,41 +4,30 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Community;
 
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\CommunityPost;
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 /**
  * Authorize gate for `GET /api/v1/community/posts/{post}/comments`
- * (#604, M9 PR-D server). The caller's academy must match the
- * post's academy — tenant isolation.
+ * (#604, M9 PR-D server). Staff need `CommunityFeedInteract`; athletes
+ * need to belong to the post's academy.
  */
 class ListCommentsRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        /** @var User|null $user */
-        $user = $this->user();
-        if ($user === null) {
-            return false;
-        }
-
         /** @var CommunityPost|null $post */
         $post = $this->route('post');
         if (! $post instanceof CommunityPost) {
             return false;
         }
 
-        $callerAcademyId = $user->isOwner()
-            ? $user->academy?->id
-            : $user->athlete?->academy_id;
-
-        if ($callerAcademyId === null) {
-            return false;
-        }
-
-        return $callerAcademyId === $post->academy_id;
+        return $this->authorizeAcademyMembership($post->academy_id, Capability::CommunityFeedInteract);
     }
 
     /** @return array<string, mixed> */
