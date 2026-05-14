@@ -103,8 +103,10 @@
       "requestNewLink": "Request a new link"
     },
     "register": {
-      "title": "Create your account",
-      "subtitle": "Join Budojo and get started today",
+      "title": "Open your academy account",
+      "subtitle": "For gym owners and academy staff",
+      "athleteNoticeTitle": "Are you an athlete?",
+      "athleteNoticeBody": "This signup is for gym owners. Ask your instructor — they will send you an invitation by email so you can join their academy.",
       "firstName": "First name",
       "firstNamePlaceholder": "Mario",
       "firstNameRequired": "First name is required.",

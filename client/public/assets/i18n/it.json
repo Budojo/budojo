@@ -103,8 +103,10 @@
       "requestNewLink": "Richiedi un nuovo link"
     },
     "register": {
-      "title": "Crea il tuo account",
-      "subtitle": "Iscriviti a Budojo e parti subito",
+      "title": "Apri l'account della tua palestra",
+      "subtitle": "Per gestori e staff di palestra",
+      "athleteNoticeTitle": "Sei un atleta?",
+      "athleteNoticeBody": "Questa registrazione è per i gestori. Chiedi al tuo maestro — ti invierà un invito via email per entrare nella sua palestra.",
       "firstName": "Nome",
       "firstNamePlaceholder": "Mario",
       "firstNameRequired": "Il nome è obbligatorio.",

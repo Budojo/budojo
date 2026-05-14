@@ -125,13 +125,21 @@ describe('Register page', () => {
   });
 
   it('renders the register form', () => {
-    cy.get('h1').should('contain', 'Create your account');
+    cy.get('h1').should('contain', 'Open your academy account');
     cy.get('input[id="first_name"]').should('exist');
     cy.get('input[id="last_name"]').should('exist');
     cy.get('input[id="email"]').should('exist');
     cy.get('input[id="password"]').should('exist');
     cy.get('input[id="password_confirmation"]').should('exist');
     cy.get('button[type="submit"]').should('contain.text', 'Create account');
+  });
+
+  it('diverts athletes to the instructor invitation flow via the inline notice (#725)', () => {
+    cy.get('[data-cy="register-athlete-notice"]').should('be.visible');
+    cy.get('[data-cy="register-athlete-notice"]').within(() => {
+      cy.contains('Are you an athlete?').should('be.visible');
+      cy.contains('Ask your instructor').should('be.visible');
+    });
   });
 
   it('shows validation errors when submitting empty form', () => {
