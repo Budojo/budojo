@@ -4,24 +4,26 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Attendance;
 
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class MarkAttendanceRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     /**
-     * Ownership gate: the authenticated user must own an academy. Per-
+     * Capability gate (`AttendanceRecord` in the active academy). Per-
      * athlete ownership (is every ID in athlete_ids actually in my
-     * academy?) is handled in the controller — validating it here would
-     * require a second query at request-resolve time and blur the
+     * academy?) is still handled in the controller — validating it here
+     * would require a second query at request-resolve time and blur the
      * FormRequest's responsibility. Canon split: FormRequest validates
-     * SHAPE, controller validates WHO-OWNS-WHAT.
+     * SHAPE + caller permission, controller validates WHO-OWNS-WHAT.
      */
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        return $user !== null && $user->academy !== null;
+        return $this->authorizeActiveAcademy(Capability::AttendanceRecord);
     }
 
     /**

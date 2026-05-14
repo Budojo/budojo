@@ -42,9 +42,15 @@ describe('Landing page (#330)', () => {
     // <button> (not an <a>), so we click and verify the URL change
     // rather than asserting `href`. The cypress-side equivalent of
     // the unit test that verifies the data-cy hook + label.
-    cy.intercept('POST', '/api/v1/auth/login', { statusCode: 401 }).as('noLogin');
+    //
+    // Flake mitigation (caught on #708 + #710 CI): the unused
+    // `/auth/login` intercept was creating ordering noise with the
+    // PrimeNG button's onClick listener; removed. The location
+    // assertion runs under the default 4s retry — fine on local
+    // hardware but tight on CI runners under load. Bump to 10s to
+    // absorb the slowest CI shard's startup latency.
     cy.get('[data-cy="landing-signup"]').should('be.visible').click();
-    cy.location('pathname').should('eq', '/auth/register');
+    cy.location('pathname', { timeout: 10_000 }).should('eq', '/auth/register');
   });
 
   it('the hero CTA also routes to /auth/register', () => {

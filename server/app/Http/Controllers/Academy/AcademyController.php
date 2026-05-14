@@ -57,7 +57,7 @@ class AcademyController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $academy = $user->academy;
+        $academy = $user->activeAcademy();
 
         if ($academy === null) {
             return response()->json(['message' => 'No academy found.'], 404);
@@ -71,7 +71,7 @@ class AcademyController extends Controller
         /** @var User $user */
         $user = $request->user();
         /** @var \App\Models\Academy $academy */
-        $academy = $user->academy; // authorize() guarantees non-null
+        $academy = $user->activeAcademy(); // authorize() guarantees non-null
 
         $academy = $this->updateAction->execute($academy, $request->validated());
 
@@ -83,7 +83,7 @@ class AcademyController extends Controller
         /** @var User $user */
         $user = $request->user();
         /** @var \App\Models\Academy $academy */
-        $academy = $user->academy;
+        $academy = $user->activeAcademy();
 
         /** @var \Illuminate\Http\UploadedFile $file */
         $file = $request->file('logo');
@@ -96,10 +96,18 @@ class AcademyController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $academy = $user->academy;
+        $academy = $user->activeAcademy();
 
         if ($academy === null) {
             return response()->json(['message' => 'No academy found.'], 404);
+        }
+
+        // Capability gate: AcademySettingsUpdate is owner/admin
+        // only per the matrix. `uploadLogo` is gated by its
+        // FormRequest; `deleteLogo` has no FormRequest (the body
+        // is empty) so the check lands here.
+        if (! $user->canInAcademy($academy->id, \App\Authorization\Capability::AcademySettingsUpdate)) {
+            return response()->json(['message' => 'Forbidden.'], 403);
         }
 
         $academy = $this->deleteLogoAction->execute($academy);

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Stats;
 
-use App\Models\User;
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -15,16 +16,16 @@ use Illuminate\Http\Exceptions\HttpResponseException;
  * yet that justifies the cost.
  *
  * Mirrors the gating pattern used elsewhere in the codebase: authorize()
- * checks the academy ownership invariant; the controller defends in
- * depth (see AttendanceController::summary).
+ * checks the StatsView capability in the active academy; the
+ * controller defends in depth (see AttendanceController::summary).
  */
 class MonthsRangeRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        return $user instanceof User && $user->academy !== null;
+        return $this->authorizeActiveAcademy(Capability::StatsView);
     }
 
     /**

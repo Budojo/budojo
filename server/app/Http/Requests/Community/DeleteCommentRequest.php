@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Community;
 
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\PostComment;
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -16,16 +17,19 @@ use Illuminate\Http\Exceptions\HttpResponseException;
  * Two paths to authorize:
  *
  * 1. **Author**: a user can always delete their own comment.
- * 2. **Owner**: the owner of the post's academy can delete any
- *    comment under any post in that academy (moderation).
+ * 2. **Moderator**: any staff member with `CommunityPostEvent` in the
+ *    post's academy can moderate a comment under that post —
+ *    Owner / Admin / Instructor per the matrix. Assistants are
+ *    read-only and athletes can only delete their own.
  *
  * 403 otherwise (canonical envelope).
  */
 class DeleteCommentRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        /** @var User|null $user */
         $user = $this->user();
         if ($user === null) {
             return false;
@@ -42,17 +46,6 @@ class DeleteCommentRequest extends FormRequest
             return true;
         }
 
-        // Owner-moderation path — the post's academy must be the
-        // user's owned academy.
-        if (! $user->isOwner()) {
-            return false;
-        }
-
-        $ownedAcademyId = $user->academy?->id;
-        if ($ownedAcademyId === null) {
-            return false;
-        }
-
         // `withTrashed()` because the parent post may have been
         // soft-deleted (PR-B's owner moderation surface) while its
         // comments still exist. Without this the default
@@ -63,7 +56,7 @@ class DeleteCommentRequest extends FormRequest
             return false;
         }
 
-        return $post->academy_id === $ownedAcademyId;
+        return $this->authorizeInAcademy($post->academy_id, Capability::CommunityPostEvent);
     }
 
     /** @return array<string, mixed> */

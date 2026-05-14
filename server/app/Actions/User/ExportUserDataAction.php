@@ -48,15 +48,24 @@ class ExportUserDataAction
             'tokens',
         ]);
 
+        // GDPR data portability: export the academies the USER OWNS,
+        // not the one they're currently switched to. A staff member
+        // viewing another owner's academy as their active one must
+        // NOT be able to exfiltrate that academy's data via the
+        // export endpoint — owner-only scope is the intent of the
+        // GDPR right-to-portability. Use the legacy `User::academy()`
+        // hasOne via `academies.user_id` (the ownership column).
+        $academy = $user->academy;
+
         return [
             'version' => self::SCHEMA_VERSION,
             'exported_at' => Carbon::now()->toIso8601String(),
             'data' => [
                 'user' => $this->serializeUser($user),
-                'academy' => $user->academy === null ? null : $this->serializeAcademy($user->academy),
-                'athletes' => $user->academy === null
+                'academy' => $academy === null ? null : $this->serializeAcademy($academy),
+                'athletes' => $academy === null
                     ? []
-                    : $user->academy->athletes->map(fn (Athlete $a): array => $this->serializeAthlete($a))->all(),
+                    : $academy->athletes->map(fn (Athlete $a): array => $this->serializeAthlete($a))->all(),
                 'personal_access_tokens' => $user->tokens
                     ->map(fn ($t): array => [
                         'id' => $t->id,

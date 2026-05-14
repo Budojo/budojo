@@ -53,7 +53,7 @@ class AthleteController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy === null) {
+        if ($user->activeAcademyId() === null) {
             return response()->json(['message' => 'No academy found.'], 403);
         }
 
@@ -81,7 +81,9 @@ class AthleteController extends Controller
         // through to the normal filter.
         $trashedMode = $request->input('status') === 'trashed';
 
-        $query = $user->academy->athletes()
+        $academy = $user->activeAcademy();
+        \assert($academy !== null); // guarded above
+        $query = $academy->athletes()
             ->when($trashedMode, fn ($q) => $q->onlyTrashed())
             // Eager-load only the current-month payments slice so the
             // `paid_current_month` derivation in AthleteResource doesn't fan
@@ -140,8 +142,9 @@ class AthleteController extends Controller
         // authorize() + failedAuthorization() override (single source of truth
         // for write 403s — see server/CLAUDE.md § Clean Architecture). The
         // FormRequest short-circuits before this method is invoked when the
-        // user has no academy, so $user->academy is non-null below.
-        \assert($user->academy !== null);
+        // user has no academy, so $user->activeAcademy() is non-null below.
+        $academy = $user->activeAcademy();
+        \assert($academy !== null);
 
         $validated = $request->validated();
         // Address (#72b) lives on a polymorphic relation, not a column on
@@ -153,8 +156,8 @@ class AthleteController extends Controller
             : null;
         unset($validated['address']);
 
-        $athlete = DB::transaction(function () use ($user, $validated, $addressPayload): Athlete {
-            $athlete = $user->academy->athletes()->create($validated);
+        $athlete = DB::transaction(function () use ($academy, $validated, $addressPayload): Athlete {
+            $athlete = $academy->athletes()->create($validated);
             if ($addressPayload !== null) {
                 $this->syncAddress->execute($athlete, $addressPayload);
             }
@@ -223,7 +226,10 @@ class AthleteController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! $this->userOwns($user, $athlete)) {
+        // Capability gate: AthletesDelete is owner/admin only per
+        // the matrix. Tenant scope is implicit — canInAcademy()
+        // requires an active membership in the athlete's academy.
+        if (! $user->canInAcademy($athlete->academy_id, \App\Authorization\Capability::AthletesDelete)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -245,7 +251,9 @@ class AthleteController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! $this->userOwns($user, $athlete)) {
+        // Capability gate: AthletesRestore is owner/admin only per
+        // the matrix.
+        if (! $user->canInAcademy($athlete->academy_id, \App\Authorization\Capability::AthletesRestore)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -361,7 +369,7 @@ class AthleteController extends Controller
      */
     private function userOwns(User $user, Athlete $athlete): bool
     {
-        return $user->academy !== null
-            && $athlete->academy_id === $user->academy->id;
+        return $user->activeAcademyId() !== null
+            && $athlete->academy_id === $user->activeAcademyId();
     }
 }

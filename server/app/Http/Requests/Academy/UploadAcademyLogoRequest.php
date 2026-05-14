@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Academy;
 
-use App\Models\User;
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UploadAcademyLogoRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        /** @var User|null $user */
-        $user = $this->user();
-
-        return $user !== null && $user->academy !== null;
+        return $this->authorizeActiveAcademy(Capability::AcademySettingsUpdate);
     }
 
     /**

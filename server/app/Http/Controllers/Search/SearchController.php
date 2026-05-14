@@ -34,7 +34,8 @@ class SearchController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy === null) {
+        $academy = $user->activeAcademy();
+        if ($academy === null) {
             // Mirrors AthleteController::index — a user without an academy
             // gets a structured 403, not a 500 from a null relation. The
             // SPA's auth interceptor pattern already handles 403 envelopes
@@ -45,7 +46,7 @@ class SearchController extends Controller
         }
 
         $query = \is_string($request->input('q')) ? $request->input('q') : '';
-        $athletes = $this->search->execute($user->academy, $query);
+        $athletes = $this->search->execute($academy, $query);
 
         return AthleteResource::collection($athletes);
     }

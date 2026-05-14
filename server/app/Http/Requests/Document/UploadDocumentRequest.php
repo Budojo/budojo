@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Document;
 
+use App\Authorization\Capability;
 use App\Enums\DocumentType;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -12,17 +14,17 @@ use Illuminate\Validation\Rule;
 
 class UploadDocumentRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        $user = $this->user();
-        if ($user === null || $user->academy === null) {
+        /** @var Athlete|null $athlete */
+        $athlete = $this->route('athlete');
+        if (! $athlete instanceof Athlete) {
             return false;
         }
 
-        /** @var Athlete|null $athlete */
-        $athlete = $this->route('athlete');
-
-        return $athlete !== null && $athlete->academy_id === $user->academy->id;
+        return $this->authorizeInAcademy($athlete->academy_id, Capability::DocumentsUpload);
     }
 
     /**

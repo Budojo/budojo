@@ -44,7 +44,7 @@ The athletes-list filter bar shows three `<p-select>` dropdowns + a search field
 
 | # | View | Status | Notes |
 |---|---|---|---|
-| 16 | Athletes-list filters | 🔴 | Move to "Filtri" CTA → bottom-sheet w/ all dropdowns inside. Recovers ~80px of viewport for the list. Reusable across attendance + payments + expiring-documents |
+| 16 | Athletes-list filters | 🟢 | #705 — new shared `<app-filter-sheet>` collapses the three dropdowns (Belt / Status / Paid) into a chip + slide-up sheet below 768px. Active-filter badge on the chip, Apply + Reset CTAs inside, Esc to dismiss. Rolling out the same pattern to attendance / summary / expiring-documents / payments is on the backlog (one PR per surface — each has different filter dimensions). |
 
 ## ── Touch targets + tap affordances
 

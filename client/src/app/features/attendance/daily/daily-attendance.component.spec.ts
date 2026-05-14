@@ -654,4 +654,28 @@ describe('DailyAttendanceComponent', () => {
 
     expect(component['first']()).toBe(0);
   });
+
+  it('mobile filter sheet hosts the same Belt control and resetFilters clears the signal (#711)', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, { athletes: [makeAthlete({ id: 1 })] });
+
+    // Both rows are rendered in the template — mobile/desktop visibility
+    // is media-query driven, not Angular-conditional.
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="attendance-filters-inline"]')).toBeTruthy();
+    expect(el.querySelector('[data-cy="attendance-filters-sheet"]')).toBeTruthy();
+
+    // Set a filter to verify resetFilters() flips it back.
+    component['selectedBelt'].set('blue');
+    expect(component['activeFilterCount']()).toBe(1);
+
+    component['resetFilters']();
+    expect(component['selectedBelt']()).toBe('');
+    expect(component['activeFilterCount']()).toBe(0);
+
+    // resetFilters() reloads athletes — drain the request so the
+    // afterEach `verify()` stays clean.
+    httpMock.expectOne((req) => req.url === '/api/v1/athletes').flush({ data: [], meta: {} });
+  });
 });

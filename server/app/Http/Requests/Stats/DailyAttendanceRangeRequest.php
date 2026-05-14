@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Stats;
 
-use App\Models\User;
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -19,11 +20,11 @@ use Illuminate\Http\Exceptions\HttpResponseException;
  */
 class DailyAttendanceRangeRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        return $user instanceof User && $user->academy !== null;
+        return $this->authorizeActiveAcademy(Capability::StatsView);
     }
 
     /**

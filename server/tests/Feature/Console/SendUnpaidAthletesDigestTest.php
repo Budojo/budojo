@@ -291,11 +291,9 @@ it('renders the body with academy name + month label + each athlete name', funct
 });
 
 it('returns FAILURE exit code when academies throw but keeps iterating the loop (resilience)', function (): void {
-    makeAcademyForUnpaid('a@example.com');
-    makeAcademyForUnpaid('b@example.com');
+    $a = makeAcademyForUnpaid('a@example.com');
+    $b = makeAcademyForUnpaid('b@example.com');
 
-    $a = Academy::query()->where('id', 1)->firstOrFail();
-    $b = Academy::query()->where('id', 2)->firstOrFail();
     makeAthleteForUnpaid($a);
     makeAthleteForUnpaid($b);
 

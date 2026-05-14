@@ -206,11 +206,9 @@ it('returns FAILURE exit code when academies throw but keeps iterating the loop 
     // continues, so BOTH academies are attempted (proves the loop
     // didn't bail on the first throw). The overall exit code is
     // FAILURE because at least one academy errored.
-    makeAcademy('a@example.com');
-    makeAcademy('b@example.com');
+    $a = makeAcademy('a@example.com');
+    $b = makeAcademy('b@example.com');
 
-    $a = Academy::query()->where('id', 1)->firstOrFail();
-    $b = Academy::query()->where('id', 2)->firstOrFail();
     makeAthleteWithCert($a, Carbon::today()->copy()->addDays(7));
     makeAthleteWithCert($b, Carbon::today()->copy()->addDays(7));
 

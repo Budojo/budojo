@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Community;
 
-use App\Models\User;
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -31,6 +32,8 @@ use Illuminate\Http\Exceptions\HttpResponseException;
  */
 class CreateEventRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     /**
      * ISO 8601 date-time regex. Requires `YYYY-MM-DDTHH:MM:SS` with
      * optional fractional seconds + a `Z` / `±HH:MM` / `±HHMM`
@@ -43,13 +46,7 @@ class CreateEventRequest extends FormRequest
 
     public function authorize(): bool
     {
-        /** @var User|null $user */
-        $user = $this->user();
-        if ($user === null || ! $user->isOwner()) {
-            return false;
-        }
-
-        return $user->academy?->id !== null;
+        return $this->authorizeActiveAcademy(Capability::CommunityPostEvent);
     }
 
     /**
