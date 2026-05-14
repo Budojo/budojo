@@ -1,6 +1,9 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { signal } from '@angular/core';
+import { SwPush } from '@angular/service-worker';
 import { Subject, of, throwError } from 'rxjs';
 import { ProfileComponent } from './profile.component';
 import { AuthService, User } from '../../core/services/auth.service';
@@ -57,6 +60,21 @@ function setup(authOverrides: Partial<AuthService> = {}, userOverride?: User | n
         useValue: {
           queryParamMap: of(convertToParamMap({})),
           snapshot: { queryParamMap: convertToParamMap({}) },
+        },
+      },
+      // ProfileBrowserNotificationsComponent (#694) injects WebPushService,
+      // which in turn injects HttpClient + SwPush. Provide both as test
+      // doubles so the subcomponent instantiates without exploding the
+      // pre-existing spec assertions (none of which touch the browser-
+      // notifications panel).
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      {
+        provide: SwPush,
+        useValue: {
+          isEnabled: false,
+          requestSubscription: () => Promise.reject(new Error('not used in this spec')),
+          unsubscribe: () => Promise.resolve(),
         },
       },
       ...provideI18nTesting(),
