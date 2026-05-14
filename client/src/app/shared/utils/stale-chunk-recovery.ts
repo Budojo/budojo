@@ -62,6 +62,18 @@ const STALE_CHUNK_MESSAGE_PATTERNS: readonly RegExp[] = [
   /Unexpected token ['"]?<['"]?/i,
 ];
 
+// `<script src="main-XXXX.js">` and friends — the synchronous bundle
+// scripts the initial `index.html` carries. When a stale `index.html`
+// is served (e.g. by a SW pinned to a previous deploy's manifest) and
+// the bundle hashes in those `<script>` tags no longer exist on the
+// current deploy, the resulting `<script>` load failure fires an
+// `error` event on the element with an empty `event.message` (Chromium
+// same-origin behaviour) — the message-based patterns above can't see
+// it. This pattern catches the synchronous boot path that would
+// otherwise blank the page until manual refresh (#722).
+const ANGULAR_BUNDLE_PATTERN =
+  /\/(?:main|chunk|polyfills|styles|runtime)-[A-Z0-9]{8,}\.(?:js|css|mjs)(?:\?|$)/i;
+
 function messageOf(value: unknown): string {
   if (value instanceof Error) return value.message;
   if (typeof value === 'string') return value;
@@ -125,7 +137,26 @@ export function setupStaleChunkRecovery(): () => void {
 
   const errorHandler = (event: ErrorEvent) => {
     const message = messageOf(event.error) || event.message || '';
-    if (looksLikeStaleChunk(message)) reloadOnce(message);
+    if (looksLikeStaleChunk(message)) {
+      reloadOnce(message);
+      return;
+    }
+    // Synchronous bundle-script load failure path (#722). The browser
+    // dispatches a generic `error` event on the failing <script> /
+    // <link> element when its src returns 404 / wrong MIME — typically
+    // with an empty message. Identify it by inspecting `event.target`:
+    // if it's an asset element whose URL matches the Angular hash-bundle
+    // shape, treat the failure as stale-chunk and recover. Without this
+    // branch, a stale `index.html` carrying a deleted `main-XXX.js`
+    // leaves users on a blank page until they pull-to-refresh.
+    const target = event.target;
+    if (target instanceof HTMLScriptElement && ANGULAR_BUNDLE_PATTERN.test(target.src)) {
+      reloadOnce(`script src=${target.src}`);
+      return;
+    }
+    if (target instanceof HTMLLinkElement && ANGULAR_BUNDLE_PATTERN.test(target.href)) {
+      reloadOnce(`link href=${target.href}`);
+    }
   };
 
   const rejectionHandler = (event: PromiseRejectionEvent) => {

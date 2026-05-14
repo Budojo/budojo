@@ -66,6 +66,49 @@ describe('setupStaleChunkRecovery', () => {
     expect(reloadSpy).not.toHaveBeenCalled();
   });
 
+  it('reloads on a <script src="main-HASH.js"> load failure with an empty message (#722)', () => {
+    // Synchronous bundle-script failure path: when index.html points at
+    // a deleted hash bundle, the browser dispatches `error` on the
+    // <script> element with an empty event.message. The listener must
+    // identify the failure via event.target.src instead.
+    const script = document.createElement('script');
+    script.src = 'https://budojo.it/main-ABCDEFGH.js';
+    document.head.appendChild(script);
+    // ErrorEvent's `target` is read-only via its constructor — dispatch
+    // a generic Event on the script element with capture:true bubbling
+    // to window so the listener attached at window level (capture
+    // phase) sees it. We mimic the browser's "script load failed" by
+    // creating an ErrorEvent and dispatching it directly on the script.
+    const evt = new Event('error', { bubbles: false, cancelable: false });
+    Object.defineProperty(evt, 'target', { value: script, configurable: true });
+    window.dispatchEvent(evt);
+    document.head.removeChild(script);
+    expect(reloadSpy).toHaveBeenCalledOnce();
+  });
+
+  it('reloads on a <link href="styles-HASH.css"> load failure (#722)', () => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://budojo.it/styles-XYZWXYZA.css';
+    document.head.appendChild(link);
+    const evt = new Event('error', { bubbles: false, cancelable: false });
+    Object.defineProperty(evt, 'target', { value: link, configurable: true });
+    window.dispatchEvent(evt);
+    document.head.removeChild(link);
+    expect(reloadSpy).toHaveBeenCalledOnce();
+  });
+
+  it('does NOT reload on a third-party <script> load failure that does not match the Angular bundle shape', () => {
+    const script = document.createElement('script');
+    script.src = 'https://analytics.example.com/tracker.js';
+    document.head.appendChild(script);
+    const evt = new Event('error', { bubbles: false, cancelable: false });
+    Object.defineProperty(evt, 'target', { value: script, configurable: true });
+    window.dispatchEvent(evt);
+    document.head.removeChild(script);
+    expect(reloadSpy).not.toHaveBeenCalled();
+  });
+
   it('refuses to reload twice in the same session (anti-loop guard)', () => {
     window.dispatchEvent(
       new ErrorEvent('error', { message: 'Failed to fetch dynamically imported module' }),
