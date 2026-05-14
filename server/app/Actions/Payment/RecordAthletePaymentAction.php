@@ -9,6 +9,7 @@ use App\Models\AthletePayment;
 use App\Notifications\AthletePaymentMarkedPaidNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class RecordAthletePaymentAction
@@ -68,15 +69,22 @@ class RecordAthletePaymentAction
             return;
         }
 
-        try {
-            $user->notify(new AthletePaymentMarkedPaidNotification($payment));
-        } catch (\Throwable $e) {
-            Log::warning('athlete_payment_marked_paid notification failed', [
-                'payment_id' => $payment->id,
-                'athlete_id' => $athlete->id,
-                'exception' => $e::class,
-                'message' => $e->getMessage(),
-            ]);
-        }
+        // Wrap in `DB::afterCommit` so a caller that itself wraps
+        // this Action in a transaction won't fire the push for a
+        // rolled-back payment. Outside a transaction, `afterCommit`
+        // fires immediately — no-op for the typical controller path
+        // that doesn't pre-wrap. Copilot review on #731.
+        DB::afterCommit(function () use ($athlete, $payment, $user): void {
+            try {
+                $user->notify(new AthletePaymentMarkedPaidNotification($payment));
+            } catch (\Throwable $e) {
+                Log::warning('athlete_payment_marked_paid notification failed', [
+                    'payment_id' => $payment->id,
+                    'athlete_id' => $athlete->id,
+                    'exception' => $e::class,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        });
     }
 }

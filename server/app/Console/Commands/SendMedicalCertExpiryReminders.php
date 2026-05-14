@@ -157,11 +157,19 @@ class SendMedicalCertExpiryReminders extends Command
 
                             // Athlete-side direct push (#729 B1). Same
                             // T-30 / T-7 / T-0 trigger that drives the
-                            // owner digest — but for the diretto
-                            // interessato. Per-athlete gated on the
-                            // user's category preference.
+                            // owner digest — but for the directly
+                            // affected athlete. Per-athlete gated on
+                            // the user's category preference; wrapped
+                            // in DB::afterCommit so a transaction
+                            // rollback past the NotificationLog claim
+                            // does NOT leave an athlete with a stray
+                            // push for an email that never sent.
+                            // Copilot review on #731.
                             foreach ($documents as $doc) {
-                                $this->notifyAthlete($doc, $today);
+                                $docFresh = $doc;
+                                \Illuminate\Support\Facades\DB::afterCommit(function () use ($docFresh, $today): void {
+                                    $this->notifyAthlete($docFresh, $today);
+                                });
                             }
 
                             return true;
@@ -221,7 +229,14 @@ class SendMedicalCertExpiryReminders extends Command
         }
 
         $expiresAt = $document->expires_at;
-        $daysToExpiry = $expiresAt !== null ? (int) $today->diffInDays($expiresAt, false) : 0;
+        // `diffInDays(absolute: false)` returns a signed float in
+        // modern Carbon — `(int)` would truncate-toward-zero and a
+        // cert expiring later today (≈ -0.96 days) would round to 0
+        // instead of -1, mis-firing the T-0 vs T-7 threshold.
+        // `round()` gives the natural whole-day delta. Copilot #731.
+        $daysToExpiry = $expiresAt !== null
+            ? (int) round($today->diffInDays($expiresAt, false))
+            : 0;
 
         try {
             $user->notify(new AthleteMedicalCertExpiringNotification($document, $daysToExpiry));

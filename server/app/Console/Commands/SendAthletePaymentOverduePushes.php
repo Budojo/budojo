@@ -45,7 +45,11 @@ class SendAthletePaymentOverduePushes extends Command
 
     public function handle(): int
     {
-        $today = Carbon::today();
+        // The scheduler runs at 09:00 Europe/Rome — anchor the date in
+        // the same timezone so the year/month below match operator
+        // intent regardless of `config('app.timezone')` drift. Copilot #731.
+        $tz = config('app.timezone');
+        $today = Carbon::today(\is_string($tz) ? $tz : null);
         $year = (int) $today->year;
         $month = (int) $today->month;
         $hasFailures = false;
