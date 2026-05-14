@@ -130,6 +130,43 @@ final class NotificationCategory
     public const string COMMUNITY_REACTION_ON_YOUR_POST = 'community_reaction_on_your_post';
 
     /**
+     * Athlete-side inbox + push fired when the athlete's own medical
+     * certificate is at the T-30 / T-7 / T-0 thresholds (#729 B1).
+     * Mirrors the owner-side `MEDICAL_CERT_EXPIRY_REMINDERS` digest:
+     * the digest tells the owner "Mario's cert expires in 7 days";
+     * this category tells Mario himself the same thing. Dispatched by
+     * `SendMedicalCertExpiryReminders` alongside the owner email.
+     */
+    public const string ATHLETE_MEDICAL_CERT_EXPIRING = 'athlete_medical_cert_expiring';
+
+    /**
+     * Athlete-side inbox + push fired when the athlete themselves is
+     * promoted to a new belt (#729 B2). Today the matrix had
+     * `COMMUNITY_BELT_CELEBRATION` which notifies OTHER members about
+     * the promotion; the directly-affected athlete received nothing.
+     * This closes that gap.
+     */
+    public const string ATHLETE_PROMOTED = 'athlete_promoted';
+
+    /**
+     * Athlete-side inbox + push fired when the owner marks the
+     * athlete's monthly payment as paid (#729 B3). Confirmation
+     * receipt — the athlete sees the same thing on their profile but
+     * a proactive push closes the loop visibly.
+     */
+    public const string ATHLETE_PAYMENT_MARKED_PAID = 'athlete_payment_marked_paid';
+
+    /**
+     * Athlete-side inbox + push reminder for an unpaid monthly fee
+     * past a per-academy grace day (#729 B4). Counterpart to
+     * `UNPAID_ATHLETES_DIGEST` which informs the OWNER monthly; this
+     * pings the athlete directly. Scheduled via
+     * `budojo:send-athlete-payment-overdue-pushes` on the 6th of
+     * each month at 09:00.
+     */
+    public const string ATHLETE_PAYMENT_OVERDUE = 'athlete_payment_overdue';
+
+    /**
      * Every category, in the order the SPA panel renders them.
      *
      * @return array<int, string>
@@ -141,6 +178,10 @@ final class NotificationCategory
             self::UNPAID_ATHLETES_DIGEST,
             self::ATHLETE_SIGNED_UP,
             self::ATHLETE_TRAINING_TODAY,
+            self::ATHLETE_MEDICAL_CERT_EXPIRING,
+            self::ATHLETE_PROMOTED,
+            self::ATHLETE_PAYMENT_MARKED_PAID,
+            self::ATHLETE_PAYMENT_OVERDUE,
             self::COMMUNITY_REPLY,
             self::COMMUNITY_NEW_POST,
             self::COMMUNITY_COMMENT_ON_YOUR_POST,

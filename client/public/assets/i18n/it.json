@@ -785,6 +785,22 @@
         "label": "Oggi si allena",
         "description": "Promemoria push alle 07:00 nei giorni in cui la tua palestra si allena — solo se non sei già stato segnato presente."
       },
+      "athleteMedicalCertExpiring": {
+        "label": "Il tuo certificato medico sta per scadere",
+        "description": "Promemoria push 30, 7 e 0 giorni prima della scadenza del tuo certificato."
+      },
+      "athletePromoted": {
+        "label": "Sei stato promosso",
+        "description": "Notifica push quando il tuo maestro registra una nuova cintura per te."
+      },
+      "athletePaymentMarkedPaid": {
+        "label": "Pagamento ricevuto",
+        "description": "Conferma push quando il tuo maestro segna il pagamento mensile come saldato."
+      },
+      "athletePaymentOverdue": {
+        "label": "Quota mensile ancora da pagare",
+        "description": "Promemoria push il giorno 6 se la quota del mese in corso non è ancora segnata come saldata."
+      },
       "communityReply": {
         "label": "Nuova risposta in un tuo thread community",
         "description": "Notifica in inbox quando qualcuno risponde a un post community su cui hai già commentato."

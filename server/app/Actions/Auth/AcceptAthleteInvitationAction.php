@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Auth;
 
 use App\Enums\UserRole;
+use App\Mail\AthleteWelcomeToAcademyMail;
 use App\Models\AthleteInvitation;
 use App\Models\User;
 use App\Notifications\AthleteSignedUpNotification;
@@ -12,6 +13,7 @@ use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
 
@@ -147,16 +149,25 @@ class AcceptAthleteInvitationAction
 
                 $lockedInvitation->forceFill(['accepted_at' => now()])->save();
 
+                // Athlete-side welcome email (#729 B5). Transactional —
+                // no opt-out gate. Wrapped in `DB::afterCommit` so a
+                // rollback past this point (e.g. token-issue throw)
+                // doesn't send a welcome for an accept that never
+                // persisted. Copilot review on #731.
+                $academy = $athlete->academy;
+                if ($academy !== null) {
+                    $freshUser = $user->fresh() ?? $user;
+                    DB::afterCommit(function () use ($freshUser, $academy): void {
+                        Mail::to($freshUser)->queue(new AthleteWelcomeToAcademyMail($freshUser, $academy));
+                    });
+                }
+
                 // Owner-side athlete_signed_up notification (#729 A1).
                 // Wrapped in `DB::afterCommit()` so the push only fires
                 // once the surrounding transaction has actually
                 // persisted — a rollback (e.g. token-issue failure
                 // below, or any post-this-block throw) cancels the
-                // notification entirely. Without afterCommit the
-                // database channel writes a row tied to a rolled-back
-                // user and the push channel calls vendor immediately
-                // for an athlete that never landed. Copilot review on
-                // #730.
+                // notification entirely. Copilot review on #730.
                 $owner = $athlete->academy?->owner;
                 if ($owner !== null
                     && NotificationPreferences::isEnabled($owner, NotificationCategory::ATHLETE_SIGNED_UP)

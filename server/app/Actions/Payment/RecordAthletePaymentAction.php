@@ -6,6 +6,11 @@ namespace App\Actions\Payment;
 
 use App\Models\Athlete;
 use App\Models\AthletePayment;
+use App\Notifications\AthletePaymentMarkedPaidNotification;
+use App\Support\NotificationCategory;
+use App\Support\NotificationPreferences;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RecordAthletePaymentAction
 {
@@ -25,10 +30,17 @@ class RecordAthletePaymentAction
      * passes the academy's current `monthly_fee_cents` after verifying it
      * is non-null. Snapshotting at the call site means future fee changes
      * do NOT rewrite past records.
+     *
+     * Side effect: if the row was just CREATED (not idempotent re-read),
+     * the linked athlete user receives the
+     * `athlete_payment_marked_paid` notification (#729 B3). The
+     * `wasRecentlyCreated` flag is the canonical Eloquent way to tell
+     * which branch of `createOrFirst` returned — same shape used in
+     * other observers.
      */
     public function execute(Athlete $athlete, int $year, int $month, int $amountCents): AthletePayment
     {
-        return AthletePayment::query()->createOrFirst(
+        $payment = AthletePayment::query()->createOrFirst(
             [
                 'athlete_id' => $athlete->id,
                 'year' => $year,
@@ -39,5 +51,40 @@ class RecordAthletePaymentAction
                 'paid_at' => now(),
             ],
         );
+
+        if ($payment->wasRecentlyCreated) {
+            $this->notifyAthlete($athlete, $payment);
+        }
+
+        return $payment;
+    }
+
+    private function notifyAthlete(Athlete $athlete, AthletePayment $payment): void
+    {
+        $user = $athlete->user;
+        if ($user === null) {
+            return;
+        }
+        if (! NotificationPreferences::isEnabled($user, NotificationCategory::ATHLETE_PAYMENT_MARKED_PAID)) {
+            return;
+        }
+
+        // Wrap in `DB::afterCommit` so a caller that itself wraps
+        // this Action in a transaction won't fire the push for a
+        // rolled-back payment. Outside a transaction, `afterCommit`
+        // fires immediately — no-op for the typical controller path
+        // that doesn't pre-wrap. Copilot review on #731.
+        DB::afterCommit(function () use ($athlete, $payment, $user): void {
+            try {
+                $user->notify(new AthletePaymentMarkedPaidNotification($payment));
+            } catch (\Throwable $e) {
+                Log::warning('athlete_payment_marked_paid notification failed', [
+                    'payment_id' => $payment->id,
+                    'athlete_id' => $athlete->id,
+                    'exception' => $e::class,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        });
     }
 }
