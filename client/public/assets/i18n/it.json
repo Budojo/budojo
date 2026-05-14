@@ -1315,7 +1315,8 @@
     "all": "Tutti gli stati",
     "active": "Attivo",
     "suspended": "Sospeso",
-    "inactive": "Inattivo"
+    "inactive": "Inattivo",
+    "trashed": "Cancellati"
   },
   "athletes": {
     "list": {
@@ -1353,7 +1354,9 @@
         "deleteAria": "Elimina {{name}}",
         "openMenuAria": "Apri il menu per {{name}}",
         "paid": "Pagato",
-        "unpaid": "Non pagato"
+        "unpaid": "Non pagato",
+        "restore": "Ripristina",
+        "restoreAria": "Ripristina {{name}}"
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",
@@ -1377,13 +1380,23 @@
         "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}"
       },
       "confirm": {
-        "deleteMessage": "Eliminare {{name}}?",
+        "deleteMessage": "Eliminare {{name}}? I suoi documenti saranno cancellati definitivamente e non potranno essere ripristinati — solo la riga atleta può essere annullata.",
         "deleteAccept": "Elimina",
         "markPaidMessage": "Segnare {{name}} come pagato per {{month}}?",
         "markPaidAccept": "Segna pagato",
         "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
         "markUnpaidAccept": "Segna non pagato",
         "cancel": "Annulla"
+      },
+      "restoreConfirm": {
+        "message": "Ripristinare {{name}}?",
+        "accept": "Ripristina",
+        "reject": "Annulla"
+      },
+      "restoreToast": {
+        "successSummary": "Atleta ripristinato",
+        "errorSummary": "Impossibile ripristinare",
+        "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
       }
     },
     "invitation": {
