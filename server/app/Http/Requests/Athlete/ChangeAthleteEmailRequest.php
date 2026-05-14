@@ -4,38 +4,33 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Athlete;
 
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Authorization + payload validation for
  * `POST /api/v1/athletes/{athlete}/email` (#476).
  *
- * Mirrors `InviteAthleteRequest`'s authorize() shape: the caller must
- * be a logged-in `role=owner` user AND must own the academy the
- * route-bound athlete belongs to. Athletes (`role=athlete`) and the
- * owners of OTHER academies are denied at this layer with a 403
- * before the action runs — defense in depth, the action itself does
- * not re-check tenant scoping.
+ * Capability gate (`AthletesCreateUpdate` in the athlete's academy)
+ * replaces the legacy `isOwner()` + active-academy check. Owners and
+ * Admins can change an athlete's email; Instructors can (it's part of
+ * record-keeping in the PRD); Assistants cannot.
  */
 class ChangeAthleteEmailRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        /** @var User|null $user */
-        $user = $this->user();
-        if ($user === null || ! $user->isOwner()) {
-            return false;
-        }
-
         /** @var Athlete|null $athlete */
         $athlete = $this->route('athlete');
         if (! $athlete instanceof Athlete) {
             return false;
         }
 
-        return $user->academy?->id === $athlete->academy_id;
+        return $this->authorizeInAcademy($athlete->academy_id, Capability::AthletesCreateUpdate);
     }
 
     /** @return array<string, mixed> */

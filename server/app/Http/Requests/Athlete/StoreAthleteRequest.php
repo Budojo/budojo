@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Athlete;
 
+use App\Authorization\Capability;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
 use App\Http\Requests\Concerns\ValidatesStripesAgainstBelt;
@@ -16,15 +18,14 @@ use Illuminate\Validation\Rule;
 
 class StoreAthleteRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
     use ValidatesAddress;
     use ValidatesPhonePair;
     use ValidatesStripesAgainstBelt;
 
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        return $user !== null && $user->academy !== null;
+        return $this->authorizeActiveAcademy(Capability::AthletesCreateUpdate);
     }
 
     /**
@@ -32,7 +33,7 @@ class StoreAthleteRequest extends FormRequest
      */
     public function rules(): array
     {
-        $academyId = $this->user()?->academy?->id;
+        $academyId = $this->user()?->active_academy_id;
 
         return [
             'first_name' => ['required', 'string', 'max:100'],

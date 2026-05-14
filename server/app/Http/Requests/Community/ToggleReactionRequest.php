@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Community;
 
+use App\Authorization\Capability;
 use App\Enums\ReactionEmoji;
-use App\Models\Athlete;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\CommunityPost;
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rules\Enum;
@@ -16,10 +16,9 @@ use Illuminate\Validation\Rules\Enum;
  * Authorize + validate `POST /api/v1/community/posts/{post}/reactions`
  * (#603, M9 PR-C).
  *
- * Authorization gate: the authenticated user must belong to the
- * post's academy. Owners read their owned academy id; athletes read
- * `$user->athlete->academy_id`. Reaction on a post in a different
- * academy → 403 (canonical envelope).
+ * Authorization gate: staff need `CommunityFeedInteract` in the post's
+ * academy; athletes need to belong to it. Reaction on a post in a
+ * different academy → 403 (canonical envelope).
  *
  * Validation: `emoji` is required and must be one of the values on
  * the `ReactionEmoji` enum (clap / pray today). Unknown emojis →
@@ -27,26 +26,17 @@ use Illuminate\Validation\Rules\Enum;
  */
 class ToggleReactionRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        /** @var User|null $user */
-        $user = $this->user();
-        if ($user === null) {
-            return false;
-        }
-
         /** @var CommunityPost|null $post */
         $post = $this->route('post');
         if (! $post instanceof CommunityPost) {
             return false;
         }
 
-        $callerAcademyId = $this->callerAcademyId($user);
-        if ($callerAcademyId === null) {
-            return false;
-        }
-
-        return $callerAcademyId === $post->academy_id;
+        return $this->authorizeAcademyMembership($post->academy_id, Capability::CommunityFeedInteract);
     }
 
     /**
@@ -64,17 +54,5 @@ class ToggleReactionRequest extends FormRequest
         throw new HttpResponseException(
             response()->json(['message' => 'Forbidden.'], 403),
         );
-    }
-
-    private function callerAcademyId(User $user): ?int
-    {
-        if ($user->isOwner()) {
-            return $user->academy?->id;
-        }
-
-        /** @var Athlete|null $athlete */
-        $athlete = $user->athlete;
-
-        return $athlete?->academy_id;
     }
 }

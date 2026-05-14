@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Academy;
 
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
 use Illuminate\Contracts\Validation\Validator;
@@ -12,23 +14,23 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 
 class UpdateAcademyRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
     use ValidatesAddress;
     use ValidatesPhonePair;
 
     /**
-     * Ownership gate: the authenticated user must own an academy.
-     * Mirrors UpdateDocumentRequest::authorize() so the FormRequest owns
-     * the entire authorization contract — the controller stays a humble
-     * orchestrator (server/CLAUDE.md § Clean Architecture).
+     * Capability gate: the authenticated user must have
+     * `AcademySettingsUpdate` in their currently-active academy. After
+     * the multi-user migration this is `Owner` + `Admin` per
+     * `RoleCapabilities::MATRIX`; `Instructor` and `Assistant` are
+     * read-only on settings.
      *
      * `slug` is intentionally immutable by design (keeps permalinks stable
      * across renames) and therefore absent from the rules below.
      */
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        return $user !== null && $user->academy !== null;
+        return $this->authorizeActiveAcademy(Capability::AcademySettingsUpdate);
     }
 
     /**

@@ -4,38 +4,34 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Athlete;
 
+use App\Authorization\Capability;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Authorization gate for `POST /api/v1/athletes/{athlete}/invite[/resend]`
  * and `DELETE /api/v1/athletes/{athlete}/invitations/{invitation}` (#445, M7 PR-B).
  *
- * No body — the request carries no user-supplied fields. The athlete
- * email + the academy scoping live on the route-bound model. We only
- * authorise: caller must be the authenticated owner of the athlete's
- * academy AND must have `role = owner`.
+ * No body — the request carries no user-supplied fields. Capability
+ * gate (`AthletesCreateUpdate` in the athlete's academy) replaces the
+ * legacy `isOwner()` + same-academy ID check. Per
+ * `RoleCapabilities::MATRIX`: Owner/Admin/Instructor can invite an
+ * athlete; Assistant cannot.
  */
 class InviteAthleteRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     public function authorize(): bool
     {
-        /** @var User|null $user */
-        $user = $this->user();
-        if ($user === null || ! $user->isOwner()) {
-            return false;
-        }
-
         /** @var Athlete|null $athlete */
         $athlete = $this->route('athlete');
         if (! $athlete instanceof Athlete) {
             return false;
         }
 
-        // Ownership check: the authenticated user must own the
-        // athlete's academy. `User::academy()` is HasOne; ID compare.
-        return $user->academy?->id === $athlete->academy_id;
+        return $this->authorizeInAcademy($athlete->academy_id, Capability::AthletesCreateUpdate);
     }
 
     /** @return array<string, mixed> */

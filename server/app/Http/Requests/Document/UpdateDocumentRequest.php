@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Document;
 
+use App\Authorization\Capability;
 use App\Enums\DocumentType;
+use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Document;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -12,28 +14,29 @@ use Illuminate\Validation\Rule;
 
 class UpdateDocumentRequest extends FormRequest
 {
+    use AuthorizesAcademyCapability;
+
     /**
-     * Full ownership gate: the authenticated user must own an academy AND
-     * the route-bound document must belong to an athlete in that academy.
-     * Mirrors UploadDocumentRequest::authorize() so the FormRequest owns
-     * the entire authorization contract — the controller stays a humble
-     * orchestrator (server/CLAUDE.md § Clean Architecture).
+     * Capability gate (`DocumentsUpload` in the document's athlete's
+     * academy). Mirrors UploadDocumentRequest::authorize() so the
+     * FormRequest owns the entire authorization contract — the
+     * controller stays a humble orchestrator (server/CLAUDE.md
+     * § Clean Architecture).
      */
     public function authorize(): bool
     {
-        $user = $this->user();
-        if ($user === null || $user->academy === null) {
-            return false;
-        }
-
         /** @var Document|null $document */
         $document = $this->route('document');
         if ($document === null) {
             return false;
         }
 
-        return $document->athlete !== null
-            && $document->athlete->academy_id === $user->academy->id;
+        $athlete = $document->athlete;
+        if ($athlete === null) {
+            return false;
+        }
+
+        return $this->authorizeInAcademy($athlete->academy_id, Capability::DocumentsUpload);
     }
 
     /**
