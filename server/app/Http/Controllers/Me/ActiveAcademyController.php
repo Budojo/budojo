@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -50,18 +51,44 @@ class ActiveAcademyController extends Controller
         $user = $request->user();
         /** @var array{academy_id: int} $validated */
         $validated = $request->validated();
+        $targetAcademyId = $validated['academy_id'];
 
-        $user->forceFill(['active_academy_id' => $validated['academy_id']])->save();
+        // Close the FormRequest → save() TOCTOU window: re-check the
+        // membership inside a transaction so a concurrent revoke
+        // between validation and persistence can't leave
+        // `users.active_academy_id` pointing at an academy the user
+        // no longer has an active membership in. We return the
+        // re-resolved membership so the response shape matches GET.
+        try {
+            $membership = DB::transaction(function () use ($user, $targetAcademyId): AcademyMembership {
+                $active = $user->memberships()
+                    ->where('academy_id', $targetAcademyId)
+                    ->whereNull('revoked_at')
+                    ->first();
 
-        // Re-resolve through activeMembership() so the response
-        // payload matches the GET shape verbatim.
-        $membership = $user->fresh()?->activeMembership();
-        // PHPStan-friendly defensive check: the FormRequest already
-        // guaranteed the membership exists.
-        if ($membership === null) {
+                if ($active === null) {
+                    // Caught below — converted to a 409, never persisted.
+                    throw new \RuntimeException('membership_revoked_concurrently');
+                }
+
+                $user->forceFill(['active_academy_id' => $targetAcademyId])->save();
+
+                return $active;
+            });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() !== 'membership_revoked_concurrently') {
+                throw $e;
+            }
+            // Concurrent revoke between FormRequest validation and
+            // persistence. Report so the rare race is visible in
+            // logs, and return 409 (Conflict) rather than 500 —
+            // it's a legitimate concurrent-state collision, not a
+            // server bug.
+            report($e);
+
             return response()->json([
-                'message' => 'Membership disappeared between validation and persistence.',
-            ], 500);
+                'message' => 'Membership was revoked concurrently. Refresh and try again.',
+            ], 409);
         }
 
         return response()->json([

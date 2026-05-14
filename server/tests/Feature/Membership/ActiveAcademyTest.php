@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Authorization\Capability;
-use App\Enums\MembershipRole;
 use App\Models\Academy;
 use App\Models\AcademyMembership;
 use App\Models\User;
@@ -135,8 +134,3 @@ it('PATCH /me/active-academy requires authentication', function (): void {
     $this->patchJson('/api/v1/me/active-academy', ['academy_id' => 1])
         ->assertUnauthorized();
 });
-
-// Eliminate the unused MembershipRole import warning — referenced
-// indirectly through the factory state helpers but PHPStan can't see
-// that chain.
-test('MembershipRole reachable', fn () => expect(MembershipRole::Owner->value)->toBe('owner'));
