@@ -65,7 +65,7 @@ Spot-check existing `*.scss` files:
 
 | # | Gap | Status | Notes |
 |---|---|---|---|
-| 19 | Installed PWA without cache + offline shows Chrome's "ERR_CONNECTION_ABORTED" page instead of our `/offline` route | 🟢 | #706 — `ngsw-config.json` gained `navigationUrls` (excludes `/api/**` + `/storage/**` so those keep hitting the network) and a `dataGroups` block for `/api/v1/**` with the `freshness` strategy + 3s timeout + 1h max age. The `/offline` route and `OfflineComponent` itself were already in place from #425. Telegram in-app browser remains the open question — separate investigation when it surfaces again. |
+| 19 | Installed PWA without cache + offline shows Chrome's "ERR_CONNECTION_ABORTED" page instead of our `/offline` route | 🟢 | #706 — `ngsw-config.json` gained `navigationUrls` (excludes `/api/**` + `/storage/**` so SPA-fallback HTML never gets served on those paths) and a narrow `dataGroups` whitelist (`/api/v1/athletes**`, `/api/v1/academy`, `/api/v1/community/feed`) under the `freshness` strategy with a 3s timeout + 1h max age. Sensitive endpoints (`/me/**`, `/auth/**`, downloads, exports) intentionally NOT cached. The `/offline` route + `OfflineComponent` were already in place from #425. Telegram in-app browser remains the open question — separate investigation when it surfaces again. |
 | 20 | Service worker auto-update on new version (#305) | 🟢 | Working — verified in audit chat |
 
 ## Methodology
