@@ -803,6 +803,49 @@
         "detail": "Something went wrong. Try again in a moment."
       }
     },
+    "browserNotifications": {
+      "title": "Browser notifications",
+      "subtitle": "Get a push from your browser the moment something happens — even if Budojo isn't open.",
+      "errorMessage": "We couldn't load your subscription state. Try again in a moment.",
+      "retry": "Retry",
+      "unsupported": "This browser doesn't support push notifications. Try on a recent version of Chrome, Edge, Firefox, or Safari 16.4+.",
+      "serverDisabled": "Push notifications aren't configured on this Budojo server. The administrator needs to set the VAPID keys.",
+      "permissionDenied": "You've blocked notifications for Budojo. To re-enable, open your browser's site settings and switch notifications back on.",
+      "offDescription": "Push notifications are off on this device. Click Enable and accept the browser prompt.",
+      "onDescription": "Push notifications are on. You can add another device or revoke individual ones below.",
+      "enable": "Enable on this device",
+      "addDevice": "Add another device",
+      "revoke": "Revoke",
+      "deviceAdded": "Added",
+      "enabledToast": {
+        "summary": "Notifications enabled on this device"
+      },
+      "revokedToast": {
+        "summary": "Device revoked"
+      },
+      "revokeErrorToast": {
+        "summary": "Couldn't revoke the device",
+        "detail": "Something went wrong. Try again in a moment."
+      },
+      "errors": {
+        "not_supported": {
+          "summary": "Push notifications aren't supported here",
+          "detail": "Your browser is missing the service worker or PushManager API."
+        },
+        "permission_denied": {
+          "summary": "You blocked notifications",
+          "detail": "Open your browser's site settings to switch notifications back on for Budojo."
+        },
+        "server_not_configured": {
+          "summary": "Push isn't configured on this server",
+          "detail": "The administrator needs to set the VAPID keys."
+        },
+        "subscribe_failed": {
+          "summary": "Couldn't enable notifications",
+          "detail": "The browser's push service rejected the request. Try again in a moment."
+        }
+      }
+    },
     "loginHistory": {
       "title": "Login history",
       "subtitle": "The last 50 sign-in attempts on your account, successful and failed.",
