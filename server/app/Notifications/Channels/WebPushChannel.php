@@ -94,7 +94,27 @@ class WebPushChannel
 
         /** @var array<string, mixed> $payload */
         $payload = $notification->toWebPush($notifiable);
-        $payloadJson = json_encode($payload, JSON_THROW_ON_ERROR);
+
+        // Reshape into the wire envelope Angular's `SwPush` expects
+        // (#702): a top-level `notification: { title, body, data }`
+        // key. With this shape the browser's service worker renders
+        // the OS-level notification automatically and emits to
+        // `SwPush.notificationClicks` on tap; the rest of our payload
+        // (link, kind, post_id, ...) rides under `data` and the SPA's
+        // click handler reads `data.link` to deep-link the user. A
+        // flat `{title, body, link, ...}` payload would only fire
+        // `SwPush.messages` (foreground), never the OS notification.
+        $title = \is_string($payload['title'] ?? null) ? $payload['title'] : 'Budojo';
+        $body = \is_string($payload['body'] ?? null) ? $payload['body'] : '';
+        unset($payload['title'], $payload['body']);
+
+        $payloadJson = json_encode([
+            'notification' => [
+                'title' => $title,
+                'body' => $body,
+                'data' => $payload,
+            ],
+        ], JSON_THROW_ON_ERROR);
 
         // Build a lookup map upfront so the per-report reconciliation
         // below is O(reports) instead of O(reports × subscriptions).

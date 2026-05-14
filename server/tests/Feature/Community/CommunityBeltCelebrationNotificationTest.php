@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Enums\Belt;
 use App\Models\Academy;
 use App\Models\Athlete;
+use App\Models\CommunityPost;
 use App\Models\User;
+use App\Notifications\Channels\WebPushChannel;
 use App\Notifications\CommunityBeltCelebrationNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
@@ -149,4 +151,19 @@ it('persists the celebration notification to the inbox with the expected wire sh
         ->and($data['old_belt'])->toBe('white')
         ->and($data['new_belt'])->toBe('blue')
         ->and($data['title'])->toContain('Mario Rossi');
+});
+
+it('via() includes the WebPushChannel and toWebPush() mirrors the database shape (#702)', function (): void {
+    /** @var Athlete $athlete */
+    $athlete = Athlete::factory()->for($this->academy)->create([
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+    ]);
+    /** @var CommunityPost $post */
+    $post = CommunityPost::factory()->for($this->academy)->create();
+    $notification = new CommunityBeltCelebrationNotification($athlete, $post, 'white', 'blue');
+
+    expect($notification->via(new \stdClass()))->toContain(WebPushChannel::class);
+    expect($notification->toWebPush(new \stdClass()))
+        ->toMatchArray($notification->toDatabase(new \stdClass()));
 });
