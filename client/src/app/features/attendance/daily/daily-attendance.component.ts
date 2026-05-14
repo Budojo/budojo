@@ -31,6 +31,7 @@ import {
 } from '../../../core/services/athlete.service';
 import { AttendanceService } from '../../../core/services/attendance.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
+import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -68,6 +69,7 @@ function toLocalDateString(d: Date): string {
     Toast,
     TranslatePipe,
     BeltBadgeComponent,
+    FilterSheetComponent,
   ],
   providers: [MessageService],
   templateUrl: './daily-attendance.component.html',
@@ -540,6 +542,23 @@ export class DailyAttendanceComponent implements OnInit {
 
   protected onBeltChange(belt: Belt | ''): void {
     this.selectedBelt.set(belt);
+    this.resetPage();
+    this.loadAthletes();
+  }
+
+  /** Active-filter badge count for the mobile filter-sheet (#711). */
+  protected readonly activeFilterCount = computed<number>(() =>
+    this.selectedBelt() !== '' ? 1 : 0,
+  );
+
+  /** No-op apply handler — on*Change loads eagerly; apply just closes. */
+  protected noop(): void {
+    // intentionally empty — see athletes-list parallel.
+  }
+
+  /** Reset every dropdown in one shot from the mobile filter-sheet (#711). */
+  protected resetFilters(): void {
+    this.selectedBelt.set('');
     this.resetPage();
     this.loadAthletes();
   }
