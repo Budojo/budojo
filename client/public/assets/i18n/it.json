@@ -1696,6 +1696,12 @@
       "countMany": "atleti devono ancora pagare",
       "viewAll": "Vedi tutti i {{count}} →",
       "viewList": "Vedi nella lista atleti →"
+    },
+    "filterSheet": {
+      "filters": "Filtri",
+      "apply": "Applica",
+      "reset": "Azzera",
+      "close": "Chiudi"
     }
   },
   "stats": {

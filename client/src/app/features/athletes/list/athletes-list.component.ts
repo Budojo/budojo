@@ -43,6 +43,7 @@ import {
 import { PaymentService } from '../../../core/services/payment.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
+import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
 import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/expiring-documents-widget/expiring-documents-widget.component';
 import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
 import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpaid-this-month-widget/unpaid-this-month-widget.component';
@@ -77,6 +78,7 @@ interface SelectOption<T extends string> {
     Tooltip,
     TranslatePipe,
     AgeBadgeComponent,
+    FilterSheetComponent,
     BeltBadgeComponent,
     ExpiringDocumentsWidgetComponent,
     MonthlySummaryWidgetComponent,
@@ -279,6 +281,19 @@ export class AthletesListComponent implements OnInit {
    */
   readonly isTrashedMode = computed<boolean>(() => this.selectedStatus() === 'trashed');
 
+  /**
+   * Count of currently-active filters for the mobile filter-sheet
+   * badge (#704). Excludes the free-text search — that one is
+   * keyboard-driven and not collapsed into the sheet.
+   */
+  readonly activeFilterCount = computed<number>(() => {
+    let count = 0;
+    if (this.selectedBelt() !== '') count += 1;
+    if (this.selectedStatus() !== '') count += 1;
+    if (this.selectedPaid() !== '') count += 1;
+    return count;
+  });
+
   readonly paidOptions = computed<SelectOption<AthletePaidFilter>[]>(() => {
     this.languageService.currentLang();
     return [
@@ -360,6 +375,19 @@ export class AthletesListComponent implements OnInit {
 
   onPaidChange(paid: AthletePaidFilter | ''): void {
     this.selectedPaid.set(paid);
+    this.resetPage();
+    this.load();
+  }
+
+  /**
+   * "Reset" action on the mobile filter-sheet (#704). Clears every
+   * dropdown in one shot and re-runs the load. The free-text search
+   * box stays untouched — clearing it is its own dedicated affordance.
+   */
+  resetFilters(): void {
+    this.selectedBelt.set('');
+    this.selectedStatus.set('');
+    this.selectedPaid.set('');
     this.resetPage();
     this.load();
   }

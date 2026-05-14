@@ -1696,6 +1696,12 @@
       "countMany": "athletes still owe",
       "viewAll": "View all {{count}} →",
       "viewList": "View on the athletes list →"
+    },
+    "filterSheet": {
+      "filters": "Filters",
+      "apply": "Apply",
+      "reset": "Reset",
+      "close": "Close"
     }
   },
   "stats": {
