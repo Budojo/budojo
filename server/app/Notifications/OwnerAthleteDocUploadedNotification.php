@@ -59,7 +59,11 @@ class OwnerAthleteDocUploadedNotification extends Notification
 
         return [
             'title' => \sprintf('%s uploaded a new document', $athleteName),
-            'body' => \sprintf('Type: %s.', $this->document->type->value),
+            // Map the enum backing string to a user-readable label.
+            // The raw value (`medical_certificate`) looks like a debug
+            // dump in a push body; the spelled-out form reads as
+            // human copy. Copilot review on #735.
+            'body' => \sprintf('Type: %s.', self::humanType($this->document->type)),
             'link' => $athlete === null
                 ? '/dashboard/athletes'
                 : \sprintf('/dashboard/athletes/%d', $athlete->id),
@@ -68,5 +72,15 @@ class OwnerAthleteDocUploadedNotification extends Notification
             'athlete_id' => $athlete?->id,
             'doc_type' => $this->document->type->value,
         ];
+    }
+
+    private static function humanType(\App\Enums\DocumentType $type): string
+    {
+        return match ($type) {
+            \App\Enums\DocumentType::MedicalCertificate => 'Medical certificate',
+            \App\Enums\DocumentType::IdCard => 'ID card',
+            \App\Enums\DocumentType::Insurance => 'Insurance',
+            \App\Enums\DocumentType::Other => 'Other',
+        };
     }
 }

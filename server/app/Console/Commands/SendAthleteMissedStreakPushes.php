@@ -124,7 +124,12 @@ class SendAthleteMissedStreakPushes extends Command
      */
     private function lastTrainingDays(array $trainingDays, Carbon $today, int $count): array
     {
-        $cursor = $today->copy();
+        // Start from YESTERDAY — the command runs at 09:30, the
+        // current day's session has not happened yet. Counting today
+        // as a "missed" date would false-positive every Monday on a
+        // Mon/Wed/Fri academy at 09:30 just because the Monday class
+        // is at 19:00. Copilot review on #735.
+        $cursor = $today->copy()->subDay();
         $dates = [];
         // Bounded walk: 30 days of history is more than enough to find
         // 3 training days even on an academy that trains weekly.
