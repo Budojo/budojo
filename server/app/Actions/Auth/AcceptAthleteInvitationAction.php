@@ -11,6 +11,7 @@ use App\Notifications\AthleteSignedUpNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
 
@@ -161,7 +162,22 @@ class AcceptAthleteInvitationAction
                 if ($owner !== null
                     && NotificationPreferences::isEnabled($owner, NotificationCategory::ATHLETE_SIGNED_UP)
                 ) {
-                    $owner->notify(new AthleteSignedUpNotification($athlete->fresh() ?? $athlete));
+                    // Best-effort — a misconfigured WebPush vendor
+                    // (invalid VAPID, transient flush failure, etc.)
+                    // must NOT roll back the accept transaction. The
+                    // athlete's account is already created at this
+                    // point; an exception bubbling up from the
+                    // dispatcher would leave them stuck.
+                    try {
+                        $owner->notify(new AthleteSignedUpNotification($athlete->fresh() ?? $athlete));
+                    } catch (\Throwable $e) {
+                        Log::warning('athlete_signed_up notification failed', [
+                            'athlete_id' => $athlete->id,
+                            'owner_id' => $owner->id,
+                            'exception' => $e::class,
+                            'message' => $e->getMessage(),
+                        ]);
+                    }
                 }
 
                 // Token name shows up in the user's "Active sessions"
