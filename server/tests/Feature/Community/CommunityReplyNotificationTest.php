@@ -72,7 +72,12 @@ it("does NOT notify the new comment's own author even if they have prior comment
         ->postJson("/api/v1/community/posts/{$this->post->id}/comments", ['body' => 'one more thing'])
         ->assertCreated();
 
-    Notification::assertNothingSent();
+    // `community_reply` still excludes the comment's own author — that's
+    // the original invariant. After #729 A6, the post author may receive
+    // `community_comment_on_your_post` (a different category whose
+    // recipient list legitimately INCLUDES the post author). Narrow the
+    // assertion to the category under test.
+    Notification::assertNotSentTo($a, CommunityReplyNotification::class);
 });
 
 it('skips recipients who opted out of community_reply', function (): void {

@@ -40,9 +40,54 @@ const CATEGORIES: readonly ToggleableCategory[] = [
     i18nDescription: 'profile.notifications.unpaidAthletesDigest.description',
   },
   {
+    key: 'athlete_signed_up',
+    i18nLabel: 'profile.notifications.athleteSignedUp.label',
+    i18nDescription: 'profile.notifications.athleteSignedUp.description',
+  },
+  {
+    key: 'athlete_training_today',
+    i18nLabel: 'profile.notifications.athleteTrainingToday.label',
+    i18nDescription: 'profile.notifications.athleteTrainingToday.description',
+  },
+  {
+    key: 'athlete_medical_cert_expiring',
+    i18nLabel: 'profile.notifications.athleteMedicalCertExpiring.label',
+    i18nDescription: 'profile.notifications.athleteMedicalCertExpiring.description',
+  },
+  {
+    key: 'athlete_promoted',
+    i18nLabel: 'profile.notifications.athletePromoted.label',
+    i18nDescription: 'profile.notifications.athletePromoted.description',
+  },
+  {
+    key: 'athlete_payment_marked_paid',
+    i18nLabel: 'profile.notifications.athletePaymentMarkedPaid.label',
+    i18nDescription: 'profile.notifications.athletePaymentMarkedPaid.description',
+  },
+  {
+    key: 'athlete_payment_overdue',
+    i18nLabel: 'profile.notifications.athletePaymentOverdue.label',
+    i18nDescription: 'profile.notifications.athletePaymentOverdue.description',
+  },
+  {
     key: 'community_reply',
     i18nLabel: 'profile.notifications.communityReply.label',
     i18nDescription: 'profile.notifications.communityReply.description',
+  },
+  {
+    key: 'community_new_post',
+    i18nLabel: 'profile.notifications.communityNewPost.label',
+    i18nDescription: 'profile.notifications.communityNewPost.description',
+  },
+  {
+    key: 'community_comment_on_your_post',
+    i18nLabel: 'profile.notifications.communityCommentOnYourPost.label',
+    i18nDescription: 'profile.notifications.communityCommentOnYourPost.description',
+  },
+  {
+    key: 'community_reaction_on_your_post',
+    i18nLabel: 'profile.notifications.communityReactionOnYourPost.label',
+    i18nDescription: 'profile.notifications.communityReactionOnYourPost.description',
   },
   {
     key: 'community_belt_celebration',

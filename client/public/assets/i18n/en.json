@@ -103,8 +103,10 @@
       "requestNewLink": "Request a new link"
     },
     "register": {
-      "title": "Create your account",
-      "subtitle": "Join Budojo and get started today",
+      "title": "Open your academy account",
+      "subtitle": "For gym owners and academy staff",
+      "athleteNoticeTitle": "Are you an athlete?",
+      "athleteNoticeBody": "This signup is for gym owners. Ask your instructor — they will send you an invitation by email so you can join their academy.",
       "firstName": "First name",
       "firstNamePlaceholder": "Mario",
       "firstNameRequired": "First name is required.",
@@ -775,9 +777,45 @@
         "label": "Unpaid athletes monthly digest",
         "description": "Once a month on the 16th, a list of athletes who haven't paid the monthly fee for the current month."
       },
+      "athleteSignedUp": {
+        "label": "An athlete just signed up",
+        "description": "Inbox + push when an athlete on your roster completes signup and can sign in."
+      },
+      "athleteTrainingToday": {
+        "label": "Today is training day",
+        "description": "Push reminder at 07:00 on days your academy trains — only if you haven't been marked present yet."
+      },
+      "athleteMedicalCertExpiring": {
+        "label": "Your medical certificate expires soon",
+        "description": "Push reminder at 30, 7, and 0 days before your own certificate expires."
+      },
+      "athletePromoted": {
+        "label": "You've been promoted",
+        "description": "Push when your instructor records a new belt for you."
+      },
+      "athletePaymentMarkedPaid": {
+        "label": "Payment received",
+        "description": "Push confirmation when your instructor marks your monthly fee as paid."
+      },
+      "athletePaymentOverdue": {
+        "label": "Monthly fee still unpaid",
+        "description": "Push reminder on the 6th if your current-month fee isn't marked paid yet."
+      },
       "communityReply": {
         "label": "New reply on your community thread",
         "description": "Inbox notification when someone replies to a community post you previously commented on."
+      },
+      "communityNewPost": {
+        "label": "New post in your academy",
+        "description": "Inbox + push when any new post lands in your academy feed — events, belt promotions, announcements."
+      },
+      "communityCommentOnYourPost": {
+        "label": "Comment on your post",
+        "description": "Inbox + push when someone comments on a post you authored."
+      },
+      "communityReactionOnYourPost": {
+        "label": "Reaction on your post",
+        "description": "Inbox + push when someone reacts to a post you authored."
       },
       "communityBeltCelebration": {
         "label": "Teammate belt promotions",

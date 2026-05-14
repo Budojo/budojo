@@ -8,8 +8,12 @@ use App\Enums\ReactionEmoji;
 use App\Models\CommunityPost;
 use App\Models\PostReaction;
 use App\Models\User;
+use App\Notifications\CommunityReactionOnYourPostNotification;
+use App\Support\NotificationCategory;
+use App\Support\NotificationPreferences;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Toggle an emoji reaction on a community post (#603, M9 PR-C server).
@@ -95,10 +99,40 @@ class ToggleReactionAction
             return $emoji->value;
         });
 
+        // Notify the post author when a reaction LANDS (not when it
+        // toggles off — `$your === null` means the user removed their
+        // own reaction). Author self-pings are skipped (#729 A7).
+        if ($your !== null) {
+            $this->notifyPostAuthor($post, $user, $emoji);
+        }
+
         return [
             'your_reaction' => $your,
             'counts' => $this->countsFor($post->id),
         ];
+    }
+
+    private function notifyPostAuthor(CommunityPost $post, User $reactor, ReactionEmoji $emoji): void
+    {
+        $author = $post->createdBy;
+        if ($author->id === $reactor->id) {
+            return;
+        }
+        if (! NotificationPreferences::isEnabled($author, NotificationCategory::COMMUNITY_REACTION_ON_YOUR_POST)) {
+            return;
+        }
+
+        try {
+            $author->notify(new CommunityReactionOnYourPostNotification($post, $reactor, $emoji));
+        } catch (\Throwable $e) {
+            Log::warning('community_reaction_on_your_post notification failed', [
+                'post_id' => $post->id,
+                'reactor_id' => $reactor->id,
+                'author_id' => $author->id,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

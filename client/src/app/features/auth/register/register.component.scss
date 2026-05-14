@@ -1,1 +1,37 @@
 @use '../auth-page';
+
+// Athlete diversion notice (#725). An info-style aside that diverts
+// athletes away from the public registration form to the instructor-
+// invitation path. Uses the design canon's hairline-border + subtle
+// surface pattern — no MD3 chip pill, no shouty colour. Sentence-case
+// throughout (canon § Design system).
+.athlete-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-sm);
+  background: var(--p-surface-50);
+  color: var(--p-text-color);
+
+  &__icon {
+    color: var(--p-primary-color);
+    font-size: 1.125rem;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    min-width: 0; // allow wrap inside flex parent
+
+    strong {
+      font-weight: 600;
+    }
+  }
+}

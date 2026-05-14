@@ -185,3 +185,52 @@ it('is a no-op when the recipient has zero subscriptions', function (): void {
 
     expect(true)->toBeTrue(); // Reaches here without exception → mock expectations enforced on close.
 });
+
+it('suppresses push delivery inside the recipient\'s quiet-hours window (#729 A3)', function (): void {
+    \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::create(2026, 5, 14, 23, 30, 0, config('app.timezone')));
+
+    $author = User::factory()->create();
+    $recipient = userWithAcademy();
+    $recipient->forceFill([
+        'quiet_hours_start_local' => 22,
+        'quiet_hours_end_local' => 7,
+    ])->save();
+    PushSubscription::factory()->for($recipient)->create();
+
+    /** @var WebPush&\Mockery\MockInterface $webPush */
+    $webPush = m::mock(WebPush::class);
+    $webPush->shouldNotReceive('queueNotification');
+    $webPush->shouldNotReceive('flush');
+
+    $channel = new WebPushChannel($webPush);
+    $channel->send($recipient->fresh()->load('pushSubscriptions'), fakeCommunityReplyNotification($author));
+
+    expect(true)->toBeTrue();
+    \Illuminate\Support\Carbon::setTestNow();
+});
+
+it('delivers push outside the quiet-hours window (#729 A3)', function (): void {
+    \Illuminate\Support\Carbon::setTestNow(\Illuminate\Support\Carbon::create(2026, 5, 14, 14, 0, 0, config('app.timezone')));
+
+    $author = User::factory()->create();
+    $recipient = userWithAcademy();
+    $recipient->forceFill([
+        'quiet_hours_start_local' => 22,
+        'quiet_hours_end_local' => 7,
+    ])->save();
+    /** @var PushSubscription $sub */
+    $sub = PushSubscription::factory()->for($recipient)->create();
+
+    /** @var WebPush&\Mockery\MockInterface $webPush */
+    $webPush = m::mock(WebPush::class);
+    $webPush->shouldReceive('queueNotification')->once();
+    $webPush->shouldReceive('flush')->once()->andReturnUsing(function () use ($sub) {
+        yield fakeReport($sub->endpoint, true);
+    });
+
+    $channel = new WebPushChannel($webPush);
+    $channel->send($recipient->fresh()->load('pushSubscriptions'), fakeCommunityReplyNotification($author));
+
+    expect(true)->toBeTrue();
+    \Illuminate\Support\Carbon::setTestNow();
+});

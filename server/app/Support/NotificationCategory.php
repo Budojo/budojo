@@ -75,8 +75,96 @@ final class NotificationCategory
      * Owner-side participation in the community surface landed in
      * #639. Default-on: events are deliberate, relatively rare, and
      * the academy roster opted in by joining the academy.
+     *
+     * **Deprecation path** (#729 A5): now a subset of
+     * `COMMUNITY_NEW_POST` which fires on ANY new community post type.
+     * Keep both during the v2.16 → v2.17 transition; a follow-up
+     * cleanup PR will collapse them once telemetry confirms no drift.
      */
     public const string COMMUNITY_EVENT_NEW = 'community_event_new';
+
+    /**
+     * Owner-side inbox notification — fires the moment an athlete the
+     * owner had on their roster completes signup (`AthleteInvitation`
+     * accept OR `athletes.user_id` flips from null to set via the
+     * legacy manual-link path). Recipients = the academy owner. The
+     * just-signed-up athlete is never notified — they're on the page
+     * already (#729 A1).
+     */
+    public const string ATHLETE_SIGNED_UP = 'athlete_signed_up';
+
+    /**
+     * Athlete-side push reminder — fires once per training-scheduled
+     * day at the local 07:00 wake-up window, ONLY if the athlete has
+     * not already been marked present for the day (so a 6:30am open-
+     * mat athlete doesn't get a redundant ping at 7:00). Recipients =
+     * every athlete whose academy `training_days` includes today
+     * AND who has no `attendance_records` row for today (#729 A2).
+     */
+    public const string ATHLETE_TRAINING_TODAY = 'athlete_training_today';
+
+    /**
+     * Inbox notification fired when ANY new community post lands in
+     * the user's academy (event, belt-promotion auto-post, future post
+     * types). Superset of `COMMUNITY_EVENT_NEW` and `COMMUNITY_BELT_
+     * CELEBRATION`'s notification trigger. Recipients = every active
+     * member of the post's academy minus the author (#729 A5).
+     */
+    public const string COMMUNITY_NEW_POST = 'community_new_post';
+
+    /**
+     * Inbox notification fired when someone comments on a post YOU
+     * authored. Distinct from `COMMUNITY_REPLY` (which fires on
+     * sibling comments under a thread you participate in) — this
+     * pings the post author specifically (#729 A6).
+     */
+    public const string COMMUNITY_COMMENT_ON_YOUR_POST = 'community_comment_on_your_post';
+
+    /**
+     * Inbox notification fired when someone reacts (clap / pray) on
+     * a post YOU authored. Reactor never self-pings. Implementation
+     * note: production may want a debounce / coalesce window before
+     * we land a "5 people reacted" digest variant — flagged in #729
+     * A7 implementation discussion (#729 A7).
+     */
+    public const string COMMUNITY_REACTION_ON_YOUR_POST = 'community_reaction_on_your_post';
+
+    /**
+     * Athlete-side inbox + push fired when the athlete's own medical
+     * certificate is at the T-30 / T-7 / T-0 thresholds (#729 B1).
+     * Mirrors the owner-side `MEDICAL_CERT_EXPIRY_REMINDERS` digest:
+     * the digest tells the owner "Mario's cert expires in 7 days";
+     * this category tells Mario himself the same thing. Dispatched by
+     * `SendMedicalCertExpiryReminders` alongside the owner email.
+     */
+    public const string ATHLETE_MEDICAL_CERT_EXPIRING = 'athlete_medical_cert_expiring';
+
+    /**
+     * Athlete-side inbox + push fired when the athlete themselves is
+     * promoted to a new belt (#729 B2). Today the matrix had
+     * `COMMUNITY_BELT_CELEBRATION` which notifies OTHER members about
+     * the promotion; the directly-affected athlete received nothing.
+     * This closes that gap.
+     */
+    public const string ATHLETE_PROMOTED = 'athlete_promoted';
+
+    /**
+     * Athlete-side inbox + push fired when the owner marks the
+     * athlete's monthly payment as paid (#729 B3). Confirmation
+     * receipt — the athlete sees the same thing on their profile but
+     * a proactive push closes the loop visibly.
+     */
+    public const string ATHLETE_PAYMENT_MARKED_PAID = 'athlete_payment_marked_paid';
+
+    /**
+     * Athlete-side inbox + push reminder for an unpaid monthly fee
+     * past a per-academy grace day (#729 B4). Counterpart to
+     * `UNPAID_ATHLETES_DIGEST` which informs the OWNER monthly; this
+     * pings the athlete directly. Scheduled via
+     * `budojo:send-athlete-payment-overdue-pushes` on the 6th of
+     * each month at 09:00.
+     */
+    public const string ATHLETE_PAYMENT_OVERDUE = 'athlete_payment_overdue';
 
     /**
      * Every category, in the order the SPA panel renders them.
@@ -88,7 +176,16 @@ final class NotificationCategory
         return [
             self::MEDICAL_CERT_EXPIRY_REMINDERS,
             self::UNPAID_ATHLETES_DIGEST,
+            self::ATHLETE_SIGNED_UP,
+            self::ATHLETE_TRAINING_TODAY,
+            self::ATHLETE_MEDICAL_CERT_EXPIRING,
+            self::ATHLETE_PROMOTED,
+            self::ATHLETE_PAYMENT_MARKED_PAID,
+            self::ATHLETE_PAYMENT_OVERDUE,
             self::COMMUNITY_REPLY,
+            self::COMMUNITY_NEW_POST,
+            self::COMMUNITY_COMMENT_ON_YOUR_POST,
+            self::COMMUNITY_REACTION_ON_YOUR_POST,
             self::COMMUNITY_BELT_CELEBRATION,
             self::COMMUNITY_EVENT_NEW,
         ];

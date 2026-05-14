@@ -6,6 +6,29 @@
       <p>{{ 'auth.register.subtitle' | translate }}</p>
     </div>
 
+    <!--
+      Athlete diversion notice (#725). The public /auth/register flow is
+      ONLY for gym owners and academy staff — athletes must be invited
+      by their instructor (#445 / multi-user epic). Without this notice
+      athletes were landing here and self-registering, which leaves them
+      orphaned (no academy attached, no athlete row) and creates support
+      load to clean up.
+    -->
+    <aside
+      class="athlete-notice"
+      role="note"
+      aria-labelledby="athlete-notice-title"
+      data-cy="register-athlete-notice"
+    >
+      <i class="pi pi-info-circle athlete-notice__icon" aria-hidden="true"></i>
+      <div class="athlete-notice__body">
+        <strong id="athlete-notice-title">
+          {{ 'auth.register.athleteNoticeTitle' | translate }}
+        </strong>
+        <span>{{ 'auth.register.athleteNoticeBody' | translate }}</span>
+      </div>
+    </aside>
+
     @if (error()) {
       <p-message severity="error" [text]="error()!" styleClass="w-full" />
     }
