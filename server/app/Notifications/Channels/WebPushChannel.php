@@ -71,6 +71,18 @@ class WebPushChannel
             return;
         }
 
+        // VAPID-unconfigured environments: silently no-op rather than
+        // letting `minishlink/web-push` throw at sign time. The
+        // controller already 503's a subscribe attempt in this state
+        // (so no rows should exist), but a row could persist across a
+        // misconfigured redeploy that emptied the env — log it once
+        // and bail before resolving the WebPush instance.
+        if (! self::vapidConfigured()) {
+            Log::warning('WebPushChannel: VAPID keys are not configured; skipping delivery.');
+
+            return;
+        }
+
         $subscriptions = $notifiable->pushSubscriptions;
         if ($subscriptions->isEmpty()) {
             return;
@@ -125,5 +137,21 @@ class WebPushChannel
                 'reason' => $report->getReason(),
             ]);
         }
+    }
+
+    /**
+     * Mirrors the `PushSubscriptionController` gate so the
+     * "configured at subscribe time AND at delivery time" check stays
+     * symmetric: all three keys non-empty strings.
+     */
+    private static function vapidConfigured(): bool
+    {
+        $pub = config('push.vapid.public_key');
+        $priv = config('push.vapid.private_key');
+        $sub = config('push.vapid.subject');
+
+        return \is_string($pub) && $pub !== ''
+            && \is_string($priv) && $priv !== ''
+            && \is_string($sub) && $sub !== '';
     }
 }

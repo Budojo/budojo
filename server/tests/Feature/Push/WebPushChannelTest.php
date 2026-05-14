@@ -115,6 +115,25 @@ it('deletes a subscription row when the vendor returns 410 Gone', function (): v
     expect(PushSubscription::query()->whereKey($sub->id)->exists())->toBeFalse();
 });
 
+it('is a no-op when VAPID keys are not configured on the server', function (): void {
+    config()->set('push.vapid.public_key', '');
+    config()->set('push.vapid.private_key', '');
+
+    $author = User::factory()->create();
+    $recipient = userWithAcademy();
+    PushSubscription::factory()->for($recipient)->create();
+
+    /** @var WebPush&\Mockery\MockInterface $webPush */
+    $webPush = m::mock(WebPush::class);
+    $webPush->shouldNotReceive('queueNotification');
+    $webPush->shouldNotReceive('flush');
+
+    $channel = new WebPushChannel($webPush);
+    $channel->send($recipient->fresh()->load('pushSubscriptions'), fakeCommunityReplyNotification($author));
+
+    expect(true)->toBeTrue();
+});
+
 it('is a no-op when the recipient has zero subscriptions', function (): void {
     $author = User::factory()->create();
     $recipient = userWithAcademy();
