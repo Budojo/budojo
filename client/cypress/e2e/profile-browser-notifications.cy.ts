@@ -20,8 +20,9 @@
  */
 describe('Profile → Browser notifications (#694)', () => {
   beforeEach(() => {
-    // Auth + minimal /me + academy intercepts the dashboard shell
-    // needs for the route to settle.
+    cy.clearLocalStorage();
+    // Auth + dashboard-shell intercepts the route depends on (mirrors
+    // the pattern in `profile-notifications.cy.ts`).
     cy.intercept('GET', '/api/v1/auth/me', {
       statusCode: 200,
       body: {
@@ -43,6 +44,11 @@ describe('Profile → Browser notifications (#694)', () => {
         },
       },
     });
+    cy.intercept('GET', '/api/v1/academy', {
+      statusCode: 200,
+      body: { data: { id: 1, name: 'Academy Gracie Milano' } },
+    });
+    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
     // Default empty responses for the other profile sub-components so
     // the page renders without console noise.
     cy.intercept('GET', '/api/v1/me/notification-preferences', { data: {} });
