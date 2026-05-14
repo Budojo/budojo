@@ -26,7 +26,17 @@ class UpdateAthleteRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->authorizeActiveAcademy(Capability::AthletesCreateUpdate);
+        /** @var Athlete|null $athlete */
+        $athlete = $this->route('athlete');
+        if (! $athlete instanceof Athlete) {
+            return false;
+        }
+
+        // Route-bound: capability check uses the athlete's actual
+        // academy, NOT the caller's active one. Otherwise a user
+        // with capability in academy A could pass FormRequest
+        // validation for an athlete in academy B.
+        return $this->authorizeInAcademy($athlete->academy_id, Capability::AthletesCreateUpdate);
     }
 
     /**
@@ -34,10 +44,13 @@ class UpdateAthleteRequest extends FormRequest
      */
     public function rules(): array
     {
-        $academyId = $this->user()?->active_academy_id;
-
         /** @var Athlete|null $athlete */
         $athlete = $this->route('athlete');
+        // Scope the unique-email rule to the athlete's actual
+        // academy — not the caller's active one — so duplicates
+        // in the athlete's tenant are caught regardless of which
+        // academy the caller is currently switched to.
+        $academyId = $athlete?->academy_id;
 
         return [
             'first_name' => ['sometimes', 'string', 'max:100'],

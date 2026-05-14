@@ -33,7 +33,12 @@ class StoreAthleteRequest extends FormRequest
      */
     public function rules(): array
     {
-        $academyId = $this->user()?->active_academy_id;
+        // Use activeAcademyId() — same helper backing the
+        // authorize() check — so the fallback to first-active-
+        // membership for users with null pointer also reaches the
+        // unique-email scope here. Otherwise duplicates in the
+        // resolved academy would slip past validation.
+        $academyId = $this->user()?->activeAcademyId();
 
         return [
             'first_name' => ['required', 'string', 'max:100'],

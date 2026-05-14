@@ -98,19 +98,20 @@ class PurgeAccountAction
             $paths['public'][] = $user->avatar_path;
         }
 
-        if ($user->academy === null) {
+        $academy = $user->activeAcademy();
+        if ($academy === null) {
             return $paths;
         }
 
-        $athletes = $user->academy->athletes()->withTrashed()->with('documents')->get();
+        $athletes = $academy->athletes()->withTrashed()->with('documents')->get();
         foreach ($athletes as $athlete) {
             foreach ($athlete->documents as $doc) {
                 $paths['local'][] = $doc->file_path;
             }
         }
 
-        if (\is_string($user->academy->logo_path) && $user->academy->logo_path !== '') {
-            $paths['public'][] = $user->academy->logo_path;
+        if (\is_string($academy->logo_path) && $academy->logo_path !== '') {
+            $paths['public'][] = $academy->logo_path;
         }
 
         return $paths;

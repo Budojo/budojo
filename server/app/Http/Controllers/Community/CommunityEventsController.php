@@ -36,7 +36,7 @@ class CommunityEventsController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $academy = $user->academy;
+        $academy = $user->activeAcademy();
         // authorize() already guarantees non-null; this is a
         // PHPStan-friendly re-assertion.
         if ($academy === null) {

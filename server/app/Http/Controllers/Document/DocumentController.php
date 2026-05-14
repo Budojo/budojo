@@ -42,7 +42,8 @@ class DocumentController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy === null) {
+        $academy = $user->activeAcademy();
+        if ($academy === null) {
             return response()->json(['message' => 'No academy found.'], 403);
         }
 
@@ -50,7 +51,7 @@ class DocumentController extends Controller
         $days = is_numeric($daysParam) ? (int) $daysParam : 30;
         $days = max(1, min($days, self::MAX_EXPIRING_DAYS));
 
-        $documents = $this->expiringAction->execute($user->academy, $days);
+        $documents = $this->expiringAction->execute($academy, $days);
 
         return DocumentResource::collection($documents);
     }
@@ -157,9 +158,9 @@ class DocumentController extends Controller
      */
     private function userOwns(User $user, Document $document): bool
     {
-        return $user->academy !== null
+        return $user->activeAcademyId() !== null
             && $document->athlete !== null
-            && $document->athlete->academy_id === $user->academy->id;
+            && $document->athlete->academy_id === $user->activeAcademyId();
     }
 
     /**

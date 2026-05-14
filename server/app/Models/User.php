@@ -142,6 +142,48 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * "Which academy am I currently operating in?" — the resolved
+     * id, with a fallback to the first non-revoked membership when
+     * the pointer is unset. Keeps the legacy single-academy code
+     * paths working through the multi-user transition without
+     * forcing every caller to deal with the null case.
+     *
+     * The fallback fires for newly-bootstrapped users (account
+     * just created via owner registration) and for test scenarios
+     * where the observer set the column but the in-memory User
+     * instance is stale.
+     */
+    public function activeAcademyId(): ?int
+    {
+        if ($this->active_academy_id !== null) {
+            return $this->active_academy_id;
+        }
+
+        /** @var AcademyMembership|null $first */
+        $first = $this->memberships()->whereNull('revoked_at')->first();
+
+        return $first?->academy_id;
+    }
+
+    /**
+     * The hydrated Academy model for `activeAcademyId()` — null when
+     * the user has no resolvable active academy. Use this in
+     * controllers / Actions instead of the legacy `$user->academy`
+     * hasOne relation (the latter only finds academies the user owns
+     * via `academies.user_id`, which collapses to ONE academy and
+     * doesn't know about admin / instructor / assistant membership).
+     */
+    public function activeAcademy(): ?Academy
+    {
+        $id = $this->activeAcademyId();
+        if ($id === null) {
+            return null;
+        }
+
+        return Academy::query()->find($id);
+    }
+
+    /**
      * Capability gate (#427 / #428 / #718). The single helper every
      * FormRequest's `authorize()` will go through after sub-issue 4/9
      * rewrites them. Resolves the user's active-and-not-revoked

@@ -90,7 +90,7 @@ class AthletePaymentController extends Controller
 
     private function userOwns(User $user, Athlete $athlete): bool
     {
-        return $user->academy !== null
-            && $athlete->academy_id === $user->academy->id;
+        return $user->activeAcademyId() !== null
+            && $athlete->academy_id === $user->activeAcademyId();
     }
 }

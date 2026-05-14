@@ -37,7 +37,8 @@ class AttendanceController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy === null) {
+        $academy = $user->activeAcademy();
+        if ($academy === null) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -56,7 +57,7 @@ class AttendanceController extends Controller
         }
 
         $records = $this->dailyAction->execute(
-            academy: $user->academy,
+            academy: $academy,
             date: $date,
             includeTrashed: $request->boolean('trashed'),
         );
@@ -68,7 +69,7 @@ class AttendanceController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $academy = $user->academy;
+        $academy = $user->activeAcademy();
 
         // MarkAttendanceRequest::authorize() already guarantees this, but
         // PHPStan can't follow that invariant across a cross-class boundary.
@@ -140,7 +141,7 @@ class AttendanceController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy === null || $athlete->academy_id !== $user->academy->id) {
+        if ($user->activeAcademyId() === null || $athlete->academy_id !== $user->activeAcademyId()) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -156,7 +157,7 @@ class AttendanceController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $academy = $user->academy;
+        $academy = $user->activeAcademy();
 
         // Same invariant reasoning as store(): authorize() gates this, but
         // PHPStan doesn't track it across FormRequest boundaries.
@@ -185,9 +186,9 @@ class AttendanceController extends Controller
      */
     private function userOwns(User $user, AttendanceRecord $record): bool
     {
-        return $user->academy !== null
+        return $user->activeAcademyId() !== null
             && $record->athlete !== null
-            && $record->athlete->academy_id === $user->academy->id;
+            && $record->athlete->academy_id === $user->activeAcademyId();
     }
 
     private function parseOptionalDate(Request $request, string $key): ?CarbonImmutable

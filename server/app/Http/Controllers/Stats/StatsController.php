@@ -27,7 +27,7 @@ class StatsController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $academy = $user->academy;
+        $academy = $user->activeAcademy();
 
         // Defensive — DailyAttendanceRangeRequest::authorize() already gates this,
         // but PHPStan can't follow that invariant cross-class.
@@ -44,7 +44,7 @@ class StatsController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $academy = $user->academy;
+        $academy = $user->activeAcademy();
 
         if ($academy === null) {
             return response()->json(['message' => 'Forbidden.'], 403);
@@ -59,7 +59,7 @@ class StatsController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $academy = $user->academy;
+        $academy = $user->activeAcademy();
 
         if ($academy === null) {
             return response()->json(['message' => 'Forbidden.'], 403);

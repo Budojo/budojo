@@ -6,7 +6,6 @@ namespace App\Http\Requests\Concerns;
 
 use App\Authorization\Capability;
 use App\Enums\UserRole;
-use App\Models\AcademyMembership;
 use App\Models\User;
 
 /**
@@ -42,7 +41,7 @@ trait AuthorizesAcademyCapability
         if ($user === null) {
             return false;
         }
-        $academyId = $this->resolveActiveAcademyId($user);
+        $academyId = $user->activeAcademyId();
         if ($academyId === null) {
             return false;
         }
@@ -74,17 +73,5 @@ trait AuthorizesAcademyCapability
         }
 
         return $user->canInAcademy($academyId, $staffCapability);
-    }
-
-    private function resolveActiveAcademyId(User $user): ?int
-    {
-        if ($user->active_academy_id !== null) {
-            return $user->active_academy_id;
-        }
-
-        /** @var AcademyMembership|null $first */
-        $first = $user->memberships()->whereNull('revoked_at')->first();
-
-        return $first?->academy_id;
     }
 }

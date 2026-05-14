@@ -30,7 +30,7 @@ class AthletePromotionController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->academy === null || $athlete->academy_id !== $user->academy->id) {
+        if ($user->activeAcademyId() === null || $athlete->academy_id !== $user->activeAcademyId()) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
