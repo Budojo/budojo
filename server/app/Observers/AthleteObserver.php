@@ -12,6 +12,7 @@ use App\Models\AthletePromotion;
 use App\Models\CommunityPost;
 use App\Models\User;
 use App\Notifications\CommunityBeltCelebrationNotification;
+use App\Notifications\CommunityNewPostNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\Auth;
@@ -149,6 +150,7 @@ class AthleteObserver
         ]);
 
         $this->fanoutBeltCelebration($athlete, $post, $userId, $oldBeltString, $newBeltString);
+        $this->fanoutCommunityNewPost($post, $userId);
     }
 
     private function handleStripesChange(Athlete $athlete, int $userId, bool $beltAlsoChanged): void
@@ -186,7 +188,8 @@ class AthleteObserver
             return;
         }
 
-        CommunityPost::create([
+        /** @var CommunityPost $stripePost */
+        $stripePost = CommunityPost::create([
             'academy_id' => $athlete->academy_id,
             'type' => CommunityPostType::StripePromotion,
             'visibility' => CommunityPostVisibility::Academy,
@@ -204,10 +207,69 @@ class AthleteObserver
             'created_by_user_id' => $userId,
         ]);
 
-        // No notification fanout for stripes — they're frequent
-        // (typically 0→1→2→3→4 within a single belt year). The feed
-        // card is the surface. An opt-in `community_stripe_celebration`
-        // category lands later if requested.
+        // Stripe-specific category (`community_stripe_celebration`)
+        // remains future work — stripes are frequent (0→1→2→3→4 in a
+        // belt year) so a dedicated category needs a debounce design
+        // before it ships. BUT a stripe-promotion post IS a new post,
+        // so the generic `community_new_post` fanout (#729 A5) fires:
+        // recipients who explicitly opted in get a generic "new post
+        // in your academy" push; those who didn't are unaffected
+        // (default-on but trivially opt-out-able from the prefs panel).
+        $this->fanoutCommunityNewPost($stripePost, $userId);
+    }
+
+    /**
+     * Generic "new community post" fanout (#729 A5). Recipients = every
+     * active member of the post's academy minus the editor. Today this
+     * fires for belt-promotion + stripe-promotion auto-posts; event-
+     * type posts continue to route through the legacy
+     * `community_event_new` category for backwards-compat (deprecation
+     * cleanup deferred to a follow-up PR that includes a data migration
+     * for users who explicitly opted out of `event_new`).
+     */
+    private function fanoutCommunityNewPost(CommunityPost $post, int $editorId): void
+    {
+        $ownerId = $post->academy->user_id;
+        $athleteUserIds = Athlete::query()
+            ->where('academy_id', $post->academy_id)
+            ->whereNotNull('user_id')
+            ->where('user_id', '!=', $editorId)
+            ->pluck('user_id');
+
+        $recipientIds = $athleteUserIds
+            ->when(
+                $ownerId !== $editorId,
+                fn ($collection) => $collection->push($ownerId),
+            )
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($recipientIds === []) {
+            return;
+        }
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, User> $recipients */
+        $recipients = User::query()->whereIn('id', $recipientIds)->get();
+
+        $eligible = $recipients->filter(
+            fn (User $u) => NotificationPreferences::isEnabled($u, NotificationCategory::COMMUNITY_NEW_POST),
+        );
+
+        if ($eligible->isEmpty()) {
+            return;
+        }
+
+        try {
+            Notification::send($eligible, new CommunityNewPostNotification($post));
+        } catch (\Throwable $e) {
+            Log::warning('community_new_post notification fanout failed', [
+                'post_id' => $post->id,
+                'recipient_count' => $eligible->count(),
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

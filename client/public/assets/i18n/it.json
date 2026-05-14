@@ -777,9 +777,29 @@
         "label": "Digest mensile atleti non paganti",
         "description": "Una volta al mese, il giorno 16, l'elenco degli atleti che non hanno pagato la quota del mese corrente."
       },
+      "athleteSignedUp": {
+        "label": "Un atleta si è iscritto",
+        "description": "Notifica in app + push quando un atleta del tuo roster completa la registrazione e può accedere."
+      },
+      "athleteTrainingToday": {
+        "label": "Oggi si allena",
+        "description": "Promemoria push alle 07:00 nei giorni in cui la tua palestra si allena — solo se non sei già stato segnato presente."
+      },
       "communityReply": {
         "label": "Nuova risposta in un tuo thread community",
         "description": "Notifica in inbox quando qualcuno risponde a un post community su cui hai già commentato."
+      },
+      "communityNewPost": {
+        "label": "Nuovo post nella tua academy",
+        "description": "Notifica in inbox + push quando un nuovo post arriva nel feed della tua academy — eventi, promozioni, annunci."
+      },
+      "communityCommentOnYourPost": {
+        "label": "Commento al tuo post",
+        "description": "Notifica in inbox + push quando qualcuno commenta un post di cui sei autore."
+      },
+      "communityReactionOnYourPost": {
+        "label": "Reazione al tuo post",
+        "description": "Notifica in inbox + push quando qualcuno reagisce a un post di cui sei autore."
       },
       "communityBeltCelebration": {
         "label": "Promozioni di cintura dei compagni",

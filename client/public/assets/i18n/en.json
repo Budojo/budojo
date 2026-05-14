@@ -777,9 +777,29 @@
         "label": "Unpaid athletes monthly digest",
         "description": "Once a month on the 16th, a list of athletes who haven't paid the monthly fee for the current month."
       },
+      "athleteSignedUp": {
+        "label": "An athlete just signed up",
+        "description": "Inbox + push when an athlete on your roster completes signup and can sign in."
+      },
+      "athleteTrainingToday": {
+        "label": "Today is training day",
+        "description": "Push reminder at 07:00 on days your academy trains — only if you haven't been marked present yet."
+      },
       "communityReply": {
         "label": "New reply on your community thread",
         "description": "Inbox notification when someone replies to a community post you previously commented on."
+      },
+      "communityNewPost": {
+        "label": "New post in your academy",
+        "description": "Inbox + push when any new post lands in your academy feed — events, belt promotions, announcements."
+      },
+      "communityCommentOnYourPost": {
+        "label": "Comment on your post",
+        "description": "Inbox + push when someone comments on a post you authored."
+      },
+      "communityReactionOnYourPost": {
+        "label": "Reaction on your post",
+        "description": "Inbox + push when someone reacts to a post you authored."
       },
       "communityBeltCelebration": {
         "label": "Teammate belt promotions",

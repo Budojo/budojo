@@ -7,6 +7,9 @@ namespace App\Actions\Auth;
 use App\Enums\UserRole;
 use App\Models\AthleteInvitation;
 use App\Models\User;
+use App\Notifications\AthleteSignedUpNotification;
+use App\Support\NotificationCategory;
+use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
@@ -142,6 +145,24 @@ class AcceptAthleteInvitationAction
                 $athlete->forceFill(['user_id' => $user->id])->save();
 
                 $lockedInvitation->forceFill(['accepted_at' => now()])->save();
+
+                // Owner-side athlete_signed_up notification (#729 A1).
+                // Fanout to the academy owner — gated by their personal
+                // preference. The just-signed-up athlete never receives
+                // this fanout; they're on the page already. Dispatched
+                // inside the transaction is fine because Laravel's
+                // notification dispatcher pushes to the queue (or
+                // database channel writes a row), neither of which
+                // depends on the transaction having committed yet — and
+                // both are safely rolled back with the transaction if
+                // the surrounding flow blows up between here and the
+                // final `commit()`.
+                $owner = $athlete->academy?->owner;
+                if ($owner !== null
+                    && NotificationPreferences::isEnabled($owner, NotificationCategory::ATHLETE_SIGNED_UP)
+                ) {
+                    $owner->notify(new AthleteSignedUpNotification($athlete->fresh() ?? $athlete));
+                }
 
                 // Token name shows up in the user's "Active sessions"
                 // list (#413). The Action accepts a `$deviceLabel`

@@ -141,8 +141,14 @@ it('persists the celebration notification to the inbox with the expected wire sh
     $this->actingAs($this->owner);
     $subject->update(['belt' => Belt::Blue]);
 
+    // After #729 A5 the same belt change also fires a generic
+    // `community_new_post` notification (default-on, sibling category).
+    // Filter explicitly on `data->kind` so the assertion stays focused
+    // on the celebration row regardless of insert order.
     /** @var \Illuminate\Notifications\DatabaseNotification|null $row */
-    $row = $a->notifications()->first();
+    $row = $a->notifications()
+        ->where('data->kind', 'community_belt_celebration')
+        ->first();
     expect($row)->not->toBeNull();
     /** @var array<string, mixed> $data */
     $data = $row->data;

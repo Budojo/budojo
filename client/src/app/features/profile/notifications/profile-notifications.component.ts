@@ -40,9 +40,34 @@ const CATEGORIES: readonly ToggleableCategory[] = [
     i18nDescription: 'profile.notifications.unpaidAthletesDigest.description',
   },
   {
+    key: 'athlete_signed_up',
+    i18nLabel: 'profile.notifications.athleteSignedUp.label',
+    i18nDescription: 'profile.notifications.athleteSignedUp.description',
+  },
+  {
+    key: 'athlete_training_today',
+    i18nLabel: 'profile.notifications.athleteTrainingToday.label',
+    i18nDescription: 'profile.notifications.athleteTrainingToday.description',
+  },
+  {
     key: 'community_reply',
     i18nLabel: 'profile.notifications.communityReply.label',
     i18nDescription: 'profile.notifications.communityReply.description',
+  },
+  {
+    key: 'community_new_post',
+    i18nLabel: 'profile.notifications.communityNewPost.label',
+    i18nDescription: 'profile.notifications.communityNewPost.description',
+  },
+  {
+    key: 'community_comment_on_your_post',
+    i18nLabel: 'profile.notifications.communityCommentOnYourPost.label',
+    i18nDescription: 'profile.notifications.communityCommentOnYourPost.description',
+  },
+  {
+    key: 'community_reaction_on_your_post',
+    i18nLabel: 'profile.notifications.communityReactionOnYourPost.label',
+    i18nDescription: 'profile.notifications.communityReactionOnYourPost.description',
   },
   {
     key: 'community_belt_celebration',
