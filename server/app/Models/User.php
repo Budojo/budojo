@@ -39,10 +39,11 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon|null  $two_factor_confirmed_at       Set when the user completes TOTP enrolment (#412). Null = 2FA not active.
  * @property Carbon|null  $onboarding_dismissed_at Set when the user explicitly skips the first-run guided tour (#424). Once non-null the SPA never re-renders the tour.
  * @property array<int, string>|null  $onboarding_completed_steps Step keys the user has ticked off on the "Getting started" checklist (#424). Null until first interaction.
+ * @property int|null     $active_academy_id  Currently-selected academy (#427 / #714). Persists across sessions; FK to `academies.id` with `ON DELETE SET NULL`. Null until the user is added to their first membership.
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at', 'onboarding_dismissed_at', 'onboarding_completed_steps'])]
+#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at', 'onboarding_dismissed_at', 'onboarding_completed_steps', 'active_academy_id'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -105,6 +106,39 @@ class User extends Authenticatable implements MustVerifyEmail
     public function pushSubscriptions(): HasMany
     {
         return $this->hasMany(PushSubscription::class);
+    }
+
+    /**
+     * Academy memberships (#427 / #714). One row per (user, academy)
+     * pair the user has been added to. Includes soft-revoked rows;
+     * callers that only want active memberships should `->whereNull
+     * ('revoked_at')` or use `activeMembership()` below.
+     *
+     * @return HasMany<AcademyMembership, $this>
+     */
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(AcademyMembership::class);
+    }
+
+    /**
+     * The active (non-revoked) membership for the user's currently-
+     * selected academy (`users.active_academy_id`). Returns null when
+     * the pointer is unset, when the pointed-at academy was deleted
+     * (FK `ON DELETE SET NULL`), or when the matching row is
+     * soft-revoked.
+     */
+    public function activeMembership(): ?AcademyMembership
+    {
+        $activeId = $this->active_academy_id ?? null;
+        if ($activeId === null) {
+            return null;
+        }
+
+        return $this->memberships()
+            ->where('academy_id', $activeId)
+            ->whereNull('revoked_at')
+            ->first();
     }
 
     /**

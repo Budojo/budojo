@@ -49,6 +49,30 @@ class Academy extends Model implements HasAddress
     }
 
     /**
+     * Team memberships (#427 / #714). Includes soft-revoked rows;
+     * use `->whereNull('revoked_at')` to scope to currently-active
+     * team members.
+     *
+     * @return HasMany<AcademyMembership, $this>
+     */
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(AcademyMembership::class);
+    }
+
+    /**
+     * Pending invitations (#427 / #714). Rows here are by definition
+     * not-yet-accepted and not-revoked — terminal state hard-deletes
+     * the row.
+     *
+     * @return HasMany<AcademyInvitation, $this>
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(AcademyInvitation::class);
+    }
+
+    /**
      * Polymorphic address (#72). `morphOne` is a READ-side convenience —
      * Eloquent returns the first matching row but does not enforce that
      * only one exists. The 1:1 invariant is enforced by:
