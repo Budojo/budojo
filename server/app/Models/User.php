@@ -142,6 +142,30 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Capability gate (#427 / #428 / #718). The single helper every
+     * FormRequest's `authorize()` will go through after sub-issue 4/9
+     * rewrites them. Resolves the user's active-and-not-revoked
+     * membership in the target academy and delegates to
+     * `RoleCapabilities::allows()`. Returns `false` when there is no
+     * matching membership at all — capability checks against an
+     * academy the user doesn't belong to are always denied.
+     */
+    public function canInAcademy(int $academyId, \App\Authorization\Capability $capability): bool
+    {
+        /** @var AcademyMembership|null $membership */
+        $membership = $this->memberships()
+            ->where('academy_id', $academyId)
+            ->whereNull('revoked_at')
+            ->first();
+
+        if ($membership === null) {
+            return false;
+        }
+
+        return \App\Authorization\RoleCapabilities::allows($membership->role, $capability);
+    }
+
+    /**
      * Email-change-with-verification pending row (#476). At most one
      * row exists at a time per user (DB UNIQUE on `user_id`). Presence
      * ⇒ the user has requested an email change but hasn't clicked the

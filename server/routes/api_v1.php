@@ -261,6 +261,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->where('id', '[0-9]+');
     Route::delete('/me/sessions', [\App\Http\Controllers\User\SessionController::class, 'destroyOthers']);
 
+    // Active academy switching (#427 / #718). GET returns the
+    // currently-selected academy + the user's role + the capabilities
+    // list (so the SPA's *budojoCan directive doesn't need a separate
+    // round-trip on switch). 204 when the user has no active
+    // membership yet. PATCH switches to the academy_id in the body;
+    // FormRequest validates the user has an active membership there.
+    Route::get('/me/active-academy', [\App\Http\Controllers\Me\ActiveAcademyController::class, 'show']);
+    Route::patch('/me/active-academy', [\App\Http\Controllers\Me\ActiveAcademyController::class, 'update']);
+
     // Web Push subscriptions (#419). One row per device the user has
     // explicitly granted push permission on. The SPA POSTs the
     // PushSubscription envelope from `PushManager.subscribe()`;
