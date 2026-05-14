@@ -98,7 +98,16 @@ class PurgeAccountAction
             $paths['public'][] = $user->avatar_path;
         }
 
-        $academy = $user->activeAcademy();
+        // GDPR purge collects files for academies that will actually
+        // be cascaded by the FK on `academies.user_id` when this user
+        // is deleted — NOT the active academy (which may be one the
+        // user is only a member of, not the owner). Using
+        // `activeAcademy()` here would orphan files from the
+        // deleted owned academy and incorrectly target another
+        // owner's files. Use the legacy `User::academy()` hasOne
+        // because it walks `academies.user_id` — the same column the
+        // cascade walks.
+        $academy = $user->academy;
         if ($academy === null) {
             return $paths;
         }

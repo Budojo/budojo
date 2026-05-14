@@ -61,9 +61,17 @@ class ActiveAcademyController extends Controller
         // re-resolved membership so the response shape matches GET.
         try {
             $membership = DB::transaction(function () use ($user, $targetAcademyId): AcademyMembership {
+                // `lockForUpdate()` issues SELECT … FOR UPDATE so a
+                // concurrent revoke (which UPDATEs `revoked_at`)
+                // blocks until this transaction commits. Without it,
+                // the read returned a non-revoked row that could be
+                // revoked between the SELECT and the user save, and
+                // the pointer would still land at a revoked
+                // membership. Copilot review on #723.
                 $active = $user->memberships()
                     ->where('academy_id', $targetAcademyId)
                     ->whereNull('revoked_at')
+                    ->lockForUpdate()
                     ->first();
 
                 if ($active === null) {

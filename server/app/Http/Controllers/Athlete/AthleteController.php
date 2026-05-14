@@ -226,7 +226,10 @@ class AthleteController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! $this->userOwns($user, $athlete)) {
+        // Capability gate: AthletesDelete is owner/admin only per
+        // the matrix. Tenant scope is implicit — canInAcademy()
+        // requires an active membership in the athlete's academy.
+        if (! $user->canInAcademy($athlete->academy_id, \App\Authorization\Capability::AthletesDelete)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
@@ -248,7 +251,9 @@ class AthleteController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! $this->userOwns($user, $athlete)) {
+        // Capability gate: AthletesRestore is owner/admin only per
+        // the matrix.
+        if (! $user->canInAcademy($athlete->academy_id, \App\Authorization\Capability::AthletesRestore)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 

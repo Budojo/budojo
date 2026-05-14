@@ -143,7 +143,15 @@ class DocumentController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! $this->userOwns($user, $document)) {
+        $athlete = $document->athlete;
+        if ($athlete === null) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        // Capability gate: DocumentsDelete is owner/admin only per
+        // the matrix. Instructor can upload but not delete;
+        // assistant is read-only on documents.
+        if (! $user->canInAcademy($athlete->academy_id, \App\Authorization\Capability::DocumentsDelete)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 

@@ -23,19 +23,26 @@ class AcademyInvitationFactory extends Factory
      */
     public function definition(): array
     {
-        // Default: build the academy first, then set the inviter to
-        // its primary owner so the (academy, inviter) pair is always
-        // consistent. Stand-alone-user inviters were unrelated to the
-        // academy under invitation and could surface inviters who
-        // don't belong to the academy — incoherent fixture data.
-        $academy = Academy::factory()->create();
-
+        // Use Closure-style attributes so `invited_by_user_id` is
+        // derived from the FINAL `academy_id` — including the one
+        // set via `->for($academy)`. The previous shape eagerly
+        // created an internal academy + bound the inviter to it,
+        // so a caller doing `->for($differentAcademy)` ended up
+        // with an inviter who was not a member of the resulting
+        // invitation's academy AND a stray internal academy
+        // persisted as a side effect. Copilot review on #723.
         return [
-            'academy_id' => $academy->id,
+            'academy_id' => Academy::factory(),
             'email' => $this->faker->unique()->safeEmail(),
             'role' => MembershipRole::Instructor,
             'token_hash' => hash('sha256', Str::random(64)),
-            'invited_by_user_id' => $academy->user_id ?? User::factory(),
+            'invited_by_user_id' => function (array $attributes): int {
+                $academyId = $attributes['academy_id'];
+                /** @var Academy|null $academy */
+                $academy = Academy::query()->find($academyId);
+
+                return $academy?->user_id ?? User::factory()->create()->id;
+            },
             'expires_at' => now()->addDays(7),
         ];
     }
