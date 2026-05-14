@@ -47,8 +47,10 @@ use Minishlink\WebPush\WebPush;
  *
  * Laravel's notification dispatcher auto-resolves the channel class
  * from the `via()` array via the container — no manifest, no manual
- * `Channel::extend()` registration. `WebPush` itself is bound as a
- * singleton in `AppServiceProvider` with the VAPID keys from config.
+ * `Channel::extend()` registration. `WebPush` itself is bound
+ * per-request in `AppServiceProvider` (not singleton — it carries
+ * queued-payload state; a singleton would let concurrent
+ * notifications cross-contaminate their queues).
  */
 class WebPushChannel
 {
