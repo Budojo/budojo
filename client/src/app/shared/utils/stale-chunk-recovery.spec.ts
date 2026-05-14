@@ -69,19 +69,15 @@ describe('setupStaleChunkRecovery', () => {
   it('reloads on a <script src="main-HASH.js"> load failure with an empty message (#722)', () => {
     // Synchronous bundle-script failure path: when index.html points at
     // a deleted hash bundle, the browser dispatches `error` on the
-    // <script> element with an empty event.message. The listener must
-    // identify the failure via event.target.src instead.
+    // <script> element with no `message`. Resource `error` events do NOT
+    // bubble — the only way `window`'s listener sees them is via the
+    // capture phase. Dispatching on the script element (not window)
+    // genuinely exercises that path, so removing `{ capture: true }`
+    // from the listener registration would now fail the test.
     const script = document.createElement('script');
     script.src = 'https://budojo.it/main-ABCDEFGH.js';
     document.head.appendChild(script);
-    // ErrorEvent's `target` is read-only via its constructor — dispatch
-    // a generic Event on the script element with capture:true bubbling
-    // to window so the listener attached at window level (capture
-    // phase) sees it. We mimic the browser's "script load failed" by
-    // creating an ErrorEvent and dispatching it directly on the script.
-    const evt = new Event('error', { bubbles: false, cancelable: false });
-    Object.defineProperty(evt, 'target', { value: script, configurable: true });
-    window.dispatchEvent(evt);
+    script.dispatchEvent(new Event('error', { bubbles: false, cancelable: false }));
     document.head.removeChild(script);
     expect(reloadSpy).toHaveBeenCalledOnce();
   });
@@ -91,9 +87,7 @@ describe('setupStaleChunkRecovery', () => {
     link.rel = 'stylesheet';
     link.href = 'https://budojo.it/styles-XYZWXYZA.css';
     document.head.appendChild(link);
-    const evt = new Event('error', { bubbles: false, cancelable: false });
-    Object.defineProperty(evt, 'target', { value: link, configurable: true });
-    window.dispatchEvent(evt);
+    link.dispatchEvent(new Event('error', { bubbles: false, cancelable: false }));
     document.head.removeChild(link);
     expect(reloadSpy).toHaveBeenCalledOnce();
   });
@@ -102,9 +96,7 @@ describe('setupStaleChunkRecovery', () => {
     const script = document.createElement('script');
     script.src = 'https://analytics.example.com/tracker.js';
     document.head.appendChild(script);
-    const evt = new Event('error', { bubbles: false, cancelable: false });
-    Object.defineProperty(evt, 'target', { value: script, configurable: true });
-    window.dispatchEvent(evt);
+    script.dispatchEvent(new Event('error', { bubbles: false, cancelable: false }));
     document.head.removeChild(script);
     expect(reloadSpy).not.toHaveBeenCalled();
   });

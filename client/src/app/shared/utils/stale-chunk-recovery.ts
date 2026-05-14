@@ -135,20 +135,29 @@ export function setupStaleChunkRecovery(): () => void {
     window.location.reload();
   }
 
-  const errorHandler = (event: ErrorEvent) => {
-    const message = messageOf(event.error) || event.message || '';
-    if (looksLikeStaleChunk(message)) {
-      reloadOnce(message);
-      return;
+  // Typed as `Event` (the supertype) because the capture-phase listener
+  // catches BOTH `ErrorEvent` (the script-error / window-onerror flavor
+  // carrying `message` + `error`) AND the plain `Event` that browsers
+  // dispatch on the failing `<script>` / `<link>` element when a
+  // resource fails to load. The latter has no `message` / `error` —
+  // narrow to `ErrorEvent` before reading those. Copilot review on #728.
+  const errorHandler = (event: Event) => {
+    if (event instanceof ErrorEvent) {
+      const message = messageOf(event.error) || event.message || '';
+      if (looksLikeStaleChunk(message)) {
+        reloadOnce(message);
+        return;
+      }
     }
     // Synchronous bundle-script load failure path (#722). The browser
     // dispatches a generic `error` event on the failing <script> /
     // <link> element when its src returns 404 / wrong MIME — typically
-    // with an empty message. Identify it by inspecting `event.target`:
-    // if it's an asset element whose URL matches the Angular hash-bundle
-    // shape, treat the failure as stale-chunk and recover. Without this
-    // branch, a stale `index.html` carrying a deleted `main-XXX.js`
-    // leaves users on a blank page until they pull-to-refresh.
+    // not an ErrorEvent, just a plain Event with `target` set. Identify
+    // it by inspecting `event.target`: if it's an asset element whose
+    // URL matches the Angular hash-bundle shape, treat the failure as
+    // stale-chunk and recover. Without this branch, a stale `index.html`
+    // carrying a deleted `main-XXX.js` leaves users on a blank page
+    // until they pull-to-refresh.
     const target = event.target;
     if (target instanceof HTMLScriptElement && ANGULAR_BUNDLE_PATTERN.test(target.src)) {
       reloadOnce(`script src=${target.src}`);
