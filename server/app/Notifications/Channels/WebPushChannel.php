@@ -7,6 +7,7 @@ namespace App\Notifications\Channels;
 use App\Models\PushSubscription;
 use App\Models\User;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\MessageSentReport;
 use Minishlink\WebPush\Subscription as WebPushSubscription;
@@ -72,6 +73,16 @@ class WebPushChannel
         }
 
         if (! method_exists($notification, 'toWebPush')) {
+            return;
+        }
+
+        // Quiet hours (#729 A3): suppress push delivery when the
+        // current local hour falls inside the user's configured
+        // window. Inbox writes (via the database channel) still
+        // happen, so the user catches up the moment the window
+        // ends — only the OS-level interrupt is muted. NULL on
+        // either column = quiet hours off, the default.
+        if (self::insideQuietHours($notifiable)) {
             return;
         }
 
@@ -161,6 +172,37 @@ class WebPushChannel
                 'reason' => $report->getReason(),
             ]);
         }
+    }
+
+    /**
+     * Quiet hours window check (#729 A3). Both columns NULL = window
+     * off. Both set = inclusive-start, exclusive-end window in the
+     * application timezone (`config('app.timezone')` for now —
+     * per-user timezone is a future enhancement for #271
+     * multi-market). Supports windows crossing midnight (e.g. 22 → 8)
+     * via modular arithmetic: when start > end, "inside" means
+     * `hour >= start OR hour < end`.
+     */
+    private static function insideQuietHours(User $user): bool
+    {
+        $start = $user->quiet_hours_start_local;
+        $end = $user->quiet_hours_end_local;
+        if ($start === null || $end === null) {
+            return false;
+        }
+        $tz = config('app.timezone');
+        $hour = (int) Carbon::now(\is_string($tz) ? $tz : null)->format('G');
+        if ($start === $end) {
+            // Same-hour window — degenerate. Treat as off rather than
+            // a 24-hour mute (which would functionally disable push
+            // for the user and is almost certainly a UI input slip).
+            return false;
+        }
+        if ($start < $end) {
+            return $hour >= $start && $hour < $end;
+        }
+
+        return $hour >= $start || $hour < $end;
     }
 
     /**

@@ -7,6 +7,7 @@ namespace App\Actions\Community;
 use App\Models\CommunityPost;
 use App\Models\PostComment;
 use App\Models\User;
+use App\Notifications\CommunityCommentOnYourPostNotification;
 use App\Notifications\CommunityReplyNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
@@ -51,6 +52,7 @@ class CreateCommentAction
         ]);
 
         $this->notifySiblingCommenters($post, $comment, $author);
+        $this->notifyPostAuthor($post, $comment, $author);
 
         return $comment;
     }
@@ -105,6 +107,39 @@ class CreateCommentAction
                 'post_id' => $newComment->post_id,
                 'comment_id' => $newComment->id,
                 'recipient_count' => $eligible->count(),
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Ping the post author (#729 A6). Distinct from the sibling-
+     * commenter fanout above — those notify everyone in a thread you
+     * participate in; this notifies the author when their post
+     * receives a new comment. The commenter is excluded (no self-
+     * ping). Best-effort, same shape as the sibling fanout.
+     */
+    private function notifyPostAuthor(
+        CommunityPost $post,
+        PostComment $newComment,
+        User $author,
+    ): void {
+        $postAuthor = $post->createdBy;
+        if ($postAuthor->id === $author->id) {
+            return;
+        }
+        if (! NotificationPreferences::isEnabled($postAuthor, NotificationCategory::COMMUNITY_COMMENT_ON_YOUR_POST)) {
+            return;
+        }
+
+        try {
+            $postAuthor->notify(new CommunityCommentOnYourPostNotification($newComment, $author));
+        } catch (\Throwable $e) {
+            Log::warning('community_comment_on_your_post notification failed', [
+                'post_id' => $newComment->post_id,
+                'comment_id' => $newComment->id,
+                'post_author_id' => $postAuthor->id,
                 'exception' => $e::class,
                 'message' => $e->getMessage(),
             ]);

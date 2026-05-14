@@ -40,10 +40,12 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon|null  $onboarding_dismissed_at Set when the user explicitly skips the first-run guided tour (#424). Once non-null the SPA never re-renders the tour.
  * @property array<int, string>|null  $onboarding_completed_steps Step keys the user has ticked off on the "Getting started" checklist (#424). Null until first interaction.
  * @property int|null     $active_academy_id  Currently-selected academy (#427 / #714). Persists across sessions; FK to `academies.id` with `ON DELETE SET NULL`. Null until the user is added to their first membership.
+ * @property int|null     $quiet_hours_start_local  Quiet-hours window start hour (0..23) in app timezone (#729 A3). Null = quiet hours off.
+ * @property int|null     $quiet_hours_end_local    Quiet-hours window end hour (0..23) in app timezone (#729 A3). Null = quiet hours off.
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at', 'onboarding_dismissed_at', 'onboarding_completed_steps', 'active_academy_id'])]
+#[Fillable(['first_name', 'last_name', 'handle', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at', 'onboarding_dismissed_at', 'onboarding_completed_steps', 'active_academy_id', 'quiet_hours_start_local', 'quiet_hours_end_local'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements MustVerifyEmail
 {

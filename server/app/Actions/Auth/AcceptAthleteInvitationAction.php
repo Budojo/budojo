@@ -7,7 +7,11 @@ namespace App\Actions\Auth;
 use App\Enums\UserRole;
 use App\Models\AthleteInvitation;
 use App\Models\User;
+use App\Notifications\AthleteSignedUpNotification;
+use App\Support\NotificationCategory;
+use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
 
@@ -142,6 +146,35 @@ class AcceptAthleteInvitationAction
                 $athlete->forceFill(['user_id' => $user->id])->save();
 
                 $lockedInvitation->forceFill(['accepted_at' => now()])->save();
+
+                // Owner-side athlete_signed_up notification (#729 A1).
+                // Wrapped in `DB::afterCommit()` so the push only fires
+                // once the surrounding transaction has actually
+                // persisted — a rollback (e.g. token-issue failure
+                // below, or any post-this-block throw) cancels the
+                // notification entirely. Without afterCommit the
+                // database channel writes a row tied to a rolled-back
+                // user and the push channel calls vendor immediately
+                // for an athlete that never landed. Copilot review on
+                // #730.
+                $owner = $athlete->academy?->owner;
+                if ($owner !== null
+                    && NotificationPreferences::isEnabled($owner, NotificationCategory::ATHLETE_SIGNED_UP)
+                ) {
+                    $freshAthlete = $athlete->fresh() ?? $athlete;
+                    DB::afterCommit(function () use ($owner, $freshAthlete): void {
+                        try {
+                            $owner->notify(new AthleteSignedUpNotification($freshAthlete));
+                        } catch (\Throwable $e) {
+                            Log::warning('athlete_signed_up notification failed', [
+                                'athlete_id' => $freshAthlete->id,
+                                'owner_id' => $owner->id,
+                                'exception' => $e::class,
+                                'message' => $e->getMessage(),
+                            ]);
+                        }
+                    });
+                }
 
                 // Token name shows up in the user's "Active sessions"
                 // list (#413). The Action accepts a `$deviceLabel`
