@@ -75,7 +75,10 @@ class AthletePaymentController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (! $this->userOwns($user, $athlete)) {
+        // Capability gate: marking a payment unpaid is owner/admin
+        // only per the matrix — instructor + assistant can only
+        // mark paid (the one-way upgrade), not undo it.
+        if (! $user->canInAcademy($athlete->academy_id, \App\Authorization\Capability::PaymentsMarkUnpaid)) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 

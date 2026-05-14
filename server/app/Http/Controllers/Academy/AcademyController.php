@@ -102,6 +102,14 @@ class AcademyController extends Controller
             return response()->json(['message' => 'No academy found.'], 404);
         }
 
+        // Capability gate: AcademySettingsUpdate is owner/admin
+        // only per the matrix. `uploadLogo` is gated by its
+        // FormRequest; `deleteLogo` has no FormRequest (the body
+        // is empty) so the check lands here.
+        if (! $user->canInAcademy($academy->id, \App\Authorization\Capability::AcademySettingsUpdate)) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
         $academy = $this->deleteLogoAction->execute($academy);
 
         return response()->json(['data' => new AcademyResource($academy)]);

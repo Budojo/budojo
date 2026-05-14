@@ -143,10 +143,16 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * "Which academy am I currently operating in?" — the resolved
-     * id, with a fallback to the first non-revoked membership when
-     * the pointer is unset. Keeps the legacy single-academy code
-     * paths working through the multi-user transition without
-     * forcing every caller to deal with the null case.
+     * id, requiring a non-revoked membership at that academy. Falls
+     * back to the first non-revoked membership when the pointer is
+     * unset OR when the pointed-at membership has been revoked since
+     * the user last selected it.
+     *
+     * The revoked-membership filter is load-bearing: without it a
+     * user whose access to academy X was revoked could still
+     * resolve X as their "active" academy and reach controllers /
+     * Actions that gate on tenant scope alone (e.g. read paths).
+     * Copilot review on #723 caught this.
      *
      * The fallback fires for newly-bootstrapped users (account
      * just created via owner registration) and for test scenarios
@@ -156,7 +162,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function activeAcademyId(): ?int
     {
         if ($this->active_academy_id !== null) {
-            return $this->active_academy_id;
+            $stillActive = $this->memberships()
+                ->where('academy_id', $this->active_academy_id)
+                ->whereNull('revoked_at')
+                ->exists();
+            if ($stillActive) {
+                return $this->active_academy_id;
+            }
         }
 
         /** @var AcademyMembership|null $first */

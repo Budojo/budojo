@@ -48,7 +48,14 @@ class ExportUserDataAction
             'tokens',
         ]);
 
-        $academy = $user->activeAcademy();
+        // GDPR data portability: export the academies the USER OWNS,
+        // not the one they're currently switched to. A staff member
+        // viewing another owner's academy as their active one must
+        // NOT be able to exfiltrate that academy's data via the
+        // export endpoint — owner-only scope is the intent of the
+        // GDPR right-to-portability. Use the legacy `User::academy()`
+        // hasOne via `academies.user_id` (the ownership column).
+        $academy = $user->academy;
 
         return [
             'version' => self::SCHEMA_VERSION,
