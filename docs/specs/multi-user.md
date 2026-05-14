@@ -16,9 +16,9 @@ Without this, Budojo cannot serve any academy larger than a single-instructor sc
 ## 2. Goals
 
 - Each `academies` row can have multiple users tied to it via a **membership**.
-- Each membership carries a **role** (one of `owner` / `admin` / `instructor` / `assistant`).
+- Each membership carries a **`MembershipRole`** (one of `owner` / `admin` / `instructor` / `assistant`). This is a new PHP enum and is intentionally distinct from the existing `App\Enums\UserRole` (`owner` / `athlete`) which is the persona discriminator (academy-running user vs. student) and stays on `users.role`. `UserRole::Owner` simply means "this user can register / run an academy"; `MembershipRole::Owner` means "this user is the top-level admin of THIS specific academy".
 - The role drives a fixed **capability matrix** (next section). Every API endpoint enforces the capability before doing work; the SPA hides CTAs the user can't use.
-- A user can be a member of multiple academies. The active academy is per-session state.
+- A user can be a member of multiple academies. The currently-selected academy is **persisted on the user record** (`users.active_academy_id`) so it survives logout / login on the same device — not per-session HTTP state.
 - Existing single-owner academies migrate cleanly (every existing `users.id` ↔ `academies.user_id` pair becomes a `(user_id, academy_id, role: owner)` membership row).
 
 ## 3. Non-goals (v1)
@@ -69,7 +69,7 @@ Without this, Budojo cannot serve any academy larger than a single-instructor sc
 id                bigint PK
 user_id           bigint  FK users        cascadeOnDelete
 academy_id        bigint  FK academies    cascadeOnDelete
-role              enum('owner','admin','instructor','assistant')
+role              varchar(16)              — cast to MembershipRole PHP enum on the model
 joined_at         timestamp
 revoked_at        timestamp NULL          (soft-revoke: keeps the audit trail intact)
 created_at, updated_at timestamps
@@ -79,7 +79,9 @@ INDEX (academy_id, role)             — list-members + capability lookups
 INDEX (revoked_at)                   — active-memberships filter
 ```
 
-**Invariant**: every academy MUST have exactly one active (`revoked_at IS NULL`) `owner` membership. Enforced by a `BeforeRevoke` observer hook on `AcademyMembership` + a PEST regression.
+**Why `varchar(16)` and not native MySQL `ENUM`**: convention across this codebase — `users.role`, `athletes.belt`, etc. are all varchar columns with PHP enum casts, deliberately so adding a future role value doesn't need an `ALTER TABLE` and survives MySQL replica-lag rollouts cleanly.
+
+**Invariant**: every academy MUST have exactly one active (`revoked_at IS NULL`) `owner` membership. Enforced by an `App\Actions\Membership\RevokeMembershipAction` that re-checks the count before persisting (NOT a Laravel model observer — there's no `BeforeRevoke` event in Laravel's lifecycle, and intercepting an `updating` event with a transaction-aware count check belongs in the Action layer per the Uncle Bob canon). The invariant is also pinned at the DB level by a PEST regression: try to revoke the only-owner membership via the Action → 422 with a `cannot_revoke_last_owner` error code; try to do it via a raw model `update()` → the spec asserts a custom DB-level constraint trigger raises (sub-issue § 9.1 includes the trigger).
 
 ### `academy_invitations`
 
@@ -87,19 +89,20 @@ INDEX (revoked_at)                   — active-memberships filter
 id                bigint PK
 academy_id        bigint  FK academies    cascadeOnDelete
 email             varchar(255)            (target invitee — may not have an account yet)
-role              enum('admin','instructor','assistant')  — NOT owner (no transfer in v1)
-token_hash        char(64)                (SHA-256 of the URL token — same shape as password resets)
+role              varchar(16)              — cast to MembershipRole; only admin/instructor/assistant accepted at the validation layer (NOT owner)
+token_hash        char(64)                (SHA-256 of the raw URL token — same shape as password resets)
 invited_by_user_id bigint FK users        — who sent the invite (for audit)
 expires_at        timestamp               (default +7 days; configurable per env)
-accepted_at       timestamp NULL          (set on accept; deletes after grace via a cron)
-revoked_at        timestamp NULL          (set when the inviter cancels before acceptance)
 created_at, updated_at timestamps
 
-INDEX (academy_id, accepted_at, revoked_at)   — list-pending filter
-INDEX (email)                                  — lookup-by-invitee on register
-UNIQUE (academy_id, email) WHERE accepted_at IS NULL AND revoked_at IS NULL
-                                               — one pending invite per (academy, email) at a time
+UNIQUE (academy_id, email)                  — one pending invite per (academy, email).
+                                              Acceptance / revocation HARD-DELETES the row
+                                              (see § 7 for the deliberate choice).
+INDEX (email)                                — lookup-by-invitee on register
+INDEX (expires_at)                           — expiry cron filter
 ```
+
+**Why no `accepted_at` / `revoked_at` columns**: keeping the table append-and-delete instead of soft-tombstoning is a deliberate trade-off — the unique constraint `(academy_id, email)` would otherwise need a partial index (`WHERE accepted_at IS NULL AND revoked_at IS NULL`), and MySQL 8 doesn't support partial unique indexes. Two ways out: a database trigger, or hard-delete on terminal state. We pick hard-delete because the membership row itself (which IS soft-revoked) is the canonical audit trail of "who joined when, who left when"; the invitation row's job ends the moment the membership exists or the inviter retracted. No audit value lost.
 
 ### `users.active_academy_id`
 
@@ -150,7 +153,7 @@ public function activeMembership(): ?AcademyMembership { … }   // resolves use
 public function canInAcademy(int $academyId, Capability $cap): bool;
 ```
 
-And `App\Authorization\RoleMatrix::can(Role $role, Capability $cap): bool` is the single source of truth for the capability table — backed by an array literal that mirrors § 4 verbatim, and pinned by a PEST regression spec.
+And `App\Authorization\RoleCapabilities::allows(MembershipRole $role, Capability $cap): bool` is the single source of truth for the capability table — backed by an array literal that mirrors § 4 verbatim, and pinned by a PEST regression spec. Named `RoleCapabilities` (not `RoleMatrix`) to make the read site self-evident: `RoleCapabilities::allows($role, Capability::AthletesUpdate)` says what it does without needing to know it's a 4×N matrix internally.
 
 ### Migration plan per controller
 
@@ -158,15 +161,23 @@ Every FormRequest under `App\Http\Requests\**` gets its `authorize()` rewritten.
 
 ## 7. Invite flow
 
+### Token shape (one place, used everywhere)
+
+- The backend generates a 256-bit random string (`Str::random(64)`) — the **raw token**.
+- The DB stores `SHA-256(raw)` in `academy_invitations.token_hash`. Same shape as Laravel's password-reset table.
+- The email link is `https://budojo.it/team/invitations/accept?token={raw}`.
+- The SPA forwards the raw value verbatim on `POST /api/v1/team/invitations/accept` with body `{"token": "{raw}"}`.
+- The backend hashes again on receive and looks up by `token_hash`. Constant-time comparison.
+
 ### Step-by-step (owner/admin invites Maria, who already has a Budojo account)
 
 1. Owner clicks "Invita teammate" on `/dashboard/team`.
 2. SPA shows modal: email + role select.
-3. `POST /api/v1/academy/invitations` `{email, role}` → backend creates `academy_invitations` row with a fresh signed token, queues invitation email via `Mail::queue`.
-4. Maria receives email "<Inviter> wants you on Academy X" with link `https://budojo.it/team/invitations/accept?token=…`.
-5. Maria clicks → SPA's `AcceptInvitationComponent` shows "Vuoi unirti a Academy X come Instructor?" with Accept / Decline.
-6. On accept (logged in): `POST /api/v1/team/invitations/accept {token}` → creates `academy_memberships` row, sets `invitations.accepted_at = NOW()`, sets `users.active_academy_id = academy_id` if it was null, redirects to dashboard.
-7. Owner receives in-app notification + optional email "Maria ha accettato".
+3. `POST /api/v1/academy/invitations` `{email, role}` → backend creates `academy_invitations` row with a fresh raw token (256-bit random) + the SHA-256 of it in `token_hash`, queues the invitation email.
+4. Maria receives the email with link `https://budojo.it/team/invitations/accept?token={raw}`.
+5. Maria clicks → SPA's `AcceptInvitationComponent` reads `?token=` from the URL → calls `GET /api/v1/team/invitations/{token}/preview` to fetch the academy name + role + inviter's name → shows "Vuoi unirti a Academy X come Instructor?" with Accept / Decline.
+6. On accept (logged in): `POST /api/v1/team/invitations/accept {token}` → server hashes, looks up, creates the `academy_memberships` row, **hard-deletes** the invitation row, sets `users.active_academy_id = academy_id` if it was null, redirects to dashboard.
+7. Owner receives in-app notification + opt-out-able email "Maria ha accettato l'invito".
 
 ### Variant: invitee doesn't have a Budojo account yet
 
@@ -181,7 +192,7 @@ Every FormRequest under `App\Http\Requests\**` gets its `authorize()` rewritten.
 
 ### Email infrastructure
 
-A new `App\Mail\AcademyInvitationMail` mailable. Template `resources/views/emails/academy-invitation.blade.php`. Standard MJML / inline-style pattern from the other transactional emails. Localised EN + IT.
+A new `App\Mail\AcademyInvitationMail` mailable, following the existing **Markdown Mailable** convention (`->markdown('emails.academy.invitation')`, view under `resources/views/emails/academy/invitation.blade.php`). Matches the existing `AthleteInvitationMail` shape verbatim — same partials, same localisation pattern (EN + IT keys under `messages.academy_invitation.*`).
 
 ## 8. SPA changes
 
