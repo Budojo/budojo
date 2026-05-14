@@ -1,0 +1,67 @@
+<button
+  type="button"
+  class="filter-sheet__chip"
+  [attr.aria-haspopup]="'dialog'"
+  [attr.aria-expanded]="isOpen()"
+  (click)="openSheet()"
+  data-cy="filter-sheet-chip"
+>
+  <i class="pi pi-filter" aria-hidden="true"></i>
+  <span>{{ labelKey() | translate }}</span>
+  @if (activeCount() > 0) {
+    <span class="filter-sheet__badge" data-cy="filter-sheet-badge">{{ activeCount() }}</span>
+  }
+</button>
+
+@if (isOpen()) {
+  <div
+    class="filter-sheet__backdrop"
+    aria-hidden="true"
+    (click)="closeSheet()"
+    data-cy="filter-sheet-backdrop"
+  ></div>
+
+  <section
+    class="filter-sheet__panel"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="labelKey() | translate"
+    data-cy="filter-sheet-panel"
+  >
+    <header class="filter-sheet__header">
+      <h2 class="filter-sheet__title">{{ labelKey() | translate }}</h2>
+      <button
+        type="button"
+        class="filter-sheet__close"
+        [attr.aria-label]="'shared.filterSheet.close' | translate"
+        (click)="closeSheet()"
+        data-cy="filter-sheet-close"
+      >
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="filter-sheet__body">
+      <ng-content />
+    </div>
+
+    <footer class="filter-sheet__footer">
+      <button
+        type="button"
+        class="filter-sheet__reset"
+        (click)="onReset()"
+        data-cy="filter-sheet-reset"
+      >
+        {{ 'shared.filterSheet.reset' | translate }}
+      </button>
+      <button
+        type="button"
+        class="filter-sheet__apply"
+        (click)="onApply()"
+        data-cy="filter-sheet-apply"
+      >
+        {{ 'shared.filterSheet.apply' | translate }}
+      </button>
+    </footer>
+  </section>
+}
