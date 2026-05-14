@@ -242,10 +242,12 @@ Each sub-issue carries its own PEST + Vitest + Cypress coverage; no shortcut on 
 | Email-only invitation phishing / spoofing | Token is a 256-bit random + SHA-256 hash; expiry 7 days; one-shot consumption. Same shape as password-reset, already audited. |
 | Removing the only owner | Invariant enforced at the model level + at the controller level + by a PEST regression. |
 
-## 12. Open questions for review
+## 12. Decisions (locked)
 
-1. **Does the assistant role have the right scope?** Current matrix says assistant can record attendance + mark paid but can't create athletes. Is "mark paid but not create" the right split for a real-world front-desk role, or do assistants need create-athlete too?
-2. **Do we want a "viewer" role** (read-only, can't even mark attendance)? Today's matrix doesn't include one — assistant is the closest. Add later if real demand surfaces.
-3. **Invitation TTL**: 7 days reasonable, or shorter? Password-reset is 1 hour; account-deletion grace is 30 days. 7 days is the middle.
-4. **Should an owner be removable from their own academy after a co-owner exists?** (Implies a "transfer ownership" flow.) Out-of-scope v1 per § 3, but worth noting the matrix has it as an owner-only capability we could ship later.
-5. **Multi-academy email**: a user signed in to academy A who gets an invitation to academy B — do they get the email or just an in-app notification? Current plan: both. Email opt-out at the user-level (not per-academy).
+The five open questions are resolved with the defaults below. The matrix in § 4 is final for v1.
+
+1. **Assistant scope**: kept as written — attendance + mark-paid yes, create-athlete no. Front-desk staff handle the daily flow, but enrollment + onboarding stays with at least an instructor. If alpha-tester feedback shows assistants need to create athletes, we'll add the capability in a follow-up rather than guess up front.
+2. **Viewer role**: skipped for v1. The assistant role already covers "show up and check people in"; a pure-read role doesn't have a clear use case the alpha-tester pool has asked for. Add later only if real demand surfaces.
+3. **Invitation TTL**: 7 days. The mid-point between the short password-reset window (1h) and the long account-deletion grace (30d). Captures honest forget-to-click-yesterday cases without leaving stale tokens floating for a month.
+4. **Owner transfer / removability**: out of scope v1. The matrix already has "change member role" as an owner-only capability so the foundation is there; transferring ownership ships in a follow-up issue once two real users ask for it.
+5. **Multi-academy notification**: both email AND in-app. Email opt-out is per-user (the existing `notification_preferences` map gets a new `academy_invitation` key); per-academy opt-out is out of scope.
