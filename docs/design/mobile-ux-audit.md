@@ -65,7 +65,7 @@ Spot-check existing `*.scss` files:
 
 | # | Gap | Status | Notes |
 |---|---|---|---|
-| 19 | Installed PWA without cache + offline shows Chrome's "ERR_CONNECTION_ABORTED" page instead of our `/offline` route | 🔴 | Cache strategy `prefetch` for app shell should already handle this; investigate why the SW's offline fallback didn't fire on the user's session (Telegram in-app browser may bypass the SW) |
+| 19 | Installed PWA without cache + offline shows Chrome's "ERR_CONNECTION_ABORTED" page instead of our `/offline` route | 🟢 | #706 — `ngsw-config.json` gained `navigationUrls` (excludes `/api/**` + `/storage/**` so those keep hitting the network) and a `dataGroups` block for `/api/v1/**` with the `freshness` strategy + 3s timeout + 1h max age. The `/offline` route and `OfflineComponent` itself were already in place from #425. Telegram in-app browser remains the open question — separate investigation when it surfaces again. |
 | 20 | Service worker auto-update on new version (#305) | 🟢 | Working — verified in audit chat |
 
 ## Methodology
