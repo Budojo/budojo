@@ -112,7 +112,18 @@ class SendAthleteTrainingTodayPushes extends Command
             if (! NotificationPreferences::isEnabled($user, NotificationCategory::ATHLETE_TRAINING_TODAY)) {
                 continue;
             }
+            if ($this->alreadyNotifiedToday($user, $today)) {
+                continue;
+            }
             $user->notify(new AthleteTrainingTodayNotification($academy));
         }
+    }
+
+    private function alreadyNotifiedToday(\App\Models\User $user, Carbon $today): bool
+    {
+        return $user->notifications()
+            ->where('data->kind', 'athlete_training_today')
+            ->where('created_at', '>=', $today->copy()->startOfDay())
+            ->exists();
     }
 }

@@ -90,6 +90,19 @@ Artisan::command('inspire', function (): void {
     ->timezone('Europe/Rome')
     ->withoutOverlapping(60);
 
+// Daily 07:00 Europe/Rome push reminder to athletes whose academy
+// trains today and who have NOT been marked present yet (#729 A2).
+// Per-athlete gate on `athlete_training_today` notification category
+// + a same-day attendance-record check to skip athletes already
+// present (open-mat early-mat scenario). The command also runs an
+// inbox-level same-day dedup before each notify(), so manual reruns
+// or mis-scheduled invocations don't re-push the same athlete
+// multiple times in a day (Copilot review on #730).
+\Illuminate\Support\Facades\Schedule::command('budojo:send-athlete-training-today-pushes')
+    ->dailyAt('07:00')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(30);
+
 // Daily prune of `login_attempts` rows older than 90 days (#430).
 // The login-history audit log is high-write (one row per login
 // attempt, success or failure); without retention the table grows

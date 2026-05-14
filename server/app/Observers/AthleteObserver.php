@@ -157,10 +157,6 @@ class AthleteObserver
 
     /**
      * Direct push to the athlete who was just promoted (#729 B2).
-     * Distinct from the community-fanout: those notify OTHERS about
-     * the promotion; this is the personal "congratulations" ping
-     * to the affected athlete. Skipped when the athlete has no
-     * linked user_id (invitation pending).
      */
     private function notifyPromotedAthlete(Athlete $athlete, string $oldBelt, string $newBelt): void
     {
@@ -264,14 +260,26 @@ class AthleteObserver
      */
     private function fanoutCommunityNewPost(CommunityPost $post, int $editorId): void
     {
-        $ownerId = $post->academy->user_id;
+        // Three recipient sources (Copilot review on #730 caught the
+        // original shape missed multi-user staff): athletes with a
+        // linked user_id, active AcademyMembership rows, and the
+        // legacy academy owner.
         $athleteUserIds = Athlete::query()
             ->where('academy_id', $post->academy_id)
             ->whereNotNull('user_id')
             ->where('user_id', '!=', $editorId)
             ->pluck('user_id');
 
+        $staffUserIds = \App\Models\AcademyMembership::query()
+            ->where('academy_id', $post->academy_id)
+            ->whereNull('revoked_at')
+            ->where('user_id', '!=', $editorId)
+            ->pluck('user_id');
+
+        $ownerId = $post->academy->user_id;
+
         $recipientIds = $athleteUserIds
+            ->merge($staffUserIds)
             ->when(
                 $ownerId !== $editorId,
                 fn ($collection) => $collection->push($ownerId),

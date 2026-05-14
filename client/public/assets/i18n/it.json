@@ -785,6 +785,7 @@
         "label": "Oggi si allena",
         "description": "Promemoria push alle 07:00 nei giorni in cui la tua palestra si allena — solo se non sei già stato segnato presente."
       },
+<<<<<<< HEAD
       "athleteMedicalCertExpiring": {
         "label": "Il tuo certificato medico sta per scadere",
         "description": "Promemoria push 30, 7 e 0 giorni prima della scadenza del tuo certificato."
@@ -813,6 +814,8 @@
         "label": "Atleta assente da diversi allenamenti",
         "description": "Notifica in inbox + push quando un atleta attivo salta gli ultimi 3 allenamenti consecutivi."
       },
+=======
+>>>>>>> origin/develop
       "communityReply": {
         "label": "Nuova risposta in un tuo thread community",
         "description": "Notifica in inbox quando qualcuno risponde a un post community su cui hai già commentato."

@@ -50,6 +50,7 @@ const CATEGORIES: readonly ToggleableCategory[] = [
     i18nDescription: 'profile.notifications.athleteTrainingToday.description',
   },
   {
+<<<<<<< HEAD
     key: 'athlete_medical_cert_expiring',
     i18nLabel: 'profile.notifications.athleteMedicalCertExpiring.label',
     i18nDescription: 'profile.notifications.athleteMedicalCertExpiring.description',
@@ -85,6 +86,8 @@ const CATEGORIES: readonly ToggleableCategory[] = [
     i18nDescription: 'profile.notifications.ownerAthleteMissedStreak.description',
   },
   {
+=======
+>>>>>>> origin/develop
     key: 'community_reply',
     i18nLabel: 'profile.notifications.communityReply.label',
     i18nDescription: 'profile.notifications.communityReply.description',

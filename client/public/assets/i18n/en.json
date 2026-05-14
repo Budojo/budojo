@@ -785,6 +785,7 @@
         "label": "Today is training day",
         "description": "Push reminder at 07:00 on days your academy trains — only if you haven't been marked present yet."
       },
+<<<<<<< HEAD
       "athleteMedicalCertExpiring": {
         "label": "Your medical certificate expires soon",
         "description": "Push reminder at 30, 7, and 0 days before your own certificate expires."
@@ -813,6 +814,8 @@
         "label": "Athlete missed several trainings",
         "description": "Inbox + push when an active athlete misses the last 3 scheduled trainings consecutively."
       },
+=======
+>>>>>>> origin/develop
       "communityReply": {
         "label": "New reply on your community thread",
         "description": "Inbox notification when someone replies to a community post you previously commented on."
