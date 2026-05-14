@@ -12,7 +12,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
     "cy:open": "cypress open",
     "cy:run": "cypress run",
-    "design:inventory": "node scripts/design-inventory.cjs"
+    "design:inventory": "node scripts/design-inventory.cjs",
+    "play-store:screenshots": "node scripts/play-store-screenshots.cjs"
   },
   "private": true,
   "packageManager": "npm@10.9.7",

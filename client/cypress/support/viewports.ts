@@ -73,3 +73,39 @@ export const ALL_VIEWPORTS: readonly Viewport[] = [
   VIEWPORT_TABLET,
   VIEWPORT_DESKTOP,
 ];
+
+/**
+ * Play Store screenshot capture viewports (#690). Dimensions sized to
+ * the strict per-slot ranges Google Play accepts (320-3840 phone/tablet-7,
+ * 1080-7680 tablet-10), with phone bumped to 1080 wide so the resulting
+ * PNG clears the "promotable" carousel threshold.
+ *
+ * Consumed by `cypress/marketing/play-store-screenshots.cy.ts` via the
+ * `PLAY_STORE_VIEWPORTS` export below — the spec re-shapes each entry
+ * into a `{slug, width, height}` triple (the slug is the canonical
+ * `name` with the `play-store-` prefix stripped). Single source of
+ * truth: change the dimensions here and the capture run picks them up.
+ */
+export const VIEWPORT_PLAY_STORE_PHONE: Viewport = {
+  name: 'play-store-phone',
+  width: 1080,
+  height: 2400,
+};
+
+export const VIEWPORT_PLAY_STORE_TABLET_7: Viewport = {
+  name: 'play-store-tablet-7',
+  width: 1080,
+  height: 1440,
+};
+
+export const VIEWPORT_PLAY_STORE_TABLET_10: Viewport = {
+  name: 'play-store-tablet-10',
+  width: 1600,
+  height: 2560,
+};
+
+export const PLAY_STORE_VIEWPORTS: readonly Viewport[] = [
+  VIEWPORT_PLAY_STORE_PHONE,
+  VIEWPORT_PLAY_STORE_TABLET_7,
+  VIEWPORT_PLAY_STORE_TABLET_10,
+];

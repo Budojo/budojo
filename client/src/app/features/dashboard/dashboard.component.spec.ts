@@ -374,20 +374,25 @@ describe('DashboardComponent', () => {
       } as unknown as PointerEvent;
     }
 
-    // Save the original window.innerWidth in beforeEach and restore in
-    // afterEach so the mobile-viewport stub doesn't leak into tests that
-    // run after this block (Copilot review on #683 — without restoration
-    // a future swipe-to-close spec would silently break unrelated tests
-    // by leaving `innerWidth = 390` set on `window`).
-    let originalInnerWidth: number;
+    // Save and restore the original `window.innerWidth` descriptor so the
+    // mobile-viewport stub doesn't leak into tests that run after this
+    // block. In jsdom `window.innerWidth` is typically NOT an own
+    // property — it's the prototype getter on `WindowProxy` — so the
+    // descriptor read here usually comes back `undefined`. We restore by
+    // either reinstating the saved descriptor (if one existed) or
+    // deleting the override (so the prototype getter takes back over),
+    // never by overwriting the getter with a plain numeric data
+    // property. Copilot review on #684 caught the value-only restore.
+    let originalInnerWidthDescriptor: PropertyDescriptor | undefined;
     beforeEach(() => {
-      originalInnerWidth = window.innerWidth;
+      originalInnerWidthDescriptor = Object.getOwnPropertyDescriptor(window, 'innerWidth');
     });
     afterEach(() => {
-      Object.defineProperty(window, 'innerWidth', {
-        value: originalInnerWidth,
-        configurable: true,
-      });
+      if (originalInnerWidthDescriptor) {
+        Object.defineProperty(window, 'innerWidth', originalInnerWidthDescriptor);
+      } else {
+        Reflect.deleteProperty(window, 'innerWidth');
+      }
     });
 
     function ensureMobileViewport(): void {

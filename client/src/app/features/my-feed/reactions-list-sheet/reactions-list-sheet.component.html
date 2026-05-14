@@ -36,7 +36,7 @@
         (click)="setTab('clap')"
         data-cy="reactions-tab-clap"
       >
-        <span aria-hidden="true">👏</span>
+        <span aria-hidden="true">👏🏻</span>
         <span class="reactions-sheet__tab-count">{{ clapCount() }}</span>
       </button>
       <button
@@ -48,7 +48,7 @@
         (click)="setTab('pray')"
         data-cy="reactions-tab-pray"
       >
-        <span aria-hidden="true">🙏</span>
+        <span aria-hidden="true">🙏🏻</span>
         <span class="reactions-sheet__tab-count">{{ prayCount() }}</span>
       </button>
     </nav>
@@ -76,7 +76,7 @@
           <li class="reactions-sheet__row" [attr.data-cy]="'reaction-row-' + r.id">
             <app-user-flair [user]="r.user" [compact]="true" />
             <span class="reactions-sheet__emoji" aria-hidden="true">
-              {{ r.emoji === 'clap' ? '👏' : '🙏' }}
+              {{ r.emoji === 'clap' ? '👏🏻' : '🙏🏻' }}
             </span>
           </li>
         }

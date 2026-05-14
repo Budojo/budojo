@@ -1,0 +1,6 @@
+// Layout pulled from the shared `_legal-page` partial — same shape as
+// `/privacy`, `/privacy/it`, and `/sub-processors{,/it}`. No
+// page-specific overrides today; if a deletion-specific accent (banner,
+// callout) is added later, it lands here on top of the partial.
+
+@use '../legal-page';

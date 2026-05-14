@@ -194,7 +194,7 @@
               (click)="toggleReaction(post, 'clap')"
               [attr.data-cy]="'react-clap-' + post.id"
             >
-              <span aria-hidden="true">👏</span>
+              <span aria-hidden="true">👏🏻</span>
               <span class="feed__react-label">{{
                 'athletePortal.feed.reactClap' | translate
               }}</span>
@@ -208,7 +208,7 @@
               (click)="toggleReaction(post, 'pray')"
               [attr.data-cy]="'react-pray-' + post.id"
             >
-              <span aria-hidden="true">🙏</span>
+              <span aria-hidden="true">🙏🏻</span>
               <span class="feed__react-label">{{
                 'athletePortal.feed.reactPray' | translate
               }}</span>
@@ -223,13 +223,13 @@
               >
                 @if (post.reaction_counts.clap > 0) {
                   <span class="feed__react-count">
-                    <span aria-hidden="true">👏</span>
+                    <span aria-hidden="true">👏🏻</span>
                     {{ post.reaction_counts.clap }}
                   </span>
                 }
                 @if (post.reaction_counts.pray > 0) {
                   <span class="feed__react-count">
-                    <span aria-hidden="true">🙏</span>
+                    <span aria-hidden="true">🙏🏻</span>
                     {{ post.reaction_counts.pray }}
                   </span>
                 }
