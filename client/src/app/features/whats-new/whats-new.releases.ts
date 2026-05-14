@@ -28,6 +28,73 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.16.0',
+    date: '2026-05-14',
+    headline:
+      "Ten new notifications go live, plus a quiet-hours window for nights and weekends. Owners get pinged when an athlete on their roster completes signup, when someone comments or reacts to one of their posts, and when any new post lands in the academy feed. Athletes get a daily 07:00 reminder on training days (skipped if they've already checked in), receipts when payments are marked paid, gentle nudges when a fee is overdue or a medical certificate is about to expire, a congratulations push the day they earn a new belt, and a welcome email the moment they accept the academy invitation. The new quiet-hours window — set a start and an end hour on /dashboard/profile → Notifications, default off — suppresses out-of-tab pushes overnight while still recording them in the inbox so nothing's lost. Two smaller fixes ride along: /auth/register now reads as the gym-owner entry point (with an inline notice diverting athletes to ask their instructor for an invitation), and a self-heal recovery for the rare cold-start white screen after the app updated in the background.",
+    sections: [
+      {
+        heading: '🔔 Ten new notification triggers',
+        bullets: [
+          "For academy owners (5): when an athlete on your roster completes signup; when someone comments on a post you authored; when someone reacts (clap / pray) to a post you authored; when any new post lands in your academy feed (events, belt promotions, future post types); plus a daily reminder when an athlete on your roster hasn't been marked present for the last 3 scheduled trainings.",
+          "For athletes (5): a 07:00 push on training days (skipped if you've already been marked present), a T-30/T-7/T-0 nudge for your own medical certificate, a congratulations push when your instructor records a new belt for you, a receipt when your monthly fee is marked paid, and a gentle reminder on day 6 if it isn't paid yet.",
+          'Plus a transactional welcome email the moment you accept an academy invitation — always sent, no opt-out gate (security/onboarding category).',
+        ],
+      },
+      {
+        heading: '🌙 Quiet hours',
+        bullets: [
+          'Set a start and end hour on /dashboard/profile → Notifications. Inside the window, push delivery is suppressed; inbox notifications still record so you catch up when the window ends. Email digests are untouched (they have their own send time).',
+          'Default off — you opt in. Windows that wrap past midnight (e.g. 22:00 → 08:00) are handled correctly.',
+        ],
+      },
+      {
+        heading: "📝 Register page: clarify who it's for",
+        bullets: [
+          '/auth/register now reads "Open your academy account" with an inline aside diverting athletes to ask their instructor for an invitation.',
+          'Two alpha testers had self-registered there as gym owners and ended up as orphan accounts (no academy, no athlete row). This closes the loop in copy + visual hierarchy so the mistake is harder to make.',
+        ],
+      },
+      {
+        heading: '🩹 TWA cold-start: synchronous <script> recovery',
+        bullets: [
+          'A stale service worker pointing the boot index.html at a deleted main-XXX.js bundle now triggers the same single-reload self-heal as a dynamic-import failure.',
+          'The bug surfaced as a white screen after the TWA splash on first launch; the workaround was a manual pull-to-refresh. With this in place the SPA self-heals on the first error event from the failing <script> element.',
+        ],
+      },
+    ],
+  },
+  {
+    version: 'v2.15.0',
+    date: '2026-05-14',
+    headline:
+      "Groundwork for multi-user academies. Today every academy is run by a single owner account; this release lays the wiring for a future where an academy can be run jointly by an owner plus admins, instructors, and assistants — each with their own role and their own scope of what they can do. The plumbing is in (database tables for memberships and invitations, a role-and-permission matrix that gates every action server-side, and a per-user 'which academy am I in right now' switch). What ships visible to you in this release is unchanged; the invitation flow and the academy-switcher in the top bar follow shortly. Alongside the groundwork, the attendance page picks up the same mobile filter sheet that the athletes list shipped in v2.14.0, and a fix to the closed-test Android app gets it past the Play Store verification step that was making it open inside an in-app browser bar.",
+    sections: [
+      {
+        heading: '🧱 Multi-user foundation',
+        bullets: [
+          "Internal plumbing only in this release — no user-visible change to today's single-owner experience.",
+          'Four building blocks landed: a membership table that links a user to an academy with a role; an invitation table for pending team invites; a per-user "active academy" pointer for the switcher to come; and a permission matrix (owner / admin / instructor / assistant) that every action checks server-side.',
+          'The invitation flow ("invite a coach by email"), the topbar academy switcher, and a *budojoCan permission gate for the SPA follow in the next two releases.',
+        ],
+      },
+      {
+        heading: '🎛️ Attendance: mobile filter sheet',
+        bullets: [
+          'The class/belt dropdowns on /dashboard/attendance now collapse into a "Filters" chip with a bottom-sheet on phone widths — same pattern as the athletes list shipped in v2.14.0.',
+          'Recovers vertical space for the actual attendance grid on phone. Desktop layout unchanged.',
+        ],
+      },
+      {
+        heading: '📱 TWA closed-test fix: assetlinks Play App Signing',
+        bullets: [
+          'assetlinks.json now carries the SHA-256 fingerprint of the Play App Signing certificate alongside the upload-key one. The TWA was rendering inside a Chrome Custom Tab (URL bar + X close button) instead of full-screen because Digital Asset Links verification was failing on the published track.',
+          'Fix shipped to Cloudflare Pages — on next clear-data the installed app launches as a proper full-screen TWA.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.14.0',
     date: '2026-05-14',
     headline:
