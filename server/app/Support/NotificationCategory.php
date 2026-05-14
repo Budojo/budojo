@@ -167,6 +167,30 @@ final class NotificationCategory
     public const string ATHLETE_PAYMENT_OVERDUE = 'athlete_payment_overdue';
 
     /**
+     * Owner-side inbox + push fired when an athlete uploads a new
+     * document (#729 C1). Fanout to the academy owner; the uploader
+     * is never the recipient. Triggered from the document-upload
+     * pipeline once athlete self-upload lands.
+     */
+    public const string OWNER_ATHLETE_DOC_UPLOADED = 'owner_athlete_doc_uploaded';
+
+    /**
+     * Owner-side inbox + push fired when someone RSVPs to an event
+     * the owner posted (#729 C2). The RSVP-ing user isn't the
+     * recipient; the post author is.
+     */
+    public const string OWNER_EVENT_RSVP = 'owner_event_rsvp';
+
+    /**
+     * Owner-side inbox + push reminder when an active athlete has
+     * missed the last N (=3) scheduled trainings consecutively
+     * (#729 C3). Engagement signal — gives the owner a chance to
+     * reach out before churn. Daily check via
+     * `budojo:send-athlete-missed-streak-pushes`.
+     */
+    public const string OWNER_ATHLETE_MISSED_STREAK = 'owner_athlete_missed_streak';
+
+    /**
      * Every category, in the order the SPA panel renders them.
      *
      * @return array<int, string>
@@ -182,6 +206,9 @@ final class NotificationCategory
             self::ATHLETE_PROMOTED,
             self::ATHLETE_PAYMENT_MARKED_PAID,
             self::ATHLETE_PAYMENT_OVERDUE,
+            self::OWNER_ATHLETE_DOC_UPLOADED,
+            self::OWNER_EVENT_RSVP,
+            self::OWNER_ATHLETE_MISSED_STREAK,
             self::COMMUNITY_REPLY,
             self::COMMUNITY_NEW_POST,
             self::COMMUNITY_COMMENT_ON_YOUR_POST,

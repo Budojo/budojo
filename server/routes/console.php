@@ -78,6 +78,18 @@ Artisan::command('inspire', function (): void {
     ->timezone('Europe/Rome')
     ->withoutOverlapping(30);
 
+// Daily engagement-signal push to academy owners when an active
+// athlete has missed the last 3 scheduled trainings (#729 C3). Same
+// daily 09:30 Europe/Rome window the medical-cert digest runs in.
+// The command's internal 14-day de-dup prevents spamming the owner
+// daily for the same athlete; once the streak is acknowledged, the
+// next ping waits until either the athlete trains again (resets the
+// streak) or another 14 days pass.
+\Illuminate\Support\Facades\Schedule::command('budojo:send-athlete-missed-streak-pushes')
+    ->dailyAt('09:30')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(60);
+
 // Daily prune of `login_attempts` rows older than 90 days (#430).
 // The login-history audit log is high-write (one row per login
 // attempt, success or failure); without retention the table grows

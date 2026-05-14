@@ -8,8 +8,12 @@ use App\Enums\RsvpResponse;
 use App\Models\CommunityPost;
 use App\Models\PostRsvp;
 use App\Models\User;
+use App\Notifications\OwnerEventRsvpNotification;
+use App\Support\NotificationCategory;
+use App\Support\NotificationPreferences;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Toggle an RSVP on an event-type community post (#605, M9 PR-E
@@ -84,10 +88,40 @@ class ToggleRsvpAction
             return $response->value;
         });
 
+        // Notify the post author on a new / swapped RSVP (#729 C2).
+        // Toggle-off (`$your === null`) skips — no spam when someone
+        // changes their mind. Author self-RSVPs are skipped.
+        if ($your !== null) {
+            $this->notifyPostAuthor($post, $user, $response);
+        }
+
         return [
             'your_rsvp' => $your,
             'counts' => $this->countsFor($post->id),
         ];
+    }
+
+    private function notifyPostAuthor(CommunityPost $post, User $responder, RsvpResponse $response): void
+    {
+        $author = $post->createdBy;
+        if ($author->id === $responder->id) {
+            return;
+        }
+        if (! NotificationPreferences::isEnabled($author, NotificationCategory::OWNER_EVENT_RSVP)) {
+            return;
+        }
+
+        try {
+            $author->notify(new OwnerEventRsvpNotification($post, $responder, $response));
+        } catch (\Throwable $e) {
+            Log::warning('owner_event_rsvp notification failed', [
+                'post_id' => $post->id,
+                'responder_id' => $responder->id,
+                'author_id' => $author->id,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

@@ -801,6 +801,18 @@
         "label": "Quota mensile ancora da pagare",
         "description": "Promemoria push il giorno 6 se la quota del mese in corso non è ancora segnata come saldata."
       },
+      "ownerAthleteDocUploaded": {
+        "label": "Un atleta ha caricato un documento",
+        "description": "Notifica in inbox + push quando un atleta carica un nuovo documento (es. certificato medico aggiornato)."
+      },
+      "ownerEventRsvp": {
+        "label": "Qualcuno ha risposto al tuo evento",
+        "description": "Notifica in inbox + push quando un membro della palestra fa RSVP a un tuo evento."
+      },
+      "ownerAthleteMissedStreak": {
+        "label": "Atleta assente da diversi allenamenti",
+        "description": "Notifica in inbox + push quando un atleta attivo salta gli ultimi 3 allenamenti consecutivi."
+      },
       "communityReply": {
         "label": "Nuova risposta in un tuo thread community",
         "description": "Notifica in inbox quando qualcuno risponde a un post community su cui hai già commentato."
