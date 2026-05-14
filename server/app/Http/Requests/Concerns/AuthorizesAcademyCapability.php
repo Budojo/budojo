@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Requests\Concerns;
 
 use App\Authorization\Capability;
-use App\Authorization\RoleCapabilities;
 use App\Enums\UserRole;
 use App\Models\AcademyMembership;
 use App\Models\User;
