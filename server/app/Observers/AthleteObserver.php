@@ -264,14 +264,33 @@ class AthleteObserver
      */
     private function fanoutCommunityNewPost(CommunityPost $post, int $editorId): void
     {
-        $ownerId = $post->academy->user_id;
+        // Three recipient sources (Copilot review on #730 caught that
+        // the original shape missed the multi-user staff):
+        //
+        //   1. Athletes in the academy with a linked user_id.
+        //   2. Every other active (non-revoked) AcademyMembership —
+        //      admin / instructor / assistant. Without this, staff
+        //      members never received the community_new_post inbox
+        //      row even when subscribed.
+        //   3. The legacy academy owner (academies.user_id) — kept
+        //      explicit until the multi-user transition completes and
+        //      every owner has a corresponding membership row.
         $athleteUserIds = Athlete::query()
             ->where('academy_id', $post->academy_id)
             ->whereNotNull('user_id')
             ->where('user_id', '!=', $editorId)
             ->pluck('user_id');
 
+        $staffUserIds = \App\Models\AcademyMembership::query()
+            ->where('academy_id', $post->academy_id)
+            ->whereNull('revoked_at')
+            ->where('user_id', '!=', $editorId)
+            ->pluck('user_id');
+
+        $ownerId = $post->academy->user_id;
+
         $recipientIds = $athleteUserIds
+            ->merge($staffUserIds)
             ->when(
                 $ownerId !== $editorId,
                 fn ($collection) => $collection->push($ownerId),

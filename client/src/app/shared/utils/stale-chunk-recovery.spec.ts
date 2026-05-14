@@ -66,6 +66,41 @@ describe('setupStaleChunkRecovery', () => {
     expect(reloadSpy).not.toHaveBeenCalled();
   });
 
+  it('reloads on a <script src="main-HASH.js"> load failure with an empty message (#722)', () => {
+    // Synchronous bundle-script failure path: when index.html points at
+    // a deleted hash bundle, the browser dispatches `error` on the
+    // <script> element with no `message`. Resource `error` events do NOT
+    // bubble — the only way `window`'s listener sees them is via the
+    // capture phase. Dispatching on the script element (not window)
+    // genuinely exercises that path, so removing `{ capture: true }`
+    // from the listener registration would now fail the test.
+    const script = document.createElement('script');
+    script.src = 'https://budojo.it/main-ABCDEFGH.js';
+    document.head.appendChild(script);
+    script.dispatchEvent(new Event('error', { bubbles: false, cancelable: false }));
+    document.head.removeChild(script);
+    expect(reloadSpy).toHaveBeenCalledOnce();
+  });
+
+  it('reloads on a <link href="styles-HASH.css"> load failure (#722)', () => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://budojo.it/styles-XYZWXYZA.css';
+    document.head.appendChild(link);
+    link.dispatchEvent(new Event('error', { bubbles: false, cancelable: false }));
+    document.head.removeChild(link);
+    expect(reloadSpy).toHaveBeenCalledOnce();
+  });
+
+  it('does NOT reload on a third-party <script> load failure that does not match the Angular bundle shape', () => {
+    const script = document.createElement('script');
+    script.src = 'https://analytics.example.com/tracker.js';
+    document.head.appendChild(script);
+    script.dispatchEvent(new Event('error', { bubbles: false, cancelable: false }));
+    document.head.removeChild(script);
+    expect(reloadSpy).not.toHaveBeenCalled();
+  });
+
   it('refuses to reload twice in the same session (anti-loop guard)', () => {
     window.dispatchEvent(
       new ErrorEvent('error', { message: 'Failed to fetch dynamically imported module' }),

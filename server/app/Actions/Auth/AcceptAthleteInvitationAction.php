@@ -12,6 +12,7 @@ use App\Notifications\AthleteSignedUpNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
@@ -157,21 +158,28 @@ class AcceptAthleteInvitationAction
                 }
 
                 // Owner-side athlete_signed_up notification (#729 A1).
-                // Fanout to the academy owner — gated by their personal
-                // preference. The just-signed-up athlete never receives
-                // this fanout; they're on the page already. Dispatched
-                // inside the transaction is fine because Laravel's
-                // notification dispatcher pushes to the queue (or
-                // database channel writes a row), neither of which
-                // depends on the transaction having committed yet — and
-                // both are safely rolled back with the transaction if
-                // the surrounding flow blows up between here and the
-                // final `commit()`.
+                // Wrapped in `DB::afterCommit()` so the push only fires
+                // once the surrounding transaction has actually
+                // persisted — a rollback (e.g. token-issue failure
+                // below, or any post-this-block throw) cancels the
+                // notification entirely. Copilot review on #730.
                 $owner = $athlete->academy?->owner;
                 if ($owner !== null
                     && NotificationPreferences::isEnabled($owner, NotificationCategory::ATHLETE_SIGNED_UP)
                 ) {
-                    $owner->notify(new AthleteSignedUpNotification($athlete->fresh() ?? $athlete));
+                    $freshAthlete = $athlete->fresh() ?? $athlete;
+                    DB::afterCommit(function () use ($owner, $freshAthlete): void {
+                        try {
+                            $owner->notify(new AthleteSignedUpNotification($freshAthlete));
+                        } catch (\Throwable $e) {
+                            Log::warning('athlete_signed_up notification failed', [
+                                'athlete_id' => $freshAthlete->id,
+                                'owner_id' => $owner->id,
+                                'exception' => $e::class,
+                                'message' => $e->getMessage(),
+                            ]);
+                        }
+                    });
                 }
 
                 // Token name shows up in the user's "Active sessions"
