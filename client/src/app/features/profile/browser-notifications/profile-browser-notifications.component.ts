@@ -64,6 +64,13 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
 
   protected readonly isSupported = this.webPushService.isSupported();
 
+  /**
+   * "What action can the user take?" — distinct from `hasDevices` so
+   * the existing device list stays visible (and revocable) even when
+   * the action surface is blocked. The five states map to one CTA
+   * each; the device list renders independently whenever `devices()`
+   * is non-empty.
+   */
   protected readonly state = computed<PanelState>(() => {
     if (!this.isSupported) return 'unsupported';
     if (!this.meta().enabled) return 'server-disabled';
@@ -71,6 +78,9 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
     if (this.devices().length === 0) return 'off';
     return 'on';
   });
+
+  /** Render the device list independently of `state`. */
+  protected readonly hasDevices = computed<boolean>(() => this.devices().length > 0);
 
   ngOnInit(): void {
     this.permission.set(this.webPushService.currentPermission());
@@ -101,7 +111,12 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
     this.busy.set(true);
     try {
       const device = await this.webPushService.subscribe(vapidKey);
-      this.devices.update((current) => [device, ...current]);
+      // The backend is idempotent on (user, endpoint_hash) and a
+      // re-subscribe from the same browser returns the existing row's
+      // id. Filter the prior entry out before prepending so the
+      // template's `@for (...; track device.id)` never sees a duplicate
+      // key (which would throw at runtime under strict change-detection).
+      this.devices.update((current) => [device, ...current.filter((d) => d.id !== device.id)]);
       this.permission.set(this.webPushService.currentPermission());
       this.messageService.add({
         severity: 'success',

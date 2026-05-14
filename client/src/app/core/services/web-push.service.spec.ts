@@ -153,6 +153,70 @@ describe('WebPushService (#694)', () => {
       expect(err.name).toBe('WebPushError');
       expect(err.reason).toBe('subscribe_failed');
     });
+
+    it('on success: POSTs the envelope and resolves with the created device', async () => {
+      const subscription = {
+        endpoint: 'https://fcm.googleapis.com/fcm/send/abc',
+        toJSON: () => ({
+          endpoint: 'https://fcm.googleapis.com/fcm/send/abc',
+          keys: { p256dh: 'p256dh-value', auth: 'auth-secret' },
+        }),
+      } as unknown as PushSubscription;
+      const { service, http } = setup({ subscription });
+
+      const result = service.subscribe('PUB');
+      // Drain microtasks so `swPush.requestSubscription` resolves and
+      // the inner `http.post` is dispatched before `expectOne`. Two
+      // awaits cover the await-chain inside `subscribe()`
+      // (requestSubscription → toJSON → http.post).
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const req = http.expectOne('/api/v1/me/push-subscriptions');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        endpoint: 'https://fcm.googleapis.com/fcm/send/abc',
+        keys: { p256dh: 'p256dh-value', auth: 'auth-secret' },
+      });
+      req.flush({
+        data: {
+          id: 42,
+          endpoint_host: 'fcm.googleapis.com',
+          last_seen_at: null,
+          created_at: '2026-05-14T07:00:00+00:00',
+        },
+      });
+
+      await expect(result).resolves.toMatchObject({ id: 42, endpoint_host: 'fcm.googleapis.com' });
+      http.verify();
+    });
+
+    it('maps a 503 response to WebPushError("server_not_configured")', async () => {
+      const subscription = {
+        endpoint: 'https://fcm.googleapis.com/fcm/send/abc',
+        toJSON: () => ({
+          endpoint: 'https://fcm.googleapis.com/fcm/send/abc',
+          keys: { p256dh: 'p256dh-value', auth: 'auth-secret' },
+        }),
+      } as unknown as PushSubscription;
+      const { service, http } = setup({ subscription });
+
+      const result = service.subscribe('PUB');
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const req = http.expectOne('/api/v1/me/push-subscriptions');
+      req.flush(
+        { message: 'Web Push is not configured on this server.' },
+        { status: 503, statusText: 'Service Unavailable' },
+      );
+
+      await expect(result).rejects.toMatchObject({
+        name: 'WebPushError',
+        reason: 'server_not_configured',
+      });
+      http.verify();
+    });
   });
 
   describe('unsubscribe', () => {

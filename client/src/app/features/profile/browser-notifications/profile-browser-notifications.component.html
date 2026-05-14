@@ -93,45 +93,55 @@
             data-cy="profile-browser-notifications-add-device"
           />
         </div>
-
-        <ul
-          class="profile-browser-notifications__devices"
-          data-cy="profile-browser-notifications-devices"
-        >
-          @for (device of devices(); track device.id) {
-            <li
-              class="profile-browser-notifications__device"
-              [attr.data-cy]="'profile-browser-notifications-device-' + device.id"
-            >
-              <div class="profile-browser-notifications__device-text">
-                <span class="profile-browser-notifications__device-host">
-                  {{ device.endpoint_host }}
-                </span>
-                <span
-                  class="profile-browser-notifications__device-meta"
-                  [attr.data-cy]="'profile-browser-notifications-device-created-' + device.id"
-                >
-                  {{ 'profile.browserNotifications.deviceAdded' | translate }}
-                  {{ device.created_at | date: 'mediumDate' }}
-                </span>
-              </div>
-              <p-button
-                type="button"
-                severity="danger"
-                icon="pi pi-times"
-                [text]="true"
-                size="small"
-                [ariaLabel]="'profile.browserNotifications.revoke' | translate"
-                [pTooltip]="'profile.browserNotifications.revoke' | translate"
-                tooltipPosition="left"
-                [loading]="busy()"
-                (onClick)="revoke(device)"
-                [attr.data-cy]="'profile-browser-notifications-revoke-' + device.id"
-              />
-            </li>
-          }
-        </ul>
       }
+    }
+
+    <!--
+      Device list renders WHENEVER the user has at least one stored
+      subscription, independently of the action `state` above. Without
+      this split, hitting a "server-disabled" or "permission-denied"
+      branch would hide the list and prevent the user from revoking
+      already-stored devices — the backend still returns `data[]`
+      regardless of `meta.enabled`.
+    -->
+    @if (hasDevices()) {
+      <ul
+        class="profile-browser-notifications__devices"
+        data-cy="profile-browser-notifications-devices"
+      >
+        @for (device of devices(); track device.id) {
+          <li
+            class="profile-browser-notifications__device"
+            [attr.data-cy]="'profile-browser-notifications-device-' + device.id"
+          >
+            <div class="profile-browser-notifications__device-text">
+              <span class="profile-browser-notifications__device-host">
+                {{ device.endpoint_host }}
+              </span>
+              <span
+                class="profile-browser-notifications__device-meta"
+                [attr.data-cy]="'profile-browser-notifications-device-created-' + device.id"
+              >
+                {{ 'profile.browserNotifications.deviceAdded' | translate }}
+                {{ device.created_at | date: 'mediumDate' }}
+              </span>
+            </div>
+            <p-button
+              type="button"
+              severity="danger"
+              icon="pi pi-times"
+              [text]="true"
+              size="small"
+              [ariaLabel]="'profile.browserNotifications.revoke' | translate"
+              [pTooltip]="'profile.browserNotifications.revoke' | translate"
+              tooltipPosition="left"
+              [loading]="busy()"
+              (onClick)="revoke(device)"
+              [attr.data-cy]="'profile-browser-notifications-revoke-' + device.id"
+            />
+          </li>
+        }
+      </ul>
     }
   }
 </div>

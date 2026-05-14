@@ -196,23 +196,24 @@ export class WebPushService {
   }
 
   /**
-   * Revoke a single device. Two distinct sides to clear:
-   *  1. The server-side row (`DELETE` endpoint) — authoritative list.
-   *  2. The local browser `PushSubscription` — only relevant if the id
-   *     being revoked corresponds to the current browser's
-   *     subscription. We can't easily tell without comparing endpoints,
-   *     so we best-effort call `swPush.unsubscribe()` and swallow
-   *     errors. A mismatched id just means the local unsubscribe
-   *     no-ops cleanly.
+   * Revoke a single device by deleting its server-side row. The
+   * server is the authoritative list — once the row is gone the
+   * fanout (#696) skips that browser, regardless of whether the
+   * browser still holds an active `PushSubscription` object.
+   *
+   * **Why we do NOT also call `swPush.unsubscribe()`**: that method
+   * unsubscribes the CURRENT browser's `PushSubscription`. If the
+   * user is revoking a different device from the list, calling it
+   * here would silently kill THIS browser's subscription while
+   * leaving its server row in place — the inverse of what the user
+   * asked for. The robust fix needs the backend to return
+   * `endpoint_hash` so we can compare against
+   * `sha256(currentSubscription.endpoint)` and only unsubscribe
+   * locally on a match; until that lands, deferring to the server
+   * delete is the safer trade-off. The orphaned local subscription
+   * is harmless — the next push fanout simply doesn't include it.
    */
   async unsubscribe(id: number): Promise<void> {
     await firstValueFrom(this.http.delete(`/api/v1/me/push-subscriptions/${id}`));
-    try {
-      if (this.swPush.isEnabled) {
-        await this.swPush.unsubscribe();
-      }
-    } catch {
-      // best-effort — server row is gone either way.
-    }
   }
 }

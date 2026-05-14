@@ -149,6 +149,57 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
     ).toBeTruthy();
   });
 
+  it('renders the "permission-denied" notice when Notification.permission is denied', () => {
+    Object.defineProperty(globalThis, 'Notification', {
+      value: { permission: 'denied' as NotificationPermission, requestPermission: vi.fn() },
+      configurable: true,
+      writable: true,
+    });
+
+    const { fixture, http } = setup();
+    fixture.detectChanges();
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [],
+      meta: { vapid_public_key: 'PUB', enabled: true },
+    });
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-cy="profile-browser-notifications-permission-denied"]',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('renders the device list ALONGSIDE a non-on state so revoke stays accessible', () => {
+    const { fixture, http } = setup();
+    fixture.detectChanges();
+    // server-disabled (meta.enabled = false) PLUS one pre-existing
+    // device. The action surface is blocked, but the user must still
+    // be able to revoke what they already opted into.
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [
+        {
+          id: 7,
+          endpoint_host: 'fcm.googleapis.com',
+          last_seen_at: null,
+          created_at: '2026-05-14T07:00:00+00:00',
+        },
+      ],
+      meta: { vapid_public_key: null, enabled: false },
+    });
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector(
+        '[data-cy="profile-browser-notifications-server-disabled"]',
+      ),
+    ).toBeTruthy();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-browser-notifications-device-7"]'),
+    ).toBeTruthy();
+  });
+
   it('renders the "unsupported" notice when serviceWorker / PushManager are missing', () => {
     const { fixture, http } = setup({ browserSupported: false });
     fixture.detectChanges();
