@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Minishlink\WebPush\WebPush;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,31 @@ class AppServiceProvider extends ServiceProvider
         // password-validation hit (Register / Reset / ChangePassword
         // / AcceptAthleteInvitation).
         $this->app->singleton(PwnedPasswordsClient::class);
+
+        // `Minishlink\WebPush\WebPush` is the per-request fanout client
+        // used by `App\Notifications\Channels\WebPushChannel` (#696).
+        // The constructor takes a VAPID config array — keep the binding
+        // here so the channel can `__construct(WebPush $webPush)` and
+        // get a fully-wired instance via the container, instead of
+        // re-reading config in every channel constructor.
+        //
+        // We do NOT singleton this: `WebPush` carries per-instance
+        // request state (queued payloads, default options); a singleton
+        // would let two concurrent notifications cross-contaminate
+        // their queues.
+        $this->app->bind(WebPush::class, function (): WebPush {
+            $publicKey = config('push.vapid.public_key');
+            $privateKey = config('push.vapid.private_key');
+            $subject = config('push.vapid.subject');
+
+            return new WebPush([
+                'VAPID' => [
+                    'subject' => \is_string($subject) ? $subject : '',
+                    'publicKey' => \is_string($publicKey) ? $publicKey : '',
+                    'privateKey' => \is_string($privateKey) ? $privateKey : '',
+                ],
+            ]);
+        });
     }
 
     public function boot(): void

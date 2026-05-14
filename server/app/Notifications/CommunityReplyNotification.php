@@ -6,6 +6,7 @@ namespace App\Notifications;
 
 use App\Models\PostComment;
 use App\Models\User;
+use App\Notifications\Channels\WebPushChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -16,15 +17,18 @@ use Illuminate\Notifications\Notification;
  * post — the trigger callsite is responsible for excluding them
  * from the recipient set.
  *
- * Channel: `database` only in V1 — the inbox bell-dropdown surfaces
- * the row immediately. A future PR can add a `webpush` channel
- * gated on `users.push_subscriptions` rows; the data shape stays
- * the same.
+ * Channels:
+ *   - `database` — always on. Backs the inbox bell-dropdown.
+ *   - `WebPushChannel` (#696) — fans out to every `push_subscriptions`
+ *     row the user has opted in from (`/dashboard/profile` → Browser
+ *     notifications). The channel is a no-op when the user has zero
+ *     subscriptions, so adding it unconditionally is safe.
  *
  * Opt-out: gated server-side at the trigger site via
  * `NotificationPreferences::isEnabled($user,
  * NotificationCategory::COMMUNITY_REPLY)` — this class is fired
- * only for recipients who have NOT opted out.
+ * only for recipients who have NOT opted out. The single gate
+ * covers both channels.
  */
 class CommunityReplyNotification extends Notification
 {
@@ -41,7 +45,7 @@ class CommunityReplyNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return ['database', WebPushChannel::class];
     }
 
     /**
@@ -50,20 +54,54 @@ class CommunityReplyNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         return [
-            'title' => \sprintf(
-                '%s commented on a post you replied to',
-                trim($this->author->first_name . ' ' . $this->author->last_name),
-            ),
-            // Excerpt of the new comment — 100 chars is enough for
-            // the dropdown row preview and matches the inbox's
-            // visual budget without truncating mid-word badly.
-            'body' => mb_strimwidth($this->newComment->body, 0, 100, '…'),
-            'link' => \sprintf('/dashboard/me/feed#post-%d', $this->newComment->post_id),
-            // Stable kind key so the SPA can render a community-
-            // specific icon / styling without parsing the title.
+            'title' => $this->title(),
+            'body' => $this->body(),
+            'link' => $this->link(),
             'kind' => 'community_reply',
             'post_id' => $this->newComment->post_id,
             'comment_id' => $this->newComment->id,
         ];
+    }
+
+    /**
+     * Browser Web Push payload (#696). Reuses the same title / body
+     * / link the inbox row carries so the in-app inbox and the
+     * out-of-tab toast stay visually consistent. `kind` lets the SPA
+     * push handler render a community-specific icon without parsing
+     * the title.
+     *
+     * @return array<string, mixed>
+     */
+    public function toWebPush(object $notifiable): array
+    {
+        return [
+            'title' => $this->title(),
+            'body' => $this->body(),
+            'link' => $this->link(),
+            'kind' => 'community_reply',
+            'post_id' => $this->newComment->post_id,
+            'comment_id' => $this->newComment->id,
+        ];
+    }
+
+    private function title(): string
+    {
+        return \sprintf(
+            '%s commented on a post you replied to',
+            trim($this->author->first_name . ' ' . $this->author->last_name),
+        );
+    }
+
+    private function body(): string
+    {
+        // Excerpt of the new comment — 100 chars is enough for the
+        // dropdown row preview and matches the inbox's visual budget
+        // without truncating mid-word badly.
+        return mb_strimwidth($this->newComment->body, 0, 100, '…');
+    }
+
+    private function link(): string
+    {
+        return \sprintf('/dashboard/me/feed#post-%d', $this->newComment->post_id);
     }
 }

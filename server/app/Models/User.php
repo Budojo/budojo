@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -91,6 +92,19 @@ class User extends Authenticatable implements MustVerifyEmail
     public function pendingDeletion(): HasOne
     {
         return $this->hasOne(PendingDeletion::class);
+    }
+
+    /**
+     * Browser Web Push subscriptions (#419, #696). One row per device
+     * the user has explicitly granted push permission on. The
+     * `WebPushChannel` iterates this relation to fan out a notification
+     * to every browser the user has opted in from.
+     *
+     * @return HasMany<PushSubscription, $this>
+     */
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
     }
 
     /**
