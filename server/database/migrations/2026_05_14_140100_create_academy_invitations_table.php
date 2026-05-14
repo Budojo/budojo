@@ -39,8 +39,15 @@ return new class extends Migration
             $table->string('email', 255);
             $table->string('role', 16);
             $table->char('token_hash', 64);
+            // cascadeOnDelete on the inviter — without it the default
+            // FK behaviour is RESTRICT, which would make any user
+            // with pending invitations impossible to delete. If the
+            // inviter is gone, the pending invitations they sent are
+            // effectively orphaned anyway; cascading lets us drop
+            // them cleanly.
             $table->foreignId('invited_by_user_id')
-                ->constrained('users');
+                ->constrained('users')
+                ->cascadeOnDelete();
             $table->timestamp('expires_at');
             $table->timestamps();
 

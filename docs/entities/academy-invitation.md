@@ -11,8 +11,8 @@ A pending invitation to join an academy as a team member (#427, PRD: `docs/specs
 | `email`               | varchar(255)   | Target invitee — may not have a Budojo account yet. |
 | `role`                | varchar(16)    | Cast to `MembershipRole`. FormRequest validation rejects `owner` (no ownership transfer in v1). |
 | `token_hash`          | char(64)       | SHA-256 of the raw URL token. Same shape as Laravel's password-reset table. |
-| `invited_by_user_id`  | bigint FK      | `users.id`. Audit of who sent the invite. |
-| `expires_at`          | timestamp      | Default `+7 days` from creation. The TTL is configurable per env via `config('teams.invitation_ttl')`. |
+| `invited_by_user_id`  | bigint FK      | `users.id`, `ON DELETE CASCADE`. Without the cascade, a user with pending invitations would be undeletable (default FK is RESTRICT). |
+| `expires_at`          | timestamp      | Default `+7 days` from creation. Currently hard-coded at the Action layer (sub-issue 5/9); a config-driven TTL can be added later if a deployer asks for it. |
 | `created_at`, `updated_at` | timestamps | |
 
 ### Indexes
@@ -26,7 +26,7 @@ A pending invitation to join an academy as a team member (#427, PRD: `docs/specs
 
 - Server generates a 256-bit raw random (`Str::random(64)`). Email link carries the raw value: `https://budojo.it/team/invitations/accept?token={raw}`.
 - DB stores only `SHA-256(raw)` in `token_hash`. Accept endpoint re-hashes the body's `token` and looks up by `token_hash`.
-- Constant-time comparison on lookup (`hash_equals`).
+- The DB index lookup itself is not constant-time (that's just an indexed select); the timing-safe comparison happens at the application layer via `hash_equals` against the stored hash.
 
 ## Business rules
 

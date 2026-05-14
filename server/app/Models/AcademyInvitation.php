@@ -25,7 +25,7 @@ use Illuminate\Support\Carbon;
  * @property int                $academy_id
  * @property string             $email           Target invitee — may not have an account yet.
  * @property MembershipRole     $role            Validation layer rejects `owner` (no transfer in v1).
- * @property string             $token_hash      SHA-256 of the raw URL token. Lookup constant-time.
+ * @property string             $token_hash      SHA-256 of the raw URL token. Accept-side comparison uses `hash_equals` for constant-time at the application layer; the DB index lookup itself is not constant-time.
  * @property int                $invited_by_user_id
  * @property Carbon             $expires_at
  * @property Carbon             $created_at
