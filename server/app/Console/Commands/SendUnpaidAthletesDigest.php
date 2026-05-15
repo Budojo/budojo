@@ -231,6 +231,11 @@ class SendUnpaidAthletesDigest extends Command
         return Athlete::query()
             ->where('academy_id', $academy->id)
             ->where('status', AthleteStatus::Active)
+            // Owner-as-athlete rows (#748) are excluded from the digest
+            // — the owner isn't billed, so listing them as "unpaid"
+            // every month would be noise. The `(academy_id, is_self)`
+            // composite index keeps the scan tight.
+            ->where('is_self', false)
             ->whereDoesntHave('payments', function ($q) use ($year, $month): void {
                 $q->where('year', $year)->where('month', $month);
             })

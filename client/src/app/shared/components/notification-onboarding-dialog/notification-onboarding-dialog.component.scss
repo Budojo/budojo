@@ -1,0 +1,72 @@
+.notification-onboarding {
+  &__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.25rem 0;
+  }
+
+  &__lede {
+    margin: 0;
+    color: var(--p-text-color);
+    line-height: 1.5;
+  }
+
+  &__points {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+
+    li {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      color: var(--p-text-color);
+
+      i {
+        flex: 0 0 auto;
+        margin-top: 0.125rem;
+        color: var(--p-primary-color);
+        font-size: 1rem;
+      }
+    }
+  }
+
+  &__fineprint {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
+  }
+
+  &__result {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+  }
+
+  &__banner {
+    width: 100%;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    width: 100%;
+
+    &--single {
+      justify-content: center;
+    }
+  }
+}

@@ -7,13 +7,20 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import type { Mock } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthletesListComponent } from './athletes-list.component';
-import { AcademyService } from '../../../core/services/academy.service';
+import { AcademyService, type Academy } from '../../../core/services/academy.service';
 import { AthleteService, type Athlete } from '../../../core/services/athlete.service';
 import { PaymentService } from '../../../core/services/payment.service';
 
 class FakeAthleteService {
+  // Declare the default `data` slot as `Athlete[]` (not `never[]`) so
+  // per-test `list.mockReturnValue(...)` calls can ship a populated
+  // roster without a type-cast — caught when wiring the owner-chip
+  // rendering specs (#754 Copilot review).
   readonly list = vi.fn(() =>
-    of({ data: [], meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 } }),
+    of({
+      data: [] as Athlete[],
+      meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 },
+    }),
   );
   readonly delete = vi.fn(() => of(void 0));
 }
@@ -727,6 +734,86 @@ describe('AthletesListComponent', () => {
       const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
       config.accept?.();
       expect(athleteService.delete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Owner-as-athlete chip + paid placeholder rendering (#750, #754 Copilot review)', () => {
+    function makeAthlete(over: Partial<Athlete> = {}): Athlete {
+      return {
+        id: 1,
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        email: null,
+        phone_country_code: null,
+        phone_national_number: null,
+        address: null,
+        date_of_birth: null,
+        belt: 'white',
+        stripes: 0,
+        status: 'active',
+        joined_at: '2026-01-01',
+        created_at: '2026-01-01T00:00:00Z',
+        is_self: false,
+        paid_current_month: true,
+        ...over,
+      } as Athlete;
+    }
+
+    it('renders the Owner chip on self-rows and omits it on the rest', () => {
+      const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+      athleteService.list.mockReturnValue(
+        of({
+          data: [makeAthlete({ id: 1, is_self: true }), makeAthlete({ id: 2, is_self: false })],
+          meta: { total: 2, current_page: 1, per_page: 20, last_page: 1 },
+        }),
+      );
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[data-cy="athlete-owner-chip-1"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="athlete-owner-chip-2"]')).toBeNull();
+    });
+
+    it('renders the paid placeholder on self-rows and the paid badge on the rest when the academy has a monthly fee', () => {
+      // `hasMonthlyFee()` reads from AcademyService.academy(); without a
+      // fee the entire paid column is gated out (#105) and there's nothing
+      // to assert on. The root-singleton signal is reset by TestBed's
+      // per-test module setup.
+      TestBed.inject(AcademyService).academy.set({
+        id: 1,
+        name: 'Test',
+        slug: 'test',
+        address: null,
+        logo_url: null,
+        monthly_fee_cents: 9500,
+      } as Academy);
+
+      const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+      athleteService.list.mockReturnValue(
+        of({
+          data: [
+            makeAthlete({ id: 1, is_self: true, paid_current_month: true }),
+            makeAthlete({ id: 2, is_self: false, paid_current_month: true }),
+          ],
+          meta: { total: 2, current_page: 1, per_page: 20, last_page: 1 },
+        }),
+      );
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement as HTMLElement;
+      // Scope assertions to the desktop `<tbody>`. The mobile-cards
+      // view (`.athletes-cards`) also renders the paid badge but does
+      // NOT gate on `is_self` (separate inconsistency tracked outside
+      // this test) — both views are present in jsdom regardless of
+      // viewport so a global count would conflate them.
+      const tbody = el.querySelector('tbody');
+      expect(tbody).not.toBeNull();
+      expect(tbody?.querySelectorAll('.athlete-paid-empty').length).toBe(1);
+      expect(tbody?.querySelectorAll('app-paid-badge').length).toBe(1);
     });
   });
 });

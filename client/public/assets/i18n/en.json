@@ -194,6 +194,7 @@
       "invite_revoked": "This invitation has been revoked. Ask your academy owner to send you a new one.",
       "invite_expired": "This invitation has expired. Ask your academy owner to send you a new one.",
       "email_already_registered": "An account already exists for this email. Please sign in instead.",
+      "password_breached": "This password has appeared in known data breaches — it's too easy to guess. Pick a longer or less common one.",
       "unknown_error": "Something went wrong. Please try again in a moment."
     }
   },
@@ -255,7 +256,9 @@
       "firstName": "First name",
       "lastName": "Last name",
       "handle": "Username",
-      "handleHint": "Lowercase letters, numbers, dots, underscores. 3–30 characters; must start with a letter. Leave empty to clear.",
+      "handleContextExample": "Your public identifier, e.g. budojo.it/@eli_33",
+      "handleHint": "Lowercase letters only (uppercase will be converted automatically). Numbers, dots and underscores are optional. 3 to 30 characters, must start with a letter.",
+      "handleClearHint": "Leave empty and save to remove your current username.",
       "noHandle": "No username set yet",
       "email": "Email",
       "verified": "Verified",
@@ -441,6 +444,25 @@
     "title": "Recent updates",
     "subtitle": "What's changed in Budojo lately, in plain language. Newest at the top.",
     "back": "Back to dashboard"
+  },
+  "notificationOnboarding": {
+    "title": "Stay in the loop",
+    "lede": "Budojo can send you a notification on this device when something needs your attention — even when the tab isn't open.",
+    "points": {
+      "athletes": "Athlete activity — new sign-ups, expiring medicals, missed trainings.",
+      "events": "Events and RSVPs — open mats, seminars, who's coming.",
+      "community": "Community — replies, comments and reactions on your posts."
+    },
+    "fineprint": "You can fine-tune which categories you receive — or turn the whole thing off — any time from Profile → Notifications.",
+    "accept": "Enable notifications",
+    "dismiss": "Not now",
+    "gotIt": "Got it",
+    "result": {
+      "succeeded": "All set. We'll start sending notifications to this device.",
+      "denied": "No problem — notifications stay off. You can turn them on later from Profile → Notifications (you'll need to allow them in your browser settings first).",
+      "failed": "We couldn't enable notifications right now. Try again later from Profile → Notifications.",
+      "dismissed": "No worries — you can turn this on whenever you like from Profile → Notifications."
+    }
   },
   "help": {
     "brandAriaLabel": "Budojo home",
@@ -765,6 +787,30 @@
       "successSummary": "Password updated",
       "successDetail": "Your password has been changed. Other devices have been signed out.",
       "genericError": "Couldn't update your password. Please try again."
+    },
+    "trainHere": {
+      "title": "Train at this academy",
+      "subtitle": "Add yourself to the roster as an athlete in your own academy. Your community posts will show your belt, your attendance is tracked, and you'll appear on the athletes list with an Owner chip.",
+      "errorMessage": "We couldn't check your enrollment state.",
+      "retry": "Try again",
+      "toggle": {
+        "label": "I train here",
+        "description": "Flip on to appear in the athletes list with a White belt as a starting point — you can promote yourself like any other athlete. Flipping off removes you from the visible list; your history (attendance, promotions) is preserved if you ever re-enroll."
+      },
+      "toast": {
+        "enrolled": {
+          "summary": "You're on the roster",
+          "detail": "You now appear in the athletes list. Your community posts will show your belt."
+        },
+        "left": {
+          "summary": "Removed from the roster",
+          "detail": "Your history is preserved — flip the toggle back on to restore it."
+        },
+        "error": {
+          "summary": "Something went wrong",
+          "detail": "Couldn't update your enrollment. Please try again."
+        }
+      }
     },
     "notifications": {
       "title": "Notifications",
@@ -1378,6 +1424,7 @@
       "beltPlaceholder": "Belt",
       "statusPlaceholder": "Status",
       "paidPlaceholder": "Paid",
+      "ownerChip": "Owner",
       "paidOptions": {
         "all": "All",
         "yes": "Paid",

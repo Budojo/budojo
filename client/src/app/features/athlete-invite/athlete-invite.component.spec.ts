@@ -7,13 +7,14 @@ import {
   AthleteInviteService,
 } from '../../core/services/athlete-invite.service';
 import { AuthService } from '../../core/services/auth.service';
+import { NotificationOnboardingService } from '../../core/services/notification-onboarding.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 function setup(
   opts: {
     token?: string | null;
     previewResponse?: AthleteInvitePreview | 'invalid';
-    acceptResponse?: 'ok' | 'invite_revoked' | 'unknown_error_shape';
+    acceptResponse?: 'ok' | 'invite_revoked' | 'unknown_error_shape' | 'password_breached';
   } = {},
 ) {
   const previewValue: AthleteInvitePreview = {
@@ -36,6 +37,9 @@ function setup(
     }
     if (opts.acceptResponse === 'unknown_error_shape') {
       return throwError(() => ({ error: {} }));
+    }
+    if (opts.acceptResponse === 'password_breached') {
+      return throwError(() => ({ error: { errors: { password: ['password_breached'] } } }));
     }
     return of({ token: 'new-sanctum-token', user: {} });
   });
@@ -69,6 +73,10 @@ function setup(
         },
       },
       { provide: Router, useValue: { navigate } as Partial<Router> },
+      {
+        provide: NotificationOnboardingService,
+        useValue: { requestPromptAfterAuth: vi.fn().mockReturnValue(false) },
+      },
       ...provideI18nTesting(),
     ],
   });
@@ -184,5 +192,27 @@ describe('AthleteInviteComponent (#445 M7 PR-C)', () => {
 
     expect(cmp.state()).toBe('error');
     expect(cmp.errorMessage()).toBe('unknown_error');
+  });
+
+  it("submit() surfaces 'password_breached' when the server rejects the chosen password (HIBP) — prod incident with Elizabeth", () => {
+    // Repro: Elizabeth filled the invite form on prod with a password
+    // that landed in the HIBP breach list. The server returned 422
+    // with `errors.password: ['password_breached']`, but the SPA's
+    // pre-fix handler only inspected `errors.token` + `errors.email`,
+    // so the panel fell through to the generic "unknown_error"
+    // message — leaving Elizabeth with no clue what to change.
+    const { cmp } = setup({ acceptResponse: 'password_breached' });
+
+    cmp.form.patchValue({
+      password: 'qwerty12345',
+      password_confirmation: 'qwerty12345',
+      privacy_accepted: true,
+      terms_accepted: true,
+    });
+
+    cmp.submit();
+
+    expect(cmp.state()).toBe('error');
+    expect(cmp.errorMessage()).toBe('password_breached');
   });
 });

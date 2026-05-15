@@ -1,0 +1,90 @@
+<p-dialog
+  [visible]="visible()"
+  (visibleChange)="onVisibleChange($event)"
+  [modal]="true"
+  [dismissableMask]="!subscribing()"
+  [closeOnEscape]="!subscribing()"
+  [closable]="!subscribing()"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '28rem' }"
+  [breakpoints]="{ '768px': '92vw' }"
+  styleClass="notification-onboarding"
+  data-cy="notification-onboarding-dialog"
+>
+  <ng-template #header>
+    <h2 class="notification-onboarding__title" data-cy="notification-onboarding-title">
+      {{ 'notificationOnboarding.title' | translate }}
+    </h2>
+  </ng-template>
+
+  @if (!isResult()) {
+    <div class="notification-onboarding__body" data-cy="notification-onboarding-body">
+      <p class="notification-onboarding__lede">
+        {{ 'notificationOnboarding.lede' | translate }}
+      </p>
+      <ul class="notification-onboarding__points">
+        <li>
+          <i class="pi pi-users" aria-hidden="true"></i>
+          <span>{{ 'notificationOnboarding.points.athletes' | translate }}</span>
+        </li>
+        <li>
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+          <span>{{ 'notificationOnboarding.points.events' | translate }}</span>
+        </li>
+        <li>
+          <i class="pi pi-comments" aria-hidden="true"></i>
+          <span>{{ 'notificationOnboarding.points.community' | translate }}</span>
+        </li>
+      </ul>
+      <p class="notification-onboarding__fineprint">
+        {{ 'notificationOnboarding.fineprint' | translate }}
+      </p>
+    </div>
+
+    <ng-template #footer>
+      <div class="notification-onboarding__actions">
+        <p-button
+          type="button"
+          severity="secondary"
+          [text]="true"
+          [label]="'notificationOnboarding.dismiss' | translate"
+          [disabled]="subscribing()"
+          (onClick)="dismiss()"
+          data-cy="notification-onboarding-dismiss"
+        />
+        <p-button
+          type="button"
+          severity="primary"
+          icon="pi pi-bell"
+          [label]="'notificationOnboarding.accept' | translate"
+          [loading]="subscribing()"
+          (onClick)="accept()"
+          data-cy="notification-onboarding-accept"
+        />
+      </div>
+    </ng-template>
+  } @else {
+    <div class="notification-onboarding__result" data-cy="notification-onboarding-result">
+      <p-message
+        [severity]="resultSeverity()"
+        [closable]="false"
+        styleClass="notification-onboarding__banner"
+      >
+        {{ 'notificationOnboarding.result.' + state() | translate }}
+      </p-message>
+    </div>
+
+    <ng-template #footer>
+      <div class="notification-onboarding__actions notification-onboarding__actions--single">
+        <p-button
+          type="button"
+          severity="primary"
+          [label]="'notificationOnboarding.gotIt' | translate"
+          (onClick)="close()"
+          data-cy="notification-onboarding-close"
+        />
+      </div>
+    </ng-template>
+  }
+</p-dialog>

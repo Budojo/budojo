@@ -26,7 +26,7 @@ permissions:
 jobs:
   release:
     name: "🚀 Semantic Release"
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, budojo]
     # Belt-and-suspenders ref guard — `workflow_dispatch` accepts any
     # ref from the Actions UI / CLI, but semantic-release is configured
     # to release ONLY from `main` (stable) and `develop` (beta). Without
@@ -125,7 +125,7 @@ jobs:
   # or approve pull requests". One-time admin toggle.
   sweep:
     name: "🔁 Post-release main → develop sweep"
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, budojo]
     needs: release
     if: |
       github.ref == 'refs/heads/main' &&

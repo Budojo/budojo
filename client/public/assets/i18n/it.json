@@ -194,6 +194,7 @@
       "invite_revoked": "Questo invito è stato revocato. Chiedi al titolare della tua academy di inviartene uno nuovo.",
       "invite_expired": "Questo invito è scaduto. Chiedi al titolare della tua academy di inviartene uno nuovo.",
       "email_already_registered": "Esiste già un account con questa email. Prova ad accedere.",
+      "password_breached": "Questa password compare in liste di password compromesse — è troppo facile da indovinare. Scegline una più lunga o meno comune.",
       "unknown_error": "Qualcosa è andato storto. Riprova tra un momento."
     }
   },
@@ -255,7 +256,9 @@
       "firstName": "Nome",
       "lastName": "Cognome",
       "handle": "Username",
-      "handleHint": "Lettere minuscole, numeri, punti, underscore. 3–30 caratteri; deve iniziare con una lettera. Lascia vuoto per rimuoverlo.",
+      "handleContextExample": "Sarà il tuo identificativo pubblico, es. budojo.it/@eli_33",
+      "handleHint": "Solo lettere minuscole (le maiuscole verranno convertite automaticamente). Numeri, punti e underscore sono opzionali. Da 3 a 30 caratteri, deve iniziare con una lettera.",
+      "handleClearHint": "Lascia vuoto e salva per rimuovere il tuo username attuale.",
       "noHandle": "Username non ancora impostato",
       "email": "Email",
       "verified": "Verificata",
@@ -441,6 +444,25 @@
     "title": "Aggiornamenti recenti",
     "subtitle": "Le novità di Budojo in parole semplici. La più recente in cima.",
     "back": "Torna alla dashboard"
+  },
+  "notificationOnboarding": {
+    "title": "Resta aggiornato",
+    "lede": "Budojo può inviarti una notifica su questo dispositivo quando succede qualcosa che richiede la tua attenzione — anche quando la scheda non è aperta.",
+    "points": {
+      "athletes": "Attività atleti — nuove iscrizioni, certificati in scadenza, allenamenti saltati.",
+      "events": "Eventi e RSVP — open mat, seminari, chi parteciperà.",
+      "community": "Community — risposte, commenti e reazioni ai tuoi post."
+    },
+    "fineprint": "Puoi scegliere quali categorie ricevere — o disattivare tutto — in qualsiasi momento da Profilo → Notifiche.",
+    "accept": "Attiva notifiche",
+    "dismiss": "Non ora",
+    "gotIt": "Va bene",
+    "result": {
+      "succeeded": "Tutto a posto. Inizieremo a inviarti le notifiche su questo dispositivo.",
+      "denied": "Nessun problema — le notifiche restano disattivate. Puoi attivarle più tardi da Profilo → Notifiche (dovrai prima consentirle nelle impostazioni del browser).",
+      "failed": "Non siamo riusciti ad attivare le notifiche in questo momento. Riprova più tardi da Profilo → Notifiche.",
+      "dismissed": "Tranquillo — puoi attivare le notifiche quando vuoi da Profilo → Notifiche."
+    }
   },
   "help": {
     "brandAriaLabel": "Home Budojo",
@@ -765,6 +787,30 @@
       "successSummary": "Password aggiornata",
       "successDetail": "La tua password è stata cambiata. Gli altri dispositivi sono stati disconnessi.",
       "genericError": "Non è stato possibile aggiornare la password. Riprova."
+    },
+    "trainHere": {
+      "title": "Mi alleno in questa palestra",
+      "subtitle": "Aggiungiti al roster come atleta della tua stessa palestra. I tuoi post community mostreranno la cintura, le tue presenze vengono tracciate e comparirai nella lista atleti con un'etichetta Owner.",
+      "errorMessage": "Non siamo riusciti a controllare se sei iscritto.",
+      "retry": "Riprova",
+      "toggle": {
+        "label": "Mi alleno qui",
+        "description": "Attiva per comparire nella lista atleti con cintura Bianca di partenza — potrai promuoverti come qualsiasi altro atleta. Disattivando ti togli dalla lista visibile; la cronologia (presenze, promozioni) viene mantenuta se torni indietro."
+      },
+      "toast": {
+        "enrolled": {
+          "summary": "Sei nel roster",
+          "detail": "Ora compari nella lista atleti. I tuoi post nel community mostreranno la cintura."
+        },
+        "left": {
+          "summary": "Rimosso dal roster",
+          "detail": "La cronologia è conservata — riattiva il toggle per ripristinarla."
+        },
+        "error": {
+          "summary": "Qualcosa è andato storto",
+          "detail": "Non siamo riusciti ad aggiornare l'iscrizione. Riprova."
+        }
+      }
     },
     "notifications": {
       "title": "Notifiche",
@@ -1378,6 +1424,7 @@
       "beltPlaceholder": "Cintura",
       "statusPlaceholder": "Stato",
       "paidPlaceholder": "Pagamento",
+      "ownerChip": "Owner",
       "paidOptions": {
         "all": "Tutti",
         "yes": "Pagato",

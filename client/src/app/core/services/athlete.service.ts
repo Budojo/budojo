@@ -104,6 +104,16 @@ export interface Athlete {
    */
   paid_current_month?: boolean;
   /**
+   * Owner-as-athlete flag (#748). True iff the row was created via the
+   * caller's own `POST /api/v1/me/athlete` enrollment — i.e. this
+   * athlete *is* an academy staff member training in their own academy.
+   * The SPA renders an `Owner` chip + hides the payment column + the
+   * regular Delete CTA on these rows. Optional to keep pre-#748 mocks
+   * and fixtures compiling; the wire shape includes it on every athlete
+   * resource from #748 onward.
+   */
+  is_self?: boolean;
+  /**
    * The single invitation row the SPA renders on the athlete-detail
    * card (#467, M7 PR-B-UI). Read-only projection — never carries the
    * raw token / hash. `null` when there's no active row OR on the
