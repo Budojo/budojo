@@ -33,10 +33,14 @@ describe('ProfileTrainHereComponent (#750)', () => {
     return { fixture };
   }
 
-  function flushList(rows: Array<{ id: number; is_self?: boolean }>) {
-    const req = httpMock.expectOne(`${environment.apiBase}/api/v1/athletes?per_page=100`);
+  function flushState(state: { enrolled: boolean; athlete_id: number | null }) {
+    // `state()` now hits the dedicated `/me/athlete/state` endpoint
+    // (#761) — previously walked one page of `/athletes` which silently
+    // missed self-rows on rosters > 20. The mock matches the new shape:
+    // `{ data: { enrolled, athlete_id } }`.
+    const req = httpMock.expectOne(`${environment.apiBase}/api/v1/me/athlete/state`);
     expect(req.request.method).toBe('GET');
-    req.flush({ data: rows });
+    req.flush({ data: state });
   }
 
   it('starts in loading state, renders the spinner', () => {
@@ -46,12 +50,12 @@ describe('ProfileTrainHereComponent (#750)', () => {
     expect(root.querySelector('[data-cy="profile-train-here-toggle"]')).toBeFalsy();
 
     // Flush the initial GET so the harness doesn't complain about pending requests.
-    flushList([]);
+    flushState({ enrolled: false, athlete_id: null });
   });
 
   it('shows the toggle in OFF state when no self-row exists', () => {
     const { fixture } = setup();
-    flushList([{ id: 1 }, { id: 2 }]);
+    flushState({ enrolled: false, athlete_id: null });
     fixture.detectChanges();
 
     // Assert via the component's signal rather than PrimeNG's DOM
@@ -64,7 +68,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
 
   it('shows the toggle in ON state when a self-row exists', () => {
     const { fixture } = setup();
-    flushList([{ id: 1, is_self: true }]);
+    flushState({ enrolled: true, athlete_id: 1 });
     fixture.detectChanges();
 
     const enrolled = (fixture.componentInstance as unknown as { enrolled(): boolean }).enrolled();
@@ -73,7 +77,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
 
   it('surfaces the error banner when the discovery fetch fails', () => {
     const { fixture } = setup();
-    const req = httpMock.expectOne(`${environment.apiBase}/api/v1/athletes?per_page=100`);
+    const req = httpMock.expectOne(`${environment.apiBase}/api/v1/me/athlete/state`);
     req.error(new ProgressEvent('Network error'), { status: 500 });
     fixture.detectChanges();
 
@@ -84,7 +88,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
 
   it('shows a success toast after enroll', async () => {
     const { fixture } = setup();
-    flushList([]);
+    flushState({ enrolled: false, athlete_id: null });
     fixture.detectChanges();
 
     // The component calls onToggle(true). We invoke it via the protected
@@ -104,7 +108,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
 
   it('rolls back the optimistic ON flip when enroll errors', async () => {
     const { fixture } = setup();
-    flushList([]);
+    flushState({ enrolled: false, athlete_id: null });
     fixture.detectChanges();
 
     (fixture.componentInstance as unknown as { onToggle(v: boolean): void }).onToggle(true);
@@ -124,7 +128,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
 
   it('shows an info toast after leave', async () => {
     const { fixture } = setup();
-    flushList([{ id: 5, is_self: true }]);
+    flushState({ enrolled: true, athlete_id: 5 });
     fixture.detectChanges();
 
     (fixture.componentInstance as unknown as { onToggle(v: boolean): void }).onToggle(false);

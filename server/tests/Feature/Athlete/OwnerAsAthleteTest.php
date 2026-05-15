@@ -278,3 +278,114 @@ it('owner-as-athlete paid_current_month uses the same payment ledger as a regula
     $row = collect($response->json('data'))->firstWhere('is_self', true);
     expect($row['paid_current_month'])->toBeTrue();
 });
+
+// ---------------------------------------------------------------------
+// GET /me/athlete/state (#761) — deterministic owner-as-athlete state
+// lookup. Replaces the SPA's previous first-page scan over /athletes
+// which silently mis-detected `enrolled: false` on rosters > 20.
+// ---------------------------------------------------------------------
+
+it('GET /me/athlete/state returns enrolled=true with athlete_id when the caller has a self-row in the active academy', function (): void {
+    $owner = userWithAcademy();
+    Sanctum::actingAs($owner);
+    /** @var Academy $academy */
+    $academy = $owner->activeAcademy();
+    /** @var Athlete $selfRow */
+    $selfRow = Athlete::factory()->for($academy)->selfFor($owner)->create();
+
+    $response = $this->getJson('/api/v1/me/athlete/state');
+
+    $response->assertOk();
+    $response->assertExactJson([
+        'data' => [
+            'enrolled' => true,
+            'athlete_id' => $selfRow->id,
+        ],
+    ]);
+});
+
+it('GET /me/athlete/state returns enrolled=false with athlete_id=null when the caller has no self-row', function (): void {
+    $owner = userWithAcademy();
+    Sanctum::actingAs($owner);
+
+    $response = $this->getJson('/api/v1/me/athlete/state');
+
+    $response->assertOk();
+    $response->assertExactJson([
+        'data' => [
+            'enrolled' => false,
+            'athlete_id' => null,
+        ],
+    ]);
+});
+
+it('GET /me/athlete/state finds the self-row regardless of roster size (the bug #761 closes)', function (): void {
+    // Repro: with the old SPA discovery (first page of /athletes,
+    // server paginates 20), a self-row sitting at position 21+ in the
+    // sort order was missed. This test creates 25 unrelated athletes
+    // BEFORE the self-row so the self-row sits late in any index
+    // order, then asserts /state still finds it. Direct query against
+    // the (academy_id, user_id, is_self=true) tuple — no pagination.
+    $owner = userWithAcademy();
+    Sanctum::actingAs($owner);
+    /** @var Academy $academy */
+    $academy = $owner->activeAcademy();
+    Athlete::factory()->count(25)->for($academy)->create();
+    /** @var Athlete $selfRow */
+    $selfRow = Athlete::factory()->for($academy)->selfFor($owner)->create();
+
+    $response = $this->getJson('/api/v1/me/athlete/state');
+
+    $response->assertOk();
+    $response->assertJsonPath('data.enrolled', true);
+    $response->assertJsonPath('data.athlete_id', $selfRow->id);
+});
+
+it('GET /me/athlete/state is scoped to the caller and does not leak rows from other academies', function (): void {
+    $owner = userWithAcademy();
+    // A self-row for a DIFFERENT user in a DIFFERENT academy must not
+    // bleed through. Direct lookup is keyed off (academy_id, user_id),
+    // but pin the negative case in a regression test.
+    $stranger = userWithAcademy();
+    /** @var Academy $other */
+    $other = $stranger->activeAcademy();
+    Athlete::factory()->for($other)->selfFor($stranger)->create();
+    Sanctum::actingAs($owner);
+
+    $response = $this->getJson('/api/v1/me/athlete/state');
+
+    $response->assertOk();
+    $response->assertExactJson([
+        'data' => [
+            'enrolled' => false,
+            'athlete_id' => null,
+        ],
+    ]);
+});
+
+it('GET /me/athlete/state returns enrolled=false with 200 when the caller has no active academy', function (): void {
+    // Read endpoints don't gate on "no active academy" — they return
+    // the off state with 200 so the SPA toggle does not need a 422
+    // branch to render. (Different from POST/DELETE which DO return
+    // 422 because they're write operations whose precondition matters
+    // for correctness.)
+    /** @var User $user */
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/v1/me/athlete/state');
+
+    $response->assertOk();
+    $response->assertExactJson([
+        'data' => [
+            'enrolled' => false,
+            'athlete_id' => null,
+        ],
+    ]);
+});
+
+it('GET /me/athlete/state requires authentication', function (): void {
+    $response = $this->getJson('/api/v1/me/athlete/state');
+
+    $response->assertUnauthorized();
+});
