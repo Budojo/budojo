@@ -1,0 +1,51 @@
+<div class="profile-train-here" data-cy="profile-train-here">
+  <header class="profile-train-here__header">
+    <h2 class="profile-train-here__title">
+      {{ 'profile.trainHere.title' | translate }}
+    </h2>
+    <p class="profile-train-here__subtitle">
+      {{ 'profile.trainHere.subtitle' | translate }}
+    </p>
+  </header>
+
+  @if (loading()) {
+    <div class="profile-train-here__state" data-cy="profile-train-here-loading">
+      <p-progress-spinner styleClass="profile-train-here__spinner" strokeWidth="3" />
+    </div>
+  } @else if (errored()) {
+    <div
+      class="profile-train-here__state profile-train-here__state--error"
+      data-cy="profile-train-here-error"
+    >
+      <i class="pi pi-times-circle" aria-hidden="true"></i>
+      <p>{{ 'profile.trainHere.errorMessage' | translate }}</p>
+      <p-button
+        type="button"
+        severity="secondary"
+        [text]="true"
+        size="small"
+        [label]="'profile.trainHere.retry' | translate"
+        (onClick)="refresh()"
+        data-cy="profile-train-here-retry"
+      />
+    </div>
+  } @else {
+    <div class="profile-train-here__row">
+      <div class="profile-train-here__row-text">
+        <span class="profile-train-here__label">{{
+          'profile.trainHere.toggle.label' | translate
+        }}</span>
+        <p class="profile-train-here__description">
+          {{ 'profile.trainHere.toggle.description' | translate }}
+        </p>
+      </div>
+      <p-toggleswitch
+        [ngModel]="enrolled()"
+        (ngModelChange)="onToggle($event)"
+        [disabled]="disabled()"
+        [ariaLabel]="'profile.trainHere.toggle.label' | translate"
+        data-cy="profile-train-here-toggle"
+      />
+    </div>
+  }
+</div>
