@@ -28,6 +28,68 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.18.1',
+    date: '2026-05-15',
+    headline:
+      "A patch release closing the three follow-ups from v2.18.0's Copilot review + a real bug found during the smoke audit the same evening. Most are internal — only the owner-as-athlete toggle one is user-visible, and only for academies with more than 20 athletes on the roster.",
+    sections: [
+      {
+        heading: '🩹 "Train at this academy" toggle: now works regardless of roster size',
+        bullets: [
+          "v2.18.0 shipped with a discovery bug Copilot caught in review the same day: the SPA looked for your self-row on the first page of /api/v1/athletes (20 athletes per page), which silently reported the toggle as OFF whenever your row sat past position 20 in the sort order. Small academies didn't see it; bigger rosters did.",
+          "Fixed with a dedicated endpoint, GET /api/v1/me/athlete/state, that queries the (academy, user, is_self=true) tuple directly — no pagination involved. The toggle's initial state is now correct on any roster size.",
+        ],
+      },
+      {
+        heading: '🧹 Behind the scenes',
+        bullets: [
+          "Internal exception rename in the owner-as-athlete enrolment path. The old name was UserAlreadyAthleteElsewhereException and the 409 message said 'you are already an athlete in another academy' — both implied the check was cross-academy. The actual check is keyed on user_id alone (global), so the wording was misleading in the rare edge case where the conflicting row lives in the same academy. Renamed to UserAlreadyAthleteException, message reworded to reflect the global scope.",
+          "/api/* endpoints that previously returned an HTML 500 page when probed without Accept: application/json (uptime monitors, bots, manual curl without the header) now return the canonical {\"message\":\"Unauthenticated.\"} JSON 401. SPA always sent the header so this never affected real users — but it stops the production.ERROR: Route [login] not defined. line from accumulating in the server log on every probe.",
+          "Cypress aggregator status check in the self-hosted CI workaround window now annotates as a ⚠️ warning (was a softer ℹ️ notice). Makes the temporary author-trust gate visible from the PR Checks UI row rather than hidden in job logs. Reverts with the rest of the workaround on 2026-05-31.",
+        ],
+      },
+    ],
+  },
+  {
+    version: 'v2.18.0',
+    date: '2026-05-15',
+    headline:
+      "The owner-as-athlete frontend landed: you can flip a toggle on your profile and show up in your own roster, with an Owner chip to distinguish you from regular students. Two real-user pain points from this week's beta got fixed in the same release — Elizabeth's invite kept failing with a generic banner because her password was in a public breach list (she had no way to know that), and the username field on /dashboard/me/profile was being read as a password / nickname / required-character mash-up.",
+    sections: [
+      {
+        heading: '🥋 Train at your own academy',
+        bullets: [
+          "Go to /dashboard/me/profile, edit, flip Train at this academy on. You appear in /dashboard/athletes as a White-belt active athlete, with an Owner chip next to your name so the row reads as 'this is staff training', not 'regular student'.",
+          "Leaving the roster is symmetric: flip the toggle off. The row soft-deletes — your attendance and any belt promotions you logged for yourself are preserved if you ever re-enrol.",
+          "Self-rows are excluded from the unpaid digest + overdue push, on purpose: you're not billing yourself.",
+        ],
+      },
+      {
+        heading: '🩹 Athlete-invite: actionable error when the chosen password is in a breach list',
+        bullets: [
+          "Beta tester Elizabeth filled the accept-invite form correctly, but the panel surfaced only 'Qualcosa è andato storto' and she had no way to figure out the problem was her password.",
+          "Cause: the server's HIBP check (the same one we apply on /auth/register, /auth/reset-password, /auth/change-password) was rejecting the password as 'compare in liste compromesse', but the SPA's error handler only inspected errors.token and errors.email — the password branch fell through to the generic banner.",
+          "Fixed: the form now surfaces 'Questa password compare in liste di password compromesse — è troppo facile da indovinare. Scegline una più lunga o meno comune.', in both IT and EN.",
+        ],
+      },
+      {
+        heading: '✨ Username field on /dashboard/me/profile: clearer, less surprising',
+        bullets: [
+          "Hint reworded: 'Solo lettere minuscole (le maiuscole verranno convertite automaticamente). Numeri, punti e underscore sono opzionali. Da 3 a 30 caratteri, deve iniziare con una lettera.' — required vs optional separated cleanly.",
+          "Sub-label added under the field label: 'Sarà il tuo identificativo pubblico, es. budojo.it/@eli_33' — concrete URL example so the abstract idea of 'handle' becomes something you can picture.",
+          "Auto-lowercase live as you type: 'Eli' becomes 'eli' the moment you press the key, no more silent rejection from the pattern validator.",
+          "The 'leave empty to remove' hint now only shows when you already have a username set, so fresh users aren't told they can remove something they don't have.",
+        ],
+      },
+      {
+        heading: '🧹 Behind the scenes',
+        bullets: [
+          "The PR-checks workflow is temporarily routing to a self-hosted runner on the dev workstation while the GitHub-hosted Actions quota is restored. End-user impact: zero (the API + SPA you see is unchanged). Reverts in a single PR on 2026-05-31.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.17.0',
     date: '2026-05-15',
     headline:
