@@ -63,6 +63,12 @@ class AthleteResource extends JsonResource
             'belt' => $athlete->belt->value,
             'stripes' => $athlete->stripes,
             'status' => $athlete->status->value,
+            // Owner-as-athlete flag (#748). The SPA uses this to:
+            //   - render an `Owner` chip next to the name on the roster,
+            //   - hide the payment column on this row,
+            //   - replace the regular `Delete athlete` CTA with the
+            //     "Leave from your Profile" affordance.
+            'is_self' => $athlete->is_self,
             'joined_at' => $athlete->joined_at->toDateString(),
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'created_at' => $athlete->created_at?->toIso8601String(),

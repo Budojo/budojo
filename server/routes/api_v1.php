@@ -270,6 +270,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me/active-academy', [\App\Http\Controllers\Me\ActiveAcademyController::class, 'show']);
     Route::patch('/me/active-academy', [\App\Http\Controllers\Me\ActiveAcademyController::class, 'update']);
 
+    // Owner-as-athlete self-enroll / self-leave (#748). Adds the caller
+    // to the roster of their active academy as an athlete with
+    // `is_self = true`, or soft-removes them. Both endpoints are
+    // idempotent. Excluded from the regular athlete-delete flow by
+    // a guard in `AthleteController::destroy` — the only way to leave
+    // is this DELETE.
+    Route::post('/me/athlete', [\App\Http\Controllers\Me\MyAthleteController::class, 'store']);
+    Route::delete('/me/athlete', [\App\Http\Controllers\Me\MyAthleteController::class, 'destroy']);
+
     // Web Push subscriptions (#419). One row per device the user has
     // explicitly granted push permission on. The SPA POSTs the
     // PushSubscription envelope from `PushManager.subscribe()`;

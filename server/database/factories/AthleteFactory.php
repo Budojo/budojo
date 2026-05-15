@@ -61,7 +61,32 @@ class AthleteFactory extends Factory
             'belt'                  => $this->faker->randomElement(Belt::cases())->value,
             'stripes'               => $this->faker->numberBetween(0, 4),
             'status'                => AthleteStatus::Active->value,
+            'is_self'               => false,
             'joined_at'             => $this->faker->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
         ];
+    }
+
+    /**
+     * Owner-as-athlete row (#748). Pairs the factory with a User to
+     * mirror the real shape — a self-row always carries `user_id`
+     * because it represents the staff member's training record.
+     *
+     * Named `selfFor()` rather than `self()` to keep call sites
+     * unambiguous (`self` is a PHP keyword for scope resolution;
+     * `Athlete::factory()->self($user)` reads momentarily like a
+     * static access on the factory class). Copilot review on #748.
+     */
+    public function selfFor(\App\Models\User $user): static
+    {
+        return $this->state([
+            'is_self' => true,
+            'user_id' => $user->id,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
+            'belt' => \App\Enums\Belt::White->value,
+            'stripes' => 0,
+            'status' => AthleteStatus::Active->value,
+        ]);
     }
 }

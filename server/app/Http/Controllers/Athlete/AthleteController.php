@@ -233,6 +233,17 @@ class AthleteController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        // Owner-as-athlete rows (#748) cannot be removed through the
+        // regular delete flow — doing so would leave the academy's
+        // owner / staff member with attendance + promotion history
+        // unreachable through the normal restore picker. The only
+        // way to leave is `DELETE /api/v1/me/athlete` which soft-
+        // deletes (history preserved if re-enrolled later) and is
+        // explicitly the caller's own action.
+        if ($athlete->is_self) {
+            return response()->json(['message' => 'Self-enrolled athletes leave via DELETE /me/athlete.'], 403);
+        }
+
         $athlete->delete();
 
         return response()->json(null, 204);
