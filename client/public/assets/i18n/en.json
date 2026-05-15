@@ -194,6 +194,7 @@
       "invite_revoked": "This invitation has been revoked. Ask your academy owner to send you a new one.",
       "invite_expired": "This invitation has expired. Ask your academy owner to send you a new one.",
       "email_already_registered": "An account already exists for this email. Please sign in instead.",
+      "password_breached": "This password has appeared in known data breaches — it's too easy to guess. Pick a longer or less common one.",
       "unknown_error": "Something went wrong. Please try again in a moment."
     }
   },

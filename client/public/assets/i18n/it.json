@@ -194,6 +194,7 @@
       "invite_revoked": "Questo invito è stato revocato. Chiedi al titolare della tua academy di inviartene uno nuovo.",
       "invite_expired": "Questo invito è scaduto. Chiedi al titolare della tua academy di inviartene uno nuovo.",
       "email_already_registered": "Esiste già un account con questa email. Prova ad accedere.",
+      "password_breached": "Questa password compare in liste di password compromesse — è troppo facile da indovinare. Scegline una più lunga o meno comune.",
       "unknown_error": "Qualcosa è andato storto. Riprova tra un momento."
     }
   },
