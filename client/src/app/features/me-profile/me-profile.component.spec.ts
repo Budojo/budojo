@@ -189,5 +189,53 @@ describe('MeProfileComponent (#610, M7 PR-D slice 1 + slice 6 edit)', () => {
 
       expect(el.querySelector('[data-cy="me-profile-edit-form"]')).not.toBeNull();
     });
+
+    it('auto-lowercases the handle as the user types (#756, Elizabeth feedback)', () => {
+      const { fixture, el } = setup({ user: populatedUser });
+
+      (el.querySelector('[data-cy="me-profile-edit"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      const handle = el.querySelector('[data-cy="me-profile-input-handle"]') as HTMLInputElement;
+      handle.value = 'Eli';
+      handle.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+
+      // Elizabeth typed "Eli" and the pattern validator silently rejected
+      // her. Auto-lowercase converts upper→lower while typing so the
+      // pattern matches without surprise — see #756.
+      expect(handle.value).toBe('eli');
+    });
+
+    it('renders a contextual sub-label with a concrete URL example in edit mode (#756)', () => {
+      const { fixture, el } = setup({ user: populatedUser });
+
+      (el.querySelector('[data-cy="me-profile-edit"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      const sublabel = el.querySelector('[data-cy="me-profile-handle-context"]');
+      expect(sublabel).not.toBeNull();
+      expect(sublabel?.textContent).toContain('budojo.it');
+    });
+
+    it('shows the clear hint when the user already has a handle (#756)', () => {
+      const { fixture, el } = setup({ user: populatedUser });
+
+      (el.querySelector('[data-cy="me-profile-edit"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="me-profile-handle-clear-hint"]')).not.toBeNull();
+    });
+
+    it('hides the clear hint when the user has no handle yet (#756)', () => {
+      const { fixture, el } = setup({
+        user: { ...populatedUser, handle: null },
+      });
+
+      (el.querySelector('[data-cy="me-profile-edit"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="me-profile-handle-clear-hint"]')).toBeNull();
+    });
   });
 });
