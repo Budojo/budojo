@@ -142,7 +142,7 @@ it('exposes is_self on the athlete list resource', function (): void {
 
     $response->assertOk();
     $items = $response->json('data');
-    expect(\count($items))->toBe(2);
+    expect(count($items))->toBe(2);
     $selfCount = collect($items)->where('is_self', true)->count();
     expect($selfCount)->toBe(1);
 });
