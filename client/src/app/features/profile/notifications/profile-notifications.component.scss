@@ -76,6 +76,17 @@
     &:last-child {
       border-bottom: 0;
     }
+
+    // Pin the switch column: flex children shrink by default, and a row
+    // whose description wrapped to 2-3 lines was visually compressing
+    // the p-toggleswitch (slightly smaller track, knob nudged inward)
+    // and pushing its left edge out of vertical alignment with the
+    // single-line rows above. Locking it to its intrinsic width on
+    // every row keeps the column dead-straight regardless of how the
+    // description text wraps. Reported on mobile after v2.17.0.
+    p-toggleswitch {
+      flex: 0 0 auto;
+    }
   }
 
   &__row-text {
