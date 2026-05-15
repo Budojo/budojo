@@ -139,10 +139,20 @@ export class AthleteInviteComponent implements OnInit {
         },
         error: (err) => {
           this.state.set('error');
-          // Surface the precise server-side error code (e.g.
-          // invite_revoked) so the UI can render a tailored message.
+          // Surface the precise server-side error code so the UI can
+          // render a tailored message. The server's validation
+          // envelope is `{ message, errors: { <field>: [code, ...] } }`
+          // — we scan the priority order (token → email → password)
+          // because token errors are the most informative for the
+          // user, then email collisions, then password issues. Without
+          // the password branch a HIBP-breach reject (server-only
+          // validator, can't be pre-flighted client-side) fell through
+          // to the generic "Qualcosa è andato storto" — verbatim user
+          // report from Elizabeth on prod, where she had no way to
+          // know her chosen password was rejected as breached.
+          const errors = err?.error?.errors ?? {};
           const code: string | undefined =
-            err?.error?.errors?.token?.[0] ?? err?.error?.errors?.email?.[0];
+            errors?.token?.[0] ?? errors?.email?.[0] ?? errors?.password?.[0];
           this.errorMessage.set(code ?? 'unknown_error');
         },
       });
