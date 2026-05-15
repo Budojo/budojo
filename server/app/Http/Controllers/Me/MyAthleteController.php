@@ -52,6 +52,7 @@ class MyAthleteController extends Controller
 {
     public function __construct(
         private readonly EnrollSelfAsAthleteAction $enroll,
+        private readonly GetSelfAthleteStateAction $getState,
         private readonly LeaveSelfAsAthleteAction $leave,
     ) {
     }
@@ -109,7 +110,7 @@ class MyAthleteController extends Controller
      * 422 keeps the SPA's call site free of a branch for a precondition
      * the read endpoint can satisfy on its own.
      */
-    public function state(Request $request, GetSelfAthleteStateAction $action): JsonResponse
+    public function state(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -121,7 +122,7 @@ class MyAthleteController extends Controller
             ]);
         }
 
-        return response()->json(['data' => $action->execute($user, $academy)]);
+        return response()->json(['data' => $this->getState->execute($user, $academy)]);
     }
 
     public function destroy(Request $request): Response|JsonResponse
