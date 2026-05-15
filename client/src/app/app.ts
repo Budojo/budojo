@@ -5,10 +5,11 @@ import { AppUpdateService } from './core/services/app-update.service';
 import { LanguageService } from './core/services/language.service';
 import { VersionCheckService } from './core/services/version-check.service';
 import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.component';
+import { NotificationOnboardingDialogComponent } from './shared/components/notification-onboarding-dialog/notification-onboarding-dialog.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastModule, CookieBannerComponent],
+  imports: [RouterOutlet, ToastModule, CookieBannerComponent, NotificationOnboardingDialogComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

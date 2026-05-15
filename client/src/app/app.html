@@ -5,3 +5,9 @@
      /sub-processors) AND inside the dashboard shell. Renders only
      while ConsentService.decided() is false. -->
 <app-cookie-banner />
+<!-- Browser-notifications soft prompt (#745). Mounted once at the app
+     root so the dialog can appear over either dashboard shell (owner
+     or athlete) the moment a post-registration trigger fires. The
+     component is dormant in the DOM whenever the state machine sits
+     at `idle` (no visible cost on every route). -->
+<app-notification-onboarding-dialog />

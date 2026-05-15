@@ -442,6 +442,25 @@
     "subtitle": "What's changed in Budojo lately, in plain language. Newest at the top.",
     "back": "Back to dashboard"
   },
+  "notificationOnboarding": {
+    "title": "Stay in the loop",
+    "lede": "Budojo can send you a notification on this device when something needs your attention — even when the tab isn't open.",
+    "points": {
+      "athletes": "Athlete activity — new sign-ups, expiring medicals, missed trainings.",
+      "events": "Events and RSVPs — open mats, seminars, who's coming.",
+      "community": "Community — replies, comments and reactions on your posts."
+    },
+    "fineprint": "You can fine-tune which categories you receive — or turn the whole thing off — any time from Profile → Notifications.",
+    "accept": "Enable notifications",
+    "dismiss": "Not now",
+    "gotIt": "Got it",
+    "result": {
+      "succeeded": "All set. We'll start sending notifications to this device.",
+      "denied": "No problem — notifications stay off. You can turn them on later from Profile → Notifications (you'll need to allow them in your browser settings first).",
+      "failed": "We couldn't enable notifications right now. Try again later from Profile → Notifications.",
+      "dismissed": "No worries — you can turn this on whenever you like from Profile → Notifications."
+    }
+  },
   "help": {
     "brandAriaLabel": "Budojo home",
     "eyebrow": "Help centre",

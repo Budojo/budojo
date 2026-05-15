@@ -442,6 +442,25 @@
     "subtitle": "Le novità di Budojo in parole semplici. La più recente in cima.",
     "back": "Torna alla dashboard"
   },
+  "notificationOnboarding": {
+    "title": "Resta aggiornato",
+    "lede": "Budojo può inviarti una notifica su questo dispositivo quando succede qualcosa che richiede la tua attenzione — anche quando la scheda non è aperta.",
+    "points": {
+      "athletes": "Attività atleti — nuove iscrizioni, certificati in scadenza, allenamenti saltati.",
+      "events": "Eventi e RSVP — open mat, seminari, chi parteciperà.",
+      "community": "Community — risposte, commenti e reazioni ai tuoi post."
+    },
+    "fineprint": "Puoi scegliere quali categorie ricevere — o disattivare tutto — in qualsiasi momento da Profilo → Notifiche.",
+    "accept": "Attiva notifiche",
+    "dismiss": "Non ora",
+    "gotIt": "Va bene",
+    "result": {
+      "succeeded": "Tutto a posto. Inizieremo a inviarti le notifiche su questo dispositivo.",
+      "denied": "Nessun problema — le notifiche restano disattivate. Puoi attivarle più tardi da Profilo → Notifiche (dovrai prima consentirle nelle impostazioni del browser).",
+      "failed": "Non siamo riusciti ad attivare le notifiche in questo momento. Riprova più tardi da Profilo → Notifiche.",
+      "dismissed": "Tranquillo — puoi attivare le notifiche quando vuoi da Profilo → Notifiche."
+    }
+  },
   "help": {
     "brandAriaLabel": "Home Budojo",
     "eyebrow": "Centro assistenza",
