@@ -26,7 +26,14 @@ jobs:
 
   phpstan:
     name: "🔬 PHPStan (level 9)"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    # Temporary container override during GHA spending-limit block (#758).
+    # `shivammathur/setup-php@v2` only supports Debian/Ubuntu hosts;
+    # self-hosted runner runs on Fedora 44, so PHP jobs are wrapped in an
+    # Ubuntu container so the setup action's apt-based install path works.
+    # Revert this file when GitHub-hosted is back in budget.
+    container:
+      image: ubuntu:24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -55,7 +62,9 @@ jobs:
 
   pest:
     name: "🧪 PEST Tests"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    container:
+      image: ubuntu:24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -97,7 +106,9 @@ jobs:
 
   php-cs-fixer:
     name: "🎨 PHP CS Fixer (dry-run)"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    container:
+      image: ubuntu:24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -126,7 +137,7 @@ jobs:
 
   angular-test:
     name: "🧪 Angular Tests (Vitest)"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -146,7 +157,7 @@ jobs:
 
   angular-lint:
     name: "🔍 Angular Lint (ESLint)"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -166,7 +177,7 @@ jobs:
 
   angular-format:
     name: "✨ Angular Format (Prettier)"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -201,7 +212,13 @@ jobs:
   # ruleset-edit coordination.
   cypress-e2e-shard:
     name: "Cypress E2E shard ${{ matrix.shard }}"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    # Temporary container override during GHA spending-limit block (#758).
+    # Cypress needs Chrome + xvfb pre-installed; `cypress/browsers` has
+    # both, plus Node 22. Revert alongside the rest of this file when
+    # GitHub-hosted is back in budget.
+    container:
+      image: cypress/browsers:latest
     strategy:
       # Run all shards even if one fails — full visibility on which
       # specs broke per shard. Sequential failures would mask up to
@@ -272,7 +289,7 @@ jobs:
     name: "🎭 Cypress E2E"
     needs: [cypress-e2e-shard]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Verify all Cypress shards passed
         run: |
@@ -284,7 +301,7 @@ jobs:
 
   openapi-lint:
     name: "🔬 OpenAPI Lint (Spectral)"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -303,7 +320,7 @@ jobs:
     # logic ships untested. Lives at the repo root because the
     # worker is its own deploy artefact, not part of the Angular app.
     name: "🧪 Worker Tests (Vitest)"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
