@@ -26,7 +26,7 @@ jobs:
 
   phpstan:
     name: "🔬 PHPStan (level 9)"
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     # Temporary container override during GHA spending-limit block (#758).
     # `shivammathur/setup-php@v2` only supports Debian/Ubuntu hosts;
     # self-hosted runner runs on Fedora 44, so PHP jobs are wrapped in an
@@ -76,7 +76,7 @@ jobs:
 
   pest:
     name: "🧪 PEST Tests"
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     container:
       image: ubuntu:24.04
     steps:
@@ -129,7 +129,7 @@ jobs:
 
   php-cs-fixer:
     name: "🎨 PHP CS Fixer (dry-run)"
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     container:
       image: ubuntu:24.04
     steps:
@@ -169,7 +169,7 @@ jobs:
 
   angular-test:
     name: "🧪 Angular Tests (Vitest)"
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     steps:
       - uses: actions/checkout@v4
 
@@ -189,7 +189,7 @@ jobs:
 
   angular-lint:
     name: "🔍 Angular Lint (ESLint)"
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     steps:
       - uses: actions/checkout@v4
 
@@ -209,7 +209,7 @@ jobs:
 
   angular-format:
     name: "✨ Angular Format (Prettier)"
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     steps:
       - uses: actions/checkout@v4
 
@@ -244,13 +244,16 @@ jobs:
   # ruleset-edit coordination.
   cypress-e2e-shard:
     name: "Cypress E2E shard ${{ matrix.shard }}"
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     # Temporary container override during GHA spending-limit block (#758).
     # Cypress needs Chrome + xvfb pre-installed; `cypress/browsers` has
     # both, plus Node 22. Revert alongside the rest of this file when
     # GitHub-hosted is back in budget.
     container:
-      image: cypress/browsers:latest
+      # Pinned to digest (not :latest) so the temp override is bisectable —
+      # cypress/browsers retags `latest` on every cypress release, so a
+      # mid-window upstream push could break unrelated PRs (Copilot #1).
+      image: cypress/browsers@sha256:c74663385d3d42f1ed1f4cebba387baf90de01e4cb1f43b470742107a9d3b3d5
     strategy:
       # Run all shards even if one fails — full visibility on which
       # specs broke per shard. Sequential failures would mask up to
@@ -314,7 +317,12 @@ jobs:
           working-directory: client
           start: npm run start
           wait-on: "http://localhost:4200"
-          wait-on-timeout: 120
+          # Bumped from 120s — 4 Cypress shards now run in parallel on the
+          # same physical machine (one budojo-slimbook-N runner each), and
+          # 4× concurrent `npm ci` + `ng serve` cold-starts saturate disk
+          # and CPU long enough that ng serve isn't bound to :4200 within
+          # the old budget (observed ECONNREFUSED on run #3 shard 1).
+          wait-on-timeout: 300
           browser: chrome
           spec: ${{ steps.specs.outputs.spec }}
 
@@ -336,7 +344,7 @@ jobs:
     name: "🎭 Cypress E2E"
     needs: [cypress-e2e-shard]
     if: always()
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     steps:
       - name: Verify all Cypress shards passed
         run: |
@@ -348,7 +356,7 @@ jobs:
 
   openapi-lint:
     name: "🔬 OpenAPI Lint (Spectral)"
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     steps:
       - uses: actions/checkout@v4
 
@@ -367,7 +375,7 @@ jobs:
     # logic ships untested. Lives at the repo root because the
     # worker is its own deploy artefact, not part of the Angular app.
     name: "🧪 Worker Tests (Vitest)"
-    runs-on: self-hosted
+    runs-on: [self-hosted, budojo]
     steps:
       - uses: actions/checkout@v4
 
