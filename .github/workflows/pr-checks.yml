@@ -366,7 +366,17 @@ jobs:
           # `docker exec budojo_client npm run cy:run` before every push.
           # Revert this whole block alongside the matrix `if: false`
           # when GitHub-hosted is back in budget.
-          echo "::notice::Cypress skipped during self-hosted workaround (see #758). PR author verified Cypress locally before push."
+          # `::warning::` (not `::notice::`) so the workaround status shows
+          # as a yellow ⚠️ annotation in the PR Checks UI — Copilot review
+          # on #763 flagged that `::notice::` reads softer than the
+          # semantics warrant: a CI-enforced gate has been downgraded to
+          # author trust for the ~16-day window. The warning surfaces the
+          # workaround in the same row as the required check, so a
+          # future bisecter looking at the `v2.18.0` tag (or later within
+          # the window) sees the marker without having to click into
+          # the job logs. Revert to `::notice::` or drop the line entirely
+          # when GitHub-hosted is back in budget.
+          echo "::warning::Cypress skipped during self-hosted workaround (see #758). PR author verified Cypress locally before push. Revert by 2026-05-31."
           exit 0
 
   openapi-lint:
