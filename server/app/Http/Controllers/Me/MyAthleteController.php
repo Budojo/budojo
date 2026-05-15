@@ -87,8 +87,11 @@ class MyAthleteController extends Controller
             // (e.g. a regular invitation that pre-dates the user
             // becoming staff). The user-facing message + the error code
             // reflect that global scope explicitly — see #764 for the
-            // history of the rename. The SPA's matching i18n key is
-            // `user_already_athlete`.
+            // history of the rename. The SPA today renders the
+            // `message` string verbatim (no client i18n mapping on
+            // `errors.user_id`); a future SPA change can key off the
+            // `user_already_athlete` code if a translated form is
+            // wanted.
             return response()->json([
                 'message' => 'You are already enrolled as an athlete. You can hold only one athlete row at a time — leave the existing one first.',
                 'errors' => [
