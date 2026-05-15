@@ -372,7 +372,8 @@ jobs:
           # semantics warrant: a CI-enforced gate has been downgraded to
           # author trust for the ~16-day window. The warning surfaces the
           # workaround in the same row as the required check, so a
-          # future bisecter looking at the `v2.18.0` tag (or later within
+          # future engineer running `git bisect` against the `v2.18.0`
+          # tag (or any commit later within
           # the window) sees the marker without having to click into
           # the job logs. Revert to `::notice::` or drop the line entirely
           # when GitHub-hosted is back in budget.
