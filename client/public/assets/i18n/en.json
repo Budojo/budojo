@@ -255,7 +255,7 @@
       "firstName": "First name",
       "lastName": "Last name",
       "handle": "Username",
-      "handleContextExample": "Your public identifier, e.g. budojo.it/@eli-33",
+      "handleContextExample": "Your public identifier, e.g. budojo.it/@eli_33",
       "handleHint": "Lowercase letters only (uppercase will be converted automatically). Numbers, dots and underscores are optional. 3 to 30 characters, must start with a letter.",
       "handleClearHint": "Leave empty and save to remove your current username.",
       "noHandle": "No username set yet",

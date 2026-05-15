@@ -255,7 +255,7 @@
       "firstName": "Nome",
       "lastName": "Cognome",
       "handle": "Username",
-      "handleContextExample": "Sarà il tuo identificativo pubblico, es. budojo.it/@eli-33",
+      "handleContextExample": "Sarà il tuo identificativo pubblico, es. budojo.it/@eli_33",
       "handleHint": "Solo lettere minuscole (le maiuscole verranno convertite automaticamente). Numeri, punti e underscore sono opzionali. Da 3 a 30 caratteri, deve iniziare con una lettera.",
       "handleClearHint": "Lascia vuoto e salva per rimuovere il tuo username attuale.",
       "noHandle": "Username non ancora impostato",
