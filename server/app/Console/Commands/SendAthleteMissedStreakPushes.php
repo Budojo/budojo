@@ -148,6 +148,19 @@ class SendAthleteMissedStreakPushes extends Command
      */
     private function missedAllStreakDates(Athlete $athlete, array $streakDates): bool
     {
+        // Guard: an athlete who joined AFTER the earliest streak date
+        // wasn't even rostered when those sessions happened — counting
+        // them as "missed" is a false positive. The earliest streak
+        // date is the LAST element (the walk in lastTrainingDays()
+        // pushes today-first, so $streakDates[0] is most recent and
+        // [count-1] is oldest). Copilot review on #738.
+        $oldestStreakDate = end($streakDates) ?: null;
+        if ($oldestStreakDate !== null
+            && $athlete->joined_at->toDateString() > $oldestStreakDate
+        ) {
+            return false;
+        }
+
         $present = AttendanceRecord::query()
             ->where('athlete_id', $athlete->id)
             ->whereIn('attended_on', $streakDates)
