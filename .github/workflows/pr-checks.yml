@@ -60,6 +60,15 @@ jobs:
         run: vendor/bin/phpstan analyse --no-progress --error-format=github
         working-directory: server
 
+      - name: Restore workspace ownership for host runner cleanup
+        # Container ran as root and wrote files to the mounted workspace.
+        # The next non-container job runs as the host user (uid 1000) and
+        # cannot rm root-owned files (actions/checkout's auto-clean step
+        # fails with EACCES). Reset before exiting. Temporary workaround
+        # for #758; revert alongside the rest of this file.
+        if: always()
+        run: chown -R 1000:1000 "${{ github.workspace }}" 2>/dev/null || true
+
   pest:
     name: "🧪 PEST Tests"
     runs-on: self-hosted
@@ -104,6 +113,10 @@ jobs:
         run: vendor/bin/pest --parallel --coverage
         working-directory: server
 
+      - name: Restore workspace ownership for host runner cleanup
+        if: always()
+        run: chown -R 1000:1000 "${{ github.workspace }}" 2>/dev/null || true
+
   php-cs-fixer:
     name: "🎨 PHP CS Fixer (dry-run)"
     runs-on: self-hosted
@@ -134,6 +147,10 @@ jobs:
       - name: Run PHP CS Fixer (dry-run)
         run: vendor/bin/php-cs-fixer fix --dry-run --diff --ansi --show-progress=none
         working-directory: server
+
+      - name: Restore workspace ownership for host runner cleanup
+        if: always()
+        run: chown -R 1000:1000 "${{ github.workspace }}" 2>/dev/null || true
 
   angular-test:
     name: "🧪 Angular Tests (Vitest)"
@@ -279,6 +296,10 @@ jobs:
           wait-on-timeout: 120
           browser: chrome
           spec: ${{ steps.specs.outputs.spec }}
+
+      - name: Restore workspace ownership for host runner cleanup
+        if: always()
+        run: chown -R 1000:1000 "${{ github.workspace }}" 2>/dev/null || true
 
   cypress-e2e:
     # Aggregator — preserves the `🎭 Cypress E2E` required-status-check
