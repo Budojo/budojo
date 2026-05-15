@@ -9,6 +9,19 @@ on:
     # and would stay blocked indefinitely.
     branches: [main, develop]
 
+# Lock the GITHUB_TOKEN down to read-only on every job in this workflow
+# (CVE-2026-45793 defence-in-depth — see graycoreio/github-actions-magento2
+# discussion #261). The PHP jobs below run `shivammathur/setup-php` which
+# pipes the workflow token into `COMPOSER_AUTH`; a future regression of
+# the Composer-validator-leak bug, OR any other downstream tool that
+# echoes credentials into stderr, would expose a token whose scope is
+# capped at read-only. CI jobs here only read the repo (clone, install,
+# test, lint) — none of them push commits, create issues, or comment on
+# PRs, so locking to `contents: read` strips every write capability with
+# zero functional cost.
+permissions:
+  contents: read
+
 jobs:
 
   phpstan:
