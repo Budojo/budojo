@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Me;
 
 use App\Actions\Athlete\EnrollSelfAsAthleteAction;
+use App\Actions\Athlete\GetSelfAthleteStateAction;
 use App\Actions\Athlete\LeaveSelfAsAthleteAction;
-use App\Exceptions\UserAlreadyAthleteElsewhereException;
+use App\Exceptions\UserAlreadyAthleteException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AthleteResource;
 use App\Models\Athlete;
@@ -51,6 +52,7 @@ class MyAthleteController extends Controller
 {
     public function __construct(
         private readonly EnrollSelfAsAthleteAction $enroll,
+        private readonly GetSelfAthleteStateAction $getState,
         private readonly LeaveSelfAsAthleteAction $leave,
     ) {
     }
@@ -80,11 +82,22 @@ class MyAthleteController extends Controller
 
         try {
             $athlete = $this->enroll->execute($user, $academy);
-        } catch (UserAlreadyAthleteElsewhereException $e) {
+        } catch (UserAlreadyAthleteException $e) {
+            // The check is keyed on `user_id` alone (the UNIQUE on
+            // `athletes.user_id` is global), so the conflict can arise
+            // EITHER across academies OR within the current academy
+            // (e.g. a regular invitation that pre-dates the user
+            // becoming staff). The user-facing message + the error code
+            // reflect that global scope explicitly — see #764 for the
+            // history of the rename. The SPA today renders the
+            // `message` string verbatim (no client i18n mapping on
+            // `errors.user_id`); a future SPA change can key off the
+            // `user_already_athlete` code if a translated form is
+            // wanted.
             return response()->json([
-                'message' => 'You are already an athlete in another academy. Leave that roster first.',
+                'message' => 'You are already enrolled as an athlete. You can hold only one athlete row at a time — leave the existing one first.',
                 'errors' => [
-                    'user_id' => ['user_already_athlete_elsewhere'],
+                    'user_id' => ['user_already_athlete'],
                 ],
             ], 409);
         }
@@ -93,6 +106,34 @@ class MyAthleteController extends Controller
             ['data' => new AthleteResource($athlete)],
             $existed ? 200 : 201,
         );
+    }
+
+    /**
+     * Read-only `enrolled` state for the caller's active academy
+     * (#761). Backs the SPA's owner-as-athlete toggle initial state
+     * without walking the paginated athletes index — see the Action
+     * docblock for the bug history.
+     *
+     * Returns `{ data: { enrolled: false, athlete_id: null } }` with
+     * 200 when the caller has no active academy, intentionally — the
+     * toggle reads "no active academy" the same way as "active academy
+     * but not enrolled" (both render the off state). Choosing 200 over
+     * 422 keeps the SPA's call site free of a branch for a precondition
+     * the read endpoint can satisfy on its own.
+     */
+    public function state(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $academy = $user->activeAcademy();
+        if ($academy === null) {
+            return response()->json([
+                'data' => ['enrolled' => false, 'athlete_id' => null],
+            ]);
+        }
+
+        return response()->json(['data' => $this->getState->execute($user, $academy)]);
     }
 
     public function destroy(Request $request): Response|JsonResponse

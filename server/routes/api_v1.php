@@ -278,6 +278,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // is this DELETE.
     Route::post('/me/athlete', [\App\Http\Controllers\Me\MyAthleteController::class, 'store']);
     Route::delete('/me/athlete', [\App\Http\Controllers\Me\MyAthleteController::class, 'destroy']);
+    // Read-only "am I self-enrolled?" lookup (#761). Backs the SPA's
+    // owner-as-athlete toggle initial state — replaces the previous
+    // first-page-scan over `/athletes` which silently mis-detected
+    // `enrolled: false` on rosters > 20 (Copilot review on #754).
+    Route::get('/me/athlete/state', [\App\Http\Controllers\Me\MyAthleteController::class, 'state']);
 
     // Web Push subscriptions (#419). One row per device the user has
     // explicitly granted push permission on. The SPA POSTs the

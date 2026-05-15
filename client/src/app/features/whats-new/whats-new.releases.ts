@@ -28,6 +28,65 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.18.1',
+    date: '2026-05-15',
+    headline:
+      'A patch release closing the three review follow-ups from v2.18.0 plus a small server-log hygiene fix. Only one user-visible change.',
+    sections: [
+      {
+        heading: '🩹 "Train at this academy" toggle: correct state on any roster size',
+        bullets: [
+          'v2.18.0 shipped with a discovery bug: on academies with more than 20 athletes on the roster, the toggle on /dashboard/profile could show as OFF even when you were enrolled. Small rosters were not affected; bigger ones were.',
+          "The toggle's initial state is now correct regardless of how many athletes you have on the roster.",
+        ],
+      },
+      {
+        heading: '🧹 Behind the scenes',
+        bullets: [
+          'Internal cleanup pass: clearer error envelopes on edge-case probes against the API, less misleading naming in the owner-as-athlete enrolment path, and a workflow annotation upgrade in the CI workaround. None of these produce a different user experience.',
+        ],
+      },
+    ],
+  },
+  {
+    version: 'v2.18.0',
+    date: '2026-05-15',
+    headline:
+      "The owner-as-athlete frontend landed: you can flip a toggle on your profile and show up in your own roster, with an Owner chip to distinguish you from regular students. Two real-user pain points from this week's beta got fixed in the same release — a confusing generic error on the accept-invite form when the chosen password was too easy to guess, and the username field on /dashboard/me/profile being read as a password / nickname / required-character mash-up.",
+    sections: [
+      {
+        heading: '🥋 Train at your own academy',
+        bullets: [
+          "Go to /dashboard/profile, find Train at this academy, flip it on. You appear in /dashboard/athletes as a White-belt active athlete, with an Owner chip next to your name so the row reads as 'this is staff training', not 'regular student'.",
+          'Leaving the roster is symmetric: flip the toggle off. The row soft-deletes — your attendance and any belt promotions you logged for yourself are preserved if you ever re-enrol.',
+          "Self-rows are excluded from the unpaid digest and the overdue-payment push, on purpose: you're not billing yourself.",
+        ],
+      },
+      {
+        heading: '🩹 Athlete-invite: clearer error when the chosen password is too easy',
+        bullets: [
+          "A beta tester filled the accept-invite form correctly but the panel surfaced only the generic 'Qualcosa è andato storto' — she had no way to know the problem was her password being on a public list of compromised passwords.",
+          "The form now surfaces the actionable message instead: 'Questa password compare in liste di password compromesse — è troppo facile da indovinare. Scegline una più lunga o meno comune.', in both Italian and English. Same check we already apply at sign-up, password-reset, and change-password — now it is also visible at invite-accept time.",
+        ],
+      },
+      {
+        heading: '✨ Username field on /dashboard/me/profile: clearer, less surprising',
+        bullets: [
+          "The hint underneath the field was being read as a list of REQUIRED character types, when it actually lists what's optional. Reworded to separate the two: 'Solo lettere minuscole (le maiuscole verranno convertite automaticamente). Numeri, punti e underscore sono opzionali. Da 3 a 30 caratteri, deve iniziare con una lettera.'",
+          "New sub-label under the field: 'Sarà il tuo identificativo pubblico, es. budojo.it/@eli_33' — a concrete URL example so the abstract idea of 'handle' becomes something you can picture.",
+          "Auto-lowercase live as you type: write 'Eli' and you see 'eli' immediately. No more silent rejection when you press Save.",
+          "The 'leave empty to remove' hint only shows when you already have a username set, so fresh users are not told they can remove something they don't have.",
+        ],
+      },
+      {
+        heading: '🧹 Behind the scenes',
+        bullets: [
+          'The PR-checks workflow is temporarily routing to a self-hosted runner while we sort out a billing snag with the cloud CI quota. Zero impact on the API or the SPA you see in the browser; reverts in a single PR by end of May.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.17.0',
     date: '2026-05-15',
     headline:
