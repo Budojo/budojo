@@ -77,6 +77,10 @@ class SendAthletePaymentOverduePushes extends Command
     {
         $athletes = $academy->athletes()
             ->where('status', AthleteStatus::Active)
+            // Owner-as-athlete rows (#748) are not billed — exclude
+            // them from the overdue push pipeline. The owner's `is_self`
+            // row carries `user_id` but is never expected to pay.
+            ->where('is_self', false)
             ->whereNotNull('user_id')
             ->with('user')
             ->get();
