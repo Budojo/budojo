@@ -215,11 +215,12 @@ The board lives at [`github.com/orgs/Budojo/projects/2`](https://github.com/orgs
 
 #### Issue + PR lifecycle on the board
 
-| Status        | When                                                           |
-| ------------- | -------------------------------------------------------------- |
-| `Todo`        | Issue created                                                  |
-| `In Progress` | PR opened (set on both the issue item AND the PR item)         |
-| `Done`        | PR merged → GitHub auto-closes issue → both items move to Done |
+| Status        | When                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------- |
+| `Todo`        | Issue created                                                                         |
+| `In Progress` | PR opened (set on both the issue item AND the PR item)                                |
+| `Merged`      | PR merged to `develop` — the PR item moves; the issue item stays in `In Progress`     |
+| `Done`        | The next `develop → main` release PR is merged — GitHub auto-closes the linked issue |
 
 #### Standard flow — step by step
 
@@ -232,7 +233,7 @@ The board lives at [`github.com/orgs/Budojo/projects/2`](https://github.com/orgs
    ./.claude/scripts/board-set.sh <ISSUE-N> in-progress
    ```
    Acceptable status arguments: `todo`, `in-progress`, `done`. Hardcoded project / field / option IDs live ONLY in the script — anywhere else referencing them is drift.
-5. **When the PR is merged**, GitHub auto-closes the linked issue and both items move to `Done` automatically (no script call needed).
+5. **When the PR is merged to `develop`** the PR item moves to `Done` automatically — but the **issue stays open**. GitHub's auto-close only fires when a `Closes #N` lands on the repo's default branch (`main`), and the feature PR merged into `develop` instead. The issue closes later, when the next `develop → main` release PR (which aggregates the leaf-issue `Closes #N` references in its `## Auto-closes` block — see the Release Flow section) is merged. No manual close needed if that aggregation discipline is followed.
 
 #### Rules
 
@@ -317,6 +318,15 @@ The changelog is **not** checked back into the repo — there is no `CHANGELOG.m
 
 - Do not create a `version` field in `package.json` — semantic-release owns versioning.
 - `package-lock.json` is committed; always run `npm install` after changing `package.json`.
+
+**Release-PR `## Auto-closes` block — mandatory.** Every `develop → main` release PR body MUST end with an `## Auto-closes` block listing each sub-issue: `Closes #N1, #N2, #N3, …`. GitHub auto-closes those issues the moment the release PR is merged. Without this block they stay open forever, because:
+
+- GitHub's auto-close fires only when a PR with `Closes #N` is merged into the repo's **default branch**. Our default is `main`; feature PRs target `develop`; so feature PRs never trigger auto-close.
+- The release PR (develop → main) IS merged to the default branch, but its own body doesn't carry the per-sub-issue references unless we add them — squash commits of the sub-PRs carry only `(#PR_N)` in their subject lines, which is a reference and not a close keyword.
+
+**How to build the block** when opening the release PR: walk the squash commits between `main..develop`, for each squash subject that includes a `(#PR_N)` reference (the suffix GitHub appends on every squash-merge regardless of conventional-commit type — `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`, …) pick up the PR (`gh pr view <PR_N> --json body`), grep its body for `Closes #M` / `Fixes #M` / `Resolves #M`, aggregate every `#M` into the release-PR body's `## Auto-closes` block. Then `gh pr create --body-file …`. The user only clicks Merge; GitHub closes the listed issues.
+
+Corollary discipline on every sub-PR: each feature / fix / chore PR body MUST contain an explicit `Closes #N` referencing the leaf issue it ships. `Closes part of #EPIC` doesn't satisfy GitHub's auto-close keyword set — write both: `Closes #N` for the leaf, plus a separate sentence pointing at the umbrella epic.
 
 **Auto-sweep main → develop after a stable release** (`.github/workflows/release.yml` § sweep job):
 
