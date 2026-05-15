@@ -63,7 +63,12 @@
 
   &__row {
     display: flex;
-    align-items: flex-start;
+    // Toggle vertically centred against the label/description block.
+    // `flex-start` left the switches at different heights when the
+    // description wrapped to a second/third line, giving the column
+    // a sfasato (staggered) feel reported on mobile after v2.17.0
+    // grew the panel to 14 rows.
+    align-items: center;
     gap: 1rem;
     padding: 1rem;
     border-bottom: 1px solid var(--p-content-border-color);

@@ -28,6 +28,35 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.17.0',
+    date: '2026-05-15',
+    headline:
+      "Three more notifications close the year-long expansion: when an athlete on your roster uploads a new document, when somebody RSVPs to your event post, and a daily 09:30 heads-up when an active athlete has skipped their last three training sessions in a row (with a built-in 14-day cooldown so it doesn't become daily background noise). Behind the scenes, the Browser-notifications panel on /dashboard/profile now actually works on production — a config bug was sending the panel's API call to the wrong host. With the bundle of three you can finally enable browser-level push and start receiving notifications when Budojo isn't open.",
+    sections: [
+      {
+        heading: '🔔 Three new owner alerts',
+        bullets: [
+          'An athlete uploaded a document — turns on the moment athlete self-upload lands; for now the trigger sits dormant.',
+          'Someone RSVPed to an event you posted — fires the first time anyone clicks Going / Maybe on your event card (no spam on mind-changes).',
+          'Athlete missed several trainings — daily 09:30 heads-up when an active athlete has skipped the last 3 scheduled sessions. 14-day cooldown per athlete so you get the signal once, not every morning.',
+        ],
+      },
+      {
+        heading: '🩹 Browser notifications panel: now works on prod',
+        bullets: [
+          "The panel was calling the wrong host (the API runs on api.budojo.it, the SPA on budojo.it) and showing 'We couldn't load your subscription state' forever. Fixed across all three calls (fetch / subscribe / unsubscribe).",
+          "Go to /dashboard/profile → Browser notifications → Enable. Accept the browser permission prompt. You're set.",
+        ],
+      },
+      {
+        heading: '✨ Notifications panel: tidied up',
+        bullets: [
+          "Toggle column is now vertically centred against each row's label/description, so a longer description doesn't push the switch out of alignment with the neighbouring rows.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.16.0',
     date: '2026-05-14',
     headline:
