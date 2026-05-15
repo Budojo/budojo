@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { MessageService } from 'primeng/api';
-import { SwUpdate } from '@angular/service-worker';
+import { SwPush, SwUpdate } from '@angular/service-worker';
 import { provideRouter } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { NEVER } from 'rxjs';
@@ -36,6 +36,16 @@ describe('App', () => {
         provideHttpClient(),
         ...provideI18nTesting(),
         { provide: SwUpdate, useValue: { isEnabled: false, versionUpdates: NEVER } },
+        // The app-root now mounts the notification onboarding dialog
+        // (#745). That dialog injects `WebPushService` indirectly via
+        // `NotificationOnboardingService`, and `WebPushService` injects
+        // `SwPush`. Provide a stub that mirrors the dev / unit-test
+        // contract (`isEnabled: false`) so the component constructs
+        // without booting a real service worker.
+        {
+          provide: SwPush,
+          useValue: { isEnabled: false, messages: NEVER, notificationClicks: NEVER },
+        },
       ],
     }).compileComponents();
   });

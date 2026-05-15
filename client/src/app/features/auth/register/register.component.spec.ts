@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationOnboardingService } from '../../../core/services/notification-onboarding.service';
 import { RegisterComponent } from './register.component';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 
@@ -30,6 +31,10 @@ describe('RegisterComponent — privacy consent gate (#219)', () => {
         provideHttpClientTesting(),
         ...provideI18nTesting(),
         { provide: AuthService, useValue: { register: authRegisterSpy } },
+        {
+          provide: NotificationOnboardingService,
+          useValue: { requestPromptAfterAuth: vi.fn().mockReturnValue(false) },
+        },
       ],
     });
     const router = TestBed.inject(Router);

@@ -9,6 +9,7 @@ import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationOnboardingService } from '../../../core/services/notification-onboarding.service';
 import { PasswordStrengthMeterComponent } from '../../../shared/components/password-strength-meter/password-strength-meter.component';
 
 @Component({
@@ -31,6 +32,7 @@ export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly notificationOnboarding = inject(NotificationOnboardingService);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -101,7 +103,15 @@ export class RegisterComponent {
       })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: () => this.router.navigate(['/dashboard']),
+        next: () => {
+          // #745 — fire the post-registration soft prompt before
+          // navigating so the dialog mounts at the app root while the
+          // dashboard shell hydrates underneath. Skip conditions live
+          // inside the service (already decided, permission != default,
+          // unsupported browser).
+          this.notificationOnboarding.requestPromptAfterAuth();
+          void this.router.navigate(['/dashboard']);
+        },
         error: (err: {
           status?: number;
           error?: { message?: string; errors?: Record<string, string[]> };

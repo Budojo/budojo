@@ -13,6 +13,7 @@ import {
   AthleteInviteService,
 } from '../../core/services/athlete-invite.service';
 import { AuthService } from '../../core/services/auth.service';
+import { NotificationOnboardingService } from '../../core/services/notification-onboarding.service';
 
 /**
  * Public athlete-invite landing page (#445, M7 PR-C). Reached at
@@ -56,6 +57,7 @@ export class AthleteInviteComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly inviteService = inject(AthleteInviteService);
   private readonly auth = inject(AuthService);
+  private readonly notificationOnboarding = inject(NotificationOnboardingService);
 
   readonly state = signal<State>('loading');
   readonly preview = signal<AthleteInvitePreview | null>(null);
@@ -121,13 +123,19 @@ export class AthleteInviteComponent implements OnInit {
           // login flow uses, so the SPA's auth state hydrates from
           // here onwards (the user object, role-aware redirect, etc.).
           this.auth.adoptIssuedToken(data.token);
+          // #745 — fire the post-registration soft prompt before
+          // navigating so the dialog mounts at the app root while the
+          // athlete dashboard hydrates underneath. Skip conditions live
+          // inside the service (already decided, permission != default,
+          // unsupported browser).
+          this.notificationOnboarding.requestPromptAfterAuth();
           // Athletes land on /dashboard/me/profile — the athlete-side
           // dashboard shell landed in #610 (M7 PR-D slice 1). The
           // owner-side /dashboard tree is guarded by `roleOwnerGuard`
           // and `hasAcademyGuard`, both of which would bounce an
           // athlete who lacks an academy by definition. /dashboard/me/*
           // is `roleAthleteGuard`-gated instead.
-          this.router.navigate(['/dashboard/me/profile']);
+          void this.router.navigate(['/dashboard/me/profile']);
         },
         error: (err) => {
           this.state.set('error');

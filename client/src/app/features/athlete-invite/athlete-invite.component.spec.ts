@@ -7,6 +7,7 @@ import {
   AthleteInviteService,
 } from '../../core/services/athlete-invite.service';
 import { AuthService } from '../../core/services/auth.service';
+import { NotificationOnboardingService } from '../../core/services/notification-onboarding.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 function setup(
@@ -69,6 +70,10 @@ function setup(
         },
       },
       { provide: Router, useValue: { navigate } as Partial<Router> },
+      {
+        provide: NotificationOnboardingService,
+        useValue: { requestPromptAfterAuth: vi.fn().mockReturnValue(false) },
+      },
       ...provideI18nTesting(),
     ],
   });
