@@ -166,4 +166,32 @@ describe('NotificationOnboardingService (#745)', () => {
       expect(service.state()).toBe('idle');
     });
   });
+
+  describe('localStorage failure modes (Copilot review on #746)', () => {
+    it('treats a throwing getItem as "not decided" rather than crashing', () => {
+      const getSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('SecurityError', 'SecurityError');
+      });
+
+      // Should not throw — service falls through to the supported branch.
+      const shown = service.requestPromptAfterAuth();
+      expect(shown).toBe(true);
+      expect(service.state()).toBe('visible' satisfies NotificationOnboardingState);
+
+      getSpy.mockRestore();
+    });
+
+    it('treats a throwing setItem as a no-op rather than crashing dismiss', () => {
+      service.requestPromptAfterAuth();
+      const setSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('QuotaExceededError', 'QuotaExceededError');
+      });
+
+      // dismiss() must complete the state transition even if persistence fails.
+      expect(() => service.dismiss()).not.toThrow();
+      expect(service.state()).toBe('dismissed' satisfies NotificationOnboardingState);
+
+      setSpy.mockRestore();
+    });
+  });
 });

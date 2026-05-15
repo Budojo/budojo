@@ -125,13 +125,32 @@ export class NotificationOnboardingService {
     this.state.set('idle');
   }
 
+  // Both helpers below wrap localStorage access in try/catch. The
+  // typeof guard alone is not enough — Safari private-browsing mode
+  // and "block third-party cookies and site data" settings expose the
+  // global but make every read/write throw a `SecurityError` or a
+  // `QuotaExceededError`. Without the wrap, a registration on such a
+  // browser would crash the soft-prompt entry point and bubble up
+  // through `router.navigate`. Returning the conservative defaults
+  // (false for hasDecided, no-op for markDecided) means the user gets
+  // the prompt every session — annoying but recoverable, vs. a hard
+  // navigation failure. Copilot review on #746.
   private hasDecided(): boolean {
-    if (typeof localStorage === 'undefined') return false;
-    return localStorage.getItem(NotificationOnboardingService.DECIDED_KEY) === '1';
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      return localStorage.getItem(NotificationOnboardingService.DECIDED_KEY) === '1';
+    } catch {
+      return false;
+    }
   }
 
   private markDecided(): void {
-    if (typeof localStorage === 'undefined') return;
-    localStorage.setItem(NotificationOnboardingService.DECIDED_KEY, '1');
+    try {
+      if (typeof localStorage === 'undefined') return;
+      localStorage.setItem(NotificationOnboardingService.DECIDED_KEY, '1');
+    } catch {
+      // Storage blocked / quota exceeded — swallow. The user will see
+      // the prompt again next session; not ideal but not broken.
+    }
   }
 }
