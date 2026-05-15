@@ -6,6 +6,7 @@ namespace App\Actions\Athlete;
 
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Exceptions\UserAlreadyAthleteElsewhereException;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
@@ -55,12 +56,41 @@ class EnrollSelfAsAthleteAction
             if ($existing !== null) {
                 if ($existing->trashed()) {
                     $existing->restore();
+                    // Refresh the row's user-mirrored columns on restore.
+                    // If the user changed their first/last/email between
+                    // leave and re-enroll (a perfectly normal flow over
+                    // a long pause), the trashed row's snapshot is stale.
+                    // Mirror the fresh-create branch below so the visible
+                    // identity always matches the current user profile
+                    // (Copilot review on #748).
                     $existing->update([
+                        'first_name' => $user->first_name,
+                        'last_name' => $user->last_name,
+                        'email' => $user->email,
                         'status' => AthleteStatus::Active,
                     ]);
                 }
 
                 return $existing->fresh() ?? $existing;
+            }
+
+            // Defensive guard against the UNIQUE constraint on
+            // `athletes.user_id` (`2026_05_05_160100_add_user_id_to_athletes_table`,
+            // M7 #445): a user globally has AT MOST one athlete row
+            // across all academies. If the caller already has a row
+            // somewhere else (e.g. invited as a regular athlete by a
+            // different academy) the bare `create()` below would 500
+            // on UNIQUE collision. Detect upfront so the controller
+            // can map to a clean 409 instead. Copilot review on #748.
+            $foreignRow = Athlete::withTrashed()
+                ->where('user_id', $user->id)
+                ->first();
+            if ($foreignRow !== null) {
+                throw new UserAlreadyAthleteElsewhereException(
+                    user: $user,
+                    existingAthleteId: $foreignRow->id,
+                    existingAcademyId: $foreignRow->academy_id,
+                );
             }
 
             return $academy->athletes()->create([

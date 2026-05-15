@@ -75,22 +75,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Athlete::class);
     }
 
-    /**
-     * The user's owner-as-athlete row in a given academy (#748). Null
-     * unless they have opted into training at that academy. Resolves
-     * the row regardless of soft-delete state — a re-enroll restores
-     * the same id, so a caller asking "is this user enrolled?" wants
-     * "is there a *live* row?", which is what this helper returns.
-     */
-    public function athleteIn(Academy $academy): ?Athlete
-    {
-        return Athlete::query()
-            ->where('academy_id', $academy->id)
-            ->where('user_id', $this->id)
-            ->where('is_self', true)
-            ->first();
-    }
-
     public function isOwner(): bool
     {
         return $this->role === UserRole::Owner;

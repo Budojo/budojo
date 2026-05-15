@@ -70,8 +70,13 @@ class AthleteFactory extends Factory
      * Owner-as-athlete row (#748). Pairs the factory with a User to
      * mirror the real shape — a self-row always carries `user_id`
      * because it represents the staff member's training record.
+     *
+     * Named `selfFor()` rather than `self()` to keep call sites
+     * unambiguous (`self` is a PHP keyword for scope resolution;
+     * `Athlete::factory()->self($user)` reads momentarily like a
+     * static access on the factory class). Copilot review on #748.
      */
-    public function self(\App\Models\User $user): static
+    public function selfFor(\App\Models\User $user): static
     {
         return $this->state([
             'is_self' => true,
