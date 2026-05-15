@@ -6,7 +6,7 @@ namespace App\Http\Controllers\Me;
 
 use App\Actions\Athlete\EnrollSelfAsAthleteAction;
 use App\Actions\Athlete\LeaveSelfAsAthleteAction;
-use App\Exceptions\UserAlreadyAthleteElsewhereException;
+use App\Exceptions\UserAlreadyAthleteException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AthleteResource;
 use App\Models\Athlete;
@@ -80,11 +80,19 @@ class MyAthleteController extends Controller
 
         try {
             $athlete = $this->enroll->execute($user, $academy);
-        } catch (UserAlreadyAthleteElsewhereException $e) {
+        } catch (UserAlreadyAthleteException $e) {
+            // The check is keyed on `user_id` alone (the UNIQUE on
+            // `athletes.user_id` is global), so the conflict can arise
+            // EITHER across academies OR within the current academy
+            // (e.g. a regular invitation that pre-dates the user
+            // becoming staff). The user-facing message + the error code
+            // reflect that global scope explicitly — see #764 for the
+            // history of the rename. The SPA's matching i18n key is
+            // `user_already_athlete`.
             return response()->json([
-                'message' => 'You are already an athlete in another academy. Leave that roster first.',
+                'message' => 'You are already enrolled as an athlete. You can hold only one athlete row at a time — leave the existing one first.',
                 'errors' => [
-                    'user_id' => ['user_already_athlete_elsewhere'],
+                    'user_id' => ['user_already_athlete'],
                 ],
             ], 409);
         }

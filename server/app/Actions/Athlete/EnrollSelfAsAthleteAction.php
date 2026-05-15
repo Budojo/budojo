@@ -6,7 +6,7 @@ namespace App\Actions\Athlete;
 
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
-use App\Exceptions\UserAlreadyAthleteElsewhereException;
+use App\Exceptions\UserAlreadyAthleteException;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
@@ -86,7 +86,7 @@ class EnrollSelfAsAthleteAction
                 ->where('user_id', $user->id)
                 ->first();
             if ($foreignRow !== null) {
-                throw new UserAlreadyAthleteElsewhereException(
+                throw new UserAlreadyAthleteException(
                     user: $user,
                     existingAthleteId: $foreignRow->id,
                     existingAcademyId: $foreignRow->academy_id,
