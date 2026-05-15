@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom, map, Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 /**
  * Browser Web Push subscriber (#694, closes the client half of #419).
@@ -128,7 +129,7 @@ export class WebPushService {
    */
   fetchState(): Observable<PushState> {
     return this.http
-      .get<PushStateEnvelope>('/api/v1/me/push-subscriptions')
+      .get<PushStateEnvelope>(`${environment.apiBase}/api/v1/me/push-subscriptions`)
       .pipe(map((response) => ({ devices: response.data, meta: response.meta })));
   }
 
@@ -180,10 +181,13 @@ export class WebPushService {
 
     try {
       const response = await firstValueFrom(
-        this.http.post<PushSubscribeEnvelope>('/api/v1/me/push-subscriptions', {
-          endpoint: json.endpoint,
-          keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-        }),
+        this.http.post<PushSubscribeEnvelope>(
+          `${environment.apiBase}/api/v1/me/push-subscriptions`,
+          {
+            endpoint: json.endpoint,
+            keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+          },
+        ),
       );
       return response.data;
     } catch (error: unknown) {
@@ -214,6 +218,8 @@ export class WebPushService {
    * is harmless — the next push fanout simply doesn't include it.
    */
   async unsubscribe(id: number): Promise<void> {
-    await firstValueFrom(this.http.delete(`/api/v1/me/push-subscriptions/${id}`));
+    await firstValueFrom(
+      this.http.delete(`${environment.apiBase}/api/v1/me/push-subscriptions/${id}`),
+    );
   }
 }

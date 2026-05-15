@@ -70,6 +70,21 @@ const CATEGORIES: readonly ToggleableCategory[] = [
     i18nDescription: 'profile.notifications.athletePaymentOverdue.description',
   },
   {
+    key: 'owner_athlete_doc_uploaded',
+    i18nLabel: 'profile.notifications.ownerAthleteDocUploaded.label',
+    i18nDescription: 'profile.notifications.ownerAthleteDocUploaded.description',
+  },
+  {
+    key: 'owner_event_rsvp',
+    i18nLabel: 'profile.notifications.ownerEventRsvp.label',
+    i18nDescription: 'profile.notifications.ownerEventRsvp.description',
+  },
+  {
+    key: 'owner_athlete_missed_streak',
+    i18nLabel: 'profile.notifications.ownerAthleteMissedStreak.label',
+    i18nDescription: 'profile.notifications.ownerAthleteMissedStreak.description',
+  },
+  {
     key: 'community_reply',
     i18nLabel: 'profile.notifications.communityReply.label',
     i18nDescription: 'profile.notifications.communityReply.description',

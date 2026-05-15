@@ -7,8 +7,13 @@ namespace App\Actions\Document;
 use App\Enums\DocumentType;
 use App\Models\Athlete;
 use App\Models\Document;
+use App\Models\User;
+use App\Notifications\OwnerAthleteDocUploadedNotification;
 use App\Support\DocumentEncryption;
+use App\Support\NotificationCategory;
+use App\Support\NotificationPreferences;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -38,6 +43,7 @@ class UploadDocumentAction
         ?string $issuedAt = null,
         ?string $expiresAt = null,
         ?string $notes = null,
+        ?User $uploader = null,
     ): Document {
         $configKey = config('documents.encryption_key');
         $shouldEncrypt = $type === DocumentType::MedicalCertificate
@@ -75,7 +81,7 @@ class UploadDocumentAction
         }
 
         try {
-            return $athlete->documents()->create([
+            $document = $athlete->documents()->create([
                 'type' => $type,
                 'file_path' => $path,
                 'original_name' => $file->getClientOriginalName(),
@@ -86,12 +92,50 @@ class UploadDocumentAction
                 'expires_at' => $expiresAt,
                 'notes' => $notes,
             ]);
+
+            $this->maybeNotifyOwner($document, $athlete, $uploader);
+
+            return $document;
         } catch (\Throwable $e) {
             // DB insert failed: wipe the orphan file and re-throw so the
             // caller (FormRequest/controller) surfaces the error as-is.
             Storage::disk('local')->delete($path);
 
             throw $e;
+        }
+    }
+
+    /**
+     * Owner-side push when an athlete (or any non-owner user) uploads
+     * a document (#729 C1). Skipped today when the caller doesn't pass
+     * an `$uploader` — that branch is the legacy owner-side upload
+     * path where the owner is BOTH uploader and recipient (self-ping
+     * not desired). Once the athlete self-upload feature lands, the
+     * controller will pass `$request->user()` and the dispatch fires.
+     */
+    private function maybeNotifyOwner(Document $document, Athlete $athlete, ?User $uploader): void
+    {
+        if ($uploader === null) {
+            return;
+        }
+        $owner = $athlete->academy?->owner;
+        if ($owner === null || $owner->id === $uploader->id) {
+            return;
+        }
+        if (! NotificationPreferences::isEnabled($owner, NotificationCategory::OWNER_ATHLETE_DOC_UPLOADED)) {
+            return;
+        }
+
+        try {
+            $owner->notify(new OwnerAthleteDocUploadedNotification($document));
+        } catch (\Throwable $e) {
+            Log::warning('owner_athlete_doc_uploaded notification failed', [
+                'document_id' => $document->id,
+                'athlete_id' => $athlete->id,
+                'owner_id' => $owner->id,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 }
