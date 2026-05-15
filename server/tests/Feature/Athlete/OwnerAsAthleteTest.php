@@ -190,29 +190,32 @@ it('excludes self-rows from the unpaid-this-month digest source list', function 
     expect($rows->first()->is_self)->toBeFalse();
 });
 
-it('returns 409 when the user already has an athlete row in a different academy', function (): void {
-    // Two academies, one user. The "first" academy has an athlete row
-    // tied to the user (e.g. invited via the M7 flow). The user is
-    // then also the owner of a "second" academy and tries to self-
-    // enroll there — the UNIQUE on `athletes.user_id` would otherwise
-    // 500 the request. We surface a clean 409 instead. Copilot review
-    // on #748.
+it('returns 409 when the user already has an athlete row anywhere (global user_id scope)', function (): void {
+    // The action's guard is keyed on `user_id` alone — the UNIQUE on
+    // `athletes.user_id` is global, so the 409 trips regardless of
+    // whether the pre-existing row lives in the current active
+    // academy or in a different one. This fixture creates the
+    // conflicting row in the user's OWN active academy (the simpler
+    // collision scenario: a regular invitation that pre-dates the
+    // user becoming staff), then asserts the 409 envelope.
+    //
+    // Originally named "in a different academy" — that read as if the
+    // check were academy-scoped (`where('academy_id', '!=', …)`),
+    // which it isn't. Copilot review on the v2.18.0 release PR
+    // tracked the test-description / implementation drift as #764.
+    // The rename here aligns the test description with the global
+    // scope the implementation actually enforces.
     $first = userWithAcademy();
     /** @var Academy $firstAcademy */
     $firstAcademy = $first->activeAcademy();
     Athlete::factory()->for($firstAcademy)->create(['user_id' => $first->id]);
 
-    // Acting as the same user; pretend they have a second academy as
-    // owner (the fixture doesn't model this multi-academy state
-    // explicitly, but the controller path doesn't need it: the
-    // enroll action's defensive guard short-circuits on the prior
-    // `user_id` row regardless of which academy is active).
     Sanctum::actingAs($first->fresh());
 
     $response = $this->postJson('/api/v1/me/athlete');
 
     $response->assertStatus(409);
-    $response->assertJsonPath('errors.user_id.0', 'user_already_athlete_elsewhere');
+    $response->assertJsonPath('errors.user_id.0', 'user_already_athlete');
 });
 
 it('excludes self-rows from the overdue-push pipeline', function (): void {
