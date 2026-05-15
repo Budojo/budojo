@@ -9,7 +9,12 @@ import { NotificationOnboardingDialogComponent } from './shared/components/notif
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastModule, CookieBannerComponent, NotificationOnboardingDialogComponent],
+  imports: [
+    RouterOutlet,
+    ToastModule,
+    CookieBannerComponent,
+    NotificationOnboardingDialogComponent,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

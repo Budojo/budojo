@@ -79,9 +79,7 @@ export class NotificationOnboardingService {
 
     try {
       const pushState = await firstValueFrom(
-        this.webPush.fetchState().pipe(
-          catchError(() => of(null)),
-        ),
+        this.webPush.fetchState().pipe(catchError(() => of(null))),
       );
       const vapid = pushState?.meta.vapid_public_key ?? null;
       if (vapid === null) {

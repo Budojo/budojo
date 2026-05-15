@@ -42,7 +42,10 @@ describe('App', () => {
         // `SwPush`. Provide a stub that mirrors the dev / unit-test
         // contract (`isEnabled: false`) so the component constructs
         // without booting a real service worker.
-        { provide: SwPush, useValue: { isEnabled: false, messages: NEVER, notificationClicks: NEVER } },
+        {
+          provide: SwPush,
+          useValue: { isEnabled: false, messages: NEVER, notificationClicks: NEVER },
+        },
       ],
     }).compileComponents();
   });

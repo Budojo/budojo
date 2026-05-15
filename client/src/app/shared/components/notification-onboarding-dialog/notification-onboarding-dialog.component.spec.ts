@@ -51,9 +51,7 @@ describe('NotificationOnboardingDialogComponent (#745)', () => {
 
   afterEach(() => {
     // Clean up any portal-rendered dialog content between tests.
-    document.body
-      .querySelectorAll('.p-dialog-mask, .p-dialog')
-      .forEach((el) => el.remove());
+    document.body.querySelectorAll('.p-dialog-mask, .p-dialog').forEach((el) => el.remove());
   });
 
   it('renders no body or result content when state is idle', () => {

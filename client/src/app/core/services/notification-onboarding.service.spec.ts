@@ -4,12 +4,7 @@ import {
   NotificationOnboardingService,
   NotificationOnboardingState,
 } from './notification-onboarding.service';
-import {
-  PushDevice,
-  PushState,
-  WebPushError,
-  WebPushService,
-} from './web-push.service';
+import { PushDevice, PushState, WebPushError, WebPushService } from './web-push.service';
 
 class FakeWebPushService {
   isSupportedReturns = true;
@@ -52,10 +47,7 @@ describe('NotificationOnboardingService (#745)', () => {
     localStorage.clear();
     webPush = new FakeWebPushService();
     TestBed.configureTestingModule({
-      providers: [
-        NotificationOnboardingService,
-        { provide: WebPushService, useValue: webPush },
-      ],
+      providers: [NotificationOnboardingService, { provide: WebPushService, useValue: webPush }],
     });
     service = TestBed.inject(NotificationOnboardingService);
   });
