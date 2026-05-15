@@ -5,31 +5,33 @@ import { environment } from '../../../environments/environment';
 
 /**
  * Owner-as-athlete self-enroll / self-leave client (#750, consumer of
- * the PR-A backend at #748). Two thin wrappers around the dedicated
- * `/me/athlete` endpoints, plus a discovery helper the profile toggle
- * uses to render its initial state.
+ * the PR-A backend at #748). Three thin wrappers around the dedicated
+ * `/me/athlete` endpoints:
  *
- *   POST   /api/v1/me/athlete  → 201 (new) | 200 (idempotent re-call)
- *   DELETE /api/v1/me/athlete  → 204
+ *   GET    /api/v1/me/athlete/state → { enrolled, athlete_id }
+ *   POST   /api/v1/me/athlete       → 201 (new) | 200 (idempotent re-call)
+ *   DELETE /api/v1/me/athlete       → 204
  *
- * The discovery helper goes through the athletes index endpoint
- * filtered to the caller's own row. We chose this over adding a new
- * dedicated GET on PR-A so the API surface stays minimal — the
- * profile toggle is the only consumer that needs "am I enrolled?",
- * and the athletes index is already eagerly cached by the roster
- * route. A 200 response with an empty `is_self` slice means the
- * caller is not enrolled.
+ * The `state()` discovery call hits the dedicated `/state` endpoint
+ * (#761). The previous implementation walked one page of
+ * `/api/v1/athletes` looking for an `is_self === true` row — but the
+ * athletes index ignores `per_page` and always paginates 20 items, so
+ * on academies with a roster larger than 20 the self-row could sit on
+ * a later page and the toggle would silently report `enrolled: false`
+ * (Copilot review on #754). The dedicated endpoint queries the
+ * (academy_id, user_id, is_self=true) tuple directly so the result is
+ * unambiguous regardless of roster size.
  */
 export interface MyAthleteState {
   readonly enrolled: boolean;
   readonly athleteId: number | null;
 }
 
-interface AthleteListEnvelope {
-  readonly data: ReadonlyArray<{
-    readonly id: number;
-    readonly is_self?: boolean;
-  }>;
+interface MeAthleteStateEnvelope {
+  readonly data: {
+    readonly enrolled: boolean;
+    readonly athlete_id: number | null;
+  };
 }
 
 interface AthleteEnvelope {
@@ -45,22 +47,21 @@ export class MyAthleteService {
 
   /**
    * Returns the caller's current self-enrolled state in their active
-   * academy. Walks one page of the athletes list looking for a row
-   * with `is_self === true` — there is at most one such row per
-   * (academy, user) so the first match wins. Returns `enrolled =
-   * false` when the user has no active academy or the list errors
-   * (the toggle treats both as "show the off state").
+   * academy. Calls the dedicated `GET /me/athlete/state` endpoint
+   * which queries the (academy_id, user_id, is_self=true) tuple
+   * directly — no pagination involved, works on any roster size
+   * (#761). The server returns `enrolled: false, athlete_id: null`
+   * with 200 when the user has no active academy, so the toggle
+   * doesn't need a separate "no academy" branch.
    */
   state(): Observable<MyAthleteState> {
     return this.http
-      .get<AthleteListEnvelope>(`${environment.apiBase}/api/v1/athletes?per_page=100`)
+      .get<MeAthleteStateEnvelope>(`${environment.apiBase}/api/v1/me/athlete/state`)
       .pipe(
-        map((response) => {
-          const self = response.data.find((row) => row.is_self === true);
-          return self !== undefined
-            ? { enrolled: true, athleteId: self.id }
-            : { enrolled: false, athleteId: null };
-        }),
+        map((response) => ({
+          enrolled: response.data.enrolled,
+          athleteId: response.data.athlete_id,
+        })),
       );
   }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Me;
 
 use App\Actions\Athlete\EnrollSelfAsAthleteAction;
+use App\Actions\Athlete\GetSelfAthleteStateAction;
 use App\Actions\Athlete\LeaveSelfAsAthleteAction;
 use App\Exceptions\UserAlreadyAthleteElsewhereException;
 use App\Http\Controllers\Controller;
@@ -51,6 +52,7 @@ class MyAthleteController extends Controller
 {
     public function __construct(
         private readonly EnrollSelfAsAthleteAction $enroll,
+        private readonly GetSelfAthleteStateAction $getState,
         private readonly LeaveSelfAsAthleteAction $leave,
     ) {
     }
@@ -93,6 +95,34 @@ class MyAthleteController extends Controller
             ['data' => new AthleteResource($athlete)],
             $existed ? 200 : 201,
         );
+    }
+
+    /**
+     * Read-only `enrolled` state for the caller's active academy
+     * (#761). Backs the SPA's owner-as-athlete toggle initial state
+     * without walking the paginated athletes index — see the Action
+     * docblock for the bug history.
+     *
+     * Returns `{ data: { enrolled: false, athlete_id: null } }` with
+     * 200 when the caller has no active academy, intentionally — the
+     * toggle reads "no active academy" the same way as "active academy
+     * but not enrolled" (both render the off state). Choosing 200 over
+     * 422 keeps the SPA's call site free of a branch for a precondition
+     * the read endpoint can satisfy on its own.
+     */
+    public function state(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $academy = $user->activeAcademy();
+        if ($academy === null) {
+            return response()->json([
+                'data' => ['enrolled' => false, 'athlete_id' => null],
+            ]);
+        }
+
+        return response()->json(['data' => $this->getState->execute($user, $academy)]);
     }
 
     public function destroy(Request $request): Response|JsonResponse
