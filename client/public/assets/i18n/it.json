@@ -785,6 +785,30 @@
       "successDetail": "La tua password è stata cambiata. Gli altri dispositivi sono stati disconnessi.",
       "genericError": "Non è stato possibile aggiornare la password. Riprova."
     },
+    "trainHere": {
+      "title": "Mi alleno in questa palestra",
+      "subtitle": "Aggiungiti al roster come atleta della tua stessa palestra. I tuoi post community mostreranno la cintura, le tue presenze vengono tracciate e comparirai nella lista atleti con un'etichetta Owner.",
+      "errorMessage": "Non siamo riusciti a controllare se sei iscritto.",
+      "retry": "Riprova",
+      "toggle": {
+        "label": "Mi alleno qui",
+        "description": "Attiva per comparire nella lista atleti con cintura Bianca di partenza — potrai promuoverti come qualsiasi altro atleta. Disattivando ti togli dalla lista visibile; la cronologia (presenze, promozioni) viene mantenuta se torni indietro."
+      },
+      "toast": {
+        "enrolled": {
+          "summary": "Sei nel roster",
+          "detail": "Ora compari nella lista atleti. I tuoi post nel community mostreranno la cintura."
+        },
+        "left": {
+          "summary": "Rimosso dal roster",
+          "detail": "La cronologia è conservata — riattiva il toggle per ripristinarla."
+        },
+        "error": {
+          "summary": "Qualcosa è andato storto",
+          "detail": "Non siamo riusciti ad aggiornare l'iscrizione. Riprova."
+        }
+      }
+    },
     "notifications": {
       "title": "Notifiche",
       "subtitle": "Scegli quali notifiche vuoi ricevere. Ogni riga indica come viene consegnata (digest email, inbox, …).",
@@ -1397,6 +1421,7 @@
       "beltPlaceholder": "Cintura",
       "statusPlaceholder": "Stato",
       "paidPlaceholder": "Pagamento",
+      "ownerChip": "Owner",
       "paidOptions": {
         "all": "Tutti",
         "yes": "Pagato",

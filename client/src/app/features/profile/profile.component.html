@@ -676,6 +676,17 @@
     </section>
 
     <!--
+      "Train at this academy" panel (#750, frontend half of the
+      owner-as-athlete epic #747). Flips the caller into the roster
+      as an athlete in their own academy. Lives next to the
+      Notifications panel because both are "personal preferences
+      that span the operator + athlete experience".
+    -->
+    <section class="profile-page__card">
+      <app-profile-train-here />
+    </section>
+
+    <!--
       Notification preferences panel (#416). Per-category opt-out for
       digest / reminder emails. Transactional emails are NOT
       toggleable; the panel surfaces them in a read-only "always

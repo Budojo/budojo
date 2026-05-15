@@ -251,6 +251,19 @@
                   >{{ athlete.first_name }} {{ athlete.last_name }}</a
                 >
                 <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
+                <!-- Owner-as-athlete chip (#750). Tells the user at a
+                     glance which roster rows are academy staff training
+                     in their own academy vs. regular students. The
+                     PrimeNG tag stays neutral severity to avoid
+                     competing with the belt-color chip beside it. -->
+                @if (athlete.is_self) {
+                  <p-tag
+                    [value]="'athletes.list.ownerChip' | translate"
+                    severity="secondary"
+                    [rounded]="true"
+                    [attr.data-cy]="'athlete-owner-chip-' + athlete.id"
+                  />
+                }
               </div>
               <!-- Social icons inline below name+age. Conditional render —
                    no empty placeholders for athletes without socials.
@@ -306,34 +319,44 @@
           </td>
           @if (hasMonthlyFee()) {
             <td>
-              <!-- Tooltip telegraphs the full month + year + status (#282)
-                   so the user gets unambiguous context on hover/long-press
-                   without crowding the row visually. The bare badge
-                   already carries Paid / Unpaid; the tooltip adds the
-                   "April 2026" anchor.
+              @if (athlete.is_self) {
+                <!-- Owner-as-athlete rows (#750) don't have a payment
+                     ledger surface — they're excluded from the unpaid
+                     digest + overdue push pipelines server-side. We
+                     leave the cell empty so the column geometry stays
+                     stable (the row above might be a regular athlete
+                     with a paid badge). -->
+                <span class="athlete-paid-empty" aria-hidden="true">—</span>
+              } @else {
+                <!-- Tooltip telegraphs the full month + year + status (#282)
+                     so the user gets unambiguous context on hover/long-press
+                     without crowding the row visually. The bare badge
+                     already carries Paid / Unpaid; the tooltip adds the
+                     "April 2026" anchor.
 
-                   Suppressed (empty string → no tooltip mounts) when
-                   `paid_current_month` is undefined — same gate that
-                   makes <app-paid-badge> render nothing for that athlete.
-                   Without the guard, an empty cell would still show a
-                   ghost tooltip reading "April 2026 — Unpaid" because
-                   the ternary defaults `undefined` to "Unpaid" (Copilot
-                   caught this on #289). -->
-              <app-paid-badge
-                [paid]="athlete.paid_current_month"
-                [clickable]="true"
-                (paidToggle)="confirmTogglePaid($event, athlete)"
-                [pTooltip]="
-                  athlete.paid_current_month === undefined
-                    ? ''
-                    : currentMonthLong() +
-                      ' — ' +
-                      (athlete.paid_current_month
-                        ? ('athletes.list.tooltip.paid' | translate)
-                        : ('athletes.list.tooltip.unpaid' | translate))
-                "
-                tooltipPosition="top"
-              />
+                     Suppressed (empty string → no tooltip mounts) when
+                     `paid_current_month` is undefined — same gate that
+                     makes <app-paid-badge> render nothing for that athlete.
+                     Without the guard, an empty cell would still show a
+                     ghost tooltip reading "April 2026 — Unpaid" because
+                     the ternary defaults `undefined` to "Unpaid" (Copilot
+                     caught this on #289). -->
+                <app-paid-badge
+                  [paid]="athlete.paid_current_month"
+                  [clickable]="true"
+                  (paidToggle)="confirmTogglePaid($event, athlete)"
+                  [pTooltip]="
+                    athlete.paid_current_month === undefined
+                      ? ''
+                      : currentMonthLong() +
+                        ' — ' +
+                        (athlete.paid_current_month
+                          ? ('athletes.list.tooltip.paid' | translate)
+                          : ('athletes.list.tooltip.unpaid' | translate))
+                  "
+                  tooltipPosition="top"
+                />
+              }
             </td>
           }
           <td class="athlete-actions">

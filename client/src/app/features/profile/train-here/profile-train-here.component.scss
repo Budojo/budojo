@@ -1,0 +1,90 @@
+.profile-train-here {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-color-secondary);
+  }
+
+  &__state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem 0;
+    color: var(--p-text-color-secondary);
+
+    &--error {
+      color: var(--p-red-500, #ef4444);
+
+      p {
+        margin: 0;
+        color: var(--p-text-color);
+      }
+    }
+
+    i {
+      font-size: 1.75rem;
+    }
+  }
+
+  &__spinner {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+
+    // Same column-pinning rule the notifications panel uses (#744).
+    // Flex children inherit `flex-shrink: 1` by default; a multi-line
+    // description sibling would otherwise compress the switch and
+    // misalign its left edge. Locking to intrinsic width guarantees
+    // the switch sits at the same X-coordinate as the notifications-
+    // panel switches above (visual consistency on /dashboard/profile).
+    p-toggleswitch {
+      flex: 0 0 auto;
+    }
+  }
+
+  &__row-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__label {
+    font-weight: 500;
+    color: var(--p-text-color);
+  }
+
+  &__description {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
+  }
+}
