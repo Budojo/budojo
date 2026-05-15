@@ -318,6 +318,15 @@ The changelog is **not** checked back into the repo — there is no `CHANGELOG.m
 - Do not create a `version` field in `package.json` — semantic-release owns versioning.
 - `package-lock.json` is committed; always run `npm install` after changing `package.json`.
 
+**Release-PR `## Auto-closes` block — mandatory.** Every `develop → main` release PR body MUST end with an `## Auto-closes` block listing each sub-issue: `Closes #N1, #N2, #N3, …`. GitHub auto-closes those issues the moment the release PR is merged. Without this block they stay open forever, because:
+
+- GitHub's auto-close fires only when a PR with `Closes #N` is merged into the repo's **default branch**. Our default is `main`; feature PRs target `develop`; so feature PRs never trigger auto-close.
+- The release PR (develop → main) IS merged to the default branch, but its own body doesn't carry the per-sub-issue references unless we add them — squash commits of the sub-PRs carry only `(#PR_N)` in their subject lines, which is a reference and not a close keyword.
+
+**How to build the block** when opening the release PR: walk the squash commits between `main..develop`, for each `feat(...): … (#PR_N)` style subject pick up the PR (`gh pr view <PR_N> --json body`), grep its body for `Closes #M` / `Fixes #M` / `Resolves #M`, aggregate every `#M` into the release-PR body's `## Auto-closes` block. Then `gh pr create --body-file …`. The user only clicks Merge; GitHub closes the listed issues.
+
+Corollary discipline on every sub-PR: each feature / fix / chore PR body MUST contain an explicit `Closes #N` referencing the leaf issue it ships. `Closes part of #EPIC` doesn't satisfy GitHub's auto-close keyword set — write both: `Closes #N` for the leaf, plus a separate sentence pointing at the umbrella epic.
+
 **Auto-sweep main → develop after a stable release** (`.github/workflows/release.yml` § sweep job):
 
 - The sweep that opens the canonical `chore/sync-main-into-develop-after-vX.Y.Z` PR runs as a **downstream job in the same Release workflow run** as semantic-release. Originally it was a separate workflow triggered on `release: published`, then on `push: tags:` — both silently no-op'd in production because GitHub Actions refuses to fire downstream workflows on events created by `GITHUB_TOKEN` (recursion guard) and semantic-release publishes via that token. Living in the same workflow run sidesteps the guard entirely.
