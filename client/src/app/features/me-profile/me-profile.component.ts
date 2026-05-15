@@ -83,6 +83,21 @@ export class MeProfileComponent {
     ],
   });
 
+  constructor() {
+    // Auto-lowercase the handle as the user types so the pattern
+    // validator (which requires `^[a-z]…`) doesn't silently reject
+    // capital-first input like "Eli". Real-user feedback on prod
+    // 2026-05-15 — see #756. `emitEvent: false` keeps the re-emission
+    // from re-entering this subscription.
+    this.form.controls.handle.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => {
+        if (typeof value === 'string' && value !== value.toLowerCase()) {
+          this.form.controls.handle.setValue(value.toLowerCase(), { emitEvent: false });
+        }
+      });
+  }
+
   protected startEdit(): void {
     const current = this.user();
     if (current === null) return;

@@ -92,6 +92,9 @@
         </label>
         <label class="profile__field">
           <span class="profile__label">{{ 'athletePortal.profile.handle' | translate }}</span>
+          <span class="profile__sublabel" data-cy="me-profile-handle-context">{{
+            'athletePortal.profile.handleContextExample' | translate
+          }}</span>
           <input
             pInputText
             type="text"
@@ -106,6 +109,11 @@
             placeholder="mariobjj"
           />
           <span class="profile__hint">{{ 'athletePortal.profile.handleHint' | translate }}</span>
+          @if (currentUser.handle) {
+            <span class="profile__hint profile__hint--clear" data-cy="me-profile-handle-clear-hint">
+              {{ 'athletePortal.profile.handleClearHint' | translate }}
+            </span>
+          }
         </label>
 
         <div class="profile__actions">

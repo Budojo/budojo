@@ -126,6 +126,12 @@
     font-size: 0.875rem;
   }
 
+  &__sublabel {
+    color: var(--p-text-color-secondary);
+    font-size: 0.875rem;
+    opacity: 0.85;
+  }
+
   &__actions {
     display: flex;
     justify-content: flex-end;
