@@ -37,7 +37,7 @@ export const RELEASES: readonly Release[] = [
         heading: '🔔 Three new owner alerts',
         bullets: [
           'An athlete uploaded a document — turns on the moment athlete self-upload lands; for now the trigger sits dormant.',
-          'Someone RSVPed to an event you posted — fires the first time anyone clicks Going / Maybe on your event card (no spam on mind-changes).',
+          'Someone RSVPed to an event you posted — fires when an attendee picks Going or Maybe, and again if they later swap between the two (a Going → Maybe swap is worth knowing about because it changes who you can count on). Toggling the same response off (un-RSVP) stays silent.',
           'Athlete missed several trainings — daily 09:30 heads-up when an active athlete has skipped the last 3 scheduled sessions. 14-day cooldown per athlete so you get the signal once, not every morning.',
         ],
       },
