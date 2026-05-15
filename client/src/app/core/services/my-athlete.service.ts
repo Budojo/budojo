@@ -67,9 +67,7 @@ export class MyAthleteService {
   enroll(): Observable<MyAthleteState> {
     return this.http
       .post<AthleteEnvelope>(`${environment.apiBase}/api/v1/me/athlete`, {})
-      .pipe(
-        map((response) => ({ enrolled: true, athleteId: response.data.id })),
-      );
+      .pipe(map((response) => ({ enrolled: true, athleteId: response.data.id })));
   }
 
   leave(): Observable<MyAthleteState> {

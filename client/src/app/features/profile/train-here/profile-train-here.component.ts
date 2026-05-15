@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -32,13 +39,7 @@ import { MyAthleteService } from '../../../core/services/my-athlete.service';
 @Component({
   selector: 'app-profile-train-here',
   standalone: true,
-  imports: [
-    ButtonModule,
-    FormsModule,
-    ProgressSpinnerModule,
-    ToggleSwitchModule,
-    TranslatePipe,
-  ],
+  imports: [ButtonModule, FormsModule, ProgressSpinnerModule, ToggleSwitchModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile-train-here.component.html',
   styleUrl: './profile-train-here.component.scss',

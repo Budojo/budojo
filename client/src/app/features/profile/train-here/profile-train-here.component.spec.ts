@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { MessageService } from 'primeng/api';
 import { environment } from '../../../../environments/environment';
 import { ProfileTrainHereComponent } from './profile-train-here.component';
@@ -61,9 +58,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
     // class — the rendered class name is an internal contract of the
     // ToggleSwitch component and varies between PrimeNG minor
     // versions. The signal is the source of truth our toggle binds to.
-    const enrolled = (
-      fixture.componentInstance as unknown as { enrolled(): boolean }
-    ).enrolled();
+    const enrolled = (fixture.componentInstance as unknown as { enrolled(): boolean }).enrolled();
     expect(enrolled).toBe(false);
   });
 
@@ -72,9 +67,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
     flushList([{ id: 1, is_self: true }]);
     fixture.detectChanges();
 
-    const enrolled = (
-      fixture.componentInstance as unknown as { enrolled(): boolean }
-    ).enrolled();
+    const enrolled = (fixture.componentInstance as unknown as { enrolled(): boolean }).enrolled();
     expect(enrolled).toBe(true);
   });
 
@@ -106,9 +99,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(messageAddSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ severity: 'success' }),
-    );
+    expect(messageAddSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
   });
 
   it('rolls back the optimistic ON flip when enroll errors', async () => {
@@ -124,14 +115,10 @@ describe('ProfileTrainHereComponent (#750)', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(messageAddSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ severity: 'error' }),
-    );
+    expect(messageAddSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
 
     // Optimistic flip rolled back — the signal should be OFF again.
-    const enrolled = (
-      fixture.componentInstance as unknown as { enrolled(): boolean }
-    ).enrolled();
+    const enrolled = (fixture.componentInstance as unknown as { enrolled(): boolean }).enrolled();
     expect(enrolled).toBe(false);
   });
 
@@ -149,9 +136,7 @@ describe('ProfileTrainHereComponent (#750)', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(messageAddSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ severity: 'info' }),
-    );
+    expect(messageAddSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'info' }));
   });
 
   afterEach(() => {
