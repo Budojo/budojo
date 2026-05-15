@@ -44,8 +44,8 @@ export const RELEASES: readonly Release[] = [
         heading: '🧹 Behind the scenes',
         bullets: [
           "Internal exception rename in the owner-as-athlete enrolment path. The old name was UserAlreadyAthleteElsewhereException and the 409 message said 'you are already an athlete in another academy' — both implied the check was cross-academy. The actual check is keyed on user_id alone (global), so the wording was misleading in the rare edge case where the conflicting row lives in the same academy. Renamed to UserAlreadyAthleteException, message reworded to reflect the global scope.",
-          "/api/* endpoints that previously returned an HTML 500 page when probed without Accept: application/json (uptime monitors, bots, manual curl without the header) now return the canonical {\"message\":\"Unauthenticated.\"} JSON 401. SPA always sent the header so this never affected real users — but it stops the production.ERROR: Route [login] not defined. line from accumulating in the server log on every probe.",
-          "Cypress aggregator status check in the self-hosted CI workaround window now annotates as a ⚠️ warning (was a softer ℹ️ notice). Makes the temporary author-trust gate visible from the PR Checks UI row rather than hidden in job logs. Reverts with the rest of the workaround on 2026-05-31.",
+          '/api/* endpoints that previously returned an HTML 500 page when probed without Accept: application/json (uptime monitors, bots, manual curl without the header) now return the canonical {"message":"Unauthenticated."} JSON 401. SPA always sent the header so this never affected real users — but it stops the production.ERROR: Route [login] not defined. line from accumulating in the server log on every probe.',
+          'Cypress aggregator status check in the self-hosted CI workaround window now annotates as a ⚠️ warning (was a softer ℹ️ notice). Makes the temporary author-trust gate visible from the PR Checks UI row rather than hidden in job logs. Reverts with the rest of the workaround on 2026-05-31.',
         ],
       },
     ],
@@ -60,7 +60,7 @@ export const RELEASES: readonly Release[] = [
         heading: '🥋 Train at your own academy',
         bullets: [
           "Go to /dashboard/me/profile, edit, flip Train at this academy on. You appear in /dashboard/athletes as a White-belt active athlete, with an Owner chip next to your name so the row reads as 'this is staff training', not 'regular student'.",
-          "Leaving the roster is symmetric: flip the toggle off. The row soft-deletes — your attendance and any belt promotions you logged for yourself are preserved if you ever re-enrol.",
+          'Leaving the roster is symmetric: flip the toggle off. The row soft-deletes — your attendance and any belt promotions you logged for yourself are preserved if you ever re-enrol.',
           "Self-rows are excluded from the unpaid digest + overdue push, on purpose: you're not billing yourself.",
         ],
       },
@@ -84,7 +84,7 @@ export const RELEASES: readonly Release[] = [
       {
         heading: '🧹 Behind the scenes',
         bullets: [
-          "The PR-checks workflow is temporarily routing to a self-hosted runner on the dev workstation while the GitHub-hosted Actions quota is restored. End-user impact: zero (the API + SPA you see is unchanged). Reverts in a single PR on 2026-05-31.",
+          'The PR-checks workflow is temporarily routing to a self-hosted runner on the dev workstation while the GitHub-hosted Actions quota is restored. End-user impact: zero (the API + SPA you see is unchanged). Reverts in a single PR on 2026-05-31.',
         ],
       },
     ],
