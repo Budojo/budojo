@@ -89,6 +89,18 @@
     color: var(--p-text-color);
   }
 
+  // Sub-row for @handle + belt-badge (#784). Keeps the two inline so the
+  // belt-badge doesn't fall to its own row below the handle, taking
+  // visual weight that competes with the post body. Wraps gracefully
+  // on extreme-narrow viewports (< 320 px).
+  &__author-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
   &__author-handle {
     color: var(--p-text-color-secondary);
     font-size: 0.875rem;
@@ -174,6 +186,10 @@
     // FAB so the chips never collide with the badge counter.
     padding-right: 3rem;
     min-height: 2.5rem;
+    // Anchor for the absolute-positioned comments FAB (#784). Previously
+    // anchored to the .feed__card root which collided with the composer
+    // when the thread expanded — see comment block on .feed__comments-fab.
+    position: relative;
   }
 
   &__react-btn {
@@ -210,47 +226,54 @@
   }
 
   &__react-count {
+    // Plain inline number after the label (#784). The previous pill
+    // background read as a leading "·" on small chip sizes — visual
+    // weight wasted. Now just the number with a small left margin;
+    // hover affordance for the clickable variant lives in colour
+    // not in a background pill.
     color: var(--p-text-color-secondary);
     font-size: 0.8125rem;
-    margin-left: 0.375rem;
-    padding: 0 0.375rem;
-    min-width: 1.25rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
+    margin-left: 0.25rem;
     font-variant-numeric: tabular-nums;
-    border-radius: 999px;
-    background: var(--p-content-hover-background, rgba(0, 0, 0, 0.06));
+    line-height: 1;
 
-    // Clickable count variant (#777) — opens the reactions-list sheet.
-    // Promoted to a subtle pill so the secondary touch zone inside the
-    // chip carries a clear hover/focus affordance per Norman.
+    // Clickable count variant (#777, refined #784) — opens the
+    // reactions-list sheet. Hover/focus signal lives in colour +
+    // underline so the secondary touch zone carries a clear
+    // affordance per Norman without re-introducing the pill.
     &--clickable {
       cursor: pointer;
-      transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+      text-decoration: underline;
+      text-decoration-color: transparent;
+      text-underline-offset: 2px;
+      transition: text-decoration-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
       &:hover {
-        background: var(--p-primary-50, rgba(91, 108, 255, 0.18));
-        color: var(--p-primary-color);
+        text-decoration-color: currentColor;
       }
 
       &:focus-visible {
         outline: 2px solid var(--p-primary-color);
         outline-offset: 2px;
+        border-radius: 2px;
       }
     }
   }
 
-  // Comments FAB (#777) — icon-only, anchored to the bottom-right
-  // corner of the card. Mirror of the moderator trash button at the
-  // top-right, opposite corner. Carries an optional badge counter for
-  // the comment count (capped at "99+" like the notification bell).
+  // Comments FAB (#777, refined #784). Originally anchored to the
+  // .feed__card root with `bottom: 0.75rem; right: 0.75rem` — that
+  // collided with the composer's "Pubblica" button when the thread
+  // expanded (two interactive elements in the same pixel — Norman §
+  // Constraints failure). Now anchored to the reactions row so the
+  // FAB stays at the bottom-right of that row regardless of whether
+  // the thread is open below. Vertically centred via top: 50% +
+  // translateY so the FAB lines up with the reaction chips.
   &__comments-fab {
     appearance: none;
     position: absolute;
-    bottom: 0.75rem;
-    right: 0.75rem;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
     width: 2.5rem;
     height: 2.5rem;
     border: none;

@@ -61,11 +61,23 @@
             />
             <div class="feed__author-meta">
               <span class="feed__author-name">{{ post.created_by.full_name }}</span>
-              @if (post.created_by.handle) {
-                <span class="feed__author-handle">&#64;{{ post.created_by.handle }}</span>
-              }
-              @if (post.created_by.belt) {
-                <app-belt-badge [belt]="post.created_by.belt" />
+              @if (post.created_by.handle || post.created_by.belt) {
+                <!--
+                  Handle + belt share a sub-row (#784). Previously the
+                  belt-badge fell to its own line below the @handle,
+                  taking visual weight that competes with the post body.
+                  Single flex-row keeps them inline; the compact-size
+                  belt-badge variant (class below) shrinks the pill so
+                  the row stays single-line on iPhone-class widths.
+                -->
+                <div class="feed__author-secondary">
+                  @if (post.created_by.handle) {
+                    <span class="feed__author-handle">&#64;{{ post.created_by.handle }}</span>
+                  }
+                  @if (post.created_by.belt) {
+                    <app-belt-badge class="belt-badge--compact" [belt]="post.created_by.belt" />
+                  }
+                </div>
               }
             </div>
             <time class="feed__time" [dateTime]="post.created_at">
@@ -254,37 +266,45 @@
                     openReactionsSheet(post); $event.stopPropagation(); $event.preventDefault()
                   "
                   [attr.data-cy]="'reactions-summary-pray-' + post.id"
-                  >· {{ post.reaction_counts.pray }}</span
+                  >{{ post.reaction_counts.pray }}</span
+                >
+              }
+            </button>
+
+            <!--
+              Comments FAB anchored to the reactions row (#784). Previously
+              positioned absolute to .feed__card, which collided with the
+              composer's "Pubblica" button when the thread expanded — two
+              interactive elements in the same pixel. Inside the footer it
+              stays at the bottom-right of the reactions row regardless of
+              thread state.
+            -->
+            <button
+              type="button"
+              class="feed__comments-fab"
+              [class.feed__comments-fab--active]="isThreadOpen(post.id)"
+              [attr.aria-expanded]="isThreadOpen(post.id)"
+              [attr.aria-controls]="'thread-' + post.id"
+              [attr.aria-label]="
+                post.comments_count > 0
+                  ? ('athletePortal.feed.commentsToggleAriaCount'
+                    | translate: { count: post.comments_count })
+                  : ('athletePortal.feed.commentsToggleAria' | translate)
+              "
+              (click)="toggleThread(post.id)"
+              [attr.data-cy]="'toggle-comments-' + post.id"
+            >
+              <i class="pi pi-comment" aria-hidden="true"></i>
+              @if (post.comments_count > 0) {
+                <span
+                  class="feed__comments-fab-badge"
+                  aria-hidden="true"
+                  [attr.data-cy]="'comments-fab-badge-' + post.id"
+                  >{{ post.comments_count > 99 ? '99+' : post.comments_count }}</span
                 >
               }
             </button>
           </footer>
-
-          <button
-            type="button"
-            class="feed__comments-fab"
-            [class.feed__comments-fab--active]="isThreadOpen(post.id)"
-            [attr.aria-expanded]="isThreadOpen(post.id)"
-            [attr.aria-controls]="'thread-' + post.id"
-            [attr.aria-label]="
-              post.comments_count > 0
-                ? ('athletePortal.feed.commentsToggleAriaCount'
-                  | translate: { count: post.comments_count })
-                : ('athletePortal.feed.commentsToggleAria' | translate)
-            "
-            (click)="toggleThread(post.id)"
-            [attr.data-cy]="'toggle-comments-' + post.id"
-          >
-            <i class="pi pi-comment" aria-hidden="true"></i>
-            @if (post.comments_count > 0) {
-              <span
-                class="feed__comments-fab-badge"
-                aria-hidden="true"
-                [attr.data-cy]="'comments-fab-badge-' + post.id"
-                >{{ post.comments_count > 99 ? '99+' : post.comments_count }}</span
-              >
-            }
-          </button>
 
           @if (isThreadOpen(post.id)) {
             <app-comments-thread
