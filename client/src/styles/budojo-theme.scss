@@ -195,6 +195,16 @@
   --budojo-page-padding-x: 1rem;
   --budojo-page-padding-y: 1rem;
 
+  // ───── Mobile topbar height (#779) ───────────────────────────────
+  // Single source of truth for the topbar's vertical extent — used by
+  // any overlay that needs to pin "just below the topbar" (e.g. the
+  // notification bell popover on mobile). The dashboard shell itself
+  // still defines an scss-local `$topbar-height: 3.5rem` in
+  // dashboard.component.scss (scss vars and CSS custom properties
+  // live in different layers); the two MUST stay in sync. If you
+  // change one, change the other.
+  --budojo-topbar-height: 3.5rem;
+
   // ───── Derived page-wrapper inner widths (#261) ──────────────────
   // What page wrappers actually consume — the outer container token
   // minus the shell padding-x on both sides, so the visual extent of
@@ -471,4 +481,42 @@
 // Utility: hairline divider (1 CSS px, device pixel on retina is sharper)
 .budojo-hairline {
   border-top: 1px solid var(--p-content-border-color);
+}
+
+// Notification bell popover — mobile override (#779). Below 768px the
+// PrimeNG-anchored popover slid past the viewport edge while its arrow
+// stayed near the trigger, producing a panel that visibly didn't
+// connect to the bell. On mobile we force an edge-to-edge pinned panel
+// under the topbar (no arrow). Desktop is unchanged. The override sits
+// in the global layer (not in component scope) because PrimeNG appends
+// the popover to body via overlay portal — component-scoped styles
+// don't reach it.
+//
+// `!important` is required because PrimeNG sets the positional
+// properties (top/left/transform/width) inline via JS at toggle time;
+// no token override can win that specificity. Scoped tightly to the
+// `notification-bell-popover` class so only this one popover instance
+// is touched.
+@media (max-width: 767px) {
+  .p-popover.notification-bell-popover {
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    width: calc(100vw - 1rem) !important;
+    max-width: none !important;
+    transform: none !important;
+    // Pin flush below the dashboard topbar — consume the
+    // `--budojo-topbar-height` CSS variable so the two values can't
+    // drift if the topbar ever changes. The variable is defined at
+    // `:root` above and mirrors the scss-local $topbar-height in
+    // dashboard.component.scss.
+    top: var(--budojo-topbar-height) !important;
+
+    // PrimeNG renders the arrow as ::before / ::after on the popover
+    // root. With the popover no longer anchored to a specific
+    // x-coordinate the pointer reads as misleading; hide both.
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
 }
