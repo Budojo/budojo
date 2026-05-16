@@ -74,24 +74,35 @@
     </header>
 
     <!--
-      "Account & invito" card (#467, M7 PR-B-UI). Visible across all
-      detail tabs because invitation state is athlete-level, not
-      tab-scoped — the owner sees the same status whether they're on
-      Documents, Attendance, Payments, or Edit. Renders nothing
-      destructive; the sub-component owns its three states (no
-      invitation / pending / accepted) and the no-email empty-state.
+      "Account & invito" + Email-change cards hidden on the owner's
+      self-row (#775). The owner already has an account — inviting
+      themselves to the system is nonsense — and they have their own
+      email-change flow at `/dashboard/me/email-change` (#476) that's
+      separate from this athlete-detail surface. Both cards are
+      athlete-level not tab-scoped, so a single `@if` covers every
+      child route.
     -->
-    <app-athlete-invitation-card [athlete]="a" />
+    @if (!a.is_self) {
+      <!--
+        "Account & invito" card (#467, M7 PR-B-UI). Visible across all
+        detail tabs because invitation state is athlete-level, not
+        tab-scoped — the owner sees the same status whether they're on
+        Documents, Attendance, Payments, or Edit. Renders nothing
+        destructive; the sub-component owns its three states (no
+        invitation / pending / accepted) and the no-email empty-state.
+      -->
+      <app-athlete-invitation-card [athlete]="a" />
 
-    <!--
-      Email-change card (#476). Sibling to the invitation card; the
-      action branches server-side on athlete state (no invitation /
-      pending invitation / linked user) and emits a `mode`
-      discriminator the card uses to pick the correct toast copy. On
-      a state-A direct edit or state-B invite swap the parent refetches
-      the athlete so the header email + invitation card stay in sync.
-    -->
-    <app-athlete-email-change-card [athlete]="a" (athleteChanged)="reloadAthlete()" />
+      <!--
+        Email-change card (#476). Sibling to the invitation card; the
+        action branches server-side on athlete state (no invitation /
+        pending invitation / linked user) and emits a `mode`
+        discriminator the card uses to pick the correct toast copy. On
+        a state-A direct edit or state-B invite swap the parent refetches
+        the athlete so the header email + invitation card stay in sync.
+      -->
+      <app-athlete-email-change-card [athlete]="a" (athleteChanged)="reloadAthlete()" />
+    }
 
     <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">
       <p-tablist>
@@ -112,10 +123,21 @@
           <i class="pi pi-calendar"></i>
           <span>{{ 'athletes.detail.tabs.attendance' | translate }}</span>
         </p-tab>
-        <p-tab value="payments" routerLink="payments" data-cy="athlete-tab-payments">
-          <i class="pi pi-euro"></i>
-          <span>{{ 'athletes.detail.tabs.payments' | translate }}</span>
-        </p-tab>
+        @if (!a.is_self) {
+          <!--
+            Payments tab hidden on the owner's self-row (#775). Self-rows
+            are excluded from the payments pipeline by design — no unpaid
+            digest, no overdue push, no ledger — so a Payments tab on a
+            self-row would render an empty view that can never have
+            content. The deep-link `/dashboard/athletes/{self-id}/payments`
+            is redirected to the next-most-likely tab by the component's
+            init effect (see athlete-detail.component.ts).
+          -->
+          <p-tab value="payments" routerLink="payments" data-cy="athlete-tab-payments">
+            <i class="pi pi-euro"></i>
+            <span>{{ 'athletes.detail.tabs.payments' | translate }}</span>
+          </p-tab>
+        }
         <p-tab value="promotions" routerLink="promotions" data-cy="athlete-tab-promotions">
           <i class="pi pi-trophy"></i>
           <span>{{ 'athletes.detail.tabs.promotions' | translate }}</span>
