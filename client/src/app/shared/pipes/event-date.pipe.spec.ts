@@ -37,9 +37,10 @@ describe('EventDatePipe', () => {
       const out = pipe.transform(new Date(2026, 4, 13, 10, 0, 0));
       expect(out).toMatch(/^Tomorrow at /);
     });
-    it('reads "Weekday at HH:MM" within the next 6 days', () => {
+    it('reads "Weekday Day at HH:MM" within the next 6 days (#777)', () => {
       const out = pipe.transform(new Date(2026, 4, 15, 10, 0, 0));
-      expect(out).toMatch(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) at /);
+      // Friday May 15 — weekday + day number + time.
+      expect(out).toMatch(/^Friday 15 at /);
     });
     it('reads "Month Day at HH:MM" for same-year events farther out', () => {
       const out = pipe.transform(new Date(2026, 5, 13, 10, 0, 0));
@@ -63,10 +64,10 @@ describe('EventDatePipe', () => {
       const out = pipe.transform(new Date(2026, 4, 13, 10, 0, 0));
       expect(out).toMatch(/^Domani alle /);
     });
-    it('capitalises the weekday name', () => {
+    it('capitalises the weekday name and includes the day number (#777)', () => {
       const out = pipe.transform(new Date(2026, 4, 15, 10, 0, 0));
-      expect(out.charAt(0)).toBe(out.charAt(0).toUpperCase());
-      expect(out).toMatch(/ alle /);
+      // Venerdì 15 alle HH:MM — capital V, day number 15, time tail.
+      expect(out).toMatch(/^Venerdì 15 alle /);
     });
   });
 });

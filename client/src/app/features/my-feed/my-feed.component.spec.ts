@@ -240,14 +240,17 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     fixture.detectChanges();
 
     expect(btn.getAttribute('aria-pressed')).toBe('true');
-    // Per-emoji count now sits on the reactions-summary button next
-    // to the toggle buttons (post-v2.9.0 — opens the reactions-list
-    // sheet on tap). Total count assertion via the summary's
-    // textContent.
-    expect(el.querySelector(`[data-cy="reactions-summary-${postId}"]`)?.textContent).toContain('1');
+    // Per-emoji count now sits INSIDE the reaction chip (#777, post-
+    // v2.18.1) — separate touch zone that opens the reactions-list
+    // sheet on tap. Asserting on the clap-specific count zone.
+    expect(el.querySelector(`[data-cy="reactions-summary-clap-${postId}"]`)?.textContent).toContain(
+      '1',
+    );
+    // Pray-side count zone absent when pray count is 0.
+    expect(el.querySelector(`[data-cy="reactions-summary-pray-${postId}"]`)).toBeNull();
   });
 
-  it('renders the per-emoji count on the reactions summary button (clap-only post)', () => {
+  it('renders the per-emoji count inside the clap chip when only clap > 0 (#777)', () => {
     const { fixture, el, http } = setup();
     const postId = 90;
     http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
@@ -262,14 +265,13 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     });
     fixture.detectChanges();
 
-    const summary = el.querySelector(`[data-cy="reactions-summary-${postId}"]`);
-    expect(summary?.textContent).toContain('2');
-    // Pray side hidden when its count is 0: there's exactly one
-    // emoji span in the summary (the clap).
-    expect(summary?.querySelectorAll('.feed__react-count').length).toBe(1);
+    const clapCount = el.querySelector(`[data-cy="reactions-summary-clap-${postId}"]`);
+    expect(clapCount?.textContent).toContain('2');
+    // Pray side hidden when its count is 0.
+    expect(el.querySelector(`[data-cy="reactions-summary-pray-${postId}"]`)).toBeNull();
   });
 
-  it('renders the per-emoji count on the reactions summary button (pray-only post — #647)', () => {
+  it('renders the per-emoji count inside the pray chip when only pray > 0 (#647 / #777)', () => {
     const { fixture, el, http } = setup();
     const postId = 91;
     http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
@@ -284,9 +286,9 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     });
     fixture.detectChanges();
 
-    const summary = el.querySelector(`[data-cy="reactions-summary-${postId}"]`);
-    expect(summary?.textContent).toContain('2');
-    expect(summary?.querySelectorAll('.feed__react-count').length).toBe(1);
+    const prayCount = el.querySelector(`[data-cy="reactions-summary-pray-${postId}"]`);
+    expect(prayCount?.textContent).toContain('2');
+    expect(el.querySelector(`[data-cy="reactions-summary-clap-${postId}"]`)).toBeNull();
   });
 
   it('clap → pray swap updates per-emoji counts without changing the total', () => {
@@ -310,10 +312,11 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     prayBtn.click();
     fixture.detectChanges();
 
-    // Optimistic: summary now reads "🙏 1" (single pill, not two).
-    const summary = el.querySelector(`[data-cy="reactions-summary-${postId}"]`);
-    expect(summary?.querySelectorAll('.feed__react-count').length).toBe(1);
-    expect(summary?.textContent).toContain('1');
+    // Optimistic: clap-side count zone disappears, pray-side renders "1".
+    expect(el.querySelector(`[data-cy="reactions-summary-clap-${postId}"]`)).toBeNull();
+    expect(el.querySelector(`[data-cy="reactions-summary-pray-${postId}"]`)?.textContent).toContain(
+      '1',
+    );
 
     // Server reconciles to the same shape.
     http
@@ -598,6 +601,83 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
       // No optimistic removal — the card stays so the user sees the
       // operation didn't take.
       expect(el.querySelector('[data-cy="my-feed-post-42"]')).not.toBeNull();
+    });
+  });
+
+  // ─── Feed mobile polish (#777) ───────────────────────────────────────────
+  // - Per-emoji count zones inside the chips open the reactions-list sheet.
+  // - Comments toggle leaves the reactions row and becomes a corner FAB with
+  //   an optional badge counter.
+
+  describe('feed mobile polish (#777)', () => {
+    function flushOne(http: HttpTestingController, post: CommunityPost) {
+      http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+        data: [post],
+        meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+      });
+    }
+
+    it('renders the comments FAB with a badge counter when comments_count > 0', () => {
+      const { fixture, el, http } = setup();
+      flushOne(http, postFixture({ id: 42, comments_count: 3 }));
+      fixture.detectChanges();
+
+      const fab = el.querySelector('[data-cy="toggle-comments-42"]');
+      expect(fab).not.toBeNull();
+      expect(fab?.classList.contains('feed__comments-fab')).toBe(true);
+      const badge = el.querySelector('[data-cy="comments-fab-badge-42"]');
+      expect(badge?.textContent?.trim()).toBe('3');
+    });
+
+    it('omits the badge counter when comments_count is 0', () => {
+      const { fixture, el, http } = setup();
+      flushOne(http, postFixture({ id: 42, comments_count: 0 }));
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="toggle-comments-42"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="comments-fab-badge-42"]')).toBeNull();
+    });
+
+    it('caps the badge counter at "99+" for large comment counts', () => {
+      const { fixture, el, http } = setup();
+      flushOne(http, postFixture({ id: 42, comments_count: 142 }));
+      fixture.detectChanges();
+
+      expect(el.querySelector('[data-cy="comments-fab-badge-42"]')?.textContent?.trim()).toBe(
+        '99+',
+      );
+    });
+
+    it('tapping the count zone inside a chip opens the reactions-list sheet without toggling the reaction', () => {
+      const { fixture, el, http } = setup();
+      flushOne(
+        http,
+        postFixture({
+          id: 42,
+          reactions_count: 2,
+          reaction_counts: { clap: 2, pray: 0 },
+          your_reaction: null,
+        }),
+      );
+      fixture.detectChanges();
+
+      const countZone = el.querySelector('[data-cy="reactions-summary-clap-42"]') as HTMLElement;
+      expect(countZone).not.toBeNull();
+
+      // `openReactionsSheet` is protected — spy via an `any` cast so the
+      // TS visibility check doesn't trip.
+      const spy = vi.spyOn(
+        fixture.componentInstance as unknown as { openReactionsSheet: (p: CommunityPost) => void },
+        'openReactionsSheet',
+      );
+      countZone.click();
+      fixture.detectChanges();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      // No reaction-toggle PATCH fired — clicking the count zone must
+      // stopPropagation so the outer chip's toggle handler doesn't run.
+      http.expectNone((r) => r.url.endsWith('/api/v1/community/posts/42/reactions'));
     });
   });
 });

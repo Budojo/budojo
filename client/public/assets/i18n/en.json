@@ -296,6 +296,8 @@
       "rsvpMaybeAria": "Mark yourself as maybe",
       "rsvpToastError": "Couldn't update your RSVP. Try again.",
       "commentsToggle": "Comments",
+      "commentsToggleAria": "Toggle comments",
+      "commentsToggleAriaCount": "Toggle comments ({count})",
       "commentsLoading": "Loading comments…",
       "commentsEmpty": "No comments yet — be the first.",
       "commentsLoadError": "Couldn't load comments. Try opening this card again.",
