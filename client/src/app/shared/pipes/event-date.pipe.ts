@@ -63,7 +63,15 @@ export class EventDatePipe implements PipeTransform {
       // Capitalise weekday first letter for Italian (toLocaleDateString
       // returns lowercase in IT — "sabato" not "Sabato").
       const weekdayCap = weekday.charAt(0).toUpperCase() + weekday.slice(1);
-      return lang === 'it' ? `${weekdayCap} alle ${time}` : `${weekdayCap} at ${time}`;
+      // Day-of-month disambiguator (#777). Without it, a card scrolled
+      // a few days after creation reads "Martedì alle 19:00" with no
+      // way to tell which Tuesday. The day number is cheap (no month
+      // unless it actually changes — handled by the > 6 days bucket
+      // below) and reads naturally in both locales.
+      const dayOfMonth = date.getDate();
+      return lang === 'it'
+        ? `${weekdayCap} ${dayOfMonth} alle ${time}`
+        : `${weekdayCap} ${dayOfMonth} at ${time}`;
     }
 
     const sameYear = date.getFullYear() === today.getFullYear();

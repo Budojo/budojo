@@ -181,4 +181,64 @@ describe('AthleteDetailComponent', () => {
     expect(fixture.nativeElement.querySelector('.contact-links')).toBeNull();
     httpMock.verify();
   });
+
+  // ─── Self-row gates (#775) ───────────────────────────────────────────────
+  // The owner-as-athlete row (`is_self: true`) excludes the invitation card,
+  // the email-change card, and the payments tab — none of those surfaces
+  // make sense on a self-row. A deep-link to `/payments` redirects to the
+  // attendance tab so the page never renders a payments view that can
+  // never have content.
+
+  it('hides the invitation card, email-change card, and payments tab on the owner self-row', () => {
+    const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ is_self: true }) });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-athlete-invitation-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-athlete-email-change-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="athlete-tab-payments"]')).toBeNull();
+    httpMock.verify();
+  });
+
+  it('still renders the three surfaces on a regular (non-self) row', () => {
+    const { http: httpMock } = setupTestBed('42');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-athlete-invitation-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-athlete-email-change-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="athlete-tab-payments"]')).not.toBeNull();
+    httpMock.verify();
+  });
+
+  it('redirects a self-row deep-link from /payments to the attendance tab', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/payments');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ is_self: true }) });
+    fixture.detectChanges();
+
+    const router = TestBed.inject(Router);
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['attendance'],
+      expect.objectContaining({ replaceUrl: true }),
+    );
+    httpMock.verify();
+  });
+
+  it('does NOT redirect from /payments when the row is not a self-row', () => {
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/payments');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    const router = TestBed.inject(Router);
+    expect(router.navigate).not.toHaveBeenCalledWith(['attendance'], expect.anything());
+    httpMock.verify();
+  });
 });

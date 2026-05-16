@@ -157,8 +157,29 @@ export class AthleteDetailComponent implements OnInit {
       .get(id)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (a) => this.athlete.set(a),
+        next: (a) => {
+          this.athlete.set(a);
+          this.maybeRedirectSelfFromPayments(a);
+        },
         error: () => this.error.set(this.translate.instant('athletes.detail.loadError')),
       });
+  }
+
+  /**
+   * Self-rows are excluded from the payments pipeline by design (#775),
+   * so the template hides the payments tab on `is_self: true`. A direct
+   * deep-link to `/dashboard/athletes/{self-id}/payments` still resolves
+   * the child route though — without this redirect the page renders a
+   * payments view that can never have content. We send the user to the
+   * attendance tab (next most likely intent on a self-row) and replace
+   * the URL so back-button doesn't bounce them right back here.
+   */
+  private maybeRedirectSelfFromPayments(a: Athlete): void {
+    if (a.is_self && this.activeTab() === 'payments') {
+      void this.router.navigate(['attendance'], {
+        relativeTo: this.route,
+        replaceUrl: true,
+      });
+    }
   }
 }

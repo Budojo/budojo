@@ -184,6 +184,21 @@
             }
           }
 
+          <!--
+            Reactions footer + comments FAB (#777). Two changes vs. the
+            v2.10.0 layout:
+              1. The per-reaction count moves INSIDE the chip (replaces
+                 the dropped summary pill that read "👏 1 · 🙏 2"). The
+                 number is a separate touch zone — tap = open the
+                 reactions-list sheet — while tapping the chip outside
+                 the count still toggles your own reaction.
+              2. The comments toggle leaves the row entirely and becomes
+                 a corner FAB (mirror of the moderator trash button,
+                 opposite corner). Icon-only with an optional badge
+                 counter; the visible label is replaced by aria.
+            Net effect: reactions sit on a single line on every mobile
+            viewport, no second-row wrap.
+          -->
           <footer class="feed__reactions" data-cy="post-reactions">
             <button
               type="button"
@@ -198,6 +213,21 @@
               <span class="feed__react-label">{{
                 'athletePortal.feed.reactClap' | translate
               }}</span>
+              @if (post.reaction_counts.clap > 0) {
+                <span
+                  class="feed__react-count feed__react-count--clickable"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="'community.reactionsList.openAria' | translate"
+                  (click)="openReactionsSheet(post); $event.stopPropagation()"
+                  (keydown.enter)="openReactionsSheet(post); $event.stopPropagation()"
+                  (keydown.space)="
+                    openReactionsSheet(post); $event.stopPropagation(); $event.preventDefault()
+                  "
+                  [attr.data-cy]="'reactions-summary-clap-' + post.id"
+                  >{{ post.reaction_counts.clap }}</span
+                >
+              }
             </button>
             <button
               type="button"
@@ -212,47 +242,49 @@
               <span class="feed__react-label">{{
                 'athletePortal.feed.reactPray' | translate
               }}</span>
-            </button>
-            @if (post.reactions_count > 0) {
-              <button
-                type="button"
-                class="feed__reactions-summary"
-                [attr.aria-label]="'community.reactionsList.openAria' | translate"
-                (click)="openReactionsSheet(post)"
-                [attr.data-cy]="'reactions-summary-' + post.id"
-              >
-                @if (post.reaction_counts.clap > 0) {
-                  <span class="feed__react-count">
-                    <span aria-hidden="true">👏🏻</span>
-                    {{ post.reaction_counts.clap }}
-                  </span>
-                }
-                @if (post.reaction_counts.pray > 0) {
-                  <span class="feed__react-count">
-                    <span aria-hidden="true">🙏🏻</span>
-                    {{ post.reaction_counts.pray }}
-                  </span>
-                }
-              </button>
-            }
-            <button
-              type="button"
-              class="feed__react-btn"
-              [class.feed__react-btn--active]="isThreadOpen(post.id)"
-              [attr.aria-expanded]="isThreadOpen(post.id)"
-              [attr.aria-controls]="'thread-' + post.id"
-              (click)="toggleThread(post.id)"
-              [attr.data-cy]="'toggle-comments-' + post.id"
-            >
-              <i class="pi pi-comment" aria-hidden="true"></i>
-              <span class="feed__react-label">{{
-                'athletePortal.feed.commentsToggle' | translate
-              }}</span>
-              @if (post.comments_count > 0) {
-                <span class="feed__react-count">{{ post.comments_count }}</span>
+              @if (post.reaction_counts.pray > 0) {
+                <span
+                  class="feed__react-count feed__react-count--clickable"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="'community.reactionsList.openAria' | translate"
+                  (click)="openReactionsSheet(post); $event.stopPropagation()"
+                  (keydown.enter)="openReactionsSheet(post); $event.stopPropagation()"
+                  (keydown.space)="
+                    openReactionsSheet(post); $event.stopPropagation(); $event.preventDefault()
+                  "
+                  [attr.data-cy]="'reactions-summary-pray-' + post.id"
+                  >· {{ post.reaction_counts.pray }}</span
+                >
               }
             </button>
           </footer>
+
+          <button
+            type="button"
+            class="feed__comments-fab"
+            [class.feed__comments-fab--active]="isThreadOpen(post.id)"
+            [attr.aria-expanded]="isThreadOpen(post.id)"
+            [attr.aria-controls]="'thread-' + post.id"
+            [attr.aria-label]="
+              post.comments_count > 0
+                ? ('athletePortal.feed.commentsToggleAriaCount'
+                  | translate: { count: post.comments_count })
+                : ('athletePortal.feed.commentsToggleAria' | translate)
+            "
+            (click)="toggleThread(post.id)"
+            [attr.data-cy]="'toggle-comments-' + post.id"
+          >
+            <i class="pi pi-comment" aria-hidden="true"></i>
+            @if (post.comments_count > 0) {
+              <span
+                class="feed__comments-fab-badge"
+                aria-hidden="true"
+                [attr.data-cy]="'comments-fab-badge-' + post.id"
+                >{{ post.comments_count > 99 ? '99+' : post.comments_count }}</span
+              >
+            }
+          </button>
 
           @if (isThreadOpen(post.id)) {
             <app-comments-thread
