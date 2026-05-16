@@ -195,6 +195,16 @@
   --budojo-page-padding-x: 1rem;
   --budojo-page-padding-y: 1rem;
 
+  // ───── Mobile topbar height (#779) ───────────────────────────────
+  // Single source of truth for the topbar's vertical extent — used by
+  // any overlay that needs to pin "just below the topbar" (e.g. the
+  // notification bell popover on mobile). The dashboard shell itself
+  // still defines an scss-local `$topbar-height: 3.5rem` in
+  // dashboard.component.scss (scss vars and CSS custom properties
+  // live in different layers); the two MUST stay in sync. If you
+  // change one, change the other.
+  --budojo-topbar-height: 3.5rem;
+
   // ───── Derived page-wrapper inner widths (#261) ──────────────────
   // What page wrappers actually consume — the outer container token
   // minus the shell padding-x on both sides, so the visual extent of
@@ -494,9 +504,12 @@
     width: calc(100vw - 1rem) !important;
     max-width: none !important;
     transform: none !important;
-    // Pin just below the dashboard topbar (3.5rem / 56px — see
-    // dashboard.component.scss $topbar-height).
-    top: 3.75rem !important;
+    // Pin flush below the dashboard topbar — consume the
+    // `--budojo-topbar-height` CSS variable so the two values can't
+    // drift if the topbar ever changes. The variable is defined at
+    // `:root` above and mirrors the scss-local $topbar-height in
+    // dashboard.component.scss.
+    top: var(--budojo-topbar-height) !important;
 
     // PrimeNG renders the arrow as ::before / ::after on the popover
     // root. With the popover no longer anchored to a specific
