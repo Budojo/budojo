@@ -9,7 +9,12 @@
         <span class="flair__handle">&#64;{{ user().handle }}</span>
       }
       @if (user().belt; as belt) {
-        <app-belt-badge [belt]="belt" />
+        <!--
+          Compact size variant (#784) when the flair is used in
+          compact mode (e.g. comments thread). Standalone uses of the
+          belt-badge component elsewhere are unaffected.
+        -->
+        <app-belt-badge [class.belt-badge--compact]="compact()" [belt]="belt" />
       }
     </div>
   </div>

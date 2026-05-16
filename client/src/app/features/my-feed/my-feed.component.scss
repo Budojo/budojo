@@ -89,6 +89,18 @@
     color: var(--p-text-color);
   }
 
+  // Sub-row for @handle + belt-badge (#784). Keeps the two inline so the
+  // belt-badge doesn't fall to its own row below the handle, taking
+  // visual weight that competes with the post body. Wraps gracefully
+  // on extreme-narrow viewports (< 320 px).
+  &__author-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
   &__author-handle {
     color: var(--p-text-color-secondary);
     font-size: 0.875rem;
@@ -174,29 +186,31 @@
     // FAB so the chips never collide with the badge counter.
     padding-right: 3rem;
     min-height: 2.5rem;
+    // Anchor for the absolute-positioned comments FAB (#784). Previously
+    // anchored to the .feed__card root which collided with the composer
+    // when the thread expanded — see comment block on .feed__comments-fab.
+    position: relative;
   }
 
-  &__react-btn {
+  // Reaction chip — wrapper that paints the rounded pill border. Two
+  // child buttons (toggle on the left, count on the right) share the
+  // chip surface seamlessly. The chip is NOT itself interactive — the
+  // buttons inside are. This is the v2.18.3 refactor (#785 Copilot)
+  // that removed the invalid nested-button HTML from v2.18.2.
+  &__react-chip {
     display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
+    align-items: stretch;
     border-radius: 999px;
     border: 1px solid var(--p-content-border-color);
     background: transparent;
     color: var(--p-text-color);
     font-size: 0.875rem;
-    cursor: pointer;
+    overflow: hidden;
     min-height: 36px;
-
-    &:hover {
-      background: var(--p-content-hover-background, rgba(0, 0, 0, 0.04));
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--p-primary-color);
-      outline-offset: 2px;
-    }
+    transition:
+      background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+      border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+      color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
     &--active {
       background: var(--p-primary-50, rgba(91, 108, 255, 0.12));
@@ -205,52 +219,72 @@
     }
   }
 
+  // Left half — the "toggle your reaction" button (emoji + label).
+  &__react-toggle,
+  &__react-count {
+    appearance: none;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+
+    &:hover {
+      background: var(--p-content-hover-background, rgba(0, 0, 0, 0.04));
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: -2px;
+    }
+  }
+
   &__react-label {
     font-weight: 500;
   }
 
+  // Right half — the count button that opens the reactions-list sheet.
+  // Visually attached to the toggle button via the chip's shared
+  // surface; styled subtly to read as a secondary touch zone (no font
+  // weight, secondary text color) so the toggle stays the primary CTA.
   &__react-count {
     color: var(--p-text-color-secondary);
     font-size: 0.8125rem;
-    margin-left: 0.375rem;
-    padding: 0 0.375rem;
-    min-width: 1.25rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
     font-variant-numeric: tabular-nums;
-    border-radius: 999px;
-    background: var(--p-content-hover-background, rgba(0, 0, 0, 0.06));
+    padding-inline-start: 0;
+    // Hairline separator on the left edge — visually distinguishes the
+    // two touch zones without re-introducing a heavy pill background.
+    border-inline-start: 1px solid var(--p-content-border-color);
+    margin-inline-start: 0.125rem;
+    padding-inline-start: 0.5rem;
 
-    // Clickable count variant (#777) — opens the reactions-list sheet.
-    // Promoted to a subtle pill so the secondary touch zone inside the
-    // chip carries a clear hover/focus affordance per Norman.
-    &--clickable {
-      cursor: pointer;
-      transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
-
-      &:hover {
-        background: var(--p-primary-50, rgba(91, 108, 255, 0.18));
-        color: var(--p-primary-color);
-      }
-
-      &:focus-visible {
-        outline: 2px solid var(--p-primary-color);
-        outline-offset: 2px;
-      }
+    // Inside an active chip the separator picks up the primary color so
+    // it doesn't clash with the chip's active border.
+    .feed__react-chip--active & {
+      border-inline-start-color: currentColor;
     }
   }
 
-  // Comments FAB (#777) — icon-only, anchored to the bottom-right
-  // corner of the card. Mirror of the moderator trash button at the
-  // top-right, opposite corner. Carries an optional badge counter for
-  // the comment count (capped at "99+" like the notification bell).
+  // Comments FAB (#777, refined #784). Originally anchored to the
+  // .feed__card root with `bottom: 0.75rem; right: 0.75rem` — that
+  // collided with the composer's "Pubblica" button when the thread
+  // expanded (two interactive elements in the same pixel — Norman §
+  // Constraints failure). Now anchored to the reactions row so the
+  // FAB stays at the bottom-right of that row regardless of whether
+  // the thread is open below. Vertically centred via top: 50% +
+  // translateY so the FAB lines up with the reaction chips.
   &__comments-fab {
     appearance: none;
     position: absolute;
-    bottom: 0.75rem;
-    right: 0.75rem;
+    top: 50%;
+    // Small inset so the tap target isn't visually clipped by the
+    // card border (#785 Copilot review).
+    right: 0.5rem;
+    transform: translateY(-50%);
     width: 2.5rem;
     height: 2.5rem;
     border: none;
