@@ -212,64 +212,73 @@
             viewport, no second-row wrap.
           -->
           <footer class="feed__reactions" data-cy="post-reactions">
-            <button
-              type="button"
-              class="feed__react-btn"
-              [class.feed__react-btn--active]="post.your_reaction === 'clap'"
-              [attr.aria-pressed]="post.your_reaction === 'clap'"
-              [attr.aria-label]="'athletePortal.feed.reactClapAria' | translate"
-              (click)="toggleReaction(post, 'clap')"
-              [attr.data-cy]="'react-clap-' + post.id"
+            <!--
+              Reaction chips (#785 review). Two sibling buttons inside a
+              wrapper `<div class="feed__react-chip">` instead of a single
+              `<button>` with a nested role="button" span — the v2.18.2
+              shape was invalid HTML (interactive nested in interactive).
+              The wrapper paints the pill; the inner buttons share the
+              border so the chip still reads as one rounded surface with
+              two touch zones: toggle (left) + count → open sheet (right).
+            -->
+            <div
+              class="feed__react-chip"
+              [class.feed__react-chip--active]="post.your_reaction === 'clap'"
             >
-              <span aria-hidden="true">👏🏻</span>
-              <span class="feed__react-label">{{
-                'athletePortal.feed.reactClap' | translate
-              }}</span>
+              <button
+                type="button"
+                class="feed__react-toggle"
+                [attr.aria-pressed]="post.your_reaction === 'clap'"
+                [attr.aria-label]="'athletePortal.feed.reactClapAria' | translate"
+                (click)="toggleReaction(post, 'clap')"
+                [attr.data-cy]="'react-clap-' + post.id"
+              >
+                <span aria-hidden="true">👏🏻</span>
+                <span class="feed__react-label">{{
+                  'athletePortal.feed.reactClap' | translate
+                }}</span>
+              </button>
               @if (post.reaction_counts.clap > 0) {
-                <span
-                  class="feed__react-count feed__react-count--clickable"
-                  role="button"
-                  tabindex="0"
+                <button
+                  type="button"
+                  class="feed__react-count"
                   [attr.aria-label]="'community.reactionsList.openAria' | translate"
-                  (click)="openReactionsSheet(post); $event.stopPropagation()"
-                  (keydown.enter)="openReactionsSheet(post); $event.stopPropagation()"
-                  (keydown.space)="
-                    openReactionsSheet(post); $event.stopPropagation(); $event.preventDefault()
-                  "
+                  (click)="openReactionsSheet(post)"
                   [attr.data-cy]="'reactions-summary-clap-' + post.id"
-                  >{{ post.reaction_counts.clap }}</span
                 >
+                  {{ post.reaction_counts.clap }}
+                </button>
               }
-            </button>
-            <button
-              type="button"
-              class="feed__react-btn"
-              [class.feed__react-btn--active]="post.your_reaction === 'pray'"
-              [attr.aria-pressed]="post.your_reaction === 'pray'"
-              [attr.aria-label]="'athletePortal.feed.reactPrayAria' | translate"
-              (click)="toggleReaction(post, 'pray')"
-              [attr.data-cy]="'react-pray-' + post.id"
+            </div>
+            <div
+              class="feed__react-chip"
+              [class.feed__react-chip--active]="post.your_reaction === 'pray'"
             >
-              <span aria-hidden="true">🙏🏻</span>
-              <span class="feed__react-label">{{
-                'athletePortal.feed.reactPray' | translate
-              }}</span>
+              <button
+                type="button"
+                class="feed__react-toggle"
+                [attr.aria-pressed]="post.your_reaction === 'pray'"
+                [attr.aria-label]="'athletePortal.feed.reactPrayAria' | translate"
+                (click)="toggleReaction(post, 'pray')"
+                [attr.data-cy]="'react-pray-' + post.id"
+              >
+                <span aria-hidden="true">🙏🏻</span>
+                <span class="feed__react-label">{{
+                  'athletePortal.feed.reactPray' | translate
+                }}</span>
+              </button>
               @if (post.reaction_counts.pray > 0) {
-                <span
-                  class="feed__react-count feed__react-count--clickable"
-                  role="button"
-                  tabindex="0"
+                <button
+                  type="button"
+                  class="feed__react-count"
                   [attr.aria-label]="'community.reactionsList.openAria' | translate"
-                  (click)="openReactionsSheet(post); $event.stopPropagation()"
-                  (keydown.enter)="openReactionsSheet(post); $event.stopPropagation()"
-                  (keydown.space)="
-                    openReactionsSheet(post); $event.stopPropagation(); $event.preventDefault()
-                  "
+                  (click)="openReactionsSheet(post)"
                   [attr.data-cy]="'reactions-summary-pray-' + post.id"
-                  >{{ post.reaction_counts.pray }}</span
                 >
+                  {{ post.reaction_counts.pray }}
+                </button>
               }
-            </button>
+            </div>
 
             <!--
               Comments FAB anchored to the reactions row (#784). Previously

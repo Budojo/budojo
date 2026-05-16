@@ -1,32 +1,6 @@
 :host {
   display: inline-flex;
 
-  // Compact size variant (#784). Apply the `belt-badge--compact` class
-  // on the host element (`<app-belt-badge class="belt-badge--compact">`)
-  // to shrink the pill for dense surfaces — the post-header sub-row in
-  // the feed and the user-flair compact mode in the comments thread.
-  // Standalone uses (athletes list, athlete detail header) are
-  // unaffected because the class isn't applied there.
-  //
-  // Targets the inner PrimeNG `<p-tag>` via the rendered `.p-tag` /
-  // `.p-tag-label` classes. `::ng-deep` is required because p-tag is
-  // a child component — the canon (`client/CLAUDE.md` § Design system)
-  // allows this when a token doesn't exist, which is the case for
-  // tag-size overrides.
-}
-:host(.belt-badge--compact) ::ng-deep .p-tag {
-  padding: 0.0625rem 0.375rem;
-  font-size: 0.6875rem;
-  line-height: 1.1;
-}
-:host(.belt-badge--compact) ::ng-deep .p-tag-label {
-  font-size: inherit;
-  line-height: inherit;
-}
-:host(.belt-badge--compact) .belt-badge__inner {
-  gap: 0.25rem;
-}
-:host {
   /*
    * IBJJF belt colors are *domain* constants, not Material Design 3 theme
    * tokens. client/CLAUDE.md § Design canon permits hardcoded values "unless
@@ -126,5 +100,34 @@
     background: currentColor;
     border-radius: 0.0625rem; // 1px — square-ish but with a hint of softening
     opacity: 0.85; // muted enough to not compete with the label
+  }
+}
+
+// Compact size variant (#784). Apply the `belt-badge--compact` class on
+// the host element (`<app-belt-badge class="belt-badge--compact">`) to
+// shrink the pill for dense surfaces — the post-header sub-row in the
+// feed and the user-flair compact mode in the comments thread.
+// Standalone uses (athletes list, athlete detail header) are unaffected
+// because the class isn't applied there.
+//
+// Targets the inner PrimeNG `<p-tag>` via the rendered `.p-tag` /
+// `.p-tag-label` classes. `::ng-deep` is required because p-tag is a
+// child component — the canon (`client/CLAUDE.md` § Design system)
+// allows this when a token doesn't exist, which is the case for
+// tag-size overrides.
+:host(.belt-badge--compact) {
+  ::ng-deep .p-tag {
+    padding: 0.0625rem 0.375rem;
+    font-size: 0.6875rem;
+    line-height: 1.1;
+  }
+
+  ::ng-deep .p-tag-label {
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .belt-badge__inner {
+    gap: 0.25rem;
   }
 }
