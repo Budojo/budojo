@@ -28,6 +28,36 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.18.2',
+    date: '2026-05-16',
+    headline:
+      'A small batch of mobile-UX polish fixes spotted while using the app on a phone the day after v2.18.1. Nothing changes about what you can do — the same screens, the same actions, just less rough at the edges on small viewports.',
+    sections: [
+      {
+        heading: "🩹 Athlete detail: cleaner view when you've added yourself as an athlete",
+        bullets: [
+          "If you flipped 'Train at this academy' on, your own row in /dashboard/athletes used to surface three things that didn't apply to a self-row: an 'Invita al sistema' card (you already have an account), an email-change card (you've got your own flow at /dashboard/me/email-change), and a Payments tab (self-rows aren't billed).",
+          'Those three are now hidden on your own self-row. Hitting the /payments URL on your own self-row redirects to Attendance instead of rendering an empty payments view.',
+        ],
+      },
+      {
+        heading: '🥋 Academy feed: tighter layout on phones',
+        bullets: [
+          "Event card dates like 'Martedì alle 19:00' now include the day-of-month — 'Martedì 19 alle 19:00' — so when the card scrolls past a few days after the post, 'which Tuesday?' is no longer ambiguous.",
+          "The reactions row sits on a single line on phones. Each reaction chip carries its own counter (👏 Applauso 2); tapping the number opens the same 'chi ha reagito' sheet as before. The middot-separated summary pill is gone.",
+          'The comments toggle becomes an icon-only floating button at the bottom-right of the card with a small badge showing the comment count. Mirrors the moderator trash button (top-right), keeps the row uncluttered.',
+          'Less dead vertical space between the page header (Pubblica evento) and the first card.',
+        ],
+      },
+      {
+        heading: '🔔 Notification bell: cleaner panel on phones',
+        bullets: [
+          'The popover from the topbar bell used to render at the edge of the screen with an arrow pointing nowhere near the bell on narrow viewports. On phones it now opens as a clean edge-to-edge panel just below the topbar, no misleading pointer. Desktop is unchanged.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.18.1',
     date: '2026-05-15',
     headline:
