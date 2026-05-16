@@ -7,7 +7,9 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  // Tightened gap (#777). The previous 1.5rem read as dead space on
+  // mobile between the header CTA cluster and the first card.
+  gap: 1rem;
 
   &__header {
     display: flex;
@@ -30,7 +32,8 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    // Tightened card-to-card gap (#777).
+    gap: 0.75rem;
   }
 
   &__card {
@@ -41,6 +44,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    // Anchor for the absolute-positioned comments FAB (#777).
+    position: relative;
 
     &--skeleton {
       gap: 0.5rem;
@@ -159,7 +164,16 @@
     display: flex;
     gap: 0.75rem;
     margin-top: 0.5rem;
-    flex-wrap: wrap;
+    // Single-line layout (#777). The previous flex-wrap allowed the row
+    // to break onto two lines when reaction counts pushed past viewport
+    // width; with the comments toggle hoisted to a corner FAB the row
+    // only has to fit two reaction chips, which it always does at the
+    // 320 px floor.
+    flex-wrap: nowrap;
+    // Reserve room on the right for the absolute-positioned comments
+    // FAB so the chips never collide with the badge counter.
+    padding-right: 3rem;
+    min-height: 2.5rem;
   }
 
   &__react-btn {
@@ -198,45 +212,93 @@
   &__react-count {
     color: var(--p-text-color-secondary);
     font-size: 0.8125rem;
-    margin-left: 0.125rem;
+    margin-left: 0.375rem;
+    padding: 0 0.375rem;
+    min-width: 1.25rem;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.25rem;
     font-variant-numeric: tabular-nums;
+    border-radius: 999px;
+    background: var(--p-content-hover-background, rgba(0, 0, 0, 0.06));
+
+    // Clickable count variant (#777) — opens the reactions-list sheet.
+    // Promoted to a subtle pill so the secondary touch zone inside the
+    // chip carries a clear hover/focus affordance per Norman.
+    &--clickable {
+      cursor: pointer;
+      transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+      &:hover {
+        background: var(--p-primary-50, rgba(91, 108, 255, 0.18));
+        color: var(--p-primary-color);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--p-primary-color);
+        outline-offset: 2px;
+      }
+    }
   }
 
-  // "X reacted with 👏 and 🙏" pill that opens the reactions-list
-  // sheet. Sits inline with the toggle buttons; styled as a subtle
-  // text-button (not a primary CTA) so it doesn't compete visually
-  // with the emoji buttons next to it.
-  &__reactions-summary {
+  // Comments FAB (#777) — icon-only, anchored to the bottom-right
+  // corner of the card. Mirror of the moderator trash button at the
+  // top-right, opposite corner. Carries an optional badge counter for
+  // the comment count (capped at "99+" like the notification bell).
+  &__comments-fab {
     appearance: none;
-    background: transparent;
+    position: absolute;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border: none;
+    border-radius: 50%;
+    background: transparent;
     cursor: pointer;
+    color: var(--p-text-color);
     display: inline-flex;
     align-items: center;
-    gap: 0.625rem;
-    padding: 0.375rem 0.625rem;
-    border-radius: 8px;
-    color: var(--p-text-muted-color);
+    justify-content: center;
     transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
-    margin-inline-start: auto;
 
     &:hover {
-      background: var(--p-content-hover-background);
-      color: var(--p-text-color);
+      background: var(--p-content-hover-background, rgba(0, 0, 0, 0.06));
     }
 
-    // Middot separator between 👏 and 🙏 counts when both are
-    // present — per the v2.10.0 spec ("👏 3 · 🙏 2"). Pure CSS so
-    // the template stays clean and the separator never renders
-    // when only one emoji has reactions.
-    .feed__react-count + .feed__react-count::before {
-      content: '·';
-      margin-inline-end: 0.375rem;
-      color: var(--p-text-muted-color);
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
     }
+
+    &--active {
+      background: var(--p-primary-50, rgba(91, 108, 255, 0.12));
+      color: var(--p-primary-color);
+    }
+
+    i {
+      font-size: 1.125rem;
+    }
+  }
+
+  &__comments-fab-badge {
+    position: absolute;
+    top: -0.125rem;
+    right: -0.125rem;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    padding: 0 0.25rem;
+    background: var(--p-red-500, #ef4444);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
 
   &__pagination {

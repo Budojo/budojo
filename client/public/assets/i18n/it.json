@@ -296,6 +296,8 @@
       "rsvpMaybeAria": "Segnati come forse",
       "rsvpToastError": "Non siamo riusciti ad aggiornare il tuo RSVP. Riprova.",
       "commentsToggle": "Commenti",
+      "commentsToggleAria": "Apri/chiudi commenti",
+      "commentsToggleAriaCount": "Apri/chiudi commenti ({count})",
       "commentsLoading": "Caricamento commenti…",
       "commentsEmpty": "Nessun commento per ora — sii il primo.",
       "commentsLoadError": "Non siamo riusciti a caricare i commenti. Riapri la card e riprova.",
