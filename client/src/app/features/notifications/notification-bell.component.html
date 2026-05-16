@@ -19,7 +19,19 @@
   }
 </button>
 
-<p-popover #panel [style]="{ width: '24rem', maxWidth: '90vw' }">
+<!--
+  Notification panel popover (#779). Carries a `styleClass` so the
+  global mobile override in `src/styles/budojo-theme.scss` can target
+  it — below 768px the popover is forced to an edge-to-edge pinned
+  panel under the topbar (no arrow), because at the bell's mid-topbar
+  position the auto-anchored PrimeNG popover slid to the viewport
+  edge and the arrow stopped pointing at the bell.
+-->
+<p-popover
+  #panel
+  styleClass="notification-bell-popover"
+  [style]="{ width: '24rem', maxWidth: '90vw' }"
+>
   <div class="notification-panel" data-cy="notification-panel">
     <header class="notification-panel__header">
       <h2 class="notification-panel__title">

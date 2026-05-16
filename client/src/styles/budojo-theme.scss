@@ -472,3 +472,38 @@
 .budojo-hairline {
   border-top: 1px solid var(--p-content-border-color);
 }
+
+// Notification bell popover — mobile override (#779). Below 768px the
+// PrimeNG-anchored popover slid past the viewport edge while its arrow
+// stayed near the trigger, producing a panel that visibly didn't
+// connect to the bell. On mobile we force an edge-to-edge pinned panel
+// under the topbar (no arrow). Desktop is unchanged. The override sits
+// in the global layer (not in component scope) because PrimeNG appends
+// the popover to body via overlay portal — component-scoped styles
+// don't reach it.
+//
+// `!important` is required because PrimeNG sets the positional
+// properties (top/left/transform/width) inline via JS at toggle time;
+// no token override can win that specificity. Scoped tightly to the
+// `notification-bell-popover` class so only this one popover instance
+// is touched.
+@media (max-width: 767px) {
+  .p-popover.notification-bell-popover {
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    width: calc(100vw - 1rem) !important;
+    max-width: none !important;
+    transform: none !important;
+    // Pin just below the dashboard topbar (3.5rem / 56px — see
+    // dashboard.component.scss $topbar-height).
+    top: 3.75rem !important;
+
+    // PrimeNG renders the arrow as ::before / ::after on the popover
+    // root. With the popover no longer anchored to a specific
+    // x-coordinate the pointer reads as misleading; hide both.
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
+}
