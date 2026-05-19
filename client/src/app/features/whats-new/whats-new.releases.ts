@@ -28,6 +28,25 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.21.0',
+    date: '2026-05-19',
+    headline:
+      "Your profile page is now organised into four tabs instead of one long scroll. The settings you use the most are still the first thing you see — everything else groups under the matching topic so you don't have to scroll past five sections to find a single toggle.",
+    sections: [
+      {
+        heading: '👤 Profile page — grouped into 4 tabs',
+        bullets: [
+          'The /dashboard/profile page previously stacked twelve separate sections in a single column. Now those settings group under four tabs, matching the visual chrome of the athlete detail page.',
+          'Profilo — your profile picture, name, handle (@you), and email. This is the default landing tab; the first thing you see is unchanged.',
+          'Sicurezza — change password, two-factor authentication, active sessions, login history. Everything that hardens your login lives here.',
+          'Notifiche — email digest preferences and browser push notifications. Both notification surfaces in one place.',
+          'Account — train at this academy as an athlete, API tokens (for integrations), and the GDPR "download my data" export.',
+          'Switching tabs is instant — no URL change, no page reload, no lost form state if you started typing something in one tab and clicked another. All your previous settings are still there; none were removed, only regrouped.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.20.0',
     date: '2026-05-19',
     headline:
