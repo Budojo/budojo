@@ -17,6 +17,7 @@ import { ButtonModule } from 'primeng/button';
 import { KnobModule } from 'primeng/knob';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TooltipModule } from 'primeng/tooltip';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { Athlete, AthleteService } from '../../../../core/services/athlete.service';
 import { AttendanceRecord, AttendanceService } from '../../../../core/services/attendance.service';
@@ -94,6 +95,7 @@ function currentYearMonth(): YearMonth {
     KnobModule,
     PopoverModule,
     SkeletonModule,
+    TooltipModule,
     AttendanceMonthHeatmapComponent,
   ],
   templateUrl: './attendance-history.component.html',
