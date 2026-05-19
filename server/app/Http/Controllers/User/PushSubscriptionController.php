@@ -7,8 +7,10 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\PushSubscription;
 use App\Models\User;
+use App\Notifications\TestPushNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Web Push subscription surface (#419). Backs the "Browser
@@ -111,6 +113,34 @@ class PushSubscriptionController extends Controller
                 'created_at' => $row->created_at->toIso8601String(),
             ],
         ], $row->wasRecentlyCreated ? 201 : 200);
+    }
+
+    /**
+     * User-triggered test push (#819). Fires a one-shot `TestPushNotification`
+     * via `WebPushChannel` to the calling user's stored subscriptions, so
+     * the user can self-verify their device's push channel is healthy
+     * (and we have a one-tap diagnostic affordance for support).
+     *
+     * 422 when the user has zero subscriptions — without an existing
+     * device, there's nothing to test against. The "Send test" button
+     * on the SPA is gated on the device list so the 422 is defensive,
+     * not the user-flow path. Quiet hours suppression is inherited from
+     * `WebPushChannel`.
+     */
+    public function test(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! $user->pushSubscriptions()->exists()) {
+            return response()->json([
+                'message' => 'No push subscriptions registered for this user.',
+            ], 422);
+        }
+
+        Notification::send($user, new TestPushNotification());
+
+        return response()->json(['data' => ['sent' => true]]);
     }
 
     public function destroy(Request $request, int $id): JsonResponse

@@ -925,6 +925,17 @@
         "summary": "Couldn't revoke the device",
         "detail": "Something went wrong. Try again in a moment."
       },
+      "sendTest": {
+        "label": "Send test notification"
+      },
+      "sendTestToast": {
+        "summary": "Test sent",
+        "detail": "Check your device — a banner should appear within a few seconds. If nothing shows up, check Settings → Apps → (your browser) → Notifications."
+      },
+      "sendTestErrorToast": {
+        "summary": "Couldn't send the test",
+        "detail": "Something went wrong on the server. Try again in a moment."
+      },
       "errors": {
         "not_supported": {
           "summary": "Push notifications aren't supported here",
