@@ -338,6 +338,28 @@ describe('AthletesListComponent', () => {
       expect(listSpy.mock.calls[0][0].paid).toBe('yes');
     });
 
+    it('resetFilters clears `?paid` from the URL so refresh-after-reset stays clean (#803 reviewer)', async () => {
+      // Reviewer finding on PR #804: `resetFilters()` mutated the
+      // signal directly without dropping the URL param; a refresh
+      // after Reset re-applied the just-cleared `paid=no` filter
+      // because the URL was the source of truth post-#803.
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+      const router = TestBed.inject(Router);
+      await router.navigate([], { queryParams: { paid: 'no' } });
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(component.selectedPaid()).toBe('no');
+
+      component.resetFilters();
+      await fixture.whenStable();
+
+      expect(component.selectedPaid()).toBe('');
+      expect(router.url).not.toContain('paid=');
+    });
+
     it('hydrates selectedPaid from the `paid` query param on first render (#803)', async () => {
       // Bug #803: tapping "Vedi tutti i N" on the unpaid widget navigates
       // to /dashboard/athletes?paid=no, but since the user was already on

@@ -422,6 +422,19 @@ export class AthletesListComponent implements OnInit {
     this.selectedPaid.set('');
     this.resetPage();
     this.load();
+    // Drop the `paid` query param from the URL so a refresh after
+    // reset doesn't re-apply the filter the user just cleared
+    // (#803, reviewer finding on PR #804). `replaceUrl: true` keeps
+    // the back button from going to the half-reset state. We don't
+    // re-trigger the queryParamMap subscription with a `null`-only
+    // navigate when the param is already absent — Angular skips the
+    // navigation as a no-op, no extra load() fires.
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { paid: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   /**
