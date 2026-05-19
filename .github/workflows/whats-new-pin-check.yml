@@ -1,0 +1,106 @@
+name: 📝 Whats-new version pin check
+
+# Runs on `develop → main` release PRs to validate that the whats-new
+# top entry matches the version semantic-release is about to tag.
+#
+# Why this exists (closes #836):
+#   The previous flow was: maintainer guesses the version when cutting
+#   `chore/whats-new-vX.Y.Z` ahead of the release PR. If the guess is
+#   wrong (e.g. a `feat:` commit got missed and semantic-release picks
+#   minor instead of patch), the release ships with a mismatched
+#   whats-new label and the SPA reads "v2.18.5" while the actual tag
+#   says "v2.19.0". Memory `feedback_compute_release_version_before_whats_new`
+#   codified the discipline; it failed once. This check is the hard
+#   guard so it can't fail again.
+#
+# Computes the expected next version by walking `main..HEAD` for
+# conventional commit types (Angular preset rules: `BREAKING CHANGE`
+# → major, `feat:` → minor, `fix:` / `perf:` / custom `hotfix:` →
+# patch, else no release). Asserts both:
+#   - `client/src/app/features/whats-new/whats-new.releases.ts`
+#     `RELEASES[0].version` matches.
+#   - newest file under `docs/changelog/user-facing/v*.md` matches.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Whats-new pin matches expected release
+    runs-on: [self-hosted, budojo]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Compute expected version + assert whats-new matches
+        run: |
+          set -euo pipefail
+
+          # Last stable tag on main (semantic-release's source of truth).
+          LAST_TAG=$(git tag --sort=-v:refname | grep -v beta | head -1)
+          if [ -z "$LAST_TAG" ]; then
+            echo "::warning::No stable tag found — first release? Skipping pin check."
+            exit 0
+          fi
+          echo "Last stable tag: $LAST_TAG"
+
+          # Parse vX.Y.Z → MAJOR / MINOR / PATCH.
+          VERSION_BARE="${LAST_TAG#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_BARE"
+
+          # Walk commits + their bodies (semantic-release reads both).
+          # %B gives subject + body separated by a blank line.
+          COMMITS=$(git log "${LAST_TAG}..HEAD" --pretty=format:%B)
+
+          if echo "$COMMITS" | grep -q "BREAKING CHANGE"; then
+            EXPECTED="v$((MAJOR + 1)).0.0"
+            BUMP="major"
+          elif echo "$COMMITS" | grep -qE '^feat(\(|:)'; then
+            EXPECTED="v${MAJOR}.$((MINOR + 1)).0"
+            BUMP="minor"
+          elif echo "$COMMITS" | grep -qE '^(fix|perf|hotfix)(\(|:)'; then
+            EXPECTED="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+            BUMP="patch"
+          else
+            echo "No releasable commits since $LAST_TAG (only chore/docs/ci/style/refactor/test)."
+            echo "semantic-release will skip the tag — whats-new pin doesn't need to advance."
+            exit 0
+          fi
+
+          echo "Expected next version: $EXPECTED ($BUMP bump from $LAST_TAG)"
+
+          # Read top entry of whats-new.releases.ts.
+          TOP_VERSION=$(grep -m1 -oE "version: 'v[0-9]+\.[0-9]+\.[0-9]+'" \
+            client/src/app/features/whats-new/whats-new.releases.ts \
+            | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "MISSING")
+          echo "whats-new.releases.ts top entry version: $TOP_VERSION"
+
+          # Read newest filename under docs/changelog/user-facing/v*.md.
+          # `sort -V` orders by semantic version so the tail is the
+          # actual highest.
+          NEWEST_FILE=$(ls docs/changelog/user-facing/v*.md 2>/dev/null \
+            | xargs -n1 basename \
+            | sed 's/\.md$//' \
+            | sort -V \
+            | tail -1 || echo "MISSING")
+          echo "newest docs/changelog/user-facing/* file: $NEWEST_FILE"
+
+          # Hard assert.
+          if [ "$TOP_VERSION" != "$EXPECTED" ] || [ "$NEWEST_FILE" != "$EXPECTED" ]; then
+            echo "::error::Whats-new pin mismatch."
+            echo "::error::Expected next version (computed from $LAST_TAG + $BUMP bump): $EXPECTED"
+            echo "::error::whats-new.releases.ts top: $TOP_VERSION"
+            echo "::error::newest docs/changelog file: $NEWEST_FILE"
+            echo ""
+            echo "Fix: rename the file + update the typed entry + bump the vitest pin, then re-push the release PR."
+            echo "See memory feedback_compute_release_version_before_whats_new for the rule."
+            exit 1
+          fi
+
+          echo "✓ Whats-new pin matches expected $EXPECTED."
