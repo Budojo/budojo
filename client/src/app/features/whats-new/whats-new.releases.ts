@@ -28,11 +28,17 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
-    version: 'v2.18.5',
+    version: 'v2.19.0',
     date: '2026-05-19',
     headline:
-      'Bug-fix release. A handful of small UX corrections + the Claude-reviewer plumbing settling in. Nothing big, nothing flashy.',
+      'Bug-fix release with one user-visible feature: a Send test notification button on the Browser notifications card. Plus a handful of small UX corrections + the Claude-reviewer plumbing settling in.',
     sections: [
+      {
+        heading: '🔔 Send test notification',
+        bullets: [
+          'A new button under Browser notifications (in /dashboard/me/profile) lets you fire a one-shot test push to your registered device any time. Useful after a phone reboot, after Android revokes the browser\'s notification permission, or as a "did I actually wire this up right?" smoke check.',
+        ],
+      },
       {
         heading: '🎯 Athlete list & widgets',
         bullets: [
