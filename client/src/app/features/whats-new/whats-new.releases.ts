@@ -51,7 +51,7 @@ export const RELEASES: readonly Release[] = [
       {
         heading: '🤖 Internal — Claude reviewer plumbing',
         bullets: [
-          'For maintainers / contributors only. The post-push code reviewer (Claude, introduced in v2.18.4) had a few rough edges: per-pass comment noise (three separate top-level comments per review), a bot-identity mismatch that broke the auto-resolve script, and a discovery that the workflow file needs to live on main for the action\'s safety guard. All settled now — the next round of PRs gets a single sticky reviewer comment that updates in place.',
+          "For maintainers / contributors only. The post-push code reviewer (Claude, introduced in v2.18.4) had a few rough edges: per-pass comment noise (three separate top-level comments per review), a bot-identity mismatch that broke the auto-resolve script, and a discovery that the workflow file needs to live on main for the action's safety guard. All settled now — the next round of PRs gets a single sticky reviewer comment that updates in place.",
         ],
       },
     ],
