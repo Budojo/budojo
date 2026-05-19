@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   ViewChild,
   computed,
@@ -9,7 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, finalize, map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -97,6 +98,8 @@ export class AthletesListComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly onboardingService = inject(OnboardingService);
@@ -304,7 +307,17 @@ export class AthletesListComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.load();
+    // Hydrate `selectedPaid` from the `paid` query param so the
+    // unpaid-widget CTA (#803) — and any future deep-link / refresh
+    // — lands with the filter applied. The subscription emits once
+    // immediately with the current params, which replaces the
+    // previous unconditional `this.load()` call.
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const paid = params.get('paid');
+      this.selectedPaid.set(paid === 'yes' || paid === 'no' ? paid : '');
+      this.resetPage();
+      this.load();
+    });
     // Lazy-load onboarding state — only when the user hasn't already
     // dismissed/completed the tour. The component itself is the
     // visibility gate; a single HTTP call hydrates the state.
@@ -374,9 +387,16 @@ export class AthletesListComponent implements OnInit {
   }
 
   onPaidChange(paid: AthletePaidFilter | ''): void {
-    this.selectedPaid.set(paid);
-    this.resetPage();
-    this.load();
+    // Echo the dropdown choice back into the URL so refresh / share /
+    // back-button preserve the active filter — and so the
+    // `queryParamMap` subscription stays the single source of truth
+    // for hydration. `queryParamsHandling: 'merge'` leaves the other
+    // filter params (belt, status) untouched.
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { paid: paid === '' ? null : paid },
+      queryParamsHandling: 'merge',
+    });
   }
 
   /**
