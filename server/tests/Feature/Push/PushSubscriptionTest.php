@@ -158,6 +158,34 @@ it('POST /me/push-subscriptions/test dispatches TestPushNotification to the call
     Illuminate\Support\Facades\Notification::assertSentTo($user, App\Notifications\TestPushNotification::class);
 });
 
+it('POST /me/push-subscriptions/test returns 503 with structured reason when the dispatch throws (#828)', function (): void {
+    $user = userWithAcademy();
+    PushSubscription::factory()->for($user)->create();
+    // Replace the Notification dispatcher with one that throws — mirrors
+    // a real-world VAPID signing failure inside WebPushChannel::send.
+    Illuminate\Support\Facades\Notification::swap(new class () extends Illuminate\Notifications\ChannelManager {
+        public function __construct()
+        {
+        }
+
+        public function send($notifiables, $instance, ?array $channels = null): void
+        {
+            throw new \RuntimeException('VAPID signing failed');
+        }
+
+        public function sendNow($notifiables, $instance, ?array $channels = null): void
+        {
+            throw new \RuntimeException('VAPID signing failed');
+        }
+    });
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/me/push-subscriptions/test')
+        ->assertStatus(503)
+        ->assertJsonPath('message', 'Could not dispatch the test notification.')
+        ->assertJsonPath('reason', 'dispatch_failed');
+});
+
 it('POST /me/push-subscriptions/test returns 422 when the user has no subscriptions', function (): void {
     $user = userWithAcademy();
     Illuminate\Support\Facades\Notification::fake();
