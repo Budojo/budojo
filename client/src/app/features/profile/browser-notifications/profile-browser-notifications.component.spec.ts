@@ -464,4 +464,49 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
       ),
     ).toBeNull();
   });
+
+  it('surfaces a warn toast when verifyDelivery resolves silent after enable (#818)', async () => {
+    const { fixture, http } = setup();
+    const messageService = TestBed.inject(MessageService);
+    const addSpy = vi.spyOn(messageService, 'add');
+    // Stub the WebPush service so enable() resolves quickly without
+    // touching the real SwPush flow, and verifyDelivery returns 'silent'
+    // to exercise the warn-toast branch.
+    const { WebPushService } = await import('../../../core/services/web-push.service');
+    const svc = TestBed.inject(WebPushService);
+    vi.spyOn(svc, 'subscribe').mockResolvedValue({
+      id: 99,
+      endpoint_host: 'fcm.googleapis.com',
+      endpoint_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      last_seen_at: null,
+      created_at: '2026-05-19T09:00:00Z',
+    });
+    vi.spyOn(svc, 'verifyDelivery').mockResolvedValue('silent');
+    vi.spyOn(svc, 'currentEndpointHash').mockResolvedValue(null);
+
+    fixture.detectChanges();
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [],
+      meta: { vapid_public_key: 'PUB', enabled: true },
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    (fixture.componentInstance as unknown as { enable(): Promise<void> })
+      .enable()
+      .then(async () => {
+        await fixture.whenStable();
+      });
+    await fixture.whenStable();
+    // Second tick — the verifyAfterEnable promise chain resolves on a
+    // later microtask than the success toast.
+    await fixture.whenStable();
+
+    expect(addSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'warn',
+        summary: expect.stringContaining("didn't arrive"),
+      }),
+    );
+  });
 });

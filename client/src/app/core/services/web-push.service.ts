@@ -1,8 +1,9 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom, map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 
 /**
  * Browser Web Push subscriber (#694, closes the client half of #419).
@@ -329,7 +330,21 @@ export class WebPushService {
     });
 
     try {
-      await this.sendTest();
+      // Inline the POST instead of calling `sendTest()` so we can opt
+      // out of the offline-redirect interceptor — this is a background
+      // poll (not user-initiated), and a transient network blip would
+      // otherwise teleport the user to `/offline` mid-subscribe
+      // (memory § background-polls / SKIP_OFFLINE_REDIRECT). The
+      // user-initiated `sendTest()` keeps the default behaviour so a
+      // real loss-of-connectivity on the manual button still routes
+      // correctly.
+      await firstValueFrom(
+        this.http.post(
+          `${environment.apiBase}/api/v1/me/push-subscriptions/test`,
+          {},
+          { context: new HttpContext().set(SKIP_OFFLINE_REDIRECT, true) },
+        ),
+      );
     } catch {
       // Server-side error on the test endpoint — VAPID misconfig, no
       // subscriptions registered, network blip. Can't verify either
