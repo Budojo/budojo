@@ -68,25 +68,33 @@ it('GET /me/push-subscriptions never includes another user\'s rows', function ()
 
 it('POST /me/push-subscriptions stores a new subscription (201)', function (): void {
     $user = userWithAcademy();
+    $endpoint = 'https://fcm.googleapis.com/fcm/send/abc';
+    $expectedHash = hash('sha256', $endpoint);
 
     $response = $this->actingAs($user)
-        ->postJson('/api/v1/me/push-subscriptions', pushPayload());
+        ->postJson('/api/v1/me/push-subscriptions', pushPayload($endpoint));
 
     $response->assertCreated()
-        ->assertJsonStructure(['data' => ['id', 'endpoint_host', 'created_at']]);
+        ->assertJsonStructure(['data' => ['id', 'endpoint_host', 'endpoint_hash', 'created_at']]);
+    // endpoint_hash is the load-bearing field for the SPA's "(this device)"
+    // pill + "Add another device" hide — without it both stay false until a
+    // page refresh.
+    expect($response->json('data.endpoint_hash'))->toBe($expectedHash);
     expect(PushSubscription::query()->where('user_id', $user->id)->count())->toBe(1);
 });
 
 it('POST /me/push-subscriptions is idempotent on (user, endpoint) — 200 on re-post', function (): void {
     $user = userWithAcademy();
     $payload = pushPayload();
+    $expectedHash = hash('sha256', $payload['endpoint']);
 
     $this->actingAs($user)
         ->postJson('/api/v1/me/push-subscriptions', $payload)
         ->assertCreated();
     $second = $this->actingAs($user)
         ->postJson('/api/v1/me/push-subscriptions', $payload);
-    $second->assertOk();
+    $second->assertOk()
+        ->assertJsonPath('data.endpoint_hash', $expectedHash);
 
     expect(PushSubscription::query()->where('user_id', $user->id)->count())->toBe(1);
 });

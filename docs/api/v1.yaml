@@ -1683,7 +1683,29 @@ paths:
                       example: 'r5y6Z...'
       responses:
         '200':
-          description: Subscription already existed; keys refreshed.
+          description: Subscription already existed; keys refreshed. Body shape mirrors the 201 response so the SPA can read `endpoint_hash` on every successful POST.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [id, endpoint_host, endpoint_hash, created_at]
+                    properties:
+                      id:
+                        type: integer
+                      endpoint_host:
+                        type: string
+                      endpoint_hash:
+                        type: string
+                        description: SHA-256 hash of the endpoint URL. Lets the SPA match the existing device against the device list, so the "(this device)" pill renders without a follow-up GET.
+                        pattern: '^[a-f0-9]{64}$'
+                        example: 'd2c8fef9a5b7e1f3c4a6b8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c4d6e8f0'
+                      created_at:
+                        type: string
+                        format: date-time
         '201':
           description: New subscription created.
           content:
@@ -1694,12 +1716,17 @@ paths:
                 properties:
                   data:
                     type: object
-                    required: [id, endpoint_host, created_at]
+                    required: [id, endpoint_host, endpoint_hash, created_at]
                     properties:
                       id:
                         type: integer
                       endpoint_host:
                         type: string
+                      endpoint_hash:
+                        type: string
+                        description: SHA-256 hash of the endpoint URL. Lets the SPA match the just-subscribed device against the device list without a follow-up GET, so the "(this device)" pill renders immediately.
+                        pattern: '^[a-f0-9]{64}$'
+                        example: 'd2c8fef9a5b7e1f3c4a6b8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c4d6e8f0'
                       created_at:
                         type: string
                         format: date-time
