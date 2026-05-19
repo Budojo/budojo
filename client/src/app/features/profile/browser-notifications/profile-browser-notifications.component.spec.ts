@@ -213,4 +213,111 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
       fixture.nativeElement.querySelector('[data-cy="profile-browser-notifications-unsupported"]'),
     ).toBeTruthy();
   });
+
+  // #819 — diagnostic "Send test notification" button under the "on"
+  // branch lets the user verify their device's push channel any time.
+
+  it('renders the Send-test button only when push is on (devices present)', () => {
+    const { fixture, http } = setup();
+    fixture.detectChanges();
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [
+        {
+          id: 11,
+          endpoint_host: 'fcm.googleapis.com',
+          last_seen_at: null,
+          created_at: '2026-05-19T09:00:00Z',
+        },
+      ],
+      meta: { vapid_public_key: 'PUB', enabled: true },
+    });
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-browser-notifications-send-test"]'),
+    ).toBeTruthy();
+  });
+
+  it('does NOT render the Send-test button in the "off" state (no devices)', () => {
+    const { fixture, http } = setup();
+    fixture.detectChanges();
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [],
+      meta: { vapid_public_key: 'PUB', enabled: true },
+    });
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-browser-notifications-send-test"]'),
+    ).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-browser-notifications-off"]'),
+    ).toBeTruthy();
+  });
+
+  it('POSTs /me/push-subscriptions/test on Send-test click + surfaces the success toast', async () => {
+    const { fixture, http } = setup();
+    const messageService = TestBed.inject(MessageService);
+    const addSpy = vi.spyOn(messageService, 'add');
+    fixture.detectChanges();
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [
+        {
+          id: 11,
+          endpoint_host: 'fcm.googleapis.com',
+          last_seen_at: null,
+          created_at: '2026-05-19T09:00:00Z',
+        },
+      ],
+      meta: { vapid_public_key: 'PUB', enabled: true },
+    });
+    fixture.detectChanges();
+
+    const btn = fixture.nativeElement.querySelector(
+      '[data-cy="profile-browser-notifications-send-test"] button',
+    ) as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    btn.click();
+
+    http
+      .expectOne((req) => req.url === '/api/v1/me/push-subscriptions/test' && req.method === 'POST')
+      .flush({ data: { sent: true } });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(addSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+  });
+
+  it('surfaces an error toast when /me/push-subscriptions/test fails', async () => {
+    const { fixture, http } = setup();
+    const messageService = TestBed.inject(MessageService);
+    const addSpy = vi.spyOn(messageService, 'add');
+    fixture.detectChanges();
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [
+        {
+          id: 11,
+          endpoint_host: 'fcm.googleapis.com',
+          last_seen_at: null,
+          created_at: '2026-05-19T09:00:00Z',
+        },
+      ],
+      meta: { vapid_public_key: 'PUB', enabled: true },
+    });
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector(
+        '[data-cy="profile-browser-notifications-send-test"] button',
+      ) as HTMLButtonElement
+    ).click();
+
+    http
+      .expectOne('/api/v1/me/push-subscriptions/test')
+      .flush({ message: 'boom' }, { status: 500, statusText: 'Server error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(addSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
+  });
 });

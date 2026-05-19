@@ -139,6 +139,36 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
     }
   }
 
+  /**
+   * Fire a server-side diagnostic push (#819). Lets the user verify
+   * their device's push channel is delivering OS-level notifications
+   * — useful after a phone reboot, after Android revokes Chrome's
+   * permission, or just as a smoke test. The bell badge stays clean
+   * because `TestPushNotification.via()` excludes the database channel.
+   */
+  protected async sendTest(): Promise<void> {
+    if (this.busy()) return;
+    this.busy.set(true);
+    try {
+      await this.webPushService.sendTest();
+      this.messageService.add({
+        severity: 'success',
+        summary: this.translate.instant('profile.browserNotifications.sendTestToast.summary'),
+        detail: this.translate.instant('profile.browserNotifications.sendTestToast.detail'),
+        life: 4000,
+      });
+    } catch {
+      this.messageService.add({
+        severity: 'error',
+        summary: this.translate.instant('profile.browserNotifications.sendTestErrorToast.summary'),
+        detail: this.translate.instant('profile.browserNotifications.sendTestErrorToast.detail'),
+        life: 5000,
+      });
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   protected async revoke(device: PushDevice): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true);
