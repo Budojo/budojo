@@ -179,6 +179,12 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
         summary: this.translate.instant('profile.browserNotifications.enabledToast.summary'),
         life: 2500,
       });
+      // Background verification (#818) — fire a test push + race the SW
+      // for 5s. If the SW never sees the push, the channel is muted at
+      // the OS level (Chrome notif off, battery saver) and we surface
+      // a SECOND toast with the actionable hint. Fire-and-forget; the
+      // success toast above already confirms the SPA-side state.
+      void this.verifyAfterEnable();
     } catch (error: unknown) {
       // Recompute permission so the panel flips to 'permission-denied'
       // immediately if the user clicked Block on the OS prompt.
@@ -192,6 +198,28 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
       });
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  /**
+   * Post-subscribe delivery verification (#818). Runs in the
+   * background after `enable()` shows the success toast. Outcomes:
+   *  - 'ok'      — channel works end-to-end, no extra UI.
+   *  - 'unknown' — couldn't verify (SW disabled / test endpoint
+   *                errored). No extra UI to avoid false alarms.
+   *  - 'silent'  — push delivered to FCM but the SW never received
+   *                it; most likely OS-level mute. Surface a warn
+   *                toast pointing at OS settings.
+   */
+  private async verifyAfterEnable(): Promise<void> {
+    const result = await this.webPushService.verifyDelivery();
+    if (result === 'silent') {
+      this.messageService.add({
+        severity: 'warn',
+        summary: this.translate.instant('profile.browserNotifications.verifySilentToast.summary'),
+        detail: this.translate.instant('profile.browserNotifications.verifySilentToast.detail'),
+        life: 8000,
+      });
     }
   }
 

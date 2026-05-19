@@ -938,6 +938,10 @@
         "summary": "Impossibile inviare il test",
         "detail": "Qualcosa è andato storto lato server. Riprova tra un momento."
       },
+      "verifySilentToast": {
+        "summary": "Notifiche attive — ma il push di prova non è arrivato",
+        "detail": "Il push è stato consegnato al servizio ma il tuo dispositivo non l'ha mostrato. Controlla Impostazioni → App → (il tuo browser) → Notifiche per assicurarti che siano attive a livello OS."
+      },
       "errors": {
         "not_supported": {
           "summary": "Le notifiche push non sono supportate qui",

@@ -275,6 +275,76 @@ export class WebPushService {
   }
 
   /**
+   * Verify the push delivery channel works end-to-end (#818). After a
+   * successful `subscribe()`, the SPA has no way to confirm that the
+   * OS will actually surface notifications — Web Notification API
+   * only exposes the SITE-level permission, not the OS-level Chrome /
+   * TWA notification toggle that #817 surfaced as the root cause of
+   * silent failures.
+   *
+   * The check:
+   *  1. Set up a `swPush.messages` listener filtered on
+   *     `data.kind === 'verification'`.
+   *  2. POST to `/me/push-subscriptions/test` — the server dispatches
+   *     `TestPushNotification` via `WebPushChannel` to ALL the user's
+   *     subscriptions (the just-created one + any others).
+   *  3. Race the listener against a 5-second timer.
+   *
+   * Outcomes:
+   *  - `'ok'`      — the SW received the test push within the window.
+   *                  Channel works.
+   *  - `'silent'`  — timeout fired without the SW receiving it. Most
+   *                  likely OS-level mute (Chrome notif off in
+   *                  Android Settings, battery saver, TWA process
+   *                  killed). The SPA surfaces an actionable hint.
+   *  - `'unknown'` — the SW isn't enabled (dev mode) OR the test
+   *                  endpoint errored (server-side throw, VAPID
+   *                  misconfig). Can't conclude either way; the UI
+   *                  stays silent to avoid false alarms.
+   *
+   * Fire-and-forget from the component — runs in the background after
+   * the success toast. The user sees a SECOND, distinct toast only
+   * when the verification times out.
+   */
+  async verifyDelivery(timeoutMs: number = 5000): Promise<'ok' | 'silent' | 'unknown'> {
+    if (!this.swPush.isEnabled) return 'unknown';
+
+    // Set up the listener BEFORE firing the ping — otherwise a fast
+    // SW could fire the push event before our subscribe lands and we
+    // would miss the signal.
+    const listenerPromise = new Promise<'ok'>((resolve) => {
+      const sub = this.swPush.messages.subscribe((rawMessage) => {
+        const data = (rawMessage as { notification?: { data?: { kind?: string } } }).notification
+          ?.data;
+        if (data?.kind === 'verification') {
+          sub.unsubscribe();
+          resolve('ok');
+        }
+      });
+      // Cleanup buffer past the timeout so the subscription doesn't
+      // leak. The race below decides the outcome at `timeoutMs`; the
+      // listener stays alive an extra second to absorb a near-miss
+      // before unsubscribing.
+      setTimeout(() => sub.unsubscribe(), timeoutMs + 1000);
+    });
+
+    try {
+      await this.sendTest();
+    } catch {
+      // Server-side error on the test endpoint — VAPID misconfig, no
+      // subscriptions registered, network blip. Can't verify either
+      // way; report 'unknown' so the UI doesn't surface a misleading
+      // "your phone is muted" toast on a server fault.
+      return 'unknown';
+    }
+
+    const timeoutPromise = new Promise<'silent'>((resolve) =>
+      setTimeout(() => resolve('silent'), timeoutMs),
+    );
+    return Promise.race([listenerPromise, timeoutPromise]);
+  }
+
+  /**
    * SHA-256 hash of the CURRENT browser's PushSubscription endpoint,
    * if one exists (#822). Mirrors the server-side
    * `PushSubscription.endpoint_hash` column so the UI can identify

@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { SwPush } from '@angular/service-worker';
-import { firstValueFrom } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
 
 import { WebPushError, WebPushService } from './web-push.service';
 
@@ -15,15 +15,18 @@ interface FakeSwPushOptions {
   readonly isEnabled?: boolean;
   readonly subscription?: PushSubscription;
   readonly subscriptionError?: unknown;
+  readonly messages?: Subject<unknown>;
 }
 
 function makeFakeSwPush(opts: FakeSwPushOptions = {}): {
   isEnabled: boolean;
+  messages: Subject<unknown>;
   requestSubscription: () => Promise<PushSubscription>;
   unsubscribe: () => Promise<void>;
 } {
   return {
     isEnabled: opts.isEnabled ?? true,
+    messages: opts.messages ?? new Subject<unknown>(),
     async requestSubscription(): Promise<PushSubscription> {
       if (opts.subscriptionError !== undefined) {
         throw opts.subscriptionError;
@@ -274,6 +277,67 @@ describe('WebPushService (#694)', () => {
         reason: 'server_not_configured',
       });
       http.verify();
+    });
+  });
+
+  describe('verifyDelivery (#818)', () => {
+    it("returns 'unknown' when SwPush is disabled — can't verify either way", async () => {
+      const { service, http } = setup({ isEnabled: false });
+      await expect(service.verifyDelivery()).resolves.toBe('unknown');
+      http.verify();
+    });
+
+    it("returns 'unknown' when the test endpoint errors — can't conclude OS-mute", async () => {
+      const { service, http } = setup();
+      const promise = service.verifyDelivery();
+      const req = http.expectOne('/api/v1/me/push-subscriptions/test');
+      req.flush({ message: 'boom' }, { status: 500, statusText: 'Server error' });
+      await expect(promise).resolves.toBe('unknown');
+      http.verify();
+    });
+
+    it("returns 'ok' when the SW receives the verification push within the window", async () => {
+      const messages = new Subject<unknown>();
+      const { service, http } = setup({ messages });
+      const promise = service.verifyDelivery(10_000);
+
+      // Fan-out endpoint POST → 200.
+      const req = http.expectOne('/api/v1/me/push-subscriptions/test');
+      req.flush({ data: { sent: true } });
+      // Drain microtasks so the listener subscribes before we emit.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Simulate the SW receiving the verification push.
+      messages.next({
+        notification: { title: 'Test', body: 'ok', data: { kind: 'verification' } },
+      });
+
+      await expect(promise).resolves.toBe('ok');
+      http.verify();
+    });
+
+    it("returns 'silent' when the SW never sees the push within the window", async () => {
+      vi.useFakeTimers();
+      try {
+        const messages = new Subject<unknown>();
+        const { service, http } = setup({ messages });
+        const promise = service.verifyDelivery(5_000);
+
+        const req = http.expectOne('/api/v1/me/push-subscriptions/test');
+        req.flush({ data: { sent: true } });
+        await Promise.resolve();
+        await Promise.resolve();
+
+        // Advance the clock past the timeout WITHOUT emitting a message.
+        vi.advanceTimersByTime(6_000);
+        await Promise.resolve();
+
+        await expect(promise).resolves.toBe('silent');
+        http.verify();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
