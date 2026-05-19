@@ -28,6 +28,35 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.18.5',
+    date: '2026-05-19',
+    headline:
+      'Bug-fix release. A handful of small UX corrections + the Claude-reviewer plumbing settling in. Nothing big, nothing flashy.',
+    sections: [
+      {
+        heading: '🎯 Athlete list & widgets',
+        bullets: [
+          'Tapping "Vedi tutti i N" on the Non-pagati widget now actually filters the athlete list to unpaid athletes. Before, the URL changed to ?paid=no but the list stayed full — silent no-op. Tap → list filters → URL stays consistent → refresh lands filtered.',
+          'The Non-pagati widget no longer counts suspended / inactive athletes. Payment isn\'t expected from them, so listing them as "owes" was false signal. Same fix removes the Unpaid chip from those rows in the table — replaced with an em-dash placeholder (same as for owner-as-athlete rows).',
+          'The Promotions tab pager (left / right chevron buttons) now has proper accessible names + tooltips on hover/long-press. Same convention as the attendance pager.',
+        ],
+      },
+      {
+        heading: '🥋 Academy feed',
+        bullets: [
+          'Going / Maybe RSVP buttons on event posts now follow the same chip styling as the reaction row. Before, they fell back to raw browser default <button> look because their styling class was orphaned — now they pick up the same border, focus ring, hover behaviour as Rispetto / Pray.',
+          "The Going count no longer looks clickable when it isn't (false affordance). The number sits as a plain span next to the button, no cursor change on hover.",
+        ],
+      },
+      {
+        heading: '🤖 Internal — Claude reviewer plumbing',
+        bullets: [
+          'For maintainers / contributors only. The post-push code reviewer (Claude, introduced in v2.18.4) had a few rough edges: per-pass comment noise (three separate top-level comments per review), a bot-identity mismatch that broke the auto-resolve script, and a discovery that the workflow file needs to live on main for the action\'s safety guard. All settled now — the next round of PRs gets a single sticky reviewer comment that updates in place.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.18.4',
     date: '2026-05-19',
     headline:
