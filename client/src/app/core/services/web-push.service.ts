@@ -74,7 +74,9 @@ export type WebPushFailureReason =
   | 'not_supported'
   | 'permission_denied'
   | 'server_not_configured'
-  | 'subscribe_failed';
+  | 'subscribe_failed'
+  | 'ios_pwa_required'
+  | 'brave_push_disabled';
 
 export class WebPushError extends Error {
   constructor(
@@ -108,6 +110,55 @@ export class WebPushService {
       typeof window !== 'undefined' &&
       'PushManager' in window
     );
+  }
+
+  /**
+   * iOS Safari supports the Push API surface AND the permission
+   * prompt since 16.4 — but only delivers actual notifications when
+   * the site is **installed as a Home Screen PWA** and opened from
+   * that icon (`navigator.standalone === true` OR
+   * `display-mode: standalone`). From a regular Safari tab the
+   * `requestSubscription()` call succeeds, the server-side mirror
+   * persists, but APNs silently refuses to deliver. Subscribe
+   * short-circuits with `ios_pwa_required` when this returns `true`
+   * so the UI surfaces an iOS-specific hint instead of pretending
+   * the flow worked (#816).
+   */
+  isIosNonStandalone(): boolean {
+    if (typeof navigator === 'undefined' || typeof window === 'undefined') {
+      return false;
+    }
+    if (!/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      return false;
+    }
+    const legacyStandalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
+    const mediaStandalone =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(display-mode: standalone)').matches;
+    return !(legacyStandalone || mediaStandalone);
+  }
+
+  /**
+   * Brave exposes itself via the (Brave-only) `navigator.brave.isBrave()`
+   * async API (Chromium UA strings are intentionally identical, so UA
+   * sniffing is unreliable). Used in the `subscribe()` catch path to
+   * distinguish Brave's "Use Google services for push messaging" toggle
+   * being off (manifests as a `NotSupportedError` / `AbortError` on
+   * `PushManager.subscribe()`) from a generic vendor failure (#811).
+   *
+   * Returns `false` on any non-Brave browser, when the global is
+   * missing, or when the async check rejects.
+   */
+  async isBrave(): Promise<boolean> {
+    if (typeof navigator === 'undefined') return false;
+    const isBraveFn = (navigator as unknown as { brave?: { isBrave?: () => Promise<boolean> } })
+      .brave?.isBrave;
+    if (typeof isBraveFn !== 'function') return false;
+    try {
+      return Boolean(await isBraveFn.call((navigator as unknown as { brave: unknown }).brave));
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -149,13 +200,23 @@ export class WebPushService {
    * Failure modes mapped to a typed reason so the UI renders the right
    * branch (vs. a generic "something went wrong"):
    *  - `not_supported`         — SW or PushManager missing
+   *  - `ios_pwa_required`      — iOS Safari needs PWA install (#816)
    *  - `permission_denied`     — user clicked Block on the prompt
+   *  - `brave_push_disabled`   — Brave with "Use Google services
+   *                              for push messaging" off (#811)
    *  - `server_not_configured` — backend returned 503 (VAPID unset)
    *  - `subscribe_failed`      — vendor push service errored
    */
   async subscribe(vapidPublicKey: string): Promise<PushDevice> {
     if (!this.isSupported() || !this.swPush.isEnabled) {
       throw new WebPushError('not_supported');
+    }
+
+    // iOS Safari guard (#816) — short-circuit BEFORE the subscribe
+    // call so the user sees a platform-specific hint instead of a
+    // misleading "all set" path that silently fails at APNs.
+    if (this.isIosNonStandalone()) {
+      throw new WebPushError('ios_pwa_required');
     }
 
     let subscription: PushSubscription;
@@ -166,12 +227,20 @@ export class WebPushService {
     } catch (error) {
       // `requestSubscription` rejects with the underlying DOMException
       // when the user denies permission OR the push service errors.
-      // The two have distinct user-visible cures (settings flip vs.
-      // try again later), so we split on `Notification.permission`
-      // after the throw rather than on error.name (which varies by
-      // browser).
+      // Three branches:
+      //  1. Permission denied — `Notification.permission` flips to
+      //     'denied'. Cures: open browser site settings.
+      //  2. Brave-with-Google-services-off — surfaces as a
+      //     `NotSupportedError` / `AbortError`. Cures: flip the
+      //     toggle at `brave://settings/privacy`. Detected via
+      //     `navigator.brave.isBrave()` async API (#811).
+      //  3. Generic vendor error — anything else.
       if (this.currentPermission() === 'denied') {
         throw new WebPushError('permission_denied', String(error));
+      }
+      const errName = (error as { name?: string })?.name ?? '';
+      if ((errName === 'NotSupportedError' || errName === 'AbortError') && (await this.isBrave())) {
+        throw new WebPushError('brave_push_disabled', String(error));
       }
       throw new WebPushError('subscribe_failed', String(error));
     }
