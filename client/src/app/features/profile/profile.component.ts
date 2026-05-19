@@ -73,9 +73,10 @@ type ProfileTab = 'identity' | 'security' | 'notifications' | 'account';
     TooltipModule,
     TranslatePipe,
   ],
-  // ConfirmationService is a per-component dependency for the avatar-remove
-  // confirm popup; mounting it here avoids leaking the dependency into every
-  // route in the dashboard shell. MessageService stays the app-level toast
+  // ConfirmationService is a per-component dependency for the email-change
+  // confirm popup (submitEditEmail). AvatarCardComponent declares its own
+  // ConfirmationService provider for the avatar-remove popup — the two
+  // instances are independent. MessageService stays the app-level toast
   // host (see the comment block in the original template / spec).
   providers: [ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
