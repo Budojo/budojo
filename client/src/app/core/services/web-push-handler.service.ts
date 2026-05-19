@@ -71,6 +71,14 @@ export class WebPushHandlerService {
       if (typeof title !== 'string' || title.length === 0) {
         return;
       }
+      // Suppress the foreground toast on the diagnostic ping (#819) —
+      // the user just tapped "Send test notification" on the profile
+      // page, they're already looking at the screen; the toast would
+      // double up with the OS banner (the very thing they're verifying).
+      // The OS banner still fires from the SW's push event.
+      if (message.notification?.data?.kind === 'verification') {
+        return;
+      }
       this.messageService.add({
         severity: 'info',
         summary: title,

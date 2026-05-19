@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import type { Mock } from 'vitest';
@@ -317,7 +317,7 @@ describe('AthletesListComponent', () => {
     // backend (server-side filter so it spans all pages, not just the
     // currently loaded 20), and the whole filter UI / badge column is
     // hidden when the academy hasn't configured a fee.
-    it('passes paid=yes to the service when the filter is set', () => {
+    it('passes paid=yes to the service when the filter is set', async () => {
       // The `paid` filter is gated on `hasMonthlyFee()` — has to seed the
       // academy with a configured fee or load() drops the value.
       TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
@@ -328,13 +328,58 @@ describe('AthletesListComponent', () => {
       const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
       listSpy.mockClear();
 
+      // onPaidChange now updates the URL; the queryParamMap subscription
+      // (#803) then sets the signal + calls load. Need to flush the
+      // navigation Promise for the assertion to see the load call.
       component.onPaidChange('yes');
+      await fixture.whenStable();
 
       expect(listSpy).toHaveBeenCalledTimes(1);
       expect(listSpy.mock.calls[0][0].paid).toBe('yes');
     });
 
-    it('omits paid from the filters when set back to the empty (All) option', () => {
+    it('resetFilters clears `?paid` from the URL so refresh-after-reset stays clean (#803 reviewer)', async () => {
+      // Reviewer finding on PR #804: `resetFilters()` mutated the
+      // signal directly without dropping the URL param; a refresh
+      // after Reset re-applied the just-cleared `paid=no` filter
+      // because the URL was the source of truth post-#803.
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+      const router = TestBed.inject(Router);
+      await router.navigate([], { queryParams: { paid: 'no' } });
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(component.selectedPaid()).toBe('no');
+
+      component.resetFilters();
+      await fixture.whenStable();
+
+      expect(component.selectedPaid()).toBe('');
+      expect(router.url).not.toContain('paid=');
+    });
+
+    it('hydrates selectedPaid from the `paid` query param on first render (#803)', async () => {
+      // Bug #803: tapping "Vedi tutti i N" on the unpaid widget navigates
+      // to /dashboard/athletes?paid=no, but since the user was already on
+      // that route, ngOnInit didn't re-fire and there was no queryParams
+      // subscription, so the filter never applied. This test pins the
+      // queryParamMap → selectedPaid → load() hydration.
+      TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+      await TestBed.inject(Router).navigate([], { queryParams: { paid: 'no' } });
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      const component = fixture.componentInstance;
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(component.selectedPaid()).toBe('no');
+      const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
+      expect(listSpy.mock.calls.at(-1)?.[0].paid).toBe('no');
+    });
+
+    it('omits paid from the filters when set back to the empty (All) option', async () => {
       TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
 
       const fixture = TestBed.createComponent(AthletesListComponent);
@@ -343,10 +388,12 @@ describe('AthletesListComponent', () => {
       const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
 
       component.onPaidChange('no');
+      await fixture.whenStable();
       expect(listSpy.mock.calls.at(-1)?.[0].paid).toBe('no');
 
       listSpy.mockClear();
       component.onPaidChange('');
+      await fixture.whenStable();
       expect(listSpy.mock.calls[0][0].paid).toBeUndefined();
     });
 
@@ -531,7 +578,7 @@ describe('AthletesListComponent', () => {
       );
     });
 
-    it('drops a stale paid filter when monthly_fee_cents is cleared after the filter was set', () => {
+    it('drops a stale paid filter when monthly_fee_cents is cleared after the filter was set', async () => {
       // Defensive: if the owner clears the academy fee in another tab while
       // this component is alive, the Paid select disappears but the signal
       // value is sticky. `load()` must NOT keep forwarding `paid` past that
@@ -545,7 +592,10 @@ describe('AthletesListComponent', () => {
       fixture.detectChanges();
       const listSpy = TestBed.inject(AthleteService).list as unknown as Mock;
 
+      // onPaidChange routes through the URL now (#803); flush before
+      // asserting on the load call.
       component.onPaidChange('yes');
+      await fixture.whenStable();
       expect(listSpy.mock.calls.at(-1)?.[0].paid).toBe('yes');
 
       // Fee gets cleared.
@@ -813,6 +863,44 @@ describe('AthletesListComponent', () => {
       const tbody = el.querySelector('tbody');
       expect(tbody).not.toBeNull();
       expect(tbody?.querySelectorAll('.athlete-paid-empty').length).toBe(1);
+      expect(tbody?.querySelectorAll('app-paid-badge').length).toBe(1);
+    });
+
+    it('renders the paid placeholder (em-dash) for suspended + inactive rows, paid badge only on active rows (#805)', () => {
+      // Same gate as the self-row branch: payment is not expected from
+      // non-active athletes, so the Unpaid chip shouldn't render for
+      // them. Owner-as-athlete already used the em-dash placeholder;
+      // this test pins that suspended / inactive rows follow the same
+      // affordance.
+      TestBed.inject(AcademyService).academy.set({
+        id: 1,
+        name: 'Test',
+        slug: 'test',
+        address: null,
+        logo_url: null,
+        monthly_fee_cents: 9500,
+      } as Academy);
+
+      const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+      athleteService.list.mockReturnValue(
+        of({
+          data: [
+            makeAthlete({ id: 10, status: 'active', paid_current_month: false }),
+            makeAthlete({ id: 11, status: 'suspended', paid_current_month: false }),
+            makeAthlete({ id: 12, status: 'inactive', paid_current_month: false }),
+          ],
+          meta: { total: 3, current_page: 1, per_page: 20, last_page: 1 },
+        }),
+      );
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      const tbody = (fixture.nativeElement as HTMLElement).querySelector('tbody');
+      // Two em-dash placeholders (suspended + inactive); one paid-badge
+      // (active). The Owner-as-athlete branch is not exercised here
+      // (all three rows have is_self=false from `makeAthlete` default).
+      expect(tbody?.querySelectorAll('.athlete-paid-empty').length).toBe(2);
       expect(tbody?.querySelectorAll('app-paid-badge').length).toBe(1);
     });
   });

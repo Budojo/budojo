@@ -223,6 +223,49 @@ it('filters athletes by ?paid=no — returns only those NOT paid for the current
     expect($ids)->not->toContain($paid->id);
 });
 
+it('?paid=no excludes suspended and inactive athletes — payment not expected from non-active rows (#805)', function (): void {
+    $active = Athlete::factory()->for($this->user->academy)->create(['status' => 'active']);
+    $suspended = Athlete::factory()->for($this->user->academy)->create(['status' => 'suspended']);
+    $inactive = Athlete::factory()->for($this->user->academy)->create(['status' => 'inactive']);
+    // None have current-month payments — under the pre-#805 filter all three
+    // would surface as "unpaid" and inflate the unpaid-this-month widget's
+    // count + name list with rows the academy isn't expecting payment from.
+
+    $ids = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/athletes?paid=no')
+        ->assertOk()
+        ->json('data'))
+        ->pluck('id')
+        ->all();
+
+    expect($ids)->toContain($active->id);
+    expect($ids)->not->toContain($suspended->id);
+    expect($ids)->not->toContain($inactive->id);
+});
+
+it('?paid=yes deliberately INCLUDES suspended/inactive athletes who paid earlier in the month (#805 asymmetry)', function (): void {
+    // The asymmetric contract: `paid=no` gates on `status=active` (an
+    // inactive athlete owes nothing) but `paid=yes` does NOT — an
+    // athlete who paid earlier in the month and then went inactive is
+    // still factually "paid" and should surface for any caller asking
+    // the inverse question. This spec pins the asymmetry so a future
+    // refactor that "symmetrises" both branches breaks intentionally.
+    $activePaid = Athlete::factory()->for($this->user->academy)->create(['status' => 'active']);
+    $inactivePaid = Athlete::factory()->for($this->user->academy)->create(['status' => 'inactive']);
+    AthletePayment::factory()->for($activePaid)->forCurrentMonth()->create();
+    AthletePayment::factory()->for($inactivePaid)->forCurrentMonth()->create();
+
+    $ids = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/athletes?paid=yes')
+        ->assertOk()
+        ->json('data'))
+        ->pluck('id')
+        ->all();
+
+    expect($ids)->toContain($activePaid->id);
+    expect($ids)->toContain($inactivePaid->id);
+});
+
 it('treats a previous-month payment as unpaid for the current-month filter', function (): void {
     $athlete = Athlete::factory()->for($this->user->academy)->create();
     AthletePayment::factory()->for($athlete)->forYearMonth(2020, 1)->create();

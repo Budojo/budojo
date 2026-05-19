@@ -319,13 +319,20 @@
           </td>
           @if (hasMonthlyFee()) {
             <td>
-              @if (athlete.is_self) {
-                <!-- Owner-as-athlete rows (#750) don't have a payment
-                     ledger surface — they're excluded from the unpaid
-                     digest + overdue push pipelines server-side. We
-                     leave the cell empty so the column geometry stays
-                     stable (the row above might be a regular athlete
-                     with a paid badge). -->
+              @if (athlete.is_self || athlete.status !== 'active') {
+                <!-- Em-dash placeholder for rows where current-month
+                     payment is not expected:
+                     - Owner-as-athlete (#750) — no payment ledger
+                       surface, excluded from unpaid digest + overdue
+                       push pipelines server-side.
+                     - Suspended / inactive athletes (#805) — payment
+                       not expected for the current month; surfacing
+                       "Unpaid" on those rows was false signal that
+                       conflated "no payment recorded" with "owes".
+                     Empty cell would still let `app-paid-badge` ghost
+                     a tooltip; the explicit em-dash keeps the column
+                     geometry stable (the row above might be a regular
+                     active athlete with a paid badge). -->
                 <span class="athlete-paid-empty" aria-hidden="true">—</span>
               } @else {
                 <!-- Tooltip telegraphs the full month + year + status (#282)

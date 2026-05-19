@@ -925,6 +925,17 @@
         "summary": "Impossibile revocare il dispositivo",
         "detail": "Qualcosa è andato storto. Riprova tra un momento."
       },
+      "sendTest": {
+        "label": "Invia notifica di prova"
+      },
+      "sendTestToast": {
+        "summary": "Test inviato",
+        "detail": "Controlla il dispositivo — il banner dovrebbe arrivare entro qualche secondo. Se non vedi nulla, controlla Impostazioni → App → (il tuo browser) → Notifiche."
+      },
+      "sendTestErrorToast": {
+        "summary": "Impossibile inviare il test",
+        "detail": "Qualcosa è andato storto lato server. Riprova tra un momento."
+      },
       "errors": {
         "not_supported": {
           "summary": "Le notifiche push non sono supportate qui",
@@ -1625,7 +1636,9 @@
         "emptyBody": "Nessuna promozione registrata. Cambia cintura o striscette e qui apparirà la riga.",
         "firstBelt": "Prima cintura",
         "stripes": "striscette",
-        "recordedBy": "Registrato da {{name}}"
+        "recordedBy": "Registrato da {{name}}",
+        "prevPage": "Pagina precedente",
+        "nextPage": "Pagina successiva"
       },
       "attendance": {
         "eyebrow": "Presenze",

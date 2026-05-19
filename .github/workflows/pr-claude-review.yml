@@ -54,6 +54,13 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
+          # Consolidate the per-pass output (#813) — without this the action
+          # posts THREE separate top-level comments per review pass (progress
+          # checklist + completion meta + verdict), so after a few iterations
+          # the PR thread is choked with bot comments. `use_sticky_comment`
+          # makes the action EDIT a single sticky comment per PR instead of
+          # appending new ones on every synchronize event.
+          use_sticky_comment: true
           prompt: |
             REPO: ${{ github.repository }}
             PR_NUMBER: ${{ github.event.pull_request.number }}
