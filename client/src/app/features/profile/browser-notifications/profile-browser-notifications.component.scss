@@ -97,6 +97,17 @@
     color: var(--p-text-color-secondary);
   }
 
+  // Inline hint shown in place of the "Add another device" button when
+  // the current browser is already in the device list (#822). Same
+  // visual weight as the secondary cta-text so it reads as informational
+  // rather than as an affordance — there's nothing to tap here.
+  &__cta-hint {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-color-secondary);
+    font-style: italic;
+  }
+
   &__devices {
     margin: 0;
     padding: 0;
@@ -133,6 +144,23 @@
     font-weight: 500;
     color: var(--p-text-color);
     word-break: break-all;
+  }
+
+  // "(this device)" pill (#822) — appears inline next to the host on the
+  // row that matches the current browser's PushSubscription hash.
+  // Compact, low-weight: a label, not an affordance.
+  &__device-pill {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-start: 0.5rem;
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    background: var(--p-primary-50, rgba(91, 108, 255, 0.12));
+    color: var(--p-primary-color);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: none;
+    white-space: nowrap;
   }
 
   &__device-meta {

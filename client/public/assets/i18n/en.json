@@ -928,6 +928,8 @@
       "sendTest": {
         "label": "Send test notification"
       },
+      "thisDevice": "this device",
+      "addDeviceHint": "To add another device, open Budojo on that device and tap \"Enable on this device\".",
       "sendTestToast": {
         "summary": "Test sent",
         "detail": "Check your device — a banner should appear within a few seconds. If nothing shows up, check Settings → Apps → (your browser) → Notifications."

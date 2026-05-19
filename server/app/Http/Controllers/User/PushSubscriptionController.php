@@ -46,6 +46,16 @@ class PushSubscriptionController extends Controller
                 // "fcm.googleapis.com" / "updates.push.services.mozilla.com"
                 // well enough to identify the device they want to revoke.
                 'endpoint_host' => parse_url($s->endpoint, PHP_URL_HOST) ?: 'unknown',
+                // SHA-256 hash of the endpoint URL (#822). Exposed so
+                // the SPA can match the current browser's
+                // `sha256(PushSubscription.endpoint)` against the
+                // device list — needed to render a "(this device)"
+                // pill on the matching row AND to hide the
+                // "Add another device" affordance when the current
+                // device is already subscribed. The hash is NOT a
+                // bearer credential (the endpoint URL is); exposing
+                // it is safe.
+                'endpoint_hash' => $s->endpoint_hash,
                 'last_seen_at' => $s->last_seen_at?->toIso8601String(),
                 'created_at' => $s->created_at->toIso8601String(),
             ])->all(),

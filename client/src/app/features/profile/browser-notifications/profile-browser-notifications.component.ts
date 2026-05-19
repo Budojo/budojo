@@ -62,6 +62,15 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
   protected readonly meta = signal<PushStateMeta>({ vapid_public_key: null, enabled: false });
   protected readonly permission = signal<NotificationPermission>('default');
 
+  /**
+   * SHA-256 hash of the CURRENT browser's PushSubscription endpoint
+   * (#822). Read once on init; the value is stable across the
+   * component's lifetime because the local subscription's endpoint
+   * doesn't change without an explicit subscribe/unsubscribe (which
+   * we trigger ourselves and refresh state after).
+   */
+  protected readonly currentEndpointHash = signal<string | null>(null);
+
   protected readonly isSupported = this.webPushService.isSupported();
 
   /**
@@ -82,9 +91,46 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
   /** Render the device list independently of `state`. */
   protected readonly hasDevices = computed<boolean>(() => this.devices().length > 0);
 
+  /**
+   * `true` when the current browser's PushSubscription endpoint hash
+   * matches one of the registered devices (#822). When true:
+   *  - The matching row carries a "(this device)" pill.
+   *  - The "Add another device" affordance hides (clicking it from
+   *    the same browser is a no-op — the server's
+   *    `updateOrCreate(user_id, endpoint_hash)` just refreshes the
+   *    same row) and is replaced with instructional copy explaining
+   *    that "add another device" means opening the SPA on a
+   *    different device.
+   */
+  protected readonly currentDeviceMatched = computed<boolean>(() => {
+    const hash = this.currentEndpointHash();
+    if (!hash) return false;
+    return this.devices().some((d) => d.endpoint_hash === hash);
+  });
+
+  /**
+   * The id of the row that corresponds to the current browser, or
+   * null. Used by the template to render the "(this device)" pill on
+   * only that row.
+   */
+  protected readonly currentDeviceId = computed<number | null>(() => {
+    const hash = this.currentEndpointHash();
+    if (!hash) return null;
+    return this.devices().find((d) => d.endpoint_hash === hash)?.id ?? null;
+  });
+
   ngOnInit(): void {
     this.permission.set(this.webPushService.currentPermission());
     this.refresh();
+    // Hash the current browser's PushSubscription endpoint (#822).
+    // Fire-and-forget — the signal is null until the promise resolves
+    // (~10 ms in practice). Errors are swallowed inside
+    // `currentEndpointHash`; null is the documented "couldn't
+    // determine" branch and the UI degrades gracefully (no pill,
+    // Add-another button stays visible).
+    void this.webPushService.currentEndpointHash().then((hash) => {
+      this.currentEndpointHash.set(hash);
+    });
   }
 
   protected refresh(): void {
@@ -118,6 +164,16 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
       // key (which would throw at runtime under strict change-detection).
       this.devices.update((current) => [device, ...current.filter((d) => d.id !== device.id)]);
       this.permission.set(this.webPushService.currentPermission());
+      // Re-fetch the current browser's endpoint hash (#822 reviewer
+      // follow-up). On a fresh page where the user starts in state
+      // 'off', the init-time fetch returned null (no subscription
+      // existed). Now that `subscribe()` succeeded, a real
+      // PushSubscription exists; re-resolve so the just-added device
+      // row picks up the "(this device)" pill and the Add-another
+      // button hides immediately, no refresh required.
+      void this.webPushService.currentEndpointHash().then((hash) => {
+        this.currentEndpointHash.set(hash);
+      });
       this.messageService.add({
         severity: 'success',
         summary: this.translate.instant('profile.browserNotifications.enabledToast.summary'),

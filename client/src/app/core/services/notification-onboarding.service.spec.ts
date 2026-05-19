@@ -18,6 +18,8 @@ class FakeWebPushService {
   subscribeReturns: PushDevice = {
     id: 1,
     endpoint_host: 'fcm.googleapis.com',
+
+    endpoint_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     last_seen_at: null,
     created_at: '2026-05-15T07:00:00Z',
   };
