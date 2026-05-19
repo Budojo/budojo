@@ -15,7 +15,7 @@ Applies to every file under:
 
 ## Design canon — the frontend shared vocabulary
 
-This SPA is judged by four shared references. When a reviewer (human or Copilot) cites one of these by name, the citation is a valid argument on its own. Pushback requires a specific pragmatic reason, never taste.
+This SPA is judged by four shared references. When a reviewer (human or the Claude post-push reviewer) cites one of these by name, the citation is a valid argument on its own. Pushback requires a specific pragmatic reason, never taste.
 
 | Source | What we take from it |
 |--------|----------------------|
@@ -87,7 +87,7 @@ Krug's three laws, translated:
 
 ### Mobile-first is the default
 
-> **🔭 Active porting (May 2026 onwards):** the SPA is being audited and ported screen-by-screen against this canon. The running roadmap is [`docs/design/mobile-ux-audit.md`](../docs/design/mobile-ux-audit.md) with 🟢 / 🟡 / 🔴 / ⚪ status per finding. **Every new feature PR is expected to be mobile-friendly on day one** — not retrofitted in a follow-up. When a reviewer cites a row of the audit, that's a load-bearing critique. If your PR adds a new list, dialog, or filter cluster, check the canon below FIRST. If the design isn't obvious mobile-friendly, surface the question in the PR description rather than letting Copilot or a reviewer flag it after the fact.
+> **🔭 Active porting (May 2026 onwards):** the SPA is being audited and ported screen-by-screen against this canon. The running roadmap is [`docs/design/mobile-ux-audit.md`](../docs/design/mobile-ux-audit.md) with 🟢 / 🟡 / 🔴 / ⚪ status per finding. **Every new feature PR is expected to be mobile-friendly on day one** — not retrofitted in a follow-up. When a reviewer cites a row of the audit, that's a load-bearing critique. If your PR adds a new list, dialog, or filter cluster, check the canon below FIRST. If the design isn't obvious mobile-friendly, surface the question in the PR description rather than letting the Claude reviewer flag it after the fact.
 
 The primary form factor for Budojo is the phone: the instructor moves around the mat with the device in hand (check-in, look up athlete, scan a document expiring). Desktop is the **secondary** layout, not the default. Every new component, screen, and layout decision starts from the mobile viewport and scales **up**.
 

@@ -28,6 +28,26 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.18.4',
+    date: '2026-05-19',
+    headline:
+      'Internal maintenance release. No user-facing changes — the app looks and behaves exactly like v2.18.3. Everything below is build / tooling plumbing.',
+    sections: [
+      {
+        heading: '🤖 Code review on PRs switched from GitHub Copilot to a Claude reviewer',
+        bullets: [
+          "For maintainers / contributors only — nothing to do as a user. PR code review now runs against a Claude reviewer that knows the repo conventions (the layered CLAUDE.md canons, the running .claude/gotchas.md mistake log) instead of a generic Copilot review. This catches the classes of bug we've shipped before — UNIQUE-constraint races, Carbon date overflow, ::ng-deep + absolute positioning losing on real iPhones, i18n key parity vs template-resolution drift — that Copilot's generic check missed.",
+        ],
+      },
+      {
+        heading: '🧹 One-line SCSS dead-code drop on the academy feed',
+        bullets: [
+          "A leftover padding-inline-start declaration on .feed__react-count had no effect after v2.18.3's reaction-counter rework. Removed. Zero pixel difference.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.18.3',
     date: '2026-05-16',
     headline:

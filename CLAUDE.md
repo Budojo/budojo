@@ -15,7 +15,7 @@ The repo uses a **hierarchical `CLAUDE.md`** layout. When Claude Code works insi
 
 | File                                     | Loaded when             | Scope                                                                                                                       |
 | ---------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `CLAUDE.md` (this file)                  | Always                  | Cross-cutting rules — git, PRs, Copilot review, docs discipline, CI, TDD, release flow                                      |
+| `CLAUDE.md` (this file)                  | Always                  | Cross-cutting rules — git, PRs, Claude reviewer flow, docs discipline, CI, TDD, release flow                                |
 | [`server/CLAUDE.md`](./server/CLAUDE.md) | Working under `server/` | Laravel patterns + **Uncle Bob canon** (Clean Code / Architecture / Agile / Coder), PHPStan/CS-Fixer/PEST conventions       |
 | [`client/CLAUDE.md`](./client/CLAUDE.md) | Working under `client/` | Angular patterns + **UX canon** (Material Design 3 / Don't Make Me Think / Norman / Laws of UX), Vitest/Cypress conventions |
 
@@ -162,9 +162,9 @@ docker exec budojo_client sh -c "cd /app && npm test -- --watch=false"
 > Run static analysis / lint **after staging** to verify the final state.
 > Never rely on CI to catch these — fix locally first.
 
-**Before the `git push`, also scan [`.claude/gotchas.md`](.claude/gotchas.md)** — a living checklist of mistakes we've made before. 30-second read vs. a 5-minute Copilot round-trip later. When Copilot flags a new non-typo mistake in review, add a `→` entry to the correct category in the SAME PR that fixes it. The file grows naturally and every future PR benefits.
+**Before the `git push`, also scan [`.claude/gotchas.md`](.claude/gotchas.md)** — a living checklist of mistakes we've made before. 30-second read vs. a 5-minute Claude-reviewer round-trip later. When the Claude reviewer flags a new non-typo mistake in review, add a `→` entry to the correct category in the SAME PR that fixes it. The file grows naturally and every future PR benefits.
 
-**Optional: run `/prereview` before pushing.** The slash command in [`.claude/commands/prereview.md`](.claude/commands/prereview.md) dispatches a fresh sub-agent to read the diff vs `develop` and surface up to 5 actionable issues — bugs, wrong assumptions, missing test coverage, security holes — before Copilot has to flag them on the PR. One agent dispatch (~30 s) trades for one Copilot CI round-trip (3-5 min). Use it when the diff is non-trivial or touches a load-bearing surface; skip it for one-line typo fixes.
+**Optional: run `/prereview` before pushing.** The slash command in [`.claude/commands/prereview.md`](.claude/commands/prereview.md) dispatches a fresh sub-agent to read the diff vs `develop` and surface up to 5 actionable issues — bugs, wrong assumptions, missing test coverage, security holes — before the Claude post-push reviewer has to flag them on the PR. One agent dispatch (~30 s) trades for one CI round-trip. Use it when the diff is non-trivial or touches a load-bearing surface; skip it for one-line typo fixes.
 
 ### Branch Naming
 
@@ -295,7 +295,7 @@ Add `💥 breaking change` as a second label when the PR contains a `BREAKING CH
 | All review comments resolved, ready to merge | `🟢 ready to merge` |
 | Waiting on a dependency or decision          | `🔴 blocked`        |
 
-Open with the type label only. Switch to `🟢 ready to merge` once all Copilot comments are addressed.
+Open with the type label only. Switch to `🟢 ready to merge` once all Claude-reviewer comments are addressed.
 
 ### Release Flow (automated via semantic-release)
 
@@ -371,26 +371,50 @@ git commit -m "fix(auth): prevent crash on expired token decode"
 # 4. Backport: second PR → develop to keep branches in sync
 ```
 
-### Copilot Review Workflow
+### Claude Reviewer Workflow
 
-When Copilot leaves review comments on a PR:
+The post-push reviewer is **Claude**, not GitHub Copilot (replaced in chore #790). The reviewer runs as `.github/workflows/pr-claude-review.yml`, invokes `anthropics/claude-code-action@v1` on Sonnet 4.6, and loads its system prompt from [`.claude/agents/pr-code-reviewer.md`](.claude/agents/pr-code-reviewer.md) — the same agent body is also usable locally via the `Agent` tool (`subagent_type: pr-code-reviewer`).
+
+**Bot identity:** inline + summary comments are posted under `claude[bot]` by default. If the first test PR shows a different login (e.g. `github-actions[bot]`), override via `BOT_LOGIN='<login>' ./.claude/scripts/reviewer-replies.sh …` and update the script default in the same commit.
+
+When the Claude reviewer leaves comments on a PR:
 
 1. Fetch all comments: `gh api repos/Budojo/budojo/pulls/<N>/comments`
 2. For each comment: evaluate, fix if valid, skip with explanation if not applicable
-3. Commit all fixes in one commit: `fix(<scope>): address copilot review comments`
-4. Reply to every thread + resolve them with the [`copilot-replies.sh`](.claude/scripts/copilot-replies.sh) helper:
+3. Commit all fixes in one commit: `fix(<scope>): address reviewer comments`
+4. Reply to every thread + resolve them with the [`reviewer-replies.sh`](.claude/scripts/reviewer-replies.sh) helper:
    ```bash
-   ./.claude/scripts/copilot-replies.sh <PR-N> "Fixed in <short-sha>. <one-sentence-rationale>."
+   ./.claude/scripts/reviewer-replies.sh <PR-N> "Fixed in <short-sha>. <one-sentence-rationale>."
    ```
-   Encapsulates the case-sensitive filter gotcha (the `/comments` endpoint reports `user.login == "Copilot"` capital C, while `/reviews` reports `copilot-pull-request-reviewer[bot]` — a naive `startswith("copilot")` filter on `/comments` matches nothing). Idempotent.
+   Idempotent — replies skip threads already replied to, resolves skip already-resolved threads. The reply step uses `gh api /pulls/<N>/comments` filtered on `user.login == BOT_LOGIN`; the resolve step uses a GraphQL `reviewThreads` query filtered on the same login. Human-reviewer threads are untouched.
 5. **Re-read the PR body and update it if the fixes changed anything it describes** (counts, paths, commands, structure, examples). A stale PR body misleads reviewers. Per-PR bodies live under `.claude/pr-bodies/<branch-or-pr>.md` so concurrent PRs don't overwrite each other; push with `gh pr edit <N> --body-file <path>`.
 6. Push and switch label to `🟢 ready to merge`.
 
 **Reply rules (mandatory):**
 
 - **Always write in English** — never Italian, regardless of the comment language.
+- **Always reply in first-person developer voice** — "Fixed the Carbon overflow with a regex pre-check." Never "the user / maintainer says". The local agent is acting on behalf of the maintainer; the wire shows the maintainer's reply.
 - **Always reference the fix commit** — include the short SHA in every reply: `Fixed in abc1234.`
 - Keep replies concise: one sentence on what changed + the commit SHA.
+
+#### Auto-poll-and-fix loop (post-push, no user prompt needed)
+
+After every `git push` that opens or updates a PR, the local agent enters an autonomous review-fix loop — **without waiting for the user to ask**. The loop is asynchronous: per [[feedback_parallel_work_during_ci]], the agent schedules the wake-up and **moves immediately to the next branch / task**. The loop fires when the wake-up returns; the agent does not sit idle staring at CI.
+
+The workflow `if:` block in `.github/workflows/pr-claude-review.yml` skips `chore/* docs/* ci/*` branches, so the post-push reviewer only fires on `feat/* fix/* hotfix/* refactor/* test/*` branches. For skipped-prefix branches, the auto-poll loop still runs (just to wait for CI green + merge) but expects no inline reviewer comments.
+
+1. Immediately after `gh pr create` / `git push`, schedule a wake-up in ~90 seconds (`ScheduleWakeup delaySeconds=90`, prompt = "check PR <N> for Claude reviewer comments + CI status").
+2. On each wake-up:
+   - `gh api repos/Budojo/budojo/pulls/<N>/comments` — any inline comments authored by `BOT_LOGIN`?
+   - `gh pr view <N> --json comments` — any top-level summary review by `BOT_LOGIN`?
+   - `gh pr checks <N>` — workflow status (the review job + the 8 required CI jobs).
+3. If the reviewer has commented:
+   - Evaluate each finding. Fix valid ones in a single `fix(<scope>): address reviewer comments` commit. Push.
+   - Run `reviewer-replies.sh <N> "Fixed in <sha>. <rationale>."` (idempotent — safe to re-run).
+   - Update PR body Test plan checkboxes via `gh pr view <N> --json body` + edit + `gh pr edit --body-file`. Switch label to `🟢 ready to merge`.
+4. If the reviewer hasn't commented yet, but the review job is still running: `ScheduleWakeup ~90s` again. Bounded by **max 3 iterations** (≈4-5 min total wait). After that, log "reviewer didn't comment, moving on" and stop polling.
+5. Once CI is green AND all reviewer threads are resolved AND label is `🟢 ready to merge`: merge (squash into develop; merge commit into main per [[project_release_merge_style]]). Exception: develop→main release PRs wait for explicit user go-ahead — see [[feedback_release_pr_wait_for_copilot]] (the rule applies to the Claude reviewer too; that memory's name is historical).
+6. **Don't re-trigger the review on every push.** Per `feedback_wait_for_copilot_on_every_pr` — the reviewer's first pass is the load-bearing one; after fix-commit-resolve, merge without waiting for a second pass unless the user explicitly asks for a re-review.
 
 ---
 
@@ -530,7 +554,7 @@ Cross-cutting rules. For backend-only rules (Uncle Bob canon, pre-push PHP gates
 5. **Merge `develop` into the feature branch** when it falls behind — no rebase. The feature branch's own history can carry merge commits; they all collapse into a single commit at PR squash-merge time anyway. No force-push gymnastics, no IDE confusion, GitHub's "Update branch" button does the right thing by default.
 6. **Squash merge** PRs into `develop`; merge commit (no squash) into `main`.
 7. **Never create a `version` field** in `package.json` — semantic-release owns versioning entirely.
-8. **Reply to all Copilot comments** after fixing: English only, always cite the short commit SHA (`Fixed in abc1234.`), re-read and update the PR body if the fixes changed anything it describes, then switch label to `🟢 ready to merge`.
+8. **Reply to all Claude-reviewer comments** after fixing: English only, first-person developer voice, always cite the short commit SHA (`Fixed in abc1234.`), re-read and update the PR body if the fixes changed anything it describes, then switch label to `🟢 ready to merge`. The auto-poll-and-fix loop in § Claude Reviewer Workflow runs this without needing a user prompt.
 9. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere.
 10. **Keep `docs/` in sync** — every PR that changes a migration, an enum, an API route, a request/response shape, or a business rule must update the relevant file in `docs/entities/` or `docs/api/v1.yaml` in the same commit history. See the "Documentation discipline" section for what counts as "substantial" and what doesn't. Internal refactors, formatting, and dependency bumps are exempt.
 11. **Respect the local canon.** When you write backend code, apply the Uncle Bob rules in `server/CLAUDE.md`. When you write frontend code, apply the UX canon in `client/CLAUDE.md`. A reviewer's citation of any book or law in those canons is a valid critique on its own — push back only with a specific pragmatic reason, never with taste.

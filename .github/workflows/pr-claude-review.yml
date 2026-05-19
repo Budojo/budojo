@@ -1,0 +1,84 @@
+name: 🤖 Claude Code Review
+
+# Replaces GitHub Copilot's PR Code Review. Triggers on every PR opened or
+# updated against develop/main, runs the `pr-code-reviewer` subagent
+# (system prompt at .claude/agents/pr-code-reviewer.md) on Sonnet 4.6, and
+# posts inline + summary review via the action's GitHub MCP tools.
+#
+# Authentication uses CLAUDE_CODE_OAUTH_TOKEN (Claude Code Pro/Max
+# subscription). To generate the token:
+#   $ claude setup-token
+# then add the output as a repo secret named CLAUDE_CODE_OAUTH_TOKEN.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Claude reviewer
+    # Skip review on branches whose diff is almost always non-code:
+    # chore/* (tooling, deps, CI), docs/* (markdown only), ci/* (workflow
+    # changes). Saves ~30-40% of token spend with negligible miss risk.
+    # refactor/* and test/* still go through — refactors can introduce
+    # regressions, test changes can mask coverage gaps.
+    if: |
+      !startsWith(github.head_ref, 'chore/') &&
+      !startsWith(github.head_ref, 'docs/') &&
+      !startsWith(github.head_ref, 'ci/')
+    # Self-hosted runner — same pool as pr-checks.yml. GitHub-hosted
+    # (`ubuntu-latest`) is disabled on this repo / billing plan, so a
+    # `ubuntu-latest` job fails in 3s with no annotation. The Claude
+    # review is short (2-5 min), light on CPU, and just needs `gh` +
+    # network, so it co-exists cleanly with the 4 budojo-slimbook
+    # runners that already serve the PR Quality Gates pipeline.
+    runs-on: [self-hosted, budojo]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude reviewer
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+            PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+            BASE_REF: ${{ github.base_ref }}
+
+            Read `.claude/agents/pr-code-reviewer.md` from the checked-out
+            repository and follow it as your full system prompt. It tells you
+            how to fetch the diff, which conventions to enforce, what to skip,
+            and the output format (inline comments + summary review).
+
+            Layered repo canon you must also consult:
+            - `CLAUDE.md` (root)
+            - `server/CLAUDE.md` (when the diff touches `server/`)
+            - `client/CLAUDE.md` (when the diff touches `client/`)
+            - `.claude/gotchas.md` (mandatory pattern-match)
+
+            Use `gh pr diff $PR_NUMBER` to read the diff. Post inline review
+            comments with `mcp__github_inline_comment__create_inline_comment`
+            and the top-level summary review with `gh pr comment $PR_NUMBER`.
+
+            Reply discipline: write findings in English, in first-person dev
+            voice. Be specific (file:line + concrete fix). False positives are
+            worse than misses.
+          claude_args: |
+            --model claude-sonnet-4-6
+            --max-turns 30
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(git diff:*),Bash(git log:*),Read,Grep,Glob"
