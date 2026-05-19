@@ -48,6 +48,7 @@ describe('Two-factor authentication panel (#412)', () => {
     }).as('status');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
     cy.wait('@status');
 
     cy.get('[data-cy="profile-two-factor"]').scrollIntoView();
@@ -75,6 +76,7 @@ describe('Two-factor authentication panel (#412)', () => {
     }).as('confirm');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
     cy.wait('@status');
     cy.get('[data-cy="profile-two-factor-enable"]').scrollIntoView();
     cy.get('[data-cy="profile-two-factor-enable"] button').click();
@@ -128,6 +130,7 @@ describe('Two-factor authentication panel (#412)', () => {
     }).as('confirm');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
     cy.wait('@status');
     cy.get('[data-cy="profile-two-factor-enable"]').scrollIntoView();
     cy.get('[data-cy="profile-two-factor-enable"] button').click();
@@ -150,6 +153,7 @@ describe('Two-factor authentication panel (#412)', () => {
     }).as('status');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
     cy.wait('@status');
 
     cy.get('[data-cy="profile-two-factor-active"]').scrollIntoView().should('be.visible');

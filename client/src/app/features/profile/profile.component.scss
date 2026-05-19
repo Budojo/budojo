@@ -29,6 +29,27 @@
     font-size: 0.875rem;
   }
 
+  // Tab strip (#847). Same shape as `athlete-detail-page__tabs` — a
+  // small top margin separates it from the page header above, and the
+  // `p-tab` host carries an icon + label flex pair via ::ng-deep so
+  // PrimeNG's default Material rendering shows both. Tabs are a visual
+  // filter on this single-component surface (no router-outlet);
+  // matching the athlete-detail strip keeps the dashboard's tab chrome
+  // consistent across surfaces.
+  &__tabs {
+    margin-top: 0.5rem;
+
+    ::ng-deep p-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      i {
+        font-size: 1rem;
+      }
+    }
+  }
+
   // Inline alert when the user was bounced here from a gated write (#167 PR3).
   // Hairline border + amber tone matches the unverified pillola so the page
   // reads as a coherent state rather than a stack of disconnected nudges.

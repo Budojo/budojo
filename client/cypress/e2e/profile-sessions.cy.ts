@@ -52,6 +52,7 @@ describe('Active sessions panel (#413)', () => {
     }).as('sessions');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
     cy.wait('@sessions');
 
     // The panel is the LAST card on the profile page — make sure the
@@ -81,6 +82,7 @@ describe('Active sessions panel (#413)', () => {
     cy.intercept('DELETE', '/api/v1/me/sessions/1', { statusCode: 204 }).as('revoke');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
     cy.wait('@sessions');
 
     // Refetch on success returns the smaller list.
@@ -112,6 +114,7 @@ describe('Active sessions panel (#413)', () => {
     }).as('revokeOthers');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
     cy.wait('@sessions');
 
     cy.intercept('GET', '/api/v1/me/sessions', {

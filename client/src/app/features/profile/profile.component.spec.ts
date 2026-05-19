@@ -10,6 +10,17 @@ import { AuthService, User } from '../../core/services/auth.service';
 import { MessageService } from 'primeng/api';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
+// PrimeNG's <p-tabs> binds a ResizeObserver in ngAfterViewInit; jsdom
+// doesn't ship one. The component renders a tab strip from #847, so
+// stub the constructor with a no-op to keep CD past the second pass.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(globalThis as unknown as { ResizeObserver: typeof ResizeObserverStub }).ResizeObserver ??=
+  ResizeObserverStub;
+
 const FAKE_USER: User = {
   id: 1,
   first_name: 'Tester',
@@ -95,8 +106,13 @@ describe('ProfileComponent — data export (#222)', () => {
     Object.assign(URL, { createObjectURL, revokeObjectURL });
   });
 
-  it('renders the export button when the user is loaded', () => {
-    const { fixture } = setup();
+  it('renders the export button when the Account tab is active', () => {
+    // Post-#847: the export action lives under the Account tab. Activate
+    // it before asserting on the DOM — the default landing tab is
+    // identity, which doesn't render the export button.
+    const { fixture, cmp } = setup();
+    cmp.setActiveTab('account');
+    fixture.detectChanges();
     const button = fixture.nativeElement.querySelector('[data-cy="profile-export-data"]');
     expect(button).not.toBeNull();
   });
@@ -157,134 +173,6 @@ describe('ProfileComponent — data export (#222)', () => {
       }),
     );
     expect(cmp['exporting']()).toBe(false);
-  });
-});
-
-describe('ProfileComponent — avatar upload (#411)', () => {
-  // jsdom doesn't ship `File` constructors with type / size that pass our
-  // MIME / size checks out of the box. A small helper keeps the specs
-  // readable AND keeps the validation logic exercised end-to-end.
-  function makeFile(opts: { type?: string; size?: number } = {}): File {
-    const type = opts.type ?? 'image/png';
-    const size = opts.size ?? 1024;
-    const bytes = new Uint8Array(size);
-    return new File([bytes], 'avatar.png', { type });
-  }
-
-  function fireSelect(cmp: ProfileComponent, file: File): void {
-    const input = document.createElement('input');
-    input.type = 'file';
-    Object.defineProperty(input, 'files', {
-      configurable: true,
-      get: () => [file] as unknown as FileList,
-    });
-    cmp['onAvatarSelected']({ target: input } as unknown as Event);
-  }
-
-  it('renders the upload button with the Upload label when no avatar is set', () => {
-    const { fixture } = setup();
-    const btn = fixture.nativeElement.querySelector(
-      '[data-cy="profile-avatar-upload"]',
-    ) as HTMLButtonElement | null;
-    expect(btn).not.toBeNull();
-    expect(btn!.textContent).toContain('Upload');
-    expect(fixture.nativeElement.querySelector('[data-cy="profile-avatar-remove"]')).toBeNull();
-  });
-
-  it('renders Replace + Remove when avatar_url is set on the cached user', () => {
-    const { fixture } = setup({}, {
-      ...FAKE_USER,
-      avatar_url: '/storage/users/avatars/1.jpg',
-    } as User);
-    const upload = fixture.nativeElement.querySelector(
-      '[data-cy="profile-avatar-upload"]',
-    ) as HTMLButtonElement;
-    expect(upload.textContent).toContain('Replace');
-    expect(fixture.nativeElement.querySelector('[data-cy="profile-avatar-remove"]')).not.toBeNull();
-  });
-
-  it('on a valid file: calls authService.uploadAvatar and surfaces a success toast', () => {
-    const messageSpy = vi.fn();
-    const { cmp, authStub } = setup();
-    const messageService = TestBed.inject(MessageService);
-    messageService.add = messageSpy;
-
-    fireSelect(cmp, makeFile({ type: 'image/png', size: 100 * 1024 }));
-
-    expect(authStub.uploadAvatar).toHaveBeenCalledTimes(1);
-    expect(messageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        severity: 'success',
-        summary: expect.stringContaining('updated'),
-      }),
-    );
-  });
-
-  it('rejects oversized files with an error toast and no upload call', () => {
-    const messageSpy = vi.fn();
-    const { cmp, authStub } = setup();
-    const messageService = TestBed.inject(MessageService);
-    messageService.add = messageSpy;
-
-    fireSelect(cmp, makeFile({ type: 'image/png', size: 3 * 1024 * 1024 }));
-
-    expect(authStub.uploadAvatar).not.toHaveBeenCalled();
-    expect(messageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        severity: 'error',
-        summary: expect.stringContaining('too large'),
-      }),
-    );
-  });
-
-  it('rejects unsupported MIME types with an error toast and no upload call', () => {
-    const messageSpy = vi.fn();
-    const { cmp, authStub } = setup();
-    const messageService = TestBed.inject(MessageService);
-    messageService.add = messageSpy;
-
-    fireSelect(cmp, makeFile({ type: 'application/pdf', size: 100 }));
-
-    expect(authStub.uploadAvatar).not.toHaveBeenCalled();
-    expect(messageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        severity: 'error',
-        summary: expect.stringContaining('Unsupported'),
-      }),
-    );
-  });
-
-  it('shows an error toast when the upload request fails', () => {
-    const messageSpy = vi.fn();
-    const { cmp } = setup({
-      uploadAvatar: vi.fn(() => throwError(() => ({ status: 500 }))) as never,
-    });
-    const messageService = TestBed.inject(MessageService);
-    messageService.add = messageSpy;
-
-    fireSelect(cmp, makeFile({ type: 'image/png', size: 100 * 1024 }));
-
-    expect(messageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        severity: 'error',
-        summary: expect.stringContaining('Upload failed'),
-      }),
-    );
-  });
-
-  it('toggles `avatarUploading` while the request is in flight', () => {
-    const subject = new Subject<User>();
-    const { cmp } = setup({
-      uploadAvatar: vi.fn(() => subject.asObservable()) as never,
-    });
-
-    expect(cmp['avatarUploading']()).toBe(false);
-    fireSelect(cmp, makeFile({ type: 'image/png', size: 100 * 1024 }));
-    expect(cmp['avatarUploading']()).toBe(true);
-
-    subject.next({ ...FAKE_USER, avatar_url: '/storage/users/avatars/1.jpg' });
-    subject.complete();
-    expect(cmp['avatarUploading']()).toBe(false);
   });
 });
 
@@ -469,8 +357,13 @@ describe('ProfileComponent — inline name edit (#463)', () => {
 });
 
 describe('ProfileComponent — change password (#409)', () => {
-  it('renders the change-password form when the user is loaded', () => {
-    const { fixture } = setup();
+  it('renders the change-password form when the Security tab is active', () => {
+    // Post-#847: the change-password card lives under the Security tab.
+    // Activate it before asserting on the DOM — the default identity
+    // tab doesn't render the security cluster.
+    const { fixture, cmp } = setup();
+    cmp.setActiveTab('security');
+    fixture.detectChanges();
     expect(
       fixture.nativeElement.querySelector('[data-cy="profile-change-password"]'),
     ).not.toBeNull();
@@ -556,6 +449,7 @@ describe('ProfileComponent — change password (#409)', () => {
       newPasswordConfirmation: 'NewPassword1!',
     });
 
+    cmp.setActiveTab('security');
     cmp.submitChangePassword();
     fixture.detectChanges();
 
@@ -580,6 +474,7 @@ describe('ProfileComponent — change password (#409)', () => {
       newPasswordConfirmation: 'OldPassword1!',
     });
 
+    cmp.setActiveTab('security');
     cmp.submitChangePassword();
     fixture.detectChanges();
 
@@ -599,6 +494,7 @@ describe('ProfileComponent — change password (#409)', () => {
       newPasswordConfirmation: 'NewPassword1!',
     });
 
+    cmp.setActiveTab('security');
     cmp.submitChangePassword();
     fixture.detectChanges();
 

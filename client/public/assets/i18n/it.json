@@ -709,6 +709,12 @@
     "title": "Profilo",
     "subtitle": "Dettagli account e stato di verifica.",
     "eyebrow": "Profilo",
+    "tabs": {
+      "identity": "Profilo",
+      "security": "Sicurezza",
+      "notifications": "Notifiche",
+      "account": "Account"
+    },
     "verifyRequiredBanner": "Devi verificare la tua email prima di aggiungere atleti o documenti. Controlla la casella di posta per il link di verifica, oppure usa il pulsante Reinvia qui sotto.",
     "name": "Nome",
     "firstName": "Nome",
