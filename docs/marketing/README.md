@@ -72,6 +72,31 @@ bubblewrap build
 
 When `twa-manifest.json` changes (most commonly: `appVersionCode` + `appVersionName` bump for a new release), edit the **repo copy** (`docs/marketing/twa-manifest.json`) first, then copy it back into `$TWA_DIR` and re-run `bubblewrap update` + `bubblewrap build`. This keeps the version-controlled config as the source of truth.
 
+### Android 13+ POST_NOTIFICATIONS — keep Bubblewrap fresh (#845)
+
+Starting with Android 13 (API 33), notifications require a **runtime** `POST_NOTIFICATIONS` permission in addition to Chrome's per-site "Allow notifications" toggle. The TWA wrapper is the entity that must request it; without that prompt, the user grants notifications inside Chrome but the OS still blocks delivery to the wrapper — `pushManager.subscribe()` either rejects or returns a subscription the OS will never surface, so the SPA's subscribe call silently never persists a row in `push_subscriptions` server-side.
+
+The fix is **NOT a manifest change** — `"enableNotifications": true` already enables notification delegation (the field is the delegation flag, despite the name). The fix is to **always build with a recent Bubblewrap CLI**: Bubblewrap from `1.10.0` onward adds `<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>` to the generated `AndroidManifest.xml` and triggers the runtime prompt at first launch. Older Bubblewraps (the ones around when this repo's first APK was built — `appVersionCode: 2`) don't, and the resulting APK is stuck.
+
+**Rule of thumb** before every TWA rebuild:
+
+```bash
+npm install -g @bubblewrap/cli@latest
+bubblewrap --version          # check it's ≥ 1.10
+cd "$TWA_DIR"
+cp "$BUDOJO_REPO/docs/marketing/twa-manifest.json" .
+bubblewrap update
+bubblewrap build              # signs with the same upload key — keystore + alias must match
+```
+
+Then bump `appVersionCode` in `twa-manifest.json` (this repo) so Play Console accepts the upgrade. The user has to **uninstall and reinstall** the APK side-loaded for testing — Play Store upgrades preserve the prior permission state, which is what we want for end-users, but for a side-loaded test on the same package id you may need a clean install to see the runtime prompt re-trigger.
+
+If you've done the rebuild + reinstall and the user STILL doesn't see notifications:
+
+1. Settings → Apps → Budojo → Notifications — the per-app toggle MUST be ON. Granting via Chrome's web prompt only sets the per-site permission; Android's per-app permission is separate post-13.
+2. `ssh budojo-prod 'cd /home/forge/api.budojo.it/current/server && php artisan tinker --execute="echo App\\Models\\User::find(<id>)->pushSubscriptions()->count();"'` — must be ≥ 1 after the user taps "Abilita notifiche" in the SPA. If still 0, the subscribe is still failing client-side; check Chrome devtools' `Application → Push Messaging` on a desktop install of the SPA to compare.
+3. `tail -n 200 storage/logs/laravel.log | grep "TestPushNotification dispatch threw"` on prod — when the subscription IS persisted but delivery fails, this is where the VAPID / endpoint diagnostics land.
+
 ## Not in this folder
 
 - **App icons** (`icon-192`, `icon-512`, `icon-maskable-512`, `apple-touch-icon`) — they're in `client/public/icons/` because the PWA needs them at runtime. Don't duplicate; reference from there.
