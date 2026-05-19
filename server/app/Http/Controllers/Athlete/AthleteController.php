@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Athlete;
 
 use App\Actions\Address\SyncAddressAction;
 use App\Actions\Athlete\RestoreAthleteAction;
+use App\Enums\AthleteStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Athlete\StoreAthleteRequest;
 use App\Http\Requests\Athlete\UpdateAthleteRequest;
@@ -118,7 +119,7 @@ class AthleteController extends Controller
             ->when(
                 $paid === 'no',
                 fn ($q) => $q->whereDoesntHave('payments', $currentMonthScope)
-                    ->where('status', 'active'),
+                    ->where('status', AthleteStatus::Active),
             )
             ->when($request->filled('q'), function (Builder|HasMany $q) use ($request) {
                 // `$request->string('q')` returns a `Stringable` — keeps PHPStan
