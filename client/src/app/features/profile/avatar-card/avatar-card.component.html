@@ -1,0 +1,52 @@
+@if (user(); as u) {
+  <div class="avatar-card" data-cy="profile-avatar-card">
+    <div class="avatar-card__preview" data-cy="profile-avatar-preview">
+      <app-user-avatar
+        [url]="avatarUrl()"
+        [name]="u.full_name"
+        size="card"
+        [alt]="'profile.avatarAlt' | translate"
+      />
+    </div>
+    <div class="avatar-card__body">
+      <p class="avatar-card__title">{{ 'profile.avatarTitle' | translate }}</p>
+      <p class="avatar-card__hint">{{ 'profile.avatarHint' | translate }}</p>
+      <div class="avatar-card__actions">
+        <p-button
+          [label]="(avatarUrl() ? 'profile.avatarReplace' : 'profile.avatarUpload') | translate"
+          icon="pi pi-upload"
+          [loading]="avatarUploading()"
+          (onClick)="onAvatarBrowse()"
+          data-cy="profile-avatar-upload"
+        />
+        @if (avatarUrl()) {
+          <p-button
+            [label]="'profile.avatarRemove' | translate"
+            icon="pi pi-trash"
+            severity="secondary"
+            [text]="true"
+            (onClick)="confirmRemoveAvatar($event)"
+            data-cy="profile-avatar-remove"
+          />
+        }
+      </div>
+    </div>
+    <!--
+      Synthetic file input. Visually hidden — the visible affordance is
+      the Upload/Replace button which calls .click() on this input.
+      Removed from tab order + aria-hidden so screen-reader users aren't
+      offered an unlabeled focusable control.
+    -->
+    <input
+      #avatarInput
+      type="file"
+      class="avatar-card__file"
+      accept="image/png,image/jpeg,image/webp"
+      (change)="onAvatarSelected($event)"
+      tabindex="-1"
+      aria-hidden="true"
+      data-cy="profile-avatar-input"
+    />
+  </div>
+  <p-confirmpopup />
+}
