@@ -1,97 +1,77 @@
 # Budojo — Client CLAUDE.md
 
-This file is loaded by Claude Code when you (or an agent) work under `client/`. It **extends** the root `CLAUDE.md` — read both. Anything written here takes precedence over the root file for frontend work.
+Loaded by Claude Code when you (or an agent) work under `client/`. **Extends** the root `CLAUDE.md` — read both. Anything here takes precedence for frontend work.
 
 ## Scope
 
 Applies to every file under:
+
 - `client/src/**` — Angular SPA source
 - `client/cypress/**` — E2E tests
 - `client/angular.json`, `client/package.json`, `client/tsconfig*.json`, `client/eslint.config.js`
 
-> **Note for Claude:** The developer is BE-focused and learning the FE stack. Always explain Angular/TypeScript decisions clearly, suggest the simplest PrimeNG component that fits the use case, and avoid over-engineering.
+> **Note for Claude:** The developer is BE-focused and learning the FE stack. Explain Angular/TypeScript decisions clearly, suggest the simplest PrimeNG component that fits, avoid over-engineering.
 
 ---
 
 ## Design canon — the frontend shared vocabulary
 
-This SPA is judged by four shared references. When a reviewer (human or the Claude post-push reviewer) cites one of these by name, the citation is a valid argument on its own. Pushback requires a specific pragmatic reason, never taste.
+The SPA is judged against four shared references. When a reviewer cites one by name, the citation is a valid critique on its own. Push back only with a specific pragmatic reason, never with taste.
 
 | Source | What we take from it |
 |--------|----------------------|
 | **[Material Design 3](https://m3.material.io/)** | Visual system — spacing (8dp grid), elevation, color roles, motion curves, accessibility (contrast, touch targets ≥ 48dp) |
 | **Don't Make Me Think** — Steve Krug | Self-evident UI — if the user has to think about what a button does, you failed |
-| **The Design of Everyday Things** — Donald Norman | Affordances, signifiers, feedback, constraints, mapping — the psychology of "does this thing look like what it does?" |
-| **[Laws of UX](https://lawsofux.com/)** — Jon Yablonski | Hick's, Miller's, Jakob's, Fitts's and friends — quantitative cognitive rules we honour, not vibes |
+| **The Design of Everyday Things** — Donald Norman | Affordances, signifiers, feedback, constraints, mapping |
+| **[Laws of UX](https://lawsofux.com/)** — Jon Yablonski | Hick's, Miller's, Jakob's, Fitts's — quantitative cognitive rules, not vibes |
 
-### Material Design 3 — how we apply it
+Full per-source operational rules (e.g. Krug's three laws, Norman's affordance/feedback/constraints set, the LoUX table) live in [`docs/design/DESIGN_SYSTEM.md`](../docs/design/DESIGN_SYSTEM.md). The hard rules below are the load-bearing subset.
 
-Budojo's UI runs on **PrimeNG 21 with the Material preset**. MD3 is our **design philosophy**; PrimeNG-Material is the concrete implementation.
+### Hard visual rules
 
-- **8dp baseline grid.** Every spacing value is a multiple of `0.5rem` (8px). Don't invent `0.75rem` or `13px` — pick `0.5rem` / `1rem` / `1.5rem` / `2rem`.
-- **Color roles over raw colors.** Use PrimeNG theme tokens (`var(--p-primary-color)`, `var(--p-surface-*)`, etc.) — never hex/rgb in component SCSS unless the token truly doesn't exist.
-- **Elevation for hierarchy.** Cards use `var(--p-content-border-color)` + subtle shadow; floating surfaces (dialogs, popovers) carry a deeper shadow. Don't stack > 3 elevation levels on one screen.
-- **Motion budget.** MD3's "easing standard" (cubic-bezier 0.2, 0, 0, 1) for ~200–300ms. No 1-second animations, no springs, no bounce.
-- **Accessibility baseline.** Touch target ≥ 48×48 CSS pixels (Laws of UX Fitts). Contrast ratio ≥ 4.5:1 for text. Never rely on color alone — pair with icon or text.
+- **8dp baseline grid.** Spacing is a multiple of `0.5rem` (8 px). No `0.75rem`, no `13px` — pick `0.5rem` / `1rem` / `1.5rem` / `2rem`.
+- **Color roles, never raw hex** in component SCSS. Use PrimeNG tokens (`var(--p-primary-color)`, `var(--p-surface-*)`) or the `--budojo-*` semantics. Exceptions are belt colors (domain palette) with a one-line comment.
+- **Sentence-case everything.** Buttons, headers, tags. No title-case, no uppercase — except eyebrow labels (`EXPIRING SOON`, `letter-spacing: 0.06em`).
+- **Don't restyle PrimeNG internals from component SCSS.** Override via CSS custom properties; `::ng-deep` only when a token truly doesn't exist AND the pattern is already documented in `DESIGN_SYSTEM.md`. The global override layer (`client/src/styles/budojo-theme.scss`) is the sanctioned exception — its selectors carry a one-line comment explaining why a token isn't enough.
+- **Motion uses `--budojo-motion-*` tokens**, not hand-picked `200ms ease-out`. Three durations, one curve (`cubic-bezier(0.2, 0, 0, 1)`).
+- **Touch target ≥ 48 × 48 CSS px** for any primary CTA, nav link, icon button (Fitts).
+- **One primary CTA per view.** Secondaries hide in menus/overflow past 3.
+- **Destructive actions confirm.** `p-confirmpopup` always; `Undo`-toast where rollback is cheap.
+- **Feedback within 300 ms** of any user action. Long ops (> 1 s) use a skeleton or progress bar.
+- **Disabled = visually obvious** (opacity ≤ 0.5 + not-allowed cursor). Loading shows a spinner AND disables the control.
 
-### Design system — Apple-minimal override layer
+### Design system — Apple-minimal override on the PrimeNG Material preset
 
-The MD3 philosophy above is the *why*; `docs/design/DESIGN_SYSTEM.md` is the *what*. It's an Apple HIG / iOS 17+ override layer on the PrimeNG Material preset — near-monochrome palette + one indigo accent (`--p-primary-500: #5b6cff`), hairline borders, max two elevation levels, 12/16/24 px radii, 160/240/360 ms motion on a decelerate cubic-bezier.
+The MD3 philosophy is the *why*; [`docs/design/DESIGN_SYSTEM.md`](../docs/design/DESIGN_SYSTEM.md) is the *what*. An iOS 17+ override on the PrimeNG Material preset — near-monochrome palette + one indigo accent (`--p-primary-500: #5b6cff`), hairline borders, max two elevation levels, 12/16/24 px radii, decelerate-cubic motion.
 
 Mandatory reads before any new component or screen:
 
-- **[`docs/design/DESIGN_SYSTEM.md`](../docs/design/DESIGN_SYSTEM.md)** — full token inventory, per-component override specs for 13 PrimeNG atoms, PWA gotchas.
-- **[`docs/design/README.md`](../docs/design/README.md)** — content voice (sentence-case, second-person, no emoji in UI, `·` as separator), iconography (`pi pi-*` only — no SF Symbols, no custom SVG), palette + casing rules.
+- [`docs/design/DESIGN_SYSTEM.md`](../docs/design/DESIGN_SYSTEM.md) — token inventory, per-component override specs, PWA gotchas.
+- [`docs/design/README.md`](../docs/design/README.md) — content voice (sentence-case, second-person, no emoji in UI), iconography (`pi pi-*` only), palette + casing rules.
 
-Wiring:
+Wiring quick reference:
 
-- Tokens live in `client/src/styles/budojo-theme.scss` and are imported last from `client/src/styles.scss` so they win against the Material preset defaults.
-- **Variant matrix lives in `client/src/styles/budojo-variants.scss`** and is imported *after* the theme. This is where the button / tag / form field / card variants are locked — when you need to pick a button variant or a tag variant, the matrix is the authoritative source. Static HTML previews under [`docs/design/preview/`](../docs/design/preview/README.md).
-- PrimeNG is wrapped in a `@layer primeng` via `providePrimeNG({ theme: { options: { cssLayer: { name: 'primeng' } } } })`. This is the *only* reliable way to make our `:root` overrides win the cascade — see `.claude/gotchas.md` § Design system / PrimeNG precedence.
-- Inter is loaded via `@fontsource/inter` (weights 400/500/600/700).
+- Tokens: `client/src/styles/budojo-theme.scss`, imported last from `client/src/styles.scss`.
+- Variant matrix: `client/src/styles/budojo-variants.scss`, imported after the theme. Static HTML previews under [`docs/design/preview/`](../docs/design/preview/README.md). **This is the authoritative source when picking a button / tag / form-field variant.**
+- PrimeNG wrapped in `@layer primeng` via `providePrimeNG({ theme: { options: { cssLayer: { name: 'primeng' } } } })` — the only reliable way to make our `:root` overrides win the cascade.
+- Inter loaded via `@fontsource/inter` (weights 400/500/600/700).
 - Dark mode: `.dark` class on `<html>`, matches `providePrimeNG({ theme: { options: { darkModeSelector: '.dark' } } })`.
 
-Hard rules, on top of the MD3 bullets above:
+### Page chrome comes from the shell, not the page (#261)
 
-- **Never use raw hex in component SCSS.** Use `var(--p-*)` tokens or the `--budojo-*` semantics. Exceptions are belt colors (domain palette) with a rationale comment — canon § gotchas.
-- **Do not restyle PrimeNG internals from component SCSS.** Override via CSS custom properties; use `::ng-deep` only when a token truly doesn't exist AND the pattern is already documented in `DESIGN_SYSTEM.md`. The *global* override layer (`client/src/styles/budojo-theme.scss`) is the **sanctioned exception**: it's allowed to touch selectors like `.p-button` / `.p-dialog` when token overrides alone can't express the behavior (e.g. killing Material box-shadow, mobile bottom-sheet transform). Every selector there carries a one-line comment explaining why a token isn't enough. Component SCSS never does this.
-- **Motion uses the `--budojo-motion-*` tokens**, not hand-picked `200ms ease-out`. Three durations, one curve.
-- **Sentence-case everything.** Buttons, headers, tags. No title-case, no uppercase — except eyebrow labels (`EXPIRING SOON`, `letter-spacing: 0.06em`). If you find yourself writing `text-transform: uppercase` elsewhere, you're off-canon.
-- **Page chrome comes from the shell, not the page (#261).** Two semantic container tokens describe the **outer extent** — `--budojo-container-content` (`75rem`, operative pages) and `--budojo-container-prose` (`56rem`, text-heavy pages). Pages inside the dashboard shell consume the **derived inner-width** tokens — `--budojo-page-content-max` and `--budojo-page-prose-max` — which subtract `2 × --budojo-page-padding-x` so the page's outer visual extent matches the container token (preserves the pre-#261 `box-sizing: border-box` measure). Page padding lives once on `.main` in the dashboard shell via `--budojo-page-padding-{x,y}` (scaled at 768px in `:root`). A page wrapper declares `max-width: var(--budojo-page-content-max); margin: 0 auto;` and **nothing else** for chrome. Any new page that re-declares its own `padding` or invents a `max-width` is a red flag — push back. Public routes outside the dashboard shell (`/privacy`, `/sub-processors`) keep their padding in `_legal-page.scss` and consume `--budojo-container-prose` directly because the shell can't reach them and their own padding is already included in `max-width` via border-box. See `docs/design/DESIGN_SYSTEM.md` § 1.7 for the full rule.
+Two semantic container tokens describe the **outer extent** — `--budojo-container-content` (`75rem`, operative pages) and `--budojo-container-prose` (`56rem`, text-heavy pages).
 
-### Don't Make Me Think — operational rules
+Pages inside the dashboard shell consume the **derived inner-width** tokens — `--budojo-page-content-max` and `--budojo-page-prose-max` — which subtract `2 × --budojo-page-padding-x` so the page's outer visual extent matches the container token (preserves the pre-#261 `box-sizing: border-box` measure). Page padding lives once on `.main` in the dashboard shell via `--budojo-page-padding-{x,y}` (scaled at 768 px in `:root`).
 
-Krug's three laws, translated:
+A page wrapper inside the shell declares `max-width: var(--budojo-page-content-max); margin: 0 auto;` and **nothing else** for chrome. A new page that re-declares its own `padding` or invents a `max-width` is a red flag — push back.
 
-1. **Self-evidence first.** A button's label tells me exactly what happens when I click it. Not "Save" when it also sends a notification — "Save & notify". Not "Proceed" — "Create athlete".
-2. **Forgiveness for mistakes.** Destructive actions always ask for confirmation (`p-confirmpopup`). Undo is better than confirm when feasible (toast with "Undo" link).
-3. **Reduce cognitive load.** Never more than one primary CTA per view. Hide secondary actions in menus/overflow once they exceed 3.
-
-### Norman's laws — affordances and feedback
-
-1. **Affordance.** A link looks like a link (underline on hover or blue). A button looks like a button (filled background + shadow + pointer cursor). An input looks editable (border + padding + cursor). An icon-only button is NEVER an affordance — it must carry a tooltip (`pTooltip`).
-2. **Signifier.** The `disabled` state is visually obvious (opacity ≤ 0.5 + not-allowed cursor). A loading state shows a spinner AND disables the control.
-3. **Feedback.** Every user action must produce feedback within **300ms**. A submit button shows `loading` (spinner) immediately on click. Long-running operations (> 1s) use a skeleton or progress bar.
-4. **Constraints.** If an action is forbidden in the current state, disable it — don't let the user click and receive an error. A `p-button` with `[disabled]="form.invalid"` is always better than a 422 alert.
-
-### Laws of UX — quantitative rules
-
-| Law | Rule for Budojo |
-|-----|-----------------|
-| **Hick's Law** | Don't show more than 5 top-level options in a menu at once. If you have 7, group. If you have 12, add search. |
-| **Miller's Law** | Chunk lists into groups of 5–9. Athletes paginated at 20/page is fine because the user scans, not memorizes. A settings form with 15 flat fields needs sections. |
-| **Jakob's Law** | Users expect Budojo to behave like every other web app. Login button top-right. Logo top-left = home. Back button always bottom-left of breadcrumb. Don't reinvent. |
-| **Fitts's Law** | Primary CTAs are big (height ≥ 40px) and reachable (corners and centered positions). Close-X buttons top-right of a dialog minimum 32×32 with 8px padding. |
-| **Aesthetic-Usability effect** | A polished UI is forgiven for minor flaws; a rough UI makes every flaw feel worse. Invest in spacing and alignment — the cheapest perceived-quality lift. |
-| **Doherty Threshold** | 400ms is the threshold above which users perceive delay. Optimistic UI (update local state before server confirms) for `DELETE` and `PUT` where rollback is cheap. |
+Public routes outside the dashboard shell (`/privacy`, `/sub-processors`) keep their padding in `_legal-page.scss` and consume `--budojo-container-prose` directly because the shell can't reach them and their own padding is already included in `max-width` via border-box. See `docs/design/DESIGN_SYSTEM.md` § 1.7.
 
 ### Mobile-first is the default
 
-> **🔭 Active porting (May 2026 onwards):** the SPA is being audited and ported screen-by-screen against this canon. The running roadmap is [`docs/design/mobile-ux-audit.md`](../docs/design/mobile-ux-audit.md) with 🟢 / 🟡 / 🔴 / ⚪ status per finding. **Every new feature PR is expected to be mobile-friendly on day one** — not retrofitted in a follow-up. When a reviewer cites a row of the audit, that's a load-bearing critique. If your PR adds a new list, dialog, or filter cluster, check the canon below FIRST. If the design isn't obvious mobile-friendly, surface the question in the PR description rather than letting the Claude reviewer flag it after the fact.
+> **🔭 Active porting (May 2026 onwards):** the SPA is being audited screen-by-screen against this canon. Roadmap: [`docs/design/mobile-ux-audit.md`](../docs/design/mobile-ux-audit.md) with 🟢 / 🟡 / 🔴 / ⚪ status per finding. **Every new feature PR is mobile-friendly on day one** — not retrofitted in a follow-up.
 
-The primary form factor for Budojo is the phone: the instructor moves around the mat with the device in hand (check-in, look up athlete, scan a document expiring). Desktop is the **secondary** layout, not the default. Every new component, screen, and layout decision starts from the mobile viewport and scales **up**.
-
-**Breakpoint tokens** — these are the only breakpoints we use. Don't invent new ones without adding them here first.
+The primary form factor is the phone: instructor moves around the mat with device in hand. Desktop is **secondary**. Every component, screen, and layout decision starts mobile and scales **up**.
 
 | Token | Pixel | Meaning |
 |-------|-------|---------|
@@ -102,59 +82,51 @@ The primary form factor for Budojo is the phone: the instructor moves around the
 
 **Rules:**
 
-- **Base styles are mobile.** Write the mobile layout first; add `@media (min-width: <token>)` blocks to scale up. Never the inverse (don't write desktop and then `@media (max-width: …)` down).
-- **Touch targets ≥ 48 × 48 CSS px** for any primary CTA, nav link, icon button. Bigger where ambient noise or thumb reach demands it (bottom of screen, corners per Fitts).
-- **Dialogs** (`p-dialog`) use `[breakpoints]="{ '768px': '92vw' }"` so they never overflow on mobile.
-- **Tables** (`p-table`) either wrap in a scrollable container (horizontal scroll acceptable with visual cue) or collapse to a card layout below 768px. The choice is per-feature; attendance, list-heavy views prefer cards.
-- **Sidebar / drawer behavior.** The dashboard shell renders a **mobile topbar + off-canvas drawer** below 768px and a **static sidebar** at or above it. See `DashboardComponent` as the reference implementation.
-- **Viewport units**: prefer `100dvh` over `100vh` for full-height layouts so iOS Safari's dynamic viewport doesn't cut off the bottom. Fall back to `100vh` as progressive enhancement.
-- **Safe area**: honour `env(safe-area-inset-*)` on any pinned UI (topbar, bottom nav) when iOS notches become relevant. For now the topbar is fine without it because it isn't sticky to the very edge.
-- **Gesture-based interactions** (swipe-to-delete, pull-to-refresh) are *not* the default — they're added only where the business flow genuinely benefits (e.g. M4 attendance check-in). Otherwise plain taps + buttons.
+- **Base styles are mobile.** Write the mobile layout first; `@media (min-width: <token>)` to scale up. Never `@media (max-width: …)` down.
+- **Dialogs** (`p-dialog`) use `[breakpoints]="{ '768px': '92vw' }"` so they never overflow.
+- **Tables** (`p-table`) either wrap in a scrollable container (horizontal scroll with visual cue) or collapse to a card layout below 768 px.
+- **`100dvh` over `100vh`** for full-height layouts (iOS Safari dynamic viewport). Fall back to `100vh` as progressive enhancement.
+- **Safe area**: honour `env(safe-area-inset-*)` on any pinned UI (topbar, bottom nav) when iOS notches become relevant.
+- **Gesture interactions** (swipe-to-delete, pull-to-refresh) are NOT default — added only where the business flow genuinely benefits.
 
-### PWA scaffold
+### PWA + service worker
 
-The app is installable as a PWA. Key files:
+The SPA is installable as a PWA. `ngsw-worker.js` is generated at build time from `client/ngsw-config.json` — **don't** register a new SW or bypass the Angular builder.
 
-- `client/public/manifest.webmanifest` — name, icons, theme, `start_url: /dashboard/athletes`, `display: standalone`
-- `client/public/icons/` — `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`
-- `client/ngsw-config.json` — Angular Service Worker cache strategy: app shell `prefetch`, `/api/v1/**` `freshness` (3s network timeout, 1h max age)
-- `client/src/index.html` — `<link rel="manifest">`, `<meta name="theme-color">`, iOS-specific meta (`apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`)
-- `client/src/app/app.config.ts` — `provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode(), registrationStrategy: 'registerWhenStable:30000' })`
+**Auto-update on new SW version (#305).** `AppUpdateService` (`client/src/app/core/services/app-update.service.ts`) wires `SwUpdate.versionUpdates` to `activateUpdate()` + `document.location.reload()` on `VERSION_READY`, plus a 1-hour periodic `checkForUpdate()`. Without this the prefetch cache leaves returning users on the old bundle until manual hard-refresh.
 
-**Don't** register a new service worker file or bypass the Angular builder — `ngsw-worker.js` is generated at build time from `ngsw-config.json`.
+### i18n — ngx-translate (#273)
 
-**Auto-update on new SW version (#305).** `AppUpdateService` (in `client/src/app/core/services/app-update.service.ts`) wires `SwUpdate.versionUpdates` to `activateUpdate()` + `document.location.reload()` on `VERSION_READY`, plus a 1-hour periodic `checkForUpdate()` for long-lived mobile sessions. Wired from `App.ngOnInit`. Without this the prefetch cache strategy above leaves returning users on the old bundle until a manual hard-refresh — beta tester caught this on the v1.8.0 → v1.9.0 boundary. Don't add a "click to refresh" toast on top: the reload itself is the signal, and the trade-off (mid-form-fill data loss) is acceptable while forms are short.
+The SPA runs `@ngx-translate/core` with a synchronous bundled-JSON loader. EN is default + fallback; IT is opt-in via the sidebar toggle.
 
-### i18n — ngx-translate framework (#273)
-
-The SPA runs **`@ngx-translate/core`** with a **synchronous bundled-JSON loader** (`client/src/test-utils/i18n-test.ts` for tests, `BundledJsonLoader` in `app.config.ts` for runtime). EN is the default + fallback; IT is opt-in via the sidebar toggle. Dashboard pages, auth flows, setup wizard, chrome, 404 + `/privacy` (English) / `/privacy/it` are all key-driven. Hard rules:
+**Hard rules:**
 
 - **Every new visible string lives in `client/public/assets/i18n/{en,it}.json`** — never hardcode a label / placeholder / message in a template or `.ts`. Use `| translate` in templates and `translateService.instant('key')` in components / services.
-- **`en.json` and `it.json` stay in lock-step.** The `i18n-keys.spec.ts` parity check fails when one has a key the other doesn't — that's the trip-wire by design. Adding a key to `en.json` requires the matching key in `it.json` (translated) in the same commit.
-- **Component specs use `provideI18nTesting()`** (from `client/src/test-utils/i18n-test.ts`) — never the production `BundledJsonLoader` directly. Asserting on translated text in a spec is fine; the harness renders English by default.
-- **Cypress specs override the language via `localStorage.budojoLang`** in `onBeforeLoad` — see `cypress/support/commands.ts`. A spec asserting on an Italian string pre-seeds `'it'`; default is `'en'`.
-- **Don't dynamically build translation keys with template strings** (`'errors.' + code`) without an explicit map of allowed keys — the JSON parity check can't see them and the IT translation drifts silently. If you genuinely need indirection, declare the allowed key set in code and lock it with a unit test.
+- **`en.json` and `it.json` stay in lock-step.** `i18n-keys.spec.ts` parity check fails when one has a key the other doesn't.
+- **Component specs use `provideI18nTesting()`** (from `client/src/test-utils/i18n-test.ts`).
+- **Cypress specs override the language via `localStorage.budojoLang`** in `onBeforeLoad` (see `cypress/support/commands.ts`).
+- **Don't dynamically build translation keys with template strings** (`'errors.' + code`) without an explicit map of allowed keys — the JSON parity check can't see them and the IT translation drifts silently.
+- **The parity check confirms key sets match, NOT that template paths resolve.** A typo in a template ships green and renders the raw key on prod. The usual victims are empty-state / error branches that specs don't cover.
 
-The roadmap (#271) adds Spanish + German next. The framework is multi-locale-ready — adding a third locale is "ship `es.json` + bump `SUPPORTED_LANGUAGES` in `LanguageService`".
+Roadmap (#271) adds Spanish + German next; framework is multi-locale-ready.
 
 ### Red flags in code review
 
 A reviewer should push back when they see:
 
-- Raw hex colors / `rgb()` in component SCSS (use theme tokens)
-- A spacing not on the 8dp grid (e.g. `13px`, `0.9rem`)
+- Raw hex / `rgb()` in component SCSS (use theme tokens)
+- A spacing not on the 8dp grid (`13px`, `0.9rem`)
 - An icon-only button without `pTooltip` or `ariaLabel`
-- A form without a clear submit button (floating "Ok" in the corner, arcane layout)
+- A form without a clear submit button
 - A destructive action (`DELETE`) without confirmation
-- More than one primary CTA (`[severity]="'primary'"` filled) per view
-- A `loading` state that's not reflected in the UI (user clicks, nothing happens for 2s, then redirect)
-- Inline styles (`style="..."`) instead of a component scss file
-- A Material Design rule or Law-of-UX cited in review that was dismissed with "I prefer it this way"
-- **A new page wrapper with a raw `max-width: 1024px`-style px value instead of `var(--budojo-page-{content,prose}-max)` (#261)**
-- **A page wrapper inside the dashboard shell that re-declares its own `padding` instead of inheriting from the dashboard shell `.main` (#261)**
-- **A page wrapper inside the dashboard shell consuming `--budojo-container-*` directly instead of the derived `--budojo-page-*-max` (#261) — the bare token is the OUTER visual extent and only legitimate for partials with their own padding (e.g. `_legal-page.scss`)**
-- **A `p-dialog` with a fixed `width` and no `[breakpoints]` for mobile**
-- **A custom breakpoint value that isn't one of `768 / 1024 / 1440`**
+- More than one primary CTA per view
+- A `loading` state not reflected in the UI
+- Inline styles (`style="..."`) instead of a component SCSS file
+- A page wrapper with a raw `max-width: 1024px`-style px value instead of `var(--budojo-page-{content,prose}-max)` (#261)
+- A page wrapper inside the dashboard shell that re-declares its own `padding` (#261) or consumes `--budojo-container-*` directly instead of the derived `--budojo-page-*-max`
+- A `p-dialog` with a fixed `width` and no `[breakpoints]` for mobile
+- A custom breakpoint that isn't `768` / `1024` / `1440`
+- A MD3 / Law-of-UX rule cited in review that was dismissed with "I prefer it this way"
 
 ---
 
@@ -163,8 +135,8 @@ A reviewer should push back when they see:
 ```
 client/src/app/
 ├── core/
-│   ├── guards/        # Route guards (authGuard, hasAcademyGuard, noAcademyGuard)
-│   ├── interceptors/  # HTTP interceptors (functional — authInterceptor)
+│   ├── guards/        # Functional route guards (authGuard, hasAcademyGuard, noAcademyGuard)
+│   ├── interceptors/  # Functional HTTP interceptors (authInterceptor)
 │   └── services/      # AuthService, AcademyService, AthleteService, DocumentService — HTTP only here
 ├── features/
 │   ├── auth/          # Login, Register pages
@@ -175,18 +147,18 @@ client/src/app/
     └── components/    # BeltBadge, ExpiryStatusBadge, and other reusable presentational components
 ```
 
-- Feature folders under `src/app/features/<feature>/`
-- HTTP calls only in `*.service.ts` — never inside components
-- Components use **OnPush** change detection by default
-- State via **Angular Signals** — no NgRx unless complexity genuinely demands it
-- Standalone components only (no NgModules)
-- **Functional** interceptors and guards (Angular 15+ style) — the `authInterceptor` is exported as a `HttpInterceptorFn`, NOT a class
+- Feature folders under `src/app/features/<feature>/`.
+- HTTP calls only in `*.service.ts` — never in components.
+- Components use **OnPush** change detection by default (no exceptions without a comment).
+- State via **Angular Signals** — no `BehaviorSubject` where `signal()` works. No NgRx unless complexity genuinely demands it.
+- Standalone components only (no NgModules).
+- **Functional** interceptors and guards (Angular 15+ style) — `authInterceptor` is exported as `HttpInterceptorFn`, NOT a class.
 
 ---
 
 ## UI — PrimeNG 21 with the Material preset
 
-All UI components come from **PrimeNG 21**. Theme preset is **Material** (from `@primeuix/themes/material`), configured in `client/src/app/app.config.ts`:
+All UI from **PrimeNG 21**. Preset: `Material` (from `@primeuix/themes/material`), configured in `client/src/app/app.config.ts`:
 
 ```typescript
 import Material from '@primeuix/themes/material';
@@ -199,58 +171,47 @@ providePrimeNG({
 });
 ```
 
-- Before building a custom component, check `https://primeng.org/` for an existing one. 9 times out of 10 there is one.
-- Use PrimeFlex for layout utilities.
-- Follow PrimeNG's theming system; no inline styles.
-- When a PrimeNG component doesn't exist for your case, the fallback is a plain HTML/SCSS component under `shared/components/` — still using theme tokens (`var(--p-*)`), never raw hex.
+- Check [primeng.org](https://primeng.org/) before rolling custom — 9 times out of 10 there's a component.
+- Use PrimeFlex for layout utilities. No inline styles.
+- When PrimeNG doesn't fit, fall back to a plain HTML/SCSS component under `shared/components/` — still using theme tokens, never raw hex.
 
 ---
 
 ## Testing — Vitest 4 (unit) + Cypress 13 (E2E)
 
+Run locally via `./.claude/scripts/test-client.sh` (prettier --write + lint + vitest). Cypress runs in CI.
+
 ### Unit tests (Vitest)
 
-```bash
-cd client
-npm test -- --watch=false       # single run
-npm test                        # watch mode
-```
-
-- Test components, services, and guards in isolation.
+- Test components, services, guards in isolation.
 - Mock `HttpClient` with `provideHttpClientTesting()`.
-- Config: Angular's `@angular/build:unit-test` builder (see `client/angular.json`), TypeScript settings in `client/tsconfig.spec.json` (`"types": ["vitest/globals"]`), npm scripts in `client/package.json`. There is no standalone `vitest.config.ts` — the Angular builder wires Vitest up for us.
+- Config: Angular's `@angular/build:unit-test` builder (see `client/angular.json`), TS settings in `client/tsconfig.spec.json` (`"types": ["vitest/globals"]`). There is no standalone `vitest.config.ts` — the Angular builder wires Vitest up.
 
 ### E2E tests (Cypress)
 
-```bash
-cd client
-npm run cy:open                 # interactive mode (requires ng serve running)
-npm run cy:run                  # headless run (CI mode, requires ng serve running)
-```
+- **Always mock every HTTP call** with `cy.intercept()` — E2E must not depend on a live backend.
+- Use `cy.visitAuthenticated(url)` (custom command in `cypress/support/commands.ts`) to pre-seed `auth_token` before Angular boots, satisfying `authGuard`.
+- When the **same endpoint is called multiple times** in a test (e.g. `GET /api/v1/academy` for both `noAcademyGuard` on load and `hasAcademyGuard` after a redirect), use `times: 1` in the `beforeEach` intercept and add a second intercept in the specific test for the post-action call.
+- Specs in `cypress/e2e/*.cy.ts`; config in `cypress.config.ts`.
 
-**Rules:**
-- **Always mock every HTTP call** with `cy.intercept()` — E2E tests must not depend on a live backend.
-- Use `cy.visitAuthenticated(url)` (custom command in `cypress/support/commands.ts`) to pre-seed `auth_token` in localStorage before Angular boots, satisfying the `authGuard`.
-- When the **same endpoint is called multiple times in a test** (e.g. `GET /api/v1/academy` fires once for `noAcademyGuard` on page load and again for `hasAcademyGuard` after a redirect), use `times: 1` in the `beforeEach` intercept and add a second intercept in the specific test for the post-action call.
-- Specs live in `cypress/e2e/*.cy.ts`; config in `cypress.config.ts`.
+**Multi-viewport responsive coverage (#240).** Default viewport is desktop (1280×720); layout regressions at narrow widths are invisible there:
 
-**Multi-viewport responsive coverage (#240).** The default Cypress viewport is desktop (1280×720). Layout regressions at narrow widths — e.g. the phone-cc ellipsis on Pixel 8 Pro (#238) — are invisible at that size and have to be caught explicitly. The convention:
-- Use the shared presets from `client/cypress/support/viewports.ts` — never hardcode `cy.viewport(390, 844)` in a fresh spec. The presets cover `iPhone SE`, `Pixel 8 Pro`, `iPad mini`, and a `Desktop 1440` baseline; `MOBILE_VIEWPORTS` is the high-yield set, `ALL_VIEWPORTS` is the full sweep.
-- Convention for filename: a `*-mobile.cy.ts` spec is layout-only; the matching desktop spec covers business logic. Don't multiply test count by running the same business assertion at every viewport.
-- Apply the multi-viewport pattern only where layout actually matters (forms, lists, modals, navigation chrome). Pure logic specs stay at the default viewport.
-- The non-trivial assertion to add at narrow viewports is `document.scrollWidth <= clientWidth` — true exactly when no child element broke out of the viewport. CSS `text-overflow: ellipsis` does NOT change `textContent`, so checking visible text alone is a false-positive guard (lesson from #239 review).
+- Use shared presets from `client/cypress/support/viewports.ts` — never hardcode `cy.viewport(390, 844)`. Presets cover `iPhone SE`, `Pixel 8 Pro`, `iPad mini`, `Desktop 1440`. `MOBILE_VIEWPORTS` is the high-yield set; `ALL_VIEWPORTS` is the full sweep.
+- Filename convention: `*-mobile.cy.ts` is layout-only; the matching desktop spec covers business logic. Don't multiply test count by running the same business assertion at every viewport.
+- Apply multi-viewport only where layout actually matters (forms, lists, modals, navigation chrome). Pure logic specs stay at default viewport.
+- The non-trivial assertion at narrow viewports: `document.scrollWidth <= clientWidth` — true exactly when no child element broke out of the viewport. CSS `text-overflow: ellipsis` does NOT change `textContent`, so checking visible text alone is a false-positive guard.
 
 ---
 
 ## What Claude Should Always Do — client-specific
 
-(These complement the general rules in root `CLAUDE.md`.)
+(Complements the rules in root `CLAUDE.md`.)
 
 - **Suggest a PrimeNG component by name** when building any UI element. Check [primeng.org](https://primeng.org/) before rolling custom.
-- **Explain FE decisions** in plain terms (the developer is BE-focused).
-- **Write code under the design canon.** Material Design 3, Don't Make Me Think, Norman, Laws of UX — a citation by a reviewer is a valid critique on its own. Push back only with a specific pragmatic reason, never with taste.
-- **Components are OnPush by default.** No exceptions without a comment explaining why.
-- **State via signals.** Don't reach for `BehaviorSubject` where a `signal()` works.
-- **Reactive Forms, not template-driven.** For anything beyond a two-field filter.
-- **Before pushing Angular changes:** `npx prettier --write "src/**/*.{ts,html,scss}"` → `npm run lint` → `npm test -- --watch=false`. All three must be clean. Cypress runs in CI.
+- **Explain FE decisions** in plain terms — the developer is BE-focused.
+- **Write code under the design canon.** MD3, Don't Make Me Think, Norman, Laws of UX — a citation by a reviewer is a valid critique.
+- **Components are OnPush by default.** No exceptions without a comment.
+- **State via signals**, not `BehaviorSubject` where a `signal()` works.
+- **Reactive Forms, not template-driven**, for anything beyond a two-field filter.
+- **Run `./.claude/scripts/test-client.sh` before every push.** All three (prettier + lint + vitest) must be clean. Cypress runs in CI.
 - **Keep `docs/api/v1.yaml` in sync** if you change how the SPA consumes the API (e.g. new query param). See root `CLAUDE.md` § Documentation discipline.
