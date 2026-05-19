@@ -1625,7 +1625,9 @@
         "emptyBody": "No promotions yet. Bump a belt or stripes and it lands here.",
         "firstBelt": "First belt",
         "stripes": "stripes",
-        "recordedBy": "Recorded by {{name}}"
+        "recordedBy": "Recorded by {{name}}",
+        "prevPage": "Previous page",
+        "nextPage": "Next page"
       },
       "attendance": {
         "eyebrow": "Attendance",

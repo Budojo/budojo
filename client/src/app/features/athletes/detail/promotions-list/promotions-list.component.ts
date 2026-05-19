@@ -12,6 +12,7 @@ import { DatePipe } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TooltipModule } from 'primeng/tooltip';
 import { type AthletePromotion, AthleteService } from '../../../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../../../shared/components/belt-badge/belt-badge.component';
 
@@ -34,7 +35,14 @@ import { BeltBadgeComponent } from '../../../../shared/components/belt-badge/bel
 @Component({
   selector: 'app-promotions-list',
   standalone: true,
-  imports: [DatePipe, TranslatePipe, ButtonModule, SkeletonModule, BeltBadgeComponent],
+  imports: [
+    DatePipe,
+    TranslatePipe,
+    ButtonModule,
+    SkeletonModule,
+    TooltipModule,
+    BeltBadgeComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './promotions-list.component.html',
   styleUrl: './promotions-list.component.scss',
