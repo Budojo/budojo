@@ -3,7 +3,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import type { Mock } from 'vitest';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { type AthletePromotion, AthleteService } from '../../../../core/services/athlete.service';
 import { PromotionsListComponent } from './promotions-list.component';
@@ -80,7 +79,7 @@ describe('PromotionsListComponent (#799)', () => {
 
   it('renders the empty-state body when the response has no promotions', () => {
     const { fixture, el, svc } = setup();
-    (svc.promotions as unknown as Mock).mockReturnValue(
+    svc.promotions.mockReturnValue(
       of({
         data: [],
         meta: { current_page: 1, per_page: 20, total: 0, last_page: 1 },
@@ -95,7 +94,7 @@ describe('PromotionsListComponent (#799)', () => {
 
   it('renders the error panel when AthleteService.promotions errors out', () => {
     const { fixture, el, svc } = setup();
-    (svc.promotions as unknown as Mock).mockReturnValue(throwError(() => new Error('boom')));
+    svc.promotions.mockReturnValue(throwError(() => new Error('boom')));
     fixture.detectChanges();
 
     expect(el.textContent).toContain("Couldn't load promotion history");
@@ -103,7 +102,7 @@ describe('PromotionsListComponent (#799)', () => {
 
   it('renders one row per promotion in the response', () => {
     const { fixture, el, svc } = setup();
-    (svc.promotions as unknown as Mock).mockReturnValue(
+    svc.promotions.mockReturnValue(
       of({
         data: [
           makePromotion({ id: 1, kind: 'belt' }),
@@ -120,7 +119,7 @@ describe('PromotionsListComponent (#799)', () => {
 
   it('renders the prev/next pager only when lastPage > 1, with the right ariaLabels', () => {
     const { fixture, el, svc } = setup();
-    (svc.promotions as unknown as Mock).mockReturnValue(
+    svc.promotions.mockReturnValue(
       of({
         data: [makePromotion()],
         meta: { current_page: 1, per_page: 20, total: 25, last_page: 2 },
@@ -139,7 +138,7 @@ describe('PromotionsListComponent (#799)', () => {
 
   it('omits the pager when lastPage === 1 (everything on one page)', () => {
     const { fixture, el, svc } = setup();
-    (svc.promotions as unknown as Mock).mockReturnValue(
+    svc.promotions.mockReturnValue(
       of({
         data: [makePromotion()],
         meta: { current_page: 1, per_page: 20, total: 3, last_page: 1 },
@@ -152,7 +151,7 @@ describe('PromotionsListComponent (#799)', () => {
 
   it('next-button click loads page 2', () => {
     const { fixture, el, svc } = setup();
-    (svc.promotions as unknown as Mock).mockReturnValueOnce(
+    svc.promotions.mockReturnValueOnce(
       of({
         data: [makePromotion()],
         meta: { current_page: 1, per_page: 20, total: 25, last_page: 2 },
@@ -160,7 +159,7 @@ describe('PromotionsListComponent (#799)', () => {
     );
     fixture.detectChanges();
     svc.promotions.mockClear();
-    (svc.promotions as unknown as Mock).mockReturnValueOnce(
+    svc.promotions.mockReturnValueOnce(
       of({
         data: [makePromotion({ id: 99 })],
         meta: { current_page: 2, per_page: 20, total: 25, last_page: 2 },
