@@ -53,6 +53,7 @@ describe('Login history panel (#430)', () => {
     }).as('history');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
     cy.wait('@history');
 
     cy.get('[data-cy="profile-login-history"]').scrollIntoView();
@@ -76,6 +77,7 @@ describe('Login history panel (#430)', () => {
     }).as('historyEmpty');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
     cy.wait('@historyEmpty');
 
     cy.get('[data-cy="profile-login-history-empty"]').scrollIntoView();
