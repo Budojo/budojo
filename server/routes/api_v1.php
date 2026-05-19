@@ -291,6 +291,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // every row tied to a target user.
     Route::get('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'index']);
     Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store']);
+    Route::post('/me/push-subscriptions/test', [\App\Http\Controllers\User\PushSubscriptionController::class, 'test']);
     Route::delete('/me/push-subscriptions/{id}', [\App\Http\Controllers\User\PushSubscriptionController::class, 'destroy'])
         ->where('id', '[0-9]+');
 

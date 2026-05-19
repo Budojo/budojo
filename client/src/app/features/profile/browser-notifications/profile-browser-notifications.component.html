@@ -82,16 +82,36 @@
           <p class="profile-browser-notifications__cta-text">
             {{ 'profile.browserNotifications.onDescription' | translate }}
           </p>
-          <p-button
-            type="button"
-            severity="secondary"
-            icon="pi pi-bell"
-            [text]="true"
-            [label]="'profile.browserNotifications.addDevice' | translate"
-            [loading]="busy()"
-            (onClick)="enable()"
-            data-cy="profile-browser-notifications-add-device"
-          />
+          <div class="profile-browser-notifications__cta-actions">
+            <p-button
+              type="button"
+              severity="secondary"
+              icon="pi pi-bell"
+              [text]="true"
+              [label]="'profile.browserNotifications.addDevice' | translate"
+              [loading]="busy()"
+              (onClick)="enable()"
+              data-cy="profile-browser-notifications-add-device"
+            />
+            <!--
+              Diagnostic ping (#819). User self-verifies the OS-level
+              push channel any time, and we get a one-tap smoke test
+              for support flows. Hidden when there are no devices yet
+              (the server would 422) — `@case ('on')` already gates on
+              `devices.length > 0`, so being inside this branch implies
+              there's at least one subscription to test against.
+            -->
+            <p-button
+              type="button"
+              severity="secondary"
+              icon="pi pi-send"
+              [text]="true"
+              [label]="'profile.browserNotifications.sendTest.label' | translate"
+              [loading]="busy()"
+              (onClick)="sendTest()"
+              data-cy="profile-browser-notifications-send-test"
+            />
+          </div>
         </div>
       }
     }

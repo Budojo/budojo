@@ -200,6 +200,23 @@ export class WebPushService {
   }
 
   /**
+   * Fire a one-shot diagnostic push to the calling user's stored
+   * subscriptions (#819). Wraps `POST /me/push-subscriptions/test`.
+   * The server dispatches a `TestPushNotification` via `WebPushChannel`
+   * only (no inbox row), so the user can self-verify their device's
+   * push channel is healthy at any time.
+   *
+   * Bubbles the underlying HTTP error so the caller can branch on
+   * status (e.g. 422 when no subscriptions exist on the user — gate
+   * the UI button on the device list to avoid this branch).
+   */
+  async sendTest(): Promise<void> {
+    await firstValueFrom(
+      this.http.post(`${environment.apiBase}/api/v1/me/push-subscriptions/test`, {}),
+    );
+  }
+
+  /**
    * Revoke a single device by deleting its server-side row. The
    * server is the authoritative list — once the row is gone the
    * fanout (#696) skips that browser, regardless of whether the
