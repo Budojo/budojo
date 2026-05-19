@@ -36,7 +36,13 @@ jobs:
       !startsWith(github.head_ref, 'chore/') &&
       !startsWith(github.head_ref, 'docs/') &&
       !startsWith(github.head_ref, 'ci/')
-    runs-on: ubuntu-latest
+    # Self-hosted runner — same pool as pr-checks.yml. GitHub-hosted
+    # (`ubuntu-latest`) is disabled on this repo / billing plan, so a
+    # `ubuntu-latest` job fails in 3s with no annotation. The Claude
+    # review is short (2-5 min), light on CPU, and just needs `gh` +
+    # network, so it co-exists cleanly with the 4 budojo-slimbook
+    # runners that already serve the PR Quality Gates pipeline.
+    runs-on: [self-hosted, budojo]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
