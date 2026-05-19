@@ -25,7 +25,7 @@ This codebase is written (and reviewed) in the spirit of Robert C. Martin's "Cle
 | **Clean Architecture** (2017) | SOLID in depth, the Dependency Rule, layered boundaries between policy and I/O |
 | **Clean Agile** (2019) | XP practices — TDD, pair programming, continuous refactoring, small releases |
 
-If a reviewer (human or Copilot) cites one of these books and the commit diff violates it, the citation is a valid argument on its own. Push back only with a specific, pragmatic reason (e.g. "Laravel's conventions override here, see the Active Record note below"). "I prefer it this way" is not a reason.
+If a reviewer (human or the Claude post-push reviewer) cites one of these books and the commit diff violates it, the citation is a valid argument on its own. Push back only with a specific, pragmatic reason (e.g. "Laravel's conventions override here, see the Active Record note below"). "I prefer it this way" is not a reason.
 
 ### SOLID — each letter, concrete
 
