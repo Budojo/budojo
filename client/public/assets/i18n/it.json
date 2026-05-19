@@ -954,6 +954,14 @@
         "subscribe_failed": {
           "summary": "Impossibile attivare le notifiche",
           "detail": "Il servizio push del browser ha rifiutato la richiesta. Riprova tra un momento."
+        },
+        "ios_pwa_required": {
+          "summary": "Installa Budojo per attivare le notifiche",
+          "detail": "Su iPhone le notifiche push funzionano solo quando Budojo è installato come app dalla schermata Home. Tocca il pulsante Condividi → Aggiungi alla schermata Home, poi attiva le notifiche dall'icona installata."
+        },
+        "brave_push_disabled": {
+          "summary": "Il servizio push di Brave è disattivato",
+          "detail": "Apri brave://settings/privacy e attiva \"Use Google services for push messaging\", poi riprova qui."
         }
       }
     },

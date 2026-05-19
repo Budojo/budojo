@@ -954,6 +954,14 @@
         "subscribe_failed": {
           "summary": "Couldn't enable notifications",
           "detail": "The browser's push service rejected the request. Try again in a moment."
+        },
+        "ios_pwa_required": {
+          "summary": "Install Budojo to enable notifications",
+          "detail": "On iPhone, push notifications work only when Budojo is installed as a Home Screen app. Tap the Share button → Add to Home Screen, then enable notifications from that icon."
+        },
+        "brave_push_disabled": {
+          "summary": "Brave's push service is off",
+          "detail": "Open brave://settings/privacy and turn on \"Use Google services for push messaging\", then try again here."
         }
       }
     },

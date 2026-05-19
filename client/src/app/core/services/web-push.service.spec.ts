@@ -149,6 +149,60 @@ describe('WebPushService (#694)', () => {
       http.verify();
     });
 
+    it('throws WebPushError("ios_pwa_required") on iOS Safari outside standalone mode (#816)', async () => {
+      const { service, http } = setup();
+      const origUA = navigator.userAgent;
+      Object.defineProperty(navigator, 'userAgent', {
+        value:
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+        configurable: true,
+      });
+      // `navigator.standalone` is false / undefined → non-standalone
+      (navigator as unknown as { standalone?: boolean }).standalone = false;
+      Object.defineProperty(window, 'matchMedia', {
+        value: () => ({ matches: false }),
+        configurable: true,
+      });
+
+      try {
+        await expect(service.subscribe('PUB')).rejects.toMatchObject({
+          name: 'WebPushError',
+          reason: 'ios_pwa_required',
+        });
+      } finally {
+        Object.defineProperty(navigator, 'userAgent', { value: origUA, configurable: true });
+        delete (navigator as unknown as { standalone?: boolean }).standalone;
+      }
+      http.verify();
+    });
+
+    it('throws WebPushError("brave_push_disabled") when Brave\'s push service rejects subscribe (#811)', async () => {
+      const { service, http } = setup({
+        subscriptionError: new DOMException('not supported', 'NotSupportedError'),
+      });
+      // Permission is NOT denied — the user accepted the OS prompt; Brave
+      // itself rejected the underlying PushManager.subscribe() call
+      // because the "Use Google services for push messaging" toggle is
+      // off at brave://settings/privacy.
+      (
+        globalThis as unknown as { Notification: { permission: NotificationPermission } }
+      ).Notification.permission = 'granted';
+      // Brave exposes navigator.brave.isBrave() returning Promise<true>.
+      (navigator as unknown as { brave: { isBrave: () => Promise<boolean> } }).brave = {
+        isBrave: () => Promise.resolve(true),
+      };
+
+      try {
+        await expect(service.subscribe('PUB')).rejects.toMatchObject({
+          name: 'WebPushError',
+          reason: 'brave_push_disabled',
+        });
+      } finally {
+        delete (navigator as unknown as { brave?: unknown }).brave;
+      }
+      http.verify();
+    });
+
     it('exposes WebPushError as an Error subclass', () => {
       const err = new WebPushError('subscribe_failed');
       expect(err).toBeInstanceOf(Error);
