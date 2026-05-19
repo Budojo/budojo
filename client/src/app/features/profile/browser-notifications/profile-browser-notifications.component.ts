@@ -164,6 +164,16 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
       // key (which would throw at runtime under strict change-detection).
       this.devices.update((current) => [device, ...current.filter((d) => d.id !== device.id)]);
       this.permission.set(this.webPushService.currentPermission());
+      // Re-fetch the current browser's endpoint hash (#822 reviewer
+      // follow-up). On a fresh page where the user starts in state
+      // 'off', the init-time fetch returned null (no subscription
+      // existed). Now that `subscribe()` succeeded, a real
+      // PushSubscription exists; re-resolve so the just-added device
+      // row picks up the "(this device)" pill and the Add-another
+      // button hides immediately, no refresh required.
+      void this.webPushService.currentEndpointHash().then((hash) => {
+        this.currentEndpointHash.set(hash);
+      });
       this.messageService.add({
         severity: 'success',
         summary: this.translate.instant('profile.browserNotifications.enabledToast.summary'),
