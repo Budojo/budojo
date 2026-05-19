@@ -1,11 +1,11 @@
 ---
-description: Pre-push review of the current branch's diff vs develop. Dispatches a fresh sub-agent that reads the diff and surfaces up to 5 actionable issues — bugs, wrong assumptions, missing test coverage, security holes — before Copilot has to flag them on the PR.
+description: Pre-push review of the current branch's diff vs develop. Dispatches a fresh sub-agent that reads the diff and surfaces up to 5 actionable issues — bugs, wrong assumptions, missing test coverage, security holes — before the post-push Claude reviewer has to flag them on the PR.
 argument-hint: '[--base <branch>]'
 ---
 
 # /prereview
 
-Run a Copilot-style pre-review on the current branch's diff. The goal is to catch the kind of bug Copilot would catch on the PR, but BEFORE the push so we save a CI round-trip.
+Run a reviewer-style pre-review on the current branch's diff. The goal is to catch the kind of bug the post-push Claude reviewer would catch on the PR (see `.claude/agents/pr-code-reviewer.md` + `.github/workflows/pr-claude-review.yml`), but BEFORE the push so we save a CI round-trip.
 
 ## Steps
 
@@ -46,4 +46,4 @@ Run a Copilot-style pre-review on the current branch's diff. The goal is to catc
 
 - The agent is `general-purpose` (not `code-reviewer`) because it doesn't need write access — pure read + reasoning.
 - Don't run automated fixes from this command. The user decides whether each finding warrants a code change before push.
-- Cost: this is one agent dispatch per push. Worth it because the alternative is the full Copilot CI round-trip (3-5 min vs ~30 s for the agent).
+- Cost: this is one agent dispatch per push. Worth it because the alternative is the full post-push reviewer CI round-trip (3-5 min vs ~30 s for the agent).
