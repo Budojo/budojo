@@ -865,5 +865,43 @@ describe('AthletesListComponent', () => {
       expect(tbody?.querySelectorAll('.athlete-paid-empty').length).toBe(1);
       expect(tbody?.querySelectorAll('app-paid-badge').length).toBe(1);
     });
+
+    it('renders the paid placeholder (em-dash) for suspended + inactive rows, paid badge only on active rows (#805)', () => {
+      // Same gate as the self-row branch: payment is not expected from
+      // non-active athletes, so the Unpaid chip shouldn't render for
+      // them. Owner-as-athlete already used the em-dash placeholder;
+      // this test pins that suspended / inactive rows follow the same
+      // affordance.
+      TestBed.inject(AcademyService).academy.set({
+        id: 1,
+        name: 'Test',
+        slug: 'test',
+        address: null,
+        logo_url: null,
+        monthly_fee_cents: 9500,
+      } as Academy);
+
+      const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+      athleteService.list.mockReturnValue(
+        of({
+          data: [
+            makeAthlete({ id: 10, status: 'active', paid_current_month: false }),
+            makeAthlete({ id: 11, status: 'suspended', paid_current_month: false }),
+            makeAthlete({ id: 12, status: 'inactive', paid_current_month: false }),
+          ],
+          meta: { total: 3, current_page: 1, per_page: 20, last_page: 1 },
+        }),
+      );
+
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      const tbody = (fixture.nativeElement as HTMLElement).querySelector('tbody');
+      // Two em-dash placeholders (suspended + inactive); one paid-badge
+      // (active). The Owner-as-athlete branch is not exercised here
+      // (all three rows have is_self=false from `makeAthlete` default).
+      expect(tbody?.querySelectorAll('.athlete-paid-empty').length).toBe(2);
+      expect(tbody?.querySelectorAll('app-paid-badge').length).toBe(1);
+    });
   });
 });
