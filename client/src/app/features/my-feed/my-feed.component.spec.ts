@@ -428,9 +428,65 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     fixture.detectChanges();
 
     expect(btn.getAttribute('aria-pressed')).toBe('true');
+    // The count is now a sibling of the toggle button inside the
+    // shared `.feed__react-chip` wrapper (#806 — RSVP buttons adopted
+    // the same chip pattern as reactions). Scope the count selector
+    // to the chip wrapper instead of nesting under the button.
     expect(
-      el.querySelector(`[data-cy="rsvp-going-${postId}"] .feed__react-count`)?.textContent,
+      el.querySelector(`[data-cy="rsvp-chip-going-${postId}"] .feed__react-count`)?.textContent,
     ).toContain('1');
+  });
+
+  it('renders RSVP triggers inside the shared .feed__react-chip wrapper (#806)', () => {
+    const { fixture, el, http } = setup();
+
+    const postId = 99;
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        {
+          id: postId,
+          type: 'event',
+          visibility: 'academy',
+          payload: {
+            title: 'Visual chip test',
+            starts_at: '2026-05-20T10:00:00Z',
+            location_text: 'Via Roma 10',
+          },
+          created_at: '2026-05-10T08:00:00Z',
+          created_by: {
+            id: 1,
+            first_name: 'O',
+            last_name: 'O',
+            full_name: 'O O',
+            handle: null,
+            avatar_url: null,
+            belt: null,
+          },
+          reactions_count: 0,
+          reaction_counts: { clap: 0, pray: 0 },
+          comments_count: 0,
+          rsvps_count: 2,
+          your_reaction: null,
+          your_rsvp: 'going',
+        },
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    // Each RSVP affordance is a chip wrapper containing a toggle button;
+    // the active state lives on the chip (not the button) so the active
+    // background + border render via `.feed__react-chip--active`.
+    const goingChip = el.querySelector(`[data-cy="rsvp-chip-going-${postId}"]`);
+    const maybeChip = el.querySelector(`[data-cy="rsvp-chip-maybe-${postId}"]`);
+    expect(goingChip?.classList.contains('feed__react-chip')).toBe(true);
+    expect(goingChip?.classList.contains('feed__react-chip--active')).toBe(true);
+    expect(maybeChip?.classList.contains('feed__react-chip')).toBe(true);
+    expect(maybeChip?.classList.contains('feed__react-chip--active')).toBe(false);
+
+    // The toggle button is the focusable element (aria-pressed, click).
+    const goingBtn = goingChip?.querySelector('button.feed__react-toggle');
+    expect(goingBtn?.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('rolls back the optimistic RSVP when the API call fails', () => {
