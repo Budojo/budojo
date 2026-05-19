@@ -1,8 +1,9 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom, map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 
 /**
  * Browser Web Push subscriber (#694, closes the client half of #419).
@@ -272,6 +273,90 @@ export class WebPushService {
       }
       throw new WebPushError('subscribe_failed', String(error));
     }
+  }
+
+  /**
+   * Verify the push delivery channel works end-to-end (#818). After a
+   * successful `subscribe()`, the SPA has no way to confirm that the
+   * OS will actually surface notifications — Web Notification API
+   * only exposes the SITE-level permission, not the OS-level Chrome /
+   * TWA notification toggle that #817 surfaced as the root cause of
+   * silent failures.
+   *
+   * The check:
+   *  1. Set up a `swPush.messages` listener filtered on
+   *     `data.kind === 'verification'`.
+   *  2. POST to `/me/push-subscriptions/test` — the server dispatches
+   *     `TestPushNotification` via `WebPushChannel` to ALL the user's
+   *     subscriptions (the just-created one + any others).
+   *  3. Race the listener against a 5-second timer.
+   *
+   * Outcomes:
+   *  - `'ok'`      — the SW received the test push within the window.
+   *                  Channel works.
+   *  - `'silent'`  — timeout fired without the SW receiving it. Most
+   *                  likely OS-level mute (Chrome notif off in
+   *                  Android Settings, battery saver, TWA process
+   *                  killed). The SPA surfaces an actionable hint.
+   *  - `'unknown'` — the SW isn't enabled (dev mode) OR the test
+   *                  endpoint errored (server-side throw, VAPID
+   *                  misconfig). Can't conclude either way; the UI
+   *                  stays silent to avoid false alarms.
+   *
+   * Fire-and-forget from the component — runs in the background after
+   * the success toast. The user sees a SECOND, distinct toast only
+   * when the verification times out.
+   */
+  async verifyDelivery(timeoutMs: number = 5000): Promise<'ok' | 'silent' | 'unknown'> {
+    if (!this.swPush.isEnabled) return 'unknown';
+
+    // Set up the listener BEFORE firing the ping — otherwise a fast
+    // SW could fire the push event before our subscribe lands and we
+    // would miss the signal.
+    const listenerPromise = new Promise<'ok'>((resolve) => {
+      const sub = this.swPush.messages.subscribe((rawMessage) => {
+        const data = (rawMessage as { notification?: { data?: { kind?: string } } }).notification
+          ?.data;
+        if (data?.kind === 'verification') {
+          sub.unsubscribe();
+          resolve('ok');
+        }
+      });
+      // Cleanup buffer past the timeout so the subscription doesn't
+      // leak. The race below decides the outcome at `timeoutMs`; the
+      // listener stays alive an extra second to absorb a near-miss
+      // before unsubscribing.
+      setTimeout(() => sub.unsubscribe(), timeoutMs + 1000);
+    });
+
+    try {
+      // Inline the POST instead of calling `sendTest()` so we can opt
+      // out of the offline-redirect interceptor — this is a background
+      // poll (not user-initiated), and a transient network blip would
+      // otherwise teleport the user to `/offline` mid-subscribe
+      // (memory § background-polls / SKIP_OFFLINE_REDIRECT). The
+      // user-initiated `sendTest()` keeps the default behaviour so a
+      // real loss-of-connectivity on the manual button still routes
+      // correctly.
+      await firstValueFrom(
+        this.http.post(
+          `${environment.apiBase}/api/v1/me/push-subscriptions/test`,
+          {},
+          { context: new HttpContext().set(SKIP_OFFLINE_REDIRECT, true) },
+        ),
+      );
+    } catch {
+      // Server-side error on the test endpoint — VAPID misconfig, no
+      // subscriptions registered, network blip. Can't verify either
+      // way; report 'unknown' so the UI doesn't surface a misleading
+      // "your phone is muted" toast on a server fault.
+      return 'unknown';
+    }
+
+    const timeoutPromise = new Promise<'silent'>((resolve) =>
+      setTimeout(() => resolve('silent'), timeoutMs),
+    );
+    return Promise.race([listenerPromise, timeoutPromise]);
   }
 
   /**
