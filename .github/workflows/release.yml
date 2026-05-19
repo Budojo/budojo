@@ -232,7 +232,7 @@ jobs:
 
           > **Merge style:** "Create a merge commit" — NOT squash. Squash erases the parent linkage and breaks downstream merge bookkeeping (memory \`project_release_merge_style.md\`).
 
-          > **Reviewer wait:** none. Alignment-only — no new code, no review surface (memory \`feedback_release_pr_wait_for_copilot.md\` — historical name; applies equally to the Claude post-push reviewer).
+          > **Reviewer wait:** none. Alignment-only — no new code, no review surface (memory \`feedback_post_push_reviewer_dance.md\` § Exceptions; superseded \`feedback_release_pr_wait_for_copilot.md\`).
 
           ## Why
 
@@ -303,12 +303,12 @@ jobs:
         # we don't want an admin-side toggle missing to fail the
         # whole release run after a tag is already published.
         #
-        # Memory `feedback_release_pr_wait_for_copilot` says the
-        # sweep is alignment-only — no reviewer wait, no review
-        # surface — so auto-merging the moment CI is green is the
-        # documented policy. The memory name is historical; the
-        # same rule applies to the Claude post-push reviewer that
-        # replaced Copilot in chore #790.
+        # Memory `feedback_post_push_reviewer_dance` § Exceptions
+        # says the sweep is alignment-only — no reviewer wait, no
+        # review surface — so auto-merging the moment CI is green
+        # is the documented policy (chore/sync-* is also `if:`-
+        # skipped in pr-claude-review.yml). This memory supersedes
+        # the historical `feedback_release_pr_wait_for_copilot`.
         if: env.HAS_BOT_TOKEN == 'true'
         env:
           GH_TOKEN: ${{ secrets.BUDOJO_BOT_TOKEN }}
