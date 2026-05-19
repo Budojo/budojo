@@ -86,13 +86,15 @@ it('POST /me/push-subscriptions stores a new subscription (201)', function (): v
 it('POST /me/push-subscriptions is idempotent on (user, endpoint) — 200 on re-post', function (): void {
     $user = userWithAcademy();
     $payload = pushPayload();
+    $expectedHash = hash('sha256', $payload['endpoint']);
 
     $this->actingAs($user)
         ->postJson('/api/v1/me/push-subscriptions', $payload)
         ->assertCreated();
     $second = $this->actingAs($user)
         ->postJson('/api/v1/me/push-subscriptions', $payload);
-    $second->assertOk();
+    $second->assertOk()
+        ->assertJsonPath('data.endpoint_hash', $expectedHash);
 
     expect(PushSubscription::query()->where('user_id', $user->id)->count())->toBe(1);
 });
