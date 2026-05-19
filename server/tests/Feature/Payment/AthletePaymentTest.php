@@ -223,6 +223,26 @@ it('filters athletes by ?paid=no — returns only those NOT paid for the current
     expect($ids)->not->toContain($paid->id);
 });
 
+it('?paid=no excludes suspended and inactive athletes — payment not expected from non-active rows (#805)', function (): void {
+    $active = Athlete::factory()->for($this->user->academy)->create(['status' => 'active']);
+    $suspended = Athlete::factory()->for($this->user->academy)->create(['status' => 'suspended']);
+    $inactive = Athlete::factory()->for($this->user->academy)->create(['status' => 'inactive']);
+    // None have current-month payments — under the pre-#805 filter all three
+    // would surface as "unpaid" and inflate the unpaid-this-month widget's
+    // count + name list with rows the academy isn't expecting payment from.
+
+    $ids = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/athletes?paid=no')
+        ->assertOk()
+        ->json('data'))
+        ->pluck('id')
+        ->all();
+
+    expect($ids)->toContain($active->id);
+    expect($ids)->not->toContain($suspended->id);
+    expect($ids)->not->toContain($inactive->id);
+});
+
 it('treats a previous-month payment as unpaid for the current-month filter', function (): void {
     $athlete = Athlete::factory()->for($this->user->academy)->create();
     AthletePayment::factory()->for($athlete)->forYearMonth(2020, 1)->create();

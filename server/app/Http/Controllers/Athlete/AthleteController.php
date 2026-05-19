@@ -104,8 +104,22 @@ class AthleteController extends Controller
             // values are silently ignored (no filter applied) — same shape
             // as `sort_by`: defensive defaults beat 422-noise on a list
             // endpoint that's read by humans more than tools.
+            //
+            // The `paid=no` branch ALSO gates on `status = 'active'` (#805):
+            // suspended / inactive athletes aren't expected to contribute
+            // for the current month, so listing them as "owes" — both in
+            // the unpaid-this-month widget (which consumes this filter)
+            // AND in any other consumer of the API — is false noise.
+            // `paid=yes` deliberately doesn't carry the same gate: an
+            // athlete who paid earlier in the month and then went inactive
+            // is still factually "paid" and worth surfacing if a caller
+            // asks for that view.
             ->when($paid === 'yes', fn ($q) => $q->whereHas('payments', $currentMonthScope))
-            ->when($paid === 'no', fn ($q) => $q->whereDoesntHave('payments', $currentMonthScope))
+            ->when(
+                $paid === 'no',
+                fn ($q) => $q->whereDoesntHave('payments', $currentMonthScope)
+                    ->where('status', 'active'),
+            )
             ->when($request->filled('q'), function (Builder|HasMany $q) use ($request) {
                 // `$request->string('q')` returns a `Stringable` — keeps PHPStan
                 // happy without the `mixed` → `string` cast that `input()` needs.
