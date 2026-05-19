@@ -13,6 +13,11 @@
 # GITHUB_TOKEN authoring instead of the dedicated claude[bot] identity):
 #   BOT_LOGIN='github-actions[bot]' ./reviewer-replies.sh 289 "Fixed in ..."
 #
+# The default `claude` was confirmed on PR #793 run 26083233537 — the first
+# real review after the migration. The action's README documents `claude[bot]`
+# as the `bot_name` default, but in practice GitHub posts under `claude`
+# (no `[bot]` suffix) when authenticated via the Claude Code GitHub App.
+#
 # Replaces the old copilot-replies.sh (chore #790). Same idempotency story:
 #   1. The `/comments` endpoint exposes `user.login`. We filter top-level
 #      threads by that login and reply once per thread. Re-running does not
@@ -40,7 +45,7 @@ usage() {
 PR="$1"
 MESSAGE="$2"
 REPO="Budojo/budojo"
-BOT_LOGIN="${BOT_LOGIN:-claude[bot]}"
+BOT_LOGIN="${BOT_LOGIN:-claude}"
 ME="$(gh api user --jq '.login')"
 
 # Reply to every TOP-LEVEL bot comment (in_reply_to_id == null) that
