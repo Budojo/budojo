@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { signal } from '@angular/core';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Subject, of, throwError } from 'rxjs';
 import { AvatarCardComponent } from './avatar-card.component';
 import { AuthService, User } from '../../../core/services/auth.service';
