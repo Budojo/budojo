@@ -2478,10 +2478,16 @@ paths:
           description: |
             Filter on the athlete's current-month payment status. `yes`
             returns only athletes with a row in `athlete_payments` for the
-            current calendar (year, month); `no` returns only those without.
-            Unrecognised values are silently ignored (no filter applied).
-            Server-side because the table is paginated — a client-side
-            filter would only sweep the current page of 20.
+            current calendar (year, month); `no` returns only those without
+            AND whose `status` is `active` (#805 — payment is not expected
+            from suspended / inactive athletes, so they're excluded from
+            the "owes" view). The asymmetry is deliberate: `paid=yes`
+            does NOT carry the same status gate, because an athlete who
+            paid earlier in the month and went inactive is still factually
+            "paid" and worth surfacing for any caller asking the inverse
+            question. Unrecognised values are silently ignored (no filter
+            applied). Server-side because the table is paginated — a
+            client-side filter would only sweep the current page of 20.
           required: false
           schema:
             type: string
