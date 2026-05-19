@@ -25,8 +25,35 @@ it('GET /me/push-subscriptions returns the user\'s rows + VAPID public key', fun
     $response->assertOk()
         ->assertJsonCount(2, 'data')
         ->assertJsonPath('meta.enabled', true)
-        ->assertJsonStructure(['data' => [['id', 'endpoint_host', 'last_seen_at', 'created_at']]]);
+        ->assertJsonStructure(['data' => [['id', 'endpoint_host', 'endpoint_hash', 'last_seen_at', 'created_at']]]);
     expect($response->json('meta.vapid_public_key'))->toBeString();
+});
+
+it('GET /me/push-subscriptions exposes endpoint_hash so the SPA can match the current device (#822)', function (): void {
+    $user = userWithAcademy();
+    $endpoint = 'https://fcm.googleapis.com/fcm/send/known-endpoint';
+    $expectedHash = hash('sha256', $endpoint);
+    // The factory's `endpoint_hash` is computed from its own random
+    // `endpoint` inside `definition()`; passing `endpoint` alone via
+    // `create()` overrides ONLY that field, leaving the hash detached.
+    // For this round-trip assertion we set both explicitly so the row
+    // mirrors the production shape (controller `store()` writes both).
+    $sub = PushSubscription::factory()->for($user)->create([
+        'endpoint' => $endpoint,
+        'endpoint_hash' => $expectedHash,
+    ]);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/me/push-subscriptions');
+
+    $response->assertOk();
+    $row = $response->json('data.0');
+    // The returned hash is the sha256 of the endpoint URL — the SPA
+    // computes the same hash from the current browser's PushSubscription
+    // and matches against this field to know which row is "this device".
+    expect($row['endpoint_hash'])->toBe($expectedHash);
+    expect($row['endpoint_hash'])->toBe($sub->endpoint_hash);
+    // Shape: 64-char lowercase hex.
+    expect($row['endpoint_hash'])->toMatch('/^[a-f0-9]{64}$/');
 });
 
 it('GET /me/push-subscriptions never includes another user\'s rows', function (): void {

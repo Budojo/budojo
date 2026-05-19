@@ -35,6 +35,12 @@ import { environment } from '../../../environments/environment';
 export interface PushDevice {
   readonly id: number;
   readonly endpoint_host: string;
+  /**
+   * SHA-256 hash of the endpoint URL, exposed by the server (#822) so
+   * the SPA can match against `sha256(currentSubscription.endpoint)`
+   * and identify which device row corresponds to the current browser.
+   */
+  readonly endpoint_hash: string;
   readonly last_seen_at: string | null;
   readonly created_at: string;
 }
@@ -196,6 +202,46 @@ export class WebPushService {
         throw new WebPushError('server_not_configured', String(error));
       }
       throw new WebPushError('subscribe_failed', String(error));
+    }
+  }
+
+  /**
+   * SHA-256 hash of the CURRENT browser's PushSubscription endpoint,
+   * if one exists (#822). Mirrors the server-side
+   * `PushSubscription.endpoint_hash` column so the UI can identify
+   * which row in the device list is "this device" and hide the
+   * redundant "Add another device" affordance when the current
+   * browser is already subscribed.
+   *
+   * Returns `null` when:
+   *  - The browser has no service-worker registration, OR
+   *  - The SW has no active PushSubscription, OR
+   *  - `crypto.subtle` is unavailable (very old browsers / non-secure
+   *    contexts — same set that would also fail `isSupported()`).
+   *
+   * Stable across page loads: the hash is a function of the endpoint
+   * URL, which the browser keeps stable until the user revokes the
+   * permission OR the vendor invalidates the endpoint.
+   */
+  async currentEndpointHash(): Promise<string | null> {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      return null;
+    }
+    if (typeof crypto === 'undefined' || typeof crypto.subtle === 'undefined') {
+      return null;
+    }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) return null;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub?.endpoint) return null;
+      const bytes = new TextEncoder().encode(sub.endpoint);
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    } catch {
+      return null;
     }
   }
 

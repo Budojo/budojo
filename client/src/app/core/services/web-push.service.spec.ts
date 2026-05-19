@@ -104,6 +104,8 @@ describe('WebPushService (#694)', () => {
           {
             id: 1,
             endpoint_host: 'fcm.googleapis.com',
+
+            endpoint_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             last_seen_at: null,
             created_at: '2026-05-14T07:00:00+00:00',
           },
@@ -182,6 +184,8 @@ describe('WebPushService (#694)', () => {
         data: {
           id: 42,
           endpoint_host: 'fcm.googleapis.com',
+
+          endpoint_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           last_seen_at: null,
           created_at: '2026-05-14T07:00:00+00:00',
         },

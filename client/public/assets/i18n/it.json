@@ -928,6 +928,8 @@
       "sendTest": {
         "label": "Invia notifica di prova"
       },
+      "thisDevice": "questo dispositivo",
+      "addDeviceHint": "Per aggiungere un altro dispositivo, apri Budojo su quel dispositivo e tocca \"Attiva su questo dispositivo\".",
       "sendTestToast": {
         "summary": "Test inviato",
         "detail": "Controlla il dispositivo — il banner dovrebbe arrivare entro qualche secondo. Se non vedi nulla, controlla Impostazioni → App → (il tuo browser) → Notifiche."
