@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { SwPush } from '@angular/service-worker';
-import { firstValueFrom } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
 
 import { WebPushError, WebPushService } from './web-push.service';
 
@@ -15,15 +15,18 @@ interface FakeSwPushOptions {
   readonly isEnabled?: boolean;
   readonly subscription?: PushSubscription;
   readonly subscriptionError?: unknown;
+  readonly messages?: Subject<unknown>;
 }
 
 function makeFakeSwPush(opts: FakeSwPushOptions = {}): {
   isEnabled: boolean;
+  messages: Subject<unknown>;
   requestSubscription: () => Promise<PushSubscription>;
   unsubscribe: () => Promise<void>;
 } {
   return {
     isEnabled: opts.isEnabled ?? true,
+    messages: opts.messages ?? new Subject<unknown>(),
     async requestSubscription(): Promise<PushSubscription> {
       if (opts.subscriptionError !== undefined) {
         throw opts.subscriptionError;
@@ -104,6 +107,8 @@ describe('WebPushService (#694)', () => {
           {
             id: 1,
             endpoint_host: 'fcm.googleapis.com',
+
+            endpoint_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             last_seen_at: null,
             created_at: '2026-05-14T07:00:00+00:00',
           },
@@ -147,6 +152,60 @@ describe('WebPushService (#694)', () => {
       http.verify();
     });
 
+    it('throws WebPushError("ios_pwa_required") on iOS Safari outside standalone mode (#816)', async () => {
+      const { service, http } = setup();
+      const origUA = navigator.userAgent;
+      Object.defineProperty(navigator, 'userAgent', {
+        value:
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+        configurable: true,
+      });
+      // `navigator.standalone` is false / undefined → non-standalone
+      (navigator as unknown as { standalone?: boolean }).standalone = false;
+      Object.defineProperty(window, 'matchMedia', {
+        value: () => ({ matches: false }),
+        configurable: true,
+      });
+
+      try {
+        await expect(service.subscribe('PUB')).rejects.toMatchObject({
+          name: 'WebPushError',
+          reason: 'ios_pwa_required',
+        });
+      } finally {
+        Object.defineProperty(navigator, 'userAgent', { value: origUA, configurable: true });
+        delete (navigator as unknown as { standalone?: boolean }).standalone;
+      }
+      http.verify();
+    });
+
+    it('throws WebPushError("brave_push_disabled") when Brave\'s push service rejects subscribe (#811)', async () => {
+      const { service, http } = setup({
+        subscriptionError: new DOMException('not supported', 'NotSupportedError'),
+      });
+      // Permission is NOT denied — the user accepted the OS prompt; Brave
+      // itself rejected the underlying PushManager.subscribe() call
+      // because the "Use Google services for push messaging" toggle is
+      // off at brave://settings/privacy.
+      (
+        globalThis as unknown as { Notification: { permission: NotificationPermission } }
+      ).Notification.permission = 'granted';
+      // Brave exposes navigator.brave.isBrave() returning Promise<true>.
+      (navigator as unknown as { brave: { isBrave: () => Promise<boolean> } }).brave = {
+        isBrave: () => Promise.resolve(true),
+      };
+
+      try {
+        await expect(service.subscribe('PUB')).rejects.toMatchObject({
+          name: 'WebPushError',
+          reason: 'brave_push_disabled',
+        });
+      } finally {
+        delete (navigator as unknown as { brave?: unknown }).brave;
+      }
+      http.verify();
+    });
+
     it('exposes WebPushError as an Error subclass', () => {
       const err = new WebPushError('subscribe_failed');
       expect(err).toBeInstanceOf(Error);
@@ -182,6 +241,8 @@ describe('WebPushService (#694)', () => {
         data: {
           id: 42,
           endpoint_host: 'fcm.googleapis.com',
+
+          endpoint_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           last_seen_at: null,
           created_at: '2026-05-14T07:00:00+00:00',
         },
@@ -216,6 +277,67 @@ describe('WebPushService (#694)', () => {
         reason: 'server_not_configured',
       });
       http.verify();
+    });
+  });
+
+  describe('verifyDelivery (#818)', () => {
+    it("returns 'unknown' when SwPush is disabled — can't verify either way", async () => {
+      const { service, http } = setup({ isEnabled: false });
+      await expect(service.verifyDelivery()).resolves.toBe('unknown');
+      http.verify();
+    });
+
+    it("returns 'unknown' when the test endpoint errors — can't conclude OS-mute", async () => {
+      const { service, http } = setup();
+      const promise = service.verifyDelivery();
+      const req = http.expectOne('/api/v1/me/push-subscriptions/test');
+      req.flush({ message: 'boom' }, { status: 500, statusText: 'Server error' });
+      await expect(promise).resolves.toBe('unknown');
+      http.verify();
+    });
+
+    it("returns 'ok' when the SW receives the verification push within the window", async () => {
+      const messages = new Subject<unknown>();
+      const { service, http } = setup({ messages });
+      const promise = service.verifyDelivery(10_000);
+
+      // Fan-out endpoint POST → 200.
+      const req = http.expectOne('/api/v1/me/push-subscriptions/test');
+      req.flush({ data: { sent: true } });
+      // Drain microtasks so the listener subscribes before we emit.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Simulate the SW receiving the verification push.
+      messages.next({
+        notification: { title: 'Test', body: 'ok', data: { kind: 'verification' } },
+      });
+
+      await expect(promise).resolves.toBe('ok');
+      http.verify();
+    });
+
+    it("returns 'silent' when the SW never sees the push within the window", async () => {
+      vi.useFakeTimers();
+      try {
+        const messages = new Subject<unknown>();
+        const { service, http } = setup({ messages });
+        const promise = service.verifyDelivery(5_000);
+
+        const req = http.expectOne('/api/v1/me/push-subscriptions/test');
+        req.flush({ data: { sent: true } });
+        await Promise.resolve();
+        await Promise.resolve();
+
+        // Advance the clock past the timeout WITHOUT emitting a message.
+        vi.advanceTimersByTime(6_000);
+        await Promise.resolve();
+
+        await expect(promise).resolves.toBe('silent');
+        http.verify();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

@@ -83,16 +83,34 @@
             {{ 'profile.browserNotifications.onDescription' | translate }}
           </p>
           <div class="profile-browser-notifications__cta-actions">
-            <p-button
-              type="button"
-              severity="secondary"
-              icon="pi pi-bell"
-              [text]="true"
-              [label]="'profile.browserNotifications.addDevice' | translate"
-              [loading]="busy()"
-              (onClick)="enable()"
-              data-cy="profile-browser-notifications-add-device"
-            />
+            <!--
+              Add-another-device affordance (#822) — visible ONLY when
+              the current browser is NOT in the device list. Clicking
+              it from a browser that's already subscribed re-runs the
+              subscribe flow which hits `updateOrCreate(user_id,
+              endpoint_hash)` and refreshes the same row — no new
+              device, just user confusion. Hide it and surface a hint
+              instead when the user IS already subscribed here.
+            -->
+            @if (currentDeviceMatched()) {
+              <p
+                class="profile-browser-notifications__cta-hint"
+                data-cy="profile-browser-notifications-add-device-hint"
+              >
+                {{ 'profile.browserNotifications.addDeviceHint' | translate }}
+              </p>
+            } @else {
+              <p-button
+                type="button"
+                severity="secondary"
+                icon="pi pi-bell"
+                [text]="true"
+                [label]="'profile.browserNotifications.addDevice' | translate"
+                [loading]="busy()"
+                (onClick)="enable()"
+                data-cy="profile-browser-notifications-add-device"
+              />
+            }
             <!--
               Diagnostic ping (#819). User self-verifies the OS-level
               push channel any time, and we get a one-tap smoke test
@@ -137,6 +155,22 @@
             <div class="profile-browser-notifications__device-text">
               <span class="profile-browser-notifications__device-host">
                 {{ device.endpoint_host }}
+                @if (device.id === currentDeviceId()) {
+                  <!--
+                    "(this device)" pill (#822) — disambiguates the row
+                    that corresponds to the current browser from any
+                    other registered devices sharing the same vendor
+                    host (all FCM-backed devices have endpoint_host =
+                    fcm.googleapis.com). Helps the revoke flow avoid
+                    silently killing the wrong device.
+                  -->
+                  <span
+                    class="profile-browser-notifications__device-pill"
+                    [attr.data-cy]="'profile-browser-notifications-device-this-' + device.id"
+                  >
+                    {{ 'profile.browserNotifications.thisDevice' | translate }}
+                  </span>
+                }
               </span>
               <span
                 class="profile-browser-notifications__device-meta"

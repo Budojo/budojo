@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\TestPushNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -46,6 +47,16 @@ class PushSubscriptionController extends Controller
                 // "fcm.googleapis.com" / "updates.push.services.mozilla.com"
                 // well enough to identify the device they want to revoke.
                 'endpoint_host' => parse_url($s->endpoint, PHP_URL_HOST) ?: 'unknown',
+                // SHA-256 hash of the endpoint URL (#822). Exposed so
+                // the SPA can match the current browser's
+                // `sha256(PushSubscription.endpoint)` against the
+                // device list — needed to render a "(this device)"
+                // pill on the matching row AND to hide the
+                // "Add another device" affordance when the current
+                // device is already subscribed. The hash is NOT a
+                // bearer credential (the endpoint URL is); exposing
+                // it is safe.
+                'endpoint_hash' => $s->endpoint_hash,
                 'last_seen_at' => $s->last_seen_at?->toIso8601String(),
                 'created_at' => $s->created_at->toIso8601String(),
             ])->all(),
@@ -110,6 +121,8 @@ class PushSubscriptionController extends Controller
             'data' => [
                 'id' => $row->id,
                 'endpoint_host' => parse_url($row->endpoint, PHP_URL_HOST) ?: 'unknown',
+                // Without this the SPA's "(this device)" pill + "Add another device" hide stay false until a GET re-fetch (#822 intent was instant matching after subscribe).
+                'endpoint_hash' => $row->endpoint_hash,
                 'created_at' => $row->created_at->toIso8601String(),
             ],
         ], $row->wasRecentlyCreated ? 201 : 200);
@@ -122,10 +135,16 @@ class PushSubscriptionController extends Controller
      * (and we have a one-tap diagnostic affordance for support).
      *
      * 422 when the user has zero subscriptions — without an existing
-     * device, there's nothing to test against. The "Send test" button
-     * on the SPA is gated on the device list so the 422 is defensive,
-     * not the user-flow path. Quiet hours suppression is inherited from
-     * `WebPushChannel`.
+     * device, there's nothing to test against. 503 when the underlying
+     * fan-out throws (e.g. VAPID misconfig at delivery time, vendor
+     * signing failure inside `WebPushChannel::send → $webPush->flush()`).
+     * Without the catch a runtime throw bubbles as a generic 500
+     * (#828) — the structured 503 + logged context lets the SPA show a
+     * specific toast and lets us correlate from server logs.
+     *
+     * The "Send test" button on the SPA is gated on the device list so
+     * the 422 is defensive, not the user-flow path. Quiet hours
+     * suppression is inherited from `WebPushChannel`.
      */
     public function test(Request $request): JsonResponse
     {
@@ -138,7 +157,20 @@ class PushSubscriptionController extends Controller
             ], 422);
         }
 
-        Notification::send($user, new TestPushNotification());
+        try {
+            Notification::send($user, new TestPushNotification());
+        } catch (\Throwable $e) {
+            // Monolog serializes the full stack trace only when context carries a Throwable under the reserved 'exception' key.
+            Log::warning('TestPushNotification dispatch threw', [
+                'user_id' => $user->id,
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'message' => 'Could not dispatch the test notification.',
+                'reason' => 'dispatch_failed',
+            ], 503);
+        }
 
         return response()->json(['data' => ['sent' => true]]);
     }

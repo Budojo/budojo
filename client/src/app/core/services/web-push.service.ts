@@ -1,8 +1,9 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom, map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 
 /**
  * Browser Web Push subscriber (#694, closes the client half of #419).
@@ -35,6 +36,12 @@ import { environment } from '../../../environments/environment';
 export interface PushDevice {
   readonly id: number;
   readonly endpoint_host: string;
+  /**
+   * SHA-256 hash of the endpoint URL, exposed by the server (#822) so
+   * the SPA can match against `sha256(currentSubscription.endpoint)`
+   * and identify which device row corresponds to the current browser.
+   */
+  readonly endpoint_hash: string;
   readonly last_seen_at: string | null;
   readonly created_at: string;
 }
@@ -68,7 +75,9 @@ export type WebPushFailureReason =
   | 'not_supported'
   | 'permission_denied'
   | 'server_not_configured'
-  | 'subscribe_failed';
+  | 'subscribe_failed'
+  | 'ios_pwa_required'
+  | 'brave_push_disabled';
 
 export class WebPushError extends Error {
   constructor(
@@ -102,6 +111,55 @@ export class WebPushService {
       typeof window !== 'undefined' &&
       'PushManager' in window
     );
+  }
+
+  /**
+   * iOS Safari supports the Push API surface AND the permission
+   * prompt since 16.4 — but only delivers actual notifications when
+   * the site is **installed as a Home Screen PWA** and opened from
+   * that icon (`navigator.standalone === true` OR
+   * `display-mode: standalone`). From a regular Safari tab the
+   * `requestSubscription()` call succeeds, the server-side mirror
+   * persists, but APNs silently refuses to deliver. Subscribe
+   * short-circuits with `ios_pwa_required` when this returns `true`
+   * so the UI surfaces an iOS-specific hint instead of pretending
+   * the flow worked (#816).
+   */
+  isIosNonStandalone(): boolean {
+    if (typeof navigator === 'undefined' || typeof window === 'undefined') {
+      return false;
+    }
+    if (!/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      return false;
+    }
+    const legacyStandalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
+    const mediaStandalone =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(display-mode: standalone)').matches;
+    return !(legacyStandalone || mediaStandalone);
+  }
+
+  /**
+   * Brave exposes itself via the (Brave-only) `navigator.brave.isBrave()`
+   * async API (Chromium UA strings are intentionally identical, so UA
+   * sniffing is unreliable). Used in the `subscribe()` catch path to
+   * distinguish Brave's "Use Google services for push messaging" toggle
+   * being off (manifests as a `NotSupportedError` / `AbortError` on
+   * `PushManager.subscribe()`) from a generic vendor failure (#811).
+   *
+   * Returns `false` on any non-Brave browser, when the global is
+   * missing, or when the async check rejects.
+   */
+  async isBrave(): Promise<boolean> {
+    if (typeof navigator === 'undefined') return false;
+    const isBraveFn = (navigator as unknown as { brave?: { isBrave?: () => Promise<boolean> } })
+      .brave?.isBrave;
+    if (typeof isBraveFn !== 'function') return false;
+    try {
+      return Boolean(await isBraveFn.call((navigator as unknown as { brave: unknown }).brave));
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -143,13 +201,23 @@ export class WebPushService {
    * Failure modes mapped to a typed reason so the UI renders the right
    * branch (vs. a generic "something went wrong"):
    *  - `not_supported`         — SW or PushManager missing
+   *  - `ios_pwa_required`      — iOS Safari needs PWA install (#816)
    *  - `permission_denied`     — user clicked Block on the prompt
+   *  - `brave_push_disabled`   — Brave with "Use Google services
+   *                              for push messaging" off (#811)
    *  - `server_not_configured` — backend returned 503 (VAPID unset)
    *  - `subscribe_failed`      — vendor push service errored
    */
   async subscribe(vapidPublicKey: string): Promise<PushDevice> {
     if (!this.isSupported() || !this.swPush.isEnabled) {
       throw new WebPushError('not_supported');
+    }
+
+    // iOS Safari guard (#816) — short-circuit BEFORE the subscribe
+    // call so the user sees a platform-specific hint instead of a
+    // misleading "all set" path that silently fails at APNs.
+    if (this.isIosNonStandalone()) {
+      throw new WebPushError('ios_pwa_required');
     }
 
     let subscription: PushSubscription;
@@ -160,12 +228,20 @@ export class WebPushService {
     } catch (error) {
       // `requestSubscription` rejects with the underlying DOMException
       // when the user denies permission OR the push service errors.
-      // The two have distinct user-visible cures (settings flip vs.
-      // try again later), so we split on `Notification.permission`
-      // after the throw rather than on error.name (which varies by
-      // browser).
+      // Three branches:
+      //  1. Permission denied — `Notification.permission` flips to
+      //     'denied'. Cures: open browser site settings.
+      //  2. Brave-with-Google-services-off — surfaces as a
+      //     `NotSupportedError` / `AbortError`. Cures: flip the
+      //     toggle at `brave://settings/privacy`. Detected via
+      //     `navigator.brave.isBrave()` async API (#811).
+      //  3. Generic vendor error — anything else.
       if (this.currentPermission() === 'denied') {
         throw new WebPushError('permission_denied', String(error));
+      }
+      const errName = (error as { name?: string })?.name ?? '';
+      if ((errName === 'NotSupportedError' || errName === 'AbortError') && (await this.isBrave())) {
+        throw new WebPushError('brave_push_disabled', String(error));
       }
       throw new WebPushError('subscribe_failed', String(error));
     }
@@ -196,6 +272,130 @@ export class WebPushService {
         throw new WebPushError('server_not_configured', String(error));
       }
       throw new WebPushError('subscribe_failed', String(error));
+    }
+  }
+
+  /**
+   * Verify the push delivery channel works end-to-end (#818). After a
+   * successful `subscribe()`, the SPA has no way to confirm that the
+   * OS will actually surface notifications — Web Notification API
+   * only exposes the SITE-level permission, not the OS-level Chrome /
+   * TWA notification toggle that #817 surfaced as the root cause of
+   * silent failures.
+   *
+   * The check:
+   *  1. Set up a `swPush.messages` listener filtered on
+   *     `data.kind === 'verification'`.
+   *  2. POST to `/me/push-subscriptions/test` — the server dispatches
+   *     `TestPushNotification` via `WebPushChannel` to ALL the user's
+   *     subscriptions (the just-created one + any others).
+   *  3. Race the listener against a 5-second timer.
+   *
+   * Outcomes:
+   *  - `'ok'`      — the SW received the test push within the window.
+   *                  Channel works.
+   *  - `'silent'`  — timeout fired without the SW receiving it. Most
+   *                  likely OS-level mute (Chrome notif off in
+   *                  Android Settings, battery saver, TWA process
+   *                  killed). The SPA surfaces an actionable hint.
+   *  - `'unknown'` — the SW isn't enabled (dev mode) OR the test
+   *                  endpoint errored (server-side throw, VAPID
+   *                  misconfig). Can't conclude either way; the UI
+   *                  stays silent to avoid false alarms.
+   *
+   * Fire-and-forget from the component — runs in the background after
+   * the success toast. The user sees a SECOND, distinct toast only
+   * when the verification times out.
+   */
+  async verifyDelivery(timeoutMs: number = 5000): Promise<'ok' | 'silent' | 'unknown'> {
+    if (!this.swPush.isEnabled) return 'unknown';
+
+    // Set up the listener BEFORE firing the ping — otherwise a fast
+    // SW could fire the push event before our subscribe lands and we
+    // would miss the signal.
+    const listenerPromise = new Promise<'ok'>((resolve) => {
+      const sub = this.swPush.messages.subscribe((rawMessage) => {
+        const data = (rawMessage as { notification?: { data?: { kind?: string } } }).notification
+          ?.data;
+        if (data?.kind === 'verification') {
+          sub.unsubscribe();
+          resolve('ok');
+        }
+      });
+      // Cleanup buffer past the timeout so the subscription doesn't
+      // leak. The race below decides the outcome at `timeoutMs`; the
+      // listener stays alive an extra second to absorb a near-miss
+      // before unsubscribing.
+      setTimeout(() => sub.unsubscribe(), timeoutMs + 1000);
+    });
+
+    try {
+      // Inline the POST instead of calling `sendTest()` so we can opt
+      // out of the offline-redirect interceptor — this is a background
+      // poll (not user-initiated), and a transient network blip would
+      // otherwise teleport the user to `/offline` mid-subscribe
+      // (memory § background-polls / SKIP_OFFLINE_REDIRECT). The
+      // user-initiated `sendTest()` keeps the default behaviour so a
+      // real loss-of-connectivity on the manual button still routes
+      // correctly.
+      await firstValueFrom(
+        this.http.post(
+          `${environment.apiBase}/api/v1/me/push-subscriptions/test`,
+          {},
+          { context: new HttpContext().set(SKIP_OFFLINE_REDIRECT, true) },
+        ),
+      );
+    } catch {
+      // Server-side error on the test endpoint — VAPID misconfig, no
+      // subscriptions registered, network blip. Can't verify either
+      // way; report 'unknown' so the UI doesn't surface a misleading
+      // "your phone is muted" toast on a server fault.
+      return 'unknown';
+    }
+
+    const timeoutPromise = new Promise<'silent'>((resolve) =>
+      setTimeout(() => resolve('silent'), timeoutMs),
+    );
+    return Promise.race([listenerPromise, timeoutPromise]);
+  }
+
+  /**
+   * SHA-256 hash of the CURRENT browser's PushSubscription endpoint,
+   * if one exists (#822). Mirrors the server-side
+   * `PushSubscription.endpoint_hash` column so the UI can identify
+   * which row in the device list is "this device" and hide the
+   * redundant "Add another device" affordance when the current
+   * browser is already subscribed.
+   *
+   * Returns `null` when:
+   *  - The browser has no service-worker registration, OR
+   *  - The SW has no active PushSubscription, OR
+   *  - `crypto.subtle` is unavailable (very old browsers / non-secure
+   *    contexts — same set that would also fail `isSupported()`).
+   *
+   * Stable across page loads: the hash is a function of the endpoint
+   * URL, which the browser keeps stable until the user revokes the
+   * permission OR the vendor invalidates the endpoint.
+   */
+  async currentEndpointHash(): Promise<string | null> {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      return null;
+    }
+    if (typeof crypto === 'undefined' || typeof crypto.subtle === 'undefined') {
+      return null;
+    }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) return null;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub?.endpoint) return null;
+      const bytes = new TextEncoder().encode(sub.endpoint);
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    } catch {
+      return null;
     }
   }
 

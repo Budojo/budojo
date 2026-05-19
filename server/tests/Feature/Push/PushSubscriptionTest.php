@@ -25,8 +25,35 @@ it('GET /me/push-subscriptions returns the user\'s rows + VAPID public key', fun
     $response->assertOk()
         ->assertJsonCount(2, 'data')
         ->assertJsonPath('meta.enabled', true)
-        ->assertJsonStructure(['data' => [['id', 'endpoint_host', 'last_seen_at', 'created_at']]]);
+        ->assertJsonStructure(['data' => [['id', 'endpoint_host', 'endpoint_hash', 'last_seen_at', 'created_at']]]);
     expect($response->json('meta.vapid_public_key'))->toBeString();
+});
+
+it('GET /me/push-subscriptions exposes endpoint_hash so the SPA can match the current device (#822)', function (): void {
+    $user = userWithAcademy();
+    $endpoint = 'https://fcm.googleapis.com/fcm/send/known-endpoint';
+    $expectedHash = hash('sha256', $endpoint);
+    // The factory's `endpoint_hash` is computed from its own random
+    // `endpoint` inside `definition()`; passing `endpoint` alone via
+    // `create()` overrides ONLY that field, leaving the hash detached.
+    // For this round-trip assertion we set both explicitly so the row
+    // mirrors the production shape (controller `store()` writes both).
+    $sub = PushSubscription::factory()->for($user)->create([
+        'endpoint' => $endpoint,
+        'endpoint_hash' => $expectedHash,
+    ]);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/me/push-subscriptions');
+
+    $response->assertOk();
+    $row = $response->json('data.0');
+    // The returned hash is the sha256 of the endpoint URL — the SPA
+    // computes the same hash from the current browser's PushSubscription
+    // and matches against this field to know which row is "this device".
+    expect($row['endpoint_hash'])->toBe($expectedHash);
+    expect($row['endpoint_hash'])->toBe($sub->endpoint_hash);
+    // Shape: 64-char lowercase hex.
+    expect($row['endpoint_hash'])->toMatch('/^[a-f0-9]{64}$/');
 });
 
 it('GET /me/push-subscriptions never includes another user\'s rows', function (): void {
@@ -41,25 +68,33 @@ it('GET /me/push-subscriptions never includes another user\'s rows', function ()
 
 it('POST /me/push-subscriptions stores a new subscription (201)', function (): void {
     $user = userWithAcademy();
+    $endpoint = 'https://fcm.googleapis.com/fcm/send/abc';
+    $expectedHash = hash('sha256', $endpoint);
 
     $response = $this->actingAs($user)
-        ->postJson('/api/v1/me/push-subscriptions', pushPayload());
+        ->postJson('/api/v1/me/push-subscriptions', pushPayload($endpoint));
 
     $response->assertCreated()
-        ->assertJsonStructure(['data' => ['id', 'endpoint_host', 'created_at']]);
+        ->assertJsonStructure(['data' => ['id', 'endpoint_host', 'endpoint_hash', 'created_at']]);
+    // endpoint_hash is the load-bearing field for the SPA's "(this device)"
+    // pill + "Add another device" hide — without it both stay false until a
+    // page refresh.
+    expect($response->json('data.endpoint_hash'))->toBe($expectedHash);
     expect(PushSubscription::query()->where('user_id', $user->id)->count())->toBe(1);
 });
 
 it('POST /me/push-subscriptions is idempotent on (user, endpoint) — 200 on re-post', function (): void {
     $user = userWithAcademy();
     $payload = pushPayload();
+    $expectedHash = hash('sha256', $payload['endpoint']);
 
     $this->actingAs($user)
         ->postJson('/api/v1/me/push-subscriptions', $payload)
         ->assertCreated();
     $second = $this->actingAs($user)
         ->postJson('/api/v1/me/push-subscriptions', $payload);
-    $second->assertOk();
+    $second->assertOk()
+        ->assertJsonPath('data.endpoint_hash', $expectedHash);
 
     expect(PushSubscription::query()->where('user_id', $user->id)->count())->toBe(1);
 });
@@ -129,6 +164,33 @@ it('POST /me/push-subscriptions/test dispatches TestPushNotification to the call
         ->assertJsonPath('data.sent', true);
 
     Illuminate\Support\Facades\Notification::assertSentTo($user, App\Notifications\TestPushNotification::class);
+});
+
+it('POST /me/push-subscriptions/test returns 503 with structured reason when the dispatch throws (#828)', function (): void {
+    $user = userWithAcademy();
+    PushSubscription::factory()->for($user)->create();
+    // Anonymous ChannelManager with empty constructor so the throw propagates to the controller's catch instead of being swallowed by Notification::fake().
+    Illuminate\Support\Facades\Notification::swap(new class () extends Illuminate\Notifications\ChannelManager {
+        public function __construct()
+        {
+        }
+
+        public function send($notifiables, $instance, ?array $channels = null): void
+        {
+            throw new \RuntimeException('VAPID signing failed');
+        }
+
+        public function sendNow($notifiables, $instance, ?array $channels = null): void
+        {
+            throw new \RuntimeException('VAPID signing failed');
+        }
+    });
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/me/push-subscriptions/test')
+        ->assertStatus(503)
+        ->assertJsonPath('message', 'Could not dispatch the test notification.')
+        ->assertJsonPath('reason', 'dispatch_failed');
 });
 
 it('POST /me/push-subscriptions/test returns 422 when the user has no subscriptions', function (): void {

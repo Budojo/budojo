@@ -928,6 +928,8 @@
       "sendTest": {
         "label": "Invia notifica di prova"
       },
+      "thisDevice": "questo dispositivo",
+      "addDeviceHint": "Per aggiungere un altro dispositivo, apri Budojo su quel dispositivo e tocca \"Attiva su questo dispositivo\".",
       "sendTestToast": {
         "summary": "Test inviato",
         "detail": "Controlla il dispositivo — il banner dovrebbe arrivare entro qualche secondo. Se non vedi nulla, controlla Impostazioni → App → (il tuo browser) → Notifiche."
@@ -935,6 +937,10 @@
       "sendTestErrorToast": {
         "summary": "Impossibile inviare il test",
         "detail": "Qualcosa è andato storto lato server. Riprova tra un momento."
+      },
+      "verifySilentToast": {
+        "summary": "Notifiche attive — ma il push di prova non è arrivato",
+        "detail": "Il push è stato consegnato al servizio ma il tuo dispositivo non l'ha mostrato. Controlla Impostazioni → App → (il tuo browser) → Notifiche per assicurarti che siano attive a livello OS."
       },
       "errors": {
         "not_supported": {
@@ -952,6 +958,14 @@
         "subscribe_failed": {
           "summary": "Impossibile attivare le notifiche",
           "detail": "Il servizio push del browser ha rifiutato la richiesta. Riprova tra un momento."
+        },
+        "ios_pwa_required": {
+          "summary": "Installa Budojo per attivare le notifiche",
+          "detail": "Su iPhone le notifiche push funzionano solo quando Budojo è installato come app dalla schermata Home. Tocca il pulsante Condividi → Aggiungi alla schermata Home, poi attiva le notifiche dall'icona installata."
+        },
+        "brave_push_disabled": {
+          "summary": "Il servizio push di Brave è disattivato",
+          "detail": "Apri brave://settings/privacy e attiva \"Use Google services for push messaging\", poi riprova qui."
         }
       }
     },

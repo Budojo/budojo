@@ -79,6 +79,8 @@
         [disabled]="!canGoPrev()"
         (onClick)="prevMonth()"
         [ariaLabel]="'athletes.detail.attendance.prevMonth' | translate"
+        [pTooltip]="'athletes.detail.attendance.prevMonth' | translate"
+        tooltipPosition="top"
         data-cy="attendance-prev"
       />
       <p-button
@@ -88,6 +90,8 @@
         [disabled]="!canGoNext()"
         (onClick)="nextMonth()"
         [ariaLabel]="'athletes.detail.attendance.nextMonth' | translate"
+        [pTooltip]="'athletes.detail.attendance.nextMonth' | translate"
+        tooltipPosition="top"
         data-cy="attendance-next"
       />
     </div>

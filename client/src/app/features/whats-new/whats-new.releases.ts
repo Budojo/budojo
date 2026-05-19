@@ -28,11 +28,47 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
-    version: 'v2.18.5',
+    version: 'v2.20.0',
     date: '2026-05-19',
     headline:
-      'Bug-fix release. A handful of small UX corrections + the Claude-reviewer plumbing settling in. Nothing big, nothing flashy.',
+      'Notification UX polish + tighter push-fail diagnostics. The Browser notifications card on /dashboard/me/profile gets smarter about which device is which, why subscribe sometimes fails, and what to do when a test push leaves silently.',
     sections: [
+      {
+        heading: '🔔 Browser notifications',
+        bullets: [
+          '"(this device)" pill on the matching row. The device list now marks the row that belongs to the browser you\'re currently looking at, so a multi-device user (phone + laptop + tablet) can tell which row maps to which session without reading the cryptic fcm.googleapis.com host string. Matching is done by hashing the current PushSubscription.endpoint (SHA-256) and comparing against the rows the server returns — no extra round-trip.',
+          '"Add another device" button hides when the current device is already subscribed. Tapping it from the device that\'s already in the list created a no-op flicker before (the upsert resolved to the same row, no toast, nothing visibly changed). Now the affordance is just absent when it can\'t do anything useful.',
+          'Delivery verification after enabling notifications. When you flip the toggle on, the SPA fires a one-shot verification push and waits up to 5 seconds for the Service Worker to receive it. If the push lands → success. If 5 seconds pass and nothing arrived → a warn toast surfaces explaining that a system layer (Android settings, browser permissions, focus mode) may be silently filtering pushes. Catches the case where Android revoked the channel permission silently between releases.',
+          'Platform-specific hints when subscribe fails. iOS Safari outside the installed PWA now explains "Web push on iOS requires the app to be installed (Add to Home Screen)". Brave with Google Push Services disabled now points to "Settings → Privacy → Push notifications". Generic "subscribe failed" is gone.',
+          "Test push button: structured 503 if delivery throws. The Send test button (added in v2.19.0) previously returned a 200 + opened the user's inbox even when the underlying WebPushChannel threw at signing time. Now the endpoint catches the exception, logs it server-side, returns a 503 with reason: dispatch_failed, and the SPA shows an error toast instead of a misleading success. No inbox row is created on failure either.",
+        ],
+      },
+      {
+        heading: '🎯 Pager parity',
+        bullets: [
+          'Attendance pager tooltips alongside ariaLabel. The left / right chevron buttons on the attendance pager already had accessible names for screen readers; now they also get pTooltip on hover/long-press for mouse + touch users, matching the convention the promotions pager picked up in v2.19.0.',
+        ],
+      },
+      {
+        heading: '🤖 Internal — release flow guard',
+        bullets: [
+          "For maintainers / contributors only. We added a CI required check (whats-new-pin-check) that fires on every develop → main release PR. It computes the version semantic-release is about to tag and fails the PR if whats-new.releases.ts's top entry or the newest docs/changelog/user-facing/v*.md filename doesn't match. Prevents the version drift that shipped v2.19.0 with a v2.18.5 whats-new label.",
+        ],
+      },
+    ],
+  },
+  {
+    version: 'v2.19.0',
+    date: '2026-05-19',
+    headline:
+      'Bug-fix release with one user-visible feature: a Send test notification button on the Browser notifications card. Plus a handful of small UX corrections + the Claude-reviewer plumbing settling in.',
+    sections: [
+      {
+        heading: '🔔 Send test notification',
+        bullets: [
+          'A new button under Browser notifications (in /dashboard/me/profile) lets you fire a one-shot test push to your registered device any time. Useful after a phone reboot, after Android revokes the browser\'s notification permission, or as a "did I actually wire this up right?" smoke check.',
+        ],
+      },
       {
         heading: '🎯 Athlete list & widgets',
         bullets: [
