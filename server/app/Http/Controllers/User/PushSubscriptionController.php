@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\TestPushNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -132,10 +133,16 @@ class PushSubscriptionController extends Controller
      * (and we have a one-tap diagnostic affordance for support).
      *
      * 422 when the user has zero subscriptions — without an existing
-     * device, there's nothing to test against. The "Send test" button
-     * on the SPA is gated on the device list so the 422 is defensive,
-     * not the user-flow path. Quiet hours suppression is inherited from
-     * `WebPushChannel`.
+     * device, there's nothing to test against. 503 when the underlying
+     * fan-out throws (e.g. VAPID misconfig at delivery time, vendor
+     * signing failure inside `WebPushChannel::send → $webPush->flush()`).
+     * Without the catch a runtime throw bubbles as a generic 500
+     * (#828) — the structured 503 + logged context lets the SPA show a
+     * specific toast and lets us correlate from server logs.
+     *
+     * The "Send test" button on the SPA is gated on the device list so
+     * the 422 is defensive, not the user-flow path. Quiet hours
+     * suppression is inherited from `WebPushChannel`.
      */
     public function test(Request $request): JsonResponse
     {
@@ -148,7 +155,20 @@ class PushSubscriptionController extends Controller
             ], 422);
         }
 
-        Notification::send($user, new TestPushNotification());
+        try {
+            Notification::send($user, new TestPushNotification());
+        } catch (\Throwable $e) {
+            // Monolog serializes the full stack trace only when context carries a Throwable under the reserved 'exception' key.
+            Log::warning('TestPushNotification dispatch threw', [
+                'user_id' => $user->id,
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'message' => 'Could not dispatch the test notification.',
+                'reason' => 'dispatch_failed',
+            ], 503);
+        }
 
         return response()->json(['data' => ['sent' => true]]);
     }

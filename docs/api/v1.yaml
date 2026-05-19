@@ -1710,6 +1710,79 @@ paths:
         '503':
           description: VAPID keys not configured on the server.
 
+  /me/push-subscriptions/test:
+    post:
+      tags: [auth]
+      summary: Send a one-shot test push to the authenticated user's subscriptions
+      description: |
+        User-triggered diagnostic ping (#819). Fires a `TestPushNotification`
+        via `WebPushChannel` to every active subscription belonging to the
+        authenticated user, so the user can self-verify their device's push
+        channel is healthy (and we get a one-tap support diagnostic).
+
+        Hardened in #828 against transient channel failures: if
+        `Notification::send` throws (e.g. VAPID library raises at signing
+        time, push vendor returns a 5xx, an unexpected `\Error` from the
+        php extension), the controller catches `\Throwable`, logs the
+        exception with full stack trace under the reserved Monolog
+        `exception` key, and returns a structured 503 with
+        `reason: 'dispatch_failed'` so the SPA can branch on the failure
+        and show an explanatory toast instead of a misleading 200.
+
+        The notification uses ONLY the `WebPushChannel` (no database
+        channel) so no inbox row is created — the user's inbox stays
+        clean of diagnostic pings. Quiet hours suppression is
+        inherited from `WebPushChannel`.
+      operationId: meWebPushTest
+      responses:
+        '200':
+          description: Test push dispatched to the user's subscriptions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [sent]
+                    properties:
+                      sent:
+                        type: boolean
+                        example: true
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: The authenticated user has no push subscriptions to test against.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: No push subscriptions registered for this user.
+        '503':
+          description: |
+            Notification dispatch threw an exception (VAPID signing
+            failure, push vendor 5xx, etc.). The `reason` discriminator
+            lets the SPA show a specific error toast instead of a
+            generic "something went wrong".
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, reason]
+                properties:
+                  message:
+                    type: string
+                    example: Could not dispatch the test notification.
+                  reason:
+                    type: string
+                    enum: [dispatch_failed]
+                    example: dispatch_failed
+
   /me/push-subscriptions/{id}:
     delete:
       tags: [auth]
