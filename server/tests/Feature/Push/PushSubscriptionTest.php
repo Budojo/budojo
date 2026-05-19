@@ -68,12 +68,18 @@ it('GET /me/push-subscriptions never includes another user\'s rows', function ()
 
 it('POST /me/push-subscriptions stores a new subscription (201)', function (): void {
     $user = userWithAcademy();
+    $endpoint = 'https://fcm.googleapis.com/fcm/send/abc';
+    $expectedHash = hash('sha256', $endpoint);
 
     $response = $this->actingAs($user)
-        ->postJson('/api/v1/me/push-subscriptions', pushPayload());
+        ->postJson('/api/v1/me/push-subscriptions', pushPayload($endpoint));
 
     $response->assertCreated()
-        ->assertJsonStructure(['data' => ['id', 'endpoint_host', 'created_at']]);
+        ->assertJsonStructure(['data' => ['id', 'endpoint_host', 'endpoint_hash', 'created_at']]);
+    // endpoint_hash is the load-bearing field for the SPA's "(this device)"
+    // pill + "Add another device" hide — without it both stay false until a
+    // page refresh.
+    expect($response->json('data.endpoint_hash'))->toBe($expectedHash);
     expect(PushSubscription::query()->where('user_id', $user->id)->count())->toBe(1);
 });
 

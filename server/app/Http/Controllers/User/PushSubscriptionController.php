@@ -121,6 +121,8 @@ class PushSubscriptionController extends Controller
             'data' => [
                 'id' => $row->id,
                 'endpoint_host' => parse_url($row->endpoint, PHP_URL_HOST) ?: 'unknown',
+                // Without this the SPA's "(this device)" pill + "Add another device" hide stay false until a GET re-fetch (#822 intent was instant matching after subscribe).
+                'endpoint_hash' => $row->endpoint_hash,
                 'created_at' => $row->created_at->toIso8601String(),
             ],
         ], $row->wasRecentlyCreated ? 201 : 200);
