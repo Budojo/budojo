@@ -172,12 +172,11 @@
     margin-top: 0.5rem;
 
     // The Going chip carries `rsvps_count` in a <span class="feed__react-count">,
-    // not a <button> — there's no RSVP-list sheet to open (yet). Neutralise the
+    // not a <button> — there's no RSVP-list sheet to open. Neutralise the
     // shared interactive styles the count would otherwise inherit from the
     // `&__react-toggle, &__react-count { cursor: pointer; … :hover {} }` block,
     // so the user doesn't see a clickable target that does nothing
-    // (Norman § signifiers — false affordance). Reviewer flagged this on #807
-    // but the PR auto-merged before the fix landed (#809).
+    // (Norman § signifiers — false affordance).
     .feed__react-count {
       cursor: default;
       pointer-events: none;
