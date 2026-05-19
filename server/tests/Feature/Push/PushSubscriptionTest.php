@@ -161,8 +161,7 @@ it('POST /me/push-subscriptions/test dispatches TestPushNotification to the call
 it('POST /me/push-subscriptions/test returns 503 with structured reason when the dispatch throws (#828)', function (): void {
     $user = userWithAcademy();
     PushSubscription::factory()->for($user)->create();
-    // Replace the Notification dispatcher with one that throws — mirrors
-    // a real-world VAPID signing failure inside WebPushChannel::send.
+    // Anonymous ChannelManager with empty constructor so the throw propagates to the controller's catch instead of being swallowed by Notification::fake().
     Illuminate\Support\Facades\Notification::swap(new class () extends Illuminate\Notifications\ChannelManager {
         public function __construct()
         {
