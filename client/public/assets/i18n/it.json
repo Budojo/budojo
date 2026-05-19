@@ -1625,7 +1625,9 @@
         "emptyBody": "Nessuna promozione registrata. Cambia cintura o striscette e qui apparirà la riga.",
         "firstBelt": "Prima cintura",
         "stripes": "striscette",
-        "recordedBy": "Registrato da {{name}}"
+        "recordedBy": "Registrato da {{name}}",
+        "prevPage": "Pagina precedente",
+        "nextPage": "Pagina successiva"
       },
       "attendance": {
         "eyebrow": "Presenze",
