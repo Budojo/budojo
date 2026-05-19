@@ -46,6 +46,7 @@ describe('Change password (#409)', () => {
     }).as('changePassword');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-security"]').click();
 
     // The change-password section sits below the avatar + name + handle
     // + email rows; on the default Cypress viewport the dashboard

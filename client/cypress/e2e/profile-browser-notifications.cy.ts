@@ -65,6 +65,7 @@ describe('Profile → Browser notifications (#694)', () => {
     });
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-notifications"]').click();
     cy.get('[data-cy="profile-browser-notifications"]').should('exist');
     cy.get('[data-cy="profile-browser-notifications-server-disabled"]').should('exist');
   });
@@ -76,6 +77,7 @@ describe('Profile → Browser notifications (#694)', () => {
     });
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-notifications"]').click();
     cy.get('[data-cy="profile-browser-notifications-off"]').should('exist');
     cy.get('[data-cy="profile-browser-notifications-enable"]').should('exist');
   });
@@ -94,6 +96,7 @@ describe('Profile → Browser notifications (#694)', () => {
     });
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-notifications"]').click();
     cy.get('[data-cy="profile-browser-notifications-on"]').should('exist');
     cy.get('[data-cy="profile-browser-notifications-device-42"]').should('exist');
     cy.get('[data-cy="profile-browser-notifications-revoke-42"]').should('exist');

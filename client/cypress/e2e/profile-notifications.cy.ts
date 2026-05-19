@@ -41,6 +41,7 @@ describe('Email notification preferences (#416)', () => {
     }).as('prefs');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-notifications"]').click();
     cy.wait('@prefs');
 
     cy.get('[data-cy="profile-notifications"]').scrollIntoView();
@@ -80,6 +81,7 @@ describe('Email notification preferences (#416)', () => {
     }).as('patch');
 
     cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-notifications"]').click();
     cy.wait('@prefs');
 
     cy.get('[data-cy="profile-notifications-toggle-medical_cert_expiry_reminders"]')

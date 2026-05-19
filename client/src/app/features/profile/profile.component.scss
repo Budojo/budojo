@@ -29,6 +29,27 @@
     font-size: 0.875rem;
   }
 
+  // Tab strip (#847). Same shape as `athlete-detail-page__tabs` — a
+  // small top margin separates it from the page header above, and the
+  // `p-tab` host carries an icon + label flex pair via ::ng-deep so
+  // PrimeNG's default Material rendering shows both. Tabs are a visual
+  // filter on this single-component surface (no router-outlet);
+  // matching the athlete-detail strip keeps the dashboard's tab chrome
+  // consistent across surfaces.
+  &__tabs {
+    margin-top: 0.5rem;
+
+    ::ng-deep p-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      i {
+        font-size: 1rem;
+      }
+    }
+  }
+
   // Inline alert when the user was bounced here from a gated write (#167 PR3).
   // Hairline border + amber tone matches the unverified pillola so the page
   // reads as a coherent state rather than a stack of disconnected nudges.
@@ -429,83 +450,6 @@
   // breathing room before an action" beat.
   :host ::ng-deep .profile-page__export-button {
     margin-top: 0.25rem;
-  }
-}
-
-// Avatar card (#411). Matches the academy-logo card geometry on
-// AcademyDetailComponent — the two surfaces share the same upload /
-// replace / remove rhythm so a user who learned one page already
-// knows the other (Jakob's Law). Layout: round preview disc on the
-// left, title + hint + button row on the right, hidden file input
-// at the end so the SCSS doesn't have to care about its position.
-.avatar-card {
-  // Internal padding for the stacked-content variant of the card —
-  // same rationale as `&__change-password` and `&__data-export`
-  // (the row-based cards get padding from each `&__row` rule; the
-  // avatar card is a flat-sibling layout — preview + body + actions —
-  // and needs the padding on the card surface itself). User
-  // feedback 2026-05-08 caught the omission; the change-password +
-  // data-export sections were already at 1.25rem, this one was the
-  // only stacked-content card still flush to the edge.
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  align-items: flex-start;
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: center;
-  }
-
-  &__preview {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  &__body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    flex: 1 1 auto;
-  }
-
-  &__title {
-    margin: 0;
-    font-weight: 600;
-    color: var(--p-text-color);
-  }
-
-  &__hint {
-    margin: 0;
-    color: var(--p-text-color-secondary);
-    font-size: 0.8125rem;
-    line-height: 1.45;
-  }
-
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-
-  // Hidden file input — the visible affordance is the upload button.
-  // `display: none` would prevent programmatic .click() from working
-  // in some browsers when paired with focus restoration; clip-path is
-  // the canonical visually-hidden pattern that keeps the element
-  // in the accessibility tree without rendering it.
-  &__file {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
   }
 }
 

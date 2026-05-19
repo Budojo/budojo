@@ -13,711 +13,586 @@
     }
 
     <!--
-      Avatar card (#411). Mirrors the academy-logo card on
-      AcademyDetailComponent — left: avatar disc, right: title + hint
-      + actions. Upload button label flips between "Upload" and
-      "Replace" based on whether `avatar_url` is set; remove only
-      surfaces when there's something to remove (Norman § constraints).
+      Tabs (#847). Visual filter on top of the same single scroll page —
+      the URL doesn't change between tabs (no router-outlet), but the
+      conditional `@if (activeTab() === 'X')` blocks below render only
+      the cards that belong to the current cluster. Mirrors the
+      athlete-detail tab strip visually; the architectural difference
+      from router-outlet keeps the SCSS encapsulation simple since every
+      card still lives inside the same component view.
     -->
-    <section class="profile-page__card">
-      <div class="avatar-card" data-cy="profile-avatar-card">
-        <div class="avatar-card__preview" data-cy="profile-avatar-preview">
-          <app-user-avatar
-            [url]="avatarUrl()"
-            [name]="u.full_name"
-            size="card"
-            [alt]="'profile.avatarAlt' | translate"
-          />
-        </div>
-        <div class="avatar-card__body">
-          <p class="avatar-card__title">{{ 'profile.avatarTitle' | translate }}</p>
-          <p class="avatar-card__hint">{{ 'profile.avatarHint' | translate }}</p>
-          <div class="avatar-card__actions">
-            <p-button
-              [label]="(avatarUrl() ? 'profile.avatarReplace' : 'profile.avatarUpload') | translate"
-              icon="pi pi-upload"
-              [loading]="avatarUploading()"
-              (onClick)="onAvatarBrowse()"
-              data-cy="profile-avatar-upload"
-            />
-            @if (avatarUrl()) {
-              <p-button
-                [label]="'profile.avatarRemove' | translate"
-                icon="pi pi-trash"
-                severity="secondary"
-                [text]="true"
-                (onClick)="confirmRemoveAvatar($event)"
-                data-cy="profile-avatar-remove"
-              />
-            }
-          </div>
-        </div>
-        <!--
-          Synthetic file input. Visually hidden (the visible affordance
-          is the "Upload"/"Replace" p-button next to the avatar, which
-          calls .click() on this input). Removed from the tab order +
-          aria-hidden so a keyboard / screen-reader user is never
-          presented with an unlabeled focusable control they can't see.
-        -->
-        <input
-          #avatarInput
-          type="file"
-          class="avatar-card__file"
-          accept="image/png,image/jpeg,image/webp"
-          (change)="onAvatarSelected($event)"
-          tabindex="-1"
-          aria-hidden="true"
-          data-cy="profile-avatar-input"
-        />
-      </div>
-    </section>
-    <p-confirmpopup />
-
-    <section class="profile-page__card">
-      <!--
-        Inline name edit (#463). Display mode shows the current name + a
-        small pencil affordance (Norman § signifier — the icon+tooltip
-        tells the user this row is editable). Edit mode swaps to a text
-        field with Save / Cancel buttons. Email and verification stay
-        read-only here; the email-change flow lands separately because
-        it needs a pending-email-changes schema + signed-link round-trip.
-      -->
-      @if (editingName()) {
-        <form
-          [formGroup]="nameForm"
-          (ngSubmit)="submitEditName()"
-          novalidate
-          class="profile-page__row profile-page__row--edit profile-page__row--edit-name"
-          data-cy="profile-name-edit-form"
+    <p-tabs [value]="activeTab()" class="profile-page__tabs" data-cy="profile-tabs">
+      <p-tablist>
+        <p-tab value="identity" (click)="setActiveTab('identity')" data-cy="profile-tab-identity">
+          <i class="pi pi-user"></i>
+          <span>{{ 'profile.tabs.identity' | translate }}</span>
+        </p-tab>
+        <p-tab value="security" (click)="setActiveTab('security')" data-cy="profile-tab-security">
+          <i class="pi pi-shield"></i>
+          <span>{{ 'profile.tabs.security' | translate }}</span>
+        </p-tab>
+        <p-tab
+          value="notifications"
+          (click)="setActiveTab('notifications')"
+          data-cy="profile-tab-notifications"
         >
-          <label for="profileFirstName" class="profile-page__label">
-            {{ 'profile.firstName' | translate }}
-          </label>
-          <input
-            id="profileFirstName"
-            type="text"
-            pInputText
-            formControlName="first_name"
-            [attr.aria-invalid]="firstNameError !== null ? true : null"
-            [attr.aria-describedby]="firstNameError !== null ? 'profileFirstNameError' : null"
-            autocomplete="given-name"
-            maxlength="100"
-            class="profile-page__input"
-            data-cy="profile-first-name-input"
-          />
-          @if (firstNameError; as err) {
-            <small id="profileFirstNameError" class="field-error" [attr.data-cy]="err.dataCy">
-              {{ err.key | translate }}
-            </small>
-          }
+          <i class="pi pi-bell"></i>
+          <span>{{ 'profile.tabs.notifications' | translate }}</span>
+        </p-tab>
+        <p-tab value="account" (click)="setActiveTab('account')" data-cy="profile-tab-account">
+          <i class="pi pi-cog"></i>
+          <span>{{ 'profile.tabs.account' | translate }}</span>
+        </p-tab>
+      </p-tablist>
+    </p-tabs>
 
-          <label for="profileLastName" class="profile-page__label">
-            {{ 'profile.lastName' | translate }}
-          </label>
-          <input
-            id="profileLastName"
-            type="text"
-            pInputText
-            formControlName="last_name"
-            [attr.aria-invalid]="lastNameError !== null ? true : null"
-            [attr.aria-describedby]="lastNameError !== null ? 'profileLastNameError' : null"
-            autocomplete="family-name"
-            maxlength="100"
-            class="profile-page__input"
-            data-cy="profile-last-name-input"
-          />
-          @if (lastNameError; as err) {
-            <small id="profileLastNameError" class="field-error" [attr.data-cy]="err.dataCy">
-              {{ err.key | translate }}
-            </small>
-          }
+    <!-- ═══════════════════════════════════════════════════════════════
+         TAB 1 — IDENTITY
+         Avatar card + name/handle/email/verification rows. The default
+         landing tab; the avatar disc and contact identity are the most
+         frequently accessed pieces.
+         ═══════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'identity') {
+      <section class="profile-page__card">
+        <app-avatar-card />
+      </section>
+      <p-confirmpopup />
 
-          @if (nameServerErrorRow; as err) {
-            <small class="field-error" [attr.data-cy]="err.dataCy">
-              {{ err.key | translate }}
-            </small>
-          }
-
-          <div class="profile-page__row-actions">
-            <p-button
-              type="submit"
-              [label]="'profile.editName.save' | translate"
-              severity="secondary"
-              [outlined]="true"
-              size="small"
-              [loading]="savingName()"
-              [disabled]="savingName()"
-              data-cy="profile-name-save"
-            />
-            <p-button
-              type="button"
-              [label]="'profile.editName.cancel' | translate"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              [disabled]="savingName()"
-              (onClick)="cancelEditName()"
-              data-cy="profile-name-cancel"
-            />
-          </div>
-        </form>
-      } @else {
-        <!--
-          Display mode for Nome + Cognome — two separate rows so they
-          align 1:1 with the rest of the card chrome (Handle, Email).
-          Both pencils open the SAME `nameForm` because first/last are
-          conceptually one identity edit (#463 + #479 keep the unified
-          edit ergonomics); the visual split is only for read-mode
-          uniformity. User feedback 2026-05-07 to converge on academy's
-          row rhythm: "ma non possiamo uniformare con questa grafica
-          che è bella?".
-        -->
-        <div class="profile-page__row">
-          <span class="profile-page__label">{{ 'profile.firstName' | translate }}</span>
-          <div class="profile-page__value-row">
-            <span class="profile-page__value" data-cy="profile-first-name">{{ u.first_name }}</span>
-            <p-button
-              type="button"
-              icon="pi pi-pencil"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              [pTooltip]="'profile.editName.edit' | translate"
-              tooltipPosition="left"
-              [ariaLabel]="'profile.editName.edit' | translate"
-              (onClick)="startEditName()"
-              styleClass="profile-page__row-edit-button"
-              data-cy="profile-first-name-edit"
-            />
-          </div>
-        </div>
-        <div class="profile-page__row">
-          <span class="profile-page__label">{{ 'profile.lastName' | translate }}</span>
-          <div class="profile-page__value-row">
-            <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
-            <p-button
-              type="button"
-              icon="pi pi-pencil"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              [pTooltip]="'profile.editName.edit' | translate"
-              tooltipPosition="left"
-              [ariaLabel]="'profile.editName.edit' | translate"
-              (onClick)="startEditName()"
-              styleClass="profile-page__row-edit-button"
-              data-cy="profile-last-name-edit"
-            />
-          </div>
-        </div>
-        <!--
-          Legacy data-cy preserved so existing E2E specs keep matching
-          the full name. aria-hidden so screen readers don't announce
-          "Mario … Bonanno … Mario Bonanno" — the two visible rows
-          above already carry the readable shape.
-        -->
-        <span class="profile-page__sr-only" data-cy="profile-name" aria-hidden="true">{{
-          u.full_name
-        }}</span>
-      }
-
-      <!--
-        Handle row (#479). Instagram-style user-chosen identifier with
-        an `@` prefix decorator; helper text spells out the IG-style
-        rules verbatim (Krug — self-evident UI: the rules are visible
-        BEFORE typing, so a generic "Invalid handle" error doesn't have
-        to carry the explanation). Empty input clears the handle.
-      -->
-      @if (editingHandle()) {
-        <form
-          [formGroup]="handleForm"
-          (ngSubmit)="submitEditHandle()"
-          novalidate
-          class="profile-page__row profile-page__row--edit profile-page__row--edit-handle"
-          data-cy="profile-handle-edit-form"
-        >
-          <label for="profileHandle" class="profile-page__label">
-            {{ 'profile.handle' | translate }}
-          </label>
-          <!--
-            Composite control (#479 follow-up). Mirrors the p-datepicker
-            override pattern (see budojo-variants.scss § p-inputgroup):
-            the wrapper carries the pill chrome, the addon + input are
-            flat children. Reads as a single Instagram-style field —
-            Norman § signifier. data-cy stays on the inner <input> so
-            existing E2E selectors continue to resolve.
-          -->
-          <p-inputgroup class="profile-page__handle-group">
-            <p-inputgroup-addon aria-hidden="true">&#64;</p-inputgroup-addon>
+      <section class="profile-page__card">
+        @if (editingName()) {
+          <form
+            [formGroup]="nameForm"
+            (ngSubmit)="submitEditName()"
+            novalidate
+            class="profile-page__row profile-page__row--edit profile-page__row--edit-name"
+            data-cy="profile-name-edit-form"
+          >
+            <label for="profileFirstName" class="profile-page__label">
+              {{ 'profile.firstName' | translate }}
+            </label>
             <input
-              id="profileHandle"
+              id="profileFirstName"
               type="text"
               pInputText
-              formControlName="handle"
-              [attr.aria-invalid]="handleError !== null ? true : null"
-              [attr.aria-describedby]="
-                handleError !== null ? 'profileHandleError' : 'profileHandleHelp'
-              "
-              autocomplete="off"
-              autocapitalize="off"
-              autocorrect="off"
-              spellcheck="false"
-              maxlength="30"
-              data-cy="profile-handle-input"
+              formControlName="first_name"
+              [attr.aria-invalid]="firstNameError !== null ? true : null"
+              [attr.aria-describedby]="firstNameError !== null ? 'profileFirstNameError' : null"
+              autocomplete="given-name"
+              maxlength="100"
+              class="profile-page__input"
+              data-cy="profile-first-name-input"
             />
-          </p-inputgroup>
-          @if (handleError; as err) {
-            <small id="profileHandleError" class="field-error" [attr.data-cy]="err.dataCy">
-              {{ err.key | translate }}
-            </small>
-          } @else {
-            <small id="profileHandleHelp" class="field-hint" data-cy="profile-handle-help">
-              {{ 'profile.editHandle.help' | translate }}
-            </small>
-          }
-          <div class="profile-page__row-actions">
+            @if (firstNameError; as err) {
+              <small id="profileFirstNameError" class="field-error" [attr.data-cy]="err.dataCy">
+                {{ err.key | translate }}
+              </small>
+            }
+
+            <label for="profileLastName" class="profile-page__label">
+              {{ 'profile.lastName' | translate }}
+            </label>
+            <input
+              id="profileLastName"
+              type="text"
+              pInputText
+              formControlName="last_name"
+              [attr.aria-invalid]="lastNameError !== null ? true : null"
+              [attr.aria-describedby]="lastNameError !== null ? 'profileLastNameError' : null"
+              autocomplete="family-name"
+              maxlength="100"
+              class="profile-page__input"
+              data-cy="profile-last-name-input"
+            />
+            @if (lastNameError; as err) {
+              <small id="profileLastNameError" class="field-error" [attr.data-cy]="err.dataCy">
+                {{ err.key | translate }}
+              </small>
+            }
+
+            @if (nameServerErrorRow; as err) {
+              <small class="field-error" [attr.data-cy]="err.dataCy">
+                {{ err.key | translate }}
+              </small>
+            }
+
+            <div class="profile-page__row-actions">
+              <p-button
+                type="submit"
+                [label]="'profile.editName.save' | translate"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                [loading]="savingName()"
+                [disabled]="savingName()"
+                data-cy="profile-name-save"
+              />
+              <p-button
+                type="button"
+                [label]="'profile.editName.cancel' | translate"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                [disabled]="savingName()"
+                (onClick)="cancelEditName()"
+                data-cy="profile-name-cancel"
+              />
+            </div>
+          </form>
+        } @else {
+          <div class="profile-page__row">
+            <span class="profile-page__label">{{ 'profile.firstName' | translate }}</span>
+            <div class="profile-page__value-row">
+              <span class="profile-page__value" data-cy="profile-first-name">{{
+                u.first_name
+              }}</span>
+              <p-button
+                type="button"
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                [pTooltip]="'profile.editName.edit' | translate"
+                tooltipPosition="left"
+                [ariaLabel]="'profile.editName.edit' | translate"
+                (onClick)="startEditName()"
+                styleClass="profile-page__row-edit-button"
+                data-cy="profile-first-name-edit"
+              />
+            </div>
+          </div>
+          <div class="profile-page__row">
+            <span class="profile-page__label">{{ 'profile.lastName' | translate }}</span>
+            <div class="profile-page__value-row">
+              <span class="profile-page__value" data-cy="profile-last-name">{{ u.last_name }}</span>
+              <p-button
+                type="button"
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                [pTooltip]="'profile.editName.edit' | translate"
+                tooltipPosition="left"
+                [ariaLabel]="'profile.editName.edit' | translate"
+                (onClick)="startEditName()"
+                styleClass="profile-page__row-edit-button"
+                data-cy="profile-last-name-edit"
+              />
+            </div>
+          </div>
+          <span class="profile-page__sr-only" data-cy="profile-name" aria-hidden="true">{{
+            u.full_name
+          }}</span>
+        }
+
+        @if (editingHandle()) {
+          <form
+            [formGroup]="handleForm"
+            (ngSubmit)="submitEditHandle()"
+            novalidate
+            class="profile-page__row profile-page__row--edit profile-page__row--edit-handle"
+            data-cy="profile-handle-edit-form"
+          >
+            <label for="profileHandle" class="profile-page__label">
+              {{ 'profile.handle' | translate }}
+            </label>
+            <p-inputgroup class="profile-page__handle-group">
+              <p-inputgroup-addon aria-hidden="true">&#64;</p-inputgroup-addon>
+              <input
+                id="profileHandle"
+                type="text"
+                pInputText
+                formControlName="handle"
+                [attr.aria-invalid]="handleError !== null ? true : null"
+                [attr.aria-describedby]="
+                  handleError !== null ? 'profileHandleError' : 'profileHandleHelp'
+                "
+                autocomplete="off"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                maxlength="30"
+                data-cy="profile-handle-input"
+              />
+            </p-inputgroup>
+            @if (handleError; as err) {
+              <small id="profileHandleError" class="field-error" [attr.data-cy]="err.dataCy">
+                {{ err.key | translate }}
+              </small>
+            } @else {
+              <small id="profileHandleHelp" class="field-hint" data-cy="profile-handle-help">
+                {{ 'profile.editHandle.help' | translate }}
+              </small>
+            }
+            <div class="profile-page__row-actions">
+              <p-button
+                type="submit"
+                [label]="'profile.editHandle.save' | translate"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                [loading]="savingHandle()"
+                [disabled]="savingHandle()"
+                data-cy="profile-handle-save"
+              />
+              <p-button
+                type="button"
+                [label]="'profile.editHandle.cancel' | translate"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                [disabled]="savingHandle()"
+                (onClick)="cancelEditHandle()"
+                data-cy="profile-handle-cancel"
+              />
+            </div>
+          </form>
+        } @else {
+          <div class="profile-page__row">
+            <span class="profile-page__label">{{ 'profile.handle' | translate }}</span>
+            <div class="profile-page__value-row">
+              @if (u.handle) {
+                <span class="profile-page__value" data-cy="profile-handle"
+                  >&#64;{{ u.handle }}</span
+                >
+              } @else {
+                <span
+                  class="profile-page__value profile-page__value--placeholder"
+                  data-cy="profile-handle-empty"
+                >
+                  {{ 'profile.editHandle.notSet' | translate }}
+                </span>
+              }
+              <p-button
+                type="button"
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                [pTooltip]="'profile.editHandle.edit' | translate"
+                tooltipPosition="left"
+                [ariaLabel]="'profile.editHandle.edit' | translate"
+                (onClick)="startEditHandle()"
+                styleClass="profile-page__row-edit-button"
+                data-cy="profile-handle-edit"
+              />
+            </div>
+          </div>
+        }
+
+        @if (pendingEmailChange(); as pending) {
+          <div class="profile-page__pending-pillola" data-cy="profile-email-pending-pillola">
+            <i class="pi pi-clock" aria-hidden="true"></i>
+            <div class="profile-page__pending-text">
+              <strong>{{ 'account.emailChange.pendingPillola.label' | translate }}</strong>
+              <p class="profile-page__pending-detail">
+                {{
+                  'account.emailChange.pendingPillola.detail'
+                    | translate: { newEmail: pending.new_email_partial }
+                }}
+              </p>
+            </div>
+            <p-button
+              type="button"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [label]="'account.emailChange.pendingPillola.cancel' | translate"
+              [loading]="cancellingEmail()"
+              (onClick)="cancelPendingEmailChange()"
+              data-cy="profile-email-pending-cancel"
+            />
+          </div>
+        }
+
+        @if (editingEmail()) {
+          <form
+            [formGroup]="emailForm"
+            (ngSubmit)="submitEditEmail($event)"
+            novalidate
+            class="profile-page__row profile-page__row--edit"
+            data-cy="profile-email-edit-form"
+          >
+            <label for="profileEmail" class="profile-page__label">
+              {{ 'account.emailChange.profile.newEmailLabel' | translate }}
+            </label>
+            <input
+              id="profileEmail"
+              type="email"
+              pInputText
+              formControlName="email"
+              [attr.aria-invalid]="emailError !== null ? true : null"
+              [attr.aria-describedby]="emailError !== null ? 'profileEmailError' : null"
+              autocomplete="email"
+              maxlength="255"
+              [placeholder]="'account.emailChange.profile.newEmailPlaceholder' | translate"
+              class="profile-page__input"
+              data-cy="profile-email-input"
+            />
+            @if (emailError; as err) {
+              <small id="profileEmailError" class="field-error" [attr.data-cy]="err.dataCy">
+                {{ err.key | translate }}
+              </small>
+            }
+            <div class="profile-page__row-actions">
+              <p-button
+                type="submit"
+                [label]="'account.emailChange.profile.save' | translate"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                [loading]="requestingEmail()"
+                [disabled]="requestingEmail()"
+                data-cy="profile-email-save"
+              />
+              <p-button
+                type="button"
+                [label]="'account.emailChange.profile.cancel' | translate"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                [disabled]="requestingEmail()"
+                (onClick)="cancelEditEmail()"
+                data-cy="profile-email-cancel"
+              />
+            </div>
+          </form>
+        } @else {
+          <div class="profile-page__row">
+            <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
+            <div class="profile-page__value-row">
+              <span class="profile-page__value" data-cy="profile-email">
+                {{ u.email }}
+                @if (u.email_verified_at) {
+                  <i
+                    class="pi pi-check-circle profile-page__email-verified-mark"
+                    aria-hidden="true"
+                    [pTooltip]="'emailVerification.verified' | translate"
+                    tooltipPosition="top"
+                    data-cy="profile-email-verified-mark"
+                  ></i>
+                }
+              </span>
+              <p-button
+                type="button"
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                size="small"
+                [pTooltip]="'account.emailChange.profile.edit' | translate"
+                tooltipPosition="left"
+                [ariaLabel]="'account.emailChange.profile.edit' | translate"
+                (onClick)="startEditEmail()"
+                styleClass="profile-page__row-edit-button"
+                data-cy="profile-email-edit"
+              />
+            </div>
+          </div>
+        }
+
+        @if (u.email_verified_at === null) {
+          <div class="profile-page__row profile-page__row--status">
+            <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>
+            <app-email-verification-status />
+          </div>
+        }
+      </section>
+    }
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TAB 2 — SECURITY
+         Change password + two-factor + active sessions + login history.
+         "Login hardening" cluster (Krug § proximity).
+         ═══════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'security') {
+      <section class="profile-page__card">
+        <section class="profile-page__change-password" data-cy="profile-change-password">
+          <span class="profile-page__label">{{ 'profile.changePassword.title' | translate }}</span>
+          <p class="profile-page__change-password-hint">
+            {{ 'profile.changePassword.hint' | translate }}
+          </p>
+
+          <form
+            [formGroup]="changePasswordForm"
+            (ngSubmit)="submitChangePassword()"
+            novalidate
+            class="profile-page__change-password-form"
+          >
+            <div class="field">
+              <label for="currentPassword">
+                {{ 'profile.changePassword.currentPassword' | translate }}
+              </label>
+              <p-password
+                inputId="currentPassword"
+                formControlName="currentPassword"
+                [feedback]="false"
+                [toggleMask]="true"
+                autocomplete="current-password"
+                styleClass="w-full"
+                [inputStyleClass]="
+                  'w-full' +
+                  (currentPassword.invalid && currentPassword.touched ? ' ng-invalid ng-dirty' : '')
+                "
+              />
+              @if (currentPassword.touched && currentPassword.errors?.['required']) {
+                <small class="field-error" data-cy="change-password-current-required">
+                  {{ 'profile.changePassword.currentPasswordRequired' | translate }}
+                </small>
+              }
+              @if (changePasswordServerError() === 'current') {
+                <small class="field-error" data-cy="change-password-current-wrong">
+                  {{ 'profile.changePassword.currentPasswordWrong' | translate }}
+                </small>
+              }
+            </div>
+
+            <div class="field">
+              <label for="newPassword">
+                {{ 'profile.changePassword.newPassword' | translate }}
+              </label>
+              <p-password
+                inputId="newPassword"
+                formControlName="newPassword"
+                [feedback]="false"
+                [toggleMask]="true"
+                autocomplete="new-password"
+                styleClass="w-full"
+                [inputStyleClass]="
+                  'w-full' +
+                  (newPassword.invalid && newPassword.touched ? ' ng-invalid ng-dirty' : '')
+                "
+              />
+              <app-password-strength-meter [password]="newPassword.value ?? null" />
+              @if (newPassword.touched && newPassword.errors?.['required']) {
+                <small class="field-error">
+                  {{ 'profile.changePassword.newPasswordRequired' | translate }}
+                </small>
+              } @else if (newPassword.touched && newPassword.errors?.['minlength']) {
+                <small class="field-error" data-cy="change-password-new-minlength">
+                  {{ 'profile.changePassword.newPasswordMinlength' | translate }}
+                </small>
+              }
+              @if (changePasswordServerError() === 'breached') {
+                <small class="field-error" data-cy="change-password-new-breached">
+                  {{ 'profile.changePassword.newPasswordBreached' | translate }}
+                </small>
+              } @else if (changePasswordServerError() === 'password') {
+                <small class="field-error" data-cy="change-password-new-server-error">
+                  {{ 'profile.changePassword.newPasswordServerError' | translate }}
+                </small>
+              }
+            </div>
+
+            <div class="field">
+              <label for="newPasswordConfirmation">
+                {{ 'profile.changePassword.newPasswordConfirmation' | translate }}
+              </label>
+              <p-password
+                inputId="newPasswordConfirmation"
+                formControlName="newPasswordConfirmation"
+                [feedback]="false"
+                [toggleMask]="true"
+                autocomplete="new-password"
+                styleClass="w-full"
+                [inputStyleClass]="
+                  'w-full' +
+                  ((newPasswordConfirmation.invalid && newPasswordConfirmation.touched) ||
+                  ((newPasswordConfirmation.touched || changePasswordForm.touched) &&
+                    changePasswordForm.errors?.['passwordsMismatch'])
+                    ? ' ng-invalid ng-dirty'
+                    : '')
+                "
+              />
+              @if (
+                (newPasswordConfirmation.touched || changePasswordForm.touched) &&
+                changePasswordForm.errors?.['passwordsMismatch']
+              ) {
+                <small class="field-error" data-cy="change-password-mismatch">
+                  {{ 'profile.changePassword.mismatch' | translate }}
+                </small>
+              }
+            </div>
+
+            @if (changePasswordServerError() === 'generic') {
+              <small class="field-error" data-cy="change-password-generic-error">
+                {{ 'profile.changePassword.genericError' | translate }}
+              </small>
+            }
+
             <p-button
               type="submit"
-              [label]="'profile.editHandle.save' | translate"
+              [label]="'profile.changePassword.submit' | translate"
               severity="secondary"
               [outlined]="true"
               size="small"
-              [loading]="savingHandle()"
-              [disabled]="savingHandle()"
-              data-cy="profile-handle-save"
+              [loading]="changingPassword()"
+              [disabled]="changingPassword()"
+              styleClass="profile-page__change-password-submit"
+              data-cy="change-password-submit"
             />
-            <p-button
-              type="button"
-              [label]="'profile.editHandle.cancel' | translate"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              [disabled]="savingHandle()"
-              (onClick)="cancelEditHandle()"
-              data-cy="profile-handle-cancel"
-            />
-          </div>
-        </form>
-      } @else {
-        <div class="profile-page__row">
-          <span class="profile-page__label">{{ 'profile.handle' | translate }}</span>
-          <div class="profile-page__value-row">
-            @if (u.handle) {
-              <span class="profile-page__value" data-cy="profile-handle">&#64;{{ u.handle }}</span>
-            } @else {
-              <span
-                class="profile-page__value profile-page__value--placeholder"
-                data-cy="profile-handle-empty"
-              >
-                {{ 'profile.editHandle.notSet' | translate }}
-              </span>
-            }
-            <p-button
-              type="button"
-              icon="pi pi-pencil"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              [pTooltip]="'profile.editHandle.edit' | translate"
-              tooltipPosition="left"
-              [ariaLabel]="'profile.editHandle.edit' | translate"
-              (onClick)="startEditHandle()"
-              styleClass="profile-page__row-edit-button"
-              data-cy="profile-handle-edit"
-            />
-          </div>
-        </div>
-      }
+          </form>
+        </section>
+      </section>
 
-      <!--
-        Inline email change (#476). When a pending row is outstanding,
-        a pillola sits ABOVE the row to make the "waiting on
-        confirmation" state self-evident (Norman § feedback) and
-        offers a "Cancel pending" CTA so the user can revoke without
-        waiting out the 24h expiry. The live `u.email` row stays
-        read-only with a pencil — the pencil opens the inline form;
-        on submit the confirm-popup spells out the consequence
-        ("we'll send a link to {new}; until you click it your login
-        email stays {old}") before the request fires.
-      -->
-      @if (pendingEmailChange(); as pending) {
-        <div class="profile-page__pending-pillola" data-cy="profile-email-pending-pillola">
-          <i class="pi pi-clock" aria-hidden="true"></i>
-          <div class="profile-page__pending-text">
-            <strong>{{ 'account.emailChange.pendingPillola.label' | translate }}</strong>
-            <p class="profile-page__pending-detail">
-              {{
-                'account.emailChange.pendingPillola.detail'
-                  | translate: { newEmail: pending.new_email_partial }
-              }}
-            </p>
-          </div>
+      <section class="profile-page__card">
+        <app-profile-two-factor />
+      </section>
+
+      <section class="profile-page__card">
+        <app-profile-sessions />
+      </section>
+
+      <section class="profile-page__card">
+        <app-profile-login-history />
+      </section>
+    }
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TAB 3 — NOTIFICATIONS
+         Email digest opt-out + browser push subscriptions.
+         ═══════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'notifications') {
+      <section class="profile-page__card">
+        <app-profile-notifications />
+      </section>
+
+      <section class="profile-page__card">
+        <app-profile-browser-notifications />
+      </section>
+    }
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TAB 4 — ACCOUNT
+         Train-here (owner-as-athlete) + API tokens + GDPR data export.
+         The settings + utilities cluster.
+         ═══════════════════════════════════════════════════════════════ -->
+    @if (activeTab() === 'account') {
+      <section class="profile-page__card">
+        <app-profile-train-here />
+      </section>
+
+      <section class="profile-page__card">
+        <app-profile-api-tokens />
+      </section>
+
+      <section class="profile-page__card">
+        <section class="profile-page__data-export" data-cy="profile-data-export">
+          <span class="profile-page__label">{{ 'profile.yourData' | translate }}</span>
+          <p class="profile-page__export-hint">{{ 'profile.exportHint' | translate }}</p>
           <p-button
             type="button"
-            severity="secondary"
-            [text]="true"
-            size="small"
-            [label]="'account.emailChange.pendingPillola.cancel' | translate"
-            [loading]="cancellingEmail()"
-            (onClick)="cancelPendingEmailChange()"
-            data-cy="profile-email-pending-cancel"
-          />
-        </div>
-      }
-
-      @if (editingEmail()) {
-        <form
-          [formGroup]="emailForm"
-          (ngSubmit)="submitEditEmail($event)"
-          novalidate
-          class="profile-page__row profile-page__row--edit"
-          data-cy="profile-email-edit-form"
-        >
-          <label for="profileEmail" class="profile-page__label">
-            {{ 'account.emailChange.profile.newEmailLabel' | translate }}
-          </label>
-          <input
-            id="profileEmail"
-            type="email"
-            pInputText
-            formControlName="email"
-            [attr.aria-invalid]="emailError !== null ? true : null"
-            [attr.aria-describedby]="emailError !== null ? 'profileEmailError' : null"
-            autocomplete="email"
-            maxlength="255"
-            [placeholder]="'account.emailChange.profile.newEmailPlaceholder' | translate"
-            class="profile-page__input"
-            data-cy="profile-email-input"
-          />
-          @if (emailError; as err) {
-            <small id="profileEmailError" class="field-error" [attr.data-cy]="err.dataCy">
-              {{ err.key | translate }}
-            </small>
-          }
-          <div class="profile-page__row-actions">
-            <p-button
-              type="submit"
-              [label]="'account.emailChange.profile.save' | translate"
-              severity="secondary"
-              [outlined]="true"
-              size="small"
-              [loading]="requestingEmail()"
-              [disabled]="requestingEmail()"
-              data-cy="profile-email-save"
-            />
-            <p-button
-              type="button"
-              [label]="'account.emailChange.profile.cancel' | translate"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              [disabled]="requestingEmail()"
-              (onClick)="cancelEditEmail()"
-              data-cy="profile-email-cancel"
-            />
-          </div>
-        </form>
-      } @else {
-        <div class="profile-page__row">
-          <span class="profile-page__label">{{ 'profile.email' | translate }}</span>
-          <div class="profile-page__value-row">
-            <span class="profile-page__value" data-cy="profile-email">
-              {{ u.email }}
-              @if (u.email_verified_at) {
-                <!-- Inline verified marker — replaces the dedicated
-                     "Verification" row that used to render a green pill
-                     even when the user hadn't asked. The verified state
-                     is the boring case (most accounts most of the time);
-                     collapsing it to a small green tick keeps the card
-                     quiet. The full Verification row stays for the
-                     pending case below, where it carries the "Resend
-                     verification email" CTA. -->
-                <i
-                  class="pi pi-check-circle profile-page__email-verified-mark"
-                  aria-hidden="true"
-                  [pTooltip]="'emailVerification.verified' | translate"
-                  tooltipPosition="top"
-                  data-cy="profile-email-verified-mark"
-                ></i>
-              }
-            </span>
-            <p-button
-              type="button"
-              icon="pi pi-pencil"
-              severity="secondary"
-              [text]="true"
-              size="small"
-              [pTooltip]="'account.emailChange.profile.edit' | translate"
-              tooltipPosition="left"
-              [ariaLabel]="'account.emailChange.profile.edit' | translate"
-              (onClick)="startEditEmail()"
-              styleClass="profile-page__row-edit-button"
-              data-cy="profile-email-edit"
-            />
-          </div>
-        </div>
-      }
-
-      @if (u.email_verified_at === null) {
-        <!-- Verification row only renders when the email is NOT
-             yet verified — at that point the row is doing real work
-             (label + Resend CTA + pending hint). Once verified, the
-             green tick inline on the email row above is sufficient,
-             and a dedicated row repeating "Email verified" for the
-             rest of the user's life is visual noise — user feedback
-             2026-05-07: "ma che gusti abbiamo?". -->
-        <div class="profile-page__row profile-page__row--status">
-          <span class="profile-page__label">{{ 'profile.verification' | translate }}</span>
-          <app-email-verification-status />
-        </div>
-      }
-    </section>
-
-    <!--
-      Change-password card (#409). Inline form on the profile page so a
-      logged-in user can rotate credentials without going through the
-      public forgot-password email round-trip. Server enforces the
-      re-auth gate via `current_password` and revokes every other Sanctum
-      token on success — the user stays logged in on this tab. Inline
-      errors under the offending field follow Norman § feedback (the user
-      is staring at the form, a toast in a corner is the wrong channel)
-      while a success toast confirms the operation since the form is
-      reset on success and would otherwise look like nothing happened.
-    -->
-    <section class="profile-page__card">
-      <section class="profile-page__change-password" data-cy="profile-change-password">
-        <span class="profile-page__label">{{ 'profile.changePassword.title' | translate }}</span>
-        <p class="profile-page__change-password-hint">
-          {{ 'profile.changePassword.hint' | translate }}
-        </p>
-
-        <form
-          [formGroup]="changePasswordForm"
-          (ngSubmit)="submitChangePassword()"
-          novalidate
-          class="profile-page__change-password-form"
-        >
-          <div class="field">
-            <label for="currentPassword">
-              {{ 'profile.changePassword.currentPassword' | translate }}
-            </label>
-            <p-password
-              inputId="currentPassword"
-              formControlName="currentPassword"
-              [feedback]="false"
-              [toggleMask]="true"
-              autocomplete="current-password"
-              styleClass="w-full"
-              [inputStyleClass]="
-                'w-full' +
-                (currentPassword.invalid && currentPassword.touched ? ' ng-invalid ng-dirty' : '')
-              "
-            />
-            @if (currentPassword.touched && currentPassword.errors?.['required']) {
-              <small class="field-error" data-cy="change-password-current-required">
-                {{ 'profile.changePassword.currentPasswordRequired' | translate }}
-              </small>
-            }
-            @if (changePasswordServerError() === 'current') {
-              <small class="field-error" data-cy="change-password-current-wrong">
-                {{ 'profile.changePassword.currentPasswordWrong' | translate }}
-              </small>
-            }
-          </div>
-
-          <div class="field">
-            <label for="newPassword">
-              {{ 'profile.changePassword.newPassword' | translate }}
-            </label>
-            <p-password
-              inputId="newPassword"
-              formControlName="newPassword"
-              [feedback]="false"
-              [toggleMask]="true"
-              autocomplete="new-password"
-              styleClass="w-full"
-              [inputStyleClass]="
-                'w-full' +
-                (newPassword.invalid && newPassword.touched ? ' ng-invalid ng-dirty' : '')
-              "
-            />
-            <app-password-strength-meter [password]="newPassword.value ?? null" />
-            @if (newPassword.touched && newPassword.errors?.['required']) {
-              <small class="field-error">
-                {{ 'profile.changePassword.newPasswordRequired' | translate }}
-              </small>
-            } @else if (newPassword.touched && newPassword.errors?.['minlength']) {
-              <small class="field-error" data-cy="change-password-new-minlength">
-                {{ 'profile.changePassword.newPasswordMinlength' | translate }}
-              </small>
-            }
-            @if (changePasswordServerError() === 'breached') {
-              <small class="field-error" data-cy="change-password-new-breached">
-                {{ 'profile.changePassword.newPasswordBreached' | translate }}
-              </small>
-            } @else if (changePasswordServerError() === 'password') {
-              <small class="field-error" data-cy="change-password-new-server-error">
-                {{ 'profile.changePassword.newPasswordServerError' | translate }}
-              </small>
-            }
-          </div>
-
-          <div class="field">
-            <label for="newPasswordConfirmation">
-              {{ 'profile.changePassword.newPasswordConfirmation' | translate }}
-            </label>
-            <p-password
-              inputId="newPasswordConfirmation"
-              formControlName="newPasswordConfirmation"
-              [feedback]="false"
-              [toggleMask]="true"
-              autocomplete="new-password"
-              styleClass="w-full"
-              [inputStyleClass]="
-                'w-full' +
-                ((newPasswordConfirmation.invalid && newPasswordConfirmation.touched) ||
-                ((newPasswordConfirmation.touched || changePasswordForm.touched) &&
-                  changePasswordForm.errors?.['passwordsMismatch'])
-                  ? ' ng-invalid ng-dirty'
-                  : '')
-              "
-            />
-            @if (
-              (newPasswordConfirmation.touched || changePasswordForm.touched) &&
-              changePasswordForm.errors?.['passwordsMismatch']
-            ) {
-              <small class="field-error" data-cy="change-password-mismatch">
-                {{ 'profile.changePassword.mismatch' | translate }}
-              </small>
-            }
-          </div>
-
-          @if (changePasswordServerError() === 'generic') {
-            <small class="field-error" data-cy="change-password-generic-error">
-              {{ 'profile.changePassword.genericError' | translate }}
-            </small>
-          }
-
-          <p-button
-            type="submit"
-            [label]="'profile.changePassword.submit' | translate"
+            icon="pi pi-download"
+            [label]="'profile.exportButton' | translate"
             severity="secondary"
             [outlined]="true"
             size="small"
-            [loading]="changingPassword()"
-            [disabled]="changingPassword()"
-            styleClass="profile-page__change-password-submit"
-            data-cy="change-password-submit"
+            [loading]="exporting()"
+            (onClick)="exportMyData()"
+            styleClass="profile-page__export-button"
+            data-cy="profile-export-data"
           />
-        </form>
+        </section>
       </section>
-    </section>
-
-    <!--
-      GDPR data portability (#222). Single tertiary action — a ZIP that
-      bundles the JSON metadata + every uploaded document. The endpoint
-      enforces a 1-call/min throttle so accidental retries don't hammer
-      the backend; the loading state on the button mirrors that.
-
-      Layout (#284): vertical stack — eyebrow → description → compact
-      button below. The previous "title left / big floating button right"
-      layout claimed visual hierarchy this action doesn't deserve (it's
-      a settings utility, not the primary action of the page) and broke
-      scan order — Krug § "self-evident UI" + canon § Card anatomy.
-    -->
-    <section class="profile-page__card">
-      <section class="profile-page__data-export" data-cy="profile-data-export">
-        <span class="profile-page__label">{{ 'profile.yourData' | translate }}</span>
-        <p class="profile-page__export-hint">{{ 'profile.exportHint' | translate }}</p>
-        <p-button
-          type="button"
-          icon="pi pi-download"
-          [label]="'profile.exportButton' | translate"
-          severity="secondary"
-          [outlined]="true"
-          size="small"
-          [loading]="exporting()"
-          (onClick)="exportMyData()"
-          styleClass="profile-page__export-button"
-          data-cy="profile-export-data"
-        />
-      </section>
-    </section>
-
-    <!--
-      Two-factor authentication panel (#412). TOTP enrolment + backup
-      codes, surfaced right after the change-password card so all
-      "login hardening" actions cluster together (Krug § proximity).
-    -->
-    <section class="profile-page__card">
-      <app-profile-two-factor />
-    </section>
-
-    <!--
-      Active sessions panel (#413). Lists every Sanctum personal-
-      access-token tied to the current user with a per-row revoke
-      action and a "Revoke all other sessions" CTA at the top.
-      The lazy load + the contained card chrome means a slow
-      `/me/sessions` fetch doesn't delay the rest of the profile
-      page from painting.
-    -->
-    <section class="profile-page__card">
-      <app-profile-sessions />
-    </section>
-
-    <!--
-      API tokens panel (#431). Long-lived, user-named, abilities-
-      scoped Sanctum tokens for integrations. Sits below the
-      sessions panel so the two "tokens in this account" surfaces
-      cluster (Krug § proximity).
-    -->
-    <section class="profile-page__card">
-      <app-profile-api-tokens />
-    </section>
-
-    <!--
-      "Train at this academy" panel (#750, frontend half of the
-      owner-as-athlete epic #747). Flips the caller into the roster
-      as an athlete in their own academy. Lives next to the
-      Notifications panel because both are "personal preferences
-      that span the operator + athlete experience".
-    -->
-    <section class="profile-page__card">
-      <app-profile-train-here />
-    </section>
-
-    <!--
-      Notification preferences panel (#416). Per-category opt-out for
-      digest / reminder emails. Transactional emails are NOT
-      toggleable; the panel surfaces them in a read-only "always
-      sent" block for transparency.
-    -->
-    <section class="profile-page__card">
-      <app-profile-notifications />
-    </section>
-
-    <!--
-      Browser push notifications panel (#694). Closes the client half
-      of the Web Push pipeline shipped in #419: the server already
-      exposes `/me/push-subscriptions` and stores VAPID-signed
-      subscriptions; this section lets the user opt in on each
-      device + revoke individual subscriptions.
-    -->
-    <section class="profile-page__card">
-      <app-profile-browser-notifications />
-    </section>
-
-    <!--
-      Login history panel (#430). Read-only list of the most recent 50
-      attempts (success + failure), pairs with the active-sessions
-      panel above — sessions covers LIVE tokens, history covers
-      PAST attempts including ones whose token has since been
-      revoked or expired. The compromise signal a user wants to
-      detect (failed-login bursts) lives here.
-    -->
-    <section class="profile-page__card">
-      <app-profile-login-history />
-    </section>
+    }
 
     <!--
       No `<p-toast>` here on purpose — the dashboard shell mounts a single

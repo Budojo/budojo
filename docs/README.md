@@ -28,6 +28,11 @@ docs/
 │   └── production-deployment.md       # the live stack: DNS, Forge, Cloudflare, runbook, gotchas
 ├── adr/                               # architectural decision records
 │   └── 0001-svg-sanitizer.md
+├── development/                       # procedural runbooks (the how-to behind CLAUDE.md rules)
+│   ├── git-flow.md                    # branch model, naming, commit format, daily/hotfix flow
+│   ├── release-flow.md                # semantic-release cadence, Auto-closes block, auto-sweep
+│   ├── reviewer-workflow.md           # Claude reviewer pipeline, reply rules, auto-poll loop
+│   └── pr-labels.md                   # type/status labels, PR checklist, PR body conventions
 └── design/                            # design system (MD3, palette, tokens, component matrix)
     ├── README.md
     ├── DESIGN_SYSTEM.md

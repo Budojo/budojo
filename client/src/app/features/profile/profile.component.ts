@@ -6,15 +6,7 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  ViewChild,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -25,12 +17,13 @@ import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
+import { TabsModule } from 'primeng/tabs';
 import { TooltipModule } from 'primeng/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
 import { PasswordStrengthMeterComponent } from '../../shared/components/password-strength-meter/password-strength-meter.component';
-import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
+import { AvatarCardComponent } from './avatar-card/avatar-card.component';
 import { ProfileBrowserNotificationsComponent } from './browser-notifications/profile-browser-notifications.component';
 import { ProfileLoginHistoryComponent } from './login-history/profile-login-history.component';
 import { ProfileNotificationsComponent } from './notifications/profile-notifications.component';
@@ -39,8 +32,7 @@ import { ProfileTrainHereComponent } from './train-here/profile-train-here.compo
 import { ProfileTwoFactorComponent } from './two-factor/profile-two-factor.component';
 import { ProfileApiTokensComponent } from './api-tokens/profile-api-tokens.component';
 
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
+type ProfileTab = 'identity' | 'security' | 'notifications' | 'account';
 
 /**
  * `/dashboard/profile` — minimal user-account surface. MVP scope is just
@@ -60,6 +52,7 @@ const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
   selector: 'app-profile',
   standalone: true,
   imports: [
+    AvatarCardComponent,
     ButtonModule,
     ConfirmPopup,
     EmailVerificationStatusComponent,
@@ -76,13 +69,14 @@ const ALLOWED_AVATAR_MIME = ['image/png', 'image/jpeg', 'image/webp'];
     ProfileTwoFactorComponent,
     ProfileApiTokensComponent,
     ReactiveFormsModule,
+    TabsModule,
     TooltipModule,
     TranslatePipe,
-    UserAvatarComponent,
   ],
-  // ConfirmationService is a per-component dependency for the avatar-remove
-  // confirm popup; mounting it here avoids leaking the dependency into every
-  // route in the dashboard shell. MessageService stays the app-level toast
+  // ConfirmationService is a per-component dependency for the email-change
+  // confirm popup (submitEditEmail). AvatarCardComponent declares its own
+  // ConfirmationService provider for the avatar-remove popup — the two
+  // instances are independent. MessageService stays the app-level toast
   // host (see the comment block in the original template / spec).
   providers: [ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -97,12 +91,22 @@ export class ProfileComponent {
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
 
-  @ViewChild('avatarInput') private avatarInput?: ElementRef<HTMLInputElement>;
-
   protected readonly user = this.authService.user;
   protected readonly exporting = signal<boolean>(false);
-  protected readonly avatarUploading = signal<boolean>(false);
-  protected readonly avatarUrl = computed<string | null>(() => this.user()?.avatar_url ?? null);
+
+  /**
+   * Active tab (#847). Tabs are a visual filter on top of the same single
+   * scroll page — the route doesn't change, only which clusters are
+   * rendered. Default tab is `identity`, where the avatar + name + email
+   * sit. `security` collects change-password + 2FA + active sessions +
+   * login history. `notifications` collects email digest + browser push.
+   * `account` collects train-here + API tokens + data export.
+   */
+  protected readonly activeTab = signal<ProfileTab>('identity');
+
+  setActiveTab(tab: ProfileTab): void {
+    this.activeTab.set(tab);
+  }
 
   /** True while PATCH /me is in flight (#463). */
   protected readonly savingName = signal<boolean>(false);
@@ -298,105 +302,6 @@ export class ProfileComponent {
           });
         },
       });
-  }
-
-  /**
-   * Avatar upload (#411). Mirrors the academy-logo flow on
-   * `AcademyDetailComponent`: hidden file input + browse button, MIME +
-   * size guards before the request, toast on success / failure. The
-   * server stores the original bytes (no GD resize); the SPA renders
-   * inside a circular CSS frame, with a `?v=updated_at` cache-buster on
-   * the URL so a same-extension replace forces the browser to refetch.
-   */
-  protected onAvatarBrowse(): void {
-    this.avatarInput?.nativeElement.click();
-  }
-
-  protected onAvatarSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    if (!ALLOWED_AVATAR_MIME.includes(file.type)) {
-      this.messageService.add({
-        severity: 'error',
-        summary: this.translate.instant('profile.avatarToast.unsupportedSummary'),
-        detail: this.translate.instant('profile.avatarToast.unsupportedDetail'),
-        life: 4000,
-      });
-      input.value = '';
-      return;
-    }
-
-    if (file.size > MAX_AVATAR_BYTES) {
-      this.messageService.add({
-        severity: 'error',
-        summary: this.translate.instant('profile.avatarToast.tooLargeSummary'),
-        detail: this.translate.instant('profile.avatarToast.tooLargeDetail'),
-        life: 4000,
-      });
-      input.value = '';
-      return;
-    }
-
-    this.avatarUploading.set(true);
-    this.authService.uploadAvatar(file).subscribe({
-      next: () => {
-        this.avatarUploading.set(false);
-        input.value = '';
-        this.messageService.add({
-          severity: 'success',
-          summary: this.translate.instant('profile.avatarToast.uploadSuccess'),
-          life: 2500,
-        });
-      },
-      error: () => {
-        this.avatarUploading.set(false);
-        input.value = '';
-        this.messageService.add({
-          severity: 'error',
-          summary: this.translate.instant('profile.avatarToast.uploadErrorSummary'),
-          detail: this.translate.instant('profile.avatarToast.uploadErrorDetail'),
-          life: 4000,
-        });
-      },
-    });
-  }
-
-  /**
-   * Confirm-then-remove for the avatar (#411). The destructive-action canon
-   * (Krug § "forgiveness for mistakes") demands a confirm step — the user
-   * could be one fat-finger away from clearing a head-shot they took five
-   * minutes to get right. Same `p-confirmpopup` pattern as the academy-logo
-   * remove flow.
-   */
-  protected confirmRemoveAvatar(event: Event): void {
-    this.confirmationService.confirm({
-      target: event.currentTarget as HTMLElement,
-      message: this.translate.instant('profile.avatarConfirm.removeMessage'),
-      acceptLabel: this.translate.instant('profile.avatarConfirm.removeAccept'),
-      rejectLabel: this.translate.instant('profile.avatarConfirm.removeReject'),
-      acceptButtonProps: { severity: 'danger' },
-      accept: () => this.removeAvatar(),
-    });
-  }
-
-  private removeAvatar(): void {
-    this.authService.removeAvatar().subscribe({
-      next: () =>
-        this.messageService.add({
-          severity: 'success',
-          summary: this.translate.instant('profile.avatarToast.removeSuccess'),
-          life: 2500,
-        }),
-      error: () =>
-        this.messageService.add({
-          severity: 'error',
-          summary: this.translate.instant('profile.avatarToast.removeErrorSummary'),
-          detail: this.translate.instant('profile.avatarToast.removeErrorDetail'),
-          life: 4000,
-        }),
-    });
   }
 
   /**

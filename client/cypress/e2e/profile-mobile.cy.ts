@@ -49,6 +49,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.intercept('GET', '/api/v1/documents/expiring*', EXPIRING_EMPTY);
       cy.intercept('GET', '/api/v1/auth/me', ME_OK);
       cy.visitAuthenticated('/dashboard/profile');
+      cy.get('[data-cy="profile-tab-account"]').click();
     });
 
     it('renders profile + Your data card without horizontal overflow', () => {
