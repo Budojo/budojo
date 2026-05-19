@@ -158,11 +158,7 @@ class PushSubscriptionController extends Controller
         try {
             Notification::send($user, new TestPushNotification());
         } catch (\Throwable $e) {
-            // Pass the Throwable directly under the reserved `exception`
-            // key so Monolog serializes a full stack trace; with just
-            // `$e::class` + `$e->getMessage()` the log entry has no
-            // file/line/trace and the failing frame inside
-            // `WebPushChannel::send` or the VAPID library is invisible.
+            // Monolog serializes the full stack trace only when context carries a Throwable under the reserved 'exception' key.
             Log::warning('TestPushNotification dispatch threw', [
                 'user_id' => $user->id,
                 'exception' => $e,
