@@ -8,12 +8,6 @@ import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { type AthletePromotion, AthleteService } from '../../../../core/services/athlete.service';
 import { PromotionsListComponent } from './promotions-list.component';
 
-/**
- * Backfilled vitest coverage (#799). Pre-#799 the component shipped with
- * zero specs — the user-visible Promotions tab was rendered by hand only.
- * This file pins the load/list/error branches + the pager wiring.
- */
-
 class FakeAthleteService {
   readonly promotions = vi.fn(() =>
     of({
@@ -120,11 +114,8 @@ describe('PromotionsListComponent (#799)', () => {
     );
     fixture.detectChanges();
 
-    // The component renders an <li> per row; promotion entries are
-    // not pinned by data-cy at the row level, so count list-items
-    // inside the timeline ul.
     const items = el.querySelectorAll('li');
-    expect(items.length).toBeGreaterThanOrEqual(2);
+    expect(items.length).toBe(2);
   });
 
   it('renders the prev/next pager only when lastPage > 1, with the right ariaLabels', () => {
