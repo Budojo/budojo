@@ -109,9 +109,7 @@ describe('Expiring documents widget + deep-link', () => {
     // the pre-#891 layout collapsed into one `[data-cy="all-clear-empty"]`
     // at the section level so the user gets one signal, not two.
     cy.get('[data-cy="all-clear-empty"]').should('be.visible');
-    cy.get('[data-cy="all-clear-empty"]')
-      .contains('All documents up to date')
-      .should('be.visible');
+    cy.get('[data-cy="all-clear-empty"]').contains('All documents up to date').should('be.visible');
   });
 
   it('surfaces athletes without medical certificate and deep-links to their documents tab (#891)', () => {

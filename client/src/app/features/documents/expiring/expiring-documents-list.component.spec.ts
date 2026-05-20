@@ -187,4 +187,34 @@ describe('ExpiringDocumentsListComponent', () => {
     expect(countNode?.textContent).toContain('3 expiring');
     expect(countNode?.textContent).toContain('2 no certificate');
   });
+
+  it('renders BOTH sections simultaneously when expiring docs AND missing certs co-exist', () => {
+    // Reviewer #892 — the count chip test confirms the phrasing but
+    // doesn't guard against a template bug where one of the two
+    // sections silently swaps to the wrong list. Pin the DOM:
+    // when both inputs are non-empty, both [data-cy] anchors render
+    // AND their row counts match the data.
+    const fixture = mount();
+    flushHealth(
+      [
+        makeExpiring({ id: 1, athlete_id: 42 }),
+        makeExpiring({ id: 2, athlete_id: 43, type: 'insurance' }),
+      ],
+      [
+        { id: 11, first_name: 'Giulia', last_name: 'Rossi' },
+        { id: 12, first_name: 'Luca', last_name: 'Verdi' },
+        { id: 13, first_name: 'Sara', last_name: 'Bianchi' },
+      ],
+    );
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="missing-cert-section"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="expiring-section"]')).not.toBeNull();
+    expect(el.querySelectorAll('[data-cy^="missing-cert-row-"]')).toHaveLength(3);
+    // The desktop table renders one <tr> per expiring doc in tbody.
+    expect(el.querySelectorAll('[data-cy="expiring-table"] tbody tr')).toHaveLength(2);
+    // All-clear empty block must NOT render when either axis has rows.
+    expect(el.querySelector('[data-cy="all-clear-empty"]')).toBeNull();
+  });
 });

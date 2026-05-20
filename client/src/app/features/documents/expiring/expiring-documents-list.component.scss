@@ -159,7 +159,7 @@ $expiring-mobile-breakpoint: 768px;
 .expiring-section__header {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 .missing-cert-section__title,
@@ -195,7 +195,7 @@ $expiring-mobile-breakpoint: 768px;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    padding: 0.875rem 1rem;
+    padding: 1rem;
     min-height: 3rem; // ≥ 48px touch target — Fitts
     text-decoration: none;
     color: var(--p-text-color);
@@ -224,7 +224,7 @@ $expiring-mobile-breakpoint: 768px;
   &__cta {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
     font-size: 0.875rem;
     color: var(--p-primary-color);
     white-space: nowrap;
