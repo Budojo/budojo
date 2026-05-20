@@ -124,4 +124,3 @@ describe('authInterceptor', () => {
     expect(logoutSpy).not.toHaveBeenCalled();
   });
 });
-
