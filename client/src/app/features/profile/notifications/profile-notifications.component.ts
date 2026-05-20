@@ -10,34 +10,23 @@ import {
   NotificationPreferencesService,
 } from '../../../core/services/notification-preferences.service';
 
-/**
- * Per-category email-notification opt-out panel on
- * `/dashboard/profile` (#416). One switch per toggleable category,
- * plus a read-only "always sent" block for the transactional
- * categories that are never opt-out (welcome, password-reset,
- * email-verification, account-deletion-*).
- *
- * Optimistic local update on toggle: flip the switch, fire the PATCH
- * in the background, refresh on response. On failure, revert the
- * switch and toast.
- */
+// Per-category email-notification opt-out panel on /dashboard/profile (#416 + #736).
 
-/**
- * Audience cluster for a notification toggle (#736). Phases A+B+C grew the
- * panel to 17 toggles in one scrolling list; the user couldn't reach the
- * bottom on mobile. Each toggle now declares which audience it belongs to:
- *
- *  - `owner`     — alerts the academy owner cares about (medical-cert
- *                  reminders, unpaid digest, athlete onboarding events).
- *  - `athlete`   — personal alerts that fire on the caller's own row
- *                  (training reminders, payment status, promotions).
- *  - `community` — feed-driven alerts (replies, comments, reactions).
- *
- * The template renders one `<details>` per group and starts collapsed.
- */
+// Audience cluster for a notification toggle (#736). Owner / athlete / community.
 type CategoryGroup = 'owner' | 'athlete' | 'community';
 
 const CATEGORY_GROUPS: readonly CategoryGroup[] = ['owner', 'athlete', 'community'];
+
+// Static i18n-key map per group (#736 reviewer finding). Banned-pattern fix:
+// dynamic key concatenation in templates falls outside the parity check and
+// drifts silently on rename — the map gives the parity spec an explicit
+// reference, AND a future key-rename fails compile here when CategoryGroup
+// gains a member (Record exhaustiveness).
+const GROUP_LABEL_KEYS: Record<CategoryGroup, string> = {
+  owner: 'profile.notifications.groups.owner',
+  athlete: 'profile.notifications.groups.athlete',
+  community: 'profile.notifications.groups.community',
+};
 
 interface ToggleableCategory {
   readonly key: string;
@@ -183,13 +172,8 @@ export class ProfileNotificationsComponent implements OnInit {
   protected readonly categories = CATEGORIES;
   protected readonly transactionalKeys = TRANSACTIONAL_KEYS;
   protected readonly groups = CATEGORY_GROUPS;
+  protected readonly groupLabelKey = GROUP_LABEL_KEYS;
 
-  /**
-   * Return the toggles that belong to a given audience group (#736).
-   * Filtering is done at render time off the static CATEGORIES list so
-   * the order of toggles inside each group matches the array order — no
-   * separate sort needed.
-   */
   protected categoriesForGroup(group: CategoryGroup): readonly ToggleableCategory[] {
     return CATEGORIES.filter((c) => c.group === group);
   }

@@ -80,7 +80,7 @@
     font-weight: 600;
     color: var(--p-text-color);
     transition: background-color var(--budojo-motion-duration-quick, 0.16s)
-      var(--budojo-motion-easing-standard, ease-out);
+      var(--budojo-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
 
     &::-webkit-details-marker {
       display: none;
@@ -105,7 +105,7 @@
     color: var(--p-text-color-secondary);
     font-size: 1rem;
     transition: transform var(--budojo-motion-duration-quick, 0.16s)
-      var(--budojo-motion-easing-standard, ease-out);
+      var(--budojo-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
   }
 
   &__group[open] &__group-chevron {
