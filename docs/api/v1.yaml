@@ -2534,7 +2534,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/NoAcademy'
+          $ref: '#/components/responses/OwnerGateForbidden'
 
   /athletes:
     get:
@@ -2636,7 +2636,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/NoAcademy'
+          $ref: '#/components/responses/OwnerGateForbidden'
 
     post:
       tags: [athletes]
@@ -2966,7 +2966,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/NoAcademy'
+          $ref: '#/components/responses/OwnerGateForbidden'
 
   /documents/{id}/download:
     parameters:
@@ -4137,6 +4137,45 @@ components:
             $ref: '#/components/schemas/ErrorMessage'
           example:
             message: verification_required
+
+    RoleRequired:
+      description: |
+        The authenticated user does not have the role required by the
+        endpoint. Returned by `role:owner`-gated routes (#774, M7 PR-F)
+        when an athlete-role caller reaches an owner-only surface. The
+        SPA's auth interceptor keys on `message: 'role_required'` to
+        bounce the caller to `/dashboard/me/profile` (athlete-portal home).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: role_required
+
+    OwnerGateForbidden:
+      description: |
+        Composite 403 for endpoints behind both `role:owner` (#774) and
+        the owner-setup check. The body discriminates the cause:
+
+        - `role_required` — athlete-role caller (server-side role gate, fires before the controller).
+        - `No academy found.` — owner caller but no academy linked yet.
+
+        The SPA's auth interceptor keys on the exact message string to
+        decide between bouncing to the athlete portal vs. the academy
+        setup wizard.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          examples:
+            roleRequired:
+              summary: Athlete-role caller (server-side role gate)
+              value:
+                message: role_required
+            noAcademy:
+              summary: Owner caller, no academy linked
+              value:
+                message: No academy found.
 
     Forbidden:
       description: |

@@ -14,10 +14,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // API-flavoured `verified` alias — returns a JSON 403 with the
-        // stable `verification_required` message that the SPA's auth
-        // interceptor keys on. See EnsureEmailIsVerifiedForApi for the
-        // reasoning vs Laravel's bundled `verified` (which is HTML-shaped).
         // Aliases for route-layer middleware:
         //   verified.api → JSON 403 with `verification_required` (see
         //                   EnsureEmailIsVerifiedForApi for the rationale

@@ -19,6 +19,19 @@ use App\Models\User;
  * interceptor keys on.
  */
 
+it('fails closed on an unrecognised role parameter (reviewer suggestion)', function (): void {
+    // Reviewer ask: pin the explicit `UserRole::tryFrom() === null` branch.
+    // A typo'd alias arg like `role:ownerr` must NOT silently open the gate.
+    $middleware = new \App\Http\Middleware\EnsureUserHasRole();
+    $request = \Illuminate\Http\Request::create('/test', 'GET');
+    $request->setUserResolver(fn () => User::factory()->create());
+
+    $response = $middleware->handle($request, fn ($r) => response()->json(['ok' => true]), 'ownerr');
+
+    expect($response->getStatusCode())->toBe(403);
+    expect(json_decode($response->getContent(), true))->toBe(['message' => 'role_required']);
+});
+
 it('blocks athlete-role users from GET /athletes with 403 role_required', function (): void {
     $athlete = User::factory()->athlete()->create();
 

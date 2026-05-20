@@ -343,7 +343,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo']);
         Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo']);
 
-        // Athlete reads — open to unverified users so they can browse.
+        // Owner reads — no email-verification gate; owners can browse the roster before verifying their email.
         Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
             ->only(['index', 'show']);
 
