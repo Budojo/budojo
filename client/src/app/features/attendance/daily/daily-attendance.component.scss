@@ -49,6 +49,36 @@
   color: var(--p-surface-900);
 }
 
+// ── No-class-today banner (#854) ──────────────────────────────────────────────
+//
+// Hairline amber chrome matches the verify-required pillola pattern on
+// the profile page so the SPA reads as one coherent state language.
+// Sits between the header and the filter strip; doesn't push the list
+// off-screen on mobile.
+.attendance__no-class-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--p-amber-200, #fde68a);
+  background: var(--p-amber-50, #fffbeb);
+  color: var(--p-amber-900, #78350f);
+  border-radius: var(--p-border-radius-md);
+  font-size: 0.875rem;
+  line-height: 1.4;
+
+  i {
+    flex: 0 0 auto;
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
 // ── Filter strip ──────────────────────────────────────────────────────────────
 //
 // Mirrors `.athletes-page__filters` exactly so the two pages read as a pair.
