@@ -126,6 +126,13 @@ export class DailyAttendanceComponent implements OnInit {
    * Drives the title swap (#854): "Check-in di oggi" when true, dated form
    * ("Check-in del martedì 19 maggio") when false. Recomputed reactively
    * so a date-picker change flips the title without a manual refresh.
+   *
+   * **Stale-after-midnight caveat**: `new Date()` is captured at computed-
+   * evaluation time without a time-based signal dependency. If the page
+   * is left open past midnight the computed won't re-run until
+   * `selectedDate` or `academy()` changes. Low-probability for typical
+   * single-session usage; acceptable today, would be revisited if the
+   * page grew an always-mounted dashboard surface.
    */
   protected readonly selectedDateIsToday = computed<boolean>(() => {
     const sel = this.selectedDate();
@@ -148,6 +155,12 @@ export class DailyAttendanceComponent implements OnInit {
    * deliberately backfilling Monday's roster on a Wednesday IS a training-
    * day flow; raising a "no class today" banner there would be a false
    * positive.
+   *
+   * **Stale-after-midnight caveat**: same invariant as
+   * `selectedDateIsToday()` — the `new Date()` read isn't on a signal,
+   * so the banner won't recompute across a midnight boundary unless the
+   * user picks a new date or the cached academy reloads. Acceptable for
+   * the current single-session usage pattern.
    */
   protected readonly showNoClassToday = computed<boolean>(() => {
     const trainingDays = this.academyService.academy()?.training_days ?? null;
