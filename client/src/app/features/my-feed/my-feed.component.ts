@@ -32,6 +32,7 @@ import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { UserFlairComponent } from '../../shared/components/user-flair/user-flair.component';
+import { MentionTextComponent } from '../../shared/components/mention-text/mention-text.component';
 import { CommentsThreadComponent } from './comments-thread/comments-thread.component';
 import { EventComposerComponent } from './event-composer/event-composer.component';
 import { EventDatePipe } from '../../shared/pipes/event-date.pipe';
@@ -71,6 +72,7 @@ import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-li
     UserFlairComponent,
     CommentsThreadComponent,
     EventComposerComponent,
+    MentionTextComponent,
     ReactionsListSheetComponent,
     RelativeTimePipe,
     EventDatePipe,
