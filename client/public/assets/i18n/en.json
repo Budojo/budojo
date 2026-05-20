@@ -1218,10 +1218,20 @@
       "other": "Other"
     },
     "expiringList": {
-      "title": "Expiring documents",
+      "title": "Document status",
       "backToAthletes": "Athletes",
       "countOne": "{{count}} document expired or expiring within 30 days",
       "countOther": "{{count}} documents expired or expiring within 30 days",
+      "countExpiring": "{{count}} expiring",
+      "countMissing": "{{count}} no certificate",
+      "expiring": {
+        "title": "Expiring documents"
+      },
+      "missingCerts": {
+        "title": "Athletes without medical certificate",
+        "hint": "Active athletes with no medical certificate on file.",
+        "action": "Upload"
+      },
       "table": {
         "athlete": "Athlete",
         "type": "Type",
@@ -1237,6 +1247,10 @@
       "empty": {
         "title": "All documents up to date.",
         "hint": "No expirations in the next 30 days. Check back later."
+      },
+      "allClear": {
+        "title": "All documents up to date.",
+        "hint": "No expirations in the next 30 days and every active athlete has a medical certificate on file."
       },
       "toast": {
         "errorSummary": "Download failed",

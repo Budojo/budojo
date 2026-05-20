@@ -17,6 +17,7 @@ import { ToastModule } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
+  AthleteMissingMedicalCertificate,
   DocumentService,
   DocumentType,
   ExpiringDocument,
@@ -26,16 +27,14 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { triggerBrowserDownload } from '../../../shared/utils/download';
 
 /**
- * Cross-athlete list of documents that are expired OR expiring within
- * 30 days. The deep-link target of the dashboard widget.
+ * Cross-athlete view of open document issues — both the expiring
+ * documents and the active athletes who don't have a medical
+ * certificate on file (#891). Deep-link target of the dashboard
+ * widget that surfaces the same combined count.
  *
- * Uses the same `listExpiring()` call as the widget. The full-page view
- * adds per-row detail (athlete identity linking back to the athlete's
- * documents page, document metadata, a download affordance, expiry status
- * badge) vs. the widget's count-only surface.
- *
- * P1 "replace document" shortcut was flagged out of scope in the M3 PRD
- * and deferred — the Download button is the only row action today.
+ * Consumes the composite `fetchDocumentsHealth()` envelope so the two
+ * lists land in one request: the user sees what the widget summarised,
+ * not just half of it.
  */
 @Component({
   selector: 'app-expiring-documents-list',
@@ -62,19 +61,37 @@ export class ExpiringDocumentsListComponent implements OnInit {
   private readonly translate = inject(TranslateService);
 
   readonly documents = signal<ExpiringDocument[]>([]);
+  readonly missingCerts = signal<readonly AthleteMissingMedicalCertificate[]>([]);
   readonly loading = signal<boolean>(true);
   readonly errored = signal<boolean>(false);
 
   readonly count = computed<number>(() => this.documents().length);
+  readonly missingCount = computed<number>(() => this.missingCerts().length);
+  readonly allClear = computed<boolean>(() => this.count() === 0 && this.missingCount() === 0);
 
-  /** Count chip for <app-page-header>. Null while loading or on error. */
+  /**
+   * Combined count chip for <app-page-header>. Renders one segment per
+   * axis ("3 expiring · 2 no certificate") or a single segment when only
+   * one axis is populated. Null while loading or on error.
+   */
   protected readonly expiringCountLabel = computed<string | null>(() => {
     if (this.loading() || this.errored()) {
       return null;
     }
-    const n = this.count();
-    const key = n === 1 ? 'documents.expiringList.countOne' : 'documents.expiringList.countOther';
-    return this.translate.instant(key, { count: n });
+    const expiring = this.count();
+    const missing = this.missingCount();
+    const segments: string[] = [];
+    if (expiring > 0) {
+      segments.push(
+        this.translate.instant('documents.expiringList.countExpiring', { count: expiring }),
+      );
+    }
+    if (missing > 0) {
+      segments.push(
+        this.translate.instant('documents.expiringList.countMissing', { count: missing }),
+      );
+    }
+    return segments.length === 0 ? null : segments.join(' · ');
   });
 
   // Static map (DocumentType → translation key) keeps the keys greppable and
@@ -95,13 +112,22 @@ export class ExpiringDocumentsListComponent implements OnInit {
     return `${doc.athlete.first_name} ${doc.athlete.last_name}`;
   }
 
+  missingAthleteNameFor(a: AthleteMissingMedicalCertificate): string {
+    return `${a.first_name} ${a.last_name}`;
+  }
+
   ngOnInit(): void {
     this.documentService
-      .listExpiring(30)
+      .fetchDocumentsHealth(30)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (docs) => {
-          this.documents.set(docs);
+        next: (envelope) => {
+          this.documents.set(envelope.data);
+          // Defensive `?? []`: most Cypress mocks predate #891 and only
+          // return `{ data: [] }`. The runtime envelope from a real API
+          // call always carries the key, so this branch fires only
+          // under stubbed E2E intercepts.
+          this.missingCerts.set(envelope.missing_medical_certificate ?? []);
           this.loading.set(false);
         },
         error: () => {
