@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Community;
 
 use App\Enums\ReactionEmoji;
+use App\Enums\RsvpResponse;
 use App\Models\CommunityPost;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -83,6 +84,15 @@ class GetCommunityFeedAction
                 'reactions as pray_reactions_count' => fn ($q) => $q->where(
                     'emoji',
                     ReactionEmoji::Pray->value,
+                ),
+                // Enum cases (not strings) so a rename in RsvpResponse trips at compile time.
+                'rsvps as going_rsvps_count' => fn ($q) => $q->where(
+                    'response',
+                    RsvpResponse::Going->value,
+                ),
+                'rsvps as maybe_rsvps_count' => fn ($q) => $q->where(
+                    'response',
+                    RsvpResponse::Maybe->value,
                 ),
             ])
             ->paginate($perPage);
