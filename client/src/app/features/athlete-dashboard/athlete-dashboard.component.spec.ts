@@ -84,4 +84,65 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
     expect(root.querySelector('[data-cy="nav-me-my-profile"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-sign-out"]')).not.toBeNull();
   });
+
+  describe('sidebar profile / settings split (#863, M9 slice C — athlete shell)', () => {
+    it('renders the Settings nav voice with the cog icon (renamed from Profile)', () => {
+      const { fixture } = setup({
+        cachedUser: {
+          first_name: 'Mario',
+          last_name: 'Rossi',
+          full_name: 'Mario Rossi',
+          handle: 'mariobjj',
+          avatar_url: null,
+        } as User,
+      });
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="nav-me-settings"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.textContent).toContain('Settings');
+      expect(link!.querySelector('i.pi-cog')).not.toBeNull();
+      // Route is unchanged — /dashboard/me/profile still hosts the
+      // athlete-side identity surface; only the label + icon changed.
+      expect(link!.getAttribute('href')).toBe('/dashboard/me/profile');
+    });
+
+    it('renders the My profile voice linking to /dashboard/me/u/<handle> when the user has a handle', () => {
+      const { fixture } = setup({
+        cachedUser: {
+          first_name: 'Mario',
+          last_name: 'Rossi',
+          full_name: 'Mario Rossi',
+          handle: 'mariobjj',
+          avatar_url: null,
+        } as User,
+      });
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="nav-me-my-profile"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.textContent).toContain('My profile');
+      expect(link!.querySelector('i.pi-id-card')).not.toBeNull();
+      expect(link!.getAttribute('href')).toBe('/dashboard/me/u/mariobjj');
+    });
+
+    it('hides the My profile voice when the user has no handle (handle is opt-in today)', () => {
+      const { fixture } = setup({
+        cachedUser: {
+          first_name: 'Mario',
+          last_name: 'Rossi',
+          full_name: 'Mario Rossi',
+          handle: null,
+          avatar_url: null,
+        } as User,
+      });
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="nav-me-my-profile"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).toBeNull();
+    });
+  });
 });

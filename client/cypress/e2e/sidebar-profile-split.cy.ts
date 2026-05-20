@@ -107,4 +107,60 @@ describe('Sidebar profile / settings split (#863)', () => {
     cy.get('[data-cy="nav-settings"]').should('exist');
     cy.get('[data-cy="nav-my-profile"]').should('not.exist');
   });
+
+  it('athlete shell: renders Settings voice with cog icon + My profile voice when handle is set', () => {
+    cy.intercept('GET', '/api/v1/auth/me*', {
+      statusCode: 200,
+      body: {
+        data: {
+          id: 2,
+          first_name: 'Alice',
+          last_name: 'Athlete',
+          full_name: 'Alice Athlete',
+          handle: 'alicebjj',
+          email: 'alice@example.com',
+          email_verified_at: '2026-01-01T00:00:00Z',
+          avatar_url: null,
+          role: 'athlete',
+        },
+      },
+    });
+
+    cy.visitAuthenticated('/dashboard/me/feed');
+
+    cy.get('[data-cy="nav-me-settings"]')
+      .should('exist')
+      .and('contain.text', 'Settings')
+      .find('i.pi-cog')
+      .should('exist');
+
+    cy.get('[data-cy="nav-me-my-profile"]')
+      .should('exist')
+      .and('contain.text', 'My profile')
+      .and('have.attr', 'href', '/dashboard/me/u/alicebjj');
+  });
+
+  it('athlete shell: hides the My profile voice when the athlete has no handle', () => {
+    cy.intercept('GET', '/api/v1/auth/me*', {
+      statusCode: 200,
+      body: {
+        data: {
+          id: 2,
+          first_name: 'Alice',
+          last_name: 'Athlete',
+          full_name: 'Alice Athlete',
+          handle: null,
+          email: 'alice@example.com',
+          email_verified_at: '2026-01-01T00:00:00Z',
+          avatar_url: null,
+          role: 'athlete',
+        },
+      },
+    });
+
+    cy.visitAuthenticated('/dashboard/me/feed');
+
+    cy.get('[data-cy="nav-me-settings"]').should('exist');
+    cy.get('[data-cy="nav-me-my-profile"]').should('not.exist');
+  });
 });
