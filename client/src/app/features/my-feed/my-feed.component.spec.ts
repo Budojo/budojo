@@ -185,6 +185,55 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     );
   });
 
+  it('renders the per-response RSVP counter on each chip independently (#859)', () => {
+    // Bug #859: a Pixel 8 Pro user saw the aggregate "2" only next to the
+    // Going chip; flipping to Maybe wiped the count entirely. The fix
+    // surfaces going_rsvps_count and maybe_rsvps_count separately. Assert
+    // that an event with 2 going + 1 maybe renders "2" next to Going AND
+    // "1" next to Maybe — both badges, gated `> 0` per template.
+    const { fixture, el, http } = setup();
+
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        postFixture({
+          id: 100,
+          rsvps_count: 3,
+          going_rsvps_count: 2,
+          maybe_rsvps_count: 1,
+        }),
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const card = el.querySelector('[data-cy="my-feed-post-100"]');
+    const goingChip = card?.querySelector('[data-cy="rsvp-chip-going-100"]');
+    const maybeChip = card?.querySelector('[data-cy="rsvp-chip-maybe-100"]');
+    expect(goingChip?.querySelector('.feed__react-count')?.textContent?.trim()).toBe('2');
+    expect(maybeChip?.querySelector('.feed__react-count')?.textContent?.trim()).toBe('1');
+  });
+
+  it('hides RSVP counter badges when both per-response counts are zero (#859)', () => {
+    const { fixture, el, http } = setup();
+
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        postFixture({
+          id: 101,
+          rsvps_count: 0,
+          going_rsvps_count: 0,
+          maybe_rsvps_count: 0,
+        }),
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const card = el.querySelector('[data-cy="my-feed-post-101"]');
+    expect(card?.querySelector('[data-cy="rsvp-chip-going-101"] .feed__react-count')).toBeNull();
+    expect(card?.querySelector('[data-cy="rsvp-chip-maybe-101"] .feed__react-count')).toBeNull();
+  });
+
   it('shows the error state when the API call fails', () => {
     const { fixture, el, http } = setup();
 
