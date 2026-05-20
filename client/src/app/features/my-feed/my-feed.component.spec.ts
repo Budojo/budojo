@@ -208,7 +208,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     expect(maybeChip?.querySelector('.feed__react-count')?.textContent?.trim()).toBe('1');
   });
 
-  it('hides RSVP counter badges when both per-response counts are zero (#859)', () => {
+  it('hides RSVP counter badges when both per-response counts are zero', () => {
     const { fixture, el, http } = setup();
 
     http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
