@@ -143,8 +143,7 @@ describe('CommentsThreadComponent (#604, M9 PR-D2 client)', () => {
       ) as HTMLAnchorElement | null;
       expect(link).not.toBeNull();
       expect(link!.textContent?.trim()).toBe('@mariobjj');
-      // Athlete-role viewer → athlete-shell route; owner-shell route is
-      // gated by roleOwnerGuard and would redirect.
+      // Athlete-role viewer → /dashboard/me/u; /dashboard/u is gated by roleOwnerGuard.
       expect(link!.getAttribute('href')).toBe('/dashboard/me/u/mariobjj');
     });
 
