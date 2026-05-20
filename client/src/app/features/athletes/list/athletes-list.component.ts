@@ -106,6 +106,9 @@ export class AthletesListComponent implements OnInit {
 
   readonly athletes = signal<Athlete[]>([]);
   readonly totalRecords = signal(0);
+
+  // Owner-only route — the link always uses the owner shell.
+  protected readonly PUBLIC_PROFILE_BASE = '/dashboard/u';
   readonly loading = signal(true);
 
   selectedBelt = signal<Belt | ''>('');

@@ -69,6 +69,12 @@ class AthleteResource extends JsonResource
             //   - replace the regular `Delete athlete` CTA with the
             //     "Leave from your Profile" affordance.
             'is_self' => $athlete->is_self,
+            // Linked-user public handle — exposed for the athletes-list
+            // public-profile affordance (post-v2.22.1). Null when the
+            // athlete row hasn't been linked to a user yet, OR when the
+            // linked user hasn't set a handle. The SPA shows the
+            // "view public profile" icon only when this is non-null.
+            'user_handle' => $athlete->user?->handle,
             'joined_at' => $athlete->joined_at->toDateString(),
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'created_at' => $athlete->created_at?->toIso8601String(),

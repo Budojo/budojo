@@ -202,6 +202,41 @@
   }
 }
 
+// Public-profile affordance on each row (post-v2.22.1). An id-card icon
+// link sits BEFORE the pencil + trash action buttons; visible only when
+// the athlete row's linked user has a handle. Plain <a> (not p-button) so
+// it carries the router link semantics without the button's hit-state +
+// loading affordances that don't apply.
+.athletes-page__public-profile-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem; // 48 px — MD3 / Fitts minimum touch target.
+  height: 3rem;
+  color: var(--p-text-muted-color);
+  text-decoration: none;
+  border-radius: 0.5rem;
+  margin-right: 0.5rem;
+  transition:
+    background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  i {
+    font-size: 1rem;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--p-content-hover-background, var(--p-surface-100));
+    color: var(--p-primary-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}
+
 .stripes {
   font-size: 0.875rem;
   font-weight: 600;

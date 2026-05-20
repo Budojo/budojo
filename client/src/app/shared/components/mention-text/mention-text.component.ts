@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { profileBaseForUser } from '../../utils/profile-base';
 
 /**
  * Renders plain feed body text, transforming `@handle` segments into
@@ -72,9 +73,8 @@ export class MentionTextComponent {
 
   protected readonly segments = computed<Segment[]>(() => splitIntoSegments(this.text()));
 
-  // Athletes land on /dashboard/me/u/<handle> (their shell); owners on /dashboard/u/<handle>. The opposite shell's route is guarded and would redirect.
   protected readonly profileBase = computed<string>(() =>
-    this.authService.user()?.role === 'athlete' ? '/dashboard/me/u' : '/dashboard/u',
+    profileBaseForUser(this.authService.user()),
   );
 }
 

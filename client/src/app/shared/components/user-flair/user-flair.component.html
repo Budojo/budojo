@@ -1,21 +1,37 @@
-<div class="flair" [class.flair--compact]="compact()">
-  @if (!compact()) {
-    <app-user-avatar [name]="displayName()" [url]="user().avatar_url" />
-  }
-  <div class="flair__meta">
-    <span class="flair__name">{{ displayName() }}</span>
-    <div class="flair__row">
-      @if (user().handle) {
-        <span class="flair__handle">&#64;{{ user().handle }}</span>
-      }
-      @if (user().belt; as belt) {
-        <!--
-          Compact size variant (#784) when the flair is used in
-          compact mode (e.g. comments thread). Standalone uses of the
-          belt-badge component elsewhere are unaffected.
-        -->
-        <app-belt-badge [class.belt-badge--compact]="compact()" [belt]="belt" />
-      }
+@let handle = user().handle;
+
+@if (handle) {
+  <a
+    [routerLink]="[profileBase(), handle]"
+    class="flair flair--link"
+    [class.flair--compact]="compact()"
+    data-cy="flair-link"
+  >
+    @if (!compact()) {
+      <app-user-avatar [name]="displayName()" [url]="user().avatar_url" />
+    }
+    <div class="flair__meta">
+      <span class="flair__name">{{ displayName() }}</span>
+      <div class="flair__row">
+        <span class="flair__handle">&#64;{{ handle }}</span>
+        @if (user().belt; as belt) {
+          <app-belt-badge [class.belt-badge--compact]="compact()" [belt]="belt" />
+        }
+      </div>
+    </div>
+  </a>
+} @else {
+  <div class="flair" [class.flair--compact]="compact()">
+    @if (!compact()) {
+      <app-user-avatar [name]="displayName()" [url]="user().avatar_url" />
+    }
+    <div class="flair__meta">
+      <span class="flair__name">{{ displayName() }}</span>
+      <div class="flair__row">
+        @if (user().belt; as belt) {
+          <app-belt-badge [class.belt-badge--compact]="compact()" [belt]="belt" />
+        }
+      </div>
     </div>
   </div>
-</div>
+}

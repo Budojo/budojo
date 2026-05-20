@@ -714,9 +714,9 @@
     }
   },
   "profile": {
-    "title": "Profile",
-    "subtitle": "Account details and verification status.",
-    "eyebrow": "Profile",
+    "title": "Settings",
+    "subtitle": "Account, security, notifications.",
+    "eyebrow": "Settings",
     "tabs": {
       "identity": "Profile",
       "security": "Security",
@@ -1501,7 +1501,9 @@
         "paid": "Paid",
         "unpaid": "Unpaid",
         "restore": "Restore",
-        "restoreAria": "Restore {{name}}"
+        "restoreAria": "Restore {{name}}",
+        "publicProfile": "View public profile",
+        "publicProfileAria": "View {{name}}'s public profile"
       },
       "social": {
         "facebookLabel": "Open Facebook profile",

@@ -95,6 +95,11 @@ class AthleteController extends Controller
             // `$athlete->address` access on each row is one batched query
             // instead of 20.
             ->with('address')
+            // Eager-load the linked user's handle column only — the
+            // AthleteResource exposes `user_handle` (#871 follow-up: the
+            // athletes-list row needs a public-profile affordance, which
+            // is gated on the athlete's user.handle being non-null).
+            ->with(['user:id,handle'])
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when(
                 ! $trashedMode && $request->filled('status'),

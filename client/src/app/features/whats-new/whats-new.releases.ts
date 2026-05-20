@@ -28,6 +28,38 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.23.0',
+    date: '2026-05-20',
+    headline:
+      'Discoverability follow-up to the M9 social-profile epic. The athlete public profile shipped in v2.22.0 but reaching it from the feed or the athletes list took more taps than it should — both surfaces now have a direct tap target. Plus a small naming polish on the settings page header.',
+    sections: [
+      {
+        heading: '👆 Tap the author flair in the feed to open the profile',
+        bullets: [
+          'Every feed post and every comment renders an author flair (avatar + name + @handle + belt). Until now it was just text — the only way in was to scroll for an @handle mention or guess the URL.',
+          'The whole flair is now tappable: one tap opens the author public profile.',
+          'Role-aware — owners go to /dashboard/u/<handle>, athletes go to /dashboard/me/u/<handle>, same profile page in the shell you are allowed to see.',
+          'Only authors with a handle set get the tap target; otherwise the flair stays plain text.',
+        ],
+      },
+      {
+        heading: '👤 "View public profile" icon on the athletes list',
+        bullets: [
+          'Each athlete row in /dashboard/athletes now carries a small id-card icon at the right edge, before the pencil + trash buttons.',
+          'Tap to open the athlete public profile in one step — no need to drill into the athlete detail first.',
+          'Visible only on rows whose linked user has a handle; other rows stay clutter-free.',
+        ],
+      },
+      {
+        heading: '🛠️ "Impostazioni" — settings page title aligned with the sidebar',
+        bullets: [
+          'The sidebar voice was renamed to "Impostazioni" in v2.22.0, but the page header at /dashboard/profile still said "Profilo".',
+          'Header now reads "Impostazioni" with a subtitle listing the four tabs. The inner "Profilo" tab stays — that is the account-info sub-tab of the settings group.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.22.1',
     date: '2026-05-20',
     headline:

@@ -714,9 +714,9 @@
     }
   },
   "profile": {
-    "title": "Profilo",
-    "subtitle": "Dettagli account e stato di verifica.",
-    "eyebrow": "Profilo",
+    "title": "Impostazioni",
+    "subtitle": "Account, sicurezza, notifiche.",
+    "eyebrow": "Impostazioni",
     "tabs": {
       "identity": "Profilo",
       "security": "Sicurezza",
@@ -1501,7 +1501,9 @@
         "paid": "Pagato",
         "unpaid": "Non pagato",
         "restore": "Ripristina",
-        "restoreAria": "Ripristina {{name}}"
+        "restoreAria": "Ripristina {{name}}",
+        "publicProfile": "Vedi profilo pubblico",
+        "publicProfileAria": "Vedi profilo pubblico di {{name}}"
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",
