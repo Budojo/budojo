@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { SwPush } from '@angular/service-worker';
 import { MessageService } from 'primeng/api';
+import { of } from 'rxjs';
 
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { ProfileBrowserNotificationsComponent } from './profile-browser-notifications.component';
@@ -122,6 +123,59 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
     expect(
       fixture.nativeElement.querySelector('[data-cy="profile-browser-notifications-enable"]'),
     ).toBeTruthy();
+  });
+
+  it('treats DELETE 404 as success — phantom row removed, no error toast (#899)', async () => {
+    // WebPushChannel auto-deletes a row server-side when FCM returns
+    // 410 on a push (post-deploy endpoint rotation). The SPA's
+    // local device list can still carry the stale row; the user's
+    // tap on × must remove it cleanly, not surface "Impossibile
+    // revocare il dispositivo".
+    const { fixture, http } = setup();
+    const addSpy = vi.spyOn(TestBed.inject(MessageService), 'add');
+    fixture.detectChanges();
+
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [
+        {
+          id: 7,
+          endpoint_host: 'fcm.googleapis.com',
+          endpoint_hash: 'a'.repeat(64),
+          last_seen_at: null,
+          created_at: '2026-05-20T19:28:00+00:00',
+        },
+      ],
+      meta: { vapid_public_key: 'PUB', enabled: true },
+    });
+    fixture.detectChanges();
+
+    // Sanity: row is in the DOM before the revoke.
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-browser-notifications-device-7"]'),
+    ).toBeTruthy();
+
+    const cmp = fixture.componentInstance as unknown as {
+      revoke(d: { id: number; endpoint_host: string; endpoint_hash: string }): Promise<void>;
+    };
+    const revokePromise = cmp.revoke({
+      id: 7,
+      endpoint_host: 'fcm.googleapis.com',
+      endpoint_hash: 'a'.repeat(64),
+    });
+
+    const req = http.expectOne('/api/v1/me/push-subscriptions/7');
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ message: 'Not found.' }, { status: 404, statusText: 'Not Found' });
+
+    await revokePromise;
+    fixture.detectChanges();
+
+    // Row gone from the DOM, success toast (not error).
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="profile-browser-notifications-device-7"]'),
+    ).toBeFalsy();
+    expect(addSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+    expect(addSpy).not.toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
   });
 
   it('renders the device list when at least one subscription exists', () => {
@@ -483,6 +537,12 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
     });
     vi.spyOn(svc, 'verifyDelivery').mockResolvedValue('silent');
     vi.spyOn(svc, 'currentEndpointHash').mockResolvedValue(null);
+    // enable() now reconciles via refresh(true) after subscribe (#899);
+    // stub fetchState() so that second GET resolves synchronously and
+    // doesn't leak past the httpMock.verify() afterEach.
+    vi.spyOn(svc, 'fetchState').mockReturnValue(
+      of({ devices: [], meta: { vapid_public_key: 'PUB', enabled: true } }),
+    );
 
     fixture.detectChanges();
     http.expectOne('/api/v1/me/push-subscriptions').flush({

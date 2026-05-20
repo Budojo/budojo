@@ -353,5 +353,32 @@ describe('WebPushService (#694)', () => {
       await expect(result).resolves.toBeUndefined();
       http.verify();
     });
+
+    it('resolves on 404 — the row is already gone server-side (#899)', async () => {
+      // WebPushChannel auto-deletes a row when FCM/Mozilla returns 410
+      // on a push (after a deploy / endpoint rotation). The SPA may
+      // still have the stale row in its `devices` signal and a user
+      // tap on × must NOT fire an error toast — the row is already
+      // gone, the delete intent is satisfied.
+      const { service, http } = setup();
+
+      const result = service.unsubscribe(7);
+      const req = http.expectOne('/api/v1/me/push-subscriptions/7');
+      req.flush({ message: 'Not found.' }, { status: 404, statusText: 'Not Found' });
+
+      await expect(result).resolves.toBeUndefined();
+      http.verify();
+    });
+
+    it('rejects on non-404 errors (genuine server fault)', async () => {
+      const { service, http } = setup();
+
+      const result = service.unsubscribe(7);
+      const req = http.expectOne('/api/v1/me/push-subscriptions/7');
+      req.flush({ message: 'ISE' }, { status: 500, statusText: 'Internal Server Error' });
+
+      await expect(result).rejects.toBeDefined();
+      http.verify();
+    });
   });
 });
