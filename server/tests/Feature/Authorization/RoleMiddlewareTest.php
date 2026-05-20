@@ -19,9 +19,9 @@ use App\Models\User;
  * interceptor keys on.
  */
 
-it('fails closed on an unrecognised role parameter (reviewer suggestion)', function (): void {
-    // Reviewer ask: pin the explicit `UserRole::tryFrom() === null` branch.
-    // A typo'd alias arg like `role:ownerr` must NOT silently open the gate.
+it('fails closed on an unrecognised role parameter', function (): void {
+    // Pin the explicit `UserRole::tryFrom() === null` branch — a typo'd
+    // alias arg like `role:ownerr` must NOT silently open the gate.
     $middleware = new \App\Http\Middleware\EnsureUserHasRole();
     $request = \Illuminate\Http\Request::create('/test', 'GET');
     $request->setUserResolver(fn () => User::factory()->create());
