@@ -204,7 +204,9 @@
             }
             @case ('owner_announcement') {
               <div class="feed__body" data-cy="post-announcement">
-                <p class="feed__announcement">{{ announcementBody(post) }}</p>
+                <p class="feed__announcement">
+                  <app-mention-text [text]="announcementBody(post)" />
+                </p>
               </div>
             }
           }

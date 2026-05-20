@@ -26,7 +26,8 @@
     "athletes": "Athletes",
     "attendance": "Attendance",
     "community": "Community",
-    "profile": "Profile",
+    "myProfile": "My profile",
+    "settings": "Settings",
     "whatsNew": "What's new",
     "support": "Contact support",
     "signOut": "Sign out",
@@ -244,7 +245,8 @@
       "signOut": "Sign out"
     },
     "nav": {
-      "profile": "Profile",
+      "myProfile": "My profile",
+      "settings": "Settings",
       "feed": "Feed",
       "academy": "Academy",
       "attendance": "Attendance",

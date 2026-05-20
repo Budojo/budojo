@@ -17,7 +17,7 @@
         @for (c of comments(); track c.id) {
           <li class="thread__row" [attr.data-cy]="'comment-' + c.id">
             <app-user-flair [user]="c.created_by" [compact]="true" />
-            <p class="thread__body">{{ c.body }}</p>
+            <p class="thread__body"><app-mention-text [text]="c.body" /></p>
             <time class="thread__time" [dateTime]="c.created_at">
               {{ c.created_at | relativeTime }}
             </time>
