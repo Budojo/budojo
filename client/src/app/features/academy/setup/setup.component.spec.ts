@@ -3,7 +3,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { SetupComponent } from './setup.component';
 import { AcademyService } from '../../../core/services/academy.service';
 import { MyAthleteService } from '../../../core/services/my-athlete.service';
@@ -81,6 +81,30 @@ describe('SetupComponent — train-here step (#751)', () => {
     expect(createAcademy).toHaveBeenCalledTimes(1);
     expect(enrollMe).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith(['/dashboard']);
+  });
+
+  it('enroll-self failure is non-fatal: navigation still happens (reviewer)', () => {
+    // Reviewer ask: the comment promised non-fatal handling but the original
+    // submit chain leaked enroll errors to the form's error banner. Verify
+    // the wizard navigates to /dashboard even when /me/athlete throws.
+    const { fixture, cmp, createAcademy, navigate } = setup();
+    cmp['form'].patchValue({ name: 'Test Academy' });
+    cmp.setTrainHere(true);
+
+    // Override the enroll spy to throw — must be done BEFORE submit().
+    const enrollSpy = TestBed.inject(MyAthleteService) as unknown as {
+      enroll: ReturnType<typeof vi.fn>;
+    };
+    enrollSpy.enroll = vi.fn(() => throwError(() => new Error('enroll backend down')));
+
+    cmp.submit();
+    fixture.detectChanges();
+
+    expect(createAcademy).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/dashboard']);
+    // Error banner must NOT show — the academy IS created, the only fall-out
+    // is the missing self-enrollment which the user can fix later from Profile.
+    expect(cmp['error']()).toBeNull();
   });
 
   it('selecting "Not now" after Yes flips back to no-enroll on submit', () => {

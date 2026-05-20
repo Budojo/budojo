@@ -7,7 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable, finalize, switchMap } from 'rxjs';
+import { Observable, catchError, finalize, of, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
@@ -81,10 +81,16 @@ export class SetupComponent {
     });
 
     // Chain enroll-self after create-academy when the user opted in (#751).
-    // Enroll error is non-fatal: the academy is created, so we still navigate;
-    // the user can flip the self-enroll later from Profile → Train here.
+    // Enroll failure is genuinely non-fatal: the academy IS created, navigation
+    // must still happen, and the user can flip the self-enroll later from
+    // Profile → Train here. Swallow the inner error with catchError so only
+    // a create-academy failure surfaces to the wizard's error banner —
+    // otherwise an enroll() 5xx would strand the caller on /setup with their
+    // academy already persisted, and a re-submit would hit a duplicate error.
     const flow$: Observable<unknown> = this.trainHere()
-      ? createAcademy$.pipe(switchMap(() => this.myAthleteService.enroll()))
+      ? createAcademy$.pipe(
+          switchMap(() => this.myAthleteService.enroll().pipe(catchError(() => of(null)))),
+        )
       : createAcademy$;
 
     flow$.pipe(finalize(() => this.loading.set(false))).subscribe({

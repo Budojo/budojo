@@ -64,9 +64,7 @@
             [outlined]="!trainHere()"
             [text]="false"
             (onClick)="setTrainHere(true)"
-            [styleClass]="
-              trainHere() ? 'train-here__cta train-here__cta--active' : 'train-here__cta'
-            "
+            styleClass="train-here__cta"
             data-cy="setup-train-here-yes"
           />
           <p-button
@@ -75,11 +73,12 @@
             severity="secondary"
             [text]="true"
             (onClick)="setTrainHere(false)"
-            [styleClass]="
-              !trainHere() ? 'train-here__cta train-here__cta--active' : 'train-here__cta'
-            "
+            styleClass="train-here__cta"
             data-cy="setup-train-here-no"
           />
+          <!-- No train-here__cta--active modifier: the active option is
+               signalled via the [outlined] ↔ [text] variant flip above;
+               no extra class needed. -->
         </div>
       </div>
 
