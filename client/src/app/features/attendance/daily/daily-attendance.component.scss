@@ -64,7 +64,7 @@
   border: 1px solid var(--p-amber-200, #fde68a);
   background: var(--p-amber-50, #fffbeb);
   color: var(--p-amber-900, #78350f);
-  border-radius: 0.75rem;
+  border-radius: var(--p-border-radius-md);
   font-size: 0.875rem;
   line-height: 1.4;
 
