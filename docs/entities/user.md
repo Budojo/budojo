@@ -17,6 +17,7 @@ Every authenticated request in the system is made on behalf of a single user. Th
 | `first_name` | string | not null, default `''` | Given name (#479). Default `''` covers the migration backfill; never lands from a validated request. |
 | `last_name` | string | not null, default `''` | Family name (#479). May legitimately be empty for a single-token migrated row. |
 | `handle` | string(30) | nullable, **unique** | Instagram-style user-chosen handle (#479). Lowercase `[a-z0-9_.]`, 3-30 chars, must start with a letter, no consecutive dots, no leading/trailing dot. Lowercased on save (the unique index is therefore effectively case-insensitive). Null until the user opts in via the profile page. |
+| `profile_is_public` | boolean | not null, default `true` | Opt-out flag for the same-academy public profile (#862). Default `true` so existing rows land in the visible state; flipping to `false` 404s `GET /api/v1/users/{handle}/profile`. Visibility is still scoped per-academy at the read layer — even `true` doesn't expose the profile cross-academy. |
 | `email` | string | not null, **unique** | Login credential and contact email |
 | `email_verified_at` | timestamp | nullable | Set when the user clicks the M5 verification link issued at `POST /auth/register`. Also stamped by `AcceptAthleteInvitationAction` (#445 — the invite token IS the email proof) and re-stamped by `ConfirmEmailChangeAction` (#476 — the verification click on the new address). Null until a flow above runs. |
 | `terms_accepted_at` | timestamp | nullable | Set on `POST /auth/register` when the user ticks the Terms-of-Service gate (#420). Null for pre-#420 accounts and any future system-only user creation path. |
@@ -48,6 +49,7 @@ Every authenticated request in the system is made on behalf of a single user. Th
 
 - **Email uniqueness is global**, not scoped. Two academies cannot share an owner's email.
 - **Handle uniqueness is global** (#479) — same shape as email. The `App\Rules\HandleFormat` rule mirrors the front-end regex so the SPA preview matches the server-accepted shape. The handle is OPTIONAL in V1: NULL is the default, and existing accounts stay NULL through the migration. The user opts in via the profile page; mention/lookup surfaces consume the column in follow-up issues.
+- **Public-profile visibility** (#862, M9 social-profile epic slice A). `profile_is_public = true` by default — opt-out semantics. The `GET /api/v1/users/{handle}/profile` endpoint enforces three privacy gates that all collapse to **404** (no existence leak): handle unknown, target opted out, viewer is in a different academy. Same-academy peer reads of an opted-in profile return the basic identity card (first name, handle, avatar, current belt, joined date, top-50 promotions timeline). Owner-side `/dashboard/u/:handle` and athlete-side `/dashboard/me/u/:handle` route to the same SPA component.
 - **Name shape** (#479) — `first_name` + `last_name` are the canonical structured fields. Surfaces that want one string consume the `full_name` accessor (`UserResource.full_name`, `User->full_name` in PHP) which is `trim(first_name . ' ' . last_name)`. Greeting contexts (welcome mail, "Hi X" lines) prefer `first_name` directly.
 - **Registration flow** (`POST /api/v1/auth/register`) creates the user without an academy. The SPA routes newly-registered users to `/setup` via the `noAcademyGuard`. Handle is NOT collected at registration — post-signup self-service.
 - **Password hashing** is handled by Laravel's `hashed` cast — callers pass plaintext and the framework hashes before insert.
@@ -71,6 +73,7 @@ Every authenticated request in the system is made on behalf of a single user. Th
 - `POST /api/v1/me/two-factor/confirm` — confirm enrolment with a TOTP, return 8 backup codes (#412)
 - `POST /api/v1/me/two-factor/recovery-codes/regenerate` — regenerate 8 backup codes (#412)
 - `DELETE /api/v1/me/two-factor` — disable 2FA, requires current password (#412)
+- `GET /api/v1/users/{handle}/profile` — same-academy peer public-profile lookup by handle (#862)
 - `GET /api/v1/health` — public, no user involved
 
 ## Related tables

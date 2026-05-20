@@ -284,6 +284,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // `enrolled: false` on rosters > 20 (Copilot review on #754).
     Route::get('/me/athlete/state', [\App\Http\Controllers\Me\MyAthleteController::class, 'state']);
 
+    // Public-profile by handle (#862, M9 social-profile epic slice A).
+    // Role-agnostic — both owners and athletes can read same-academy peer
+    // profiles. The Action enforces the three gates (handle resolution,
+    // profile_is_public, same-academy) all collapsing to 404 so the surface
+    // doesn't leak existence of users behind any of them. The handle pattern
+    // mirrors HandleFormat (#479): lowercase alphanumeric + dot + underscore,
+    // 3-30 chars, must start with a letter. A malformed value 404s at the
+    // route layer before reaching the controller.
+    Route::get('/users/{handle}/profile', [\App\Http\Controllers\User\PublicProfileController::class, 'show'])
+        ->where('handle', '[a-z][a-z0-9._]{2,29}');
+
     // Web Push subscriptions (#419). One row per device the user has
     // explicitly granted push permission on. The SPA POSTs the
     // PushSubscription envelope from `PushManager.subscribe()`;

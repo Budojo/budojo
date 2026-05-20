@@ -172,6 +172,17 @@ export const routes: Routes = [
             (m) => m.MyDocumentsComponent,
           ),
       },
+      {
+        // Same-academy peer public-profile lookup (#862, M9 social
+        // profile epic slice A). Lives inside the athlete shell so
+        // the shared sidebar stays visible. The component itself is
+        // shared with the owner-side route (`/dashboard/u/:handle`).
+        path: 'u/:handle',
+        loadComponent: () =>
+          import('./features/public-profile/public-profile.component').then(
+            (m) => m.PublicProfileComponent,
+          ),
+      },
     ],
   },
   {
@@ -364,6 +375,17 @@ export const routes: Routes = [
         path: 'support',
         loadComponent: () =>
           import('./features/support/support.component').then((m) => m.SupportComponent),
+      },
+      {
+        // Same-academy peer public-profile lookup (#862, M9 social
+        // profile epic slice A). Lives inside the owner shell so the
+        // sidebar stays visible. Component is shared with the
+        // athlete-side route (`/dashboard/me/u/:handle`).
+        path: 'u/:handle',
+        loadComponent: () =>
+          import('./features/public-profile/public-profile.component').then(
+            (m) => m.PublicProfileComponent,
+          ),
       },
     ],
   },

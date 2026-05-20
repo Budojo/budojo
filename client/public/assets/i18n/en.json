@@ -1919,5 +1919,19 @@
         "master_7": "Master 7"
       }
     }
+  },
+  "publicProfile": {
+    "joinedAt": "Joined {{ date }}",
+    "promotions": {
+      "title": "Promotions",
+      "empty": "No promotions recorded yet.",
+      "beltChange": "Promoted from {{ from }} to {{ to }}",
+      "stripeChange": "Stripes: {{ from }} → {{ to }}"
+    },
+    "notFound": {
+      "title": "Profile not available",
+      "body": "We couldn't find this profile, or it isn't visible to you.",
+      "back": "Back to athletes"
+    }
   }
 }
