@@ -79,7 +79,9 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
     expect(root.querySelector('[data-cy="nav-me-attendance"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-me-payments"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-me-documents"]')).not.toBeNull();
-    expect(root.querySelector('[data-cy="nav-me-profile"]')).not.toBeNull();
+    expect(root.querySelector('[data-cy="nav-me-settings"]')).not.toBeNull();
+    // Athlete with a handle gets the public-profile sidebar row (#863).
+    expect(root.querySelector('[data-cy="nav-me-my-profile"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-sign-out"]')).not.toBeNull();
   });
 });

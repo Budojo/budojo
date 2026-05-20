@@ -143,15 +143,27 @@
         <i class="pi pi-comments" aria-hidden="true"></i>
         <span>{{ 'nav.community' | translate }}</span>
       </a>
+      @if (user()?.handle) {
+        <a
+          [routerLink]="['/dashboard/u', user()?.handle]"
+          routerLinkActive="sidebar__nav-item--active"
+          class="sidebar__nav-item"
+          data-cy="nav-my-profile"
+          (click)="closeSidebar()"
+        >
+          <i class="pi pi-id-card" aria-hidden="true"></i>
+          <span>{{ 'nav.myProfile' | translate }}</span>
+        </a>
+      }
       <a
         routerLink="profile"
         routerLinkActive="sidebar__nav-item--active"
         class="sidebar__nav-item"
-        data-cy="nav-profile"
+        data-cy="nav-settings"
         (click)="closeSidebar()"
       >
-        <i class="pi pi-user"></i>
-        <span>{{ 'nav.profile' | translate }}</span>
+        <i class="pi pi-cog" aria-hidden="true"></i>
+        <span>{{ 'nav.settings' | translate }}</span>
       </a>
     </nav>
 

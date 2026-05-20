@@ -628,10 +628,74 @@ describe('DashboardComponent', () => {
       expect(link!.querySelector('i.pi-comments')).not.toBeNull();
 
       const profile = fixture.nativeElement.querySelector(
-        '[data-cy="nav-profile"]',
+        '[data-cy="nav-settings"]',
       ) as HTMLAnchorElement;
       // DOCUMENT_POSITION_FOLLOWING = 4 — community must come before profile.
       expect(link!.compareDocumentPosition(profile) & 4).toBe(4);
+    });
+  });
+
+  describe('sidebar profile / settings split (#863, M9 slice C)', () => {
+    it('renders the Settings nav voice with the cog icon (renamed from Profile)', () => {
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="nav-settings"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.textContent).toContain('Settings');
+      expect(link!.querySelector('i.pi-cog')).not.toBeNull();
+      // The relative routerLink="profile" still hosts the settings
+      // tabs at /dashboard/profile in production; the test's router
+      // base is the empty path, so we assert the resolved href is the
+      // 'profile' segment, which is the load-bearing change-detector.
+      expect(link!.getAttribute('href')).toBe('/profile');
+    });
+
+    it('renders the "My profile" voice linking to /dashboard/u/<handle> when the user has a handle', () => {
+      authService.user.set({
+        id: 1,
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        full_name: 'Mario Rossi',
+        handle: 'mariobjj',
+        email: 'mario@example.com',
+        email_verified_at: null,
+        avatar_url: null,
+      } as never);
+
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="nav-my-profile"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.textContent).toContain('My profile');
+      expect(link!.querySelector('i.pi-id-card')).not.toBeNull();
+      expect(link!.getAttribute('href')).toBe('/dashboard/u/mariobjj');
+    });
+
+    it('hides the "My profile" voice when the user has no handle (handle is opt-in today)', () => {
+      authService.user.set({
+        id: 1,
+        first_name: 'Mario',
+        last_name: 'Rossi',
+        full_name: 'Mario Rossi',
+        handle: null,
+        email: 'mario@example.com',
+        email_verified_at: null,
+        avatar_url: null,
+      } as never);
+
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector(
+        '[data-cy="nav-my-profile"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).toBeNull();
     });
   });
 
