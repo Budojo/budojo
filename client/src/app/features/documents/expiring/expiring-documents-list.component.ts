@@ -68,14 +68,14 @@ export class ExpiringDocumentsListComponent implements OnInit {
   readonly count = computed<number>(() => this.documents().length);
 
   /** Count chip for <app-page-header>. Null while loading or on error. */
-  protected expiringCountLabel(): string | null {
+  protected readonly expiringCountLabel = computed<string | null>(() => {
     if (this.loading() || this.errored()) {
       return null;
     }
     const n = this.count();
     const key = n === 1 ? 'documents.expiringList.countOne' : 'documents.expiringList.countOther';
     return this.translate.instant(key, { count: n });
-  }
+  });
 
   // Static map (DocumentType → translation key) keeps the keys greppable and
   // forces TS to flag any new DocumentType case missing a translation, per
