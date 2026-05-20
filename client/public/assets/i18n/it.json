@@ -714,9 +714,9 @@
     }
   },
   "profile": {
-    "title": "Profilo",
-    "subtitle": "Dettagli account e stato di verifica.",
-    "eyebrow": "Profilo",
+    "title": "Impostazioni",
+    "subtitle": "Account, sicurezza, notifiche.",
+    "eyebrow": "Impostazioni",
     "tabs": {
       "identity": "Profilo",
       "security": "Sicurezza",
