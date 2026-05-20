@@ -31,3 +31,36 @@ textarea.p-textarea {
   resize: vertical;
   font-family: inherit;
 }
+
+// Train-here step (#751). Card-style block matching the form fields above —
+// hairline border, 12 px radius, internal padding. Two CTAs side-by-side
+// with the active option emphasized via the outlined / text variant flip
+// in the template; no SCSS state needed.
+.train-here {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  margin-bottom: 1rem;
+
+  &__hint {
+    margin: 0;
+    color: var(--p-text-color-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  &__cta {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

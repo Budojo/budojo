@@ -47,6 +47,42 @@
         />
       </div>
 
+      <!--
+        "Train here too?" final step (#751, M7 PR-C of #747 epic). Drives the
+        post-create POST /me/athlete call. Default "Not now" so a coach who
+        skips through doesn't get auto-enrolled. Choice can be flipped later
+        from Profile → Train at this academy.
+      -->
+      <div class="train-here" data-cy="setup-train-here-question">
+        <span class="field-label">{{ 'setup.trainHere.label' | translate }}</span>
+        <p class="train-here__hint">{{ 'setup.trainHere.body' | translate }}</p>
+        <div class="train-here__actions">
+          <p-button
+            type="button"
+            [label]="'setup.trainHere.yes' | translate"
+            severity="secondary"
+            [outlined]="!trainHere()"
+            [text]="false"
+            (onClick)="setTrainHere(true)"
+            [styleClass]="
+              trainHere() ? 'train-here__cta train-here__cta--active' : 'train-here__cta'
+            "
+            data-cy="setup-train-here-yes"
+          />
+          <p-button
+            type="button"
+            [label]="'setup.trainHere.no' | translate"
+            severity="secondary"
+            [text]="true"
+            (onClick)="setTrainHere(false)"
+            [styleClass]="
+              !trainHere() ? 'train-here__cta train-here__cta--active' : 'train-here__cta'
+            "
+            data-cy="setup-train-here-no"
+          />
+        </div>
+      </div>
+
       <p-button
         type="submit"
         [label]="'setup.submit' | translate"

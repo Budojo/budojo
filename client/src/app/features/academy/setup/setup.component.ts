@@ -7,12 +7,13 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { Observable, finalize, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
+import { MyAthleteService } from '../../../core/services/my-athlete.service';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 
 const noWhitespace: ValidatorFn = (control: AbstractControl) =>
@@ -35,10 +36,19 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
 export class SetupComponent {
   private readonly fb = inject(FormBuilder);
   private readonly academyService = inject(AcademyService);
+  private readonly myAthleteService = inject(MyAthleteService);
   private readonly router = inject(Router);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+
+  // Owner-as-athlete choice on the final wizard step (#751). Defaults to false
+  // so a coach who skips the section by hitting submit doesn't get auto-enrolled.
+  readonly trainHere = signal<boolean>(false);
+
+  setTrainHere(value: boolean): void {
+    this.trainHere.set(value);
+  }
 
   /**
    * Setup intentionally does NOT collect the structured address (#72) —
@@ -65,18 +75,24 @@ export class SetupComponent {
     const name = this.form.value.name!.trim();
     const days = this.form.value.training_days ?? [];
 
-    this.academyService
-      .create({
-        name,
-        training_days: days.length === 0 ? null : days,
-      })
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: () => this.router.navigate(['/dashboard']),
-        error: (err) => {
-          this.error.set(err?.error?.message ?? 'Something went wrong. Please try again.');
-        },
-      });
+    const createAcademy$ = this.academyService.create({
+      name,
+      training_days: days.length === 0 ? null : days,
+    });
+
+    // Chain enroll-self after create-academy when the user opted in (#751).
+    // Enroll error is non-fatal: the academy is created, so we still navigate;
+    // the user can flip the self-enroll later from Profile → Train here.
+    const flow$: Observable<unknown> = this.trainHere()
+      ? createAcademy$.pipe(switchMap(() => this.myAthleteService.enroll()))
+      : createAcademy$;
+
+    flow$.pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: () => this.router.navigate(['/dashboard']),
+      error: (err: { error?: { message?: string } }) => {
+        this.error.set(err?.error?.message ?? 'Something went wrong. Please try again.');
+      },
+    });
   }
 
   setTrainingDays(days: number[]): void {

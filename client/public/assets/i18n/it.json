@@ -393,7 +393,13 @@
     "nameMaxlength": "Massimo 255 caratteri.",
     "trainingDaysLabel": "Giorni di allenamento",
     "optional": "(opzionale)",
-    "submit": "Crea academy"
+    "submit": "Crea academy",
+    "trainHere": {
+      "label": "Ti alleni anche tu in questa palestra?",
+      "body": "Se sì: comparirai nella lista atleti con un chip Owner, i tuoi post nella community mostreranno la cintura, potrai segnare la tua presenza, e non sarai fatturato (escluso dalle pagine pagamenti). Puoi cambiare scelta più tardi da Profilo → Allena qui.",
+      "yes": "Sì, iscrivimi",
+      "no": "Non ora"
+    }
   },
   "legal": {
     "chrome": {
