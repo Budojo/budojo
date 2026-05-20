@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { SwPush } from '@angular/service-worker';
 import { MessageService } from 'primeng/api';
+import { of } from 'rxjs';
 
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { ProfileBrowserNotificationsComponent } from './profile-browser-notifications.component';
@@ -536,6 +537,12 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
     });
     vi.spyOn(svc, 'verifyDelivery').mockResolvedValue('silent');
     vi.spyOn(svc, 'currentEndpointHash').mockResolvedValue(null);
+    // enable() now reconciles via refresh(true) after subscribe (#899);
+    // stub fetchState() so that second GET resolves synchronously and
+    // doesn't leak past the httpMock.verify() afterEach.
+    vi.spyOn(svc, 'fetchState').mockReturnValue(
+      of({ devices: [], meta: { vapid_public_key: 'PUB', enabled: true } }),
+    );
 
     fixture.detectChanges();
     http.expectOne('/api/v1/me/push-subscriptions').flush({
