@@ -1,0 +1,71 @@
+@let s = state();
+
+<div class="public-profile-page">
+  @if (s.kind === 'loading') {
+    <div class="public-profile-skeleton" aria-busy="true">
+      <p-skeleton shape="circle" size="5rem" />
+      <p-skeleton width="12rem" height="1.5rem" styleClass="mt-3" />
+      <p-skeleton width="7rem" height="1rem" styleClass="mt-2" />
+    </div>
+  } @else if (s.kind === 'not-found') {
+    <section class="public-profile-empty" role="status">
+      <h1>{{ 'publicProfile.notFound.title' | translate }}</h1>
+      <p>{{ 'publicProfile.notFound.body' | translate }}</p>
+      <a
+        pButton
+        [routerLink]="['/dashboard/athletes']"
+        [label]="'publicProfile.notFound.back' | translate"
+        severity="secondary"
+        size="small"
+      >
+      </a>
+    </section>
+  } @else {
+    <header class="public-profile-header">
+      <div class="public-profile-avatar" aria-hidden="true">
+        @if (s.profile.avatar_url) {
+          <img [src]="s.profile.avatar_url" [alt]="s.profile.first_name" />
+        } @else {
+          <span class="public-profile-initial">{{ initials() }}</span>
+        }
+      </div>
+      <div class="public-profile-identity">
+        <h1 class="public-profile-name">{{ s.profile.first_name }}</h1>
+        <p class="public-profile-handle">&commat;{{ s.profile.handle }}</p>
+        <div class="public-profile-meta">
+          @if (s.profile.belt) {
+            <app-belt-badge [belt]="s.profile.belt" />
+          }
+          @if (joinedAtLabel()) {
+            <span class="public-profile-joined">
+              {{ 'publicProfile.joinedAt' | translate: { date: joinedAtLabel() } }}
+            </span>
+          }
+        </div>
+      </div>
+    </header>
+
+    <section class="public-profile-section" aria-labelledby="promotions-heading">
+      <h2 id="promotions-heading">{{ 'publicProfile.promotions.title' | translate }}</h2>
+      @if (s.profile.promotions.length === 0) {
+        <p class="public-profile-empty-row">
+          {{ 'publicProfile.promotions.empty' | translate }}
+        </p>
+      } @else {
+        <ol class="public-profile-timeline">
+          @for (promotion of s.profile.promotions; track promotion.id) {
+            <li class="public-profile-timeline-row">
+              <div class="public-profile-timeline-marker" aria-hidden="true"></div>
+              <div class="public-profile-timeline-content">
+                <p class="public-profile-timeline-title">{{ promotionLine(promotion) }}</p>
+                <time class="public-profile-timeline-date" [attr.datetime]="promotion.recorded_at">
+                  {{ promotion.recorded_at | date: 'mediumDate' }}
+                </time>
+              </div>
+            </li>
+          }
+        </ol>
+      }
+    </section>
+  }
+</div>
