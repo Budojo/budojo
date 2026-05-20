@@ -11,32 +11,8 @@
   // (#268) so this page matches the operative chrome rhythm of
   // Athletes / Attendance — `margin: 0 auto` is a no-op on mobile,
   // where the wrapper already fills the shell content area.
-  max-width: 40rem;
+  max-width: var(--budojo-page-content-max);
   margin: 0 auto;
-}
-
-.form__header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.form__eyebrow {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--p-text-muted-color);
-}
-
-.form__title {
-  margin: 0;
-  font-size: 1.75rem;
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.018em;
-  color: var(--p-text-color);
 }
 
 .form__alert {

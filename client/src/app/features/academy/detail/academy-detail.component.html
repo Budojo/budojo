@@ -4,22 +4,16 @@
 <p-confirmpopup />
 
 <section class="detail" data-cy="academy-detail">
-  <header class="detail__header">
-    <div class="detail__heading">
-      <p class="detail__eyebrow">{{ 'academy.detail.eyebrow' | translate }}</p>
-      <h1 class="detail__title" data-cy="academy-name">
-        {{ a?.name ?? '—' }}
-      </h1>
-    </div>
-
+  <app-page-header [eyebrow]="'academy.detail.eyebrow' | translate" [title]="a?.name ?? '—'">
     <p-button
+      pageHeaderCta
       [label]="'academy.detail.edit' | translate"
       icon="pi pi-pencil"
+      size="small"
       routerLink="/dashboard/academy/edit"
-      styleClass="detail__edit"
       data-cy="academy-edit-link"
     />
-  </header>
+  </app-page-header>
 
   <div class="logo-card" data-cy="academy-logo-card">
     <div class="logo-card__preview" data-cy="academy-logo-preview">
