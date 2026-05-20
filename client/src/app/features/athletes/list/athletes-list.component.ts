@@ -117,14 +117,14 @@ export class AthletesListComponent implements OnInit {
    * or when the academy has zero athletes — the header collapses the chip
    * cleanly in those cases.
    */
-  protected totalCountLabel(): string | null {
+  protected readonly totalCountLabel = computed<string | null>(() => {
     const total = this.totalRecords();
     if (this.loading() || total === 0) {
       return null;
     }
     const key = total === 1 ? 'athletes.list.totalCountOne' : 'athletes.list.totalCountOther';
     return this.translate.instant(key, { count: total });
-  }
+  });
   readonly loading = signal(true);
 
   selectedBelt = signal<Belt | ''>('');
