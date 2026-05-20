@@ -29,6 +29,7 @@ import {
   RsvpToggleResponse,
 } from '../../core/services/community.service';
 import { AuthService } from '../../core/services/auth.service';
+import { profileBaseForUser } from '../../shared/utils/profile-base';
 import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
@@ -123,9 +124,8 @@ export class MyFeedComponent implements OnInit {
    */
   protected readonly canModerate = computed(() => this.authService.user()?.role === 'owner');
 
-  // Athletes land on /dashboard/me/u/<handle>; owners on /dashboard/u/<handle>. Opposite shell is role-guarded.
   protected readonly profileBase = computed<string>(() =>
-    this.authService.user()?.role === 'athlete' ? '/dashboard/me/u' : '/dashboard/u',
+    profileBaseForUser(this.authService.user()),
   );
 
   protected readonly posts = signal<readonly CommunityPost[]>([]);

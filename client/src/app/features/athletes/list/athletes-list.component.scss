@@ -211,12 +211,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3rem; // 48 px — MD3 / Fitts minimum touch target.
+  height: 3rem;
   color: var(--p-text-muted-color);
   text-decoration: none;
   border-radius: 0.5rem;
-  margin-right: 0.25rem;
+  margin-right: 0.5rem;
   transition:
     background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
     color var(--budojo-motion-fast) var(--budojo-motion-decelerate);

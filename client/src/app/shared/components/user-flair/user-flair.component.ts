@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { BeltBadgeComponent } from '../belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../user-avatar/user-avatar.component';
 import { AuthService } from '../../../core/services/auth.service';
+import { profileBaseForUser } from '../../utils/profile-base';
 import type { Belt } from '../../../core/services/athlete.service';
 
 /**
@@ -70,8 +71,7 @@ export class UserFlairComponent {
     return [u.first_name, initial].filter((s) => s.length > 0).join(' ');
   });
 
-  // Athletes land on /dashboard/me/u/<handle> (their shell); owners on /dashboard/u/<handle>. The opposite shell's route is guarded.
   protected readonly profileBase = computed<string>(() =>
-    this.authService.user()?.role === 'athlete' ? '/dashboard/me/u' : '/dashboard/u',
+    profileBaseForUser(this.authService.user()),
   );
 }
