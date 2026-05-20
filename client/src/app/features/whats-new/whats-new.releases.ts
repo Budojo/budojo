@@ -28,6 +28,30 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.24.0',
+    date: '2026-05-20',
+    headline:
+      'Two follow-ups from owner feedback after the M9 release. The "1 documento da controllare" dashboard widget now also counts athletes who don\'t have a medical certificate on file at all — same CONI/insurance risk as an expired one. The dashboard page headers are also standardised: every page now uses a tight one-row "title · count chip · action" pattern.',
+    sections: [
+      {
+        heading: '🩺 Athletes with no medical certificate flagged in the dashboard widget',
+        bullets: [
+          'Before: the widget counted only documents expired or expiring within 30 days. An athlete with no certificate at all was invisible — same CONI/insurance risk, zero alert.',
+          'Now: combined "X atleti da controllare" count with a breakdown line "Y in scadenza · Z senza certificato".',
+          'Active athletes count; suspended / inactive don\'t. Soft-deleted certs count as missing. Expired certs stay in the "scadenza" count, never double-counted.',
+        ],
+      },
+      {
+        heading: '🧭 One-row, tight page headers across the dashboard',
+        bullets: [
+          'Five most-visited dashboard pages now use the same one-row pattern: Feed, Atleti, Documenti in scadenza, Presenze del giorno, Riepilogo presenze mensile.',
+          'Each header reads "Title · count chip · primary action" on one row, dropping ~60–80 px of vertical space per page.',
+          'Remaining dashboard pages (Impostazioni, dettaglio atleta, accademia, statistiche) follow in the next release.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.23.0',
     date: '2026-05-20',
     headline:
