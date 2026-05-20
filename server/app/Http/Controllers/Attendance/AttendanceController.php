@@ -6,10 +6,12 @@ namespace App\Http\Controllers\Attendance;
 
 use App\Actions\Attendance\DeleteAttendanceAction;
 use App\Actions\Attendance\GetAthleteAttendanceAction;
+use App\Actions\Attendance\GetAthleteAttendanceSummaryAction;
 use App\Actions\Attendance\GetDailyAttendanceAction;
 use App\Actions\Attendance\GetMonthlyAttendanceSummaryAction;
 use App\Actions\Attendance\MarkAttendanceAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Attendance\AthleteAttendanceSummaryRequest;
 use App\Http\Requests\Attendance\MarkAttendanceRequest;
 use App\Http\Requests\Attendance\MonthlySummaryRequest;
 use App\Http\Resources\AttendanceRecordResource;
@@ -20,15 +22,25 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Cache;
 
 class AttendanceController extends Controller
 {
+    /**
+     * Cache TTL for the per-athlete summary endpoint (#893). 5 min is the
+     * sweet spot between freshness (instructor marks attendance mid-class
+     * and wants the chart to reflect it on the next reload) and load
+     * (chart re-fetch on every page nav is fine to serve from cache).
+     */
+    private const ATHLETE_SUMMARY_TTL_SECONDS = 300;
+
     public function __construct(
         private readonly MarkAttendanceAction $markAction,
         private readonly DeleteAttendanceAction $deleteAction,
         private readonly GetDailyAttendanceAction $dailyAction,
         private readonly GetAthleteAttendanceAction $athleteAction,
         private readonly GetMonthlyAttendanceSummaryAction $summaryAction,
+        private readonly GetAthleteAttendanceSummaryAction $athleteSummaryAction,
     ) {
     }
 
@@ -151,6 +163,33 @@ class AttendanceController extends Controller
         $records = $this->athleteAction->execute($athlete, $from, $to);
 
         return AttendanceRecordResource::collection($records);
+    }
+
+    /**
+     * Per-athlete attendance summary over the last N days (#893). Cached
+     * for 5 min per (athlete_id, range) — chart is read-heavy and the
+     * underlying lesson-day pivot is stable in the short term.
+     */
+    public function athleteSummary(AthleteAttendanceSummaryRequest $request, Athlete $athlete): JsonResponse
+    {
+        // Authorization (caller owns this athlete) is enforced by the
+        // FormRequest's authorize() — Laravel returns 403 before we get
+        // here on a foreign-academy athlete.
+        // `validated('range')` is mixed at the PHPStan view; the in:30,90,365
+        // rule narrows it at runtime, but we re-narrow with a regex + cast
+        // so the type stays explicit.
+        $rangeInput = $request->validated('range');
+        $range = is_numeric($rangeInput) ? (int) $rangeInput : 90;
+
+        $cacheKey = \sprintf('attendance.summary.athlete.%d.range.%d', $athlete->id, $range);
+
+        $payload = Cache::remember(
+            $cacheKey,
+            self::ATHLETE_SUMMARY_TTL_SECONDS,
+            fn (): array => $this->athleteSummaryAction->execute($athlete, $range),
+        );
+
+        return response()->json(['data' => $payload]);
     }
 
     public function summary(MonthlySummaryRequest $request): JsonResponse

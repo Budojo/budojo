@@ -444,6 +444,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'index']);
         Route::post('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'store']);
         Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy']);
+        // Per-athlete attendance summary (#893). Must come BEFORE the more
+        // general /athletes/{athlete}/attendance route or "summary" would
+        // bind as a record id.
+        Route::get('/athletes/{athlete}/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteSummary']);
         Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
     });
 
