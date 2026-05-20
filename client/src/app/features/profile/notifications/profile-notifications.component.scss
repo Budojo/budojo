@@ -51,14 +51,74 @@
   }
 
   &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  // Native <details> group container (#736). One per audience cluster
+  // (owner / athlete / community). Hairline border + 12 px radius
+  // matches the rest of the SPA's card chrome; closed by default
+  // (the user opens the audience they care about). Default <summary>
+  // marker is replaced with a custom chevron that rotates on [open].
+  &__group {
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--p-border-radius-md);
+    overflow: hidden;
+    background: var(--p-surface-0);
+  }
+
+  &__group-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 1rem;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    font-weight: 600;
+    color: var(--p-text-color);
+    transition: background-color var(--budojo-motion-duration-quick, 0.16s)
+      var(--budojo-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    &:hover {
+      background-color: var(--p-surface-50, transparent);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: -2px;
+    }
+  }
+
+  &__group-title {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__group-chevron {
+    color: var(--p-text-color-secondary);
+    font-size: 1rem;
+    transition: transform var(--budojo-motion-duration-quick, 0.16s)
+      var(--budojo-motion-easing-standard, cubic-bezier(0.2, 0, 0, 1));
+  }
+
+  &__group[open] &__group-chevron {
+    transform: rotate(180deg);
+  }
+
+  &__group-list {
     margin: 0;
     padding: 0;
     list-style: none;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--p-content-border-color);
-    border-radius: var(--p-border-radius-md);
-    overflow: hidden;
+    border-top: 1px solid var(--p-content-border-color);
   }
 
   &__row {

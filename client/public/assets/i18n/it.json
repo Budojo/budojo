@@ -823,6 +823,11 @@
     "notifications": {
       "title": "Notifiche",
       "subtitle": "Scegli quali notifiche vuoi ricevere. Ogni riga indica come viene consegnata (digest email, inbox, …).",
+      "groups": {
+        "owner": "Avvisi maestro",
+        "athlete": "Avvisi personali",
+        "community": "Community"
+      },
       "medicalCertReminders": {
         "label": "Promemoria scadenza certificato medico",
         "description": "Digest giornaliero alle 09:00 con gli atleti il cui certificato medico scade tra 30, 7 o 0 giorni."
