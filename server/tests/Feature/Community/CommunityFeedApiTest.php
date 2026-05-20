@@ -141,6 +141,39 @@ it('includes reactions_count / comments_count / rsvps_count zeroed for a fresh p
         ->and($response->json('data.0.rsvps_count'))->toBe(0);
 });
 
+it('exposes per-response rsvps split (going_rsvps_count / maybe_rsvps_count) on event posts (#859)', function (): void {
+    // Bug #859: the feed used to surface only the aggregate rsvps_count, so
+    // the SPA could render a count only on the "Going" chip. A post with
+    // mixed responses showed "2" on Going when the actual breakdown was
+    // 1 going + 1 maybe. Per-response aliased counts let the template
+    // render the right number on each chip.
+    /** @var \App\Models\CommunityPost $event */
+    $event = CommunityPost::factory()->for($this->academy)->create([
+        'type' => \App\Enums\CommunityPostType::Event,
+    ]);
+
+    $goingUser = \App\Models\User::factory()->create();
+    $maybeUser = \App\Models\User::factory()->create();
+    \App\Models\PostRsvp::create([
+        'post_id' => $event->id,
+        'user_id' => $goingUser->id,
+        'response' => \App\Enums\RsvpResponse::Going,
+    ]);
+    \App\Models\PostRsvp::create([
+        'post_id' => $event->id,
+        'user_id' => $maybeUser->id,
+        'response' => \App\Enums\RsvpResponse::Maybe,
+    ]);
+
+    $response = $this->actingAs($this->owner)
+        ->getJson('/api/v1/community/feed')
+        ->assertOk();
+
+    expect($response->json('data.0.rsvps_count'))->toBe(2)
+        ->and($response->json('data.0.going_rsvps_count'))->toBe(1)
+        ->and($response->json('data.0.maybe_rsvps_count'))->toBe(1);
+});
+
 it('surfaces the caller\'s your_reaction on each item when they have reacted', function (): void {
     /** @var CommunityPost $post */
     $post = CommunityPost::factory()->for($this->academy)->create();

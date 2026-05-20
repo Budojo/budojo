@@ -60,6 +60,12 @@ export interface CommunityPost {
   };
   readonly comments_count: number;
   readonly rsvps_count: number;
+  // Per-response RSVP split (#859). The single aggregate `rsvps_count`
+  // alone was insufficient: the feed card could only render the total
+  // next to the Going chip; the Maybe chip stayed blank. With these
+  // two aliased counts the template renders the right number per chip.
+  readonly going_rsvps_count: number;
+  readonly maybe_rsvps_count: number;
   readonly your_reaction: ReactionEmoji | null;
   readonly your_rsvp: RsvpResponse | null;
 }

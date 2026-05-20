@@ -173,8 +173,8 @@
                         'athletePortal.feed.rsvpGoing' | translate
                       }}</span>
                     </button>
-                    @if (post.rsvps_count > 0) {
-                      <span class="feed__react-count">{{ post.rsvps_count }}</span>
+                    @if (post.going_rsvps_count > 0) {
+                      <span class="feed__react-count">{{ post.going_rsvps_count }}</span>
                     }
                   </div>
                   <div
@@ -195,6 +195,9 @@
                         'athletePortal.feed.rsvpMaybe' | translate
                       }}</span>
                     </button>
+                    @if (post.maybe_rsvps_count > 0) {
+                      <span class="feed__react-count">{{ post.maybe_rsvps_count }}</span>
+                    }
                   </div>
                 </div>
               </div>

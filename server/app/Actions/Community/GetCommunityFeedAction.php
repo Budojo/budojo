@@ -84,6 +84,18 @@ class GetCommunityFeedAction
                     'emoji',
                     ReactionEmoji::Pray->value,
                 ),
+                // Per-response RSVP split (#859). Symmetric to the reactions
+                // pattern above — without these, the SPA could only render
+                // the total on the Going chip and the Maybe chip stayed
+                // blank. Enum cases so a future rename trips at compile time.
+                'rsvps as going_rsvps_count' => fn ($q) => $q->where(
+                    'response',
+                    \App\Enums\RsvpResponse::Going->value,
+                ),
+                'rsvps as maybe_rsvps_count' => fn ($q) => $q->where(
+                    'response',
+                    \App\Enums\RsvpResponse::Maybe->value,
+                ),
             ])
             ->paginate($perPage);
     }
