@@ -49,6 +49,7 @@ import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/exp
 import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthly-summary-widget/monthly-summary-widget.component';
 import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpaid-this-month-widget/unpaid-this-month-widget.component';
 import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 
@@ -86,6 +87,7 @@ interface SelectOption<T extends string> {
     UnpaidThisMonthWidgetComponent,
     PaidBadgeComponent,
     OnboardingChecklistComponent,
+    PageHeaderComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',
@@ -109,6 +111,20 @@ export class AthletesListComponent implements OnInit {
 
   // Owner-only route — the link always uses the owner shell.
   protected readonly PUBLIC_PROFILE_BASE = '/dashboard/u';
+
+  /**
+   * Translated count chip for <app-page-header>. Returns null while loading
+   * or when the academy has zero athletes — the header collapses the chip
+   * cleanly in those cases.
+   */
+  protected totalCountLabel(): string | null {
+    const total = this.totalRecords();
+    if (this.loading() || total === 0) {
+      return null;
+    }
+    const key = total === 1 ? 'athletes.list.totalCountOne' : 'athletes.list.totalCountOther';
+    return this.translate.instant(key, { count: total });
+  }
   readonly loading = signal(true);
 
   selectedBelt = signal<Belt | ''>('');

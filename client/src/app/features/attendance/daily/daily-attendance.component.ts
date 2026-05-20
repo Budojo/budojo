@@ -32,6 +32,7 @@ import {
 import { AttendanceService } from '../../../core/services/attendance.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -70,6 +71,7 @@ function toLocalDateString(d: Date): string {
     TranslatePipe,
     BeltBadgeComponent,
     FilterSheetComponent,
+    PageHeaderComponent,
   ],
   providers: [MessageService],
   templateUrl: './daily-attendance.component.html',
@@ -120,6 +122,13 @@ export class DailyAttendanceComponent implements OnInit {
    * lands on a non-training-day default and every check-in click 422s.
    */
   protected readonly selectedDate = signal<Date>(new Date());
+
+  /** Translated header title — today / dated variant in one place for <app-page-header>. */
+  protected readonly attendanceTitle = computed<string>(() => {
+    return this.selectedDateIsToday()
+      ? this.translate.instant('attendance.daily.title')
+      : this.translate.instant('attendance.daily.titleForDate', { date: this.selectedDateLabel() });
+  });
 
   /**
    * True when `selectedDate` matches today (calendar day, not exact instant).

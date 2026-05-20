@@ -14,7 +14,8 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
 import { LanguageService } from '../../../core/services/language.service';
@@ -58,7 +59,15 @@ function compareYearMonth(a: YearMonth, b: YearMonth): number {
 @Component({
   selector: 'app-monthly-summary',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ButtonModule, InputTextModule, SkeletonModule, TableModule, TranslatePipe],
+  imports: [
+    FormsModule,
+    ButtonModule,
+    InputTextModule,
+    SkeletonModule,
+    TableModule,
+    TranslatePipe,
+    PageHeaderComponent,
+  ],
   templateUrl: './monthly-summary.component.html',
   styleUrl: './monthly-summary.component.scss',
 })
@@ -67,6 +76,7 @@ export class MonthlySummaryComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly attendanceService = inject(AttendanceService);
   private readonly academyService = inject(AcademyService);
+  private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -102,6 +112,16 @@ export class MonthlySummaryComponent implements OnInit {
   });
 
   protected readonly totalDays = computed(() => this.rows().reduce((acc, r) => acc + r.count, 0));
+
+  /** "21 giorni · 32 atleti" — single combined chip for the page-header. */
+  protected readonly summaryCountLabel = computed<string>(() => {
+    const days = this.totalDays();
+    const athletes = this.rows().length;
+    const daysKey = days === 1 ? 'attendance.summary.daysOne' : 'attendance.summary.daysOther';
+    const athletesKey =
+      athletes === 1 ? 'attendance.summary.athletesOne' : 'attendance.summary.athletesOther';
+    return `${this.translate.instant(daysKey, { count: days })} · ${this.translate.instant(athletesKey, { count: athletes })}`;
+  });
 
   /**
    * Scheduled training-day count for the visible month, capped at today.

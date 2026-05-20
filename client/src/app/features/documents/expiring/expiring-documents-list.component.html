@@ -1,25 +1,14 @@
 <p-toast position="top-right" />
 
 <section class="expiring-page">
-  <header class="expiring-page__header">
-    <a routerLink="/dashboard/athletes" class="expiring-page__back" data-cy="back-to-athletes">
-      <i class="pi pi-chevron-left" aria-hidden="true"></i>
-      <span>{{ 'documents.expiringList.backToAthletes' | translate }}</span>
-    </a>
-    <div class="expiring-page__title-area">
-      <h1 class="expiring-page__title">{{ 'documents.expiringList.title' | translate }}</h1>
-      @if (!loading() && !errored()) {
-        <span class="expiring-page__count">
-          {{
-            (count() === 1
-              ? 'documents.expiringList.countOne'
-              : 'documents.expiringList.countOther'
-            ) | translate: { count: count() }
-          }}
-        </span>
-      }
-    </div>
-  </header>
+  <a routerLink="/dashboard/athletes" class="expiring-page__back" data-cy="back-to-athletes">
+    <i class="pi pi-chevron-left" aria-hidden="true"></i>
+    <span>{{ 'documents.expiringList.backToAthletes' | translate }}</span>
+  </a>
+  <app-page-header
+    [title]="'documents.expiringList.title' | translate"
+    [countLabel]="expiringCountLabel()"
+  />
 
   @if (errored()) {
     <div class="expiring-page__empty-state" data-cy="expiring-list-error">

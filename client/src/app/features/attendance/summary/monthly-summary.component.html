@@ -1,24 +1,10 @@
 <section class="summary-page" data-cy="monthly-summary-page">
-  <header class="summary-page__header">
-    <div class="summary-page__heading">
-      <p class="summary-page__eyebrow">{{ 'attendance.summary.eyebrow' | translate }}</p>
-      <h1 class="summary-page__title" data-cy="monthly-summary-month">{{ monthLabel() }}</h1>
-      <p class="summary-page__counter">
-        {{
-          (totalDays() === 1 ? 'attendance.summary.daysOne' : 'attendance.summary.daysOther')
-            | translate: { count: totalDays() }
-        }}
-        ·
-        {{
-          (rows().length === 1
-            ? 'attendance.summary.athletesOne'
-            : 'attendance.summary.athletesOther'
-          ) | translate: { count: rows().length }
-        }}
-      </p>
-    </div>
-
-    <div class="summary-page__nav">
+  <app-page-header
+    [eyebrow]="'attendance.summary.eyebrow' | translate"
+    [title]="monthLabel()"
+    [countLabel]="summaryCountLabel()"
+  >
+    <div pageHeaderCta class="summary-page__nav">
       <p-button
         icon="pi pi-chevron-left"
         [text]="true"
@@ -37,7 +23,7 @@
         data-cy="monthly-summary-next"
       />
     </div>
-  </header>
+  </app-page-header>
 
   <div class="summary-page__filter">
     <input
