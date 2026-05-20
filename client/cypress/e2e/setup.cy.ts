@@ -74,6 +74,49 @@ describe('Academy setup page', () => {
   // #72: setup is now name-only (plus optional training days). The address
   // path is exercised by the edit form's spec.
 
+  it('with "Yes, enroll me" → POST /me/athlete fires after create, before redirect (#751)', () => {
+    cy.intercept('POST', '/api/v1/academy', {
+      statusCode: 201,
+      body: {
+        data: { id: 1, name: 'My Academy', slug: 'my-academy', address: null, logo_url: null },
+      },
+    }).as('createAcademy');
+    cy.intercept('POST', '/api/v1/me/athlete', {
+      statusCode: 201,
+      body: { data: { id: 42, is_self: true } },
+    }).as('enrollMe');
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletesList');
+
+    cy.get('input[id="name"]').type('My Academy');
+    cy.get('[data-cy="setup-train-here-yes"]').click();
+    cy.get('button[type="submit"]').click();
+
+    cy.wait('@createAcademy');
+    cy.wait('@enrollMe');
+    cy.wait('@athletesList');
+    cy.url().should('include', '/dashboard/athletes');
+  });
+
+  it('default "Not now" → POST /me/athlete is NOT fired (#751)', () => {
+    cy.intercept('POST', '/api/v1/academy', {
+      statusCode: 201,
+      body: {
+        data: { id: 1, name: 'My Academy', slug: 'my-academy', address: null, logo_url: null },
+      },
+    }).as('createAcademy');
+    // If /me/athlete fires unexpectedly, Cypress will error on the un-stubbed
+    // request — the absence of the .wait() is the assertion.
+    cy.intercept('POST', '/api/v1/me/athlete', () => {
+      throw new Error('should not be called when Not now is selected');
+    });
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
+
+    cy.get('input[id="name"]').type('My Academy');
+    cy.get('button[type="submit"]').click();
+    cy.wait('@createAcademy');
+    cy.url().should('include', '/dashboard/athletes');
+  });
+
   it('shows error message when creation fails', () => {
     cy.intercept('POST', '/api/v1/academy', {
       statusCode: 500,

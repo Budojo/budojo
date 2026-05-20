@@ -393,7 +393,13 @@
     "nameMaxlength": "Maximum 255 characters.",
     "trainingDaysLabel": "Training days",
     "optional": "(optional)",
-    "submit": "Create academy"
+    "submit": "Create academy",
+    "trainHere": {
+      "label": "Do you train at this academy too?",
+      "body": "If yes: you'll appear in the athletes list with an Owner chip, your community posts will show your belt, you can mark your own attendance, and you won't be billed (excluded from payment surfaces). You can flip this later from Profile → Train at this academy.",
+      "yes": "Yes, enroll me",
+      "no": "Not now"
+    }
   },
   "legal": {
     "chrome": {
