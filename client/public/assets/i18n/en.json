@@ -823,6 +823,11 @@
     "notifications": {
       "title": "Notifications",
       "subtitle": "Choose which notifications you want to receive. Each row lists how it's delivered (email digest, inbox, …).",
+      "groups": {
+        "owner": "Owner alerts",
+        "athlete": "Personal alerts",
+        "community": "Community"
+      },
       "medicalCertReminders": {
         "label": "Medical certificate expiring reminders",
         "description": "Daily digest at 09:00 listing athletes whose medical certificate expires in 30, 7, or 0 days."

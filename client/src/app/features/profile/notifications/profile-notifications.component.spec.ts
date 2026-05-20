@@ -89,6 +89,56 @@ describe('ProfileNotificationsComponent (#416)', () => {
     expect(component.isEnabled(UNPAID)).toBe(true);
   });
 
+  // ─── Group pagination (#736) ────────────────────────────────────────────
+  // Phases A+B+C grew the panel to 17 toggles; the user couldn't scroll past
+  // them on mobile. Three collapsible <details> sections now group them by
+  // audience: Owner / Athlete / Community. Each section closed by default.
+
+  it('renders three collapsible group sections (owner / athlete / community), closed by default', () => {
+    const { fixture, httpMock, el } = setup();
+    httpMock.expectOne(ENDPOINT).flush({ data: {} });
+    fixture.detectChanges();
+
+    const owner = el.querySelector(
+      '[data-cy="profile-notifications-group-owner"]',
+    ) as HTMLDetailsElement | null;
+    const athlete = el.querySelector(
+      '[data-cy="profile-notifications-group-athlete"]',
+    ) as HTMLDetailsElement | null;
+    const community = el.querySelector(
+      '[data-cy="profile-notifications-group-community"]',
+    ) as HTMLDetailsElement | null;
+
+    expect(owner).not.toBeNull();
+    expect(athlete).not.toBeNull();
+    expect(community).not.toBeNull();
+    expect(owner!.open).toBe(false);
+    expect(athlete!.open).toBe(false);
+    expect(community!.open).toBe(false);
+  });
+
+  it('places each category row inside the correct group', () => {
+    const { fixture, httpMock, el } = setup();
+    httpMock.expectOne(ENDPOINT).flush({ data: {} });
+    fixture.detectChanges();
+
+    // Spot-check one row per group — full enumeration would just mirror
+    // the CATEGORIES constant in the component.
+    const ownerGroup = el.querySelector('[data-cy="profile-notifications-group-owner"]');
+    const athleteGroup = el.querySelector('[data-cy="profile-notifications-group-athlete"]');
+    const communityGroup = el.querySelector('[data-cy="profile-notifications-group-community"]');
+
+    expect(
+      ownerGroup?.querySelector(`[data-cy="profile-notifications-row-${MEDICAL}"]`),
+    ).not.toBeNull();
+    expect(
+      athleteGroup?.querySelector('[data-cy="profile-notifications-row-athlete_training_today"]'),
+    ).not.toBeNull();
+    expect(
+      communityGroup?.querySelector('[data-cy="profile-notifications-row-community_reply"]'),
+    ).not.toBeNull();
+  });
+
   it('reverts the toggle and toasts an error on PATCH failure', () => {
     const { fixture, httpMock, addToastSpy } = setup();
     httpMock.expectOne(ENDPOINT).flush({ data: { [MEDICAL]: true, [UNPAID]: true } });
