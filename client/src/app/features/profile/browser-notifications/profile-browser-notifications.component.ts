@@ -133,8 +133,15 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
     });
   }
 
-  protected refresh(): void {
-    this.loading.set(true);
+  /**
+   * @param silent — skip the loading-flash on the panel. Used by the
+   *   post-subscribe reconcile (#899): the optimistic local prepend
+   *   has already painted the new row, so flipping `loading` would
+   *   blank the panel under a success toast — Norman feedback
+   *   violation (signalling success and uncertainty at once).
+   */
+  protected refresh(silent = false): void {
+    if (!silent) this.loading.set(true);
     this.errored.set(false);
     this.webPushService.fetchState().subscribe({
       next: (state) => {
@@ -166,9 +173,10 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
       // Reconcile against the canonical server state (#899). The local
       // signal can carry rows that `WebPushChannel::send()` already
       // auto-deleted on a vendor 410 (post-deploy endpoint rotation,
-      // most commonly). Without this refetch the user sees a phantom
-      // row that 404s on revoke.
-      this.refresh();
+      // most commonly). Silent so the panel keeps showing the freshly-
+      // added row while the GET completes — Norman feedback rule
+      // (#900 review).
+      this.refresh(/* silent */ true);
       this.permission.set(this.webPushService.currentPermission());
       // Re-fetch the current browser's endpoint hash (#822 reviewer
       // follow-up). On a fresh page where the user starts in state
