@@ -35,6 +35,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
             <span class="page-header__count" data-cy="page-header-count">{{ count }}</span>
           }
         </div>
+        @if (subtitle(); as s) {
+          <p class="page-header__subtitle" data-cy="page-header-subtitle">{{ s }}</p>
+        }
       </div>
       <div class="page-header__cta">
         <ng-content select="[pageHeaderCta]" />
@@ -88,6 +91,13 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         color: var(--p-surface-500);
       }
 
+      .page-header__subtitle {
+        margin: 0;
+        font-size: 0.875rem;
+        color: var(--p-surface-500);
+        line-height: 1.3;
+      }
+
       .page-header__cta {
         display: inline-flex;
         align-items: center;
@@ -103,4 +113,5 @@ export class PageHeaderComponent {
   readonly title = input.required<string>();
   readonly countLabel = input<string | null>(null);
   readonly eyebrow = input<string | null>(null);
+  readonly subtitle = input<string | null>(null);
 }

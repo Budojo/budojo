@@ -7,7 +7,12 @@ import { PageHeaderComponent } from './page-header.component';
   standalone: true,
   imports: [PageHeaderComponent],
   template: `
-    <app-page-header [title]="title" [countLabel]="countLabel" [eyebrow]="eyebrow">
+    <app-page-header
+      [title]="title"
+      [countLabel]="countLabel"
+      [eyebrow]="eyebrow"
+      [subtitle]="subtitle"
+    >
       @if (showCta) {
         <button pageHeaderCta type="button" data-cy="host-cta">Add</button>
       }
@@ -18,6 +23,7 @@ class HostComponent {
   title = 'Atleti';
   countLabel: string | null = null;
   eyebrow: string | null = null;
+  subtitle: string | null = null;
   showCta = false;
 }
 
@@ -87,6 +93,28 @@ describe('PageHeaderComponent (#883)', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-cy="page-header-eyebrow"]')).toBeNull();
+  });
+
+  it('renders the subtitle when provided', () => {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.title = 'Impostazioni';
+    fixture.componentInstance.subtitle = 'Account, sicurezza, notifiche.';
+    fixture.detectChanges();
+
+    const sub = fixture.nativeElement.querySelector('[data-cy="page-header-subtitle"]');
+    expect(sub).not.toBeNull();
+    expect(sub.textContent.trim()).toBe('Account, sicurezza, notifiche.');
+  });
+
+  it('hides the subtitle when null', () => {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.title = 'Atleti';
+    fixture.componentInstance.subtitle = null;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="page-header-subtitle"]')).toBeNull();
   });
 
   it('omits the CTA wrapper visually when no content is projected (no orphan empty div)', () => {

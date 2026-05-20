@@ -1,5 +1,5 @@
 <div class="my-documents">
-  <h1 class="my-documents__title">{{ 'athletePortal.documents.title' | translate }}</h1>
+  <app-page-header [title]="'athletePortal.documents.title' | translate" />
 
   @if (loading()) {
     <div class="my-documents__card" data-cy="my-documents-loading">

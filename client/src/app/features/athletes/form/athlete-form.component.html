@@ -1,20 +1,7 @@
 <p-toast position="top-right" />
 
 <div class="athlete-form-page">
-  <header class="athlete-form-page__header">
-    <h1 class="athlete-form-page__title">
-      {{
-        (mode() === 'create' ? 'athletes.form.title.create' : 'athletes.form.title.edit')
-          | translate
-      }}
-    </h1>
-    <p class="athlete-form-page__subtitle">
-      {{
-        (mode() === 'create' ? 'athletes.form.subtitle.create' : 'athletes.form.subtitle.edit')
-          | translate
-      }}
-    </p>
-  </header>
+  <app-page-header [title]="pageHeaderTitle()" [subtitle]="pageHeaderSubtitle()" />
 
   @if (error()) {
     <p-message severity="error" [text]="error()!" styleClass="w-full" />

@@ -37,6 +37,7 @@ import {
 } from '../../../core/services/athlete.service';
 import { Address, CountryCode, ItalianProvinceCode } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   COUNTRY_OPTIONS,
   PROVINCE_OPTIONS,
@@ -165,6 +166,7 @@ const urlIfPresent: ValidatorFn = (control: AbstractControl) => {
     SelectModule,
     ToastModule,
     Tooltip,
+    PageHeaderComponent,
   ],
   providers: [MessageService],
   templateUrl: './athlete-form.component.html',
@@ -188,6 +190,18 @@ export class AthleteFormComponent implements OnInit {
 
   readonly mode = computed<'create' | 'edit'>(() =>
     this.athleteId() === null ? 'create' : 'edit',
+  );
+
+  protected readonly pageHeaderTitle = computed<string>(() =>
+    this.translate.instant(
+      this.mode() === 'create' ? 'athletes.form.title.create' : 'athletes.form.title.edit',
+    ),
+  );
+
+  protected readonly pageHeaderSubtitle = computed<string>(() =>
+    this.translate.instant(
+      this.mode() === 'create' ? 'athletes.form.subtitle.create' : 'athletes.form.subtitle.edit',
+    ),
   );
 
   /**

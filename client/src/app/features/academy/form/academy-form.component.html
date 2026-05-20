@@ -1,10 +1,10 @@
 <p-toast position="top-right" />
 
 <section class="form" data-cy="academy-form">
-  <header class="form__header">
-    <p class="form__eyebrow">{{ 'academy.form.eyebrow' | translate }}</p>
-    <h1 class="form__title">{{ 'academy.form.title' | translate }}</h1>
-  </header>
+  <app-page-header
+    [eyebrow]="'academy.form.eyebrow' | translate"
+    [title]="'academy.form.title' | translate"
+  />
 
   @if (error()) {
     <p-message

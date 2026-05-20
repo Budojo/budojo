@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Document, DocumentService } from '../../core/services/document.service';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /**
  * Athlete-portal documents list (M7 PR-D slice 5). Read-only — V1
@@ -22,7 +23,7 @@ import { Document, DocumentService } from '../../core/services/document.service'
 @Component({
   selector: 'app-my-documents',
   standalone: true,
-  imports: [TranslatePipe, DatePipe, SkeletonModule],
+  imports: [TranslatePipe, DatePipe, SkeletonModule, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-documents.component.html',
   styleUrl: './my-documents.component.scss',
