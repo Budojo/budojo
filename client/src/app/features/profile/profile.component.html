@@ -1,9 +1,9 @@
 @if (user(); as u) {
   <div class="profile-page">
-    <header class="profile-page__header">
-      <h1 class="profile-page__title">{{ 'profile.title' | translate }}</h1>
-      <p class="profile-page__subtitle">{{ 'profile.subtitle' | translate }}</p>
-    </header>
+    <app-page-header
+      [title]="'profile.title' | translate"
+      [subtitle]="'profile.subtitle' | translate"
+    />
 
     @if (verifyRequired()) {
       <div class="profile-page__banner" role="alert" data-cy="profile-verify-required-banner">

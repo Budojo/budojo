@@ -37,6 +37,7 @@ import {
 } from '../../../core/services/athlete.service';
 import { Address, CountryCode, ItalianProvinceCode } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   COUNTRY_OPTIONS,
   PROVINCE_OPTIONS,
@@ -165,6 +166,7 @@ const urlIfPresent: ValidatorFn = (control: AbstractControl) => {
     SelectModule,
     ToastModule,
     Tooltip,
+    PageHeaderComponent,
   ],
   providers: [MessageService],
   templateUrl: './athlete-form.component.html',

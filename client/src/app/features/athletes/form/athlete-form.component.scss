@@ -1,31 +1,12 @@
 .athlete-form-page {
-  // Intermediate-width form layout — kept at 900px until the hierarchy
-  // rework (#261 follow-up) decides whether this should fold into the
-  // wide-header + narrow-card pattern. Page padding comes from the
-  // dashboard shell.
-  max-width: 900px;
+  // Page-content max-width token (#883) — same chrome as Atleti / Feed /
+  // Documenti so the form lands at the canonical width. Page padding
+  // comes from the dashboard shell.
+  max-width: var(--budojo-page-content-max);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-
-  &__header {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  &__title {
-    margin: 0;
-    font-size: 1.75rem;
-    font-weight: 600;
-    color: var(--p-text-color);
-  }
-
-  &__subtitle {
-    margin: 0;
-    color: var(--p-text-muted-color);
-  }
 
   &__loading {
     display: flex;

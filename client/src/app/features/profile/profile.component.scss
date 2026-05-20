@@ -11,24 +11,6 @@
   max-width: 640px;
   margin: 0 auto;
 
-  &__header {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  &__title {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
-
-  &__subtitle {
-    margin: 0;
-    color: var(--p-text-color-secondary);
-    font-size: 0.875rem;
-  }
-
   // Tab strip (#847). Same shape as `athlete-detail-page__tabs` — a
   // small top margin separates it from the page header above, and the
   // `p-tab` host carries an icon + label flex pair via ::ng-deep so
