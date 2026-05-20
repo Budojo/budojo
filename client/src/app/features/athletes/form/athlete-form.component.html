@@ -1,7 +1,19 @@
 <p-toast position="top-right" />
 
 <div class="athlete-form-page">
-  <app-page-header [title]="pageHeaderTitle()" [subtitle]="pageHeaderSubtitle()" />
+  <!-- Title + subtitle resolve via the TranslatePipe so they re-render
+       reactively when the user toggles language at runtime. Computed
+       signals over `translate.instant()` froze on the boot-time locale
+       (reviewer #890). -->
+  <app-page-header
+    [title]="
+      (mode() === 'create' ? 'athletes.form.title.create' : 'athletes.form.title.edit') | translate
+    "
+    [subtitle]="
+      (mode() === 'create' ? 'athletes.form.subtitle.create' : 'athletes.form.subtitle.edit')
+        | translate
+    "
+  />
 
   @if (error()) {
     <p-message severity="error" [text]="error()!" styleClass="w-full" />

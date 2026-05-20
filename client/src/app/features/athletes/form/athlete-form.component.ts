@@ -192,18 +192,6 @@ export class AthleteFormComponent implements OnInit {
     this.athleteId() === null ? 'create' : 'edit',
   );
 
-  protected readonly pageHeaderTitle = computed<string>(() =>
-    this.translate.instant(
-      this.mode() === 'create' ? 'athletes.form.title.create' : 'athletes.form.title.edit',
-    ),
-  );
-
-  protected readonly pageHeaderSubtitle = computed<string>(() =>
-    this.translate.instant(
-      this.mode() === 'create' ? 'athletes.form.subtitle.create' : 'athletes.form.subtitle.edit',
-    ),
-  );
-
   /**
    * Belt picker options. Order = IBJJF rank (kids → adults → senior
    * coral/red) so the picker reads bottom-up like a progression chart.
