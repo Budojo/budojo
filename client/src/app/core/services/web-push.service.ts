@@ -1,4 +1,4 @@
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom, map, Observable } from 'rxjs';
@@ -435,8 +435,21 @@ export class WebPushService {
    * is harmless — the next push fanout simply doesn't include it.
    */
   async unsubscribe(id: number): Promise<void> {
-    await firstValueFrom(
-      this.http.delete(`${environment.apiBase}/api/v1/me/push-subscriptions/${id}`),
-    );
+    try {
+      await firstValueFrom(
+        this.http.delete(`${environment.apiBase}/api/v1/me/push-subscriptions/${id}`),
+      );
+    } catch (err) {
+      // 404 means the row is already gone server-side — typically
+      // because `WebPushChannel::send()` auto-deleted it after FCM /
+      // Mozilla returned 410 on a push (post-deploy endpoint rotation).
+      // The delete intent is satisfied; surface as a no-op so the SPA's
+      // catch handler doesn't fire a misleading "Impossibile revocare"
+      // toast on the user's tap (#899).
+      if (err instanceof HttpErrorResponse && err.status === 404) {
+        return;
+      }
+      throw err;
+    }
   }
 }
