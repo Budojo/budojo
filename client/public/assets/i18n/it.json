@@ -1252,9 +1252,10 @@
         "title": "Tutti i documenti sono aggiornati",
         "hint": "Nessuna scadenza nei prossimi 30 giorni"
       },
-      "countOne": "{{count}} documento da controllare",
-      "countOther": "{{count}} documenti da controllare",
-      "countHint": "Scaduti o in scadenza entro 30 giorni"
+      "countOne": "{{count}} atleta da controllare",
+      "countOther": "{{count}} atleti da controllare",
+      "countHint": "Scaduti, in scadenza o senza certificato",
+      "breakdown": "{{expiring}} in scadenza · {{missing}} senza certificato"
     }
   },
   "weekdays": {

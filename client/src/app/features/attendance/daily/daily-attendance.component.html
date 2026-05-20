@@ -22,19 +22,9 @@
 </p-toast>
 
 <section class="attendance" data-cy="attendance-page">
-  <header class="attendance__header">
-    <div class="attendance__heading">
-      <p class="attendance__eyebrow">{{ 'attendance.daily.eyebrow' | translate }}</p>
-      <h1 class="attendance__title" data-cy="attendance-title">
-        @if (selectedDateIsToday()) {
-          {{ 'attendance.daily.title' | translate }}
-        } @else {
-          {{ 'attendance.daily.titleForDate' | translate: { date: selectedDateLabel() } }}
-        }
-      </h1>
-    </div>
-
+  <app-page-header [eyebrow]="'attendance.daily.eyebrow' | translate" [title]="attendanceTitle()">
     <p-datepicker
+      pageHeaderCta
       [ngModel]="selectedDate()"
       (ngModelChange)="selectedDate.set($event); onDateChanged()"
       [maxDate]="maxDate"
@@ -45,7 +35,7 @@
       styleClass="attendance__date-picker"
       data-cy="attendance-date"
     />
-  </header>
+  </app-page-header>
 
   <!--
     No-class-today banner (#854). Lights up ONLY when today itself is

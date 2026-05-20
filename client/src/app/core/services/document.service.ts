@@ -58,6 +58,28 @@ export interface ExpiringDocument extends Document {
   };
 }
 
+/**
+ * Athlete summary used in the `missing_medical_certificate` array of
+ * the `/documents/expiring` envelope (#881). Active athletes with no
+ * live (non-trashed) medical certificate row — same risk surface as
+ * an expired one.
+ */
+export interface AthleteMissingMedicalCertificate {
+  id: number;
+  first_name: string;
+  last_name: string;
+}
+
+/**
+ * Composite envelope returned by `GET /api/v1/documents/expiring`.
+ * Carries both the expiring documents and the "missing entirely"
+ * athletes so the dashboard widget can render one combined count.
+ */
+export interface ExpiringDocumentsResponse {
+  data: ExpiringDocument[];
+  missing_medical_certificate: AthleteMissingMedicalCertificate[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class DocumentService {
   private readonly http = inject(HttpClient);
@@ -89,6 +111,17 @@ export class DocumentService {
     return this.http
       .get<{ data: ExpiringDocument[] }>(`${this.base}/documents/expiring`, { params })
       .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Full documents-health snapshot (#881): expiring documents AND
+   * active athletes missing a medical certificate. The widget consumes
+   * this composite shape; `listExpiring()` above stays for callers
+   * that only want the expiring list.
+   */
+  fetchDocumentsHealth(days: number = 30): Observable<ExpiringDocumentsResponse> {
+    const params = new HttpParams().set('days', String(days));
+    return this.http.get<ExpiringDocumentsResponse>(`${this.base}/documents/expiring`, { params });
   }
 
   /**

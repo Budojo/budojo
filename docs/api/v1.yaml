@@ -2965,11 +2965,33 @@ paths:
             default: 30
       responses:
         '200':
-          description: Expiring-or-expired documents, most urgent first
+          description: |
+            Composite documents-health envelope. `data` is the expiring/expired
+            document list (existing shape). `missing_medical_certificate`
+            (#881) lists ACTIVE athletes in the academy with no live row of
+            `type=medical_certificate`. Same CONI/insurance risk surface as
+            an expired certificate — the SPA widget combines both into one
+            "needs attention" count.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DocumentList'
+                type: object
+                required: [data, missing_medical_certificate]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Document' }
+                    description: Documents whose `expires_at` is in the past OR within `days`. Ordered by `expires_at` ascending.
+                  missing_medical_certificate:
+                    type: array
+                    description: Active athletes with no live medical-certificate row.
+                    items:
+                      type: object
+                      required: [id, first_name, last_name]
+                      properties:
+                        id: { type: integer, format: int64 }
+                        first_name: { type: string }
+                        last_name: { type: string }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':

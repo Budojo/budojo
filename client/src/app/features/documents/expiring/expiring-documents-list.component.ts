@@ -22,6 +22,7 @@ import {
   ExpiringDocument,
 } from '../../../core/services/document.service';
 import { ExpiryStatusBadgeComponent } from '../../../shared/components/expiry-status-badge/expiry-status-badge.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { triggerBrowserDownload } from '../../../shared/utils/download';
 
 /**
@@ -48,6 +49,7 @@ import { triggerBrowserDownload } from '../../../shared/utils/download';
     Tooltip,
     TranslatePipe,
     ExpiryStatusBadgeComponent,
+    PageHeaderComponent,
   ],
   providers: [MessageService],
   templateUrl: './expiring-documents-list.component.html',
@@ -64,6 +66,16 @@ export class ExpiringDocumentsListComponent implements OnInit {
   readonly errored = signal<boolean>(false);
 
   readonly count = computed<number>(() => this.documents().length);
+
+  /** Count chip for <app-page-header>. Null while loading or on error. */
+  protected expiringCountLabel(): string | null {
+    if (this.loading() || this.errored()) {
+      return null;
+    }
+    const n = this.count();
+    const key = n === 1 ? 'documents.expiringList.countOne' : 'documents.expiringList.countOther';
+    return this.translate.instant(key, { count: n });
+  }
 
   // Static map (DocumentType → translation key) keeps the keys greppable and
   // forces TS to flag any new DocumentType case missing a translation, per

@@ -113,7 +113,7 @@ describe('ExpiringDocumentsListComponent', () => {
     flushExpiring([makeExpiring({ id: 1 })]);
     fixture.detectChanges();
 
-    const countNode = fixture.nativeElement.querySelector('.expiring-page__count');
+    const countNode = fixture.nativeElement.querySelector('[data-cy=page-header-count]');
     // Wording covers both expired + expiring within 30 days, since the
     // endpoint includes already-past documents too.
     expect(countNode?.textContent).toContain('1 document expired or expiring within 30 days');
@@ -124,7 +124,7 @@ describe('ExpiringDocumentsListComponent', () => {
     flushExpiring([makeExpiring({ id: 1 }), makeExpiring({ id: 2 }), makeExpiring({ id: 3 })]);
     fixture.detectChanges();
 
-    const countNode = fixture.nativeElement.querySelector('.expiring-page__count');
+    const countNode = fixture.nativeElement.querySelector('[data-cy=page-header-count]');
     expect(countNode?.textContent).toContain('3 documents expired or expiring within 30 days');
   });
 });

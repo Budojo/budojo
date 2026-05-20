@@ -11,7 +11,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
-import { DocumentService, ExpiringDocument } from '../../../core/services/document.service';
+import {
+  AthleteMissingMedicalCertificate,
+  DocumentService,
+  ExpiringDocument,
+} from '../../../core/services/document.service';
 
 /**
  * Dashboard widget: a single glanceable signal about document health.
@@ -43,18 +47,22 @@ export class ExpiringDocumentsWidgetComponent implements OnInit {
 
   /** Raw payload, kept so tests can inspect the fetched rows if needed. */
   readonly documents = signal<ExpiringDocument[]>([]);
+  readonly missing = signal<AthleteMissingMedicalCertificate[]>([]);
   readonly loading = signal<boolean>(true);
   readonly errored = signal<boolean>(false);
 
-  readonly count = computed<number>(() => this.documents().length);
+  readonly expiringCount = computed<number>(() => this.documents().length);
+  readonly missingCount = computed<number>(() => this.missing().length);
+  readonly count = computed<number>(() => this.expiringCount() + this.missingCount());
 
   ngOnInit(): void {
     this.documentService
-      .listExpiring(30)
+      .fetchDocumentsHealth(30)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (docs) => {
-          this.documents.set(docs);
+        next: (resp) => {
+          this.documents.set(resp.data);
+          this.missing.set(resp.missing_medical_certificate);
           this.loading.set(false);
         },
         error: () => {
