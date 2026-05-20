@@ -109,3 +109,16 @@ it('404s when the handle is malformed (route regex catches before controller)', 
         ->getJson('/api/v1/users/INVALID/profile')
         ->assertNotFound();
 });
+
+it('returns the public profile when an athlete-role viewer reads a same-academy peer', function () {
+    $viewerUser = User::factory()->athlete()->create(['handle' => 'viewerbjj']);
+    Athlete::factory()
+        ->for($this->academy)
+        ->state(['user_id' => $viewerUser->id])
+        ->create();
+
+    $this->actingAs($viewerUser)
+        ->getJson('/api/v1/users/mariobjj/profile')
+        ->assertOk()
+        ->assertJsonPath('data.handle', 'mariobjj');
+});

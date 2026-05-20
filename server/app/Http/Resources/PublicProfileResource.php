@@ -34,7 +34,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *         to_belt: string|null,
  *         from_stripes: int|null,
  *         to_stripes: int|null,
- *         belt_at_event: string|null,
+ *         belt_at_event: string,
  *         recorded_at: string,
  *     }>,
  * } $resource
@@ -56,7 +56,7 @@ class PublicProfileResource extends JsonResource
      *         to_belt: string|null,
      *         from_stripes: int|null,
      *         to_stripes: int|null,
-     *         belt_at_event: string|null,
+     *         belt_at_event: string,
      *         recorded_at: string,
      *     }>,
      * }

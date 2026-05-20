@@ -24,7 +24,7 @@ export interface PublicProfilePromotion {
   to_belt: Belt | null;
   from_stripes: number | null;
   to_stripes: number | null;
-  belt_at_event: Belt | null;
+  belt_at_event: Belt;
   recorded_at: string;
 }
 

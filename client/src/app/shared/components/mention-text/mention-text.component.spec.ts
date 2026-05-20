@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { describe, beforeEach, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { AuthService, type User } from '../../../core/services/auth.service';
 import { MentionTextComponent, splitIntoSegments } from './mention-text.component';
 
 @Component({
@@ -79,15 +80,20 @@ describe('splitIntoSegments (#864 mention parser)', () => {
   });
 });
 
-describe('MentionTextComponent', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      imports: [HostComponent],
-      providers: [provideRouter([])],
-    });
+function setupWithRole(role: 'owner' | 'athlete' | null) {
+  const user = signal<User | null>(role === null ? null : ({ id: 1, role } as unknown as User));
+  TestBed.configureTestingModule({
+    imports: [HostComponent],
+    providers: [
+      provideRouter([]),
+      { provide: AuthService, useValue: { user } as unknown as AuthService },
+    ],
   });
+}
 
-  it('renders mentions as router links pointing at the public profile route', () => {
+describe('MentionTextComponent', () => {
+  it('owner viewer: mention links target /dashboard/u/<handle>', () => {
+    setupWithRole('owner');
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.value = 'congrats @mariobjj!';
     fixture.detectChanges();
@@ -100,7 +106,24 @@ describe('MentionTextComponent', () => {
     expect(link!.getAttribute('href')).toBe('/dashboard/u/mariobjj');
   });
 
+  it('athlete viewer: mention links target /dashboard/me/u/<handle> (athlete shell)', () => {
+    // Without role-aware routing, athletes click @handle in their feed
+    // and hit /dashboard/u/* which is gated by roleOwnerGuard — the
+    // guard redirects them away and the public profile never renders.
+    setupWithRole('athlete');
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.value = 'thanks @alicebjj';
+    fixture.detectChanges();
+
+    const link = fixture.nativeElement.querySelector(
+      '[data-cy="mention-link"]',
+    ) as HTMLAnchorElement | null;
+    expect(link).not.toBeNull();
+    expect(link!.getAttribute('href')).toBe('/dashboard/me/u/alicebjj');
+  });
+
   it('renders plain text when the body has no mention', () => {
+    setupWithRole('owner');
     const fixture = TestBed.createComponent(HostComponent);
     fixture.componentInstance.value = 'no mention here';
     fixture.detectChanges();

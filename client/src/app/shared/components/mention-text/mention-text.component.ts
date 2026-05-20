@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 
 /**
  * Renders plain feed body text, transforming `@handle` segments into
@@ -39,7 +40,7 @@ const HANDLE_PATTERN = /(^|[\s([{,;:!?\n])@([a-z][a-z0-9._]{2,29})(?![a-z0-9._])
         <span>{{ segment.value }}</span>
       } @else {
         <a
-          [routerLink]="['/dashboard/u', segment.handle]"
+          [routerLink]="[profileBase(), segment.handle]"
           class="mention-text__link"
           data-cy="mention-link"
           >&commat;{{ segment.handle }}</a
@@ -65,9 +66,16 @@ const HANDLE_PATTERN = /(^|[\s([{,;:!?\n])@([a-z][a-z0-9._]{2,29})(?![a-z0-9._])
   ],
 })
 export class MentionTextComponent {
+  private readonly authService = inject(AuthService);
+
   readonly text = input.required<string>();
 
   protected readonly segments = computed<Segment[]>(() => splitIntoSegments(this.text()));
+
+  // Athletes land on /dashboard/me/u/<handle> (their shell); owners on /dashboard/u/<handle>. The opposite shell's route is guarded and would redirect.
+  protected readonly profileBase = computed<string>(() =>
+    this.authService.user()?.role === 'athlete' ? '/dashboard/me/u' : '/dashboard/u',
+  );
 }
 
 export function splitIntoSegments(input: string): Segment[] {

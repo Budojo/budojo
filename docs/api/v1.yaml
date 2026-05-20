@@ -5831,7 +5831,7 @@ components:
         to_belt: { type: string, nullable: true, description: 'IBJJF belt slug; null on stripe-only rows.' }
         from_stripes: { type: integer, nullable: true, minimum: 0, maximum: 6 }
         to_stripes: { type: integer, nullable: true, minimum: 0, maximum: 6 }
-        belt_at_event: { type: string, nullable: true, description: 'IBJJF belt slug at the moment the event was recorded.' }
+        belt_at_event: { type: string, description: 'IBJJF belt slug at the moment the event was recorded. Always present — the column is NOT NULL on every promotion row.' }
         recorded_at: { type: string, format: date-time }
 
     PublicProfile:

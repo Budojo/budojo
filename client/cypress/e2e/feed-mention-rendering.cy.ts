@@ -63,12 +63,36 @@ function feedPage(body: string) {
   };
 }
 
+function authMeAs(role: 'owner' | 'athlete') {
+  return {
+    statusCode: 200,
+    body: {
+      data: {
+        id: role === 'owner' ? 1 : 2,
+        first_name: role === 'owner' ? 'Owner' : 'Alice',
+        last_name: 'User',
+        full_name: role === 'owner' ? 'Owner User' : 'Alice User',
+        handle: role === 'owner' ? 'owner1' : 'alicebjj',
+        email: `${role}@example.com`,
+        email_verified_at: '2026-01-01T00:00:00Z',
+        avatar_url: null,
+        role,
+      },
+    },
+  };
+}
+
 describe('Feed @handle mention rendering (#864)', () => {
   beforeEach(() => {
     cy.intercept('GET', '/api/v1/academy*', ACADEMY_OK);
+    // Every test stubs an explicit role on /auth/me — without it the
+    // default test-user has no `role` and MentionTextComponent silently
+    // defaults to the owner path, which would pass the owner case for
+    // the wrong reason. The per-it variants below override the role.
+    cy.intercept('GET', '/api/v1/auth/me*', authMeAs('owner'));
   });
 
-  it('renders @handle inside an announcement body as a router link to /dashboard/u/<handle>', () => {
+  it('owner viewer: @handle inside an announcement links to /dashboard/u/<handle>', () => {
     cy.intercept(
       'GET',
       '/api/v1/community/feed*',
@@ -84,7 +108,28 @@ describe('Feed @handle mention rendering (#864)', () => {
       .and('contain.text', '@mariobjj')
       .and('have.attr', 'href', '/dashboard/u/mariobjj');
 
-    cy.get('[data-cy="post-announcement"]').should('contain.text', 'Congrats').and('contain.text', 'on the promotion!');
+    cy.get('[data-cy="post-announcement"]')
+      .should('contain.text', 'Congrats')
+      .and('contain.text', 'on the promotion!');
+  });
+
+  it('athlete viewer: @handle inside an announcement links to /dashboard/me/u/<handle>', () => {
+    // Override the beforeEach owner stub for this test only.
+    cy.intercept('GET', '/api/v1/auth/me*', authMeAs('athlete'));
+    cy.intercept(
+      'GET',
+      '/api/v1/community/feed*',
+      feedPage('Congrats @mariobjj on the promotion!'),
+    ).as('feedAthlete');
+
+    cy.visitAuthenticated('/dashboard/me/feed');
+    cy.wait('@feedAthlete');
+
+    cy.get('[data-cy="post-announcement"]')
+      .find('[data-cy="mention-link"]')
+      .should('exist')
+      .and('contain.text', '@mariobjj')
+      .and('have.attr', 'href', '/dashboard/me/u/mariobjj');
   });
 
   it('renders an announcement body with no mention as plain text (no anchor leakage)', () => {
