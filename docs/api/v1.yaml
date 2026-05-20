@@ -5328,6 +5328,14 @@ components:
             athlete with `(year, month) = (NOW()->year, NOW()->month)`. The
             `/athletes` index endpoint eager-loads only the current-month
             payments slice to keep this derivation O(1) per row (no N+1).
+        user_handle:
+          type: string
+          nullable: true
+          description: |
+            Linked-user public handle. Null when the athlete hasn't been
+            linked to a user yet, OR when the linked user has no handle.
+            The SPA athletes-list shows a "view public profile" icon only
+            when this is non-null.
         invitation:
           nullable: true
           description: |

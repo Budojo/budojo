@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -28,6 +29,7 @@ import {
   RsvpToggleResponse,
 } from '../../core/services/community.service';
 import { AuthService } from '../../core/services/auth.service';
+import { profileBaseForUser } from '../../shared/utils/profile-base';
 import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
@@ -61,6 +63,7 @@ import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-li
   selector: 'app-my-feed',
   standalone: true,
   imports: [
+    RouterLink,
     TranslatePipe,
     ButtonModule,
     SkeletonModule,
@@ -120,6 +123,10 @@ export class MyFeedComponent implements OnInit {
    * athletes can't use rather than let them click into a 403.
    */
   protected readonly canModerate = computed(() => this.authService.user()?.role === 'owner');
+
+  protected readonly profileBase = computed<string>(() =>
+    profileBaseForUser(this.authService.user()),
+  );
 
   protected readonly posts = signal<readonly CommunityPost[]>([]);
   protected readonly loading = signal(true);

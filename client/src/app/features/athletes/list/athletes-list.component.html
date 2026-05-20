@@ -390,6 +390,21 @@
                 data-cy="restore-btn"
               />
             } @else {
+              @if (athlete.user_handle; as handle) {
+                <a
+                  class="athletes-page__public-profile-link"
+                  [routerLink]="[PUBLIC_PROFILE_BASE, handle]"
+                  [pTooltip]="'athletes.list.tooltip.publicProfile' | translate"
+                  [attr.aria-label]="
+                    'athletes.list.tooltip.publicProfileAria'
+                      | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                  "
+                  tooltipPosition="left"
+                  [attr.data-cy]="'public-profile-btn-' + athlete.id"
+                >
+                  <i class="pi pi-id-card" aria-hidden="true"></i>
+                </a>
+              }
               <p-button
                 icon="pi pi-pencil"
                 severity="secondary"

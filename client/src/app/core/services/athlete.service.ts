@@ -88,6 +88,15 @@ export interface Athlete {
   status: AthleteStatus;
   joined_at: string;
   /**
+   * Public handle of the user this athlete row is linked to. Null when:
+   *   - the athlete hasn't been linked to a user yet (V1 athletes
+   *     created without an invite flow);
+   *   - the linked user hasn't set a handle.
+   * The athletes-list shows the "view public profile" icon only when
+   * this is non-null.
+   */
+  user_handle?: string | null;
+  /**
    * Structured address (#72b). `null` means no address on file. Same
    * read/write asymmetry as Academy: writes require every field except
    * `line2`; reads may carry nulls for legacy rows backfilled from a
