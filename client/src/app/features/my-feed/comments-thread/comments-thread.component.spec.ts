@@ -143,7 +143,9 @@ describe('CommentsThreadComponent (#604, M9 PR-D2 client)', () => {
       ) as HTMLAnchorElement | null;
       expect(link).not.toBeNull();
       expect(link!.textContent?.trim()).toBe('@mariobjj');
-      expect(link!.getAttribute('href')).toBe('/dashboard/u/mariobjj');
+      // Athlete-role viewer → athlete-shell route; owner-shell route is
+      // gated by roleOwnerGuard and would redirect.
+      expect(link!.getAttribute('href')).toBe('/dashboard/me/u/mariobjj');
     });
 
     it('renders a comment with no mention as plain text — no mention-link anchor leaks', () => {
