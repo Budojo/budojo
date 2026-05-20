@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
 /**
@@ -32,7 +31,7 @@ const HANDLE_PATTERN = /(^|[\s([{,;:!?\n])@([a-z][a-z0-9._]{2,29})(?![a-z0-9._])
 @Component({
   selector: 'app-mention-text',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (segment of segments(); track $index) {

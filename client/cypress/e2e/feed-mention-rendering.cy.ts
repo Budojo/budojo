@@ -103,4 +103,12 @@ describe('Feed @handle mention rendering (#864)', () => {
     );
     cy.get('[data-cy="post-announcement"] [data-cy="mention-link"]').should('not.exist');
   });
+
+  // Comment-body mention rendering is covered at the Vitest integration
+  // layer in comments-thread.component.spec.ts. We deliberately don't
+  // exercise it through Cypress + ng serve because the dynamic-import
+  // chunk renaming during hot-reload makes the click-to-open-thread
+  // step flaky enough that the signal-to-noise ratio drops below the
+  // value of the assertion (the wiring change in the template is a
+  // one-liner: <app-mention-text [text]="c.body" />).
 });
