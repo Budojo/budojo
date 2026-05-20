@@ -69,6 +69,13 @@ tags:
       moderation. Reactions, comments, and RSVPs land in subsequent
       slices (PR-C/D/E); today the feed surfaces the read path + the
       moderation endpoint.
+  - name: profile
+    description: |
+      Athlete-side public profile by handle (#862, M9 social-profile
+      epic slice A). Same-academy peers can read each other's basic
+      identity card — avatar, first name, current belt, joined date,
+      promotions timeline. Three privacy gates (unknown handle,
+      opted-out target, cross-academy viewer) all collapse to 404.
 
 paths:
 
@@ -3626,6 +3633,57 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
 
+  /users/{handle}/profile:
+    get:
+      tags: [profile]
+      summary: Read a same-academy peer's public profile by handle
+      description: |
+        Returns the public-profile view of the user identified by the
+        provided handle — `first_name`, `handle`, `avatar_url`,
+        current `belt`, `joined_at` date, and the top-50 `promotions`
+        timeline (newest first).
+
+        Three privacy gates all collapse to **404 Not Found** so this
+        endpoint never leaks the existence of a user behind any of them:
+
+          1. Handle is unknown.
+          2. Target opted out (`profile_is_public = false`).
+          3. Viewer is not in the same academy as the target.
+
+        The handle path segment is bound by a route regex matching the
+        canonical handle format (#479) — lowercase `[a-z][a-z0-9._]{2,29}`.
+        Malformed values 404 at the route layer before reaching the
+        controller.
+      operationId: getPublicProfile
+      parameters:
+        - in: path
+          name: handle
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z][a-z0-9._]{2,29}$'
+            example: mariobjj
+          description: The target user's handle (3-30 chars).
+      responses:
+        '200':
+          description: The peer's public profile snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicProfile'
+        '401':
+          description: Unauthenticated.
+        '404':
+          description: Handle unknown, profile opted-out, or viewer is cross-academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Not Found. }
+
   /community/feed:
     get:
       tags: [community]
@@ -5752,6 +5810,50 @@ components:
         explicit positive values. The absence of a row means "no
         answer" — there is no explicit Declined value (V1 only tracks
         who is coming).
+
+    PublicProfilePromotionKind:
+      type: string
+      enum: [belt, stripe]
+      description: |
+        Promotion-event discriminator on the public profile timeline.
+        `belt` rows carry `from_belt`/`to_belt`; `stripe` rows carry
+        `from_stripes`/`to_stripes`. `belt_at_event` is the canonical
+        belt colour at the moment the promotion was recorded —
+        present for both kinds.
+
+    PublicProfilePromotion:
+      type: object
+      required: [id, kind, from_belt, to_belt, from_stripes, to_stripes, belt_at_event, recorded_at]
+      properties:
+        id: { type: integer, format: int64 }
+        kind: { $ref: '#/components/schemas/PublicProfilePromotionKind' }
+        from_belt: { type: string, nullable: true, description: 'IBJJF belt slug; null on stripe-only rows.' }
+        to_belt: { type: string, nullable: true, description: 'IBJJF belt slug; null on stripe-only rows.' }
+        from_stripes: { type: integer, nullable: true, minimum: 0, maximum: 6 }
+        to_stripes: { type: integer, nullable: true, minimum: 0, maximum: 6 }
+        belt_at_event: { type: string, nullable: true, description: 'IBJJF belt slug at the moment the event was recorded.' }
+        recorded_at: { type: string, format: date-time }
+
+    PublicProfile:
+      type: object
+      required: [id, first_name, handle, avatar_url, belt, joined_at, promotions]
+      properties:
+        id: { type: integer, format: int64 }
+        first_name: { type: string }
+        handle:
+          type: string
+          pattern: '^[a-z][a-z0-9._]{2,29}$'
+          description: |
+            The target's Instagram-style handle (#479). Non-empty on
+            this surface — the route regex 404s before reaching the
+            controller when the handle is malformed.
+        avatar_url: { type: string, nullable: true, format: uri }
+        belt: { type: string, nullable: true, description: 'Current belt slug. Null when the athlete row has no belt yet.' }
+        joined_at: { type: string, nullable: true, format: date, description: 'Date the athlete row was registered in this academy.' }
+        promotions:
+          type: array
+          description: 'Top-50 belt + stripe promotions, newest first.'
+          items: { $ref: '#/components/schemas/PublicProfilePromotion' }
 
     CommunityPost:
       type: object
