@@ -104,15 +104,61 @@ describe('Expiring documents widget + deep-link', () => {
     cy.visitAuthenticated('/dashboard/documents/expiring');
     cy.wait(['@academy', '@getExpiring']);
 
-    // [data-cy=expiring-list-empty] is the desktop empty state inside
-    // the table; the mobile container has its own empty-title <p>. At
-    // viewport ≥ 768px the mobile list is display:none, so cy.contains
-    // would match the hidden mobile copy first by DOM order — scope
-    // to the desktop empty cell instead.
-    cy.get('[data-cy="expiring-list-empty"]').should('be.visible');
-    cy.get('[data-cy="expiring-list-empty"]')
+    // Single combined empty block now covers BOTH axes (no expiring
+    // docs AND no missing certs). The dual desktop/mobile blocks of
+    // the pre-#891 layout collapsed into one `[data-cy="all-clear-empty"]`
+    // at the section level so the user gets one signal, not two.
+    cy.get('[data-cy="all-clear-empty"]').should('be.visible');
+    cy.get('[data-cy="all-clear-empty"]')
       .contains('All documents up to date')
       .should('be.visible');
+  });
+
+  it('surfaces athletes without medical certificate and deep-links to their documents tab (#891)', () => {
+    cy.intercept('GET', '/api/v1/documents/expiring*', {
+      statusCode: 200,
+      body: {
+        data: [],
+        missing_medical_certificate: [
+          { id: 11, first_name: 'Giulia', last_name: 'Rossi' },
+          { id: 12, first_name: 'Luca', last_name: 'Verdi' },
+        ],
+      },
+    }).as('getExpiring');
+    cy.intercept('GET', '/api/v1/athletes/11', {
+      statusCode: 200,
+      body: {
+        data: {
+          id: 11,
+          first_name: 'Giulia',
+          last_name: 'Rossi',
+          email: null,
+          phone_country_code: null,
+          phone_national_number: null,
+          address: null,
+          date_of_birth: null,
+          belt: 'white',
+          stripes: 0,
+          status: 'active',
+          joined_at: '2024-01-01',
+          created_at: '2024-01-01T00:00:00+00:00',
+        },
+      },
+    }).as('getAthlete');
+    cy.intercept('GET', '/api/v1/athletes/11/documents*', {
+      statusCode: 200,
+      body: { data: [] },
+    }).as('getDocs');
+
+    cy.visitAuthenticated('/dashboard/documents/expiring');
+    cy.wait(['@academy', '@getExpiring']);
+
+    cy.get('[data-cy="missing-cert-section"]').should('be.visible');
+    cy.get('[data-cy="missing-cert-row-11"]').should('contain.text', 'Giulia Rossi');
+    cy.get('[data-cy="missing-cert-row-12"]').should('contain.text', 'Luca Verdi');
+
+    cy.get('[data-cy="missing-cert-row-11"]').click();
+    cy.url().should('include', '/dashboard/athletes/11/documents');
   });
 
   it('athlete name link on the list page deep-links to the athlete documents page', () => {
@@ -182,8 +228,9 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.visitAuthenticated('/dashboard/documents/expiring');
       cy.wait(['@academy', '@getExpiring']);
 
-      cy.get('[data-cy="expiring-mobile-empty"]').should('be.visible');
-      // Cards container exists but no <li.expiring-card> rows.
+      // Same `all-clear-empty` block as the desktop branch — see the
+      // #891 collapse note on the desktop spec above.
+      cy.get('[data-cy="all-clear-empty"]').should('be.visible');
       cy.get('[data-cy^="expiring-card-"]').should('not.exist');
     });
 

@@ -1218,10 +1218,20 @@
       "other": "Altro"
     },
     "expiringList": {
-      "title": "Documenti in scadenza",
+      "title": "Stato documenti",
       "backToAthletes": "Atleti",
       "countOne": "{{count}} documento scaduto o in scadenza entro 30 giorni",
       "countOther": "{{count}} documenti scaduti o in scadenza entro 30 giorni",
+      "countExpiring": "{{count}} in scadenza",
+      "countMissing": "{{count}} senza certificato",
+      "expiring": {
+        "title": "Documenti in scadenza"
+      },
+      "missingCerts": {
+        "title": "Atleti senza certificato medico",
+        "hint": "Atleti attivi senza un certificato medico caricato.",
+        "action": "Carica"
+      },
       "table": {
         "athlete": "Atleta",
         "type": "Tipo",
@@ -1237,6 +1247,10 @@
       "empty": {
         "title": "Tutti i documenti sono aggiornati.",
         "hint": "Nessuna scadenza nei prossimi 30 giorni. Ricontrolla più avanti."
+      },
+      "allClear": {
+        "title": "Tutti i documenti sono aggiornati.",
+        "hint": "Nessuna scadenza nei prossimi 30 giorni e tutti gli atleti attivi hanno un certificato medico caricato."
       },
       "toast": {
         "errorSummary": "Scaricamento non riuscito",
