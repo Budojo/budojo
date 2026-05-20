@@ -1501,7 +1501,9 @@
         "paid": "Pagato",
         "unpaid": "Non pagato",
         "restore": "Ripristina",
-        "restoreAria": "Ripristina {{name}}"
+        "restoreAria": "Ripristina {{name}}",
+        "publicProfile": "Vedi profilo pubblico",
+        "publicProfileAria": "Vedi profilo pubblico di {{name}}"
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",

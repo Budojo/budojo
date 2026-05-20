@@ -106,6 +106,13 @@ export class AthletesListComponent implements OnInit {
 
   readonly athletes = signal<Athlete[]>([]);
   readonly totalRecords = signal(0);
+
+  // The athletes list is owner-only (route guarded by roleOwnerGuard),
+  // so the public-profile link always uses the owner shell. Kept as a
+  // method so the template binding stays static-string-free.
+  protected publicProfileBase(): string {
+    return '/dashboard/u';
+  }
   readonly loading = signal(true);
 
   selectedBelt = signal<Belt | ''>('');

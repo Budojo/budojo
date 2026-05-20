@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { BeltBadgeComponent } from '../belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../user-avatar/user-avatar.component';
+import { AuthService } from '../../../core/services/auth.service';
 import type { Belt } from '../../../core/services/athlete.service';
 
 /**
@@ -29,21 +31,23 @@ export interface UserFlairShape {
  * comment rows where the avatar would be visually noisy under the
  * parent post's bigger avatar.
  *
- * The component is presentation-only; the parent decides what data
- * to render. Two places consume it today: MyFeedComponent (per-post
- * author line) and the comments thread mounted under each card.
- * Third caller will trigger the Rule-of-Three extraction of the
- * `Belt` cell into its own variant.
+ * Tappable when the author has a handle (post-v2.22.1). The entire
+ * flair surface becomes a router link to the public-profile page —
+ * `/dashboard/u/<handle>` for owners, `/dashboard/me/u/<handle>` for
+ * athletes (the opposite shell's route is role-guarded). When the
+ * author has no handle yet, the flair stays as plain text.
  */
 @Component({
   selector: 'app-user-flair',
   standalone: true,
-  imports: [UserAvatarComponent, BeltBadgeComponent],
+  imports: [RouterLink, UserAvatarComponent, BeltBadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './user-flair.component.html',
   styleUrl: './user-flair.component.scss',
 })
 export class UserFlairComponent {
+  private readonly authService = inject(AuthService);
+
   readonly user = input.required<UserFlairShape>();
   readonly compact = input<boolean>(false);
 
@@ -65,4 +69,9 @@ export class UserFlairComponent {
     const initial = last.length > 0 ? `${last.charAt(0).toUpperCase()}.` : '';
     return [u.first_name, initial].filter((s) => s.length > 0).join(' ');
   });
+
+  // Athletes land on /dashboard/me/u/<handle> (their shell); owners on /dashboard/u/<handle>. The opposite shell's route is guarded.
+  protected readonly profileBase = computed<string>(() =>
+    this.authService.user()?.role === 'athlete' ? '/dashboard/me/u' : '/dashboard/u',
+  );
 }

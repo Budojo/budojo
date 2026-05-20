@@ -43,6 +43,22 @@ it('returns paginated list of athletes for the authenticated academy', function 
         ->assertJsonStructure(['data', 'meta']);
 });
 
+it('index: user_handle is present and exposes the linked users handle when set', function (): void {
+    $user = userWithAcademy();
+    $linkedUser = \App\Models\User::factory()->athlete()->create(['handle' => 'mariobjj']);
+    \App\Models\Athlete::factory()
+        ->for($user->academy)
+        ->state(['user_id' => $linkedUser->id])
+        ->create();
+    // Second athlete with no linked user — surfaces user_handle: null.
+    \App\Models\Athlete::factory()->for($user->academy)->create();
+
+    $response = $this->actingAs($user)->getJson('/api/v1/athletes')->assertOk();
+    $handles = collect($response->json('data'))->pluck('user_handle')->all();
+
+    expect($handles)->toContain('mariobjj')->and($handles)->toContain(null);
+});
+
 it('does not return soft-deleted athletes in the list', function (): void {
     $user = userWithAcademy();
     Athlete::factory(2)->for($user->academy)->create();

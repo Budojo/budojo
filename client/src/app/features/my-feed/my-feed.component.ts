@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -61,6 +62,7 @@ import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-li
   selector: 'app-my-feed',
   standalone: true,
   imports: [
+    RouterLink,
     TranslatePipe,
     ButtonModule,
     SkeletonModule,
@@ -120,6 +122,11 @@ export class MyFeedComponent implements OnInit {
    * athletes can't use rather than let them click into a 403.
    */
   protected readonly canModerate = computed(() => this.authService.user()?.role === 'owner');
+
+  // Athletes land on /dashboard/me/u/<handle>; owners on /dashboard/u/<handle>. Opposite shell is role-guarded.
+  protected readonly profileBase = computed<string>(() =>
+    this.authService.user()?.role === 'athlete' ? '/dashboard/me/u' : '/dashboard/u',
+  );
 
   protected readonly posts = signal<readonly CommunityPost[]>([]);
   protected readonly loading = signal(true);
