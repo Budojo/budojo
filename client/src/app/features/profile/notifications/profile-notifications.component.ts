@@ -17,11 +17,7 @@ type CategoryGroup = 'owner' | 'athlete' | 'community';
 
 const CATEGORY_GROUPS: readonly CategoryGroup[] = ['owner', 'athlete', 'community'];
 
-// Static i18n-key map per group (#736 reviewer finding). Banned-pattern fix:
-// dynamic key concatenation in templates falls outside the parity check and
-// drifts silently on rename — the map gives the parity spec an explicit
-// reference, AND a future key-rename fails compile here when CategoryGroup
-// gains a member (Record exhaustiveness).
+// Static map — dynamic template key concat is banned (client/CLAUDE.md § i18n); Record exhaustiveness guards against future CategoryGroup renames.
 const GROUP_LABEL_KEYS: Record<CategoryGroup, string> = {
   owner: 'profile.notifications.groups.owner',
   athlete: 'profile.notifications.groups.athlete',
