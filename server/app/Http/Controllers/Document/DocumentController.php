@@ -14,7 +14,6 @@ use App\Models\User;
 use App\Support\DocumentEncryption;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -37,7 +36,7 @@ class DocumentController extends Controller
     ) {
     }
 
-    public function expiring(Request $request): AnonymousResourceCollection|JsonResponse
+    public function expiring(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -52,8 +51,18 @@ class DocumentController extends Controller
         $days = max(1, min($days, self::MAX_EXPIRING_DAYS));
 
         $documents = $this->expiringAction->execute($academy, $days);
+        // Athletes with NO medical certificate at all (#881). Same
+        // CONI/insurance risk as an expired one, surfaced alongside.
+        $missing = $this->expiringAction->missingMedicalCertificate($academy);
 
-        return DocumentResource::collection($documents);
+        return response()->json([
+            'data' => DocumentResource::collection($documents)->resolve(),
+            'missing_medical_certificate' => $missing->map(fn (\App\Models\Athlete $a) => [
+                'id' => $a->id,
+                'first_name' => $a->first_name,
+                'last_name' => $a->last_name,
+            ])->values()->all(),
+        ]);
     }
 
     public function download(Request $request, Document $document): BinaryFileResponse|Response|StreamedResponse|JsonResponse

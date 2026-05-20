@@ -1252,9 +1252,10 @@
         "title": "All documents up to date",
         "hint": "No expirations in the next 30 days"
       },
-      "countOne": "{{count}} document needs attention",
-      "countOther": "{{count}} documents need attention",
-      "countHint": "Expired or expiring within 30 days"
+      "countOne": "{{count}} athlete needs attention",
+      "countOther": "{{count}} athletes need attention",
+      "countHint": "Expired or expiring within 30 days",
+      "breakdown": "{{expiring}} expiring · {{missing}} no certificate"
     }
   },
   "weekdays": {

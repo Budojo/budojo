@@ -42,7 +42,16 @@
             ) | translate: { count: count() }
           }}
         </span>
-        <span class="widget__hint">{{ 'documents.expiringWidget.countHint' | translate }}</span>
+        <span class="widget__hint" data-cy="expiring-widget-breakdown">
+          {{
+            'documents.expiringWidget.breakdown'
+              | translate
+                : {
+                    expiring: expiringCount(),
+                    missing: missingCount(),
+                  }
+          }}
+        </span>
       }
     </div>
     <i class="widget__chevron pi pi-chevron-right" aria-hidden="true"></i>

@@ -151,6 +151,23 @@ describe('DocumentService', () => {
     });
   });
 
+  describe('fetchDocumentsHealth (#881)', () => {
+    it('returns the full envelope including missing_medical_certificate', () => {
+      service.fetchDocumentsHealth(30).subscribe((resp) => {
+        expect(resp.data).toHaveLength(0);
+        expect(resp.missing_medical_certificate).toEqual([
+          { id: 7, first_name: 'Luca', last_name: 'Bianchi' },
+        ]);
+      });
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/documents/expiring')
+        .flush({
+          data: [],
+          missing_medical_certificate: [{ id: 7, first_name: 'Luca', last_name: 'Bianchi' }],
+        });
+    });
+  });
+
   describe('download', () => {
     it('requests the blob via HttpClient so the auth interceptor attaches the token', () => {
       let received: Blob | null = null;

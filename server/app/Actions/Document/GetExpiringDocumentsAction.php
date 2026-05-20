@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Actions\Document;
 
+use App\Enums\DocumentType;
 use App\Models\Academy;
+use App\Models\Athlete;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Carbon;
@@ -49,6 +51,27 @@ class GetExpiringDocumentsAction
             ->where('documents.expires_at', '<=', $cutoff)
             ->with('athlete')
             ->orderBy('documents.expires_at', 'asc')
+            ->limit(self::MAX_RESULTS)
+            ->get();
+    }
+
+    /**
+     * Active athletes in the academy with NO live medical-certificate row.
+     * "Live" excludes soft-deleted rows. Active means status='active' —
+     * suspended / inactive athletes don't need a cert.
+     *
+     * An athlete with an EXPIRED but non-trashed medical cert is NOT
+     * counted here — they already surface via `execute()` above.
+     *
+     * @return Collection<int, Athlete>
+     */
+    public function missingMedicalCertificate(Academy $academy): Collection
+    {
+        return $academy->athletes()
+            ->where('status', 'active')
+            ->whereDoesntHave('documents', fn ($q) => $q->where('type', DocumentType::MedicalCertificate->value))
+            ->orderBy('first_name')
+            ->orderBy('last_name')
             ->limit(self::MAX_RESULTS)
             ->get();
     }
