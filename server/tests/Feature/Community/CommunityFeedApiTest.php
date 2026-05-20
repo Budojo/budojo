@@ -141,12 +141,7 @@ it('includes reactions_count / comments_count / rsvps_count zeroed for a fresh p
         ->and($response->json('data.0.rsvps_count'))->toBe(0);
 });
 
-it('exposes per-response rsvps split (going_rsvps_count / maybe_rsvps_count) on event posts (#859)', function (): void {
-    // Bug #859: the feed used to surface only the aggregate rsvps_count, so
-    // the SPA could render a count only on the "Going" chip. A post with
-    // mixed responses showed "2" on Going when the actual breakdown was
-    // 1 going + 1 maybe. Per-response aliased counts let the template
-    // render the right number on each chip.
+it('exposes per-response rsvps split (going_rsvps_count / maybe_rsvps_count) on event posts', function (): void {
     /** @var \App\Models\CommunityPost $event */
     $event = CommunityPost::factory()->for($this->academy)->create([
         'type' => \App\Enums\CommunityPostType::Event,

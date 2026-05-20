@@ -481,11 +481,6 @@ export class MyFeedComponent implements OnInit {
     Subject<{ response: RsvpResponse; rollback: () => void }>
   >();
 
-  /**
-   * Optimistic RSVP toggle. Updates `your_rsvp` + the per-response counts
-   * locally (#859), fires the API, reconciles to the server's canonical
-   * state. On error, rolls back to the pre-click state.
-   */
   protected toggleRsvp(post: CommunityPost, response: RsvpResponse): void {
     const previous = {
       your_rsvp: post.your_rsvp,

@@ -185,12 +185,7 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     );
   });
 
-  it('renders the per-response RSVP counter on each chip independently (#859)', () => {
-    // Bug #859: a Pixel 8 Pro user saw the aggregate "2" only next to the
-    // Going chip; flipping to Maybe wiped the count entirely. The fix
-    // surfaces going_rsvps_count and maybe_rsvps_count separately. Assert
-    // that an event with 2 going + 1 maybe renders "2" next to Going AND
-    // "1" next to Maybe — both badges, gated `> 0` per template.
+  it('renders the per-response RSVP counter on each chip independently', () => {
     const { fixture, el, http } = setup();
 
     http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
