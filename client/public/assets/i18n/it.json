@@ -1921,5 +1921,19 @@
         "master_7": "Master 7"
       }
     }
+  },
+  "publicProfile": {
+    "joinedAt": "Iscritto a {{ date }}",
+    "promotions": {
+      "title": "Promozioni",
+      "empty": "Nessuna promozione registrata.",
+      "beltChange": "Promosso da {{ from }} a {{ to }}",
+      "stripeChange": "Gradi: {{ from }} → {{ to }}"
+    },
+    "notFound": {
+      "title": "Profilo non disponibile",
+      "body": "Non troviamo questo profilo, oppure non è visibile a te.",
+      "back": "Torna agli atleti"
+    }
   }
 }
