@@ -1390,6 +1390,8 @@
     "daily": {
       "eyebrow": "Attendance",
       "title": "Today's check-in",
+      "titleForDate": "Check-in · {{date}}",
+      "noClassToday": "No class today — you're looking at the {{date}} session.",
       "searchPlaceholder": "Search by name",
       "beltPlaceholder": "Belt",
       "table": {

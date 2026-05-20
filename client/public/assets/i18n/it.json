@@ -1390,6 +1390,8 @@
     "daily": {
       "eyebrow": "Presenze",
       "title": "Check-in di oggi",
+      "titleForDate": "Check-in · {{date}}",
+      "noClassToday": "Oggi nessun allenamento — stai vedendo la sessione di {{date}}.",
       "searchPlaceholder": "Cerca per nome",
       "beltPlaceholder": "Cintura",
       "table": {
