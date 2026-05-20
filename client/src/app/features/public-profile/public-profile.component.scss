@@ -40,13 +40,15 @@
 
 .public-profile-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  text-align: center;
   gap: 1.5rem;
 
-  @media (max-width: 480px) {
-    flex-direction: column;
-    text-align: center;
+  @media (min-width: 768px) {
+    flex-direction: row;
     align-items: center;
+    text-align: left;
   }
 }
 

@@ -1,6 +1,6 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 import { Belt } from './athlete.service';
@@ -45,20 +45,11 @@ interface PublicProfileEnvelope {
 @Injectable({ providedIn: 'root' })
 export class PublicProfileService {
   private readonly http = inject(HttpClient);
+  private readonly url = (handle: string) =>
+    `${environment.apiBase}/api/v1/users/${handle}/profile`;
 
   get(handle: string): Observable<PublicProfile> {
-    return new Observable<PublicProfile>((subscriber) => {
-      const sub = this.http
-        .get<PublicProfileEnvelope>(`${environment.apiBase}/api/v1/users/${handle}/profile`)
-        .subscribe({
-          next: (env) => {
-            subscriber.next(env.data);
-            subscriber.complete();
-          },
-          error: (err) => subscriber.error(err),
-        });
-      return () => sub.unsubscribe();
-    });
+    return this.http.get<PublicProfileEnvelope>(this.url(handle)).pipe(map((env) => env.data));
   }
 
   /**
@@ -69,20 +60,9 @@ export class PublicProfileService {
    * [[feedback_background_polls_skip_offline_redirect]].
    */
   getSilent(handle: string): Observable<PublicProfile> {
-    return new Observable<PublicProfile>((subscriber) => {
-      const context = new HttpContext().set(SKIP_OFFLINE_REDIRECT, true);
-      const sub = this.http
-        .get<PublicProfileEnvelope>(`${environment.apiBase}/api/v1/users/${handle}/profile`, {
-          context,
-        })
-        .subscribe({
-          next: (env) => {
-            subscriber.next(env.data);
-            subscriber.complete();
-          },
-          error: (err) => subscriber.error(err),
-        });
-      return () => sub.unsubscribe();
-    });
+    const context = new HttpContext().set(SKIP_OFFLINE_REDIRECT, true);
+    return this.http
+      .get<PublicProfileEnvelope>(this.url(handle), { context })
+      .pipe(map((env) => env.data));
   }
 }

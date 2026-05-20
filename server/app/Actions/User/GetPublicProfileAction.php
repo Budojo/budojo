@@ -87,7 +87,7 @@ class GetPublicProfileAction
                     'belt_at_event' => $p->belt_at_event->value,
                     'recorded_at' => $p->recorded_at->toIso8601String(),
                 ])
-                ->all()
+                ->all(),
         );
 
         return [

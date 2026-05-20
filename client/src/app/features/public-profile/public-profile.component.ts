@@ -6,8 +6,14 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
-import { PublicProfile, PublicProfileService } from '../../core/services/public-profile.service';
+import {
+  PublicProfile,
+  PublicProfilePromotion,
+  PublicProfileService,
+} from '../../core/services/public-profile.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
+import { Belt } from '../../core/services/athlete.service';
+import { BELT_KEYS } from '../../shared/utils/i18n-enum-keys';
 
 type ViewState =
   | { kind: 'loading' }
@@ -79,6 +85,35 @@ export class PublicProfileComponent {
     const locale = this.translateService.currentLang ?? this.translateService.defaultLang ?? 'en';
     return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date);
   });
+
+  /**
+   * Renders a promotion row as a fully-translated localized string,
+   * resolved entirely in TypeScript so the template carries no dynamic
+   * i18n key concatenation (client/CLAUDE.md § i18n hard rules:
+   * "Don't dynamically build translation keys with template strings").
+   *
+   * Belt labels resolve through `BELT_KEYS` — the single static
+   * `Belt → key` mapping — so a typo in a belt slug fails at compile
+   * time (TypeScript narrows on the `Belt` union) instead of shipping
+   * green to prod and rendering the raw key in the timeline (cf.
+   * [[feedback_i18n_parity_doesnt_verify_templates]]).
+   */
+  protected promotionLine(promotion: PublicProfilePromotion): string {
+    if (promotion.kind === 'belt') {
+      return this.translateService.instant('publicProfile.promotions.beltChange', {
+        from: this.beltLabel(promotion.from_belt ?? 'white'),
+        to: this.beltLabel(promotion.to_belt ?? 'white'),
+      });
+    }
+    return this.translateService.instant('publicProfile.promotions.stripeChange', {
+      from: promotion.from_stripes ?? 0,
+      to: promotion.to_stripes ?? 0,
+    });
+  }
+
+  private beltLabel(belt: Belt): string {
+    return this.translateService.instant(BELT_KEYS[belt]);
+  }
 
   protected readonly initials = computed(() => {
     const s = this.state();

@@ -57,29 +57,7 @@
             <li class="public-profile-timeline-row">
               <div class="public-profile-timeline-marker" aria-hidden="true"></div>
               <div class="public-profile-timeline-content">
-                @if (promotion.kind === 'belt') {
-                  <p class="public-profile-timeline-title">
-                    {{
-                      'publicProfile.promotions.beltChange'
-                        | translate
-                          : {
-                              from: 'belt.' + (promotion.from_belt ?? 'white') | translate,
-                              to: 'belt.' + (promotion.to_belt ?? 'white') | translate,
-                            }
-                    }}
-                  </p>
-                } @else {
-                  <p class="public-profile-timeline-title">
-                    {{
-                      'publicProfile.promotions.stripeChange'
-                        | translate
-                          : {
-                              from: promotion.from_stripes ?? 0,
-                              to: promotion.to_stripes ?? 0,
-                            }
-                    }}
-                  </p>
-                }
+                <p class="public-profile-timeline-title">{{ promotionLine(promotion) }}</p>
                 <time class="public-profile-timeline-date" [attr.datetime]="promotion.recorded_at">
                   {{ promotion.recorded_at | date: 'mediumDate' }}
                 </time>
