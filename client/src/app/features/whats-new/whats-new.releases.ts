@@ -28,6 +28,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.22.1',
+    date: '2026-05-20',
+    headline:
+      'Build-budget patch unblocking the v2.22.0 SPA deploy. Same user-facing surface as v2.22.0 — every feature listed in those notes is now actually reachable on https://budojo.it.',
+    sections: [
+      {
+        heading: '🛠️ Internal: SPA initial-bundle budget raised to 1.25 MB',
+        bullets: [
+          'v2.22.0 introduced the M9 social-profile epic plus the per-response RSVP counter; combined, the new code pushed the Angular initial chunk over the 1 MB Cloudflare Pages cap by 988 bytes.',
+          'The build failed silently and the SPA stayed on v2.21.0 while the API was already on v2.22.0.',
+          'This patch raises the maximumError budget to 1.25 MB so the existing 500 kB warning still fires when the bundle grows, but the build no longer fails until we are meaningfully over the limit.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.22.0',
     date: '2026-05-20',
     headline:
