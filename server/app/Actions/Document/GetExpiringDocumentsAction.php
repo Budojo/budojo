@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Document;
 
+use App\Enums\AthleteStatus;
 use App\Enums\DocumentType;
 use App\Models\Academy;
 use App\Models\Athlete;
@@ -68,7 +69,7 @@ class GetExpiringDocumentsAction
     public function missingMedicalCertificate(Academy $academy): Collection
     {
         return $academy->athletes()
-            ->where('status', 'active')
+            ->where('status', AthleteStatus::Active->value)
             ->whereDoesntHave('documents', fn ($q) => $q->where('type', DocumentType::MedicalCertificate->value))
             ->orderBy('first_name')
             ->orderBy('last_name')

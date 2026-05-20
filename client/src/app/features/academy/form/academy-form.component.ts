@@ -36,6 +36,7 @@ import {
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor } from '../../../shared/utils/locale';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   COUNTRY_OPTIONS,
   PROVINCE_OPTIONS,
@@ -138,6 +139,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
     Tooltip,
     TranslatePipe,
     TrainingDaysPickerComponent,
+    PageHeaderComponent,
   ],
   providers: [MessageService],
   templateUrl: './academy-form.component.html',

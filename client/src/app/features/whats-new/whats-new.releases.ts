@@ -28,6 +28,39 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.25.0',
+    date: '2026-05-20',
+    headline:
+      'Two follow-ups on owner feedback after v2.24.0 plus the backend foundation for the upcoming attendance-percentage chart. The "documenti da controllare" widget now opens to a page that ALSO lists the athletes without a medical certificate. Five more dashboard pages join the shared one-row page-header pattern. The API now exposes a per-athlete attendance summary — the chart lands next release.',
+    sections: [
+      {
+        heading: '📋 La lista "Stato documenti" mostra anche chi non ha il certificato',
+        bullets: [
+          'Tapping the dashboard widget used to open a page that listed only the expiring documents — the athletes without a certificate were counted but had nowhere to be acted on.',
+          'The page now has two sections: "Atleti senza certificato medico" (one tappable row per athlete, links to their documents tab where the cert can be uploaded) and "Documenti in scadenza" (same table as before).',
+          'Header count chip combines both axes ("3 in scadenza · 6 senza certificato") so the page matches the widget that opened it.',
+        ],
+      },
+      {
+        heading: '🧭 Page-header pattern extended to five more pages',
+        bullets: [
+          'Impostazioni, dettaglio + modifica accademia, modulo nuovo / modifica atleta, i miei documenti now use the same eyebrow + title + count + CTA chrome as the v2.24.0 pages.',
+          'Page max-width on these pages also uses the shared --budojo-page-content-max token, so every operative page wraps at the same desktop width.',
+          "Edge pages (dettaglio atleta, stats, ricerca, support, aiuto, what's new, portale atleta) follow in a subsequent release.",
+        ],
+      },
+      {
+        heading: '📈 Internal: API endpoint per attendance percentage chart',
+        bullets: [
+          'Backend foundation for the upcoming "% di presenze" chart that the owner asked for on each athlete profile and on /me.',
+          'GET /api/v1/athletes/:id/attendance/summary?range=30|90|365 returns attended count / expected count / rate plus a sparkline-ready series.',
+          'Denominator is "realized lesson days" — distinct dates where the academy held a lesson AND the athlete was already on the roster, so closures / cancellations / pre-roster days never penalize the rate.',
+          'The chart itself lands in the next release.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.24.0',
     date: '2026-05-20',
     headline:

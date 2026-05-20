@@ -2,7 +2,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ExpiringDocument } from '../../../core/services/document.service';
+import {
+  AthleteMissingMedicalCertificate,
+  ExpiringDocument,
+} from '../../../core/services/document.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { ExpiringDocumentsListComponent } from './expiring-documents-list.component';
 
@@ -48,21 +51,26 @@ describe('ExpiringDocumentsListComponent', () => {
     return fixture;
   }
 
-  function flushExpiring(docs: ExpiringDocument[]): void {
-    httpMock.expectOne('/api/v1/documents/expiring?days=30').flush({ data: docs });
+  function flushHealth(
+    docs: ExpiringDocument[],
+    missing: AthleteMissingMedicalCertificate[] = [],
+  ): void {
+    httpMock
+      .expectOne('/api/v1/documents/expiring?days=30')
+      .flush({ data: docs, missing_medical_certificate: missing });
   }
 
-  it('fetches listExpiring(30) on init', () => {
+  it('fetches the documents-health envelope (days=30) on init', () => {
     mount();
     const req = httpMock.expectOne(
       (r) => r.url === '/api/v1/documents/expiring' && r.params.get('days') === '30',
     );
-    req.flush({ data: [] });
+    req.flush({ data: [], missing_medical_certificate: [] });
   });
 
   it('renders rows with athlete name + deep-link to the athlete documents page', () => {
     const fixture = mount();
-    flushExpiring([
+    flushHealth([
       makeExpiring({
         id: 1,
         athlete_id: 42,
@@ -86,14 +94,15 @@ describe('ExpiringDocumentsListComponent', () => {
     expect(links[1].getAttribute('href')).toBe('/dashboard/athletes/7/documents');
   });
 
-  it('shows the empty-state block when no expiring documents exist', () => {
+  it('shows the empty-state block when no expiring documents AND no missing certs exist', () => {
     const fixture = mount();
-    flushExpiring([]);
+    flushHealth([], []);
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('[data-cy="expiring-list-empty"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="all-clear-empty"]')).not.toBeNull();
     expect(el.querySelector('[data-cy="athlete-link"]')).toBeNull();
+    expect(el.querySelector('[data-cy="missing-cert-section"]')).toBeNull();
   });
 
   it('shows the error block when the fetch fails and hides the table', () => {
@@ -108,23 +117,104 @@ describe('ExpiringDocumentsListComponent', () => {
     expect(el.querySelector('[data-cy="expiring-table"]')).toBeNull();
   });
 
-  it('count phrasing uses singular when only one document is returned', () => {
+  it('renders the missing-cert section when athletes without medical certs are returned', () => {
     const fixture = mount();
-    flushExpiring([makeExpiring({ id: 1 })]);
+    flushHealth(
+      [],
+      [
+        { id: 11, first_name: 'Giulia', last_name: 'Rossi' },
+        { id: 12, first_name: 'Luca', last_name: 'Verdi' },
+      ],
+    );
     fixture.detectChanges();
 
-    const countNode = fixture.nativeElement.querySelector('[data-cy=page-header-count]');
-    // Wording covers both expired + expiring within 30 days, since the
-    // endpoint includes already-past documents too.
-    expect(countNode?.textContent).toContain('1 document expired or expiring within 30 days');
+    const el: HTMLElement = fixture.nativeElement;
+    const section = el.querySelector('[data-cy="missing-cert-section"]');
+    expect(section).not.toBeNull();
+    const rows = el.querySelectorAll(
+      '[data-cy^="missing-cert-row-"]',
+    ) as NodeListOf<HTMLAnchorElement>;
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain('Giulia Rossi');
+    expect(rows[0].getAttribute('href')).toBe('/dashboard/athletes/11/documents');
+    expect(rows[1].textContent).toContain('Luca Verdi');
+    expect(rows[1].getAttribute('href')).toBe('/dashboard/athletes/12/documents');
   });
 
-  it('count phrasing uses plural when multiple are returned', () => {
+  it('hides the missing-cert section when no missing certs are returned', () => {
     const fixture = mount();
-    flushExpiring([makeExpiring({ id: 1 }), makeExpiring({ id: 2 }), makeExpiring({ id: 3 })]);
+    flushHealth([makeExpiring({ id: 9 })], []);
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('[data-cy="missing-cert-section"]'),
+    ).toBeNull();
+  });
+
+  it('hides the expiring section when only missing certs exist (no expired documents)', () => {
+    const fixture = mount();
+    flushHealth([], [{ id: 11, first_name: 'Giulia', last_name: 'Rossi' }]);
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    // Missing section is visible, but the expiring section block should be
+    // entirely gone so the user isn't confused by an empty list under it.
+    expect(el.querySelector('[data-cy="missing-cert-section"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="expiring-section"]')).toBeNull();
+  });
+
+  it('count phrasing uses singular when only one expiring document is returned', () => {
+    const fixture = mount();
+    flushHealth([makeExpiring({ id: 1 })], []);
     fixture.detectChanges();
 
     const countNode = fixture.nativeElement.querySelector('[data-cy=page-header-count]');
-    expect(countNode?.textContent).toContain('3 documents expired or expiring within 30 days');
+    expect(countNode?.textContent).toContain('1 expiring');
+  });
+
+  it('count phrasing combines expiring + missing when both are present', () => {
+    const fixture = mount();
+    flushHealth(
+      [makeExpiring({ id: 1 }), makeExpiring({ id: 2 }), makeExpiring({ id: 3 })],
+      [
+        { id: 11, first_name: 'Giulia', last_name: 'Rossi' },
+        { id: 12, first_name: 'Luca', last_name: 'Verdi' },
+      ],
+    );
+    fixture.detectChanges();
+
+    const countNode = fixture.nativeElement.querySelector('[data-cy=page-header-count]');
+    expect(countNode?.textContent).toContain('3 expiring');
+    expect(countNode?.textContent).toContain('2 no certificate');
+  });
+
+  it('renders BOTH sections simultaneously when expiring docs AND missing certs co-exist', () => {
+    // Reviewer #892 — the count chip test confirms the phrasing but
+    // doesn't guard against a template bug where one of the two
+    // sections silently swaps to the wrong list. Pin the DOM:
+    // when both inputs are non-empty, both [data-cy] anchors render
+    // AND their row counts match the data.
+    const fixture = mount();
+    flushHealth(
+      [
+        makeExpiring({ id: 1, athlete_id: 42 }),
+        makeExpiring({ id: 2, athlete_id: 43, type: 'insurance' }),
+      ],
+      [
+        { id: 11, first_name: 'Giulia', last_name: 'Rossi' },
+        { id: 12, first_name: 'Luca', last_name: 'Verdi' },
+        { id: 13, first_name: 'Sara', last_name: 'Bianchi' },
+      ],
+    );
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="missing-cert-section"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="expiring-section"]')).not.toBeNull();
+    expect(el.querySelectorAll('[data-cy^="missing-cert-row-"]')).toHaveLength(3);
+    // The desktop table renders one <tr> per expiring doc in tbody.
+    expect(el.querySelectorAll('[data-cy="expiring-table"] tbody tr')).toHaveLength(2);
+    // All-clear empty block must NOT render when either axis has rows.
+    expect(el.querySelector('[data-cy="all-clear-empty"]')).toBeNull();
   });
 });

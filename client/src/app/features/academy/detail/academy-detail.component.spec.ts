@@ -47,7 +47,7 @@ describe('AcademyDetailComponent', () => {
     fixture.detectChanges();
 
     const html = fixture.nativeElement as HTMLElement;
-    expect(html.querySelector('[data-cy="academy-name"]')?.textContent).toContain(
+    expect(html.querySelector('[data-cy="page-header-title"]')?.textContent).toContain(
       'Gracie Barra Torino',
     );
     expect(html.querySelector('[data-cy="academy-row-slug"]')?.textContent).toContain(
@@ -133,7 +133,7 @@ describe('AcademyDetailComponent', () => {
     fixture.detectChanges();
 
     const html = fixture.nativeElement as HTMLElement;
-    expect(html.querySelector('[data-cy="academy-name"]')?.textContent?.trim()).toBe('—');
+    expect(html.querySelector('[data-cy="page-header-title"]')?.textContent?.trim()).toBe('—');
     expect(html.querySelector('[data-cy="academy-row-slug"]')?.textContent?.trim()).toBe('—');
   });
 

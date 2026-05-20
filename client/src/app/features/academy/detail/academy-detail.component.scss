@@ -12,52 +12,11 @@
   // (#268) so this page matches the operative chrome rhythm of
   // Athletes / Attendance — `margin: 0 auto` is a no-op on mobile,
   // where the wrapper already fills the shell content area.
-  max-width: 40rem;
+  // Canonical page-width token (#883) — matches Athletes / Attendance /
+  // Documents. The 40rem cap was a pre-token override; folded into the
+  // shared token as part of the UI uniformity sweep (#889).
+  max-width: var(--budojo-page-content-max);
   margin: 0 auto;
-}
-
-.detail__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.detail__heading {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0; // allow long academy names to wrap instead of overflowing
-}
-
-// Eyebrow — ALL CAPS + letter-spacing 0.06em is the canon marker for
-// section labels (canon § Casing). Muted color pushes it below the title
-// in the visual hierarchy while staying readable.
-.detail__eyebrow {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--p-text-muted-color);
-}
-
-.detail__title {
-  margin: 0;
-  font-size: 1.75rem; // Title 2 — the canon's 28/34 size in rem
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.018em;
-  color: var(--p-text-color);
-  word-break: break-word;
-}
-
-// The Edit button is a p-button outlined — hit the 48 px touch floor
-// via padding, not a forced min-height (PrimeNG handles the baseline).
-// `styleClass="detail__edit"` lets us nudge it if needed; today we only
-// use it to preserve the top alignment when the title wraps.
-.detail__edit {
-  flex-shrink: 0;
 }
 
 // Grouped-list card — flat surface-0 fill, hairline border, 12 px radius,

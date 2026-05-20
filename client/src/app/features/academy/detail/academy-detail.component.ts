@@ -15,6 +15,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
@@ -31,7 +32,7 @@ const ALLOWED_LOGO_MIME = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/we
 @Component({
   selector: 'app-academy-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ButtonModule, ConfirmPopup, Toast, TranslatePipe],
+  imports: [RouterLink, ButtonModule, ConfirmPopup, Toast, TranslatePipe, PageHeaderComponent],
   providers: [ConfirmationService, MessageService],
   templateUrl: './academy-detail.component.html',
   styleUrl: './academy-detail.component.scss',

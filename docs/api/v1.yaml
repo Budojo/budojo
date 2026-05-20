@@ -3505,6 +3505,86 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
               example: { message: Forbidden. }
 
+  /athletes/{athlete}/attendance/summary:
+    get:
+      tags: [attendance]
+      summary: Per-athlete attendance summary over the last N days
+      description: |
+        Aggregate attendance % for one athlete over the trailing window.
+        `range` is one of {30, 90, 365}; default 90.
+
+        **Denominator semantic.** `expected_count` is the count of *realized
+        lesson days* in the window — distinct dates where the academy has at
+        least one attendance row AND the athlete was already on the roster
+        (`joined_at <= date`). This avoids penalizing the athlete for
+        cancellations / holidays / pre-roster days.
+
+        `rate = attended_count / expected_count`, rounded to 4 decimal places.
+        When the academy held no lessons in the window (`expected_count = 0`),
+        `rate` is `null`. The `series` array exposes one entry per realized
+        lesson day, oldest first — sparkline-ready.
+
+        Response is cached for 5 minutes per (athlete_id, range).
+      operationId: attendanceAthleteSummary
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: range
+          in: query
+          required: false
+          schema:
+            type: integer
+            enum: [30, 90, 365]
+            default: 90
+      responses:
+        '200':
+          description: Attendance summary payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [range_days, range_start, range_end, attended_count, expected_count, rate, series]
+                    properties:
+                      range_days: { type: integer, enum: [30, 90, 365] }
+                      range_start: { type: string, format: date }
+                      range_end: { type: string, format: date }
+                      attended_count: { type: integer, minimum: 0 }
+                      expected_count: { type: integer, minimum: 0 }
+                      rate:
+                        type: number
+                        nullable: true
+                        minimum: 0
+                        maximum: 1
+                        description: |
+                          `null` when `expected_count` is 0 (no realized lesson
+                          days in the window); a 0..1 fraction otherwise.
+                      series:
+                        type: array
+                        items:
+                          type: object
+                          required: [date, attended]
+                          properties:
+                            date: { type: string, format: date }
+                            attended: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Athlete is not in the authenticated academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '404':
+          description: Athlete does not exist.
+        '422':
+          description: Validation error — `range` must be 30, 90, or 365.
+
   /stats/attendance/daily:
     get:
       operationId: statsAttendanceDaily

@@ -31,6 +31,7 @@ import { ProfileSessionsComponent } from './sessions/profile-sessions.component'
 import { ProfileTrainHereComponent } from './train-here/profile-train-here.component';
 import { ProfileTwoFactorComponent } from './two-factor/profile-two-factor.component';
 import { ProfileApiTokensComponent } from './api-tokens/profile-api-tokens.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 type ProfileTab = 'identity' | 'security' | 'notifications' | 'account';
 
@@ -72,6 +73,7 @@ type ProfileTab = 'identity' | 'security' | 'notifications' | 'account';
     TabsModule,
     TooltipModule,
     TranslatePipe,
+    PageHeaderComponent,
   ],
   // ConfirmationService is a per-component dependency for the email-change
   // confirm popup (submitEditEmail). AvatarCardComponent declares its own

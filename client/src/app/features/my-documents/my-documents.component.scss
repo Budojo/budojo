@@ -8,13 +8,6 @@
   flex-direction: column;
   gap: 1.5rem;
 
-  &__title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--p-text-color);
-  }
-
   &__card {
     background: var(--p-content-background);
     border: 1px solid var(--p-content-border-color);
