@@ -5885,8 +5885,8 @@ components:
             first). `clap + pray == reactions_count`.
         comments_count: { type: integer, minimum: 0, description: 'Aggregated count from `post_comments`. Zero in V1; populated by PR-D.' }
         rsvps_count: { type: integer, minimum: 0, description: 'Aggregated total RSVP count from `post_rsvps` across both response values. `going_rsvps_count + maybe_rsvps_count == rsvps_count`.' }
-        going_rsvps_count: { type: integer, minimum: 0, description: 'Per-response aggregated count of RSVPs with `response = going` (#859). Drives the count badge inside the "Going" chip on event posts so a maybe-only post doesn''t dump its total on the going button.' }
-        maybe_rsvps_count: { type: integer, minimum: 0, description: 'Per-response aggregated count of RSVPs with `response = maybe` (#859). Mirror of `going_rsvps_count` for the "Maybe" chip.' }
+        going_rsvps_count: { type: integer, minimum: 0, description: 'Per-response aggregated count of RSVPs with `response = going`. Drives the count badge inside the "Going" chip on event posts so a maybe-only post doesn''t dump its total on the going button.' }
+        maybe_rsvps_count: { type: integer, minimum: 0, description: 'Per-response aggregated count of RSVPs with `response = maybe`. Mirror of `going_rsvps_count` for the "Maybe" chip.' }
         your_reaction:
           type: string
           enum: [clap, pray]
