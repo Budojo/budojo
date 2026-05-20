@@ -126,3 +126,69 @@ it('excludes soft-deleted documents', function (): void {
 it('returns 401 on expiring endpoint without auth', function (): void {
     $this->getJson('/api/v1/documents/expiring')->assertUnauthorized();
 });
+
+// Missing-medical-certificate split — same CONI/insurance risk as an
+// expired one, must surface in the dashboard widget (#881).
+
+it('includes active athletes with no medical certificate in the missing_medical_certificate array', function (): void {
+    $user = userWithAcademy();
+    $withCert = Athlete::factory()->for($user->academy)->create(['first_name' => 'Mario', 'last_name' => 'Rossi']);
+    Document::factory()->for($withCert)->state(['type' => \App\Enums\DocumentType::MedicalCertificate])->valid()->create();
+    $missing = Athlete::factory()->for($user->academy)->create(['first_name' => 'Luca', 'last_name' => 'Bianchi']);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/documents/expiring')->assertOk();
+    $ids = collect($response->json('missing_medical_certificate'))->pluck('id')->all();
+
+    expect($ids)->toContain($missing->id)->and($ids)->not->toContain($withCert->id);
+});
+
+it('excludes inactive / suspended athletes from missing_medical_certificate', function (): void {
+    $user = userWithAcademy();
+    Athlete::factory()->for($user->academy)->create(['status' => 'suspended']);
+    Athlete::factory()->for($user->academy)->create(['status' => 'inactive']);
+    $active = Athlete::factory()->for($user->academy)->create(['status' => 'active']);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/documents/expiring')->assertOk();
+    $ids = collect($response->json('missing_medical_certificate'))->pluck('id')->all();
+
+    expect($ids)->toEqual([$active->id]);
+});
+
+it('counts an athlete as missing when the only medical certificate row is soft-deleted', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    Document::factory()
+        ->for($athlete)
+        ->state(['type' => \App\Enums\DocumentType::MedicalCertificate, 'deleted_at' => now()])
+        ->valid()
+        ->create();
+
+    $response = $this->actingAs($user)->getJson('/api/v1/documents/expiring')->assertOk();
+    expect(collect($response->json('missing_medical_certificate'))->pluck('id'))->toContain($athlete->id);
+});
+
+it('does NOT count an athlete with an EXPIRED medical certificate as missing (they show in data already)', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    Document::factory()
+        ->for($athlete)
+        ->state(['type' => \App\Enums\DocumentType::MedicalCertificate])
+        ->expired()
+        ->create();
+
+    $response = $this->actingAs($user)->getJson('/api/v1/documents/expiring')->assertOk();
+    expect(collect($response->json('missing_medical_certificate'))->pluck('id'))->not->toContain($athlete->id);
+});
+
+it('ignores non-medical document types when computing missing_medical_certificate', function (): void {
+    $user = userWithAcademy();
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    Document::factory()
+        ->for($athlete)
+        ->state(['type' => \App\Enums\DocumentType::IdCard])
+        ->valid()
+        ->create();
+
+    $response = $this->actingAs($user)->getJson('/api/v1/documents/expiring')->assertOk();
+    expect(collect($response->json('missing_medical_certificate'))->pluck('id'))->toContain($athlete->id);
+});
