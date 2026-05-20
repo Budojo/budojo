@@ -73,9 +73,9 @@ export class MentionTextComponent {
   protected readonly segments = computed<Segment[]>(() => splitIntoSegments(this.text()));
 
   // Athletes land on /dashboard/me/u/<handle> (their shell); owners on /dashboard/u/<handle>. The opposite shell's route is guarded and would redirect.
-  protected profileBase(): string {
-    return this.authService.user()?.role === 'athlete' ? '/dashboard/me/u' : '/dashboard/u';
-  }
+  protected readonly profileBase = computed<string>(() =>
+    this.authService.user()?.role === 'athlete' ? '/dashboard/me/u' : '/dashboard/u',
+  );
 }
 
 export function splitIntoSegments(input: string): Segment[] {
