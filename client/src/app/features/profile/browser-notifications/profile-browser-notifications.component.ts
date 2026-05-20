@@ -163,6 +163,12 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
       // template's `@for (...; track device.id)` never sees a duplicate
       // key (which would throw at runtime under strict change-detection).
       this.devices.update((current) => [device, ...current.filter((d) => d.id !== device.id)]);
+      // Reconcile against the canonical server state (#899). The local
+      // signal can carry rows that `WebPushChannel::send()` already
+      // auto-deleted on a vendor 410 (post-deploy endpoint rotation,
+      // most commonly). Without this refetch the user sees a phantom
+      // row that 404s on revoke.
+      this.refresh();
       this.permission.set(this.webPushService.currentPermission());
       // Re-fetch the current browser's endpoint hash (#822 reviewer
       // follow-up). On a fresh page where the user starts in state
