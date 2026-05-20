@@ -28,6 +28,73 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.22.0',
+    date: '2026-05-20',
+    headline:
+      'Athletes in your academy now have a public profile page. The card shows first name, current belt, joined date, and the full promotions timeline — the same view your peers see when they tap your name. Composers can tag @handle in feed posts and comments to drop a clickable link to that profile. The sidebar is reorganised so "Profilo" (which was actually settings) becomes "Impostazioni" and a new "Il mio profilo" voice opens your own public profile in one tap.',
+    sections: [
+      {
+        heading: '👤 Athlete public profile page',
+        bullets: [
+          'Tap an athlete name in the feed or the new "Il mio profilo" sidebar voice to land on /dashboard/u/<handle>.',
+          'The page shows avatar + first name + @handle, current belt with stripes badge, "Joined {month year}", and the full promotions timeline (newest first, up to 50 events).',
+          'Visible to your same-academy peers by default; a Settings → Privacy toggle to flip it off ships next release.',
+          'Never exposed cross-academy — someone from a different academy who guesses your handle sees the generic "Profile not available" state, not a leak.',
+        ],
+      },
+      {
+        heading: '🏷️ @handle tagging in feed posts + comments',
+        bullets: [
+          'When you write a community post or a comment, typing @mariobjj (any valid handle) renders as a tappable link to that profile — same pattern as Facebook / Twitter / Mastodon.',
+          'Mentions in plain prose work too; email-looking text is left alone.',
+          'Today the link is rendered passively; a composer-side @-autocomplete ships in the next release.',
+        ],
+      },
+      {
+        heading: '🧭 Sidebar — "Profilo" → "Impostazioni" + new "Il mio profilo"',
+        bullets: [
+          'The old "Profilo" voice actually opened settings (notifications, password, sessions). Renamed to "Impostazioni" (cog icon); route unchanged.',
+          'New "Il mio profilo" (id-card icon) opens your own public profile so you see the same view your peers see. Hidden when your handle is empty; set one in the profile page to surface the row.',
+        ],
+      },
+      {
+        heading: '🟢 RSVP counter on event posts — Going + Maybe each get their own number',
+        bullets: [
+          'Bug from a Pixel 8 Pro report — the RSVP counter only showed a number next to "Ci sarò" (Going), never next to "Forse" (Maybe).',
+          'The feed now ships per-response counts: Going renders its own number, Maybe renders its own number, both update optimistically when you tap.',
+        ],
+      },
+      {
+        heading: '🏗️ "Train here too?" step in academy setup',
+        bullets: [
+          'When you set up a new academy, the wizard now asks one final question: do you train as an athlete too, or only manage it?',
+          'Picking "yes" automatically creates your athlete row so your own attendance and promotions are tracked from day one.',
+        ],
+      },
+      {
+        heading: '🔐 Server-side role gate on owner-only routes',
+        bullets: [
+          "Before this release, the SPA hid owner-only screens from athletes, but the API itself didn't re-check the role on every endpoint — a direct curl from an athlete token could in theory reach owner-only data.",
+          'The server now re-checks the role on every gated route. The SPA gates are now defense-in-depth, not the only gate.',
+        ],
+      },
+      {
+        heading: '🔔 Notification preferences — 3 collapsible groups',
+        bullets: [
+          'The page previously listed 14+ toggles in one flat column. They are now grouped into three collapsible sections: Owner, Athlete, Community.',
+          'Opens with the section relevant to your role expanded; the rest collapse, so the page is one scroll-page on a phone.',
+        ],
+      },
+      {
+        heading: '🗓️ Attendance page — today-aware title + no-class banner',
+        bullets: [
+          'If you visit the attendance page on a day with no scheduled training, the page now says "Nessun allenamento oggi" with the next training day, instead of a confusing "Check-in di oggi" header with an arbitrary other date.',
+          "The athletes list still shows tonight's attendees when there IS a class, with the right session date in the title.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.21.0',
     date: '2026-05-19',
     headline:

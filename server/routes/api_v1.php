@@ -284,6 +284,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // `enrolled: false` on rosters > 20 (Copilot review on #754).
     Route::get('/me/athlete/state', [\App\Http\Controllers\Me\MyAthleteController::class, 'state']);
 
+    // Public-profile by handle (#862, M9 social-profile epic slice A).
+    // Role-agnostic — both owners and athletes can read same-academy peer
+    // profiles. The Action enforces the three gates (handle resolution,
+    // profile_is_public, same-academy) all collapsing to 404 so the surface
+    // doesn't leak existence of users behind any of them. The handle pattern
+    // mirrors HandleFormat (#479): lowercase alphanumeric + dot + underscore,
+    // 3-30 chars, must start with a letter. A malformed value 404s at the
+    // route layer before reaching the controller.
+    Route::get('/users/{handle}/profile', [\App\Http\Controllers\User\PublicProfileController::class, 'show'])
+        ->where('handle', '[a-z][a-z0-9._]{2,29}');
+
     // Web Push subscriptions (#419). One row per device the user has
     // explicitly granted push permission on. The SPA POSTs the
     // PushSubscription envelope from `PushManager.subscribe()`;
@@ -323,103 +334,118 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->middleware('throttle:email-verification-resend');
 
 
-    Route::post('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'store']);
-    Route::get('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'show']);
-    Route::patch('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'update']);
-    Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo']);
-    Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo']);
+    // ──────────────────────────────────────────────────────────────────────
+    // Owner-only routes (#774, M7 PR-F).
+    //
+    // Everything inside this block returns 403 `role_required` to an
+    // athlete-role caller — these surfaces manage the academy roster,
+    // its attendance, payments, documents, and aggregated stats. The
+    // athlete-side reads of "the caller's own data" live under /me/*
+    // above and stay role-agnostic.
+    //
+    // The owner-only `/community/events` create endpoint is NOT in
+    // this block — its FormRequest authorize() already enforces
+    // isOwner() + academy linkage as part of the M9 community flow.
+    // ──────────────────────────────────────────────────────────────────────
+    Route::middleware('role:owner')->group(function (): void {
+        Route::post('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'store']);
+        Route::get('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'show']);
+        Route::patch('/academy', [\App\Http\Controllers\Academy\AcademyController::class, 'update']);
+        Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo']);
+        Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo']);
 
-    // Athlete reads — open to unverified users so they can browse.
-    Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
-        ->only(['index', 'show']);
-
-    // Athlete writes — gated on `verified.api`. Unverified users get a JSON
-    // 403 with `message: 'verification_required'` (see
-    // EnsureEmailIsVerifiedForApi). The SPA's auth interceptor keys on that
-    // string to bounce the user to /dashboard/profile.
-    Route::middleware('verified.api')->group(function (): void {
+        // Owner reads — no email-verification gate; owners can browse the roster before verifying their email.
         Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
-            ->only(['store', 'update', 'destroy']);
+            ->only(['index', 'show']);
 
-        // Athlete restore (#700). Brings a soft-deleted athlete back into
-        // the active roster. `->withTrashed()` lets the route-model binding
-        // resolve a soft-deleted id; without it the binding would 404
-        // before the controller could even check ownership.
-        Route::post('/athletes/{athlete}/restore', [\App\Http\Controllers\Athlete\AthleteController::class, 'restore'])
+        // Athlete writes — gated on `verified.api`. Unverified users get a JSON
+        // 403 with `message: 'verification_required'` (see
+        // EnsureEmailIsVerifiedForApi). The SPA's auth interceptor keys on that
+        // string to bounce the user to /dashboard/profile.
+        Route::middleware('verified.api')->group(function (): void {
+            Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
+                ->only(['store', 'update', 'destroy']);
+
+            // Athlete restore (#700). Brings a soft-deleted athlete back into
+            // the active roster. `->withTrashed()` lets the route-model binding
+            // resolve a soft-deleted id; without it the binding would 404
+            // before the controller could even check ownership.
+            Route::post('/athletes/{athlete}/restore', [\App\Http\Controllers\Athlete\AthleteController::class, 'restore'])
+                ->withTrashed();
+
+            // Athlete invitations — owner-side (#445, M7 PR-B). The owner of
+            // an academy invites a roster athlete to log into the SPA. The
+            // FormRequest's authorize() carries both the role:owner check
+            // and the academy-ownership check; the action handles
+            // re-use-pending-row + anti-squatting + best-effort mail.
+            // Throttled lightly — the action already de-dupes pending rows
+            // so two clicks bump last_sent_at instead of spawning two
+            // tokens, but we still cap to defeat scripted spamming of the
+            // mail vendor.
+            Route::post('/athletes/{athlete}/invite', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'store'])
+                ->middleware('throttle:5,1');
+            Route::post('/athletes/{athlete}/invite/resend', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'resend'])
+                ->middleware('throttle:5,1');
+            Route::delete('/athletes/{athlete}/invitations/{invitation}', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'destroy']);
+
+            // Athlete email change (#476). State-aware on the action side:
+            //
+            // - state A (no invitation, no `user_id`) → the action mutates
+            //   `athletes.email` directly; no mail.
+            // - state B (pending invitation, no `user_id`) → the action
+            //   revokes the live invitation, swaps `athletes.email`, sends
+            //   a fresh invite to the new address.
+            // - state C (`user_id` is set) → the action delegates to the
+            //   pending-then-verify flow used by `/me/email-change`.
+            //
+            // Throttle 5/hour PER OWNER user — same `email-change-request`
+            // limiter as `/me/email-change`. The pair shares a budget on
+            // purpose: an owner mass-changing emails on athletes should
+            // hit the same ceiling as the same owner spamming their own
+            // address change, since the mail-vendor cost class is the same.
+            Route::post('/athletes/{athlete}/email', [\App\Http\Controllers\Athlete\AthleteEmailController::class, 'update'])
+                ->middleware('throttle:email-change-request');
+        });
+
+        // Documents — read access stays open (browsing + downloading); writes are
+        // gated. Listing per-athlete is a read; uploading is a write.
+        Route::get('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'index']);
+        // Promotion history — owner reads belt + stripe events for a
+        // specific athlete (post-v2.9.0). Same academy-scope gate as
+        // documents; lives in the controller's first line.
+        Route::get('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'index']);
+        // Documents — flat routes for operations that target a single document.
+        // `/expiring` must come before `/{document}` routes or Laravel tries to
+        // bind the literal "expiring" as a document id.
+        Route::get('/documents/expiring', [\App\Http\Controllers\Document\DocumentController::class, 'expiring']);
+        // Download allows binding soft-deleted rows so the controller can return
+        // 410 Gone (tombstone) instead of the generic 404. See PRD P0.7b.
+        Route::get('/documents/{document}/download', [\App\Http\Controllers\Document\DocumentController::class, 'download'])
             ->withTrashed();
 
-        // Athlete invitations — owner-side (#445, M7 PR-B). The owner of
-        // an academy invites a roster athlete to log into the SPA. The
-        // FormRequest's authorize() carries both the role:owner check
-        // and the academy-ownership check; the action handles
-        // re-use-pending-row + anti-squatting + best-effort mail.
-        // Throttled lightly — the action already de-dupes pending rows
-        // so two clicks bump last_sent_at instead of spawning two
-        // tokens, but we still cap to defeat scripted spamming of the
-        // mail vendor.
-        Route::post('/athletes/{athlete}/invite', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'store'])
-            ->middleware('throttle:5,1');
-        Route::post('/athletes/{athlete}/invite/resend', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'resend'])
-            ->middleware('throttle:5,1');
-        Route::delete('/athletes/{athlete}/invitations/{invitation}', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'destroy']);
+        // Document writes — gated on `verified.api`.
+        Route::middleware('verified.api')->group(function (): void {
+            Route::post('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'store']);
+            Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
+            Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
+        });
 
-        // Athlete email change (#476). State-aware on the action side:
-        //
-        // - state A (no invitation, no `user_id`) → the action mutates
-        //   `athletes.email` directly; no mail.
-        // - state B (pending invitation, no `user_id`) → the action
-        //   revokes the live invitation, swaps `athletes.email`, sends
-        //   a fresh invite to the new address.
-        // - state C (`user_id` is set) → the action delegates to the
-        //   pending-then-verify flow used by `/me/email-change`.
-        //
-        // Throttle 5/hour PER OWNER user — same `email-change-request`
-        // limiter as `/me/email-change`. The pair shares a budget on
-        // purpose: an owner mass-changing emails on athletes should
-        // hit the same ceiling as the same owner spamming their own
-        // address change, since the mail-vendor cost class is the same.
-        Route::post('/athletes/{athlete}/email', [\App\Http\Controllers\Athlete\AthleteEmailController::class, 'update'])
-            ->middleware('throttle:email-change-request');
+        // Payments — M5 (#104). Nested under athlete; the academy's monthly fee
+        // is set via PATCH /academy. `paid_current_month` lives on the athlete
+        // resource so the list page can render the badge without an extra hop.
+        Route::get('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'index']);
+        Route::post('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'store']);
+        Route::delete('/athletes/{athlete}/payments/{year}/{month}', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'destroy'])
+            ->whereNumber(['year', 'month']);
+
+        // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
+        // or Laravel binds "summary" as an attendance-record id and returns 404.
+        Route::get('/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'summary']);
+        Route::get('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'index']);
+        Route::post('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'store']);
+        Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy']);
+        Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
     });
-
-    // Documents — read access stays open (browsing + downloading); writes are
-    // gated. Listing per-athlete is a read; uploading is a write.
-    Route::get('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'index']);
-    // Promotion history — owner reads belt + stripe events for a
-    // specific athlete (post-v2.9.0). Same academy-scope gate as
-    // documents; lives in the controller's first line.
-    Route::get('/athletes/{athlete}/promotions', [\App\Http\Controllers\Athlete\AthletePromotionController::class, 'index']);
-    // Documents — flat routes for operations that target a single document.
-    // `/expiring` must come before `/{document}` routes or Laravel tries to
-    // bind the literal "expiring" as a document id.
-    Route::get('/documents/expiring', [\App\Http\Controllers\Document\DocumentController::class, 'expiring']);
-    // Download allows binding soft-deleted rows so the controller can return
-    // 410 Gone (tombstone) instead of the generic 404. See PRD P0.7b.
-    Route::get('/documents/{document}/download', [\App\Http\Controllers\Document\DocumentController::class, 'download'])
-        ->withTrashed();
-
-    // Document writes — gated on `verified.api`.
-    Route::middleware('verified.api')->group(function (): void {
-        Route::post('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'store']);
-        Route::put('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'update']);
-        Route::delete('/documents/{document}', [\App\Http\Controllers\Document\DocumentController::class, 'destroy']);
-    });
-
-    // Payments — M5 (#104). Nested under athlete; the academy's monthly fee
-    // is set via PATCH /academy. `paid_current_month` lives on the athlete
-    // resource so the list page can render the badge without an extra hop.
-    Route::get('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'index']);
-    Route::post('/athletes/{athlete}/payments', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'store']);
-    Route::delete('/athletes/{athlete}/payments/{year}/{month}', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'destroy'])
-        ->whereNumber(['year', 'month']);
-
-    // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
-    // or Laravel binds "summary" as an attendance-record id and returns 404.
-    Route::get('/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'summary']);
-    Route::get('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'index']);
-    Route::post('/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'store']);
-    Route::delete('/attendance/{attendance}', [\App\Http\Controllers\Attendance\AttendanceController::class, 'destroy']);
-    Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
 
     // Support contact form (#423 + post-v1.17 consolidation that
     // retired the legacy /dashboard/feedback page). Authenticated user
@@ -431,20 +457,26 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/support', [\App\Http\Controllers\Support\SupportTicketController::class, 'store'])
         ->middleware('throttle:5,1');
 
-    // Global search (#426) — backs the Cmd/Ctrl-K command palette in the
-    // SPA. Single invokable controller; academy-scoped; capped at 20 rows
-    // (no pagination envelope — palette is a quick-jump, not a list page).
-    // V1 indexes only athletes by name; future V2 expansion (academy,
-    // payments) lands here without a SPA URL bump.
-    Route::get('/search', \App\Http\Controllers\Search\SearchController::class);
+    // Owner-only search + stats (#774). The Cmd/Ctrl-K palette and the
+    // /dashboard/stats charts both surface academy-wide PII (athlete
+    // names + counts by belt + payment totals); athletes have no business
+    // there, so the role gate is enforced server-side too.
+    Route::middleware('role:owner')->group(function (): void {
+        // Global search (#426) — backs the Cmd/Ctrl-K command palette in
+        // the SPA. Single invokable controller; academy-scoped; capped at
+        // 20 rows (no pagination envelope — palette is a quick-jump, not
+        // a list page). V1 indexes only athletes by name; future V2
+        // expansion (academy, payments) lands here without a SPA URL bump.
+        Route::get('/search', \App\Http\Controllers\Search\SearchController::class);
 
-    // Stats — server-side aggregations for the /dashboard/stats charts.
-    // Grouped under /stats so T3 (payments) and T4 (age bands) can extend
-    // this block without touching other route sections.
-    Route::prefix('stats')->group(function (): void {
-        Route::get('attendance/daily', [StatsController::class, 'attendanceDaily']);
-        Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
-        Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
+        // Stats — server-side aggregations for the /dashboard/stats charts.
+        // Grouped under /stats so T3 (payments) and T4 (age bands) can extend
+        // this block without touching other route sections.
+        Route::prefix('stats')->group(function (): void {
+            Route::get('attendance/daily', [StatsController::class, 'attendanceDaily']);
+            Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
+            Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
+        });
     });
 
     // Community (M9). Owners + athletes share the same /api/v1/community

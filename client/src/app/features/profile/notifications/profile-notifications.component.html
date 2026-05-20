@@ -30,28 +30,55 @@
       />
     </div>
   } @else {
-    <ul class="profile-notifications__list" data-cy="profile-notifications-list">
-      @for (category of categories; track category.key) {
-        <li
-          class="profile-notifications__row"
-          [attr.data-cy]="'profile-notifications-row-' + category.key"
+    <!--
+      Group pagination (#736). Native <details>/<summary> instead of
+      p-accordion — the panel doesn't need PrimeNG's animation budget
+      and <details> stays accessible (built-in summary keyboard nav +
+      aria-expanded) without extra wiring. Each group closed by default;
+      the user opens the audience they care about.
+    -->
+    <div class="profile-notifications__list" data-cy="profile-notifications-list">
+      @for (group of groups; track group) {
+        <details
+          class="profile-notifications__group"
+          [attr.data-cy]="'profile-notifications-group-' + group"
         >
-          <div class="profile-notifications__row-text">
-            <span class="profile-notifications__label">{{ category.i18nLabel | translate }}</span>
-            <p class="profile-notifications__description">
-              {{ category.i18nDescription | translate }}
-            </p>
-          </div>
-          <p-toggleswitch
-            [ngModel]="isEnabled(category.key)"
-            (ngModelChange)="onToggle(category, $event)"
-            [disabled]="saving() !== null"
-            [ariaLabel]="category.i18nLabel | translate"
-            [attr.data-cy]="'profile-notifications-toggle-' + category.key"
-          />
-        </li>
+          <summary class="profile-notifications__group-summary">
+            <span class="profile-notifications__group-title">
+              {{ groupLabelKey[group] | translate }}
+            </span>
+            <i
+              class="pi pi-chevron-down profile-notifications__group-chevron"
+              aria-hidden="true"
+            ></i>
+          </summary>
+          <ul class="profile-notifications__group-list">
+            @for (category of categoriesForGroup(group); track category.key) {
+              <li
+                class="profile-notifications__row"
+                [attr.data-cy]="'profile-notifications-row-' + category.key"
+              >
+                <div class="profile-notifications__row-text">
+                  <span class="profile-notifications__label">{{
+                    category.i18nLabel | translate
+                  }}</span>
+                  <p class="profile-notifications__description">
+                    {{ category.i18nDescription | translate }}
+                  </p>
+                </div>
+                <p-toggleswitch
+                  [ngModel]="isEnabled(category.key)"
+                  (ngModelChange)="onToggle(category, $event)"
+                  [disabled]="saving() !== null"
+                  [ariaLabel]="category.i18nLabel | translate"
+                  [attr.data-cy]="'profile-notifications-toggle-' + category.key"
+                />
+              </li>
+            }
+          </ul>
+        </details>
       }
-    </ul>
+    </div>
 
     <section
       class="profile-notifications__transactional"

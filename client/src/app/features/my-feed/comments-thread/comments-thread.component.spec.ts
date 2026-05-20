@@ -128,4 +128,37 @@ describe('CommentsThreadComponent (#604, M9 PR-D2 client)', () => {
     expect(el.querySelector('[data-cy="comment-delete-1"]')).not.toBeNull();
     expect(el.querySelector('[data-cy="comment-delete-2"]')).toBeNull();
   });
+
+  describe('@handle mention rendering in comment body (#864 slice B)', () => {
+    it('renders @handle inside a comment body as a router link to the public profile', () => {
+      const { fixture, el, http } = setup({ currentUserId: 42, role: 'athlete' });
+      http.expectOne(`${environment.apiBase}/api/v1/community/posts/99/comments?page=1`).flush({
+        data: [authorComment({ id: 1, body: 'nice one @mariobjj, see you tonight' })],
+        meta: { current_page: 1, per_page: 50, total: 1, last_page: 1 },
+      });
+      fixture.detectChanges();
+
+      const link = el.querySelector(
+        '[data-cy="comment-1"] [data-cy="mention-link"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link!.textContent?.trim()).toBe('@mariobjj');
+      // Athlete-role viewer → /dashboard/me/u; /dashboard/u is gated by roleOwnerGuard.
+      expect(link!.getAttribute('href')).toBe('/dashboard/me/u/mariobjj');
+    });
+
+    it('renders a comment with no mention as plain text — no mention-link anchor leaks', () => {
+      const { fixture, el, http } = setup({ currentUserId: 42, role: 'athlete' });
+      http.expectOne(`${environment.apiBase}/api/v1/community/posts/99/comments?page=1`).flush({
+        data: [authorComment({ id: 1, body: 'great class today' })],
+        meta: { current_page: 1, per_page: 50, total: 1, last_page: 1 },
+      });
+      fixture.detectChanges();
+
+      const row = el.querySelector('[data-cy="comment-1"]');
+      expect(row).not.toBeNull();
+      expect(row?.textContent).toContain('great class today');
+      expect(row?.querySelector('[data-cy="mention-link"]')).toBeNull();
+    });
+  });
 });

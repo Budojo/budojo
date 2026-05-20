@@ -14,12 +14,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // API-flavoured `verified` alias — returns a JSON 403 with the
-        // stable `verification_required` message that the SPA's auth
-        // interceptor keys on. See EnsureEmailIsVerifiedForApi for the
-        // reasoning vs Laravel's bundled `verified` (which is HTML-shaped).
+        // Aliases for route-layer middleware:
+        //   verified.api → JSON 403 with `verification_required` (see
+        //                   EnsureEmailIsVerifiedForApi for the rationale
+        //                   vs Laravel's bundled HTML-shaped `verified`).
+        //   role         → JSON 403 with `role_required` (#774 / M7 PR-F);
+        //                   parameterised: `role:owner` or `role:athlete`.
+        //                   The SPA's error interceptor keys on the body
+        //                   string to drop the caller off the offending
+        //                   surface.
         $middleware->alias([
             'verified.api' => \App\Http\Middleware\EnsureEmailIsVerifiedForApi::class,
+            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
         ]);
 
         // Disable the framework default guest-redirect callback (#769).

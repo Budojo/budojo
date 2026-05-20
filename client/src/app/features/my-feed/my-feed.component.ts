@@ -32,6 +32,7 @@ import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { UserFlairComponent } from '../../shared/components/user-flair/user-flair.component';
+import { MentionTextComponent } from '../../shared/components/mention-text/mention-text.component';
 import { CommentsThreadComponent } from './comments-thread/comments-thread.component';
 import { EventComposerComponent } from './event-composer/event-composer.component';
 import { EventDatePipe } from '../../shared/pipes/event-date.pipe';
@@ -71,6 +72,7 @@ import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-li
     UserFlairComponent,
     CommentsThreadComponent,
     EventComposerComponent,
+    MentionTextComponent,
     ReactionsListSheetComponent,
     RelativeTimePipe,
     EventDatePipe,
@@ -479,14 +481,13 @@ export class MyFeedComponent implements OnInit {
     Subject<{ response: RsvpResponse; rollback: () => void }>
   >();
 
-  /**
-   * Optimistic RSVP toggle. Updates `your_rsvp` + `rsvps_count`
-   * locally, fires the API, and reconciles to the server's
-   * canonical state. On error, rolls back to the pre-click state.
-   */
   protected toggleRsvp(post: CommunityPost, response: RsvpResponse): void {
-    const previousRsvp = post.your_rsvp;
-    const previousCount = post.rsvps_count;
+    const previous = {
+      your_rsvp: post.your_rsvp,
+      rsvps_count: post.rsvps_count,
+      going_rsvps_count: post.going_rsvps_count,
+      maybe_rsvps_count: post.maybe_rsvps_count,
+    };
 
     const optimistic = this.predictNextRsvp(post, response);
     this.replacePostRsvp(post.id, optimistic);
@@ -495,10 +496,7 @@ export class MyFeedComponent implements OnInit {
     stream.next({
       response,
       rollback: () => {
-        this.replacePostRsvp(post.id, {
-          your_rsvp: previousRsvp,
-          rsvps_count: previousCount,
-        });
+        this.replacePostRsvp(post.id, previous);
       },
     });
   }
@@ -530,6 +528,8 @@ export class MyFeedComponent implements OnInit {
         this.replacePostRsvp(postId, {
           your_rsvp: resp.your_rsvp,
           rsvps_count: resp.counts.going + resp.counts.maybe,
+          going_rsvps_count: resp.counts.going,
+          maybe_rsvps_count: resp.counts.maybe,
         });
       });
 
@@ -537,26 +537,70 @@ export class MyFeedComponent implements OnInit {
     return subject;
   }
 
+  // other-vote→switch keeps the total flat but shifts counts between buckets — the case a single rsvps_count couldn't model.
   private predictNextRsvp(
     post: CommunityPost,
     response: RsvpResponse,
-  ): { your_rsvp: RsvpResponse | null; rsvps_count: number } {
+  ): {
+    your_rsvp: RsvpResponse | null;
+    rsvps_count: number;
+    going_rsvps_count: number;
+    maybe_rsvps_count: number;
+  } {
+    const bumpGoing = (n: number) => (response === 'going' ? n + 1 : n);
+    const bumpMaybe = (n: number) => (response === 'maybe' ? n + 1 : n);
+    const dropGoing = (n: number) => (response === 'going' ? Math.max(0, n - 1) : n);
+    const dropMaybe = (n: number) => (response === 'maybe' ? Math.max(0, n - 1) : n);
+
     if (post.your_rsvp === null) {
-      return { your_rsvp: response, rsvps_count: post.rsvps_count + 1 };
+      return {
+        your_rsvp: response,
+        rsvps_count: post.rsvps_count + 1,
+        going_rsvps_count: bumpGoing(post.going_rsvps_count),
+        maybe_rsvps_count: bumpMaybe(post.maybe_rsvps_count),
+      };
     }
     if (post.your_rsvp === response) {
-      return { your_rsvp: null, rsvps_count: Math.max(0, post.rsvps_count - 1) };
+      return {
+        your_rsvp: null,
+        rsvps_count: Math.max(0, post.rsvps_count - 1),
+        going_rsvps_count: dropGoing(post.going_rsvps_count),
+        maybe_rsvps_count: dropMaybe(post.maybe_rsvps_count),
+      };
     }
-    return { your_rsvp: response, rsvps_count: post.rsvps_count };
+    // Switch — total unchanged, one bucket +1 and the other -1.
+    const switchedGoing =
+      response === 'going' ? post.going_rsvps_count + 1 : Math.max(0, post.going_rsvps_count - 1);
+    const switchedMaybe =
+      response === 'maybe' ? post.maybe_rsvps_count + 1 : Math.max(0, post.maybe_rsvps_count - 1);
+    return {
+      your_rsvp: response,
+      rsvps_count: post.rsvps_count,
+      going_rsvps_count: switchedGoing,
+      maybe_rsvps_count: switchedMaybe,
+    };
   }
 
   private replacePostRsvp(
     postId: number,
-    patch: { your_rsvp: RsvpResponse | null; rsvps_count: number },
+    patch: {
+      your_rsvp: RsvpResponse | null;
+      rsvps_count: number;
+      going_rsvps_count: number;
+      maybe_rsvps_count: number;
+    },
   ): void {
     this.posts.update((list) =>
       list.map((p) =>
-        p.id === postId ? { ...p, your_rsvp: patch.your_rsvp, rsvps_count: patch.rsvps_count } : p,
+        p.id === postId
+          ? {
+              ...p,
+              your_rsvp: patch.your_rsvp,
+              rsvps_count: patch.rsvps_count,
+              going_rsvps_count: patch.going_rsvps_count,
+              maybe_rsvps_count: patch.maybe_rsvps_count,
+            }
+          : p,
       ),
     );
   }

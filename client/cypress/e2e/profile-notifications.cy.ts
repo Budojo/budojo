@@ -47,6 +47,13 @@ describe('Email notification preferences (#416)', () => {
     cy.get('[data-cy="profile-notifications"]').scrollIntoView();
     cy.get('[data-cy="profile-notifications"]').should('be.visible');
 
+    // Owner toggles live inside the closed-by-default "Owner alerts"
+    // <details> (#736). Open the group before asserting on its rows;
+    // medical-cert + unpaid-digest are both in the owner cluster.
+    cy.get('[data-cy="profile-notifications-group-owner"]').then((g) => {
+      (g[0] as HTMLDetailsElement).open = true;
+    });
+
     cy.get('[data-cy="profile-notifications-row-medical_cert_expiry_reminders"]').should(
       'be.visible',
     );
@@ -83,6 +90,11 @@ describe('Email notification preferences (#416)', () => {
     cy.visitAuthenticated('/dashboard/profile');
     cy.get('[data-cy="profile-tab-notifications"]').click();
     cy.wait('@prefs');
+
+    // Toggle lives in the Owner group, closed by default after #736.
+    cy.get('[data-cy="profile-notifications-group-owner"]').then((g) => {
+      (g[0] as HTMLDetailsElement).open = true;
+    });
 
     cy.get('[data-cy="profile-notifications-toggle-medical_cert_expiry_reminders"]')
       .scrollIntoView()

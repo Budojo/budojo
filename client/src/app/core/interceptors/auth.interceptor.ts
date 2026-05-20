@@ -6,10 +6,16 @@ import { AuthService } from '../services/auth.service';
 
 /**
  * Adds the Sanctum bearer token to every outgoing request when one exists,
- * and intercepts two server-driven session-state responses:
+ * and intercepts three server-driven session-state responses:
  *
  * - **403 `verification_required`**: bounces the user to the profile page
  *   with a query flag so the page can render the verify-email banner.
+ * - **403 `role_required`** (#774 / M7 PR-F): an athlete-role user
+ *   somehow reached an owner-only endpoint. The SPA's `ownerOnlyGuard`
+ *   normally prevents this at the route layer; the server-side gate is
+ *   the lifeboat for curl traffic, a stale tab, or a race between role
+ *   change and navigation. Bounce to the athlete-portal home so the
+ *   user lands on a surface they actually have access to.
  * - **401 Unauthenticated**: clears the bearer token from local storage
  *   and redirects to `/auth/login`. This handles the "your session was
  *   revoked elsewhere" case — e.g. the user changed their password on
@@ -31,16 +37,20 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(outgoing).pipe(
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse) {
-        if (
-          err.status === 403 &&
-          (err.error as { message?: string })?.message === 'verification_required'
-        ) {
+        const message = (err.error as { message?: string })?.message;
+        if (err.status === 403 && message === 'verification_required') {
           // Don't await navigation — interceptor must return the error stream
           // promptly so feature handlers see the same 403. The redirect lands
           // in the next tick.
           void router.navigate(['/dashboard/profile'], {
             queryParams: { reason: 'verify_required' },
           });
+        } else if (err.status === 403 && message === 'role_required') {
+          // Server-side role gate fired (#774). The athlete-portal home is
+          // the safe landing — every athlete has access to /me/profile by
+          // definition (it's their own data). Same `navigateByUrl` shape as
+          // the 401-logout branch so the redirect doesn't double-await.
+          void router.navigateByUrl('/dashboard/me/profile');
         } else if (err.status === 401 && token !== null) {
           // The token was rejected by the server — most commonly because
           // it was revoked from another tab/device after a password

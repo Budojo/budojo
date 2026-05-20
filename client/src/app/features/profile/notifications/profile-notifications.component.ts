@@ -10,107 +10,130 @@ import {
   NotificationPreferencesService,
 } from '../../../core/services/notification-preferences.service';
 
-/**
- * Per-category email-notification opt-out panel on
- * `/dashboard/profile` (#416). One switch per toggleable category,
- * plus a read-only "always sent" block for the transactional
- * categories that are never opt-out (welcome, password-reset,
- * email-verification, account-deletion-*).
- *
- * Optimistic local update on toggle: flip the switch, fire the PATCH
- * in the background, refresh on response. On failure, revert the
- * switch and toast.
- */
+// Per-category email-notification opt-out panel on /dashboard/profile (#416 + #736).
+
+// Audience cluster for a notification toggle (#736). Owner / athlete / community.
+type CategoryGroup = 'owner' | 'athlete' | 'community';
+
+const CATEGORY_GROUPS: readonly CategoryGroup[] = ['owner', 'athlete', 'community'];
+
+// Static map — dynamic template key concat is banned (client/CLAUDE.md § i18n); Record exhaustiveness guards against future CategoryGroup renames.
+const GROUP_LABEL_KEYS: Record<CategoryGroup, string> = {
+  owner: 'profile.notifications.groups.owner',
+  athlete: 'profile.notifications.groups.athlete',
+  community: 'profile.notifications.groups.community',
+};
 
 interface ToggleableCategory {
   readonly key: string;
+  readonly group: CategoryGroup;
   readonly i18nLabel: string;
   readonly i18nDescription: string;
 }
 
 const CATEGORIES: readonly ToggleableCategory[] = [
+  // ── Owner ─────────────────────────────────────────────────────────────
   {
     key: 'medical_cert_expiry_reminders',
+    group: 'owner',
     i18nLabel: 'profile.notifications.medicalCertReminders.label',
     i18nDescription: 'profile.notifications.medicalCertReminders.description',
   },
   {
     key: 'unpaid_athletes_digest',
+    group: 'owner',
     i18nLabel: 'profile.notifications.unpaidAthletesDigest.label',
     i18nDescription: 'profile.notifications.unpaidAthletesDigest.description',
   },
   {
     key: 'athlete_signed_up',
+    group: 'owner',
     i18nLabel: 'profile.notifications.athleteSignedUp.label',
     i18nDescription: 'profile.notifications.athleteSignedUp.description',
   },
   {
-    key: 'athlete_training_today',
-    i18nLabel: 'profile.notifications.athleteTrainingToday.label',
-    i18nDescription: 'profile.notifications.athleteTrainingToday.description',
-  },
-  {
-    key: 'athlete_medical_cert_expiring',
-    i18nLabel: 'profile.notifications.athleteMedicalCertExpiring.label',
-    i18nDescription: 'profile.notifications.athleteMedicalCertExpiring.description',
-  },
-  {
-    key: 'athlete_promoted',
-    i18nLabel: 'profile.notifications.athletePromoted.label',
-    i18nDescription: 'profile.notifications.athletePromoted.description',
-  },
-  {
-    key: 'athlete_payment_marked_paid',
-    i18nLabel: 'profile.notifications.athletePaymentMarkedPaid.label',
-    i18nDescription: 'profile.notifications.athletePaymentMarkedPaid.description',
-  },
-  {
-    key: 'athlete_payment_overdue',
-    i18nLabel: 'profile.notifications.athletePaymentOverdue.label',
-    i18nDescription: 'profile.notifications.athletePaymentOverdue.description',
-  },
-  {
     key: 'owner_athlete_doc_uploaded',
+    group: 'owner',
     i18nLabel: 'profile.notifications.ownerAthleteDocUploaded.label',
     i18nDescription: 'profile.notifications.ownerAthleteDocUploaded.description',
   },
   {
     key: 'owner_event_rsvp',
+    group: 'owner',
     i18nLabel: 'profile.notifications.ownerEventRsvp.label',
     i18nDescription: 'profile.notifications.ownerEventRsvp.description',
   },
   {
     key: 'owner_athlete_missed_streak',
+    group: 'owner',
     i18nLabel: 'profile.notifications.ownerAthleteMissedStreak.label',
     i18nDescription: 'profile.notifications.ownerAthleteMissedStreak.description',
   },
+  // ── Athlete personal ──────────────────────────────────────────────────
+  {
+    key: 'athlete_training_today',
+    group: 'athlete',
+    i18nLabel: 'profile.notifications.athleteTrainingToday.label',
+    i18nDescription: 'profile.notifications.athleteTrainingToday.description',
+  },
+  {
+    key: 'athlete_medical_cert_expiring',
+    group: 'athlete',
+    i18nLabel: 'profile.notifications.athleteMedicalCertExpiring.label',
+    i18nDescription: 'profile.notifications.athleteMedicalCertExpiring.description',
+  },
+  {
+    key: 'athlete_promoted',
+    group: 'athlete',
+    i18nLabel: 'profile.notifications.athletePromoted.label',
+    i18nDescription: 'profile.notifications.athletePromoted.description',
+  },
+  {
+    key: 'athlete_payment_marked_paid',
+    group: 'athlete',
+    i18nLabel: 'profile.notifications.athletePaymentMarkedPaid.label',
+    i18nDescription: 'profile.notifications.athletePaymentMarkedPaid.description',
+  },
+  {
+    key: 'athlete_payment_overdue',
+    group: 'athlete',
+    i18nLabel: 'profile.notifications.athletePaymentOverdue.label',
+    i18nDescription: 'profile.notifications.athletePaymentOverdue.description',
+  },
+  // ── Community ─────────────────────────────────────────────────────────
   {
     key: 'community_reply',
+    group: 'community',
     i18nLabel: 'profile.notifications.communityReply.label',
     i18nDescription: 'profile.notifications.communityReply.description',
   },
   {
     key: 'community_new_post',
+    group: 'community',
     i18nLabel: 'profile.notifications.communityNewPost.label',
     i18nDescription: 'profile.notifications.communityNewPost.description',
   },
   {
     key: 'community_comment_on_your_post',
+    group: 'community',
     i18nLabel: 'profile.notifications.communityCommentOnYourPost.label',
     i18nDescription: 'profile.notifications.communityCommentOnYourPost.description',
   },
   {
     key: 'community_reaction_on_your_post',
+    group: 'community',
     i18nLabel: 'profile.notifications.communityReactionOnYourPost.label',
     i18nDescription: 'profile.notifications.communityReactionOnYourPost.description',
   },
   {
     key: 'community_belt_celebration',
+    group: 'community',
     i18nLabel: 'profile.notifications.communityBeltCelebration.label',
     i18nDescription: 'profile.notifications.communityBeltCelebration.description',
   },
   {
     key: 'community_event_new',
+    group: 'community',
     i18nLabel: 'profile.notifications.communityEventNew.label',
     i18nDescription: 'profile.notifications.communityEventNew.description',
   },
@@ -144,6 +167,12 @@ export class ProfileNotificationsComponent implements OnInit {
 
   protected readonly categories = CATEGORIES;
   protected readonly transactionalKeys = TRANSACTIONAL_KEYS;
+  protected readonly groups = CATEGORY_GROUPS;
+  protected readonly groupLabelKey = GROUP_LABEL_KEYS;
+
+  protected categoriesForGroup(group: CategoryGroup): readonly ToggleableCategory[] {
+    return CATEGORIES.filter((c) => c.group === group);
+  }
 
   ngOnInit(): void {
     this.refresh();

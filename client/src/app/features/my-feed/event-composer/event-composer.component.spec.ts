@@ -48,6 +48,8 @@ const POST: CommunityPost = {
   reaction_counts: { clap: 0, pray: 0 },
   comments_count: 0,
   rsvps_count: 0,
+  going_rsvps_count: 0,
+  maybe_rsvps_count: 0,
   your_reaction: null,
   your_rsvp: null,
 };

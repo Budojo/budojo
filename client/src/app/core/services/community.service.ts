@@ -60,6 +60,8 @@ export interface CommunityPost {
   };
   readonly comments_count: number;
   readonly rsvps_count: number;
+  readonly going_rsvps_count: number;
+  readonly maybe_rsvps_count: number;
   readonly your_reaction: ReactionEmoji | null;
   readonly your_rsvp: RsvpResponse | null;
 }

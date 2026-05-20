@@ -26,7 +26,8 @@
     "athletes": "Athletes",
     "attendance": "Attendance",
     "community": "Community",
-    "profile": "Profile",
+    "myProfile": "My profile",
+    "settings": "Settings",
     "whatsNew": "What's new",
     "support": "Contact support",
     "signOut": "Sign out",
@@ -244,7 +245,8 @@
       "signOut": "Sign out"
     },
     "nav": {
-      "profile": "Profile",
+      "myProfile": "My profile",
+      "settings": "Settings",
       "feed": "Feed",
       "academy": "Academy",
       "attendance": "Attendance",
@@ -393,7 +395,13 @@
     "nameMaxlength": "Maximum 255 characters.",
     "trainingDaysLabel": "Training days",
     "optional": "(optional)",
-    "submit": "Create academy"
+    "submit": "Create academy",
+    "trainHere": {
+      "label": "Do you train at this academy too?",
+      "body": "If yes: you'll appear in the athletes list with an Owner chip, your community posts will show your belt, you can mark your own attendance, and you won't be billed (excluded from payment surfaces). You can flip this later from Profile → Train at this academy.",
+      "yes": "Yes, enroll me",
+      "no": "Not now"
+    }
   },
   "legal": {
     "chrome": {
@@ -823,6 +831,11 @@
     "notifications": {
       "title": "Notifications",
       "subtitle": "Choose which notifications you want to receive. Each row lists how it's delivered (email digest, inbox, …).",
+      "groups": {
+        "owner": "Owner alerts",
+        "athlete": "Personal alerts",
+        "community": "Community"
+      },
       "medicalCertReminders": {
         "label": "Medical certificate expiring reminders",
         "description": "Daily digest at 09:00 listing athletes whose medical certificate expires in 30, 7, or 0 days."
@@ -1390,6 +1403,8 @@
     "daily": {
       "eyebrow": "Attendance",
       "title": "Today's check-in",
+      "titleForDate": "Check-in · {{date}}",
+      "noClassToday": "No class today — you're looking at the {{date}} session.",
       "searchPlaceholder": "Search by name",
       "beltPlaceholder": "Belt",
       "table": {
@@ -1905,6 +1920,20 @@
         "master_6": "Master 6",
         "master_7": "Master 7"
       }
+    }
+  },
+  "publicProfile": {
+    "joinedAt": "Joined {{ date }}",
+    "promotions": {
+      "title": "Promotions",
+      "empty": "No promotions recorded yet.",
+      "beltChange": "Promoted from {{ from }} to {{ to }}",
+      "stripeChange": "Stripes: {{ from }} → {{ to }}"
+    },
+    "notFound": {
+      "title": "Profile not available",
+      "body": "We couldn't find this profile, or it isn't visible to you.",
+      "back": "Back to athletes"
     }
   }
 }

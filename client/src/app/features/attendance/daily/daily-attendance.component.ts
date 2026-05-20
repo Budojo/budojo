@@ -122,6 +122,70 @@ export class DailyAttendanceComponent implements OnInit {
   protected readonly selectedDate = signal<Date>(new Date());
 
   /**
+   * True when `selectedDate` matches today (calendar day, not exact instant).
+   * Drives the title swap (#854): "Check-in di oggi" when true, dated form
+   * ("Check-in del martedì 19 maggio") when false. Recomputed reactively
+   * so a date-picker change flips the title without a manual refresh.
+   *
+   * **Stale-after-midnight caveat**: `new Date()` is captured at computed-
+   * evaluation time without a time-based signal dependency. If the page
+   * is left open past midnight the computed won't re-run until
+   * `selectedDate` or `academy()` changes. Low-probability for typical
+   * single-session usage; acceptable today, would be revisited if the
+   * page grew an always-mounted dashboard surface.
+   */
+  protected readonly selectedDateIsToday = computed<boolean>(() => {
+    const sel = this.selectedDate();
+    const today = new Date();
+    return (
+      sel.getFullYear() === today.getFullYear() &&
+      sel.getMonth() === today.getMonth() &&
+      sel.getDate() === today.getDate()
+    );
+  });
+
+  /**
+   * True when **today itself** is a no-class day AND `training_days` is
+   * configured. Banner trigger (#854) — surfaces ONLY when `initSelectedDate()`
+   * had to reseat onto a past training day, NOT when the user manually
+   * navigates to a past date on a normal training day (the backfill case
+   * is silent; only the title changes there).
+   *
+   * Why not derive from "selectedDate is in the past" alone: a coach
+   * deliberately backfilling Monday's roster on a Wednesday IS a training-
+   * day flow; raising a "no class today" banner there would be a false
+   * positive.
+   *
+   * **Stale-after-midnight caveat**: same invariant as
+   * `selectedDateIsToday()` — the `new Date()` read isn't on a signal,
+   * so the banner won't recompute across a midnight boundary unless the
+   * user picks a new date or the cached academy reloads. Acceptable for
+   * the current single-session usage pattern.
+   */
+  protected readonly showNoClassToday = computed<boolean>(() => {
+    const trainingDays = this.academyService.academy()?.training_days ?? null;
+    if (trainingDays === null || trainingDays.length === 0) return false;
+    const today = new Date();
+    return !trainingDays.includes(today.getDay());
+  });
+
+  /**
+   * Localised "weekday DD month" form of `selectedDate`. Used by the
+   * dated title fallback and the banner copy when the page is showing a
+   * past training day. `Intl.DateTimeFormat` picks the active SPA locale
+   * from `LanguageService` so the string flips IT/EN with the sidebar
+   * toggle — matches the rest of the dashboard chrome.
+   */
+  protected readonly selectedDateLabel = computed<string>(() => {
+    const locale = this.languageService.currentLang() === 'it' ? 'it-IT' : 'en-GB';
+    return new Intl.DateTimeFormat(locale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }).format(this.selectedDate());
+  });
+
+  /**
    * Active athletes on the currently-selected page. Backed by the SAME
    * paginated `/api/v1/athletes` endpoint as athletes-list, so the
    * default 20-row slice applies — the page walks via `onPageChange()`

@@ -67,6 +67,8 @@ function postFixture(overrides: Partial<CommunityPost> = {}): CommunityPost {
     reaction_counts: { clap: 0, pray: 0 },
     comments_count: 0,
     rsvps_count: 0,
+    going_rsvps_count: 0,
+    maybe_rsvps_count: 0,
     your_reaction: null,
     your_rsvp: null,
     ...overrides,
@@ -121,6 +123,8 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
+          going_rsvps_count: 0,
+          maybe_rsvps_count: 0,
           your_reaction: null,
           your_rsvp: null,
         },
@@ -163,6 +167,8 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
+          going_rsvps_count: 0,
+          maybe_rsvps_count: 0,
           your_reaction: null,
           your_rsvp: null,
         },
@@ -177,6 +183,50 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     expect(card?.querySelector('.feed__event-location')?.textContent).toContain(
       'Via Roma 10, Milano',
     );
+  });
+
+  it('renders the per-response RSVP counter on each chip independently', () => {
+    const { fixture, el, http } = setup();
+
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        postFixture({
+          id: 100,
+          rsvps_count: 3,
+          going_rsvps_count: 2,
+          maybe_rsvps_count: 1,
+        }),
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const card = el.querySelector('[data-cy="my-feed-post-100"]');
+    const goingChip = card?.querySelector('[data-cy="rsvp-chip-going-100"]');
+    const maybeChip = card?.querySelector('[data-cy="rsvp-chip-maybe-100"]');
+    expect(goingChip?.querySelector('.feed__react-count')?.textContent?.trim()).toBe('2');
+    expect(maybeChip?.querySelector('.feed__react-count')?.textContent?.trim()).toBe('1');
+  });
+
+  it('hides RSVP counter badges when both per-response counts are zero', () => {
+    const { fixture, el, http } = setup();
+
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [
+        postFixture({
+          id: 101,
+          rsvps_count: 0,
+          going_rsvps_count: 0,
+          maybe_rsvps_count: 0,
+        }),
+      ],
+      meta: { current_page: 1, per_page: 20, total: 1, last_page: 1 },
+    });
+    fixture.detectChanges();
+
+    const card = el.querySelector('[data-cy="my-feed-post-101"]');
+    expect(card?.querySelector('[data-cy="rsvp-chip-going-101"] .feed__react-count')).toBeNull();
+    expect(card?.querySelector('[data-cy="rsvp-chip-maybe-101"] .feed__react-count')).toBeNull();
   });
 
   it('shows the error state when the API call fails', () => {
@@ -215,6 +265,8 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
+          going_rsvps_count: 0,
+          maybe_rsvps_count: 0,
           your_reaction: null,
           your_rsvp: null,
         },
@@ -355,6 +407,8 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
+          going_rsvps_count: 0,
+          maybe_rsvps_count: 0,
           your_reaction: null,
           your_rsvp: null,
         },
@@ -406,6 +460,8 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
+          going_rsvps_count: 0,
+          maybe_rsvps_count: 0,
           your_reaction: null,
           your_rsvp: null,
         },
@@ -514,6 +570,8 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
+          going_rsvps_count: 0,
+          maybe_rsvps_count: 0,
           your_reaction: null,
           your_rsvp: null,
         },
@@ -559,6 +617,8 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
           reaction_counts: { clap: 0, pray: 0 },
           comments_count: 0,
           rsvps_count: 0,
+          going_rsvps_count: 0,
+          maybe_rsvps_count: 0,
           your_reaction: null,
           your_rsvp: null,
         },

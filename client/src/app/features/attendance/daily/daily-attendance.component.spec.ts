@@ -306,6 +306,80 @@ describe('DailyAttendanceComponent', () => {
     }
   });
 
+  // ─── Today-aware title + no-class banner (#854) ────────────────────────────
+  // The page header used to render "Check-in di oggi" unconditionally, even
+  // when initSelectedDate() reseated the date onto a past training day —
+  // the user saw a roster labelled "oggi" that was actually from an earlier
+  // session. Two new pieces of chrome cover the ambiguity:
+  //   - `selectedDateIsToday()` toggles the title between the literal
+  //     "today" string and a dated form.
+  //   - `showNoClassToday()` lights up a banner ONLY when today itself is
+  //     a no-class day AND the reseat ran. Manual past-date navigation
+  //     (backfill) is silent — the title changes, the banner doesn't.
+
+  it('selectedDateIsToday is true when today is a training day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 3, 29, 10)); // Wed
+    try {
+      const { fixture, component, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        training_days: [1, 3, 5], // Wed is in
+      });
+      fixture.detectChanges();
+      flushInit(httpMock, {});
+
+      expect(component['selectedDateIsToday']()).toBe(true);
+      expect(component['showNoClassToday']()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('selectedDateIsToday is false AND showNoClassToday is true when today is not a training day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 3, 29, 10)); // Wed
+    try {
+      const { fixture, component, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        training_days: [1], // Mon only — Wed reseat to Mon
+      });
+      fixture.detectChanges();
+      flushInit(httpMock, {});
+
+      expect(component['selectedDateIsToday']()).toBe(false);
+      // Banner lights up because today itself (Wed) is a no-class day, NOT
+      // because the user navigated to a past date manually.
+      expect(component['showNoClassToday']()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('selectedDateIsToday is false but showNoClassToday stays false when the user manually navigates to a past date on a normal training day', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 3, 29, 10)); // Wed
+    try {
+      const { fixture, component, httpMock } = setup();
+      TestBed.inject(AcademyService).academy.set({
+        ...ACADEMY_BASE,
+        training_days: [1, 3, 5], // Wed is in — today IS a class day
+      });
+      fixture.detectChanges();
+      flushInit(httpMock, {});
+
+      // Simulate the user manually picking Mon (2026-04-27) via the date picker.
+      component['selectedDate'].set(new Date(2026, 3, 27));
+
+      expect(component['selectedDateIsToday']()).toBe(false);
+      // No banner — the backfill case is silent; only the title is dated.
+      expect(component['showNoClassToday']()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // ─── Filter strip (#184) ────────────────────────────────────────────────────
   // Search input + belt select forward to the same paginated athletes
   // endpoint that backs the page. Filter changes re-trigger loadDay()

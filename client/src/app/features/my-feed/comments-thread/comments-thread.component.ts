@@ -17,6 +17,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { CommunityService, PostComment } from '../../../core/services/community.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserFlairComponent } from '../../../shared/components/user-flair/user-flair.component';
+import { MentionTextComponent } from '../../../shared/components/mention-text/mention-text.component';
 import { RelativeTimePipe } from '../../../shared/pipes/relative-time.pipe';
 
 /**
@@ -49,6 +50,7 @@ import { RelativeTimePipe } from '../../../shared/pipes/relative-time.pipe';
     ButtonModule,
     TextareaModule,
     UserFlairComponent,
+    MentionTextComponent,
     RelativeTimePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

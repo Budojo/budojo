@@ -26,7 +26,8 @@
     "athletes": "Atleti",
     "attendance": "Presenze",
     "community": "Community",
-    "profile": "Profilo",
+    "myProfile": "Il mio profilo",
+    "settings": "Impostazioni",
     "whatsNew": "Novità",
     "support": "Contatta il supporto",
     "signOut": "Esci",
@@ -244,7 +245,8 @@
       "signOut": "Esci"
     },
     "nav": {
-      "profile": "Profilo",
+      "myProfile": "Il mio profilo",
+      "settings": "Impostazioni",
       "feed": "Feed",
       "academy": "Academy",
       "attendance": "Presenze",
@@ -393,7 +395,13 @@
     "nameMaxlength": "Massimo 255 caratteri.",
     "trainingDaysLabel": "Giorni di allenamento",
     "optional": "(opzionale)",
-    "submit": "Crea academy"
+    "submit": "Crea academy",
+    "trainHere": {
+      "label": "Ti alleni anche tu in questa palestra?",
+      "body": "Se sì: comparirai nella lista atleti con un chip Owner, i tuoi post nella community mostreranno la cintura, potrai segnare la tua presenza, e non sarai fatturato (escluso dalle pagine pagamenti). Puoi cambiare scelta più tardi da Profilo → Allena qui.",
+      "yes": "Sì, iscrivimi",
+      "no": "Non ora"
+    }
   },
   "legal": {
     "chrome": {
@@ -823,6 +831,11 @@
     "notifications": {
       "title": "Notifiche",
       "subtitle": "Scegli quali notifiche vuoi ricevere. Ogni riga indica come viene consegnata (digest email, inbox, …).",
+      "groups": {
+        "owner": "Avvisi maestro",
+        "athlete": "Avvisi personali",
+        "community": "Community"
+      },
       "medicalCertReminders": {
         "label": "Promemoria scadenza certificato medico",
         "description": "Digest giornaliero alle 09:00 con gli atleti il cui certificato medico scade tra 30, 7 o 0 giorni."
@@ -1390,6 +1403,8 @@
     "daily": {
       "eyebrow": "Presenze",
       "title": "Check-in di oggi",
+      "titleForDate": "Check-in · {{date}}",
+      "noClassToday": "Oggi nessun allenamento — stai vedendo la sessione di {{date}}.",
       "searchPlaceholder": "Cerca per nome",
       "beltPlaceholder": "Cintura",
       "table": {
@@ -1905,6 +1920,20 @@
         "master_6": "Master 6",
         "master_7": "Master 7"
       }
+    }
+  },
+  "publicProfile": {
+    "joinedAt": "Iscritto a {{ date }}",
+    "promotions": {
+      "title": "Promozioni",
+      "empty": "Nessuna promozione registrata.",
+      "beltChange": "Promosso da {{ from }} a {{ to }}",
+      "stripeChange": "Gradi: {{ from }} → {{ to }}"
+    },
+    "notFound": {
+      "title": "Profilo non disponibile",
+      "body": "Non troviamo questo profilo, oppure non è visibile a te.",
+      "back": "Torna agli atleti"
     }
   }
 }

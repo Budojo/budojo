@@ -71,6 +71,8 @@ class CommunityPostResource extends JsonResource
             ],
             'comments_count' => $post->comments_count ?? 0,
             'rsvps_count' => $post->rsvps_count ?? 0,
+            'going_rsvps_count' => $post->going_rsvps_count ?? 0,
+            'maybe_rsvps_count' => $post->maybe_rsvps_count ?? 0,
             // Caller's own reaction on this post (#617, PR-C2). The
             // Action eager-loads the constrained `reactions` relation
             // limited to the authenticated user, so the first row (if
