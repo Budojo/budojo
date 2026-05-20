@@ -21,26 +21,16 @@
   -->
   <app-onboarding-checklist />
 
-  <header class="athletes-page__header">
-    <div class="athletes-page__title-area">
-      <h1 class="athletes-page__title">{{ 'athletes.list.title' | translate }}</h1>
-      @if (!loading() && totalRecords() > 0) {
-        <span class="athletes-page__count">
-          {{
-            (totalRecords() === 1 ? 'athletes.list.totalCountOne' : 'athletes.list.totalCountOther')
-              | translate: { count: totalRecords() }
-          }}
-        </span>
-      }
-    </div>
+  <app-page-header [title]="'athletes.list.title' | translate" [countLabel]="totalCountLabel()">
     <p-button
+      pageHeaderCta
       [label]="'athletes.list.addButton' | translate"
       icon="pi pi-plus"
       size="small"
       (onClick)="goToNew()"
       data-cy="add-athlete-btn"
     />
-  </header>
+  </app-page-header>
 
   <div class="athletes-page__widgets">
     <!-- Document health signal — fetches on init, links to the full cross-athlete

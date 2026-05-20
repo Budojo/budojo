@@ -1,8 +1,8 @@
 <div class="feed">
-  <header class="feed__header">
-    <h1 class="feed__title">{{ 'athletePortal.feed.title' | translate }}</h1>
+  <app-page-header [title]="'athletePortal.feed.title' | translate">
     @if (canPostEvents()) {
       <p-button
+        pageHeaderCta
         [label]="'community.composer.openButton' | translate"
         icon="pi pi-plus"
         size="small"
@@ -10,7 +10,7 @@
         data-cy="my-feed-open-composer"
       />
     }
-  </header>
+  </app-page-header>
 
   @if (canPostEvents()) {
     <app-event-composer

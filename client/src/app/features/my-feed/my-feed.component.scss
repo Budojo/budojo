@@ -11,21 +11,6 @@
   // mobile between the header CTA cluster and the first card.
   gap: 1rem;
 
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  &__title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--p-text-color);
-  }
-
   &__list {
     list-style: none;
     margin: 0;
