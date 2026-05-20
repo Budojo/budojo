@@ -28,6 +28,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.25.1',
+    date: '2026-05-20',
+    headline:
+      'Patch on top of v2.25.0. Re-enabling browser notifications after a deploy could leave a stale row in the device list; tapping × on it surfaced "Impossibile revocare il dispositivo" because the server had already cleaned the row up. Revoke is now idempotent on 404 and the panel reconciles in the background after a subscribe.',
+    sections: [
+      {
+        heading: '🛠️ Browser notifications — revoke no longer trips on a stale row',
+        bullets: [
+          'After every deploy that swaps the Service Worker, FCM / Mozilla / Apple rotate the push endpoint. The server already cleans up dead rows on the next outbound push (410 GONE), but the SPA could still carry the old row until a refresh.',
+          'Revoke is now idempotent on 404 — "already gone" counts as success: row leaves the list, success toast, no error.',
+          'Re-enabling notifications now reconciles the device list against the server in the background (no loading flash), so the panel matches actual state.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.25.0',
     date: '2026-05-20',
     headline:
