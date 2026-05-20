@@ -540,13 +540,7 @@ export class MyFeedComponent implements OnInit {
     return subject;
   }
 
-  /**
-   * Predict the post-toggle counts before the server roundtrip lands (#859).
-   * Three transitions: no-vote→vote, same-vote→clear (untoggle), other-vote
-   * →switch. The latter keeps the total flat but shifts the per-response
-   * counts between buckets, which is the case the original `rsvps_count`-
-   * only handler couldn't model.
-   */
+  // other-vote→switch keeps the total flat but shifts counts between buckets — the case a single rsvps_count couldn't model.
   private predictNextRsvp(
     post: CommunityPost,
     response: RsvpResponse,
