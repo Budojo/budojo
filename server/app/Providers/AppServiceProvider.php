@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Academy;
+use App\Models\Athlete;
+use App\Models\AthletePayment;
+use App\Models\Document;
+use App\Observers\Audit\AcademyAuditObserver;
+use App\Observers\Audit\AthleteAuditObserver;
+use App\Observers\Audit\AthletePaymentAuditObserver;
+use App\Observers\Audit\DocumentAuditObserver;
 use App\Services\PwnedPasswordsClient;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -150,6 +158,16 @@ class AppServiceProvider extends ServiceProvider
         // EmailVerificationController::clientUrl()). The token + email
         // are passed as query string params so the SPA can pre-fill
         // the form.
+        // Audit-log observers (#429). Registered here, alongside the
+        // domain observers wired via #[ObservedBy(...)], so the audit
+        // hooks fire on every lifecycle event across the academy
+        // without coupling to the unrelated business logic in the
+        // existing AthleteObserver / AcademyObserver.
+        Athlete::observe(AthleteAuditObserver::class);
+        AthletePayment::observe(AthletePaymentAuditObserver::class);
+        Document::observe(DocumentAuditObserver::class);
+        Academy::observe(AcademyAuditObserver::class);
+
         ResetPassword::createUrlUsing(function (mixed $user, string $token): string {
             $clientUrl = config('app.client_url');
             $base = \is_string($clientUrl) ? rtrim($clientUrl, '/') : 'http://localhost:4200';
