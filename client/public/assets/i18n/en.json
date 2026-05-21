@@ -1272,6 +1272,22 @@
       "breakdown": "{{expiring}} expiring · {{missing}} no certificate"
     }
   },
+  "attendanceSummary": {
+    "title": "Attendance rate",
+    "attendedOfExpected": "{{attended}} of {{expected}} realized lessons",
+    "legend": {
+      "attended": "Attended",
+      "missed": "Missed"
+    },
+    "empty": {
+      "title": "No lessons in this window yet",
+      "hint": "Your academy hasn't recorded any training session in the selected range."
+    },
+    "error": {
+      "title": "Couldn't load the chart",
+      "hint": "Refresh the page to try again."
+    }
+  },
   "weekdays": {
     "groupAria": "Training days of the week",
     "mon": "Mon",

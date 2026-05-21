@@ -1,4 +1,10 @@
 <section class="attendance-history" data-cy="attendance-history">
+  @if (athleteIdForChart(); as id) {
+    <!-- 90-day attendance trend chart (#894). Sits above the existing
+         monthly heatmap so the user gets the high-level "% di presenze"
+         read before drilling into the calendar. -->
+    <app-attendance-summary-chart [athleteId]="id" />
+  }
   <header class="attendance-history__header">
     <div class="attendance-history__heading">
       <p class="attendance-history__eyebrow">

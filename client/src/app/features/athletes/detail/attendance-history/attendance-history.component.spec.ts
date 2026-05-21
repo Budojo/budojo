@@ -43,6 +43,30 @@ function makeRecord(overrides: Partial<AttendanceRecord> = {}): AttendanceRecord
   };
 }
 
+/**
+ * Drain any pending `GET /athletes/:id/attendance/summary` requests
+ * fired by the embedded `<app-attendance-summary-chart>` (#894). These
+ * specs cover the heatmap/knob surfaces; the chart's network is owned
+ * by its own spec. Without this drain, `httpMock.verify()` flags the
+ * orphan request as a test leak.
+ */
+function flushSummary(httpMock: HttpTestingController): void {
+  const summaryReqs = httpMock.match((r) => r.url.endsWith('/attendance/summary'));
+  for (const r of summaryReqs) {
+    r.flush({
+      data: {
+        range_days: 90,
+        range_start: '2026-02-20',
+        range_end: '2026-05-20',
+        attended_count: 0,
+        expected_count: 0,
+        rate: null,
+        series: [],
+      },
+    });
+  }
+}
+
 function setupTestBed(): HttpTestingController {
   const parentParamMap = convertToParamMap({ id: String(ATHLETE_ID) });
   TestBed.configureTestingModule({
@@ -84,6 +108,7 @@ describe('AttendanceHistoryComponent', () => {
 
     expect(fixture.componentInstance['attendedCount']()).toBe(1);
     expect(fixture.componentInstance['attendedDates']().has('2026-04-10')).toBe(true);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -123,6 +148,7 @@ describe('AttendanceHistoryComponent', () => {
     expect(fixture.componentInstance['attendedCount']()).toBe(5);
     expect(fixture.componentInstance['scheduledCount']()).toBe(11);
     expect(fixture.componentInstance['ratePercent']()).toBe(45); // 5/11 = 0.4545 -> 45
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -150,6 +176,7 @@ describe('AttendanceHistoryComponent', () => {
     expect(fixture.componentInstance['scheduledCount']()).toBeNull();
     expect(fixture.componentInstance['ratePercent']()).toBeNull();
     expect(fixture.componentInstance['progressBarWidth']()).toBeNull();
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -174,6 +201,7 @@ describe('AttendanceHistoryComponent', () => {
     httpMock
       .expectOne(`/api/v1/athletes/${ATHLETE_ID}/attendance?from=2026-04-01&to=2026-04-30`)
       .flush({ data: [] });
+    flushSummary(httpMock);
     httpMock.verify();
 
     // Step the visible month FORWARD past today — now scheduledCount = 0.
@@ -223,6 +251,7 @@ describe('AttendanceHistoryComponent', () => {
     expect(aprilFourth).not.toBeNull();
     expect(aprilFourth!.classList.contains('attendance-history__cell--training')).toBe(false);
 
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -250,6 +279,7 @@ describe('AttendanceHistoryComponent', () => {
       '.attendance-history__cell--training',
     ) as NodeListOf<HTMLElement>;
     expect(trainingCells.length).toBe(0);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -290,6 +320,7 @@ describe('AttendanceHistoryComponent', () => {
     expect(component.ratePercent()).toBe(150);
     // aria-valuenow stays within [0, 100] so it matches aria-valuemax.
     expect(component.ariaValueNow()).toBe(100);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -327,6 +358,7 @@ describe('AttendanceHistoryComponent', () => {
     // The visible bar is clamped — but the percentage label still shows the
     // literal 150% so the instructor can see the off-schedule signal.
     expect(fixture.componentInstance['progressBarWidth']()).toBe('100%');
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -381,6 +413,7 @@ describe('AttendanceHistoryComponent', () => {
     const detailText = (detail as HTMLElement).textContent?.trim() ?? '';
     expect(detailText).toContain('6');
     expect(detailText).toContain('4');
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -410,6 +443,7 @@ describe('AttendanceHistoryComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="attendance-rate-knob"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-cy="attendance-rate-pct"]')).toBeNull();
     expect(fixture.componentInstance['ratePercent']()).toBeNull();
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -431,6 +465,7 @@ describe('AttendanceHistoryComponent', () => {
       .flush({ data: [makeRecord({ attended_on: '2026-03-12' })] });
 
     expect(fixture.componentInstance['attendedDates']().has('2026-03-12')).toBe(true);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -452,6 +487,7 @@ describe('AttendanceHistoryComponent', () => {
       .flush({ data: [] });
 
     expect(fixture.componentInstance['visible']()).toEqual({ year: 2026, month: 12 });
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -468,6 +504,7 @@ describe('AttendanceHistoryComponent', () => {
       .flush({ data: [] });
 
     expect(fixture.componentInstance['canGoPrev']()).toBe(false);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -484,6 +521,7 @@ describe('AttendanceHistoryComponent', () => {
       .flush({ data: [] });
 
     expect(fixture.componentInstance['canGoPrev']()).toBe(true);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -498,6 +536,7 @@ describe('AttendanceHistoryComponent', () => {
       .flush({ data: [] });
 
     expect(fixture.componentInstance['canGoNext']()).toBe(false);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -518,6 +557,7 @@ describe('AttendanceHistoryComponent', () => {
       .flush({ data: [] });
 
     expect(fixture.componentInstance['canGoNext']()).toBe(true);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -535,6 +575,7 @@ describe('AttendanceHistoryComponent', () => {
 
     fixture.componentInstance.openNotesFor(new MouseEvent('click'), '2026-04-10');
     expect(fixture.componentInstance['activeNotes']()).toBe('Open mat — rolled with Lucia');
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -550,6 +591,7 @@ describe('AttendanceHistoryComponent', () => {
 
     fixture.componentInstance.openNotesFor(new MouseEvent('click'), '2026-04-10');
     expect(fixture.componentInstance['activeNotes']()).toBeNull();
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -570,6 +612,7 @@ describe('AttendanceHistoryComponent', () => {
 
     expect(fixture.componentInstance['notedDates']().has('2026-04-10')).toBe(true);
     expect(fixture.componentInstance['notedDates']().has('2026-04-12')).toBe(false);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -603,6 +646,7 @@ describe('AttendanceHistoryComponent', () => {
 
     expect(fixture.componentInstance['visible']()).toEqual({ year: 2026, month: 1 });
     expect(fixture.componentInstance['canGoPrev']()).toBe(false);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -618,6 +662,7 @@ describe('AttendanceHistoryComponent', () => {
 
     expect(fixture.componentInstance['athlete']()?.id).toBe(ATHLETE_ID);
     expect(fixture.componentInstance['records']()).toEqual([]);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 
@@ -652,6 +697,7 @@ describe('AttendanceHistoryComponent', () => {
     // Stale March response must NOT overwrite the February state.
     expect(fixture.componentInstance['records']().some((r) => r.id === 99)).toBe(true);
     expect(fixture.componentInstance['records']().some((r) => r.id === 88)).toBe(false);
+    flushSummary(httpMock);
     httpMock.verify();
   });
 });
