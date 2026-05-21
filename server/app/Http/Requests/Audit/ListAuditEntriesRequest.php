@@ -35,6 +35,7 @@ class ListAuditEntriesRequest extends FormRequest
             'subject_type' => ['nullable', 'string', 'max:120'],
             'subject_id' => ['nullable', 'integer'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ];
     }
 

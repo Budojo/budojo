@@ -9,6 +9,7 @@ use App\Models\AthletePayment;
 use App\Support\Audit\PiiRedactor;
 use App\Support\Audit\ResolvesAuditActor;
 
+// Bulk callers must pre-load `athlete.academy` to avoid N×2 queries per event.
 class AthletePaymentAuditObserver
 {
     use ResolvesAuditActor;
