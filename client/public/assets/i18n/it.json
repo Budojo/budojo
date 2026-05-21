@@ -25,6 +25,7 @@
     "academy": "Accademia",
     "athletes": "Atleti",
     "attendance": "Presenze",
+    "activity": "Attività",
     "community": "Community",
     "myProfile": "Il mio profilo",
     "settings": "Impostazioni",
@@ -1287,6 +1288,20 @@
       "title": "Impossibile caricare il grafico",
       "hint": "Aggiorna la pagina per riprovare."
     }
+  },
+  "audit": {
+    "title": "Attività",
+    "subtitle": "Ogni azione registrata nell'accademia — chi ha fatto cosa, e quando.",
+    "filters": {
+      "action": "Azione",
+      "actionPlaceholder": "es. athlete.deleted",
+      "from": "Dal",
+      "to": "Al",
+      "apply": "Applica",
+      "reset": "Reimposta"
+    },
+    "emptyBody": "Nessuna attività registrata in questo periodo.",
+    "errorBody": "Impossibile caricare il registro attività. Aggiorna la pagina per riprovare."
   },
   "weekdays": {
     "groupAria": "Giorni di allenamento della settimana",

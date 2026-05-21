@@ -134,6 +134,16 @@
         <span>{{ 'nav.stats' | translate }}</span>
       </a>
       <a
+        routerLink="academy/activity"
+        routerLinkActive="sidebar__nav-item--active"
+        class="sidebar__nav-item"
+        (click)="closeSidebar()"
+        data-cy="nav-audit-activity"
+      >
+        <i class="pi pi-history" aria-hidden="true"></i>
+        <span>{{ 'nav.activity' | translate }}</span>
+      </a>
+      <a
         routerLink="community"
         routerLinkActive="sidebar__nav-item--active"
         class="sidebar__nav-item"
