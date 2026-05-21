@@ -20,7 +20,7 @@ describe('NotificationPreferencesService (#416)', () => {
 
   afterEach(() => http.verify());
 
-  it('GETs /me/notification-preferences and unwraps the snapshot', () => {
+  it('GETs /api/v1/me/notification-preferences and unwraps the snapshot', () => {
     let result: NotificationPreferences | null = null;
     svc.show().subscribe((p) => (result = p));
 
