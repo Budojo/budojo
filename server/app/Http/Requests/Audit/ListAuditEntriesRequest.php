@@ -38,10 +38,7 @@ class ListAuditEntriesRequest extends FormRequest
         ];
     }
 
-    // ── Typed accessors ────────────────────────────────────────────
-    // Keeps the controller thin (server CLAUDE.md § controller discipline)
-    // — receive → delegate. The narrowing lives here once, not at every
-    // call site.
+    // Typed accessors: narrows validated() once so the controller stays receive → delegate.
 
     public function actionFilter(): ?string
     {

@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { AuditEntriesPage, AuditService } from '../../core/services/audit.service';
 import { AuditActivityComponent } from './audit-activity.component';
@@ -14,7 +14,7 @@ function emptyPage(overrides: Partial<AuditEntriesPage['meta']> = {}): AuditEntr
   };
 }
 
-function setup(): {
+function setup(listReturn: Observable<AuditEntriesPage> = of(emptyPage())): {
   fixture: ComponentFixture<AuditActivityComponent>;
   svc: AuditService;
 } {
@@ -28,7 +28,7 @@ function setup(): {
     ],
   });
   const svc = TestBed.inject(AuditService);
-  vi.spyOn(svc, 'list').mockReturnValue(of(emptyPage()));
+  vi.spyOn(svc, 'list').mockReturnValue(listReturn);
   const fixture = TestBed.createComponent(AuditActivityComponent);
   return { fixture, svc };
 }
@@ -54,18 +54,7 @@ describe('AuditActivityComponent (#429 part 3)', () => {
   });
 
   it('renders the error block when the service errors', () => {
-    TestBed.configureTestingModule({
-      imports: [AuditActivityComponent],
-      providers: [
-        provideAnimationsAsync(),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        ...provideI18nTesting(),
-      ],
-    });
-    const svc = TestBed.inject(AuditService);
-    vi.spyOn(svc, 'list').mockReturnValue(throwError(() => new Error('boom')));
-    const fixture = TestBed.createComponent(AuditActivityComponent);
+    const { fixture } = setup(throwError(() => new Error('boom')));
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-cy="audit-error"]')).not.toBeNull();
   });
