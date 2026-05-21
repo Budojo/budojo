@@ -17,6 +17,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { AuthService } from '../../core/services/auth.service';
 import { SupportService, SupportTicketCategory } from '../../core/services/support.service';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /**
  * Single contact / support form (#423 + post-v1.17 consolidation that
@@ -56,6 +57,7 @@ import { SupportService, SupportTicketCategory } from '../../core/services/suppo
     TranslatePipe,
     ButtonModule,
     InputTextModule,
+    PageHeaderComponent,
     SelectModule,
     TextareaModule,
     ToastModule,

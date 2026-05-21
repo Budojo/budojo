@@ -12,25 +12,7 @@
   gap: 2rem;
   padding-block: 1rem;
 
-  &__header {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  &__title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-  }
-
-  &__subtitle {
-    margin: 0;
-    font-size: 0.9375rem;
-    color: var(--p-text-color-secondary);
-    line-height: 1.5;
-  }
-
+  // __header / __title / __subtitle now live in <app-page-header>.
   &__form {
     display: flex;
     flex-direction: column;
