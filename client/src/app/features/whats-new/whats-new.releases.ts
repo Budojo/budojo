@@ -28,6 +28,29 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.26.1',
+    date: '2026-05-21',
+    headline:
+      "Patch on v2.26.0. Smaller register / reset-password / change-password pages — the password-strength meter is now dynamic-imported on first keystroke, so users who never focus a password field don't download the ~700 kB zxcvbn-ts dictionaries. Plus the last two test-coverage gaps from the #588 umbrella closed.",
+    sections: [
+      {
+        heading: '⚡ Smaller register / reset / change-password pages',
+        bullets: [
+          'zxcvbn-ts (the password strength analyser) used to ship eagerly on every page mount; now it loads on the first non-empty keystroke and caches after that.',
+          'Empty-input branch (any password field the user never focused) pays zero KB.',
+          'No visible UX change for active typers — the meter still appears ~10 ms after the first character.',
+        ],
+      },
+      {
+        heading: '🧪 Internal: last two #588 test-coverage gaps closed',
+        bullets: [
+          'OnboardingChecklistComponent: visibility gate, step CTA, confirm-popup dismiss path.',
+          'ProfileApiTokensComponent: list/empty/error branches, create-then-plaintext flow, confirm-revoke flow.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.26.0',
     date: '2026-05-21',
     headline:
