@@ -481,6 +481,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('payments/monthly', [StatsController::class, 'paymentsMonthly']);
             Route::get('athletes/age-bands', [StatsController::class, 'ageBands']);
         });
+
+        // Audit log (#429). Owner-only paginated read; writes are observer-driven.
+        Route::get('/audit-entries', [\App\Http\Controllers\Audit\AuditEntriesController::class, 'index']);
     });
 
     // Community (M9). Owners + athletes share the same /api/v1/community

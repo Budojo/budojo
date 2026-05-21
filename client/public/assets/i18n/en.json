@@ -25,6 +25,7 @@
     "academy": "Academy",
     "athletes": "Athletes",
     "attendance": "Attendance",
+    "activity": "Activity",
     "community": "Community",
     "myProfile": "My profile",
     "settings": "Settings",
@@ -1287,6 +1288,20 @@
       "title": "Couldn't load the chart",
       "hint": "Refresh the page to try again."
     }
+  },
+  "audit": {
+    "title": "Activity",
+    "subtitle": "Every recorded action across the academy — who did what, when.",
+    "filters": {
+      "action": "Action",
+      "actionPlaceholder": "e.g. athlete.deleted",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "reset": "Reset"
+    },
+    "emptyBody": "No activity recorded yet in this window.",
+    "errorBody": "We couldn't load the activity log. Refresh the page to try again."
   },
   "weekdays": {
     "groupAria": "Training days of the week",
