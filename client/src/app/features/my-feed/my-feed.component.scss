@@ -220,6 +220,21 @@
   // chip surface seamlessly. The chip is NOT itself interactive — the
   // buttons inside are. This is the v2.18.3 refactor (#785 Copilot)
   // that removed the invalid nested-button HTML from v2.18.2.
+  //
+  // Edge-clipping defence (#904): some Android webviews (EMUI/MagicOS,
+  // observed on a Honor 200) don't clip the right border-radius
+  // correctly when an inline-flex parent uses `overflow: hidden` with
+  // stretched children — the count child's right edge punches out the
+  // pill on the right side. The fix is belt-and-suspenders:
+  //   1. `overflow: clip` — newer clip semantics that don't create a
+  //      formatting context and clip more aggressively on legacy
+  //      webviews. Falls back to `hidden` where unsupported.
+  //   2. `isolation: isolate` — locks the chip into its own stacking
+  //      context so the children paint into it cleanly.
+  //   3. Explicit `border-radius: inherit` on the children — clips
+  //      each button's own corners at the source, independent of the
+  //      parent overflow setting (the actual mechanism that fixes the
+  //      reported Honor visual bug).
   &__react-chip {
     display: inline-flex;
     align-items: stretch;
@@ -229,6 +244,8 @@
     color: var(--p-text-color);
     font-size: 0.875rem;
     overflow: hidden;
+    overflow: clip;
+    isolation: isolate;
     min-height: 36px;
     transition:
       background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
@@ -264,6 +281,23 @@
       outline: 2px solid var(--p-primary-color);
       outline-offset: -2px;
     }
+  }
+
+  // Honor 200 / EMUI webview fix (#904, refined per #909 review).
+  // ONLY the outer corners inherit the chip radius — rounding all four
+  // corners on each child would leave transparent quarter-circle
+  // cutouts at the inner seam (page colour bleeds through, breaking
+  // the "single pill" read). Outer corners get the 999px from the
+  // parent; inner corners stay square so the toggle's right edge
+  // meets the count's left edge flush.
+  &__react-toggle {
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+  }
+
+  &__react-count {
+    border-top-right-radius: inherit;
+    border-bottom-right-radius: inherit;
   }
 
   &__react-label {
