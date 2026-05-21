@@ -7,6 +7,7 @@ use App\Models\Athlete;
 use App\Models\AuditEntry;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 beforeEach(function (): void {
     Carbon::setTestNow(Carbon::parse('2026-05-21 09:00:00'));
@@ -82,12 +83,19 @@ it('truncates user-agent to 512 characters at write time', function (): void {
 it('swallows write failures and logs them as warning (no exception bubbles)', function (): void {
     Log::shouldReceive('warning')->once();
 
-    // Force a failure by passing an invalid subject_type that won't
-    // fit in the 120-char column.
-    $entry = app(WriteAuditEntry::class)->execute(
-        action: 'athlete.created',
-        subjectType: str_repeat('X', 1000),
-    );
+    // Force a write failure by removing the underlying table. The
+    // `\Throwable` catch in WriteAuditEntry must convert the
+    // QueryException into a `null` return + Log::warning, so the
+    // user request never fails because audit logging failed.
+    //
+    // RefreshDatabase rolls the database back at the end of the
+    // test, so the table reappears for sibling specs. This path is
+    // DB-engine agnostic (works on SQLite + MySQL identically),
+    // unlike a VARCHAR-length overflow which SQLite silently
+    // accepts.
+    Schema::drop('audit_entries');
+
+    $entry = app(WriteAuditEntry::class)->execute(action: 'athlete.created');
 
     expect($entry)->toBeNull();
 });
