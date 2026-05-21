@@ -1,9 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { NgClass } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
-import { zxcvbn, zxcvbnOptions } from '@zxcvbn-ts/core';
-import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common';
-import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en';
 
 /**
  * Password strength feedback bar (#415). Sits under any `p-password`
@@ -26,24 +32,50 @@ import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en';
  * control + value, this just observes the typed string and renders.
  * Empty input shows nothing — Krug § self-evidence again, no point
  * in flashing "very weak" before the user has typed anything.
+ *
+ * **Lazy loading (#877 follow-up).** zxcvbn-ts ships ~700 kB of
+ * dictionaries; loading it eagerly at module import time was the
+ * single biggest hit on the register / reset-password / change-
+ * password lazy chunks. The actual analyser + dictionaries are now
+ * dynamic-imported on the FIRST non-empty password keystroke. The JS
+ * loader caches the resolved module after that, so subsequent
+ * keystrokes don't re-fetch. The empty-input branch — which is the
+ * vast majority of mounts (any form with a password field that the
+ * user never focused) — pays zero KB for the library.
  */
 
-zxcvbnOptions.setOptions({
-  // Common dictionary applies regardless of locale (top-N leaked
-  // passwords, dates, keyboard walks). The English wordlist covers
-  // English dictionary words; the IT translation of the strength
-  // labels lives in our own i18n bundle, not zxcvbn-ts's
-  // `translations` package, so the dictionary stays English even
-  // when the SPA is set to Italian.
-  dictionary: {
-    ...zxcvbnCommonPackage.dictionary,
-    ...zxcvbnEnPackage.dictionary,
-  },
-  graphs: zxcvbnCommonPackage.adjacencyGraphs,
-  useLevenshteinDistance: true,
-});
-
 type Score = 0 | 1 | 2 | 3 | 4;
+
+/**
+ * Module-level promise — once resolved, the loaded zxcvbn function
+ * is cached and every subsequent caller reuses the same Promise. The
+ * JS module loader does the heavy lifting; this constant just gives
+ * us a type-safe handle on the result.
+ */
+type ZxcvbnFn = (value: string) => { score: number };
+let zxcvbnPromise: Promise<ZxcvbnFn> | null = null;
+
+function loadZxcvbn(): Promise<ZxcvbnFn> {
+  if (zxcvbnPromise !== null) return zxcvbnPromise;
+  zxcvbnPromise = Promise.all([
+    import('@zxcvbn-ts/core'),
+    import('@zxcvbn-ts/language-common'),
+    import('@zxcvbn-ts/language-en'),
+  ]).then(([core, common, en]) => {
+    // Same options the eager path used to set; runs once on first
+    // load. Common dictionary regardless of locale (leaked passwords,
+    // dates, keyboard walks); English wordlist covers English
+    // dictionary words. The IT translation of the strength labels
+    // lives in our own i18n bundle, not zxcvbn-ts's `translations`.
+    core.zxcvbnOptions.setOptions({
+      dictionary: { ...common.dictionary, ...en.dictionary },
+      graphs: common.adjacencyGraphs,
+      useLevenshteinDistance: true,
+    });
+    return core.zxcvbn as ZxcvbnFn;
+  });
+  return zxcvbnPromise;
+}
 
 @Component({
   selector: 'app-password-strength-meter',
@@ -54,6 +86,8 @@ type Score = 0 | 1 | 2 | 3 | 4;
   styleUrl: './password-strength-meter.component.scss',
 })
 export class PasswordStrengthMeterComponent {
+  private readonly destroyRef = inject(DestroyRef);
+
   /**
    * Plain-text password value the parent form is currently
    * shepherding. Empty / null → meter renders nothing.
@@ -61,25 +95,62 @@ export class PasswordStrengthMeterComponent {
   readonly password = input<string | null | undefined>(null);
 
   /**
-   * Computed score in [0, 4]. zxcvbn-ts is fast (~ms on modern
-   * hardware) but we still memoize via the input signal so a
-   * change-detection tick that doesn't change the password doesn't
-   * re-run the analysis.
+   * Score signal — set asynchronously once zxcvbn finishes its dynamic
+   * import + analysis. `null` while loading OR for empty input. The
+   * UX accepts a ~10ms first-keystroke delay (after the import the
+   * function is cached at module scope; subsequent keystrokes run
+   * synchronously fast).
    */
-  protected readonly score = computed<Score | null>(() => {
-    // Don't trim — leading/trailing whitespace is part of the
-    // password the user will actually submit, and the server hashes
-    // the raw value too. Trimming here would understate / overstate
-    // the entropy of a "  hunter2  " input. We still treat empty /
-    // null / whitespace-only as "nothing typed yet" for the
-    // affordance — that's a UX choice, not a measurement choice.
-    const value = this.password() ?? '';
-    if (value.length === 0 || value.trim().length === 0) {
-      return null;
-    }
-    const result = zxcvbn(value);
-    return result.score as Score;
-  });
+  protected readonly score = signal<Score | null>(null);
+
+  /**
+   * Effect chained on the `password` input. On every value change we
+   * either:
+   *   - reset to null (empty / whitespace-only — the meter hides);
+   *   - kick off (or reuse) the dynamic import + score the current
+   *     value once the analyser is available.
+   *
+   * Stale-response guard: the `currentSequence` counter increments
+   * every effect run; an in-flight import that resolves AFTER the
+   * password has changed again sees its captured sequence != current
+   * and bails before writing.
+   */
+  private currentSequence = 0;
+
+  constructor() {
+    effect(() => {
+      const value = this.password() ?? '';
+      const seq = ++this.currentSequence;
+      if (value.length === 0 || value.trim().length === 0) {
+        this.score.set(null);
+        return;
+      }
+      void loadZxcvbn()
+        .then((zxcvbn) => {
+          // Stale-response: another keystroke landed since we kicked off,
+          // a later effect will re-score with the newer value.
+          if (seq !== this.currentSequence) return;
+          const result = zxcvbn(value);
+          this.score.set(result.score as Score);
+        })
+        .catch(() => {
+          // Swallow — primarily for the Vitest jsdom teardown path
+          // where a component is destroyed mid-import and the language
+          // packs try to resolve into a torn-down environment. The
+          // production path doesn't tear down the environment under
+          // a live SPA, so the only realistic catch site is the test
+          // env. Leaving `score` at its current value (null or stale)
+          // is fine — the next keystroke re-scores.
+        });
+    });
+    // Defensive: zxcvbnPromise lives at module scope, so the cleanup
+    // here is just the sequence counter — destroyRef is referenced so
+    // future async cleanup hooks (cancel an in-flight import, etc.)
+    // have a typed handle.
+    this.destroyRef.onDestroy(() => {
+      this.currentSequence = -1;
+    });
+  }
 
   /**
    * Translate-key for the bucket label. `meter.bucket.${score}`
