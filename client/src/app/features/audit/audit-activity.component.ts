@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
@@ -25,7 +25,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
-    FormsModule,
+    ReactiveFormsModule,
     TranslatePipe,
     ButtonModule,
     InputTextModule,
@@ -40,6 +40,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 export class AuditActivityComponent {
   private readonly auditService = inject(AuditService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly fb = inject(FormBuilder);
 
   protected readonly entries = signal<readonly AuditEntry[]>([]);
   protected readonly loading = signal<boolean>(true);
@@ -48,10 +49,13 @@ export class AuditActivityComponent {
   protected readonly page = signal<number>(1);
   protected readonly perPage = signal<number>(20);
 
-  // Filter signals — bound to inputs via ngModel.
-  protected readonly actionFilter = signal<string>('');
-  protected readonly fromFilter = signal<string>('');
-  protected readonly toFilter = signal<string>('');
+  // Reactive form (client/CLAUDE.md § "Reactive Forms, not template-
+  // driven, for anything beyond a two-field filter" — three fields here).
+  protected readonly filterForm = this.fb.nonNullable.group({
+    action: '',
+    from: '',
+    to: '',
+  });
 
   protected readonly hasEntries = computed<boolean>(() => this.entries().length > 0);
 
@@ -65,35 +69,34 @@ export class AuditActivityComponent {
   }
 
   protected onFilterReset(): void {
-    this.actionFilter.set('');
-    this.fromFilter.set('');
-    this.toFilter.set('');
+    this.filterForm.reset({ action: '', from: '', to: '' });
     this.page.set(1);
     this.refetch();
   }
 
-  protected onPageChange(event: { page: number }): void {
+  protected onPageChange(event: { page?: number }): void {
     // PrimeNG paginator is 0-indexed; the API is 1-indexed.
-    this.page.set(event.page + 1);
+    this.page.set((event.page ?? 0) + 1);
     this.refetch();
   }
 
   private refetch(): void {
     this.loading.set(true);
     this.errored.set(false);
+    const { action, from, to } = this.filterForm.getRawValue();
     this.auditService
       .list({
-        action: this.actionFilter() || undefined,
-        from: this.fromFilter() || undefined,
-        to: this.toFilter() || undefined,
+        action: action || undefined,
+        from: from || undefined,
+        to: to || undefined,
         page: this.page(),
         per_page: this.perPage(),
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (page) => {
-          this.entries.set(page.data);
-          this.total.set(page.meta.total);
+        next: (response) => {
+          this.entries.set(response.data);
+          this.total.set(response.meta.total);
           this.loading.set(false);
         },
         error: () => {
