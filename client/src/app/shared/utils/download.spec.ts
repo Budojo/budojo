@@ -52,6 +52,7 @@ describe('triggerBrowserDownload', () => {
 
   it('uses the supplied filename verbatim (no sanitisation today)', () => {
     triggerBrowserDownload(new Blob([]), 'with spaces & special-chars (1).pdf');
+    expect(createdAnchor).not.toBeNull();
     expect(createdAnchor!.download).toBe('with spaces & special-chars (1).pdf');
   });
 });

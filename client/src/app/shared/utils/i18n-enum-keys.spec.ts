@@ -8,9 +8,8 @@ describe('i18n enum-key bindings (#357)', () => {
       // pin it as the authoritative key set so an unmapped new belt
       // here trips at compile time (compiler enforces Record<Belt, …>)
       // AND at test time (this assertion).
-      const orderedKeys = BELT_ORDER.map((b) => b);
       const mapKeys = Object.keys(BELT_KEYS) as Belt[];
-      expect(new Set(mapKeys)).toEqual(new Set(orderedKeys));
+      expect(new Set(mapKeys)).toEqual(new Set(BELT_ORDER));
     });
 
     it('the belts.* keys are statically greppable strings (no template interpolation)', () => {
@@ -41,9 +40,8 @@ describe('i18n enum-key bindings (#357)', () => {
 
   describe('STATUS_KEYS', () => {
     it('maps every AthleteStatus case to a `statuses.*` key', () => {
-      const orderedKeys = STATUS_ORDER.map((s) => s);
       const mapKeys = Object.keys(STATUS_KEYS) as AthleteStatus[];
-      expect(new Set(mapKeys)).toEqual(new Set(orderedKeys));
+      expect(new Set(mapKeys)).toEqual(new Set(STATUS_ORDER));
     });
 
     it('the statuses.* keys are statically greppable strings', () => {
