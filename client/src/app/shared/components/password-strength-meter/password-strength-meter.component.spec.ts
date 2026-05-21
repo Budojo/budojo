@@ -39,11 +39,7 @@ async function setup(password: string | null): Promise<{
         const node = fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]');
         expect(node).not.toBeNull();
       },
-      // Generous timeout — the lazy import of zxcvbn-ts + its
-      // dictionaries (~700 KB) is fast locally but CI's self-hosted
-      // runner cold-loads them slower; 2s wasn't enough on a clean
-      // module-cache (CI flake observed on PR #930). 30s caps the
-      // wait at "definitely broken, not just slow".
+      // 30s ceiling: CI's cold module-cache loads zxcvbn-ts dictionaries slower than the previous 2s.
       { timeout: 30_000, interval: 50 },
     );
   } else {
