@@ -7,6 +7,7 @@ import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+import { WebPushService } from '../../../core/services/web-push.service';
 import { ProfileBrowserNotificationsComponent } from './profile-browser-notifications.component';
 
 /**
@@ -520,14 +521,16 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
   });
 
   it('surfaces a warn toast when verifyDelivery resolves silent after enable (#818)', async () => {
-    const { fixture, http } = setup();
+    const { fixture } = setup();
     const messageService = TestBed.inject(MessageService);
     const addSpy = vi.spyOn(messageService, 'add');
-    // Stub the WebPush service so enable() resolves quickly without
-    // touching the real SwPush flow, and verifyDelivery returns 'silent'
-    // to exercise the warn-toast branch.
-    const { WebPushService } = await import('../../../core/services/web-push.service');
-    const svc = TestBed.inject(WebPushService);
+    // Pull the WebPush service via the SAME injection path the component
+    // uses, so spyOn replaces methods on the singleton the component holds.
+    // Earlier `await import + TestBed.inject` shape didn't reliably win
+    // under Angular's Vitest builder on cold-cache CI (#930).
+    const svc = (
+      fixture.componentInstance as unknown as { webPushService: WebPushService }
+    ).webPushService;
     vi.spyOn(svc, 'subscribe').mockResolvedValue({
       id: 99,
       endpoint_host: 'fcm.googleapis.com',
@@ -537,30 +540,20 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
     });
     vi.spyOn(svc, 'verifyDelivery').mockResolvedValue('silent');
     vi.spyOn(svc, 'currentEndpointHash').mockResolvedValue(null);
-    // enable() now reconciles via refresh(true) after subscribe (#899);
-    // stub fetchState() so that second GET resolves synchronously and
-    // doesn't leak past the httpMock.verify() afterEach.
     vi.spyOn(svc, 'fetchState').mockReturnValue(
       of({ devices: [], meta: { vapid_public_key: 'PUB', enabled: true } }),
     );
 
     fixture.detectChanges();
-    http.expectOne('/api/v1/me/push-subscriptions').flush({
-      data: [],
-      meta: { vapid_public_key: 'PUB', enabled: true },
-    });
-    fixture.detectChanges();
     await fixture.whenStable();
 
-    (fixture.componentInstance as unknown as { enable(): Promise<void> })
-      .enable()
-      .then(async () => {
-        await fixture.whenStable();
-      });
-    await fixture.whenStable();
-    // Second tick — the verifyAfterEnable promise chain resolves on a
-    // later microtask than the success toast.
-    await fixture.whenStable();
+    await (fixture.componentInstance as unknown as { enable(): Promise<void> }).enable();
+    // verifyAfterEnable() is fire-and-forget — flush a few microtasks so
+    // the warn toast lands before the assertion (cold-cache runners need
+    // more than one whenStable tick).
+    for (let i = 0; i < 5; i++) {
+      await fixture.whenStable();
+    }
 
     expect(addSpy).toHaveBeenCalledWith(
       expect.objectContaining({
