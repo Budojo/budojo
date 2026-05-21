@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
+import { SidebarFooterMetaComponent } from '../../shared/components/sidebar-footer-meta/sidebar-footer-meta.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 
 /**
@@ -24,6 +25,7 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
     RouterLink,
     RouterLinkActive,
     BrandGlyphComponent,
+    SidebarFooterMetaComponent,
     UserAvatarComponent,
     TranslatePipe,
   ],
