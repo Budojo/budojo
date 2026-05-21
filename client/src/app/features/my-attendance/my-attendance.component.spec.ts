@@ -70,7 +70,26 @@ describe('MyAttendanceComponent (M7 PR-D slice 3)', () => {
     });
     fixture.detectChanges();
 
-    expect(el.querySelectorAll('[data-cy^="attendance-"]')).toHaveLength(2);
+    // Scope the row count to the list so the `<app-attendance-summary-chart>`
+    // children (which also start with `attendance-...`) don't bleed in.
+    expect(
+      el.querySelectorAll('[data-cy="my-attendance-list"] [data-cy^="attendance-"]'),
+    ).toHaveLength(2);
+    // The chart fires its own GET — drain so afterEach `http.verify()`
+    // stays clean. Payload doesn't matter for this list-focused spec.
+    http
+      .expectOne((r) => r.url.endsWith('/attendance/summary'))
+      .flush({
+        data: {
+          range_days: 90,
+          range_start: '2026-02-20',
+          range_end: '2026-05-20',
+          attended_count: 0,
+          expected_count: 0,
+          rate: null,
+          series: [],
+        },
+      });
     expect(
       el.querySelector('[data-cy="attendance-2"] .my-attendance__notes')?.textContent,
     ).toContain('Sparring round');

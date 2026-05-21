@@ -1,0 +1,65 @@
+<section class="attendance-chart" data-cy="attendance-summary-chart">
+  <header class="attendance-chart__header">
+    <h3 class="attendance-chart__title">{{ 'attendanceSummary.title' | translate }}</h3>
+    <p-selectbutton
+      [options]="rangeOptions"
+      [ngModel]="range()"
+      (ngModelChange)="onRangeChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      styleClass="attendance-chart__range"
+      data-cy="attendance-summary-range"
+    />
+  </header>
+
+  @if (loading()) {
+    <div class="attendance-chart__loading" data-cy="attendance-summary-loading">
+      <p-skeleton shape="circle" size="9rem" />
+      <p-skeleton height="2.5rem" styleClass="mt-3" />
+    </div>
+  } @else if (errored()) {
+    <div class="attendance-chart__empty" data-cy="attendance-summary-error">
+      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+      <p class="attendance-chart__empty-title">
+        {{ 'attendanceSummary.error.title' | translate }}
+      </p>
+      <p class="attendance-chart__empty-hint">
+        {{ 'attendanceSummary.error.hint' | translate }}
+      </p>
+    </div>
+  } @else if (!hasData()) {
+    <div class="attendance-chart__empty" data-cy="attendance-summary-empty">
+      <i class="pi pi-calendar" aria-hidden="true"></i>
+      <p class="attendance-chart__empty-title">
+        {{ 'attendanceSummary.empty.title' | translate }}
+      </p>
+      <p class="attendance-chart__empty-hint">
+        {{ 'attendanceSummary.empty.hint' | translate }}
+      </p>
+    </div>
+  } @else {
+    <div class="attendance-chart__body">
+      <!-- Donut + headline rate. The big % sits dead-centre inside the
+           cutout so the read is "75% — 3 of 4 lessons" at a glance. -->
+      <div class="attendance-chart__donut-wrap">
+        <p-chart type="doughnut" [data]="donutData()" [options]="donutOptions" height="180" />
+        <div class="attendance-chart__donut-center" aria-hidden="true">
+          <strong class="attendance-chart__rate" data-cy="attendance-summary-rate">
+            {{ rateLabel() }}
+          </strong>
+        </div>
+      </div>
+
+      <p class="attendance-chart__counts" data-cy="attendance-summary-counts">
+        {{ attendedExpectedLabel() }}
+      </p>
+
+      <!-- Bar timeline — one bar per realized lesson day, colour-encoded
+           by attendance. Keeps a fast "are they trending up or down?"
+           read alongside the bare % number. -->
+      <div class="attendance-chart__timeline">
+        <p-chart type="bar" [data]="timelineData()" [options]="timelineOptions" height="60" />
+      </div>
+    </div>
+  }
+</section>
