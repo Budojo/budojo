@@ -524,13 +524,11 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
     const { fixture } = setup();
     const messageService = TestBed.inject(MessageService);
     const addSpy = vi.spyOn(messageService, 'add');
-    // Pull the WebPush service via the SAME injection path the component
-    // uses, so spyOn replaces methods on the singleton the component holds.
-    // Earlier `await import + TestBed.inject` shape didn't reliably win
-    // under Angular's Vitest builder on cold-cache CI (#930).
-    const svc = (
-      fixture.componentInstance as unknown as { webPushService: WebPushService }
-    ).webPushService;
+    // Static-import the service so TestBed.inject resolves to the same
+    // singleton the component holds; the earlier `await import(...)` shape
+    // could yield a different module reference than the DI token under
+    // Angular's Vitest builder on a cold cache.
+    const svc = TestBed.inject(WebPushService);
     vi.spyOn(svc, 'subscribe').mockResolvedValue({
       id: 99,
       endpoint_host: 'fcm.googleapis.com',
