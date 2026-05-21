@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Contracts\HasAddress;
 use App\Observers\AcademyObserver;
+use App\Observers\Audit\AcademyAuditObserver;
 use Database\Factories\AcademyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -30,7 +31,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
  * @property list<int>|null      $training_days  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
  */
 #[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'training_days'])]
-#[ObservedBy([AcademyObserver::class])]
+#[ObservedBy([AcademyObserver::class, AcademyAuditObserver::class])]
 class Academy extends Model implements HasAddress
 {
     /** @use HasFactory<AcademyFactory> */

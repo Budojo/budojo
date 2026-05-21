@@ -6,16 +6,17 @@ namespace App\Observers\Audit;
 
 use App\Actions\Audit\WriteAuditEntry;
 use App\Models\Athlete;
-use App\Models\User;
 use App\Support\Audit\PiiRedactor;
-use Illuminate\Support\Facades\Auth;
+use App\Support\Audit\ResolvesAuditActor;
 
 // Audit hooks for the Athlete model (#429). Separate from AthleteObserver
 // so the SRP holds: AthleteObserver does community/notification side
-// effects on belt changes; this one writes audit rows. Both register on
-// Athlete::observe() in AppServiceProvider::boot().
+// effects on belt changes; this one writes audit rows. Both wired via
+// #[ObservedBy([...])] on the Athlete model.
 class AthleteAuditObserver
 {
+    use ResolvesAuditActor;
+
     public function __construct(
         private readonly WriteAuditEntry $writeAuditEntry,
         private readonly PiiRedactor $redactor,
@@ -89,12 +90,5 @@ class AthleteAuditObserver
     private function labelFor(Athlete $athlete): string
     {
         return trim($athlete->first_name . ' ' . $athlete->last_name);
-    }
-
-    private function currentActor(): ?User
-    {
-        $user = Auth::user();
-
-        return $user instanceof User ? $user : null;
     }
 }

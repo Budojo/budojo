@@ -6,12 +6,13 @@ namespace App\Observers\Audit;
 
 use App\Actions\Audit\WriteAuditEntry;
 use App\Models\AthletePayment;
-use App\Models\User;
 use App\Support\Audit\PiiRedactor;
-use Illuminate\Support\Facades\Auth;
+use App\Support\Audit\ResolvesAuditActor;
 
 class AthletePaymentAuditObserver
 {
+    use ResolvesAuditActor;
+
     public function __construct(
         private readonly WriteAuditEntry $writeAuditEntry,
         private readonly PiiRedactor $redactor,
@@ -79,12 +80,5 @@ class AthletePaymentAuditObserver
         $period = \sprintf('%04d-%02d', $payment->year, $payment->month);
 
         return $athleteName . ' — ' . $period;
-    }
-
-    private function currentActor(): ?User
-    {
-        $user = Auth::user();
-
-        return $user instanceof User ? $user : null;
     }
 }
