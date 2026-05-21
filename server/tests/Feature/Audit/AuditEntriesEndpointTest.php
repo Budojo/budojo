@@ -155,6 +155,14 @@ it('rejects unsupported per_page values with 422', function (): void {
     $this->getJson('/api/v1/audit-entries?per_page=0')->assertStatus(422);
 });
 
+it('rejects unsupported page values with 422', function (): void {
+    $owner = userWithAcademy();
+    Sanctum::actingAs($owner);
+
+    $this->getJson('/api/v1/audit-entries?page=0')->assertStatus(422);
+    $this->getJson('/api/v1/audit-entries?page=-1')->assertStatus(422);
+});
+
 it('rejects malformed date filters with 422', function (): void {
     $owner = userWithAcademy();
     Sanctum::actingAs($owner);
