@@ -8,6 +8,7 @@ use App\Contracts\HasAddress;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
 use App\Observers\AthleteObserver;
+use App\Observers\Audit\AthleteAuditObserver;
 use Database\Factories\AthleteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -42,7 +43,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Carbon\Carbon|null     $deleted_at
  */
 #[Fillable(['academy_id', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
-#[ObservedBy([AthleteObserver::class])]
+#[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class])]
 class Athlete extends Model implements HasAddress
 {
     /** @use HasFactory<AthleteFactory> */

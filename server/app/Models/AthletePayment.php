@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Observers\Audit\AthletePaymentAuditObserver;
 use Carbon\Carbon;
 use Database\Factories\AthletePaymentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +29,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property Carbon    $updated_at
  */
 #[Fillable(['athlete_id', 'year', 'month', 'amount_cents', 'paid_at'])]
+#[ObservedBy([AthletePaymentAuditObserver::class])]
 class AthletePayment extends Model
 {
     /** @use HasFactory<AthletePaymentFactory> */
