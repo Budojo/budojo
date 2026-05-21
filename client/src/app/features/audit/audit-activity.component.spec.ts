@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { AuditEntriesPage, AuditService } from '../../core/services/audit.service';
 import { AuditActivityComponent } from './audit-activity.component';
@@ -85,6 +85,47 @@ describe('AuditActivityComponent (#429 part 3)', () => {
     cmp.onPageChange({ page: 2 });
 
     expect(svc.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3 }));
+  });
+
+  it('cancels the in-flight request when a new filter-apply lands (switchMap, #933)', () => {
+    // First emission hangs (never completes) — simulates a slow GET.
+    // Second emission resolves immediately with a populated page.
+    // switchMap should drop the first and only the second response
+    // should land in entries() — a naive merge/concat would leak both
+    // and the stale first response would briefly overwrite the second.
+    const slow = new Subject<AuditEntriesPage>();
+    const fast = of(emptyPage({ total: 7 })) satisfies Observable<AuditEntriesPage>;
+    const listSpy = vi.fn<(f: unknown) => Observable<AuditEntriesPage>>();
+    listSpy.mockReturnValueOnce(slow.asObservable()).mockReturnValueOnce(fast);
+
+    TestBed.configureTestingModule({
+      imports: [AuditActivityComponent],
+      providers: [
+        provideAnimationsAsync(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        ...provideI18nTesting(),
+        { provide: AuditService, useValue: { list: listSpy } },
+      ],
+    });
+    const fixture = TestBed.createComponent(AuditActivityComponent);
+    fixture.detectChanges();
+
+    // First request fires from constructor → hangs on `slow`.
+    expect(listSpy).toHaveBeenCalledTimes(1);
+
+    const cmp = fixture.componentInstance as unknown as {
+      total: () => number;
+      onFilterApply(): void;
+    };
+    cmp.onFilterApply(); // second emission — switchMap drops `slow`, subscribes to `fast`
+    expect(listSpy).toHaveBeenCalledTimes(2);
+
+    // Late completion of the cancelled stream MUST be ignored.
+    slow.next(emptyPage({ total: 999 }));
+    slow.complete();
+
+    expect(cmp.total()).toBe(7);
   });
 
   it('onFilterApply forwards the populated filters to the service', () => {
