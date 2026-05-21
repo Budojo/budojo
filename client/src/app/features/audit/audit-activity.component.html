@@ -1,46 +1,39 @@
 <section class="audit-page" data-cy="audit-activity">
   <app-page-header [title]="'audit.title' | translate" [subtitle]="'audit.subtitle' | translate" />
 
-  <div class="audit-page__filters" data-cy="audit-filters">
+  <form
+    class="audit-page__filters"
+    [formGroup]="filterForm"
+    (ngSubmit)="onFilterApply()"
+    data-cy="audit-filters"
+  >
     <label class="audit-page__field">
       <span>{{ 'audit.filters.action' | translate }}</span>
       <input
         pInputText
         type="text"
-        [ngModel]="actionFilter()"
-        (ngModelChange)="actionFilter.set($event)"
+        formControlName="action"
         [placeholder]="'audit.filters.actionPlaceholder' | translate"
         data-cy="audit-filter-action"
       />
     </label>
     <label class="audit-page__field">
       <span>{{ 'audit.filters.from' | translate }}</span>
-      <input
-        pInputText
-        type="date"
-        [ngModel]="fromFilter()"
-        (ngModelChange)="fromFilter.set($event)"
-        data-cy="audit-filter-from"
-      />
+      <input pInputText type="date" formControlName="from" data-cy="audit-filter-from" />
     </label>
     <label class="audit-page__field">
       <span>{{ 'audit.filters.to' | translate }}</span>
-      <input
-        pInputText
-        type="date"
-        [ngModel]="toFilter()"
-        (ngModelChange)="toFilter.set($event)"
-        data-cy="audit-filter-to"
-      />
+      <input pInputText type="date" formControlName="to" data-cy="audit-filter-to" />
     </label>
     <div class="audit-page__actions">
       <p-button
+        type="submit"
         [label]="'audit.filters.apply' | translate"
         size="small"
-        (onClick)="onFilterApply()"
         data-cy="audit-filter-apply"
       />
       <p-button
+        type="button"
         [label]="'audit.filters.reset' | translate"
         size="small"
         severity="secondary"
@@ -49,7 +42,7 @@
         data-cy="audit-filter-reset"
       />
     </div>
-  </div>
+  </form>
 
   @if (errored()) {
     <p class="audit-page__empty" role="alert" data-cy="audit-error">

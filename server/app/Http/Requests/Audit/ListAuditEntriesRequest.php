@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Audit;
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ListAuditEntriesRequest extends FormRequest
@@ -35,5 +36,69 @@ class ListAuditEntriesRequest extends FormRequest
             'subject_id' => ['nullable', 'integer'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
+    }
+
+    // ── Typed accessors ────────────────────────────────────────────
+    // Keeps the controller thin (server CLAUDE.md § controller discipline)
+    // — receive → delegate. The narrowing lives here once, not at every
+    // call site.
+
+    public function actionFilter(): ?string
+    {
+        $value = $this->validated('action');
+
+        return \is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public function actorUserIdFilter(): ?int
+    {
+        $value = $this->validated('actor_user_id');
+
+        return is_numeric($value) ? (int) $value : null;
+    }
+
+    public function fromFilter(): ?CarbonImmutable
+    {
+        $value = $this->validated('from');
+        if (! \is_string($value) || $value === '') {
+            return null;
+        }
+        // `!Y-m-d` zeroes the time portion so the day boundary doesn't
+        // drift with the wall clock on a midday request.
+        $parsed = CarbonImmutable::createFromFormat('!Y-m-d', $value);
+
+        return $parsed instanceof CarbonImmutable ? $parsed : null;
+    }
+
+    public function toFilter(): ?CarbonImmutable
+    {
+        $value = $this->validated('to');
+        if (! \is_string($value) || $value === '') {
+            return null;
+        }
+        $parsed = CarbonImmutable::createFromFormat('!Y-m-d', $value);
+
+        return $parsed instanceof CarbonImmutable ? $parsed : null;
+    }
+
+    public function subjectTypeFilter(): ?string
+    {
+        $value = $this->validated('subject_type');
+
+        return \is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public function subjectIdFilter(): ?int
+    {
+        $value = $this->validated('subject_id');
+
+        return is_numeric($value) ? (int) $value : null;
+    }
+
+    public function perPage(): int
+    {
+        $value = $this->validated('per_page');
+
+        return is_numeric($value) ? (int) $value : 20;
     }
 }
