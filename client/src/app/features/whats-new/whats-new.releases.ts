@@ -28,6 +28,45 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.26.0',
+    date: '2026-05-21',
+    headline:
+      'The "% di presenze" chart you asked for lands on each athlete profile + /me/attendance — donut with the headline rate, bar timeline of realized lesson days, range switcher 30/90/365. Alongside, three Honor-200 bug fixes (athlete sidebar footer, Impostazioni rename, reaction chip clipping) and a small bundle-size audit win.',
+    sections: [
+      {
+        heading: '📈 Attendance percentage chart on athlete profile + /me',
+        bullets: [
+          'Donut with the headline rate dead-centre + bar timeline below (one bar per realized lesson day, colour-encoded primary/muted).',
+          'Range switcher 30/90/365 — default 90.',
+          'Denominator is "realized lesson days" (academy actually held a session AND athlete already on the roster) — closures, holidays, pre-roster days never penalize the rate.',
+          'Empty state when expected_count is zero — no misleading 0%.',
+        ],
+      },
+      {
+        heading: '🛠️ Athlete sidebar footer + Impostazioni rename',
+        bullets: [
+          'Athlete drawer now carries the same footer as the owner side: language toggle, Help · Privacy · vX.Y.Z. Pre-fix athletes saw only Sign-out and had no way to confirm their app version inside the shell.',
+          'Athlete settings page header renamed "Il tuo profilo" → "Impostazioni" (IT) / "Settings" (EN) to match the sidebar voice that opens it.',
+        ],
+      },
+      {
+        heading: '🎯 Reaction chip right edge no longer clipped on Honor 200',
+        bullets: [
+          'Per-corner border-radius split — outer corners round, inner seam stays flush.',
+          'Belt-and-suspenders: overflow: clip + isolation: isolate added to the chip wrapper.',
+          'iOS Safari + desktop Chromium rendering unchanged.',
+        ],
+      },
+      {
+        heading: '⚙️ Internal: initial-bundle audit + lazy qrcode',
+        bullets: [
+          'Snapshot of the initial Angular chunk (1.00 MB raw / 234 kB transfer) documented under docs/development/bundle-audit-2026-05.md.',
+          'qrcode now loads dynamically only on first 2FA enrolment — users who never enable 2FA no longer download the library.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.25.1',
     date: '2026-05-20',
     headline:
