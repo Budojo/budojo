@@ -317,6 +317,15 @@ export const routes: Routes = [
           import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),
       },
       {
+        // Owner-only audit log (#429). The page itself is auth-walled by
+        // the parent dashboard guards; the BE route also lives behind
+        // role:owner middleware so an athlete deep-linking here gets 403
+        // on the network call.
+        path: 'academy/activity',
+        loadComponent: () =>
+          import('./features/audit/audit-activity.component').then((m) => m.AuditActivityComponent),
+      },
+      {
         path: 'stats',
         loadComponent: () =>
           import('./features/stats/stats.component').then((m) => m.StatsComponent),

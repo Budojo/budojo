@@ -39,7 +39,8 @@ async function setup(password: string | null): Promise<{
         const node = fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]');
         expect(node).not.toBeNull();
       },
-      { timeout: 2000, interval: 25 },
+      // 30s ceiling: CI's cold module-cache loads zxcvbn-ts dictionaries slower than the previous 2s.
+      { timeout: 30_000, interval: 50 },
     );
   } else {
     await fixture.whenStable();

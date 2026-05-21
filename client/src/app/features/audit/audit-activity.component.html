@@ -1,0 +1,96 @@
+<section class="audit-page" data-cy="audit-activity">
+  <app-page-header [title]="'audit.title' | translate" [subtitle]="'audit.subtitle' | translate" />
+
+  <form
+    class="audit-page__filters"
+    [formGroup]="filterForm"
+    (ngSubmit)="onFilterApply()"
+    data-cy="audit-filters"
+  >
+    <label class="audit-page__field">
+      <span>{{ 'audit.filters.action' | translate }}</span>
+      <input
+        pInputText
+        type="text"
+        formControlName="action"
+        [placeholder]="'audit.filters.actionPlaceholder' | translate"
+        data-cy="audit-filter-action"
+      />
+    </label>
+    <label class="audit-page__field">
+      <span>{{ 'audit.filters.from' | translate }}</span>
+      <input pInputText type="date" formControlName="from" data-cy="audit-filter-from" />
+    </label>
+    <label class="audit-page__field">
+      <span>{{ 'audit.filters.to' | translate }}</span>
+      <input pInputText type="date" formControlName="to" data-cy="audit-filter-to" />
+    </label>
+    <div class="audit-page__actions">
+      <p-button
+        type="submit"
+        [label]="'audit.filters.apply' | translate"
+        size="small"
+        data-cy="audit-filter-apply"
+      />
+      <p-button
+        type="button"
+        [label]="'audit.filters.reset' | translate"
+        size="small"
+        severity="secondary"
+        [text]="true"
+        (onClick)="onFilterReset()"
+        data-cy="audit-filter-reset"
+      />
+    </div>
+  </form>
+
+  @if (errored()) {
+    <p class="audit-page__empty" role="alert" data-cy="audit-error">
+      {{ 'audit.errorBody' | translate }}
+    </p>
+  } @else if (loading()) {
+    <div class="audit-page__skeleton" data-cy="audit-loading">
+      <p-skeleton height="2rem" styleClass="mb-2" />
+      <p-skeleton height="2rem" styleClass="mb-2" />
+      <p-skeleton height="2rem" />
+    </div>
+  } @else if (!hasEntries()) {
+    <p class="audit-page__empty" data-cy="audit-empty">
+      {{ 'audit.emptyBody' | translate }}
+    </p>
+  } @else {
+    <ul class="audit-page__list" data-cy="audit-list">
+      @for (entry of entries(); track entry.id) {
+        <li class="audit-row" [attr.data-cy]="'audit-row-' + entry.id">
+          <div class="audit-row__head">
+            <span class="audit-row__action" data-cy="audit-row-action">{{ entry.action }}</span>
+            <time
+              class="audit-row__date"
+              [attr.datetime]="entry.created_at"
+              [attr.title]="entry.created_at"
+            >
+              {{ entry.created_at | date: 'medium' }}
+            </time>
+          </div>
+          <div class="audit-row__body">
+            <span class="audit-row__actor">{{ entry.actor_label || '—' }}</span>
+            @if (entry.subject_label) {
+              <span class="audit-row__sep">→</span>
+              <span class="audit-row__subject">{{ entry.subject_label }}</span>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+
+    @if (total() > perPage()) {
+      <p-paginator
+        [rows]="perPage()"
+        [totalRecords]="total()"
+        [first]="(page() - 1) * perPage()"
+        (onPageChange)="onPageChange($event)"
+        data-cy="audit-paginator"
+      />
+    }
+  }
+</section>

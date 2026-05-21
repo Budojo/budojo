@@ -3585,6 +3585,94 @@ paths:
         '422':
           description: Validation error — `range` must be 30, 90, or 365.
 
+  /audit-entries:
+    get:
+      operationId: listAuditEntries
+      summary: Paginated audit log of academy actions
+      description: |
+        Owner-only paginated read of the immutable audit log (#429).
+        Academy-scoped; writes are observer-driven, this endpoint is
+        read-only. Default ordering: `created_at DESC, id DESC`.
+
+        Filters narrow the result set:
+          - `action` — exact match on the action verb (e.g. `athlete.deleted`).
+          - `actor_user_id` — exact match.
+          - `from` / `to` — inclusive date range on `created_at` (YYYY-MM-DD).
+          - `subject_type` + `subject_id` — per-entity history.
+          - `per_page` — page size (1..100, default 20).
+      tags: [Audit]
+      parameters:
+        - in: query
+          name: action
+          required: false
+          schema: { type: string, maxLength: 80 }
+        - in: query
+          name: actor_user_id
+          required: false
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: from
+          required: false
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: false
+          schema: { type: string, format: date }
+        - in: query
+          name: subject_type
+          required: false
+          schema: { type: string, maxLength: 120 }
+        - in: query
+          name: subject_id
+          required: false
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: per_page
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: page
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        '200':
+          description: Paginated audit entries page.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, action, actor_label, created_at]
+                      properties:
+                        id: { type: integer }
+                        action: { type: string }
+                        actor_user_id: { type: integer, nullable: true }
+                        actor_label: { type: string, nullable: true }
+                        subject_type: { type: string, nullable: true }
+                        subject_id: { type: integer, nullable: true }
+                        subject_label: { type: string, nullable: true }
+                        before: { type: object, nullable: true, additionalProperties: true }
+                        after: { type: object, nullable: true, additionalProperties: true }
+                        ip: { type: string, nullable: true }
+                        user_agent: { type: string, nullable: true }
+                        created_at: { type: string, format: date-time }
+                  meta:
+                    type: object
+                    required: [current_page, last_page, total, per_page]
+                    properties:
+                      current_page: { type: integer }
+                      last_page: { type: integer }
+                      total: { type: integer }
+                      per_page: { type: integer }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden — athlete-role users are not owners. }
+        '422': { description: Validation error on a filter. }
+
   /stats/attendance/daily:
     get:
       operationId: statsAttendanceDaily
