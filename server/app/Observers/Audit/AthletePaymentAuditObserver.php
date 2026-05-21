@@ -9,9 +9,7 @@ use App\Models\AthletePayment;
 use App\Support\Audit\PiiRedactor;
 use App\Support\Audit\ResolvesAuditActor;
 
-// Bulk callers (seeders, batch imports, factory sequences) must
-// pre-load `athlete.academy` before iterating — every event resolves
-// two unloaded relations otherwise (N×2 extra queries).
+// Bulk callers must pre-load `athlete.academy` to avoid N×2 queries per event.
 class AthletePaymentAuditObserver
 {
     use ResolvesAuditActor;
