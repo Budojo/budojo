@@ -75,7 +75,7 @@
           <div class="audit-row__body">
             <span class="audit-row__actor">{{ entry.actor_label || '—' }}</span>
             @if (entry.subject_label) {
-              <span class="audit-row__sep">→</span>
+              <span class="audit-row__sep" aria-hidden="true">→</span>
               <span class="audit-row__subject">{{ entry.subject_label }}</span>
             }
           </div>

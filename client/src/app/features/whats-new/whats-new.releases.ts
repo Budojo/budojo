@@ -28,6 +28,28 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.28.1',
+    date: '2026-05-21',
+    headline:
+      'Patch on v2.28.0. Three small audit-log polish fixes after the reviewer pass — screen-reader skips the decorative arrow, ?page=0 now returns 422 like the spec said, and a rapid double-tap on Applica no longer flashes a stale row count. Plus a 2FA dependency bump.',
+    sections: [
+      {
+        heading: '🕒 Audit page — three quiet fixes',
+        bullets: [
+          'The → separator between actor and subject is now marked decorative — VoiceOver / NVDA skip it cleanly instead of reading "right-pointing arrow".',
+          '?page=0 / ?page=-1 used to silently fall back to page 1; they now return 422 like every other invalid pagination value, matching what the API spec documented.',
+          'A rapid double-tap on Applica (or a page change landing while the previous request is still in flight) used to briefly flash a stale row count. The list now cancels the previous request — only the latest filter ever wins.',
+        ],
+      },
+      {
+        heading: '🔐 Two-factor library bumped',
+        bullets: [
+          'pragmarx/google2fa 8 → 9 — same APIs, no user-visible change, pulls in upstream fixes + PHP 8.4 polish.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.28.0',
     date: '2026-05-21',
     headline:

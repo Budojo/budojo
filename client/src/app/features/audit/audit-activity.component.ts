@@ -15,7 +15,9 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
-import { AuditEntry, AuditService } from '../../core/services/audit.service';
+import { EMPTY, Subject } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
+import { AuditEntriesFilters, AuditEntry, AuditService } from '../../core/services/audit.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 // Owner-only academy activity log (#429 part 3).
@@ -59,7 +61,37 @@ export class AuditActivityComponent {
 
   protected readonly hasEntries = computed<boolean>(() => this.entries().length > 0);
 
+  // switchMap drops the previous in-flight request when a new filter
+  // or page lands — a rapid double-tap on Apply can't leak the stale
+  // response over the fresh one.
+  private readonly fetches$ = new Subject<AuditEntriesFilters>();
+
   constructor() {
+    this.fetches$
+      .pipe(
+        tap(() => {
+          this.loading.set(true);
+          this.errored.set(false);
+        }),
+        // catchError inside the inner observable keeps the outer
+        // stream alive — a single error must not silently disable
+        // every subsequent refetch until the page reloads.
+        switchMap((filters) =>
+          this.auditService.list(filters).pipe(
+            catchError(() => {
+              this.errored.set(true);
+              this.loading.set(false);
+              return EMPTY;
+            }),
+          ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((response) => {
+        this.entries.set(response.data);
+        this.total.set(response.meta.total);
+        this.loading.set(false);
+      });
     this.refetch();
   }
 
@@ -81,28 +113,13 @@ export class AuditActivityComponent {
   }
 
   private refetch(): void {
-    this.loading.set(true);
-    this.errored.set(false);
     const { action, from, to } = this.filterForm.getRawValue();
-    this.auditService
-      .list({
-        action: action || undefined,
-        from: from || undefined,
-        to: to || undefined,
-        page: this.page(),
-        per_page: this.perPage(),
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (response) => {
-          this.entries.set(response.data);
-          this.total.set(response.meta.total);
-          this.loading.set(false);
-        },
-        error: () => {
-          this.errored.set(true);
-          this.loading.set(false);
-        },
-      });
+    this.fetches$.next({
+      action: action || undefined,
+      from: from || undefined,
+      to: to || undefined,
+      page: this.page(),
+      per_page: this.perPage(),
+    });
   }
 }
