@@ -209,59 +209,9 @@
         <i class="pi pi-sign-out" aria-hidden="true"></i>
         <span>{{ 'nav.signOut' | translate }}</span>
       </button>
-      <!-- Language toggle (#273). Two pill buttons inline; the active
-           lang is non-clickable + carries aria-current="true". 48 px touch
-           target maintained via padding (canon § Fitts). Sits visually
-           between Sign out and the version footer so it reads as a
-           preference control, not navigation. -->
-      <div class="sidebar__lang" role="group" [attr.aria-label]="'language.label' | translate">
-        <button
-          type="button"
-          class="sidebar__lang-option"
-          [class.sidebar__lang-option--active]="currentLang() === 'en'"
-          [attr.aria-current]="currentLang() === 'en' ? 'true' : null"
-          [disabled]="currentLang() === 'en'"
-          (click)="setLang('en')"
-          data-cy="lang-toggle-en"
-        >
-          {{ 'language.english' | translate }}
-        </button>
-        <button
-          type="button"
-          class="sidebar__lang-option"
-          [class.sidebar__lang-option--active]="currentLang() === 'it'"
-          [attr.aria-current]="currentLang() === 'it' ? 'true' : null"
-          [disabled]="currentLang() === 'it'"
-          (click)="setLang('it')"
-          data-cy="lang-toggle-it"
-        >
-          {{ 'language.italian' | translate }}
-        </button>
-      </div>
-      <p class="sidebar__version" data-cy="sidebar-version">
-        <!-- Help link (#422). Public route — same `sidebar__legal-link`
-             treatment as Privacy below: muted, footer-of-every-page
-             chrome, separated by a middle dot. Sits BEFORE Privacy
-             because help-seeking is a higher-frequency action than
-             reading the policy. -->
-        <a class="sidebar__legal-link" routerLink="/help" data-cy="sidebar-help-link">{{
-          'nav.help' | translate
-        }}</a>
-        <span aria-hidden="true">·</span>
-        <!-- Privacy link adapts to the active language (#291). EN users
-             land on the canonical /privacy; IT users go straight to
-             /privacy/it without bouncing through the English page +
-             toggle. The page itself ALSO carries an inline toggle so
-             the choice can be flipped from there too. -->
-        <a
-          class="sidebar__legal-link"
-          [routerLink]="currentLang() === 'it' ? '/privacy/it' : '/privacy'"
-          data-cy="sidebar-privacy-link"
-          >{{ 'nav.privacy' | translate }}</a
-        >
-        <span aria-hidden="true">·</span>
-        {{ versionTag }}
-      </p>
+      <!-- Lang toggle + Help · Privacy · vX.Y.Z block now shared with
+           the athlete-portal shell (#902). -->
+      <app-sidebar-footer-meta />
     </div>
   </aside>
 

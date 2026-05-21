@@ -254,7 +254,7 @@
       "documents": "Documents"
     },
     "profile": {
-      "title": "Your profile",
+      "title": "Settings",
       "firstName": "First name",
       "lastName": "Last name",
       "handle": "Username",
