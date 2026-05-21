@@ -35,29 +35,39 @@ function setup(initialLang: SupportedLanguage = 'en'): {
 describe('SidebarFooterMetaComponent (#902)', () => {
   it('renders both language pills with the active one disabled + aria-current', () => {
     const { fixture } = setup('en');
-    const en: HTMLButtonElement = fixture.nativeElement.querySelector('[data-cy="lang-toggle-en"]');
-    const it: HTMLButtonElement = fixture.nativeElement.querySelector('[data-cy="lang-toggle-it"]');
-    expect(en).not.toBeNull();
-    expect(it).not.toBeNull();
-    expect(en.disabled).toBe(true);
-    expect(it.disabled).toBe(false);
-    expect(en.getAttribute('aria-current')).toBe('true');
-    expect(it.getAttribute('aria-current')).toBeNull();
+    const enPill: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-cy="lang-toggle-en"]',
+    );
+    const itPill: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-cy="lang-toggle-it"]',
+    );
+    expect(enPill).not.toBeNull();
+    expect(itPill).not.toBeNull();
+    expect(enPill.disabled).toBe(true);
+    expect(itPill.disabled).toBe(false);
+    expect(enPill.getAttribute('aria-current')).toBe('true');
+    expect(itPill.getAttribute('aria-current')).toBeNull();
   });
 
   it('flips active state when the active lang is IT', () => {
     const { fixture } = setup('it');
-    const en: HTMLButtonElement = fixture.nativeElement.querySelector('[data-cy="lang-toggle-en"]');
-    const it: HTMLButtonElement = fixture.nativeElement.querySelector('[data-cy="lang-toggle-it"]');
-    expect(en.disabled).toBe(false);
-    expect(it.disabled).toBe(true);
-    expect(it.getAttribute('aria-current')).toBe('true');
+    const enPill: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-cy="lang-toggle-en"]',
+    );
+    const itPill: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-cy="lang-toggle-it"]',
+    );
+    expect(enPill.disabled).toBe(false);
+    expect(itPill.disabled).toBe(true);
+    expect(itPill.getAttribute('aria-current')).toBe('true');
   });
 
   it('clicking the inactive pill calls LanguageService.setLanguage with that code', () => {
     const { fixture, langSvc } = setup('en');
-    const it: HTMLButtonElement = fixture.nativeElement.querySelector('[data-cy="lang-toggle-it"]');
-    it.click();
+    const itPill: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-cy="lang-toggle-it"]',
+    );
+    itPill.click();
     expect(langSvc.setLanguage).toHaveBeenCalledWith('it');
   });
 
