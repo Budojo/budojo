@@ -54,13 +54,13 @@ describe('MyAthleteService (#750)', () => {
       expect(result).toEqual({ enrolled: true, athleteId: 99 });
     });
 
-    it('returns enrolled:true even on idempotent 200 re-call (same athlete id)', () => {
-      // The server replies 200 (vs 201) when the user already had a
-      // self-row and re-posts; the projection MUST stay the same.
+    it('returns the athleteId from the response body, not a cached value from a prior call', () => {
+      // Different id from the previous test confirms the projection
+      // reads `data.id` afresh every call rather than memoising.
       let result: { enrolled: boolean; athleteId: number | null } | null = null;
       svc.enroll().subscribe((s) => (result = s));
-      http.expectOne('/api/v1/me/athlete').flush({ data: { id: 99, is_self: true } });
-      expect(result).toEqual({ enrolled: true, athleteId: 99 });
+      http.expectOne('/api/v1/me/athlete').flush({ data: { id: 77, is_self: true } });
+      expect(result).toEqual({ enrolled: true, athleteId: 77 });
     });
   });
 
