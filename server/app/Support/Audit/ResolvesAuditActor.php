@@ -7,7 +7,7 @@ namespace App\Support\Audit;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
-// Shared "who's the current actor?" narrowing for every audit observer.
+// Auth::user() narrowing extracted once — every audit observer needs it.
 trait ResolvesAuditActor
 {
     private function currentActor(): ?User
