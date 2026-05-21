@@ -28,6 +28,24 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.28.0',
+    date: '2026-05-21',
+    headline:
+      'The "Attività" page is here. Every meaningful action across the academy — athletes added or removed, payments edited, documents uploaded, belts promoted, academy details changed — is now recorded as it happens and surfaced on a new owner-only page with filters.',
+    sections: [
+      {
+        heading: '🕒 Activity log — who did what, when',
+        bullets: [
+          'New sidebar voice Attività between Statistiche and Community. Owner-only.',
+          'One row per recorded action: actor → subject + timestamp. Filters by action verb + date range.',
+          'Every write is recorded automatically: athlete created/updated/belt.promoted/deleted, payment created/updated/deleted, document uploaded/deleted, academy updated and logo replaced.',
+          'Immutable log — owners can read it but never edit or delete entries.',
+          'PII redacted at write time: email + phone become opaque hashes (you see the value changed but not WHAT), fiscal codes are masked, freeform notes and addresses are replaced with a placeholder.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.27.0',
     date: '2026-05-21',
     headline:
