@@ -15,8 +15,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
-import { Subject } from 'rxjs';
-import { switchMap, tap } from 'rxjs/operators';
+import { EMPTY, Subject } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
 import { AuditEntriesFilters, AuditEntry, AuditService } from '../../core/services/audit.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
@@ -73,19 +73,24 @@ export class AuditActivityComponent {
           this.loading.set(true);
           this.errored.set(false);
         }),
-        switchMap((filters) => this.auditService.list(filters)),
+        // catchError inside the inner observable keeps the outer
+        // stream alive — a single error must not silently disable
+        // every subsequent refetch until the page reloads.
+        switchMap((filters) =>
+          this.auditService.list(filters).pipe(
+            catchError(() => {
+              this.errored.set(true);
+              this.loading.set(false);
+              return EMPTY;
+            }),
+          ),
+        ),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe({
-        next: (response) => {
-          this.entries.set(response.data);
-          this.total.set(response.meta.total);
-          this.loading.set(false);
-        },
-        error: () => {
-          this.errored.set(true);
-          this.loading.set(false);
-        },
+      .subscribe((response) => {
+        this.entries.set(response.data);
+        this.total.set(response.meta.total);
+        this.loading.set(false);
       });
     this.refetch();
   }

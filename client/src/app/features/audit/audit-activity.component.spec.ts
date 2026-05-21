@@ -128,6 +128,45 @@ describe('AuditActivityComponent (#429 part 3)', () => {
     expect(cmp.total()).toBe(7);
   });
 
+  it('keeps the stream alive after an error so the next filter-apply still fires (#936)', () => {
+    // The switchMap pattern (#933) regressed error recovery: an error
+    // surfacing on the OUTER subscribe would terminate the entire
+    // stream, silently dropping every subsequent refetch until the
+    // user reloaded the page. catchError inside the inner observable
+    // keeps the outer alive.
+    const listSpy = vi.fn<(f: unknown) => Observable<AuditEntriesPage>>();
+    listSpy
+      .mockReturnValueOnce(throwError(() => new Error('boom')))
+      .mockReturnValueOnce(of(emptyPage({ total: 42 })));
+
+    TestBed.configureTestingModule({
+      imports: [AuditActivityComponent],
+      providers: [
+        provideAnimationsAsync(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        ...provideI18nTesting(),
+        { provide: AuditService, useValue: { list: listSpy } },
+      ],
+    });
+    const fixture = TestBed.createComponent(AuditActivityComponent);
+    fixture.detectChanges();
+
+    const cmp = fixture.componentInstance as unknown as {
+      total: () => number;
+      errored: () => boolean;
+      onFilterApply(): void;
+    };
+
+    expect(cmp.errored()).toBe(true);
+    expect(listSpy).toHaveBeenCalledTimes(1);
+
+    // Second call MUST still fire — without catchError this is dropped.
+    cmp.onFilterApply();
+    expect(listSpy).toHaveBeenCalledTimes(2);
+    expect(cmp.total()).toBe(42);
+  });
+
   it('onFilterApply forwards the populated filters to the service', () => {
     const { fixture, svc } = setup();
     const cmp = fixture.componentInstance as unknown as {
