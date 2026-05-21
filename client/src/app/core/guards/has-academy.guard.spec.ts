@@ -23,10 +23,12 @@ describe('hasAcademyGuard', () => {
 
     return TestBed.runInInjectionContext(() => {
       const result = hasAcademyGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot);
-      // The guard returns an Observable; subscribe synchronously to capture.
-      let captured: boolean | UrlTree = false;
+      // `undefined` as sentinel so a never-emitted observable trips the
+      // assertion below rather than silently passing as "false".
+      let captured: boolean | UrlTree | undefined;
       (result as Observable<boolean | UrlTree>).subscribe((v) => (captured = v));
-      return captured;
+      expect(captured, 'observable must emit synchronously').not.toBeUndefined();
+      return captured as boolean | UrlTree;
     });
   }
 
