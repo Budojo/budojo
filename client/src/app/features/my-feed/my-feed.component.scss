@@ -272,12 +272,6 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.75rem;
-    // Honor 200 / EMUI webview fix (#904) — clip each child's own
-    // corners so the right edge stays inside the pill regardless of
-    // how the parent's `overflow: hidden` paints. `border-radius:
-    // inherit` picks up the chip's 999px so the toggle's left + the
-    // count's right both round naturally; the middle seam stays flat.
-    border-radius: inherit;
 
     &:hover {
       background: var(--p-content-hover-background, rgba(0, 0, 0, 0.04));
@@ -287,6 +281,23 @@
       outline: 2px solid var(--p-primary-color);
       outline-offset: -2px;
     }
+  }
+
+  // Honor 200 / EMUI webview fix (#904, refined per #909 review).
+  // ONLY the outer corners inherit the chip radius — rounding all four
+  // corners on each child would leave transparent quarter-circle
+  // cutouts at the inner seam (page colour bleeds through, breaking
+  // the "single pill" read). Outer corners get the 999px from the
+  // parent; inner corners stay square so the toggle's right edge
+  // meets the count's left edge flush.
+  &__react-toggle {
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+  }
+
+  &__react-count {
+    border-top-right-radius: inherit;
+    border-bottom-right-radius: inherit;
   }
 
   &__react-label {
