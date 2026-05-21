@@ -15,10 +15,10 @@ import { provideI18nTesting } from '../../../../test-utils/i18n-test';
  * Keeping the assertions framework-loose means a future zxcvbn-ts
  * minor version that re-tunes its scoring won't break our specs.
  */
-function setup(password: string | null): {
+async function setup(password: string | null): Promise<{
   fixture: ComponentFixture<PasswordStrengthMeterComponent>;
   cmp: PasswordStrengthMeterComponent;
-} {
+}> {
   TestBed.configureTestingModule({
     imports: [PasswordStrengthMeterComponent],
     providers: [...provideI18nTesting()],
@@ -26,22 +26,41 @@ function setup(password: string | null): {
   const fixture = TestBed.createComponent(PasswordStrengthMeterComponent);
   fixture.componentRef.setInput('password', password);
   fixture.detectChanges();
+  // zxcvbn-ts is now lazy-imported on first non-empty input (#877
+  // follow-up). The score signal lands asynchronously after the
+  // dynamic-import promise chain resolves AND a following microtask
+  // runs the analysis + the next CD pass. `vi.waitFor` polls until
+  // the DOM reflects the analysed value OR the empty branch (for
+  // null / '' inputs that resolve synchronously and never render).
+  if (password !== null && password !== '') {
+    await vi.waitFor(
+      () => {
+        fixture.detectChanges();
+        const node = fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]');
+        expect(node).not.toBeNull();
+      },
+      { timeout: 2000, interval: 25 },
+    );
+  } else {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
   return { fixture, cmp: fixture.componentInstance };
 }
 
 describe('PasswordStrengthMeterComponent (#415)', () => {
-  it('renders nothing when the password is empty', () => {
-    const { fixture } = setup('');
+  it('renders nothing when the password is empty', async () => {
+    const { fixture } = await setup('');
     expect(fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]')).toBeNull();
   });
 
-  it('renders nothing when the password is null', () => {
-    const { fixture } = setup(null);
+  it('renders nothing when the password is null', async () => {
+    const { fixture } = await setup(null);
     expect(fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]')).toBeNull();
   });
 
-  it('renders the meter with a score in [0, 4] for a non-empty password', () => {
-    const { fixture } = setup('any-password-123');
+  it('renders the meter with a score in [0, 4] for a non-empty password', async () => {
+    const { fixture } = await setup('any-password-123');
     const meter = fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]');
     expect(meter).not.toBeNull();
     const score = Number(meter!.getAttribute('data-score'));
@@ -49,8 +68,8 @@ describe('PasswordStrengthMeterComponent (#415)', () => {
     expect(score).toBeLessThanOrEqual(4);
   });
 
-  it('renders a progressbar with aria-valuemin/max pinned to 0 and 4', () => {
-    const { fixture } = setup('hunter2');
+  it('renders a progressbar with aria-valuemin/max pinned to 0 and 4', async () => {
+    const { fixture } = await setup('hunter2');
     const bar = fixture.nativeElement.querySelector('[role="progressbar"]');
     expect(bar).not.toBeNull();
     expect(bar!.getAttribute('aria-valuemin')).toBe('0');
@@ -65,23 +84,25 @@ describe('PasswordStrengthMeterComponent (#415)', () => {
     expect(bar!.getAttribute('aria-valuenow')).toBe(String(score));
   });
 
-  it('exposes a translated aria-label so screen readers announce what the value refers to', () => {
+  it('exposes a translated aria-label so screen readers announce what the value refers to', async () => {
     // Copilot caught the original release missing this — without an
     // accessible name, NVDA/VoiceOver read the value but not "what
     // the value is for". Pinning the resolved translated string here
     // (via provideI18nTesting → en bundle) guards both the binding
     // and the presence of the i18n key.
-    const { fixture } = setup('hunter2');
+    const { fixture } = await setup('hunter2');
     const bar = fixture.nativeElement.querySelector('[role="progressbar"]');
     expect(bar!.getAttribute('aria-label')).toBe('Password strength');
   });
 
-  it('clearing the password between ticks hides the meter again', () => {
-    const { fixture } = setup('something');
+  it('clearing the password between ticks hides the meter again', async () => {
+    const { fixture } = await setup('something');
     expect(
       fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]'),
     ).not.toBeNull();
     fixture.componentRef.setInput('password', '');
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]')).toBeNull();
   });
