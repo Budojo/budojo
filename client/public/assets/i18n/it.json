@@ -254,7 +254,7 @@
       "documents": "Documenti"
     },
     "profile": {
-      "title": "Il tuo profilo",
+      "title": "Impostazioni",
       "firstName": "Nome",
       "lastName": "Cognome",
       "handle": "Username",
@@ -1270,6 +1270,22 @@
       "countOther": "{{count}} atleti da controllare",
       "countHint": "Scaduti, in scadenza o senza certificato",
       "breakdown": "{{expiring}} in scadenza · {{missing}} senza certificato"
+    }
+  },
+  "attendanceSummary": {
+    "title": "Percentuale di presenze",
+    "attendedOfExpected": "{{attended}} su {{expected}} lezioni effettive",
+    "legend": {
+      "attended": "Presente",
+      "missed": "Assente"
+    },
+    "empty": {
+      "title": "Nessuna lezione in questo intervallo",
+      "hint": "L'accademia non ha registrato sessioni nel periodo selezionato."
+    },
+    "error": {
+      "title": "Impossibile caricare il grafico",
+      "hint": "Aggiorna la pagina per riprovare."
     }
   },
   "weekdays": {

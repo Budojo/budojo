@@ -17,6 +17,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { LanguageService, SupportedLanguage } from '../../core/services/language.service';
 import { WebPushHandlerService } from '../../core/services/web-push-handler.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
+import { SidebarFooterMetaComponent } from '../../shared/components/sidebar-footer-meta/sidebar-footer-meta.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { SearchPaletteComponent } from '../search/search-palette.component';
 import { NotificationBellComponent } from '../notifications/notification-bell.component';
@@ -33,6 +34,7 @@ import { VERSION } from '../../../environments/version';
     UserAvatarComponent,
     SearchPaletteComponent,
     NotificationBellComponent,
+    SidebarFooterMetaComponent,
     TranslatePipe,
   ],
   templateUrl: './dashboard.component.html',

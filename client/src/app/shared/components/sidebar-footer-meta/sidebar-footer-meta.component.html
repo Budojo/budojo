@@ -1,0 +1,44 @@
+<!-- Language toggle (#273). Two pill buttons inline; the active lang is
+     non-clickable + carries aria-current="true". 48 px touch target via
+     padding (Fitts). Lives between Sign out and the version line so it
+     reads as a preference control, not navigation. -->
+<div class="sidebar-meta__lang" role="group" [attr.aria-label]="'language.label' | translate">
+  <button
+    type="button"
+    class="sidebar-meta__lang-option"
+    [class.sidebar-meta__lang-option--active]="currentLang() === 'en'"
+    [attr.aria-current]="currentLang() === 'en' ? 'true' : null"
+    [disabled]="currentLang() === 'en'"
+    (click)="setLang('en')"
+    data-cy="lang-toggle-en"
+  >
+    {{ 'language.english' | translate }}
+  </button>
+  <button
+    type="button"
+    class="sidebar-meta__lang-option"
+    [class.sidebar-meta__lang-option--active]="currentLang() === 'it'"
+    [attr.aria-current]="currentLang() === 'it' ? 'true' : null"
+    [disabled]="currentLang() === 'it'"
+    (click)="setLang('it')"
+    data-cy="lang-toggle-it"
+  >
+    {{ 'language.italian' | translate }}
+  </button>
+</div>
+
+<p class="sidebar-meta__version" data-cy="sidebar-version">
+  <a class="sidebar-meta__legal-link" routerLink="/help" data-cy="sidebar-help-link">
+    {{ 'nav.help' | translate }}
+  </a>
+  <span aria-hidden="true">·</span>
+  <a
+    class="sidebar-meta__legal-link"
+    [routerLink]="currentLang() === 'it' ? '/privacy/it' : '/privacy'"
+    data-cy="sidebar-privacy-link"
+  >
+    {{ 'nav.privacy' | translate }}
+  </a>
+  <span aria-hidden="true">·</span>
+  {{ versionTag }}
+</p>

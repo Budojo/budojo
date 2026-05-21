@@ -254,7 +254,7 @@
       "documents": "Documents"
     },
     "profile": {
-      "title": "Your profile",
+      "title": "Settings",
       "firstName": "First name",
       "lastName": "Last name",
       "handle": "Username",
@@ -1270,6 +1270,22 @@
       "countOther": "{{count}} athletes need attention",
       "countHint": "Expired or expiring within 30 days",
       "breakdown": "{{expiring}} expiring · {{missing}} no certificate"
+    }
+  },
+  "attendanceSummary": {
+    "title": "Attendance rate",
+    "attendedOfExpected": "{{attended}} of {{expected}} realized lessons",
+    "legend": {
+      "attended": "Attended",
+      "missed": "Missed"
+    },
+    "empty": {
+      "title": "No lessons in this window yet",
+      "hint": "Your academy hasn't recorded any training session in the selected range."
+    },
+    "error": {
+      "title": "Couldn't load the chart",
+      "hint": "Refresh the page to try again."
     }
   },
   "weekdays": {

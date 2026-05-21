@@ -12,6 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AttendanceRecord, AttendanceService } from '../../core/services/attendance.service';
+import { AttendanceSummaryChartComponent } from '../../shared/components/attendance-summary-chart/attendance-summary-chart.component';
 
 /**
  * Athlete-portal attendance history page (M7 PR-D slice 3). Read-only
@@ -26,7 +27,7 @@ import { AttendanceRecord, AttendanceService } from '../../core/services/attenda
 @Component({
   selector: 'app-my-attendance',
   standalone: true,
-  imports: [TranslatePipe, DatePipe, SkeletonModule],
+  imports: [TranslatePipe, DatePipe, SkeletonModule, AttendanceSummaryChartComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-attendance.component.html',
   styleUrl: './my-attendance.component.scss',
@@ -39,6 +40,18 @@ export class MyAttendanceComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly loadError = signal(false);
   protected readonly noProfile = signal(false);
+
+  /**
+   * Athlete id for the `<app-attendance-summary-chart>` (#894). The
+   * `/me/attendance` payload carries `athlete_id` on every row; we
+   * pluck it from the first one. When the user has zero records ever,
+   * the chart simply isn't rendered (the existing empty-state already
+   * covers that branch — no point asking the chart endpoint for a
+   * zero-data window).
+   */
+  protected readonly chartAthleteId = computed<number | null>(
+    () => this.records()[0]?.athlete_id ?? null,
+  );
 
   /**
    * Last-30-days session count — a single number under the page

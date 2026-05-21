@@ -9,7 +9,11 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import * as QRCode from 'qrcode';
+// qrcode loaded lazily on first enrolment (#877). It's a CommonJS
+// dependency (build warning: optimization bailout); dynamic-import
+// keeps it out of the profile-page chunk for users who never enable
+// 2FA. Type-only import keeps the call site type-checked.
+import type * as QRCodeType from 'qrcode';
 import {
   TwoFactorEnrolment,
   TwoFactorService,
@@ -113,7 +117,15 @@ export class ProfileTwoFactorComponent implements OnInit {
         // Render the otpauth:// URI as a data: URL SVG (the dataURL
         // helper returns base64-encoded SVG that fits a normal <img>
         // src — no <canvas> dependency, scales freely).
-        QRCode.toDataURL(data.provisioning_uri, { margin: 1, scale: 4 })
+        //
+        // Dynamic import keeps qrcode out of the profile-page chunk
+        // for users who never enable 2FA (#877). The promise is
+        // cached at module level by the JS loader so subsequent
+        // enrolments don't re-fetch the chunk.
+        import('qrcode')
+          .then((QRCode: typeof QRCodeType) =>
+            QRCode.toDataURL(data.provisioning_uri, { margin: 1, scale: 4 }),
+          )
           .then((url) => this.qrDataUrl.set(url))
           .catch(() => this.qrDataUrl.set(null));
         this.status.set({ enabled: false, pending: true, recovery_codes_remaining: 0 });

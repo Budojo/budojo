@@ -27,6 +27,7 @@ import {
 } from '../../../../shared/utils/attendance-rate';
 import { YearMonth, buildCalendarGrid, shiftMonth } from './calendar-grid';
 import { AttendanceMonthHeatmapComponent } from './attendance-month-heatmap.component';
+import { AttendanceSummaryChartComponent } from '../../../../shared/components/attendance-summary-chart/attendance-summary-chart.component';
 
 const MONTH_KEYS = [
   'month.january',
@@ -97,6 +98,7 @@ function currentYearMonth(): YearMonth {
     SkeletonModule,
     TooltipModule,
     AttendanceMonthHeatmapComponent,
+    AttendanceSummaryChartComponent,
   ],
   templateUrl: './attendance-history.component.html',
   styleUrl: './attendance-history.component.scss',
@@ -122,6 +124,13 @@ export class AttendanceHistoryComponent implements OnInit {
   protected readonly records = signal<AttendanceRecord[]>([]);
   protected readonly loading = signal(true);
   protected readonly activeNotes = signal<string | null>(null);
+
+  /**
+   * The athlete id we feed the `<app-attendance-summary-chart>` (#894).
+   * Tracks the same signal the heatmap reads from so the chart re-loads
+   * when navigating from athlete A to athlete B.
+   */
+  protected readonly athleteIdForChart = computed<number | null>(() => this.athlete()?.id ?? null);
 
   protected readonly visible = signal<YearMonth>(currentYearMonth());
 

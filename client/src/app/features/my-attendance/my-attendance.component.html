@@ -21,6 +21,13 @@
       {{ 'athletePortal.attendance.emptyBody' | translate }}
     </p>
   } @else {
+    @if (chartAthleteId(); as id) {
+      <!-- 90-day attendance trend chart (#894). Above the session list
+           so the high-level "% di presenze" is the first thing the
+           athlete sees on their own attendance page. -->
+      <app-attendance-summary-chart [athleteId]="id" />
+    }
+
     <section class="my-attendance__summary" data-cy="my-attendance-summary">
       <span class="my-attendance__summary-count">{{ last30Count() }}</span>
       <span class="my-attendance__summary-label">{{
