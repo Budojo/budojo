@@ -1,10 +1,10 @@
 <section class="support-page">
   <p-toast />
 
-  <header class="support-page__header">
-    <h1 class="support-page__title">{{ 'support.title' | translate }}</h1>
-    <p class="support-page__subtitle">{{ 'support.subtitle' | translate }}</p>
-  </header>
+  <app-page-header
+    [title]="'support.title' | translate"
+    [subtitle]="'support.subtitle' | translate"
+  />
 
   <form
     class="support-page__form"

@@ -28,6 +28,30 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.27.0',
+    date: '2026-05-21',
+    headline:
+      'Two fronts: invisible audit-log foundation that lets us answer "who deleted what, when" starting next release, and two more dashboard pages joining the uniform header pattern (support, stats overview).',
+    sections: [
+      {
+        heading: '🔒 Audit log foundation — invisible today, indispensable tomorrow',
+        bullets: [
+          'No user-visible change in this release — schema + write API + tests only. The observers and the "Activity" page land next release.',
+          'Once wired up, every delete / edit / upload across the academy writes an immutable trail (actor, action, before/after, ip, ua, timestamp).',
+          'Closes a real GDPR Art. 5 §2 accountability gap and unlocks the "who deleted Mario\'s payment last Tuesday" troubleshooting flow.',
+        ],
+      },
+      {
+        heading: '🧭 Page-header pattern — two more pages join',
+        bullets: [
+          '/dashboard/support and /dashboard/stats now use the shared header chrome — single visual rhythm across every dashboard page.',
+          "Public help + what's-new pages keep their distinctive brand-glyph design.",
+          '/dashboard/athletes/:id (the complex composite header) follows in a focused PR.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.26.1',
     date: '2026-05-21',
     headline:

@@ -1,9 +1,9 @@
 <div class="stats-page">
-  <header class="stats-page__header">
-    <p class="stats-page__eyebrow">{{ 'stats.eyebrow' | translate }}</p>
-    <h1 class="stats-page__title">{{ 'stats.title' | translate }}</h1>
-    <p class="stats-page__subtitle">{{ 'stats.subtitle' | translate }}</p>
-  </header>
+  <app-page-header
+    [eyebrow]="'stats.eyebrow' | translate"
+    [title]="'stats.title' | translate"
+    [subtitle]="'stats.subtitle' | translate"
+  />
 
   @if (errored()) {
     <p class="stats-page__error" role="alert" data-cy="stats-error">
