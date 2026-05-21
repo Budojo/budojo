@@ -220,6 +220,21 @@
   // chip surface seamlessly. The chip is NOT itself interactive — the
   // buttons inside are. This is the v2.18.3 refactor (#785 Copilot)
   // that removed the invalid nested-button HTML from v2.18.2.
+  //
+  // Edge-clipping defence (#904): some Android webviews (EMUI/MagicOS,
+  // observed on a Honor 200) don't clip the right border-radius
+  // correctly when an inline-flex parent uses `overflow: hidden` with
+  // stretched children — the count child's right edge punches out the
+  // pill on the right side. The fix is belt-and-suspenders:
+  //   1. `overflow: clip` — newer clip semantics that don't create a
+  //      formatting context and clip more aggressively on legacy
+  //      webviews. Falls back to `hidden` where unsupported.
+  //   2. `isolation: isolate` — locks the chip into its own stacking
+  //      context so the children paint into it cleanly.
+  //   3. Explicit `border-radius: inherit` on the children — clips
+  //      each button's own corners at the source, independent of the
+  //      parent overflow setting (the actual mechanism that fixes the
+  //      reported Honor visual bug).
   &__react-chip {
     display: inline-flex;
     align-items: stretch;
@@ -229,6 +244,8 @@
     color: var(--p-text-color);
     font-size: 0.875rem;
     overflow: hidden;
+    overflow: clip;
+    isolation: isolate;
     min-height: 36px;
     transition:
       background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
@@ -255,6 +272,12 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.375rem 0.75rem;
+    // Honor 200 / EMUI webview fix (#904) — clip each child's own
+    // corners so the right edge stays inside the pill regardless of
+    // how the parent's `overflow: hidden` paints. `border-radius:
+    // inherit` picks up the chip's 999px so the toggle's left + the
+    // count's right both round naturally; the middle seam stays flat.
+    border-radius: inherit;
 
     &:hover {
       background: var(--p-content-hover-background, rgba(0, 0, 0, 0.04));
