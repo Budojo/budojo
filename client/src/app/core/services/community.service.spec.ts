@@ -275,7 +275,9 @@ describe('CommunityService', () => {
       let result: CommunityPost | undefined;
       svc.createEvent(baseEvent()).subscribe((p) => (result = p));
       const created = basePost({ id: 99, type: 'event' });
-      http.expectOne('/api/v1/community/events').flush({ data: created });
+      const req = http.expectOne('/api/v1/community/events');
+      expect(req.request.method).toBe('POST');
+      req.flush({ data: created });
       expect(result).toEqual(created);
     });
 
