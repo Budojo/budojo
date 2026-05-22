@@ -37,6 +37,7 @@ function makeRecord(overrides: Partial<AttendanceRecord> = {}): AttendanceRecord
     athlete_id: ATHLETE_ID,
     attended_on: '2026-04-10',
     notes: null,
+    source: 'instructor',
     created_at: '2026-04-10T10:00:00+00:00',
     deleted_at: null,
     ...overrides,

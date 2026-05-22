@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\AttendanceSource;
 use Database\Factories\AttendanceRecordFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int                 $athlete_id
  * @property \Carbon\Carbon      $attended_on
  * @property string|null         $notes
+ * @property AttendanceSource    $source
  * @property \Carbon\Carbon|null $created_at
  * @property \Carbon\Carbon|null $updated_at
  * @property \Carbon\Carbon|null $deleted_at
@@ -24,6 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'athlete_id',
     'attended_on',
     'notes',
+    'source',
 ])]
 class AttendanceRecord extends Model
 {
@@ -50,6 +53,7 @@ class AttendanceRecord extends Model
         // `whereDate` as defense-in-depth — see MarkAttendanceAction.
         return [
             'attended_on' => 'date:Y-m-d',
+            'source' => AttendanceSource::class,
         ];
     }
 }

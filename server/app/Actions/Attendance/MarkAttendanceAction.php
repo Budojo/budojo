@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Attendance;
 
+use App\Enums\AttendanceSource;
 use App\Models\Academy;
 use App\Models\AttendanceRecord;
 use Carbon\CarbonImmutable;
@@ -32,11 +33,19 @@ class MarkAttendanceAction
      * to $academy. Passing stale IDs silently skips them (they match no
      * academy athlete).
      *
+     * The `source` parameter pins who marked the presence. Defaults to
+     * `Instructor` for back-compat with the owner-side widget; the
+     * athlete-side `POST /me/attendance/today` endpoint passes `Self`.
+     *
      * @param  list<int>  $athleteIds
      * @return Collection<int, AttendanceRecord>
      */
-    public function execute(Academy $academy, CarbonImmutable $date, array $athleteIds): Collection
-    {
+    public function execute(
+        Academy $academy,
+        CarbonImmutable $date,
+        array $athleteIds,
+        AttendanceSource $source = AttendanceSource::Instructor,
+    ): Collection {
         // Restrict to athletes that actually belong to this academy (defense
         // in depth — the FormRequest should have already gated this).
         // The explicit (mixed) $v closure narrows the pluck result — which
@@ -73,6 +82,7 @@ class MarkAttendanceAction
             $newRecords->push(AttendanceRecord::create([
                 'athlete_id' => $athleteId,
                 'attended_on' => $date->toDateString(),
+                'source' => $source,
             ]));
         }
 

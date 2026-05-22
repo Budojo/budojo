@@ -65,8 +65,8 @@ class AthleteTrainingTodayNotification extends Notification
     {
         return [
             'title' => 'Today is training day',
-            'body' => \sprintf('See you on the mat at %s.', $this->academy->name),
-            'link' => '/dashboard/me/academy',
+            'body' => \sprintf('Tap to register your attendance at %s.', $this->academy->name),
+            'link' => '/dashboard/me/attendance/today',
             'kind' => 'athlete_training_today',
             'academy_id' => $this->academy->id,
         ];
