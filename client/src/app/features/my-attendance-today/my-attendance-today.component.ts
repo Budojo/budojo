@@ -22,8 +22,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
  * Self-mark today's presence (#960). Athlete-portal page reached from
  * the 07:00 "today is training day" push or via the sidebar.
  *
- * Four template branches:
- *   - `loading` — initial state, briefly while the page mounts.
+ * Three template branches:
  *   - `not-training-day` — academy schedule says today is off.
  *   - `marked` — a row exists for the athlete on today. Shows the
  *     Annulla button ONLY when the row is athlete-self-marked
