@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Me;
 
 use App\Actions\Attendance\GetAthleteAttendanceAction;
-use App\Actions\Attendance\MarkAttendanceAction;
-use App\Enums\AttendanceSource;
+use App\Actions\Attendance\MarkTodayAttendanceAction;
+use App\Actions\Attendance\UnmarkTodayAttendanceAction;
+use App\Actions\Attendance\UnmarkTodayResult;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AttendanceRecordResource;
-use App\Models\Academy;
-use App\Models\AttendanceRecord;
 use App\Models\User;
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -48,7 +46,8 @@ class MyAttendanceController extends Controller
 {
     public function __construct(
         private readonly GetAthleteAttendanceAction $action,
-        private readonly MarkAttendanceAction $markAttendance,
+        private readonly MarkTodayAttendanceAction $markTodayAction,
+        private readonly UnmarkTodayAttendanceAction $unmarkTodayAction,
     ) {
     }
 
@@ -83,14 +82,15 @@ class MyAttendanceController extends Controller
 
     /**
      * `POST /api/v1/me/attendance/today` (#960) — self-register the
-     * athlete's presence for today. Idempotent: 201 on the first call,
-     * 200 on subsequent same-day calls (returns the existing row,
-     * which may carry `source='instructor'` if the instructor already
-     * marked them — the self-mark is a no-op in that case, NOT a
-     * source flip).
+     * athlete's presence for today. Business logic (training-day rule
+     * + idempotent fetch + delegation) lives in
+     * `MarkTodayAttendanceAction`; this method maps the result branch
+     * to the HTTP status only.
      *
-     * - 404 when the caller has no linked athlete row
-     * - 422 when today is not in the academy's `training_days`
+     *  - `Created` → 201 with the new row
+     *  - `Existed` → 200 with the existing row (instructor- OR self-marked)
+     *  - `NotTrainingDay` → 422 with `{message}`
+     *  - No athlete row → 404
      */
     public function markToday(Request $request): JsonResponse
     {
@@ -102,42 +102,30 @@ class MyAttendanceController extends Controller
             return response()->json(['message' => 'No athlete profile found.'], 404);
         }
 
-        /** @var Academy $academy */
-        $academy = $athlete->academy;
-        if (! $this->isTrainingDayToday($academy)) {
-            return response()->json(['message' => 'Not a training day today.'], 422);
-        }
+        $result = $this->markTodayAction->execute($athlete);
 
-        $today = CarbonImmutable::today();
-        $existing = AttendanceRecord::query()
-            ->where('athlete_id', $athlete->id)
-            ->whereDate('attended_on', $today->toDateString())
-            ->first();
-
-        if ($existing !== null) {
-            return AttendanceRecordResource::make($existing)
+        return match ($result->status) {
+            'created' => AttendanceRecordResource::make($result->record)
                 ->response()
-                ->setStatusCode(Response::HTTP_OK);
-        }
-
-        $created = $this->markAttendance->execute(
-            $academy,
-            $today,
-            [$athlete->id],
-            AttendanceSource::Self,
-        )->first();
-
-        return AttendanceRecordResource::make($created)
-            ->response()
-            ->setStatusCode(Response::HTTP_CREATED);
+                ->setStatusCode(Response::HTTP_CREATED),
+            'existed' => AttendanceRecordResource::make($result->record)
+                ->response()
+                ->setStatusCode(Response::HTTP_OK),
+            'not_training_day' => response()->json(
+                ['message' => 'Not a training day today.'],
+                422,
+            ),
+            default => response()->json(['message' => 'Unexpected mark-today result.'], 500),
+        };
     }
 
     /**
      * `DELETE /api/v1/me/attendance/today` (#960) — revert the
      * athlete's own self-mark. Idempotent: 204 on success AND when no
      * row exists. 403 when today's row was instructor-marked — only
-     * the instructor can revert their own marks (athletes can't fake
-     * a "no-show" to undo what the instructor saw).
+     * the instructor can revert their own marks. Business logic lives
+     * in `UnmarkTodayAttendanceAction`; the controller's job is the
+     * 404-vs-result-enum → HTTP-status mapping.
      */
     public function unmarkToday(Request $request): JsonResponse|Response
     {
@@ -149,25 +137,13 @@ class MyAttendanceController extends Controller
             return response()->json(['message' => 'No athlete profile found.'], 404);
         }
 
-        $today = Carbon::today()->toDateString();
-        $record = AttendanceRecord::query()
-            ->where('athlete_id', $athlete->id)
-            ->whereDate('attended_on', $today)
-            ->first();
-
-        if ($record === null) {
-            return response()->noContent();
-        }
-        if ($record->source !== AttendanceSource::Self) {
-            return response()->json(
+        return match ($this->unmarkTodayAction->execute($athlete)) {
+            UnmarkTodayResult::Deleted, UnmarkTodayResult::NoRow => response()->noContent(),
+            UnmarkTodayResult::InstructorLocked => response()->json(
                 ['message' => 'Cannot revert an instructor-marked attendance.'],
                 403,
-            );
-        }
-
-        $record->delete();
-
-        return response()->noContent();
+            ),
+        };
     }
 
     /**
@@ -238,22 +214,5 @@ class MyAttendanceController extends Controller
         }
 
         return $parsed;
-    }
-
-    /**
-     * Today's weekday is in the academy's configured `training_days`.
-     * Null / empty `training_days` → no schedule configured → today
-     * does not count as a training day (returns false). The owner has
-     * to explicitly populate the schedule for self-mark to be legal.
-     */
-    private function isTrainingDayToday(Academy $academy): bool
-    {
-        /** @var list<int>|null $trainingDays */
-        $trainingDays = $academy->training_days;
-        if ($trainingDays === null || $trainingDays === []) {
-            return false;
-        }
-
-        return \in_array((int) Carbon::today()->dayOfWeek, $trainingDays, true);
     }
 }
