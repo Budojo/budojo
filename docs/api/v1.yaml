@@ -2056,6 +2056,64 @@ paths:
         '422':
           description: 2FA not active — call /me/two-factor/enrol first.
 
+  /me/attendance/today:
+    post:
+      tags: [attendance]
+      summary: Self-register the athlete's presence for today
+      description: |
+        Athlete-side self-mark (#960). Idempotent: 201 on the first
+        call, 200 on subsequent same-day calls (returns the existing
+        row, which may carry `source: instructor` if the instructor
+        already marked them — the self-mark is a no-op in that case,
+        NOT a source flip).
+
+        - 422 when today is not in the academy's `training_days`
+        - 404 when the caller has no linked `athletes` row
+      operationId: meMarkAttendanceToday
+      responses:
+        '201':
+          description: New self-mark created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/AttendanceRecord' }
+        '200':
+          description: A row already exists for today (idempotent re-call or instructor-marked).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/AttendanceRecord' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: No athlete profile found for the caller.
+        '422':
+          description: Today is not a configured training day for the academy.
+
+    delete:
+      tags: [attendance]
+      summary: Revert the athlete's own self-mark for today
+      description: |
+        Idempotent — 204 both when a row was deleted and when none
+        existed. Returns 403 when today's row was instructor-marked
+        (only the instructor can revert their own marks).
+      operationId: meUnmarkAttendanceToday
+      responses:
+        '204':
+          description: Row removed (or already absent).
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: The existing row is instructor-marked; only the instructor can revert it.
+        '404':
+          description: No athlete profile found for the caller.
+
   /me/avatar:
     post:
       tags: [auth]
@@ -5778,7 +5836,7 @@ components:
 
     AttendanceRecord:
       type: object
-      required: [id, athlete_id, attended_on]
+      required: [id, athlete_id, attended_on, source]
       properties:
         id:
           type: integer
@@ -5794,6 +5852,13 @@ components:
           type: string
           nullable: true
           maxLength: 500
+        source:
+          type: string
+          enum: [instructor, self]
+          description: |
+            Who marked the presence. `instructor` is the default (and
+            backfill for legacy rows) — owner-side widget. `self` is
+            pinned by the athlete-side `POST /me/attendance/today`.
         created_at:
           type: string
           format: date-time

@@ -161,6 +161,17 @@ export const routes: Routes = [
           ),
       },
       {
+        // Self-mark today's presence (#960). Athlete lands here from
+        // the 07:00 push reminder, taps "I'm here today", done.
+        // Separate route from `/attendance` (which is the read-only
+        // history) so the deep-link from the push is unambiguous.
+        path: 'attendance/today',
+        loadComponent: () =>
+          import('./features/my-attendance-today/my-attendance-today.component').then(
+            (m) => m.MyAttendanceTodayComponent,
+          ),
+      },
+      {
         path: 'payments',
         loadComponent: () =>
           import('./features/my-payments/my-payments.component').then((m) => m.MyPaymentsComponent),

@@ -229,6 +229,14 @@ export class DailyAttendanceComponent implements OnInit {
    */
   protected readonly presentMap = signal<Map<number, number>>(new Map());
 
+  /**
+   * Subset of presentMap that was self-marked by the athlete (#960).
+   * Renders a small "Self" badge next to the name so the instructor
+   * distinguishes self-reported presence from rows they entered
+   * themselves — spot anomalies, accept the rest.
+   */
+  protected readonly selfMarkedSet = signal<Set<number>>(new Set());
+
   protected readonly loading = signal<boolean>(false);
 
   /**
@@ -472,10 +480,13 @@ export class DailyAttendanceComponent implements OnInit {
       next: (records) => {
         if (epoch === this.loadEpoch) {
           const map = new Map<number, number>();
+          const selfSet = new Set<number>();
           for (const r of records) {
             map.set(r.athlete_id, r.id);
+            if (r.source === 'self') selfSet.add(r.athlete_id);
           }
           this.presentMap.set(map);
+          this.selfMarkedSet.set(selfSet);
         }
         settle();
       },
@@ -490,6 +501,12 @@ export class DailyAttendanceComponent implements OnInit {
 
   protected isPresent(athleteId: number): boolean {
     return this.presentMap().has(athleteId);
+  }
+
+  /** Was today's row pinned by the athlete via `POST /me/attendance/today`
+   *  (#960). True only for active rows where source === 'self'. */
+  protected isSelfMarked(athleteId: number): boolean {
+    return this.selfMarkedSet().has(athleteId);
   }
 
   protected isInflight(athleteId: number): boolean {
@@ -688,6 +705,13 @@ export class DailyAttendanceComponent implements OnInit {
     const next = new Map(this.presentMap());
     next.delete(athleteId);
     this.presentMap.set(next);
+    // Drop from the self-marked set too — the row is gone, the badge
+    // should disappear with it.
+    if (this.selfMarkedSet().has(athleteId)) {
+      const nextSet = new Set(this.selfMarkedSet());
+      nextSet.delete(athleteId);
+      this.selfMarkedSet.set(nextSet);
+    }
   }
 
   private markInflight(athleteId: number, on: boolean): void {

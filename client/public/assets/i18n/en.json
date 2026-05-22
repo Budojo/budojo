@@ -1458,6 +1458,10 @@
         "belt": "Belt",
         "presentAria": "Present"
       },
+      "selfBadge": {
+        "label": "Self",
+        "title": "The athlete registered their own attendance via the app."
+      },
       "empty": {
         "filtered": "No active athletes match the current filters.",
         "noAthletes": "No active athletes yet — add one from the Athletes page."
@@ -1982,6 +1986,42 @@
       "title": "Profile not available",
       "body": "We couldn't find this profile, or it isn't visible to you.",
       "back": "Back to athletes"
+    }
+  },
+  "myAttendanceToday": {
+    "title": "Today's attendance",
+    "notTrainingDay": {
+      "heading": "No training today",
+      "copy": "Your academy isn't scheduled to train today. Enjoy the rest day — we'll ping you on the next training day.",
+      "cta": "Back to my profile"
+    },
+    "marked": {
+      "heading": "You're in for today",
+      "copySelf": "We've registered your attendance. See you on the mat.",
+      "copyInstructor": "Your instructor has already marked you present for today.",
+      "unmarkButton": "Cancel attendance"
+    },
+    "unmarked": {
+      "heading": "Going to training tonight?",
+      "copy": "Tap below to register your attendance. Your instructor won't have to do it for you.",
+      "markButton": "I'm here today"
+    },
+    "markedToast": {
+      "summary": "Attendance registered"
+    },
+    "unmarkedToast": {
+      "summary": "Attendance cancelled"
+    },
+    "instructorLockedToast": {
+      "summary": "Your instructor has marked you present",
+      "detail": "Only the instructor can revert their own marks. Talk to your academy if there's a mistake."
+    },
+    "markErrorToast": {
+      "summary": "Couldn't register attendance",
+      "detail": "Something went wrong. Try again in a moment."
+    },
+    "unmarkErrorToast": {
+      "summary": "Couldn't cancel attendance"
     }
   }
 }

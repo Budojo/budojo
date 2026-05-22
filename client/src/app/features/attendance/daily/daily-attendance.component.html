@@ -160,7 +160,18 @@
           (keydown.space)="togglePresent(athlete); $event.preventDefault()"
           [attr.data-cy]="'attendance-row-' + athlete.id"
         >
-          <td class="attendance-cell-name">{{ athlete.first_name }} {{ athlete.last_name }}</td>
+          <td class="attendance-cell-name">
+            {{ athlete.first_name }} {{ athlete.last_name }}
+            @if (isSelfMarked(athlete.id)) {
+              <span
+                class="attendance-self-badge"
+                [attr.title]="'attendance.daily.selfBadge.title' | translate"
+                data-cy="attendance-self-badge"
+              >
+                {{ 'attendance.daily.selfBadge.label' | translate }}
+              </span>
+            }
+          </td>
           <td>
             <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
           </td>

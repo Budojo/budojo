@@ -4,6 +4,13 @@ import { Observable, catchError, map, of, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /**
+ * Source of an attendance row (#960). `'instructor'` is the default
+ * for every legacy row and for the owner-side widget;  `'self'` is
+ * pinned by the athlete-side `POST /me/attendance/today` endpoint.
+ */
+export type AttendanceSource = 'instructor' | 'self';
+
+/**
  * Attendance record on the wire — one row in `attendance_records`.
  * Mirrors AttendanceRecordResource.toArray() server-side.
  */
@@ -12,6 +19,7 @@ export interface AttendanceRecord {
   athlete_id: number;
   attended_on: string; // YYYY-MM-DD
   notes: string | null;
+  source: AttendanceSource;
   created_at: string | null;
   deleted_at: string | null;
 }
@@ -47,6 +55,18 @@ interface AttendanceListResponse {
 interface AttendanceSummaryResponse {
   data: AttendanceSummaryRow[];
 }
+
+/** Discriminated outcomes of `markToday()` — see method docstring. */
+export type MarkTodayResult =
+  | { status: 'marked'; record: AttendanceRecord }
+  | { status: 'not-training-day' }
+  | { status: 'no-athlete' };
+
+/** Discriminated outcomes of `unmarkToday()` — see method docstring. */
+export type UnmarkTodayResult =
+  | { status: 'unmarked' }
+  | { status: 'instructor-locked' }
+  | { status: 'no-athlete' };
 
 /**
  * Client wrapper for the M4.1 attendance API. Five endpoints, all
@@ -132,6 +152,55 @@ export class AttendanceService {
           err.status === 404 ? of<AttendanceRecord[] | null>(null) : throwError(() => err),
         ),
       );
+  }
+
+  /**
+   * Self-mark today's presence (#960). Idempotent — second call
+   * returns the existing row instead of erroring; the HTTP status
+   * (201 vs 200) distinguishes new vs existing but both unwrap to the
+   * same AttendanceRecord shape.
+   *
+   * Returns:
+   *  - `{ status: 'marked', record }` on 200/201 success
+   *  - `{ status: 'not-training-day' }` on 422 (today isn't in the academy's training_days)
+   *  - `{ status: 'no-athlete' }` on 404 (caller has no linked athlete row)
+   *
+   * Wraps the four success/error branches into a discriminated union
+   * so the component can `@switch` over status without an outer try/
+   * catch — matches the pattern used by `WebPushService.subscribe()`.
+   */
+  markToday(): Observable<MarkTodayResult> {
+    return this.http
+      .post<{ data: AttendanceRecord }>(`${environment.apiBase}/api/v1/me/attendance/today`, {})
+      .pipe(
+        map((res) => ({ status: 'marked' as const, record: res.data })),
+        catchError((err: HttpErrorResponse) => {
+          if (err.status === 422) return of<MarkTodayResult>({ status: 'not-training-day' });
+          if (err.status === 404) return of<MarkTodayResult>({ status: 'no-athlete' });
+          return throwError(() => err);
+        }),
+      );
+  }
+
+  /**
+   * Revert the athlete's own self-mark for today (#960). Idempotent
+   * — 204 both when a row was deleted and when none existed.
+   *
+   * Returns:
+   *  - `{ status: 'unmarked' }` on 204
+   *  - `{ status: 'instructor-locked' }` on 403 (today's row is
+   *     instructor-marked; only the instructor can revert it)
+   *  - `{ status: 'no-athlete' }` on 404
+   */
+  unmarkToday(): Observable<UnmarkTodayResult> {
+    return this.http.delete<void>(`${environment.apiBase}/api/v1/me/attendance/today`).pipe(
+      map(() => ({ status: 'unmarked' as const })),
+      catchError((err: HttpErrorResponse) => {
+        if (err.status === 403) return of<UnmarkTodayResult>({ status: 'instructor-locked' });
+        if (err.status === 404) return of<UnmarkTodayResult>({ status: 'no-athlete' });
+        return throwError(() => err);
+      }),
+    );
   }
 
   /**

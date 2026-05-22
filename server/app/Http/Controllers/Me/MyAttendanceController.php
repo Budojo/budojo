@@ -5,13 +5,19 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Me;
 
 use App\Actions\Attendance\GetAthleteAttendanceAction;
+use App\Actions\Attendance\MarkAttendanceAction;
+use App\Enums\AttendanceSource;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AttendanceRecordResource;
+use App\Models\Academy;
+use App\Models\AttendanceRecord;
 use App\Models\User;
+use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 /**
  * Athlete-portal attendance history (#618 / M7 PR-D slice 3).
@@ -42,6 +48,7 @@ class MyAttendanceController extends Controller
 {
     public function __construct(
         private readonly GetAthleteAttendanceAction $action,
+        private readonly MarkAttendanceAction $markAttendance,
     ) {
     }
 
@@ -72,6 +79,95 @@ class MyAttendanceController extends Controller
         $records = $this->action->execute($athlete, $from, $to);
 
         return AttendanceRecordResource::collection($records);
+    }
+
+    /**
+     * `POST /api/v1/me/attendance/today` (#960) — self-register the
+     * athlete's presence for today. Idempotent: 201 on the first call,
+     * 200 on subsequent same-day calls (returns the existing row,
+     * which may carry `source='instructor'` if the instructor already
+     * marked them — the self-mark is a no-op in that case, NOT a
+     * source flip).
+     *
+     * - 404 when the caller has no linked athlete row
+     * - 422 when today is not in the academy's `training_days`
+     */
+    public function markToday(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $athlete = $user->athlete;
+        if ($athlete === null) {
+            return response()->json(['message' => 'No athlete profile found.'], 404);
+        }
+
+        /** @var Academy $academy */
+        $academy = $athlete->academy;
+        if (! $this->isTrainingDayToday($academy)) {
+            return response()->json(['message' => 'Not a training day today.'], 422);
+        }
+
+        $today = CarbonImmutable::today();
+        $existing = AttendanceRecord::query()
+            ->where('athlete_id', $athlete->id)
+            ->whereDate('attended_on', $today->toDateString())
+            ->first();
+
+        if ($existing !== null) {
+            return AttendanceRecordResource::make($existing)
+                ->response()
+                ->setStatusCode(Response::HTTP_OK);
+        }
+
+        $created = $this->markAttendance->execute(
+            $academy,
+            $today,
+            [$athlete->id],
+            AttendanceSource::Self,
+        )->first();
+
+        return AttendanceRecordResource::make($created)
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    /**
+     * `DELETE /api/v1/me/attendance/today` (#960) — revert the
+     * athlete's own self-mark. Idempotent: 204 on success AND when no
+     * row exists. 403 when today's row was instructor-marked — only
+     * the instructor can revert their own marks (athletes can't fake
+     * a "no-show" to undo what the instructor saw).
+     */
+    public function unmarkToday(Request $request): JsonResponse|Response
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $athlete = $user->athlete;
+        if ($athlete === null) {
+            return response()->json(['message' => 'No athlete profile found.'], 404);
+        }
+
+        $today = Carbon::today()->toDateString();
+        $record = AttendanceRecord::query()
+            ->where('athlete_id', $athlete->id)
+            ->whereDate('attended_on', $today)
+            ->first();
+
+        if ($record === null) {
+            return response()->noContent();
+        }
+        if ($record->source !== AttendanceSource::Self) {
+            return response()->json(
+                ['message' => 'Cannot revert an instructor-marked attendance.'],
+                403,
+            );
+        }
+
+        $record->delete();
+
+        return response()->noContent();
     }
 
     /**
@@ -142,5 +238,22 @@ class MyAttendanceController extends Controller
         }
 
         return $parsed;
+    }
+
+    /**
+     * Today's weekday is in the academy's configured `training_days`.
+     * Null / empty `training_days` → no schedule configured → today
+     * does not count as a training day (returns false). The owner has
+     * to explicitly populate the schedule for self-mark to be legal.
+     */
+    private function isTrainingDayToday(Academy $academy): bool
+    {
+        /** @var list<int>|null $trainingDays */
+        $trainingDays = $academy->training_days;
+        if ($trainingDays === null || $trainingDays === []) {
+            return false;
+        }
+
+        return \in_array((int) Carbon::today()->dayOfWeek, $trainingDays, true);
     }
 }
