@@ -60,6 +60,7 @@ attendance_records
 - athlete_id (fk athletes.id, cascade on delete, index)
 - attended_on (date, not null, index)
 - notes (text, nullable, max 500 chars)
+- source (enum 'instructor' | 'self', default 'instructor')   ← #960
 - created_at, updated_at
 - deleted_at (SoftDeletes)
 
@@ -67,6 +68,8 @@ UNIQUE (athlete_id, attended_on) where deleted_at IS NULL
 Index (attended_on)
 Index (athlete_id, attended_on)
 ```
+
+The `source` column (added by #960) distinguishes rows the instructor entered via the owner-side widget (`'instructor'`, the default for every legacy row) from rows the athlete pinned themselves via `POST /me/attendance/today` (`'self'`). The owner-side daily widget renders a small "Self" badge next to self-marked rows so the instructor can spot anomalies; only the instructor can revert their own marks (athletes cannot un-mark an `'instructor'` row, and instructors retain DELETE authority on both).
 
 The uniqueness constraint is conditional on `deleted_at IS NULL` so that correcting a mistaken record by soft-deleting the first one and inserting a correct one does not trip a duplicate-key error.
 

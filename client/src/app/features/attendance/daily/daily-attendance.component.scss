@@ -185,6 +185,25 @@
   color: var(--p-surface-900);
 }
 
+// "Self" pill next to an athlete's name (#960) — the instructor's
+// at-a-glance signal that the row was filled by the athlete, not them.
+// Eyebrow-tier visual weight (small, uppercase, soft tint) — present
+// without competing with the name itself.
+.attendance-self-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0 0.5rem;
+  line-height: 1.5rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--p-primary-color) 14%, transparent);
+  color: var(--p-primary-color);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
 // ── Present indicator ─────────────────────────────────────────────────────────
 //
 // Right-aligned cell with a circle / check icon. Width is fixed so the

@@ -26,6 +26,7 @@ class AttendanceRecordResource extends JsonResource
             'athlete_id' => $record->athlete_id,
             'attended_on' => $record->attended_on->toDateString(),
             'notes' => $record->notes,
+            'source' => $record->source->value,
             'created_at' => $record->created_at?->toIso8601String(),
             'deleted_at' => $record->deleted_at?->toIso8601String(),
         ];

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Me;
 
 use App\Actions\Attendance\GetAthleteAttendanceAction;
+use App\Actions\Attendance\MarkTodayAttendanceAction;
+use App\Actions\Attendance\UnmarkTodayAttendanceAction;
+use App\Actions\Attendance\UnmarkTodayResult;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AttendanceRecordResource;
 use App\Models\User;
@@ -12,6 +15,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 /**
  * Athlete-portal attendance history (#618 / M7 PR-D slice 3).
@@ -42,6 +46,8 @@ class MyAttendanceController extends Controller
 {
     public function __construct(
         private readonly GetAthleteAttendanceAction $action,
+        private readonly MarkTodayAttendanceAction $markTodayAction,
+        private readonly UnmarkTodayAttendanceAction $unmarkTodayAction,
     ) {
     }
 
@@ -72,6 +78,72 @@ class MyAttendanceController extends Controller
         $records = $this->action->execute($athlete, $from, $to);
 
         return AttendanceRecordResource::collection($records);
+    }
+
+    /**
+     * `POST /api/v1/me/attendance/today` (#960) — self-register the
+     * athlete's presence for today. Business logic (training-day rule
+     * + idempotent fetch + delegation) lives in
+     * `MarkTodayAttendanceAction`; this method maps the result branch
+     * to the HTTP status only.
+     *
+     *  - `Created` → 201 with the new row
+     *  - `Existed` → 200 with the existing row (instructor- OR self-marked)
+     *  - `NotTrainingDay` → 422 with `{message}`
+     *  - No athlete row → 404
+     */
+    public function markToday(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $athlete = $user->athlete;
+        if ($athlete === null) {
+            return response()->json(['message' => 'No athlete profile found.'], 404);
+        }
+
+        $result = $this->markTodayAction->execute($athlete);
+
+        return match ($result->status) {
+            'created' => AttendanceRecordResource::make($result->record)
+                ->response()
+                ->setStatusCode(Response::HTTP_CREATED),
+            'existed' => AttendanceRecordResource::make($result->record)
+                ->response()
+                ->setStatusCode(Response::HTTP_OK),
+            'not_training_day' => response()->json(
+                ['message' => 'Not a training day today.'],
+                422,
+            ),
+            default => response()->json(['message' => 'Unexpected mark-today result.'], 500),
+        };
+    }
+
+    /**
+     * `DELETE /api/v1/me/attendance/today` (#960) — revert the
+     * athlete's own self-mark. Idempotent: 204 on success AND when no
+     * row exists. 403 when today's row was instructor-marked — only
+     * the instructor can revert their own marks. Business logic lives
+     * in `UnmarkTodayAttendanceAction`; the controller's job is the
+     * 404-vs-result-enum → HTTP-status mapping.
+     */
+    public function unmarkToday(Request $request): JsonResponse|Response
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $athlete = $user->athlete;
+        if ($athlete === null) {
+            return response()->json(['message' => 'No athlete profile found.'], 404);
+        }
+
+        return match ($this->unmarkTodayAction->execute($athlete)) {
+            UnmarkTodayResult::Deleted, UnmarkTodayResult::NoRow => response()->noContent(),
+            UnmarkTodayResult::InstructorLocked => response()->json(
+                ['message' => 'Cannot revert an instructor-marked attendance.'],
+                403,
+            ),
+        };
     }
 
     /**

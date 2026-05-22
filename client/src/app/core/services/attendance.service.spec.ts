@@ -9,6 +9,7 @@ function makeRecord(overrides: Partial<AttendanceRecord> = {}): AttendanceRecord
     athlete_id: 1,
     attended_on: '2026-04-24',
     notes: null,
+    source: 'instructor',
     created_at: '2026-04-24T10:00:00+00:00',
     deleted_at: null,
     ...overrides,
@@ -114,6 +115,91 @@ describe('AttendanceService', () => {
       req.flush({ data: rows });
 
       expect(received).toEqual(rows);
+    });
+  });
+
+  // ─── Self-mark (#960) ─────────────────────────────────────────
+
+  describe('markToday', () => {
+    it('POSTs /me/attendance/today and resolves to status:marked on 201', () => {
+      let result: unknown;
+      service.markToday().subscribe((r) => (result = r));
+      const req = httpMock.expectOne('/api/v1/me/attendance/today');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      req.flush({ data: makeRecord({ source: 'self' }) }, { status: 201, statusText: 'Created' });
+      expect(result).toEqual({ status: 'marked', record: makeRecord({ source: 'self' }) });
+    });
+
+    it('200 (idempotent re-call) also resolves to status:marked with the existing row', () => {
+      let result: unknown;
+      service.markToday().subscribe((r) => (result = r));
+      httpMock
+        .expectOne('/api/v1/me/attendance/today')
+        .flush({ data: makeRecord({ source: 'instructor' }) }, { status: 200, statusText: 'OK' });
+      expect(result).toEqual({ status: 'marked', record: makeRecord({ source: 'instructor' }) });
+    });
+
+    it('422 (not training day) collapses to status:not-training-day', () => {
+      let result: unknown;
+      service.markToday().subscribe((r) => (result = r));
+      httpMock
+        .expectOne('/api/v1/me/attendance/today')
+        .flush(
+          { message: 'Not a training day today.' },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+      expect(result).toEqual({ status: 'not-training-day' });
+    });
+
+    it('404 (no athlete) collapses to status:no-athlete', () => {
+      let result: unknown;
+      service.markToday().subscribe((r) => (result = r));
+      httpMock
+        .expectOne('/api/v1/me/attendance/today')
+        .flush({ message: 'No athlete profile found.' }, { status: 404, statusText: 'Not Found' });
+      expect(result).toEqual({ status: 'no-athlete' });
+    });
+
+    it('lets a 500 propagate to the error handler (caller decides)', () => {
+      let errored = false;
+      service.markToday().subscribe({ error: () => (errored = true) });
+      httpMock
+        .expectOne('/api/v1/me/attendance/today')
+        .flush({}, { status: 500, statusText: 'Server Error' });
+      expect(errored).toBe(true);
+    });
+  });
+
+  describe('unmarkToday', () => {
+    it('DELETEs /me/attendance/today and resolves to status:unmarked on 204', () => {
+      let result: unknown;
+      service.unmarkToday().subscribe((r) => (result = r));
+      const req = httpMock.expectOne('/api/v1/me/attendance/today');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+      expect(result).toEqual({ status: 'unmarked' });
+    });
+
+    it('403 (instructor-marked row) collapses to status:instructor-locked', () => {
+      let result: unknown;
+      service.unmarkToday().subscribe((r) => (result = r));
+      httpMock
+        .expectOne('/api/v1/me/attendance/today')
+        .flush(
+          { message: 'Cannot revert an instructor-marked attendance.' },
+          { status: 403, statusText: 'Forbidden' },
+        );
+      expect(result).toEqual({ status: 'instructor-locked' });
+    });
+
+    it('404 collapses to status:no-athlete', () => {
+      let result: unknown;
+      service.unmarkToday().subscribe((r) => (result = r));
+      httpMock
+        .expectOne('/api/v1/me/attendance/today')
+        .flush({ message: 'No athlete profile found.' }, { status: 404, statusText: 'Not Found' });
+      expect(result).toEqual({ status: 'no-athlete' });
     });
   });
 });

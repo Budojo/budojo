@@ -1,0 +1,64 @@
+.attendance-today {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+
+  &__panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+    padding: 2.5rem 1.5rem;
+    background: var(--p-surface-0);
+    border: 1px solid var(--p-surface-200);
+    border-radius: 16px;
+  }
+
+  &__panel--marked {
+    background: color-mix(in srgb, var(--p-primary-color) 8%, var(--p-surface-0));
+    border-color: color-mix(in srgb, var(--p-primary-color) 25%, var(--p-surface-200));
+  }
+
+  &__glyph {
+    font-size: 3rem;
+    line-height: 1;
+  }
+
+  &__heading {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--p-text-color);
+  }
+
+  &__copy {
+    margin: 0;
+    color: var(--p-text-muted-color);
+    max-width: 32rem;
+  }
+
+  &__link {
+    color: var(--p-primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    margin-top: 0.5rem;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__cta {
+    margin-top: 0.5rem;
+
+    // Bigger touch target for the primary CTA — Fitts: this is THE
+    // action on this page. PrimeNG tokens (not ::ng-deep) so the
+    // override stays within the design-system surface area; 3rem
+    // height clears the 48 dp mobile minimum from client/CLAUDE.md
+    // § hard visual rules.
+    --p-button-min-width: 12rem;
+    --p-button-padding-y: 1rem;
+    --p-button-padding-x: 1.5rem;
+    --p-button-font-size: 1rem;
+  }
+}

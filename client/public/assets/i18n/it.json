@@ -1458,6 +1458,10 @@
         "belt": "Cintura",
         "presentAria": "Presente"
       },
+      "selfBadge": {
+        "label": "Da solo",
+        "title": "L'atleta si è segnato presente dall'app."
+      },
       "empty": {
         "filtered": "Nessun atleta attivo corrisponde ai filtri.",
         "noAthletes": "Nessun atleta attivo ancora — aggiungine uno dalla pagina Atleti."
@@ -1982,6 +1986,42 @@
       "title": "Profilo non disponibile",
       "body": "Non troviamo questo profilo, oppure non è visibile a te.",
       "back": "Torna agli atleti"
+    }
+  },
+  "myAttendanceToday": {
+    "title": "Presenza di oggi",
+    "notTrainingDay": {
+      "heading": "Oggi non si allena",
+      "copy": "La tua palestra oggi non è in programma. Riposati — ti avviseremo al prossimo giorno di allenamento.",
+      "cta": "Torna al mio profilo"
+    },
+    "marked": {
+      "heading": "Sei a posto per oggi",
+      "copySelf": "Abbiamo registrato la tua presenza. Ci vediamo sul tatami.",
+      "copyInstructor": "Il tuo maestro ti ha già segnato presente per oggi.",
+      "unmarkButton": "Annulla presenza"
+    },
+    "unmarked": {
+      "heading": "Vai ad allenarti stasera?",
+      "copy": "Tocca qui sotto per registrare la tua presenza. Il maestro non dovrà farlo a mano.",
+      "markButton": "Sono qui oggi"
+    },
+    "markedToast": {
+      "summary": "Presenza registrata"
+    },
+    "unmarkedToast": {
+      "summary": "Presenza annullata"
+    },
+    "instructorLockedToast": {
+      "summary": "Il maestro ti ha già segnato",
+      "detail": "Solo il maestro può cancellare la sua firma. Avvisa la palestra se c'è un errore."
+    },
+    "markErrorToast": {
+      "summary": "Impossibile registrare la presenza",
+      "detail": "Qualcosa è andato storto. Riprova tra un momento."
+    },
+    "unmarkErrorToast": {
+      "summary": "Impossibile annullare la presenza"
     }
   }
 }

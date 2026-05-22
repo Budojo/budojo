@@ -13,6 +13,7 @@ function record(over: Partial<AttendanceRecord> = {}): AttendanceRecord {
     athlete_id: 1,
     attended_on: '2026-05-01',
     notes: null,
+    source: 'instructor',
     created_at: '2026-05-01T19:00:00Z',
     deleted_at: null,
     ...over,

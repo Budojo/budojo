@@ -1,0 +1,74 @@
+<app-page-header [title]="'myAttendanceToday.title' | translate" [subtitle]="todayLabel()" />
+
+<section class="attendance-today" data-cy="attendance-today">
+  @switch (status()) {
+    @case ('not-training-day') {
+      <div class="attendance-today__panel" data-cy="attendance-today-not-training">
+        <span class="attendance-today__glyph" aria-hidden="true">🛌</span>
+        <h2 class="attendance-today__heading">
+          {{ 'myAttendanceToday.notTrainingDay.heading' | translate }}
+        </h2>
+        <p class="attendance-today__copy">
+          {{ 'myAttendanceToday.notTrainingDay.copy' | translate }}
+        </p>
+        <a
+          routerLink="/dashboard/me/profile"
+          class="attendance-today__link"
+          data-cy="attendance-today-back"
+        >
+          {{ 'myAttendanceToday.notTrainingDay.cta' | translate }}
+        </a>
+      </div>
+    }
+
+    @case ('marked') {
+      <div
+        class="attendance-today__panel attendance-today__panel--marked"
+        data-cy="attendance-today-marked"
+      >
+        <span class="attendance-today__glyph" aria-hidden="true">✅</span>
+        <h2 class="attendance-today__heading">
+          {{ 'myAttendanceToday.marked.heading' | translate }}
+        </h2>
+        <p class="attendance-today__copy">
+          @if (source() === 'self') {
+            {{ 'myAttendanceToday.marked.copySelf' | translate }}
+          } @else {
+            {{ 'myAttendanceToday.marked.copyInstructor' | translate }}
+          }
+        </p>
+
+        @if (canUnmark()) {
+          <p-button
+            [label]="'myAttendanceToday.marked.unmarkButton' | translate"
+            severity="secondary"
+            [text]="true"
+            [loading]="busy()"
+            (onClick)="onUnmark()"
+            data-cy="attendance-today-unmark"
+          />
+        }
+      </div>
+    }
+
+    @case ('unmarked') {
+      <div class="attendance-today__panel" data-cy="attendance-today-unmarked">
+        <span class="attendance-today__glyph" aria-hidden="true">🥋</span>
+        <h2 class="attendance-today__heading">
+          {{ 'myAttendanceToday.unmarked.heading' | translate }}
+        </h2>
+        <p class="attendance-today__copy">
+          {{ 'myAttendanceToday.unmarked.copy' | translate }}
+        </p>
+        <p-button
+          [label]="'myAttendanceToday.unmarked.markButton' | translate"
+          severity="primary"
+          [loading]="busy()"
+          (onClick)="onMark()"
+          data-cy="attendance-today-mark"
+          styleClass="attendance-today__cta"
+        />
+      </div>
+    }
+  }
+</section>

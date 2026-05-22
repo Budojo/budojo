@@ -177,6 +177,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // the owner-side `/athletes/{id}/attendance` is the right surface
     // for any athlete's history).
     Route::get('/me/attendance', [\App\Http\Controllers\Me\MyAttendanceController::class, 'index']);
+    // Self-mark today's presence — athlete self-service that spares
+    // the instructor the manual roll-call (#960). DELETE reverts the
+    // athlete's own self-mark; instructor-marked rows stay (only the
+    // instructor can revert their own marks).
+    Route::post('/me/attendance/today', [\App\Http\Controllers\Me\MyAttendanceController::class, 'markToday']);
+    Route::delete('/me/attendance/today', [\App\Http\Controllers\Me\MyAttendanceController::class, 'unmarkToday']);
 
     // Athlete-portal monthly payment history (M7 PR-D slice 4).
     // Returns the auth athlete's payment rows for the given

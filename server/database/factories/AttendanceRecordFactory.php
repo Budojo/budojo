@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\AttendanceSource;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -26,6 +27,7 @@ class AttendanceRecordFactory extends Factory
             // "recent attendance" don't need to pick dates by hand.
             'attended_on' => now()->subDays($this->faker->numberBetween(0, 30))->toDateString(),
             'notes' => null,
+            'source' => AttendanceSource::Instructor,
         ];
     }
 
@@ -39,5 +41,11 @@ class AttendanceRecordFactory extends Factory
     public function withNote(string $note): static
     {
         return $this->state(['notes' => $note]);
+    }
+
+    /** Factory state: self-marked by the athlete (not the instructor). */
+    public function selfMarked(): static
+    {
+        return $this->state(['source' => AttendanceSource::Self]);
     }
 }

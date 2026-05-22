@@ -49,7 +49,10 @@ async function setup(password: string | null): Promise<{
   return { fixture, cmp: fixture.componentInstance };
 }
 
-describe('PasswordStrengthMeterComponent (#415)', () => {
+// 30s per-test timeout: setup() may sit inside vi.waitFor up to 30s for
+// the zxcvbn-ts dynamic import on a cold-cache CI runner, which exceeds
+// vitest's 5s default and trips every non-empty-password test.
+describe('PasswordStrengthMeterComponent (#415)', { timeout: 30_000 }, () => {
   it('renders nothing when the password is empty', async () => {
     const { fixture } = await setup('');
     expect(fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]')).toBeNull();
