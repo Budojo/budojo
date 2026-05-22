@@ -336,9 +336,7 @@ describe('CommunityService', () => {
 
     it('forwards populated lat/lon/max_attendees verbatim', () => {
       svc
-        .createEvent(
-          baseEvent({ location_lat: 45.46, location_lon: 9.18, max_attendees: 20 }),
-        )
+        .createEvent(baseEvent({ location_lat: 45.46, location_lon: 9.18, max_attendees: 20 }))
         .subscribe();
       const req = http.expectOne('/api/v1/community/events');
       expect(req.request.body.location_lat).toBe(45.46);
@@ -349,9 +347,7 @@ describe('CommunityService', () => {
 
     it('preserves an explicit null on lat/lon/max_attendees', () => {
       svc
-        .createEvent(
-          baseEvent({ location_lat: null, location_lon: null, max_attendees: null }),
-        )
+        .createEvent(baseEvent({ location_lat: null, location_lon: null, max_attendees: null }))
         .subscribe();
       const req = http.expectOne('/api/v1/community/events');
       expect(req.request.body.location_lat).toBeNull();
