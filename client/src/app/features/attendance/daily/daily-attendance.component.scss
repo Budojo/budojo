@@ -192,7 +192,8 @@
 .attendance-self-badge {
   display: inline-block;
   margin-left: 0.5rem;
-  padding: 0.125rem 0.5rem;
+  padding: 0 0.5rem;
+  line-height: 1.5rem;
   border-radius: 8px;
   background: color-mix(in srgb, var(--p-primary-color) 14%, transparent);
   color: var(--p-primary-color);

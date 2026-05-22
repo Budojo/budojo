@@ -173,6 +173,24 @@ describe('MyAttendanceTodayComponent (#960)', () => {
     expect(add).toHaveBeenCalledWith(expect.objectContaining({ severity: 'warn' }));
   });
 
+  it('on unmark no-athlete: bounces to the owner dashboard (rare race)', async () => {
+    const { fixture, svc, router } = setup();
+    svc.markToday.mockReturnValue(
+      of<MarkTodayResult>({ status: 'marked', record: baseRecord({ source: 'self' }) }),
+    );
+    const cmp = fixture.componentInstance as unknown as { onMark(): void; onUnmark(): void };
+    cmp.onMark();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const navSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    svc.unmarkToday.mockReturnValue(of<UnmarkTodayResult>({ status: 'no-athlete' }));
+    cmp.onUnmark();
+    await fixture.whenStable();
+
+    expect(navSpy).toHaveBeenCalledWith('/dashboard');
+  });
+
   it('does not fire a second POST while a mark is in flight (busy guard)', async () => {
     const { fixture, svc } = setup();
     // The observable never completes — simulates a slow request.

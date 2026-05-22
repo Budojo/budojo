@@ -2,12 +2,6 @@
 
 <section class="attendance-today" data-cy="attendance-today">
   @switch (status()) {
-    @case ('loading') {
-      <div class="attendance-today__loading" data-cy="attendance-today-loading">
-        <p-progress-spinner styleClass="attendance-today__spinner" />
-      </div>
-    }
-
     @case ('not-training-day') {
       <div class="attendance-today__panel" data-cy="attendance-today-not-training">
         <span class="attendance-today__glyph" aria-hidden="true">🛌</span>

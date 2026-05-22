@@ -2,12 +2,6 @@
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
 
-  &__loading {
-    display: flex;
-    justify-content: center;
-    padding: 4rem 0;
-  }
-
   &__panel {
     display: flex;
     flex-direction: column;
