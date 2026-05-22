@@ -13,20 +13,7 @@
  * persona BEFORE the visit (visitAuthenticated pre-seeds the token).
  */
 
-const ACADEMY_OK = {
-  statusCode: 200,
-  body: {
-    data: {
-      id: 1,
-      name: 'BJJ Academy Rome',
-      city: 'Rome',
-      country_code: 'IT',
-      logo_url: null,
-      created_at: '2025-01-01T00:00:00Z',
-      updated_at: '2025-01-01T00:00:00Z',
-    },
-  },
-};
+import { MOCK_ACADEMY_RESPONSE } from '../support/fixtures';
 
 const ATHLETE_ME = {
   statusCode: 200,
@@ -64,7 +51,7 @@ const SELF_MARK_RECORD = (id: number) => ({
 
 describe('Athlete self-mark attendance (#960)', () => {
   beforeEach(() => {
-    cy.intercept('GET', '/api/v1/academy*', ACADEMY_OK);
+    cy.intercept('GET', '/api/v1/academy*', MOCK_ACADEMY_RESPONSE);
     cy.intercept('GET', '/api/v1/auth/me*', ATHLETE_ME);
   });
 
