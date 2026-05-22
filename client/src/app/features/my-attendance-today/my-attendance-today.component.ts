@@ -11,7 +11,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import {
   AttendanceService,
   MarkTodayResult,
@@ -45,12 +44,12 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
  * RESPONSE shape (201 = was unmarked + just marked, 200 = was
  * already marked → either branch shows the "marked" state).
  */
-type Status = 'loading' | 'not-training-day' | 'marked' | 'unmarked';
+type Status = 'not-training-day' | 'marked' | 'unmarked';
 
 @Component({
   selector: 'app-my-attendance-today',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, ButtonModule, ProgressSpinnerModule, PageHeaderComponent],
+  imports: [RouterLink, TranslatePipe, ButtonModule, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-attendance-today.component.html',
   styleUrl: './my-attendance-today.component.scss',
@@ -150,6 +149,12 @@ export class MyAttendanceTodayComponent {
               detail: this.translate.instant('myAttendanceToday.instructorLockedToast.detail'),
               life: 5000,
             });
+          } else if (result.status === 'no-athlete') {
+            // Athlete row was removed between mount and tap (rare —
+            // owner deleted the roster row during the session). Mirror
+            // the onMark() bounce so the user isn't stuck on a page
+            // that can never resolve.
+            void this.router.navigateByUrl('/dashboard');
           }
         },
         error: () => {
