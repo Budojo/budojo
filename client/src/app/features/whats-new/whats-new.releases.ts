@@ -28,6 +28,29 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.29.0',
+    date: '2026-05-22',
+    headline:
+      'The "Sono qui oggi" feature you have been asking about: athletes self-register their own presence — the instructor stops doing roll call by hand for every training day.',
+    sections: [
+      {
+        heading: '🥋 Athletes can self-register their presence',
+        bullets: [
+          'New page reachable from the 07:00 "today is training day" push: one big "Sono qui oggi" button registers the athlete for tonight\'s class.',
+          'Three on-page states: training day with the mark button, non-training day with a quiet rest-day panel, already-marked with a Cancel option (only on own self-marks — instructor marks stay protected).',
+          'Small "Self" pill on the instructor\'s daily check-in widget marks rows the athlete registered themselves — spot anomalies at a glance, accept the rest.',
+        ],
+      },
+      {
+        heading: '🧪 Under the hood',
+        bullets: [
+          'Every HTTP service under core/services/ now ships with Vitest coverage (AuthService, CommunityService, AttendanceService, every smaller wrapper).',
+          'Same for the remaining shared components and utility functions — regression sieve that did not exist a week ago.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.28.1',
     date: '2026-05-21',
     headline:
