@@ -396,10 +396,18 @@ describe('AuthService', () => {
 
     it('omits the query string when format=json is requested explicitly', () => {
       const { svc, http } = bootstrap('tk');
-      svc.exportMyData('json').subscribe();
-      http.expectOne('/api/v1/me/export').flush(new Blob(['{}']), {
+      let result: { blob: Blob; filename: string } | undefined;
+      svc.exportMyData('json').subscribe((r) => (result = r));
+
+      const req = http.expectOne('/api/v1/me/export');
+      expect(req.request.method).toBe('GET');
+      expect(req.request.responseType).toBe('blob');
+      req.flush(new Blob(['{}']), {
         headers: { 'Content-Disposition': 'attachment; filename="data.json"' },
       });
+
+      expect(result?.blob).toBeInstanceOf(Blob);
+      expect(result?.filename).toBe('data.json');
     });
 
     it('falls back to a sensible filename when Content-Disposition is missing (zip)', () => {
