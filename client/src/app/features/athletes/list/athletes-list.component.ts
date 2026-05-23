@@ -669,19 +669,22 @@ export class AthletesListComponent implements OnInit {
   protected readonly cardMenuItems = signal<MenuItem[]>([]);
 
   protected openCardMenu(event: Event, athlete: Athlete): void {
-    // Build the menu model conditionally: the destructive Delete is
-    // always present; Payments only if the academy tracks a monthly
-    // fee AND this row isn't the owner-self row; Public profile only
-    // when the linked user has a handle. The remaining quick-jumps
-    // (Detail, Documents, Promotions, Edit) are always present —
-    // each one is a single tap away from the deep-link the menu
-    // hides today.
-    const fullName = `${athlete.first_name} ${athlete.last_name}`;
+    // Build the menu model conditionally:
+    //   - Attendance / Documents / Promotions / Edit / Delete: always present.
+    //   - Payments: only when the academy tracks a monthly fee AND the row
+    //     isn't the owner-self row (the self row hides payments by design).
+    //   - Public profile: only when the linked user has a handle.
+    //
+    // Icon mapping follows the desktop convention (Jakob's law — same
+    // glyph = same destination): `pi pi-id-card` is the canonical
+    // public-profile signifier (see desktop `.athletes-page__public-
+    // profile-link` at athletes-list.component.html). Internal-detail
+    // tabs each get their own glyph.
     const items: MenuItem[] = [
       {
-        label: this.translate.instant('athletes.list.tooltip.viewProfile'),
-        icon: 'pi pi-id-card',
-        command: () => this.goToDetail(athlete),
+        label: this.translate.instant('athletes.list.tooltip.attendance'),
+        icon: 'pi pi-check-square',
+        command: () => this.goToTab(athlete, 'attendance'),
       },
       {
         label: this.translate.instant('athletes.list.tooltip.documents'),
@@ -707,7 +710,7 @@ export class AthletesListComponent implements OnInit {
     if (athlete.user_handle) {
       items.push({
         label: this.translate.instant('athletes.list.tooltip.publicProfile'),
-        icon: 'pi pi-user',
+        icon: 'pi pi-id-card',
         command: () => this.goToPublicProfile(athlete),
       });
     }
@@ -726,19 +729,14 @@ export class AthletesListComponent implements OnInit {
       },
     );
 
-    // Suppress the unused-binding warning — the menu reads the name
-    // when the screen-reader announces the open command on focus.
-    void fullName;
-
     this.cardMenuItems.set(items);
     this.cardMenu?.toggle(event);
   }
 
-  private goToDetail(athlete: Athlete): void {
-    void this.router.navigate(['/dashboard/athletes', athlete.id]);
-  }
-
-  private goToTab(athlete: Athlete, tab: 'documents' | 'payments' | 'promotions'): void {
+  private goToTab(
+    athlete: Athlete,
+    tab: 'attendance' | 'documents' | 'payments' | 'promotions',
+  ): void {
     void this.router.navigate(['/dashboard/athletes', athlete.id, tab]);
   }
 

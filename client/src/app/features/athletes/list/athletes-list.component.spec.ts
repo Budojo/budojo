@@ -750,7 +750,7 @@ describe('AthletesListComponent', () => {
       expect(items).toHaveLength(5);
       const icons = items.map((it) => it.icon);
       expect(icons).toEqual([
-        'pi pi-id-card',
+        'pi pi-check-square',
         'pi pi-file',
         'pi pi-trophy',
         'pi pi-pencil',
@@ -777,7 +777,9 @@ describe('AthletesListComponent', () => {
       );
 
       const icons = component.cardMenuItems().map((it) => it.icon);
-      expect(icons).toContain('pi pi-user');
+      // Jakob's law — public profile uses the same `pi pi-id-card`
+      // glyph as the desktop `.athletes-page__public-profile-link`.
+      expect(icons).toContain('pi pi-id-card');
     });
 
     it('confirmDeleteFromCardMenu routes through ConfirmationService with the mobile dialog key', () => {
