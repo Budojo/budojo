@@ -43,6 +43,7 @@ import {
 } from '../../../core/services/athlete.service';
 import { PaymentService } from '../../../core/services/payment.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
+import { UserAvatarComponent } from '../../../shared/components/user-avatar/user-avatar.component';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
 import { ExpiringDocumentsWidgetComponent } from '../../../shared/components/expiring-documents-widget/expiring-documents-widget.component';
@@ -82,6 +83,7 @@ interface SelectOption<T extends string> {
     AgeBadgeComponent,
     FilterSheetComponent,
     BeltBadgeComponent,
+    UserAvatarComponent,
     ExpiringDocumentsWidgetComponent,
     MonthlySummaryWidgetComponent,
     UnpaidThisMonthWidgetComponent,

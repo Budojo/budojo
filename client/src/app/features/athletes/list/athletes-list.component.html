@@ -234,6 +234,35 @@
                  and trash remain inline for the fast paths. -->
             <div class="athlete-name">
               <div class="athlete-name__primary">
+                @if (athlete.user_handle; as handle) {
+                  <a
+                    class="athlete-name__avatar-link"
+                    [routerLink]="['/dashboard/u', handle]"
+                    [attr.aria-label]="
+                      'athletes.list.tooltip.publicProfileAria'
+                        | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                    "
+                    [attr.data-cy]="'athlete-avatar-link-' + athlete.id"
+                  >
+                    <app-user-avatar
+                      [url]="athlete.user_avatar_url"
+                      [name]="athlete.first_name + ' ' + athlete.last_name"
+                      size="chip"
+                    />
+                  </a>
+                } @else {
+                  <span
+                    class="athlete-name__avatar-link athlete-name__avatar-link--inert"
+                    aria-hidden="true"
+                    [attr.data-cy]="'athlete-avatar-inert-' + athlete.id"
+                  >
+                    <app-user-avatar
+                      [url]="athlete.user_avatar_url"
+                      [name]="athlete.first_name + ' ' + athlete.last_name"
+                      size="chip"
+                    />
+                  </span>
+                }
                 <a
                   class="athlete-name__text"
                   [routerLink]="['/dashboard/athletes', athlete.id]"
@@ -486,6 +515,36 @@
         @for (athlete of athletes(); track athlete.id) {
           <li class="athlete-card" [attr.data-cy]="'athlete-card-' + athlete.id">
             <header class="athlete-card__header">
+              @if (athlete.user_handle; as handle) {
+                <a
+                  class="athlete-card__avatar-link"
+                  [routerLink]="['/dashboard/u', handle]"
+                  (click)="$event.stopPropagation()"
+                  [attr.aria-label]="
+                    'athletes.list.tooltip.publicProfileAria'
+                      | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                  "
+                  [attr.data-cy]="'athlete-card-avatar-link-' + athlete.id"
+                >
+                  <app-user-avatar
+                    [url]="athlete.user_avatar_url"
+                    [name]="athlete.first_name + ' ' + athlete.last_name"
+                    size="chip"
+                  />
+                </a>
+              } @else {
+                <span
+                  class="athlete-card__avatar-link athlete-card__avatar-link--inert"
+                  aria-hidden="true"
+                  [attr.data-cy]="'athlete-card-avatar-inert-' + athlete.id"
+                >
+                  <app-user-avatar
+                    [url]="athlete.user_avatar_url"
+                    [name]="athlete.first_name + ' ' + athlete.last_name"
+                    size="chip"
+                  />
+                </span>
+              }
               <a
                 class="athlete-card__name athlete-card__stretched-link"
                 [routerLink]="['/dashboard/athletes', athlete.id]"
