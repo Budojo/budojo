@@ -2156,25 +2156,25 @@ paths:
         '404':
           description: No athlete profile found for the caller.
 
-  /me/recap/{weekStart}:
+  /me/recap:
     get:
       tags: [engagement]
       summary: Weekly recap for the authenticated user
       description: |
-        Read-side of the Sunday 19:00 weekly recap push (#960). `weekStart`
-        is an ISO Monday in `YYYY-MM-DD` form — server validates Monday-only
-        and rejects with 422 otherwise. Mirrors the same numbers the push
-        carried (training days, total mat hours at 1.5 h/session, top three
-        peers by overlap count).
+        Read-side of the Sunday 19:00 weekly recap push (#960). `week`
+        is an ISO Monday in `YYYY-MM-DD` form — server validates
+        Monday-only and rejects with 422 otherwise. Mirrors the same
+        numbers the push carried (training days, total mat hours at
+        1.5 h/session, top three peers by overlap count).
 
         - 200 when the user has at least one attendance row in the week.
         - 404 when the week is empty (no rows) — the SPA renders an
           "you did not train this week" empty state.
-        - 422 when `weekStart` is malformed or not a Monday.
+        - 422 when `week` is malformed or not a Monday.
       operationId: meWeeklyRecap
       parameters:
-        - in: path
-          name: weekStart
+        - in: query
+          name: week
           required: true
           schema: { type: string, format: date }
           description: ISO Monday date that anchors the recap week.
