@@ -2006,6 +2006,13 @@
       "back": "Back to athletes"
     }
   },
+  "leaderboard": {
+    "title": "Top of the mat — this month",
+    "loading": "Loading the leaderboard…",
+    "empty": "No mat hours yet this month. Be the first.",
+    "error": "Couldn't load the leaderboard.",
+    "anonymous": "Anonymous"
+  },
   "myRecap": {
     "title": "Your week on the mats",
     "loading": "Loading your week…",

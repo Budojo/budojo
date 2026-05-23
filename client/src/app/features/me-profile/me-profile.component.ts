@@ -14,6 +14,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { AuthService } from '../../core/services/auth.service';
+import { LeaderboardCardComponent } from '../../shared/components/leaderboard-card/leaderboard-card.component';
 
 /**
  * Athlete-side profile page (#610, M7 PR-D slice 1 + slice 6 edit).
@@ -44,7 +45,14 @@ const noTrailingDot: ValidatorFn = (control: AbstractControl): ValidationErrors 
 @Component({
   selector: 'app-me-profile',
   standalone: true,
-  imports: [TranslatePipe, ReactiveFormsModule, ButtonModule, InputTextModule, ToastModule],
+  imports: [
+    TranslatePipe,
+    ReactiveFormsModule,
+    ButtonModule,
+    InputTextModule,
+    ToastModule,
+    LeaderboardCardComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [MessageService],
   templateUrl: './me-profile.component.html',
