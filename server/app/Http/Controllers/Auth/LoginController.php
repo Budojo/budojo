@@ -6,20 +6,19 @@ namespace App\Http\Controllers\Auth;
 
 use App\Actions\Auth\LoginUserAction;
 use App\Actions\Auth\RecordLoginAttemptAction;
+use App\Actions\Auth\VerifyTwoFactorAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
-use App\Models\User;
-use App\Support\TwoFactorAuth;
 use App\Support\UserAgentLabel;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class LoginController extends Controller
 {
     public function __construct(
         private readonly LoginUserAction $action,
         private readonly RecordLoginAttemptAction $recordAttempt,
+        private readonly VerifyTwoFactorAction $verifyTwoFactor,
     ) {
     }
 
@@ -68,7 +67,7 @@ class LoginController extends Controller
                     422,
                 );
             }
-            if (! $this->verifyTwoFactor($user, $code)) {
+            if (! $this->verifyTwoFactor->execute($user, $code)) {
                 $this->recordAttemptSafely(
                     userId: $user->id,
                     email: $email,
@@ -117,50 +116,6 @@ class LoginController extends Controller
                 'token' => $token,
             ],
         );
-    }
-
-    /**
-     * Accepts either a 6-digit TOTP OR an 8-char backup code (with
-     * or without the canonical dash, case-insensitive). Tries the
-     * cheaper TOTP check first; falls through to backup-code
-     * consumption on miss.
-     *
-     * **Atomicity** — backup-code consumption is wrapped in a DB
-     * transaction with a row-level SELECT FOR UPDATE on the user.
-     * Without this, two concurrent logins racing with the same
-     * recovery code could both succeed (each reads the array, finds
-     * the code, persists `remaining` independently — second write
-     * wins, but BOTH have already returned `true`). The lock + reload
-     * inside the transaction is the canonical pattern for "consume
-     * once" semantics on shared mutable state.
-     */
-    private function verifyTwoFactor(User $user, string $code): bool
-    {
-        $secret = $user->two_factor_secret;
-        if ($secret !== null && TwoFactorAuth::verifyTotp($secret, $code)) {
-            return true;
-        }
-
-        return DB::transaction(function () use ($user, $code): bool {
-            /** @var User|null $locked */
-            $locked = User::query()->lockForUpdate()->find($user->id);
-            if ($locked === null) {
-                return false;
-            }
-            $codes = $locked->two_factor_recovery_codes ?? [];
-            $remaining = TwoFactorAuth::consumeRecoveryCode($codes, $code);
-            if ($remaining === null) {
-                return false;
-            }
-            $locked->forceFill(['two_factor_recovery_codes' => $remaining])->save();
-            // Mirror the in-memory state on the caller's reference so
-            // downstream `$user` reads (e.g. UserResource) see the
-            // post-consume state without a second DB roundtrip.
-            $user->setRawAttributes($locked->getAttributes(), true);
-            $user->exists = true;
-
-            return true;
-        });
     }
 
     /**
