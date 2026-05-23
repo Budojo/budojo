@@ -671,7 +671,64 @@ export class AthletesListComponent implements OnInit {
   protected readonly cardMenuItems = signal<MenuItem[]>([]);
 
   protected openCardMenu(event: Event, athlete: Athlete): void {
-    this.cardMenuItems.set([
+    // Build the menu model conditionally:
+    //   - Attendance / Documents / Promotions / Edit / Delete: always present.
+    //   - Payments: only when the academy tracks a monthly fee AND the row
+    //     isn't the owner-self row (the self row hides payments by design).
+    //   - Public profile: only when the linked user has a handle.
+    //
+    // Icon mapping follows the desktop convention (Jakob's law — same
+    // glyph = same destination): `pi pi-id-card` is the canonical
+    // public-profile signifier (see desktop `.athletes-page__public-
+    // profile-link` at athletes-list.component.html). Internal-detail
+    // tabs each get their own glyph.
+    const items: MenuItem[] = [
+      {
+        label: this.translate.instant('athletes.list.tooltip.attendance'),
+        // Jakob's law — the attendance tab on the detail (athlete-
+        // detail.component.html) carries `pi pi-calendar`; using the
+        // same glyph in the kebab keeps signifier parity across the
+        // journey. `pi-check-square` stays reserved for the
+        // transactional "mark today" flow elsewhere in the SPA.
+        icon: 'pi pi-calendar',
+        command: () => this.goToTab(athlete, 'attendance'),
+      },
+      {
+        label: this.translate.instant('athletes.list.tooltip.documents'),
+        icon: 'pi pi-file',
+        command: () => this.goToTab(athlete, 'documents'),
+      },
+    ];
+
+    if (this.hasMonthlyFee() && !athlete.is_self) {
+      items.push({
+        label: this.translate.instant('athletes.list.tooltip.payments'),
+        // Jakob's law — the payments tab on the detail
+        // (athlete-detail.component.html) carries `pi pi-euro`.
+        // Matching glyph keeps signifier parity across kebab→tab.
+        // The athlete-portal sidebar still uses `pi-wallet`; that
+        // surface is the remaining outlier (normalisation in a
+        // follow-up sweep).
+        icon: 'pi pi-euro',
+        command: () => this.goToTab(athlete, 'payments'),
+      });
+    }
+
+    items.push({
+      label: this.translate.instant('athletes.list.tooltip.promotions'),
+      icon: 'pi pi-trophy',
+      command: () => this.goToTab(athlete, 'promotions'),
+    });
+
+    if (athlete.user_handle) {
+      items.push({
+        label: this.translate.instant('athletes.list.tooltip.publicProfile'),
+        icon: 'pi pi-id-card',
+        command: () => this.goToPublicProfile(athlete),
+      });
+    }
+
+    items.push(
       {
         label: this.translate.instant('athletes.list.tooltip.edit'),
         icon: 'pi pi-pencil',
@@ -683,8 +740,23 @@ export class AthletesListComponent implements OnInit {
         styleClass: 'menu-item--danger',
         command: () => this.confirmDeleteFromCardMenu(athlete),
       },
-    ]);
+    );
+
+    this.cardMenuItems.set(items);
     this.cardMenu?.toggle(event);
+  }
+
+  private goToTab(
+    athlete: Athlete,
+    tab: 'attendance' | 'documents' | 'payments' | 'promotions',
+  ): void {
+    void this.router.navigate(['/dashboard/athletes', athlete.id, tab]);
+  }
+
+  private goToPublicProfile(athlete: Athlete): void {
+    if (athlete.user_handle) {
+      void this.router.navigate(['/dashboard/u', athlete.user_handle]);
+    }
   }
 
   /**
