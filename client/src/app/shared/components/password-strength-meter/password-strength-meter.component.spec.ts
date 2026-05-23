@@ -39,8 +39,11 @@ async function setup(password: string | null): Promise<{
         const node = fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]');
         expect(node).not.toBeNull();
       },
-      // 30s ceiling: CI's cold module-cache loads zxcvbn-ts dictionaries slower than the previous 2s.
-      { timeout: 30_000, interval: 50 },
+      // 50s ceiling: CI's cold module-cache loads zxcvbn-ts dictionaries
+      // slower than 30s on some runner generations. The describe block
+      // below clears the test-level timeout to 60s, giving vi.waitFor
+      // room to complete without bumping into vitest's per-test budget.
+      { timeout: 50_000, interval: 50 },
     );
   } else {
     await fixture.whenStable();
@@ -49,10 +52,12 @@ async function setup(password: string | null): Promise<{
   return { fixture, cmp: fixture.componentInstance };
 }
 
-// 30s per-test timeout: setup() may sit inside vi.waitFor up to 30s for
-// the zxcvbn-ts dynamic import on a cold-cache CI runner, which exceeds
-// vitest's 5s default and trips every non-empty-password test.
-describe('PasswordStrengthMeterComponent (#415)', { timeout: 30_000 }, () => {
+// 60s per-test timeout: setup() may sit inside vi.waitFor up to 50s
+// for the zxcvbn-ts dynamic import on a cold-cache CI runner.
+// vitest's per-test budget needs to be wider than vi.waitFor's
+// internal timeout or the wait hits the test ceiling instead of the
+// resolution path.
+describe('PasswordStrengthMeterComponent (#415)', { timeout: 60_000 }, () => {
   it('renders nothing when the password is empty', async () => {
     const { fixture } = await setup('');
     expect(fixture.nativeElement.querySelector('[data-cy="password-strength-meter"]')).toBeNull();
