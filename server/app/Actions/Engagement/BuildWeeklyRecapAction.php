@@ -44,10 +44,11 @@ class BuildWeeklyRecapAction
                 if ($d instanceof CarbonInterface) {
                     return $d->toDateString();
                 }
+
                 // attendance_records.attended_on is cast to `date:Y-m-d`
                 // on the model, so the only non-Carbon path here would
                 // be a fresh-from-array unhydrated row (test edge).
-                return is_string($d) ? $d : '';
+                return \is_string($d) ? $d : '';
             })
             ->unique()
             ->values();
@@ -84,12 +85,13 @@ class BuildWeeklyRecapAction
                 // onto the AttendanceRecord model attributes (Eloquent
                 // doesn't care about the source table — it just hydrates
                 // selected columns by name).
-                $firstName = is_string($row->getAttribute('first_name'))
+                $firstName = \is_string($row->getAttribute('first_name'))
                     ? $row->getAttribute('first_name')
                     : '';
-                $lastName = is_string($row->getAttribute('last_name'))
+                $lastName = \is_string($row->getAttribute('last_name'))
                     ? $row->getAttribute('last_name')
                     : '';
+
                 return [
                     'first_name' => $firstName,
                     'last_name_initial' => $lastName !== ''

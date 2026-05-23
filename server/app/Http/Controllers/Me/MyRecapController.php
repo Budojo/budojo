@@ -43,6 +43,7 @@ class MyRecapController extends Controller
         if (! preg_match('/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/', $weekRaw)) {
             return response()->json(['message' => 'Malformed week parameter.'], 422);
         }
+
         try {
             $weekStart = CarbonImmutable::createFromFormat('!Y-m-d', $weekRaw);
         } catch (\Throwable) {

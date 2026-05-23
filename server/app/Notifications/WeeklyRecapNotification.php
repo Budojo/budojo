@@ -60,6 +60,7 @@ class WeeklyRecapNotification extends Notification
     private function payload(): array
     {
         $sessions = $this->recap->sessions;
+
         return [
             'title' => 'Your week on the mats',
             'body' => \sprintf(
