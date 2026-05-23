@@ -1996,6 +1996,26 @@
       "back": "Back to athletes"
     }
   },
+  "myRecap": {
+    "title": "Your week on the mats",
+    "loading": "Loading your week…",
+    "heading": "Here's your week",
+    "sessions": "{{count}} session{{count, plural, one {} other {s}}}",
+    "hours": "Hours on the mat",
+    "partners": {
+      "heading": "Top training partners"
+    },
+    "shareButton": "Share",
+    "shareTitle": "My week on the mats",
+    "shareCaption": "{{sessions}} sessions, {{hours}}h on the mats this week. 🥋",
+    "shareErrorSummary": "Couldn't share. Try again.",
+    "copiedSummary": "Recap copied to clipboard.",
+    "error": {
+      "heading": "We couldn't load this recap",
+      "copy": "The week parameter looks off, or your athlete profile isn't ready yet.",
+      "cta": "Back to my profile"
+    }
+  },
   "myAttendanceToday": {
     "title": "Today's attendance",
     "peers": {

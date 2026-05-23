@@ -1996,6 +1996,26 @@
       "back": "Torna agli atleti"
     }
   },
+  "myRecap": {
+    "title": "La tua settimana sul tatami",
+    "loading": "Caricamento della settimana…",
+    "heading": "Ecco la tua settimana",
+    "sessions": "{{count}} allenament{{count, plural, one {o} other {i}}}",
+    "hours": "Ore di tatami",
+    "partners": {
+      "heading": "Compagni di allenamento"
+    },
+    "shareButton": "Condividi",
+    "shareTitle": "La mia settimana sul tatami",
+    "shareCaption": "{{sessions}} allenamenti, {{hours}}h sul tatami questa settimana. 🥋",
+    "shareErrorSummary": "Impossibile condividere. Riprova.",
+    "copiedSummary": "Recap copiato negli appunti.",
+    "error": {
+      "heading": "Impossibile caricare il recap",
+      "copy": "Il parametro settimana sembra sbagliato, o il tuo profilo atleta non è pronto.",
+      "cta": "Torna al mio profilo"
+    }
+  },
   "myAttendanceToday": {
     "title": "Presenza di oggi",
     "peers": {

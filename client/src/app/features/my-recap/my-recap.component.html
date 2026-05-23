@@ -1,0 +1,67 @@
+<app-page-header [title]="'myRecap.title' | translate" [subtitle]="weekLabel()" />
+
+<section class="recap" data-cy="recap">
+  @switch (status()) {
+    @case ('loading') {
+      <div class="recap__loading" data-cy="recap-loading">
+        <p>{{ 'myRecap.loading' | translate }}</p>
+      </div>
+    }
+
+    @case ('error') {
+      <div class="recap__panel recap__panel--error" data-cy="recap-error">
+        <span class="recap__glyph" aria-hidden="true">😕</span>
+        <h2 class="recap__heading">{{ 'myRecap.error.heading' | translate }}</h2>
+        <p class="recap__copy">{{ 'myRecap.error.copy' | translate }}</p>
+        <a routerLink="/dashboard/me/profile" class="recap__link" data-cy="recap-back">
+          {{ 'myRecap.error.cta' | translate }}
+        </a>
+      </div>
+    }
+
+    @case ('ok') {
+      @if (recap(); as r) {
+        <div class="recap__panel" data-cy="recap-ok">
+          <span class="recap__glyph" aria-hidden="true">🥋</span>
+          <h2 class="recap__heading">{{ 'myRecap.heading' | translate }}</h2>
+
+          <div class="recap__stats">
+            <div class="recap__stat" data-cy="recap-sessions">
+              <span class="recap__number">{{ r.sessions }}</span>
+              <span class="recap__label">
+                {{ 'myRecap.sessions' | translate: { count: r.sessions } }}
+              </span>
+            </div>
+            <div class="recap__stat" data-cy="recap-hours">
+              <span class="recap__number">{{ r.hours.toFixed(1) }}h</span>
+              <span class="recap__label">{{ 'myRecap.hours' | translate }}</span>
+            </div>
+          </div>
+
+          @if (r.partners.length > 0) {
+            <div class="recap__partners" data-cy="recap-partners">
+              <h3 class="recap__partners-heading">
+                {{ 'myRecap.partners.heading' | translate }}
+              </h3>
+              <ul class="recap__partners-list">
+                @for (p of r.partners; track $index) {
+                  <li class="recap__partner" data-cy="recap-partner">
+                    {{ p.first_name }} {{ p.last_name_initial }}.
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+
+          <p-button
+            [label]="'myRecap.shareButton' | translate"
+            severity="primary"
+            (onClick)="onShare()"
+            data-cy="recap-share"
+            styleClass="recap__cta"
+          />
+        </div>
+      }
+    }
+  }
+</section>
