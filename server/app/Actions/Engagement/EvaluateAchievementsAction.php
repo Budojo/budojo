@@ -125,9 +125,10 @@ class EvaluateAchievementsAction
                 if ($d instanceof \Carbon\CarbonInterface) {
                     return $d->toDateString();
                 }
+
                 // attendance_records.attended_on is cast to date on the
                 // model — this branch is the unhydrated-row edge.
-                return is_string($d) ? $d : '';
+                return \is_string($d) ? $d : '';
             })
             ->unique()
             ->values();

@@ -5,14 +5,12 @@ declare(strict_types=1);
 use App\Actions\Engagement\EvaluateAchievementsAction;
 use App\Enums\AchievementKind;
 use App\Enums\Belt;
-use App\Models\Achievement;
 use App\Models\Academy;
+use App\Models\Achievement;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\User;
-use App\Support\NotificationCategory;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Notification;
 
 /**
  * Achievement rules + observers (#961). Tests cover:
@@ -126,7 +124,9 @@ it('does NOT unlock 30_day_streak with a one-day gap', function (): void {
     $athlete = makeAthleteWithUser($this->academy);
     $today = CarbonImmutable::today();
     for ($i = 0; $i < 30; $i++) {
-        if ($i === 15) continue; // skip day 15 — gap
+        if ($i === 15) {
+            continue;
+        } // skip day 15 — gap
         AttendanceRecord::factory()->for($athlete)->create([
             'attended_on' => $today->subDays($i)->toDateString(),
         ]);
