@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Athlete;
 
+use App\Actions\Address\AddressIntent;
 use App\Actions\Athlete\CreateAthleteAction;
 use App\Actions\Athlete\RestoreAthleteAction;
 use App\Actions\Athlete\UpdateAthleteAction;
@@ -217,20 +218,18 @@ class AthleteController extends Controller
         }
 
         $validated = $request->validated();
-        // Three-way semantics on `address` (#72b): absent → no change,
-        // null → clear (delete the morph row), array → upsert. Strip
-        // the key off the scalar payload here; the Action consumes the
-        // boolean + raw value.
-        $addressKeyPresent = \array_key_exists('address', $validated);
-        /** @var array<string, mixed>|null $addressPayload */
-        $addressPayload = \is_array($validated['address'] ?? null) ? $validated['address'] : null;
+        // Three-way semantics on `address` (#72b) carried as a single
+        // value object (Clean Code § "no flag arguments"). The
+        // factory reads the validated payload and maps absent/null/
+        // array to skip/clear/set — controller no longer juggles a
+        // boolean + nullable payload.
+        $addressIntent = AddressIntent::fromValidated($validated);
         unset($validated['address']);
 
         $fresh = $this->updateAthlete->execute(
             athlete: $athlete,
             validated: $validated,
-            addressKeyPresent: $addressKeyPresent,
-            addressPayload: $addressPayload,
+            address: $addressIntent,
         );
 
         return response()->json(['data' => new AthleteResource($fresh)]);

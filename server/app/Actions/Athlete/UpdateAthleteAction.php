@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Athlete;
 
+use App\Actions\Address\AddressIntent;
 use App\Actions\Address\SyncAddressAction;
 use App\Models\Athlete;
 use Illuminate\Support\Facades\DB;
@@ -30,26 +31,19 @@ class UpdateAthleteAction
     /**
      * @param Athlete $athlete  the bound athlete to mutate
      * @param array<string, mixed> $validated  scalar payload — `address` already stripped
-     * @param bool $addressKeyPresent  did the caller send the `address` key at all?
-     * @param array<string, mixed>|null $addressPayload  payload when present; null clears
+     * @param AddressIntent $address  three-way intent on the address morph (skip / clear / set)
      */
     public function execute(
         Athlete $athlete,
         array $validated,
-        bool $addressKeyPresent,
-        ?array $addressPayload,
+        AddressIntent $address,
     ): Athlete {
-        return DB::transaction(function () use (
-            $athlete,
-            $validated,
-            $addressKeyPresent,
-            $addressPayload,
-        ): Athlete {
+        return DB::transaction(function () use ($athlete, $validated, $address): Athlete {
             if ($validated !== []) {
                 $athlete->update($validated);
             }
-            if ($addressKeyPresent) {
-                $this->syncAddress->execute($athlete, $addressPayload);
+            if ($address->present) {
+                $this->syncAddress->execute($athlete, $address->payload);
             }
 
             return $athlete->fresh() ?? $athlete;
