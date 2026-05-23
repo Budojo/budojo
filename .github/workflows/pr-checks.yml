@@ -207,6 +207,32 @@ jobs:
         run: npm run lint
         working-directory: client
 
+  angular-stylelint:
+    # Non-blocking warning surface for SCSS hygiene (#978).
+    # Today the rule we enforce is the 8dp grid (multiples of 0.5rem on
+    # padding / margin / gap). Pre-existing violations land as `warning`,
+    # not `error`, so the gate stays green while we drain the backlog in
+    # follow-up sweep PRs. New violations show up in PR diffs so reviewers
+    # (human + Claude) can push back proactively.
+    name: "🎨 SCSS Lint (stylelint, 8dp grid)"
+    runs-on: [self-hosted, budojo]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: client
+
+      - name: Run stylelint
+        run: npm run lint:scss
+        working-directory: client
+
   angular-format:
     name: "✨ Angular Format (Prettier)"
     runs-on: [self-hosted, budojo]
