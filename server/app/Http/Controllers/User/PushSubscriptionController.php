@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\StorePushSubscriptionRequest;
 use App\Models\PushSubscription;
 use App\Models\User;
 use App\Notifications\TestPushNotification;
@@ -67,7 +68,7 @@ class PushSubscriptionController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StorePushSubscriptionRequest $request): JsonResponse
     {
         if (! self::vapidConfigured()) {
             return response()->json(
@@ -78,29 +79,13 @@ class PushSubscriptionController extends Controller
 
         /** @var User $user */
         $user = $request->user();
-        // `endpoint` is constrained to `https://` so a malformed
-        // PushSubscription envelope can't shape-shift into an SSRF
-        // vector once server-side fanout is wired — the fanout
-        // worker POSTs back to this URL with a JWT signed by our
-        // VAPID private key, and accepting arbitrary http/internal/
-        // loopback URLs would let an authenticated user point the
-        // worker at internal services. The `https_url` validator
-        // accepts only well-formed https URLs.
-        //
-        // `keys.p256dh` / `keys.auth` carry the base64url shape from
-        // the W3C PushSubscription serialisation — the `regex` rule
-        // rejects anything that isn't [A-Za-z0-9_-]+ so garbage rows
-        // can't slip in and fail later at signing time.
-        $validated = $request->validate([
-            'endpoint' => ['required', 'string', 'max:1024', 'regex:/^https:\/\//', 'url'],
-            'keys' => ['required', 'array'],
-            'keys.p256dh' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9_\-]+$/'],
-            'keys.auth' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_\-]+$/'],
-        ]);
-
-        /** @var string $endpoint */
+        // SSRF gate + payload-shape validation now lives in
+        // `StorePushSubscriptionRequest` — the rule grep-resolves
+        // from a single dedicated file the moment a future security
+        // audit reaches for it (server canon § FormRequest discipline).
+        /** @var array{endpoint: string, keys: array<string, string>} $validated */
+        $validated = $request->validated();
         $endpoint = $validated['endpoint'];
-        /** @var array<string, string> $keys */
         $keys = $validated['keys'];
 
         // Idempotent upsert: re-subscribing the same browser hits the
