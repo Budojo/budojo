@@ -29,6 +29,8 @@ import {
   RsvpToggleResponse,
 } from '../../core/services/community.service';
 import { AuthService } from '../../core/services/auth.service';
+import { AcademyService } from '../../core/services/academy.service';
+import { PromotionShareCardService } from '../../shared/services/promotion-share-card.service';
 import { profileBaseForUser } from '../../shared/utils/profile-base';
 import type { Belt } from '../../core/services/athlete.service';
 import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
@@ -93,6 +95,8 @@ export class MyFeedComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly translateService = inject(TranslateService);
   private readonly authService = inject(AuthService);
+  private readonly academyService = inject(AcademyService);
+  private readonly shareCard = inject(PromotionShareCardService);
   private readonly confirmationService = inject(ConfirmationService);
 
   protected readonly composerOpen = signal(false);
@@ -284,6 +288,83 @@ export class MyFeedComponent implements OnInit {
   protected stripesOf(post: CommunityPost, field: 'old_stripes' | 'new_stripes'): number {
     const raw = post.payload[field];
     return typeof raw === 'number' ? raw : 0;
+  }
+
+  /**
+   * Share a belt-promotion post as an IG-Stories-ready PNG (#959).
+   * Renders the card via PromotionShareCardService, then invokes the
+   * Web Share API with the file. Falls back to a download when the
+   * platform doesn't support file sharing (desktop Chrome / Firefox
+   * older builds). Async + best-effort: every error path surfaces a
+   * toast and the existing feed render stays untouched.
+   */
+  protected async onSharePromotion(post: CommunityPost): Promise<void> {
+    const newBelt = this.beltOf(post, 'new_belt');
+    if (newBelt === null) return;
+    const oldBelt = this.beltOf(post, 'old_belt');
+    const athleteName = this.athleteNameOf(post) || post.created_by.full_name;
+
+    try {
+      // Lazy-load academy for the card footer. AcademyService doesn't
+      // cache internally, but a single GET per share tap is cheap.
+      const academy = await new Promise<string>((resolve) => {
+        this.academyService
+          .getMine()
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: (a) => resolve(a?.name ?? ''),
+            error: () => resolve(''),
+          });
+      });
+
+      const blob = await this.shareCard.toBlob({
+        athleteName,
+        fromBelt: oldBelt,
+        toBelt: newBelt,
+        academyName: academy,
+        date: post.created_at.slice(0, 10),
+      });
+
+      const file = new File([blob], 'budojo-promotion.png', { type: 'image/png' });
+      const canShareFile =
+        typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
+
+      if (canShareFile && typeof navigator.share === 'function') {
+        await navigator.share({
+          files: [file],
+          title: this.translateService.instant('athletePortal.feed.share.title'),
+          text: this.translateService.instant('athletePortal.feed.share.caption', {
+            name: athleteName,
+          }),
+        });
+      } else {
+        // Fallback: download the PNG. Desktop Chrome doesn't ship file-
+        // share to navigator.share, so users on a laptop still get the
+        // artifact + can attach it to a Stories upload from their phone
+        // via AirDrop / Google Photos.
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'budojo-promotion.png';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.messageService.add({
+          severity: 'info',
+          summary: this.translateService.instant('athletePortal.feed.share.downloadedSummary'),
+          life: 3000,
+        });
+      }
+    } catch (err) {
+      const aborted =
+        err instanceof DOMException &&
+        (err.name === 'AbortError' || err.name === 'NotAllowedError');
+      if (aborted) return; // user cancelled the share-sheet
+      this.messageService.add({
+        severity: 'error',
+        summary: this.translateService.instant('athletePortal.feed.share.errorSummary'),
+        life: 5000,
+      });
+    }
   }
 
   protected athleteNameOf(post: CommunityPost): string {

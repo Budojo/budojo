@@ -284,6 +284,14 @@
       "stripePromotion": {
         "text": "{{name}} ha preso una striscetta — {{from}} → {{to}}"
       },
+      "share": {
+        "button": "Condividi",
+        "aria": "Condividi questa promozione come immagine",
+        "title": "Nuova cintura!",
+        "caption": "{{name}} ha appena conquistato una nuova cintura! 🥋",
+        "downloadedSummary": "Card salvata — puoi allegarla a una Storia dal telefono",
+        "errorSummary": "Impossibile generare la card. Riprova."
+      },
       "pagination": "Impaginazione feed",
       "pageOf": "Pagina {{current}} di {{total}}",
       "previous": "Precedente",

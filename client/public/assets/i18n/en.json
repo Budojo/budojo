@@ -284,6 +284,14 @@
       "stripePromotion": {
         "text": "{{name}} just got a new stripe — {{from}} → {{to}}"
       },
+      "share": {
+        "button": "Share",
+        "aria": "Share this promotion as an image",
+        "title": "New belt!",
+        "caption": "{{name}} just earned a new belt! 🥋",
+        "downloadedSummary": "Card saved — you can attach it to a Story upload from your phone",
+        "errorSummary": "Couldn't generate the share card. Try again."
+      },
       "pagination": "Feed pagination",
       "pageOf": "Page {{current}} of {{total}}",
       "previous": "Previous",
