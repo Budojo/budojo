@@ -175,16 +175,14 @@ class AthleteController extends Controller
         \assert($academy !== null);
 
         $validated = $request->validated();
-        // Address (#72b) lives on a polymorphic relation, not a column on
-        // the athletes row — strip it from the mass-assignable payload
-        // before delegating to the Action.
-        /** @var array<string, mixed>|null $addressPayload */
-        $addressPayload = isset($validated['address']) && \is_array($validated['address'])
-            ? $validated['address']
-            : null;
+        // Address (#72b) lives on a polymorphic relation, not a column
+        // on the athletes row — strip it from the scalar payload and
+        // carry the three-way intent via the value object, same shape
+        // as `update()` below.
+        $addressIntent = AddressIntent::fromValidated($validated);
         unset($validated['address']);
 
-        $athlete = $this->createAthlete->execute($academy, $validated, $addressPayload);
+        $athlete = $this->createAthlete->execute($academy, $validated, $addressIntent);
 
         return response()->json(['data' => new AthleteResource($athlete)], 201);
     }

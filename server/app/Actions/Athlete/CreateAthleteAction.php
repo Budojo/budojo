@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Athlete;
 
+use App\Actions\Address\AddressIntent;
 use App\Actions\Address\SyncAddressAction;
 use App\Models\Academy;
 use App\Models\Athlete;
@@ -21,6 +22,11 @@ use Illuminate\Support\Facades\DB;
  * domain operation. The Action exposes a single `execute()` so a
  * future non-HTTP caller (a CLI import, a batch enrolment) can land
  * the same invariant with no code duplication.
+ *
+ * Uses the same `AddressIntent` value object as `UpdateAthleteAction`
+ * for parameter parity (Clean Code § flag args + sibling-Action
+ * consistency). On Create both `skip` and `clear` collapse to "do
+ * nothing" — there's no prior morph row to delete.
  */
 class CreateAthleteAction
 {
@@ -32,15 +38,15 @@ class CreateAthleteAction
     /**
      * @param Academy $academy
      * @param array<string, mixed> $validated  scalar payload — `address` already stripped
-     * @param array<string, mixed>|null $addressPayload  upsert the morph row when present
+     * @param AddressIntent $address  three-way intent (only `set` mutates on Create)
      */
-    public function execute(Academy $academy, array $validated, ?array $addressPayload): Athlete
+    public function execute(Academy $academy, array $validated, AddressIntent $address): Athlete
     {
-        return DB::transaction(function () use ($academy, $validated, $addressPayload): Athlete {
+        return DB::transaction(function () use ($academy, $validated, $address): Athlete {
             /** @var Athlete $athlete */
             $athlete = $academy->athletes()->create($validated);
-            if ($addressPayload !== null) {
-                $this->syncAddress->execute($athlete, $addressPayload);
+            if ($address->present && $address->payload !== null) {
+                $this->syncAddress->execute($athlete, $address->payload);
             }
 
             return $athlete;
