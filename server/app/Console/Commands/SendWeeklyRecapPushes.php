@@ -89,9 +89,14 @@ class SendWeeklyRecapPushes extends Command
 
     private function alreadyNotifiedThisWeek(\App\Models\User $user, CarbonImmutable $weekStart): bool
     {
+        // `data->kind` JSON-path operator works on MySQL JSON columns but
+        // the default notifications.data column is TEXT — portable check
+        // is `whereJsonContains` which Laravel routes to JSON_CONTAINS on
+        // MySQL + json_extract on SQLite. Match the full discriminator
+        // shape (kind + iso_week_start) in one predicate.
         return $user->notifications()
-            ->where('data->kind', 'weekly_recap')
-            ->where('data->iso_week_start', $weekStart->toDateString())
+            ->whereJsonContains('data->kind', 'weekly_recap')
+            ->whereJsonContains('data->iso_week_start', $weekStart->toDateString())
             ->exists();
     }
 }

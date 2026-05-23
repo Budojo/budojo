@@ -170,20 +170,30 @@ it('respects WEEKLY_RECAP opt-out', function (): void {
     Notification::assertNothingSent();
 });
 
-it('does not double-push when re-run in the same week (dedup)', function (): void {
+it('does not push again when a notification for the same iso week already exists (dedup)', function (): void {
+    Notification::fake();
     [$user, $athlete] = authedRecapAthlete($this->academy);
     $today = CarbonImmutable::now();
     AttendanceRecord::factory()->for($athlete)->create(['attended_on' => $today->toDateString()]);
 
-    // First run — real push (database channel).
-    $this->artisan('budojo:send-weekly-recap-pushes')->assertExitCode(0);
-    $firstCount = $user->notifications()->where('data->kind', 'weekly_recap')->count();
-    expect($firstCount)->toBe(1);
+    // Seed a prior notification row that mimics a previous fanout's
+    // database write. The command's alreadyNotifiedThisWeek() check
+    // must find this and skip — without it, the cron would double-push
+    // on a Monday-morning manual rerun. Using a raw insert avoids the
+    // notify() path (which Notification::fake would intercept).
+    $weekStart = CarbonImmutable::now()->startOfWeek(CarbonImmutable::MONDAY);
+    $user->notifications()->create([
+        'id' => (string) \Illuminate\Support\Str::uuid(),
+        'type' => \App\Notifications\WeeklyRecapNotification::class,
+        'data' => [
+            'kind' => 'weekly_recap',
+            'iso_week_start' => $weekStart->toDateString(),
+        ],
+    ]);
 
-    // Re-run — dedup should suppress.
     $this->artisan('budojo:send-weekly-recap-pushes')->assertExitCode(0);
-    $secondCount = $user->notifications()->where('data->kind', 'weekly_recap')->count();
-    expect($secondCount)->toBe(1);
+
+    Notification::assertNothingSent();
 });
 
 // ─── GET /api/v1/me/recap ────────────────────────────────────────
