@@ -1279,6 +1279,27 @@
       "countOther": "{{count}} atleti da controllare",
       "countHint": "Scaduti, in scadenza o senza certificato",
       "breakdown": "{{expiring}} in scadenza · {{missing}} senza certificato"
+    },
+    "upload": {
+      "header": "Carica documento",
+      "typeLabel": "Tipo *",
+      "typePlaceholder": "Seleziona un tipo di documento",
+      "typeRequired": "Seleziona un tipo di documento.",
+      "fileLabel": "File *",
+      "fileChoose": "Scegli file",
+      "fileHint": "PDF, JPEG o PNG · max 10 MB",
+      "fileRequired": "Scegli un file da caricare.",
+      "fileTooLarge": "Il file supera il limite di 10 MB.",
+      "fileWrongType": "Sono accettati solo file PDF, JPEG o PNG.",
+      "issuedOnLabel": "Emesso il",
+      "expiresOnLabel": "Scade il",
+      "expiryBeforeIssue": "La data di scadenza deve essere uguale o successiva alla data di emissione.",
+      "notesLabel": "Note",
+      "notesPlaceholder": "Facoltativo — clinica, numero, commento…",
+      "notesTooLong": "Le note devono essere lunghe al massimo 500 caratteri.",
+      "cancel": "Annulla",
+      "submit": "Carica",
+      "genericError": "Qualcosa è andato storto. Riprova."
     }
   },
   "attendanceSummary": {
