@@ -12,6 +12,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { mergeMap, range, toArray } from 'rxjs';
 import { ChartModule } from 'primeng/chart';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { LeaderboardCardComponent } from '../../../shared/components/leaderboard-card/leaderboard-card.component';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Athlete, AthleteService, Belt } from '../../../core/services/athlete.service';
 import { LanguageService } from '../../../core/services/language.service';
@@ -89,7 +90,13 @@ interface DoughnutData {
   selector: 'app-stats-overview',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, ChartModule, PageHeaderComponent, SkeletonModule],
+  imports: [
+    TranslatePipe,
+    ChartModule,
+    PageHeaderComponent,
+    LeaderboardCardComponent,
+    SkeletonModule,
+  ],
   templateUrl: './stats-overview.component.html',
   styleUrl: './stats-overview.component.scss',
 })

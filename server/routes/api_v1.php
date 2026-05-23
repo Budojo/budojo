@@ -188,6 +188,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // opt-out-respected. The Athlete relation hook is the gate (404
     // for owner-only users without a linked athlete row).
     Route::get('/me/attendance/today/peers', [\App\Http\Controllers\Me\MyAttendanceController::class, 'peers']);
+    // Monthly mat-hours leaderboard (#962). Top 5 athletes by session
+    // count for the academy + month. Available to owners (active
+    // academy scope) AND athletes (linked-row scope). Anonymises
+    // opted-out users via the action layer.
+    Route::get('/attendance/leaderboard', [\App\Http\Controllers\Attendance\LeaderboardController::class, 'show']);
     // Athlete-portal weekly recap (#960). `?week=YYYY-MM-DD` is the
     // Monday-of-week start date; controller validates the format AND
     // the day-of-week constraint (must be Monday).

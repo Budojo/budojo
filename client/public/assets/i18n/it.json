@@ -2006,6 +2006,13 @@
       "back": "Torna agli atleti"
     }
   },
+  "leaderboard": {
+    "title": "Top del tatami — questo mese",
+    "loading": "Caricamento classifica…",
+    "empty": "Nessuna ora sul tatami questo mese. Sii il primo.",
+    "error": "Impossibile caricare la classifica.",
+    "anonymous": "Anonimo"
+  },
   "myRecap": {
     "title": "La tua settimana sul tatami",
     "loading": "Caricamento della settimana…",

@@ -1,0 +1,73 @@
+.leaderboard-card {
+  padding: 1.5rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 16px;
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  &__month {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  &__placeholder {
+    margin: 0;
+    color: var(--p-text-muted-color);
+    font-size: 0.9375rem;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 2rem 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background: var(--p-surface-50);
+  }
+
+  &__row--self {
+    background: color-mix(in srgb, var(--p-primary-color) 12%, var(--p-surface-0));
+    border: 1px solid color-mix(in srgb, var(--p-primary-color) 30%, var(--p-surface-200));
+  }
+
+  &__rank {
+    font-weight: 700;
+    color: var(--p-primary-color);
+    text-align: center;
+  }
+
+  &__name {
+    font-weight: 500;
+    color: var(--p-text-color);
+  }
+
+  &__stats {
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+  }
+}

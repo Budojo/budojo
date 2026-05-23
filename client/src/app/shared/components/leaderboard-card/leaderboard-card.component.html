@@ -1,0 +1,51 @@
+<section class="leaderboard-card" data-cy="leaderboard-card">
+  <header class="leaderboard-card__header">
+    <h3 class="leaderboard-card__title">
+      {{ 'leaderboard.title' | translate }}
+    </h3>
+    @if (month()) {
+      <span class="leaderboard-card__month">{{ month() }}</span>
+    }
+  </header>
+
+  @switch (status()) {
+    @case ('loading') {
+      <p class="leaderboard-card__placeholder" data-cy="leaderboard-loading">
+        {{ 'leaderboard.loading' | translate }}
+      </p>
+    }
+    @case ('empty') {
+      <p class="leaderboard-card__placeholder" data-cy="leaderboard-empty">
+        {{ 'leaderboard.empty' | translate }}
+      </p>
+    }
+    @case ('error') {
+      <p class="leaderboard-card__placeholder" data-cy="leaderboard-error">
+        {{ 'leaderboard.error' | translate }}
+      </p>
+    }
+    @case ('ok') {
+      <ol class="leaderboard-card__list" data-cy="leaderboard-list">
+        @for (row of rows(); track row.athlete_id) {
+          <li
+            class="leaderboard-card__row"
+            [class.leaderboard-card__row--self]="row.is_self"
+            [attr.data-cy]="'leaderboard-row-' + row.athlete_id"
+          >
+            <span class="leaderboard-card__rank">{{ row.rank }}</span>
+            <span class="leaderboard-card__name">
+              @if (row.anonymous) {
+                {{ 'leaderboard.anonymous' | translate }}
+              } @else {
+                {{ row.first_name }} {{ row.last_name_initial }}.
+              }
+            </span>
+            <span class="leaderboard-card__stats">
+              {{ row.sessions }}× · {{ row.hours.toFixed(1) }}h
+            </span>
+          </li>
+        }
+      </ol>
+    }
+  }
+</section>
