@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Document } from '../../../../core/services/document.service';
+import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { UploadDocumentDialogComponent } from './upload-document-dialog.component';
 
 // Host component so we can exercise the `[(visible)]` model binding and the
@@ -38,7 +39,7 @@ describe('UploadDocumentDialogComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [UploadDocumentDialogComponent, HostComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), ...provideI18nTesting()],
     });
     httpMock = TestBed.inject(HttpTestingController);
   });
