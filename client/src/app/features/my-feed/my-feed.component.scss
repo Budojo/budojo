@@ -11,6 +11,30 @@
   // mobile between the header CTA cluster and the first card.
   gap: 1rem;
 
+  // Share button on the belt_promotion post body (#959). Sits below
+  // the belt-transition row + above the reaction chip row. Plain
+  // text-button styling so it doesn't compete visually with the
+  // primary react buttons.
+  &__share {
+    align-self: flex-start;
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: 1px solid var(--p-surface-200);
+    border-radius: 12px;
+    color: var(--p-primary-color);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &:hover {
+      background: color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+    }
+  }
+
   &__list {
     list-style: none;
     margin: 0;
