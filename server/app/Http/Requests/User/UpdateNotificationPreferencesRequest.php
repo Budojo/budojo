@@ -9,7 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Validates `PUT /me/notification-preferences` (#1004 — controller-
+ * Validates `PATCH /me/notification-preferences` (#1004 — controller-
  * bloat extraction).
  *
  * Shape: `preferences: { <category>: bool }`. The `Rule::array(...)`
