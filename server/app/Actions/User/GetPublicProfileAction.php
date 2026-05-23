@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\User;
 
+use App\Models\Achievement;
 use App\Models\AthletePromotion;
 use App\Models\User;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -40,6 +41,11 @@ class GetPublicProfileAction
      *         to_stripes: int|null,
      *         belt_at_event: string,
      *         recorded_at: string,
+     *     }>,
+     *     achievements: list<array{
+     *         kind: string,
+     *         unlocked_at: string,
+     *         metadata: array<string, mixed>|null,
      *     }>,
      * }
      */
@@ -90,6 +96,19 @@ class GetPublicProfileAction
                 ->all(),
         );
 
+        $achievements = array_values(
+            Achievement::query()
+                ->where('athlete_id', $targetAthlete->id)
+                ->orderByDesc('unlocked_at')
+                ->get()
+                ->map(fn (Achievement $a): array => [
+                    'kind' => $a->kind->value,
+                    'unlocked_at' => $a->unlocked_at->toIso8601String(),
+                    'metadata' => $a->metadata,
+                ])
+                ->all(),
+        );
+
         return [
             'id' => $target->id,
             'first_name' => $target->first_name,
@@ -98,6 +117,7 @@ class GetPublicProfileAction
             'belt' => $targetAthlete->belt->value,
             'joined_at' => $targetAthlete->joined_at->toDateString(),
             'promotions' => $promotions,
+            'achievements' => $achievements,
         ];
     }
 

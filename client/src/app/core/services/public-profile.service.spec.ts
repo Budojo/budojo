@@ -32,6 +32,7 @@ describe('PublicProfileService', () => {
       belt: 'blue',
       joined_at: '2025-01-15',
       promotions: [],
+      achievements: [],
     };
 
     let received: PublicProfile | null = null;
@@ -61,6 +62,7 @@ describe('PublicProfileService', () => {
         belt: null,
         joined_at: null,
         promotions: [],
+        achievements: [],
       },
     });
   });

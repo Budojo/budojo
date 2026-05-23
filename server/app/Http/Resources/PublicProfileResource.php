@@ -14,7 +14,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * envelope the SPA renders on `/dashboard/u/{handle}`. Mirrors the
  * field set documented in the epic body — first name only (no last
  * name in V1), handle, avatar, current belt, joined-at, promotions
- * timeline.
+ * timeline, achievements (#961).
  *
  * The Action does all the data-shaping; this Resource is a humble
  * pass-through so PHPStan keeps the typed shape end-to-end without
@@ -37,6 +37,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *         belt_at_event: string,
  *         recorded_at: string,
  *     }>,
+ *     achievements: list<array{kind: string, unlocked_at: string, metadata: array<string, mixed>|null}>,
  * } $resource
  */
 class PublicProfileResource extends JsonResource
@@ -59,6 +60,7 @@ class PublicProfileResource extends JsonResource
      *         belt_at_event: string,
      *         recorded_at: string,
      *     }>,
+     *     achievements: list<array{kind: string, unlocked_at: string, metadata: array<string, mixed>|null}>,
      * }
      */
     public function toArray(Request $request): array
