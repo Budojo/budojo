@@ -284,6 +284,14 @@
       "stripePromotion": {
         "text": "{{name}} ha preso una striscetta — {{from}} → {{to}}"
       },
+      "share": {
+        "button": "Condividi",
+        "aria": "Condividi questa promozione come immagine",
+        "title": "Nuova cintura!",
+        "caption": "{{name}} ha appena conquistato una nuova cintura! 🥋",
+        "downloadedSummary": "Card salvata — puoi allegarla a una Storia dal telefono",
+        "errorSummary": "Impossibile generare la card. Riprova."
+      },
       "pagination": "Impaginazione feed",
       "pageOf": "Pagina {{current}} di {{total}}",
       "previous": "Precedente",
@@ -1982,14 +1990,55 @@
       "beltChange": "Promosso da {{ from }} a {{ to }}",
       "stripeChange": "Gradi: {{ from }} → {{ to }}"
     },
+    "achievements": {
+      "title": "Traguardi",
+      "kind": {
+        "first_class": "Prima lezione",
+        "30_day_streak": "30 giorni di fila",
+        "100_sessions": "100 allenamenti",
+        "1_year_at_academy": "1 anno in palestra",
+        "belt_promotion": "Promozione cintura"
+      }
+    },
     "notFound": {
       "title": "Profilo non disponibile",
       "body": "Non troviamo questo profilo, oppure non è visibile a te.",
       "back": "Torna agli atleti"
     }
   },
+  "leaderboard": {
+    "title": "Top del tatami — questo mese",
+    "loading": "Caricamento classifica…",
+    "empty": "Nessuna ora sul tatami questo mese. Sii il primo.",
+    "error": "Impossibile caricare la classifica.",
+    "anonymous": "Anonimo"
+  },
+  "myRecap": {
+    "title": "La tua settimana sul tatami",
+    "loading": "Caricamento della settimana…",
+    "heading": "Ecco la tua settimana",
+    "sessions": "{{count}} allenament{{count, plural, one {o} other {i}}}",
+    "hours": "Ore di tatami",
+    "partners": {
+      "heading": "Compagni di allenamento"
+    },
+    "shareButton": "Condividi",
+    "shareTitle": "La mia settimana sul tatami",
+    "shareCaption": "{{sessions}} allenamenti, {{hours}}h sul tatami questa settimana. 🥋",
+    "shareErrorSummary": "Impossibile condividere. Riprova.",
+    "copiedSummary": "Recap copiato negli appunti.",
+    "error": {
+      "heading": "Impossibile caricare il recap",
+      "copy": "Il parametro settimana sembra sbagliato, o il tuo profilo atleta non è pronto.",
+      "cta": "Torna al mio profilo"
+    }
+  },
   "myAttendanceToday": {
     "title": "Presenza di oggi",
+    "peers": {
+      "heading": "Stasera in palestra",
+      "empty": "Sii il primo a segnarti"
+    },
     "notTrainingDay": {
       "heading": "Oggi non si allena",
       "copy": "La tua palestra oggi non è in programma. Riposati — ti avviseremo al prossimo giorno di allenamento.",

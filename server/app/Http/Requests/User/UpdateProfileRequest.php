@@ -57,6 +57,9 @@ class UpdateProfileRequest extends FormRequest
                 // the rule against itself.
                 Rule::unique('users', 'handle')->ignore($userId),
             ],
+            // Attendance peer-preview opt-out (#958). Optional in the
+            // payload — omitting it leaves the existing value untouched.
+            'attendance_peer_visible' => ['sometimes', 'boolean'],
         ];
     }
 

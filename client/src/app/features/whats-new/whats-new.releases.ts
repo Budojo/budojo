@@ -28,6 +28,60 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.30.0',
+    date: '2026-05-23',
+    headline:
+      'The social-engagement train: peer presence on self-mark, share-worthy belt promotions, weekly recap pushes, achievement badges, and a monthly mat-hours leaderboard.',
+    sections: [
+      {
+        heading: '🥋 "Chi viene stasera?" peer preview',
+        bullets: [
+          'On the "Sono qui oggi" page, see who else from your academy has self-marked today — up to 8 faces with an overflow chip for the rest.',
+          'Per-athlete opt-out from the profile page ("Mostra agli altri quando mi alleno") — the row disappears from the preview while still counting toward attendance.',
+        ],
+      },
+      {
+        heading: '📸 Share your belt promotion to Instagram',
+        bullets: [
+          'Belt-promotion feed posts get a "Condividi" button — generates a 1080×1920 story image right in the browser and hands it to the native share sheet.',
+          'Falls back to a plain download on desktop or browsers without Web Share. No server round-trip, no storage, zero latency.',
+        ],
+      },
+      {
+        heading: '📬 Sunday weekly recap',
+        bullets: [
+          'Push lands every Sunday at 19:00 with the week summary: training days, mat hours (1.5 h/session), three most-overlapping peers.',
+          'Tap to land on a dedicated recap page that mirrors the numbers, plus a Web Share button for plain-text bragging rights.',
+          'Notification dedupes — a worker retry will not double-ping you.',
+        ],
+      },
+      {
+        heading: '🏆 Achievement badges',
+        bullets: [
+          'Five lifetime milestones unlock automatically: 🥋 First class, 🔥 30-day streak, 💯 100 sessions, 🎂 1 year at the academy, 🎉 Belt promotion.',
+          'Evaluator runs on every attendance row plus a nightly 02:00 cron for the time-based ones.',
+          'Unlocked badges surface on your public profile (`/u/<handle>`).',
+        ],
+      },
+      {
+        heading: '📊 Monthly mat-hours leaderboard',
+        bullets: [
+          'New card on the stats / profile pages: top 5 athletes by sessions this month, hours at 1.5 h per session.',
+          'Drilldown to a specific month via `?month=YYYY-MM`. Your own row is highlighted when you appear in the top 5.',
+          'Opt-out from the profile page ("Mostra il mio nome nella classifica") anonymises the row to "Anonimo" while still counting toward rank.',
+        ],
+      },
+      {
+        heading: '🧪 Under the hood',
+        bullets: [
+          'Claude reviewer switched to opus 4.7 — sonnet-4-6 was failing on the 1M-token context on bigger PRs.',
+          'Password-strength meter spec timeouts bumped to 50s/60s for the cold-cache CI runner that lazy-loads zxcvbn-ts more slowly than the budget allowed.',
+          'Patch-level dep sweep: Angular 21.2.14, PrimeNG 21.1.8, Laravel 13.11.2.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.29.0',
     date: '2026-05-22',
     headline:

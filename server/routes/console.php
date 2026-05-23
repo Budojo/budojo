@@ -91,6 +91,26 @@ Artisan::command('inspire', function (): void {
     ->timezone('Europe/Rome')
     ->withoutOverlapping(30);
 
+// Weekly recap fanout (#960). Fires Sunday 19:00 local — domenica
+// sera è planning-time, l'utente guarda indietro alla settimana
+// appena finita e in avanti a quella che arriva. Skipped athletes
+// with zero sessions (no pity push). Inbox dedup against the
+// (user, iso_week_start) tuple makes a manual rerun on Monday a
+// no-op.
+\Illuminate\Support\Facades\Schedule::command('budojo:send-weekly-recap-pushes')
+    ->weeklyOn(\Illuminate\Support\Carbon::SUNDAY, '19:00')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(30);
+
+// Time-based achievement evaluator (#961). Runs nightly at 02:00
+// local to pick up anniversary + 30-day-streak crossings that can't
+// be event-driven (no attendance row means the AttendanceObserver
+// never fires; the date alone closes the window).
+\Illuminate\Support\Facades\Schedule::command('budojo:evaluate-time-based-achievements')
+    ->dailyAt('02:00')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(60);
+
 // Daily prune of `login_attempts` rows older than 90 days (#430).
 // The login-history audit log is high-write (one row per login
 // attempt, success or failure); without retention the table grows

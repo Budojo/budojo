@@ -85,6 +85,11 @@ describe('StatsOverviewComponent', () => {
     expect(beltChart.datasets[0].data).toEqual([1, 2, 1]);
 
     expect(fixture.componentInstance['totalAthletes']()).toBe(4);
+    // The embedded LeaderboardCardComponent (#962) fires a GET on
+    // mount — drain it so httpMock.verify() doesn't trip.
+    httpMock
+      .expectOne((r) => r.url.endsWith('/attendance/leaderboard'))
+      .flush({ data: [], meta: { month: '2026-05' } });
     httpMock.verify();
   });
 
@@ -118,6 +123,9 @@ describe('StatsOverviewComponent', () => {
 
     expect(fixture.componentInstance['totalAthletes']()).toBe(4);
     expect(fixture.componentInstance['beltChartData']().labels).toEqual(['White', 'Blue', 'Black']);
+    httpMock
+      .expectOne((r) => r.url.endsWith('/attendance/leaderboard'))
+      .flush({ data: [], meta: { month: '2026-05' } });
     httpMock.verify();
   });
 

@@ -1,3 +1,77 @@
+// "Chi viene stasera?" peer preview row (#958). Renders above the
+// mark/unmark/not-training panels so the social signal is the first
+// thing the athlete sees on the page.
+.attendance-peers {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto 1.5rem;
+
+  &__heading {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+    margin: 0 0 0.5rem;
+  }
+
+  &__empty {
+    margin: 0;
+    color: var(--p-text-muted-color);
+    font-size: 0.9375rem;
+  }
+
+  &__row {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--p-surface-0);
+    border: 1px solid var(--p-surface-200);
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-color);
+    white-space: nowrap;
+  }
+
+  &__overflow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    padding: 0 0.5rem;
+    background: var(--p-surface-100);
+    border-radius: 12px;
+    color: var(--p-text-muted-color);
+    font-weight: 600;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+}
+
 .attendance-today {
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;

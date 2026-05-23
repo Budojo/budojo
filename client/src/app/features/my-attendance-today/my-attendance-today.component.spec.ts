@@ -27,9 +27,10 @@ const baseRecord = (overrides: Partial<AttendanceRecord> = {}): AttendanceRecord
 interface AttendanceStub {
   markToday: ReturnType<typeof vi.fn>;
   unmarkToday: ReturnType<typeof vi.fn>;
+  getTodayPeers: ReturnType<typeof vi.fn>;
 }
 
-function setup(): {
+function setup(peers: unknown[] = []): {
   fixture: ComponentFixture<MyAttendanceTodayComponent>;
   svc: AttendanceStub;
   add: ReturnType<typeof vi.fn>;
@@ -38,6 +39,8 @@ function setup(): {
   const svc: AttendanceStub = {
     markToday: vi.fn(),
     unmarkToday: vi.fn(),
+    // Auto-fired on mount — return supplied stub (empty by default).
+    getTodayPeers: vi.fn().mockReturnValue(of(peers)),
   };
   const messageService = { add: vi.fn() };
   TestBed.configureTestingModule({
@@ -189,6 +192,74 @@ describe('MyAttendanceTodayComponent (#960)', () => {
     await fixture.whenStable();
 
     expect(navSpy).toHaveBeenCalledWith('/dashboard');
+  });
+
+  // ─── #958 peer preview ─────────────────────────────────────────
+
+  it('renders the empty-state copy when no peers are marked yet', () => {
+    const { fixture } = setup();
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="attendance-peers-empty"]'),
+    ).not.toBeNull();
+  });
+
+  it('renders one chip per peer with no full last_name leak', async () => {
+    const { fixture } = setup([
+      {
+        id: 1,
+        first_name: 'Mario',
+        last_name_initial: 'R',
+        handle: 'mariobjj',
+        belt: 'blue',
+        avatar_url: null,
+      },
+      {
+        id: 2,
+        first_name: 'Alice',
+        last_name_initial: 'B',
+        handle: null,
+        belt: 'white',
+        avatar_url: null,
+      },
+    ]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="attendance-peer-1"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="attendance-peer-2"]')).not.toBeNull();
+    // No surface should leak full last names we never received.
+    expect(fixture.nativeElement.textContent).not.toContain('Rossi');
+    expect(fixture.nativeElement.textContent).not.toContain('Bianchi');
+  });
+
+  it('shows the overflow chip when more than 8 peers are returned', async () => {
+    const tenPeers = Array.from({ length: 10 }).map((_, i) => ({
+      id: i + 1,
+      first_name: `Athlete${i + 1}`,
+      last_name_initial: 'X',
+      handle: null,
+      belt: 'white',
+      avatar_url: null,
+    }));
+    const { fixture } = setup(tenPeers);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('[data-cy^="attendance-peer-"]').length).toBe(8);
+    const overflow = fixture.nativeElement.querySelector('[data-cy="attendance-peers-overflow"]');
+    expect(overflow).not.toBeNull();
+    expect(overflow!.textContent?.trim()).toBe('+2');
+  });
+
+  it('refreshes the peer set after a successful mark', async () => {
+    const { fixture, svc } = setup();
+    svc.markToday.mockReturnValue(
+      of<MarkTodayResult>({ status: 'marked', record: baseRecord({ source: 'self' }) }),
+    );
+    expect(svc.getTodayPeers).toHaveBeenCalledTimes(1); // mount
+    (fixture.componentInstance as unknown as { onMark(): void }).onMark();
+    await fixture.whenStable();
+    expect(svc.getTodayPeers).toHaveBeenCalledTimes(2); // refreshed after mark
   });
 
   it('does not fire a second POST while a mark is in flight (busy guard)', async () => {

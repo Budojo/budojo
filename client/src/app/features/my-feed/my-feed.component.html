@@ -125,6 +125,16 @@
                     <app-belt-badge [belt]="fresh" />
                   }
                 </div>
+                <button
+                  type="button"
+                  class="feed__share"
+                  (click)="onSharePromotion(post)"
+                  [attr.data-cy]="'share-promotion-' + post.id"
+                  [attr.aria-label]="'athletePortal.feed.share.aria' | translate"
+                >
+                  <i class="pi pi-share-alt" aria-hidden="true"></i>
+                  {{ 'athletePortal.feed.share.button' | translate }}
+                </button>
               </div>
             }
             @case ('stripe_promotion') {

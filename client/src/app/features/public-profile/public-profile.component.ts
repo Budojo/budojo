@@ -115,6 +115,24 @@ export class PublicProfileComponent {
     return this.translateService.instant(BELT_KEYS[belt]);
   }
 
+  /**
+   * Visual glyph per achievement kind (#961). Inline lookup to keep
+   * the template light. Mirrors the AchievementKind enum on the
+   * server; an unknown kind falls through to a trophy glyph as a
+   * safe default (handles a forward-compat scenario where the server
+   * starts emitting a new kind ahead of an SPA release).
+   */
+  protected badgeGlyph(kind: string): string {
+    const glyphs: Record<string, string> = {
+      first_class: '🥋',
+      '30_day_streak': '🔥',
+      '100_sessions': '💯',
+      '1_year_at_academy': '🎂',
+      belt_promotion: '🎉',
+    };
+    return glyphs[kind] ?? '🏆';
+  }
+
   protected readonly initials = computed(() => {
     const s = this.state();
     if (s.kind !== 'ready') {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Observers;
 
 use App\Actions\Document\DeleteDocumentAction;
+use App\Actions\Engagement\EvaluateAchievementsAction;
 use App\Enums\CommunityPostType;
 use App\Enums\CommunityPostVisibility;
 use App\Models\Athlete;
@@ -22,8 +23,10 @@ use Illuminate\Support\Facades\Notification;
 
 class AthleteObserver
 {
-    public function __construct(private readonly DeleteDocumentAction $deleteDocument)
-    {
+    public function __construct(
+        private readonly DeleteDocumentAction $deleteDocument,
+        private readonly EvaluateAchievementsAction $evaluateAchievements,
+    ) {
     }
 
     /**
@@ -153,6 +156,19 @@ class AthleteObserver
         $this->fanoutBeltCelebration($athlete, $post, $userId, $oldBeltString, $newBeltString);
         $this->fanoutCommunityNewPost($post, $userId);
         $this->notifyPromotedAthlete($athlete, $oldBeltString, $newBeltString);
+
+        // First belt promotion unlocks the `belt_promotion` badge
+        // (#961). Evaluator is idempotent — subsequent promotions
+        // are no-ops at the badge level since the kind is unique.
+        try {
+            $this->evaluateAchievements->execute($athlete);
+        } catch (\Throwable $e) {
+            Log::warning('achievement evaluation failed on belt change', [
+                'athlete_id' => $athlete->id,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

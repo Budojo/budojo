@@ -2114,6 +2114,42 @@ paths:
         '404':
           description: No athlete profile found for the caller.
 
+  /me/attendance/today/peers:
+    get:
+      tags: [attendance]
+      summary: Peer preview for "Chi viene stasera?" on the self-mark page
+      description: |
+        Same-academy athletes whose attendance row exists for today.
+        Drives the peer-preview row on `/dashboard/me/attendance/today`
+        (#958). Server-side caps at 8 rows and filters out athletes
+        who opted out via `users.attendance_peer_visible = false`.
+
+        Narrower shape than `AthleteResource` on purpose — only
+        `first_name + last_name_initial + handle + belt + avatar_url`,
+        no email / phone / fiscal code. Defence-in-depth against
+        shoulder-surfing the page in a public space.
+
+        - 404 when the caller has no linked athlete row
+        - 200 with `{data: []}` when the user is fine but nobody is
+          marked yet
+      operationId: meAttendanceTodayPeers
+      responses:
+        '200':
+          description: List of same-academy peers marked for today.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/AttendanceTodayPeer' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: No athlete profile found for the caller.
+
   /me/avatar:
     post:
       tags: [auth]
@@ -5868,6 +5904,31 @@ components:
           format: date-time
           nullable: true
           description: Non-null when the record is a tombstone.
+
+    AttendanceTodayPeer:
+      type: object
+      required: [id, first_name, last_name_initial, belt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        first_name:
+          type: string
+        last_name_initial:
+          type: string
+          description: |
+            Single uppercase letter (the initial of the last name) +
+            empty string when the last_name is empty. The full
+            last_name is intentionally never emitted on this surface.
+        handle:
+          type: string
+          nullable: true
+        belt:
+          type: string
+          description: Backed-enum value of the athlete's current belt.
+        avatar_url:
+          type: string
+          nullable: true
 
     AttendanceRecordList:
       type: object

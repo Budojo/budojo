@@ -18,6 +18,7 @@ function makeProfile(overrides: Partial<PublicProfile> = {}): PublicProfile {
     belt: 'blue',
     joined_at: '2025-01-15',
     promotions: [],
+    achievements: [],
     ...overrides,
   };
 }
@@ -125,6 +126,40 @@ describe('PublicProfileComponent', () => {
     fixture.detectChanges();
     const html = fixture.nativeElement.textContent as string;
     expect(html).toContain('No promotions recorded yet.');
+  });
+
+  it('renders the achievements row when the profile carries badges (#961)', () => {
+    const fixture = TestBed.createComponent(PublicProfileComponent);
+    fixture.detectChanges();
+
+    http.expectOne(`${environment.apiBase}/api/v1/users/mariobjj/profile`).flush({
+      data: makeProfile({
+        promotions: [],
+        achievements: [
+          { kind: 'first_class', unlocked_at: '2026-04-01T10:00:00Z', metadata: null },
+          { kind: '30_day_streak', unlocked_at: '2026-05-01T10:00:00Z', metadata: { days: 30 } },
+        ],
+      }),
+    });
+
+    fixture.detectChanges();
+
+    const badges = fixture.nativeElement.querySelector('[data-cy="public-profile-badges"]');
+    expect(badges).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="badge-first_class"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="badge-30_day_streak"]')).not.toBeNull();
+  });
+
+  it('omits the achievements row when the profile has no badges yet', () => {
+    const fixture = TestBed.createComponent(PublicProfileComponent);
+    fixture.detectChanges();
+
+    http
+      .expectOne(`${environment.apiBase}/api/v1/users/mariobjj/profile`)
+      .flush({ data: makeProfile({ achievements: [] }) });
+
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-cy="public-profile-badges"]')).toBeNull();
   });
 });
 
