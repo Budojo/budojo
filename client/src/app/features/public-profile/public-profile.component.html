@@ -45,6 +45,29 @@
       </div>
     </header>
 
+    @if (s.profile.achievements.length > 0) {
+      <section class="public-profile-section" aria-labelledby="achievements-heading">
+        <h2 id="achievements-heading">{{ 'publicProfile.achievements.title' | translate }}</h2>
+        <ul class="public-profile-badges" data-cy="public-profile-badges">
+          @for (badge of s.profile.achievements; track badge.kind) {
+            <li class="public-profile-badge" [attr.data-cy]="'badge-' + badge.kind">
+              <span class="public-profile-badge-glyph" aria-hidden="true">
+                {{ badgeGlyph(badge.kind) }}
+              </span>
+              <div class="public-profile-badge-text">
+                <span class="public-profile-badge-title">
+                  {{ 'publicProfile.achievements.kind.' + badge.kind | translate }}
+                </span>
+                <time class="public-profile-badge-date" [attr.datetime]="badge.unlocked_at">
+                  {{ badge.unlocked_at | date: 'mediumDate' }}
+                </time>
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
     <section class="public-profile-section" aria-labelledby="promotions-heading">
       <h2 id="promotions-heading">{{ 'publicProfile.promotions.title' | translate }}</h2>
       @if (s.profile.promotions.length === 0) {

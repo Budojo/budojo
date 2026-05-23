@@ -28,6 +28,25 @@ export interface PublicProfilePromotion {
   recorded_at: string;
 }
 
+/**
+ * Achievement badge unlocked for the profile owner (#961). Mirrors
+ * App\Enums\AchievementKind on the server. The `metadata` shape is
+ * kind-specific — the SPA template renders per `kind` so no strict
+ * type on the bag.
+ */
+export type PublicProfileAchievementKind =
+  | 'first_class'
+  | '30_day_streak'
+  | '100_sessions'
+  | '1_year_at_academy'
+  | 'belt_promotion';
+
+export interface PublicProfileAchievement {
+  kind: PublicProfileAchievementKind;
+  unlocked_at: string;
+  metadata: Record<string, unknown> | null;
+}
+
 export interface PublicProfile {
   id: number;
   first_name: string;
@@ -36,6 +55,7 @@ export interface PublicProfile {
   belt: Belt | null;
   joined_at: string | null;
   promotions: PublicProfilePromotion[];
+  achievements: PublicProfileAchievement[];
 }
 
 interface PublicProfileEnvelope {

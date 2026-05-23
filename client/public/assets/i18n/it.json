@@ -1990,6 +1990,16 @@
       "beltChange": "Promosso da {{ from }} a {{ to }}",
       "stripeChange": "Gradi: {{ from }} → {{ to }}"
     },
+    "achievements": {
+      "title": "Traguardi",
+      "kind": {
+        "first_class": "Prima lezione",
+        "30_day_streak": "30 giorni di fila",
+        "100_sessions": "100 allenamenti",
+        "1_year_at_academy": "1 anno in palestra",
+        "belt_promotion": "Promozione cintura"
+      }
+    },
     "notFound": {
       "title": "Profilo non disponibile",
       "body": "Non troviamo questo profilo, oppure non è visibile a te.",
