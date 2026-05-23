@@ -188,6 +188,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // opt-out-respected. The Athlete relation hook is the gate (404
     // for owner-only users without a linked athlete row).
     Route::get('/me/attendance/today/peers', [\App\Http\Controllers\Me\MyAttendanceController::class, 'peers']);
+    // Athlete-portal weekly recap (#960). `?week=YYYY-MM-DD` is the
+    // Monday-of-week start date; controller validates the format AND
+    // the day-of-week constraint (must be Monday).
+    Route::get('/me/recap', [\App\Http\Controllers\Me\MyRecapController::class, 'show']);
 
     // Athlete-portal monthly payment history (M7 PR-D slice 4).
     // Returns the auth athlete's payment rows for the given

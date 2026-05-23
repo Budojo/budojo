@@ -172,6 +172,14 @@ export const routes: Routes = [
           ),
       },
       {
+        // Weekly recap landing page (#960). Reached from the Sunday
+        // 19:00 push deep-link. `:isoWeek` is the Monday-of-week
+        // date in YYYY-MM-DD format.
+        path: 'recap/:isoWeek',
+        loadComponent: () =>
+          import('./features/my-recap/my-recap.component').then((m) => m.MyRecapComponent),
+      },
+      {
         path: 'payments',
         loadComponent: () =>
           import('./features/my-payments/my-payments.component').then((m) => m.MyPaymentsComponent),

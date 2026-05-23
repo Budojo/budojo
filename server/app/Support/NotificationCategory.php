@@ -191,6 +191,16 @@ final class NotificationCategory
     public const string OWNER_ATHLETE_MISSED_STREAK = 'owner_athlete_missed_streak';
 
     /**
+     * Athlete-side weekly recap push (#960). Fires Sunday 19:00 local
+     * per academy, sending each athlete a digest of the past 7 days:
+     * sessions count, top training partners (handle/initial only),
+     * total hours estimated. Skipped when the athlete trained zero
+     * times that week (no "0 sessions" pity push). Tap-through opens
+     * `/dashboard/me/recap/:isoWeek` with the share-card button.
+     */
+    public const string WEEKLY_RECAP = 'weekly_recap';
+
+    /**
      * Every category, in the order the SPA panel renders them.
      *
      * @return array<int, string>
@@ -209,6 +219,7 @@ final class NotificationCategory
             self::OWNER_ATHLETE_DOC_UPLOADED,
             self::OWNER_EVENT_RSVP,
             self::OWNER_ATHLETE_MISSED_STREAK,
+            self::WEEKLY_RECAP,
             self::COMMUNITY_REPLY,
             self::COMMUNITY_NEW_POST,
             self::COMMUNITY_COMMENT_ON_YOUR_POST,
