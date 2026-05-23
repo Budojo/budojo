@@ -560,6 +560,11 @@ $athletes-mobile-breakpoint: 768px;
   // open the public profile (#983) instead of the athlete detail. When
   // the linked user has no handle, the wrapping element is a <span> so
   // the same visual rhythm is preserved without a click target.
+  // The 3rem × 3rem (48 px) min-box satisfies MD3 Fitts on mobile —
+  // the visible 32 px avatar disc sits centered inside a 48 px hit
+  // target. Negative margin keeps the surrounding layout pinned to
+  // the original visual rhythm (the disc-to-name gap reads as the
+  // previous 0.5rem from the header gap, not 1rem).
   &__avatar-link {
     position: relative;
     z-index: 2;
@@ -567,6 +572,9 @@ $athletes-mobile-breakpoint: 768px;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    min-width: 3rem;
+    min-height: 3rem;
+    margin: -0.5rem 0 -0.5rem -0.5rem;
     border-radius: 50%;
     transition: opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
