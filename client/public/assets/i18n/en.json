@@ -1561,7 +1561,11 @@
         "restore": "Restore",
         "restoreAria": "Restore {{name}}",
         "publicProfile": "View public profile",
-        "publicProfileAria": "View {{name}}'s public profile"
+        "publicProfileAria": "View {{name}}'s public profile",
+        "viewProfile": "View profile",
+        "documents": "Documents",
+        "payments": "Payments",
+        "promotions": "Belt history"
       },
       "social": {
         "facebookLabel": "Open Facebook profile",

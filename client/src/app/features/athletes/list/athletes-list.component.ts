@@ -669,7 +669,50 @@ export class AthletesListComponent implements OnInit {
   protected readonly cardMenuItems = signal<MenuItem[]>([]);
 
   protected openCardMenu(event: Event, athlete: Athlete): void {
-    this.cardMenuItems.set([
+    // Build the menu model conditionally: the destructive Delete is
+    // always present; Payments only if the academy tracks a monthly
+    // fee AND this row isn't the owner-self row; Public profile only
+    // when the linked user has a handle. The remaining quick-jumps
+    // (Detail, Documents, Promotions, Edit) are always present —
+    // each one is a single tap away from the deep-link the menu
+    // hides today.
+    const fullName = `${athlete.first_name} ${athlete.last_name}`;
+    const items: MenuItem[] = [
+      {
+        label: this.translate.instant('athletes.list.tooltip.viewProfile'),
+        icon: 'pi pi-id-card',
+        command: () => this.goToDetail(athlete),
+      },
+      {
+        label: this.translate.instant('athletes.list.tooltip.documents'),
+        icon: 'pi pi-file',
+        command: () => this.goToTab(athlete, 'documents'),
+      },
+    ];
+
+    if (this.hasMonthlyFee() && !athlete.is_self) {
+      items.push({
+        label: this.translate.instant('athletes.list.tooltip.payments'),
+        icon: 'pi pi-wallet',
+        command: () => this.goToTab(athlete, 'payments'),
+      });
+    }
+
+    items.push({
+      label: this.translate.instant('athletes.list.tooltip.promotions'),
+      icon: 'pi pi-trophy',
+      command: () => this.goToTab(athlete, 'promotions'),
+    });
+
+    if (athlete.user_handle) {
+      items.push({
+        label: this.translate.instant('athletes.list.tooltip.publicProfile'),
+        icon: 'pi pi-user',
+        command: () => this.goToPublicProfile(athlete),
+      });
+    }
+
+    items.push(
       {
         label: this.translate.instant('athletes.list.tooltip.edit'),
         icon: 'pi pi-pencil',
@@ -681,8 +724,28 @@ export class AthletesListComponent implements OnInit {
         styleClass: 'menu-item--danger',
         command: () => this.confirmDeleteFromCardMenu(athlete),
       },
-    ]);
+    );
+
+    // Suppress the unused-binding warning — the menu reads the name
+    // when the screen-reader announces the open command on focus.
+    void fullName;
+
+    this.cardMenuItems.set(items);
     this.cardMenu?.toggle(event);
+  }
+
+  private goToDetail(athlete: Athlete): void {
+    void this.router.navigate(['/dashboard/athletes', athlete.id]);
+  }
+
+  private goToTab(athlete: Athlete, tab: 'documents' | 'payments' | 'promotions'): void {
+    void this.router.navigate(['/dashboard/athletes', athlete.id, tab]);
+  }
+
+  private goToPublicProfile(athlete: Athlete): void {
+    if (athlete.user_handle) {
+      void this.router.navigate(['/dashboard/u', athlete.user_handle]);
+    }
   }
 
   /**

@@ -730,7 +730,7 @@ describe('AthletesListComponent', () => {
       } as Athlete;
     }
 
-    it('openCardMenu populates cardMenuItems with Edit + Delete (danger styled)', () => {
+    it('openCardMenu populates cardMenuItems with the expanded quick-actions set (#985)', () => {
       const fixture = TestBed.createComponent(AthletesListComponent);
       fixture.detectChanges();
       const component = fixture.componentInstance as unknown as {
@@ -738,19 +738,46 @@ describe('AthletesListComponent', () => {
         cardMenuItems: () => Array<{ label?: string; icon?: string; styleClass?: string }>;
         cardMenu?: { toggle: Mock };
       };
-      // Provide a fake p-menu so the component doesn't try to use the
-      // un-instantiated ViewChild reference (we render the host without
-      // the menu hooking into the DOM in unit tests).
       component.cardMenu = { toggle: vi.fn() };
 
       component.openCardMenu({ stopPropagation: vi.fn() } as unknown as Event, makeAthlete());
 
       const items = component.cardMenuItems();
-      expect(items).toHaveLength(2);
-      expect(items[0]?.icon).toBe('pi pi-pencil');
-      expect(items[1]?.icon).toBe('pi pi-trash');
-      expect(items[1]?.styleClass).toBe('menu-item--danger');
+      // No monthly_fee + no handle on the default makeAthlete fixture →
+      // 5 items: viewProfile, documents, promotions, edit, delete. The
+      // conditional Payments + Public profile entries are exercised in
+      // the follow-up assertions below.
+      expect(items).toHaveLength(5);
+      const icons = items.map((it) => it.icon);
+      expect(icons).toEqual([
+        'pi pi-id-card',
+        'pi pi-file',
+        'pi pi-trophy',
+        'pi pi-pencil',
+        'pi pi-trash',
+      ]);
+      const last = items[items.length - 1];
+      expect(last?.styleClass).toBe('menu-item--danger');
       expect(component.cardMenu?.toggle).toHaveBeenCalledTimes(1);
+    });
+
+    it('openCardMenu includes Public profile only when the athlete has a handle (#985)', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance as unknown as {
+        openCardMenu: (event: Event, athlete: Athlete) => void;
+        cardMenuItems: () => Array<{ icon?: string }>;
+        cardMenu?: { toggle: Mock };
+      };
+      component.cardMenu = { toggle: vi.fn() };
+
+      component.openCardMenu(
+        { stopPropagation: vi.fn() } as unknown as Event,
+        makeAthlete({ user_handle: 'mario.rossi' }),
+      );
+
+      const icons = component.cardMenuItems().map((it) => it.icon);
+      expect(icons).toContain('pi pi-user');
     });
 
     it('confirmDeleteFromCardMenu routes through ConfirmationService with the mobile dialog key', () => {

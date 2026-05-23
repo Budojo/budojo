@@ -1561,7 +1561,11 @@
         "restore": "Ripristina",
         "restoreAria": "Ripristina {{name}}",
         "publicProfile": "Vedi profilo pubblico",
-        "publicProfileAria": "Vedi profilo pubblico di {{name}}"
+        "publicProfileAria": "Vedi profilo pubblico di {{name}}",
+        "viewProfile": "Vai al profilo",
+        "documents": "Documenti",
+        "payments": "Pagamenti",
+        "promotions": "Storico cinture"
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",
