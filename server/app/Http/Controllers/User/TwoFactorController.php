@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\ConfirmTwoFactorRequest;
+use App\Http\Requests\User\DisableTwoFactorRequest;
 use App\Models\User;
 use App\Support\TwoFactorAuth;
 use Illuminate\Http\JsonResponse;
@@ -81,14 +83,13 @@ class TwoFactorController extends Controller
         ]);
     }
 
-    public function confirm(Request $request): JsonResponse
+    public function confirm(ConfirmTwoFactorRequest $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'size:6'],
-        ]);
+        /** @var array{code: string} $validated */
+        $validated = $request->validated();
 
         if ($user->two_factor_secret === null) {
             throw ValidationException::withMessages([
@@ -145,14 +146,13 @@ class TwoFactorController extends Controller
         ]);
     }
 
-    public function destroy(Request $request): JsonResponse
+    public function destroy(DisableTwoFactorRequest $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
-        $validated = $request->validate([
-            'password' => ['required', 'string'],
-        ]);
+        /** @var array{password: string} $validated */
+        $validated = $request->validated();
 
         if (! Hash::check($validated['password'], $user->password)) {
             throw ValidationException::withMessages([
