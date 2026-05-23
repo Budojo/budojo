@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\User;
 
+use App\Actions\User\IssueApiTokenAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\IssueApiTokenRequest;
 use App\Models\User;
 use App\Support\ApiTokenAbility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
@@ -36,6 +36,11 @@ use Laravel\Sanctum\PersonalAccessToken;
  */
 class ApiTokenController extends Controller
 {
+    public function __construct(
+        private readonly IssueApiTokenAction $issueApiToken,
+    ) {
+    }
+
     public function index(Request $request): JsonResponse
     {
         /** @var User $user */
@@ -69,40 +74,21 @@ class ApiTokenController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(IssueApiTokenRequest $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
+        /** @var array{name: string, abilities: list<string>, expires_in_days?: int|null} $validated */
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'abilities' => ['required', 'array', 'min:1'],
-            'abilities.*' => ['string', Rule::in(ApiTokenAbility::all())],
-            'expires_in_days' => ['nullable', 'integer', 'min:1', 'max:730'],
-        ]);
+        $newToken = $this->issueApiToken->execute(
+            user: $user,
+            name: $validated['name'],
+            abilities: $validated['abilities'],
+            expiresInDays: $validated['expires_in_days'] ?? null,
+        );
 
-        /** @var array<int, string> $abilities */
         $abilities = $validated['abilities'];
-        /** @var ?int $expiresInDays */
-        $expiresInDays = $validated['expires_in_days'] ?? null;
-        $expiresAt = $expiresInDays !== null ? now()->addDays($expiresInDays) : null;
-
-        // Wrap create + kind-stamp in a transaction so a crash
-        // between the two queries can't leak a token marked
-        // `kind = 'session'` (which would surface in `/me/sessions`
-        // and risk being wiped by "revoke other sessions"). Atomic
-        // either-both-or-neither is the right contract.
-        $newToken = DB::transaction(function () use ($user, $validated, $abilities, $expiresAt) {
-            $minted = $user->createToken(
-                name: $validated['name'],
-                abilities: $abilities,
-                expiresAt: $expiresAt,
-            );
-            $minted->accessToken->forceFill(['kind' => 'api'])->save();
-
-            return $minted;
-        });
-
         $row = $newToken->accessToken;
 
         return response()->json([
