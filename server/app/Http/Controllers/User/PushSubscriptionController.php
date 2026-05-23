@@ -83,7 +83,7 @@ class PushSubscriptionController extends Controller
         // `StorePushSubscriptionRequest` — the rule grep-resolves
         // from a single dedicated file the moment a future security
         // audit reaches for it (server canon § FormRequest discipline).
-        /** @var array{endpoint: string, keys: array<string, string>} $validated */
+        /** @var array{endpoint: string, keys: array{p256dh: string, auth: string}} $validated */
         $validated = $request->validated();
         $endpoint = $validated['endpoint'];
         $keys = $validated['keys'];
