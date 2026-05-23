@@ -7,8 +7,7 @@ namespace App\Http\Requests\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validates the password re-auth gate on `DELETE /me/two-factor`
- *.
+ * Validates the password re-auth gate on `DELETE /me/two-factor`.
  *
  * Disabling 2FA is a high-risk operation — the user must re-prove
  * the password to suppress a CSRF / session-takeover path from

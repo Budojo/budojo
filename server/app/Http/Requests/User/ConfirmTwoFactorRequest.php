@@ -7,8 +7,7 @@ namespace App\Http\Requests\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validates the step-2 TOTP confirmation on `POST /me/two-factor/confirm`
- *.
+ * Validates the step-2 TOTP confirmation on `POST /me/two-factor/confirm`.
  *
  * The 6-digit TOTP code is the canonical "I have the authenticator
  * app on my device" proof. Size is exactly 6 chars — backup codes
