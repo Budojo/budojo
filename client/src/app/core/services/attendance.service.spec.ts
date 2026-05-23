@@ -171,6 +171,45 @@ describe('AttendanceService', () => {
     });
   });
 
+  describe('getTodayPeers (#958)', () => {
+    it('GETs /me/attendance/today/peers and unwraps data', () => {
+      let result: unknown;
+      service.getTodayPeers().subscribe((r) => (result = r));
+      const req = httpMock.expectOne('/api/v1/me/attendance/today/peers');
+      expect(req.request.method).toBe('GET');
+      const peers = [
+        {
+          id: 1,
+          first_name: 'Mario',
+          last_name_initial: 'R',
+          handle: 'mariobjj',
+          belt: 'blue',
+          avatar_url: null,
+        },
+      ];
+      req.flush({ data: peers });
+      expect(result).toEqual(peers);
+    });
+
+    it('returns null on 404 (no athlete row) instead of erroring', () => {
+      let result: unknown;
+      service.getTodayPeers().subscribe((r) => (result = r));
+      httpMock
+        .expectOne('/api/v1/me/attendance/today/peers')
+        .flush({ message: 'No athlete profile found.' }, { status: 404, statusText: 'Not Found' });
+      expect(result).toBeNull();
+    });
+
+    it('lets a 500 propagate to the error handler', () => {
+      let errored = false;
+      service.getTodayPeers().subscribe({ error: () => (errored = true) });
+      httpMock
+        .expectOne('/api/v1/me/attendance/today/peers')
+        .flush({}, { status: 500, statusText: 'Server Error' });
+      expect(errored).toBe(true);
+    });
+  });
+
   describe('unmarkToday', () => {
     it('DELETEs /me/attendance/today and resolves to status:unmarked on 204', () => {
       let result: unknown;

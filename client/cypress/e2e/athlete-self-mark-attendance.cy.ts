@@ -53,6 +53,13 @@ describe('Athlete self-mark attendance (#960)', () => {
   beforeEach(() => {
     cy.intercept('GET', '/api/v1/academy*', MOCK_ACADEMY_RESPONSE);
     cy.intercept('GET', '/api/v1/auth/me*', ATHLETE_ME);
+    // Peer-preview endpoint (#958). Defaults to empty so the page
+    // boots in the "be the first" empty state; per-test overrides
+    // populate it.
+    cy.intercept('GET', '/api/v1/me/attendance/today/peers', {
+      statusCode: 200,
+      body: { data: [] },
+    });
   });
 
   it('mark flow: unmarked panel → tap "Sono qui oggi" → marked panel with Annulla', () => {
@@ -106,5 +113,47 @@ describe('Athlete self-mark attendance (#960)', () => {
       'href',
       '/dashboard/me/profile',
     );
+  });
+
+  // ─── #958 peer preview ─────────────────────────────────────────
+
+  it('peer preview: empty state when no peer is marked yet', () => {
+    cy.visitAuthenticated('/dashboard/me/attendance/today');
+    cy.get('[data-cy="attendance-peers-empty"]').should('be.visible');
+  });
+
+  it('peer preview: renders chips from the peers endpoint, no full last_name leak', () => {
+    cy.intercept('GET', '/api/v1/me/attendance/today/peers', {
+      statusCode: 200,
+      body: {
+        data: [
+          {
+            id: 11,
+            first_name: 'Mario',
+            last_name_initial: 'R',
+            handle: 'mariobjj',
+            belt: 'blue',
+            avatar_url: null,
+          },
+          {
+            id: 12,
+            first_name: 'Alice',
+            last_name_initial: 'B',
+            handle: null,
+            belt: 'white',
+            avatar_url: null,
+          },
+        ],
+      },
+    });
+    cy.visitAuthenticated('/dashboard/me/attendance/today');
+    cy.get('[data-cy="attendance-peer-11"]').should('be.visible');
+    cy.get('[data-cy="attendance-peer-12"]').should('be.visible');
+    // No anchor anywhere on the peer surface should leak full last names
+    // the API never sent.
+    cy.get('[data-cy="attendance-peers-row"]')
+      .invoke('text')
+      .should('not.contain', 'Rossi')
+      .and('not.contain', 'Bianchi');
   });
 });

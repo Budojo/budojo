@@ -14,9 +14,13 @@ import { MessageService } from 'primeng/api';
 import {
   AttendanceService,
   MarkTodayResult,
+  TodayPeer,
   UnmarkTodayResult,
 } from '../../core/services/attendance.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
+import { BeltBadgeComponent } from '../../shared/components/belt-badge/belt-badge.component';
+import type { Belt } from '../../core/services/athlete.service';
 
 /**
  * Self-mark today's presence (#960). Athlete-portal page reached from
@@ -48,7 +52,14 @@ type Status = 'not-training-day' | 'marked' | 'unmarked';
 @Component({
   selector: 'app-my-attendance-today',
   standalone: true,
-  imports: [RouterLink, TranslatePipe, ButtonModule, PageHeaderComponent],
+  imports: [
+    RouterLink,
+    TranslatePipe,
+    ButtonModule,
+    PageHeaderComponent,
+    UserAvatarComponent,
+    BeltBadgeComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-attendance-today.component.html',
   styleUrl: './my-attendance-today.component.scss',
@@ -68,6 +79,13 @@ export class MyAttendanceTodayComponent {
    *  Annulla is shown (only own self-marks can be reverted). */
   protected readonly source = signal<'self' | 'instructor' | null>(null);
 
+  /** Peers already marked for today (#958). Auto-loaded on mount;
+   *  refreshed after mark/unmark so the current user appears / vanishes
+   *  in the preview row. `null` = caller is an owner-only user (no
+   *  athlete row) — page bounces, so this branch is effectively dead. */
+  protected readonly peers = signal<readonly TodayPeer[]>([]);
+  protected readonly peersOverflow = signal<number>(0);
+
   protected readonly canUnmark = computed(
     () => this.status() === 'marked' && this.source() === 'self',
   );
@@ -82,6 +100,38 @@ export class MyAttendanceTodayComponent {
     });
   });
 
+  constructor() {
+    // Auto-load peers on mount — the preview row is THE selling point
+    // of the page ("ah viene Marco, ci sono"), so we don't gate it
+    // behind the user's first tap.
+    this.refreshPeers();
+  }
+
+  /** Reload the peer set. Called on mount + after every mark/unmark
+   *  so the current user appears / vanishes in the preview. */
+  private refreshPeers(): void {
+    this.attendanceService
+      .getTodayPeers()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (rows) => {
+          if (rows === null) return;
+          this.peers.set(rows.slice(0, 8));
+          this.peersOverflow.set(Math.max(0, rows.length - 8));
+        },
+        error: () => {
+          // Silent — the preview is a quality-of-life feature, not
+          // load-bearing. The mark button still works.
+          this.peers.set([]);
+          this.peersOverflow.set(0);
+        },
+      });
+  }
+
+  protected beltOf(belt: string): Belt {
+    return belt as Belt;
+  }
+
   protected onMark(): void {
     if (this.busy()) return;
     this.busy.set(true);
@@ -94,6 +144,7 @@ export class MyAttendanceTodayComponent {
           if (result.status === 'marked') {
             this.status.set('marked');
             this.source.set(result.record.source);
+            this.refreshPeers();
             this.messageService.add({
               severity: 'success',
               summary: this.translate.instant('myAttendanceToday.markedToast.summary'),
@@ -131,6 +182,7 @@ export class MyAttendanceTodayComponent {
           if (result.status === 'unmarked') {
             this.status.set('unmarked');
             this.source.set(null);
+            this.refreshPeers();
             this.messageService.add({
               severity: 'info',
               summary: this.translate.instant('myAttendanceToday.unmarkedToast.summary'),
