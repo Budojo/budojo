@@ -2,11 +2,7 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
-import {
-  LeaderboardPage,
-  LeaderboardResult,
-  LeaderboardService,
-} from './leaderboard.service';
+import { LeaderboardPage, LeaderboardResult, LeaderboardService } from './leaderboard.service';
 
 const URL = `${environment.apiBase}/api/v1/attendance/leaderboard`;
 
