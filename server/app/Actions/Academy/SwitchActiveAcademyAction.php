@@ -40,7 +40,12 @@ class SwitchActiveAcademyAction
 
             if ($active === null) {
                 // Concurrent revoke between FormRequest validation and
-                // here. Caller maps to 409.
+                // here. Caller maps to 409. `report()` surfaces the
+                // rare race in Sentry / the log channel — preserves
+                // the observability the pre-refactor controller had
+                // via `report($e)` on the sentinel-exception path.
+                report(new \RuntimeException('membership_revoked_concurrently'));
+
                 return SwitchActiveAcademyResult::revokedConcurrently();
             }
 
