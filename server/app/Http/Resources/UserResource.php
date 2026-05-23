@@ -61,6 +61,7 @@ class UserResource extends JsonResource
             // here; mutation flows write `first_name` / `last_name`.
             'full_name' => $user->full_name,
             'handle' => $user->handle,
+            'attendance_peer_visible' => $user->attendance_peer_visible,
             'email' => $user->email,
             'role' => $user->role->value,
             'email_verified_at' => $user->email_verified_at?->toIso8601String(),

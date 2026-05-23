@@ -25,6 +25,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string       $last_name          Family name. Required (NOT NULL, default ''). May legitimately be empty for a single-token migrated record (the user fixes on next profile visit).
  * @property string|null  $handle             Instagram-style user-chosen identifier (#479). 3-30 chars, lowercase `[a-z0-9_.]`, must start with a letter, no consecutive dots, no leading/trailing dot. Globally unique. Null until the user opts in via the profile page.
  * @property bool         $profile_is_public  Opt-out flag for the same-academy public profile (#862). Default `true`; flipping to `false` 404s the `/api/v1/users/{handle}/profile` endpoint. Visibility is still scoped per-academy at the read layer — even `true` doesn't expose the profile cross-academy.
+ * @property bool         $attendance_peer_visible  Opt-out flag for the peer-preview row on `/me/attendance/today` (#958). Default `true`; flipping to `false` hides this user from peers viewing the page. Attendance rows are still created + counted; only the avatar+handle on the peer preview is suppressed.
  * @property-read string  $full_name          Trimmed `first_name + ' ' + last_name`. Read-only accessor for surfaces (mailables, audit log) that still want a single string.
  * @property string       $email
  * @property Carbon|null  $email_verified_at  Set when the user clicks the signed verification link; null until then.
@@ -46,7 +47,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon       $created_at
  * @property Carbon       $updated_at
  */
-#[Fillable(['first_name', 'last_name', 'handle', 'profile_is_public', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at', 'onboarding_dismissed_at', 'onboarding_completed_steps', 'active_academy_id', 'quiet_hours_start_local', 'quiet_hours_end_local'])]
+#[Fillable(['first_name', 'last_name', 'handle', 'profile_is_public', 'attendance_peer_visible', 'email', 'password', 'terms_accepted_at', 'avatar_path', 'role', 'notification_preferences', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at', 'onboarding_dismissed_at', 'onboarding_completed_steps', 'active_academy_id', 'quiet_hours_start_local', 'quiet_hours_end_local'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -299,6 +300,7 @@ class User extends Authenticatable implements MustVerifyEmail
             // — `false` = opted out, `true` (or absent) = enabled.
             'notification_preferences' => 'array',
             'profile_is_public' => 'boolean',
+            'attendance_peer_visible' => 'boolean',
             // 2FA columns (#412). `encrypted` ensures DB-dump leaks
             // don't expose usable secrets; `encrypted:array` does
             // the same for the JSON backup-codes column. The

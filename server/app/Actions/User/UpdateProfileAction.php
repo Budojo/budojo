@@ -27,12 +27,20 @@ class UpdateProfileAction
         string $firstName,
         string $lastName,
         ?string $handle,
+        ?bool $attendancePeerVisible = null,
     ): User {
-        $user->update([
+        $patch = [
             'first_name' => $firstName,
             'last_name' => $lastName,
             'handle' => $handle === null ? null : mb_strtolower($handle),
-        ]);
+        ];
+        // Only mutate the toggle when the caller explicitly sent it —
+        // preserves the existing value on partial PATCHes that omit
+        // the field.
+        if ($attendancePeerVisible !== null) {
+            $patch['attendance_peer_visible'] = $attendancePeerVisible;
+        }
+        $user->update($patch);
 
         return $user;
     }

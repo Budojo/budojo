@@ -183,6 +183,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // instructor can revert their own marks).
     Route::post('/me/attendance/today', [\App\Http\Controllers\Me\MyAttendanceController::class, 'markToday']);
     Route::delete('/me/attendance/today', [\App\Http\Controllers\Me\MyAttendanceController::class, 'unmarkToday']);
+    // "Chi viene stasera?" peer preview (#958). Surfaces same-academy
+    // athletes whose attendance row exists for today, capped at 8 and
+    // opt-out-respected. The Athlete relation hook is the gate (404
+    // for owner-only users without a linked athlete row).
+    Route::get('/me/attendance/today/peers', [\App\Http\Controllers\Me\MyAttendanceController::class, 'peers']);
 
     // Athlete-portal monthly payment history (M7 PR-D slice 4).
     // Returns the auth athlete's payment rows for the given

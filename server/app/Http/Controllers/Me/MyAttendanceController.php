@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Me;
 
 use App\Actions\Attendance\GetAthleteAttendanceAction;
+use App\Actions\Attendance\GetTodayPeersAction;
 use App\Actions\Attendance\MarkTodayAttendanceAction;
 use App\Actions\Attendance\UnmarkTodayAttendanceAction;
 use App\Actions\Attendance\UnmarkTodayResult;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AttendanceRecordResource;
+use App\Http\Resources\AttendanceTodayPeerResource;
+use App\Models\Academy;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -48,6 +51,7 @@ class MyAttendanceController extends Controller
         private readonly GetAthleteAttendanceAction $action,
         private readonly MarkTodayAttendanceAction $markTodayAction,
         private readonly UnmarkTodayAttendanceAction $unmarkTodayAction,
+        private readonly GetTodayPeersAction $peersAction,
     ) {
     }
 
@@ -117,6 +121,30 @@ class MyAttendanceController extends Controller
             ),
             default => response()->json(['message' => 'Unexpected mark-today result.'], 500),
         };
+    }
+
+    /**
+     * `GET /api/v1/me/attendance/today/peers` (#958) — peers from the
+     * caller's academy whose attendance row exists for today. Drives
+     * the "Chi viene stasera?" preview row on the self-mark page.
+     * Capped + opt-out-respected inside the Action.
+     */
+    public function peers(Request $request): AnonymousResourceCollection|JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $athlete = $user->athlete;
+        if ($athlete === null) {
+            return response()->json(['message' => 'No athlete profile found.'], 404);
+        }
+
+        /** @var Academy $academy */
+        $academy = $athlete->academy;
+
+        return AttendanceTodayPeerResource::collection(
+            $this->peersAction->execute($academy),
+        );
     }
 
     /**

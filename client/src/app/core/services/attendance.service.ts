@@ -56,6 +56,20 @@ interface AttendanceSummaryResponse {
   data: AttendanceSummaryRow[];
 }
 
+/**
+ * Peer row in the "Chi viene stasera?" preview (#958). Deliberately
+ * narrower than `Athlete`: `last_name_initial` (not full last_name),
+ * no email, no phone — defence-in-depth against shoulder-surfing.
+ */
+export interface TodayPeer {
+  readonly id: number;
+  readonly first_name: string;
+  readonly last_name_initial: string;
+  readonly handle: string | null;
+  readonly belt: string;
+  readonly avatar_url: string | null;
+}
+
 /** Discriminated outcomes of `markToday()` — see method docstring. */
 export type MarkTodayResult =
   | { status: 'marked'; record: AttendanceRecord }
@@ -179,6 +193,24 @@ export class AttendanceService {
           if (err.status === 404) return of<MarkTodayResult>({ status: 'no-athlete' });
           return throwError(() => err);
         }),
+      );
+  }
+
+  /**
+   * "Chi viene stasera?" peer preview (#958). Returns same-academy
+   * athletes who have an active attendance row for today, capped + opt-
+   * out-respected server-side. Returns `null` on 404 (no linked athlete
+   * row) so the component can render the empty state without an error
+   * path — mirrors the `getMine()` shape.
+   */
+  getTodayPeers(): Observable<TodayPeer[] | null> {
+    return this.http
+      .get<{ data: TodayPeer[] }>(`${environment.apiBase}/api/v1/me/attendance/today/peers`)
+      .pipe(
+        map((res) => res.data),
+        catchError((err: HttpErrorResponse) =>
+          err.status === 404 ? of<TodayPeer[] | null>(null) : throwError(() => err),
+        ),
       );
   }
 

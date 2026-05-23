@@ -32,11 +32,18 @@ class ProfileController extends Controller
         // branch is the safety net for partial updates.
         $handle = $request->has('handle') ? $this->normalizeHandle($request->input('handle')) : $user->handle;
 
+        // Optional attendance-peer-visibility opt-out (#958). `null` =
+        // not in the payload → action preserves existing value.
+        $peerVisible = $request->has('attendance_peer_visible')
+            ? $request->boolean('attendance_peer_visible')
+            : null;
+
         $updated = $this->action->execute(
             $user,
             $request->string('first_name')->toString(),
             $request->string('last_name')->toString(),
             $handle,
+            $peerVisible,
         );
 
         // Eager-load every relation the UserResource projects so the

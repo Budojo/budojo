@@ -1,5 +1,41 @@
 <app-page-header [title]="'myAttendanceToday.title' | translate" [subtitle]="todayLabel()" />
 
+<!-- "Chi viene stasera?" peer preview (#958). Shown on every status
+     branch so the social signal is consistent. Empty-state copy on
+     no peers: "Sii il primo". -->
+<section class="attendance-peers" data-cy="attendance-peers">
+  <h3 class="attendance-peers__heading">
+    {{ 'myAttendanceToday.peers.heading' | translate }}
+  </h3>
+  @if (peers().length === 0) {
+    <p class="attendance-peers__empty" data-cy="attendance-peers-empty">
+      {{ 'myAttendanceToday.peers.empty' | translate }}
+    </p>
+  } @else {
+    <ul class="attendance-peers__row" data-cy="attendance-peers-row">
+      @for (peer of peers(); track peer.id) {
+        <li class="attendance-peers__chip" [attr.data-cy]="'attendance-peer-' + peer.id">
+          <app-user-avatar
+            [name]="peer.first_name + ' ' + peer.last_name_initial"
+            [url]="peer.avatar_url"
+          />
+          <div class="attendance-peers__meta">
+            <span class="attendance-peers__name">
+              {{ peer.first_name }} {{ peer.last_name_initial }}.
+            </span>
+            <app-belt-badge [belt]="beltOf(peer.belt)" [class.belt-badge--compact]="true" />
+          </div>
+        </li>
+      }
+      @if (peersOverflow() > 0) {
+        <li class="attendance-peers__overflow" data-cy="attendance-peers-overflow">
+          +{{ peersOverflow() }}
+        </li>
+      }
+    </ul>
+  }
+</section>
+
 <section class="attendance-today" data-cy="attendance-today">
   @switch (status()) {
     @case ('not-training-day') {
