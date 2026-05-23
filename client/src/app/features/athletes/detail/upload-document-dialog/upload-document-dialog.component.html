@@ -34,9 +34,7 @@
         data-cy="doc-type"
       />
       @if (typeCtrl.touched && typeCtrl.hasError('required')) {
-        <small class="upload-form__error">{{
-          'documents.upload.typeRequired' | translate
-        }}</small>
+        <small class="upload-form__error">{{ 'documents.upload.typeRequired' | translate }}</small>
       }
     </div>
 
@@ -62,17 +60,11 @@
       />
       <small class="upload-form__hint">{{ 'documents.upload.fileHint' | translate }}</small>
       @if (fileCtrl.touched && fileCtrl.hasError('required')) {
-        <small class="upload-form__error">{{
-          'documents.upload.fileRequired' | translate
-        }}</small>
+        <small class="upload-form__error">{{ 'documents.upload.fileRequired' | translate }}</small>
       } @else if (fileCtrl.hasError('maxSize')) {
-        <small class="upload-form__error">{{
-          'documents.upload.fileTooLarge' | translate
-        }}</small>
+        <small class="upload-form__error">{{ 'documents.upload.fileTooLarge' | translate }}</small>
       } @else if (fileCtrl.hasError('mimeType')) {
-        <small class="upload-form__error">{{
-          'documents.upload.fileWrongType' | translate
-        }}</small>
+        <small class="upload-form__error">{{ 'documents.upload.fileWrongType' | translate }}</small>
       }
     </div>
 
@@ -124,9 +116,7 @@
         data-cy="doc-notes"
       ></textarea>
       @if (notesCtrl.hasError('maxlength')) {
-        <small class="upload-form__error">{{
-          'documents.upload.notesTooLong' | translate
-        }}</small>
+        <small class="upload-form__error">{{ 'documents.upload.notesTooLong' | translate }}</small>
       }
     </div>
 
