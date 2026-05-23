@@ -25,7 +25,7 @@
       <p-select
         inputId="doc-type"
         formControlName="type"
-        [options]="typeOptions"
+        [options]="typeOptions()"
         optionLabel="label"
         optionValue="value"
         [placeholder]="'documents.upload.typePlaceholder' | translate"
