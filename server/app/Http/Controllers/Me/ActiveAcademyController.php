@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Me;
 
+use App\Actions\Academy\SwitchActiveAcademyAction;
 use App\Authorization\RoleCapabilities;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Me\UpdateActiveAcademyRequest;
@@ -12,7 +13,6 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -30,6 +30,11 @@ use Illuminate\Support\Facades\Storage;
  */
 class ActiveAcademyController extends Controller
 {
+    public function __construct(
+        private readonly SwitchActiveAcademyAction $switchActiveAcademy,
+    ) {
+    }
+
     public function show(Request $request): JsonResponse|Response
     {
         /** @var User $user */
@@ -51,56 +56,19 @@ class ActiveAcademyController extends Controller
         $user = $request->user();
         /** @var array{academy_id: int} $validated */
         $validated = $request->validated();
-        $targetAcademyId = $validated['academy_id'];
 
-        // Close the FormRequest → save() TOCTOU window: re-check the
-        // membership inside a transaction so a concurrent revoke
-        // between validation and persistence can't leave
-        // `users.active_academy_id` pointing at an academy the user
-        // no longer has an active membership in. We return the
-        // re-resolved membership so the response shape matches GET.
-        try {
-            $membership = DB::transaction(function () use ($user, $targetAcademyId): AcademyMembership {
-                // `lockForUpdate()` issues SELECT … FOR UPDATE so a
-                // concurrent revoke (which UPDATEs `revoked_at`)
-                // blocks until this transaction commits. Without it,
-                // the read returned a non-revoked row that could be
-                // revoked between the SELECT and the user save, and
-                // the pointer would still land at a revoked
-                // membership. Copilot review on #723.
-                $active = $user->memberships()
-                    ->where('academy_id', $targetAcademyId)
-                    ->whereNull('revoked_at')
-                    ->lockForUpdate()
-                    ->first();
+        $result = $this->switchActiveAcademy->execute($user, $validated['academy_id']);
 
-                if ($active === null) {
-                    // Caught below — converted to a 409, never persisted.
-                    throw new \RuntimeException('membership_revoked_concurrently');
-                }
-
-                $user->forceFill(['active_academy_id' => $targetAcademyId])->save();
-
-                return $active;
-            });
-        } catch (\RuntimeException $e) {
-            if ($e->getMessage() !== 'membership_revoked_concurrently') {
-                throw $e;
-            }
-            // Concurrent revoke between FormRequest validation and
-            // persistence. Report so the rare race is visible in
-            // logs, and return 409 (Conflict) rather than 500 —
-            // it's a legitimate concurrent-state collision, not a
-            // server bug.
-            report($e);
-
+        if ($result->revokedConcurrently) {
             return response()->json([
                 'message' => 'Membership was revoked concurrently. Refresh and try again.',
             ], 409);
         }
 
+        \assert($result->membership !== null);
+
         return response()->json([
-            'data' => $this->payload($membership),
+            'data' => $this->payload($result->membership),
         ]);
     }
 
