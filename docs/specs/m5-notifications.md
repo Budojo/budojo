@@ -1,6 +1,6 @@
 # M5 — Email infrastructure & notifications (PRD)
 
-> Status: **In progress** · Owner: m-bonanno · Target: 5 PRs (PR-A through PR-E)
+> Status: **Shipped** · Owner: m-bonanno · All 5 PRs (PR-A through PR-E) landed in stable. Live on `main` since v2.30.0 and earlier.
 > Supersedes the "M5 — notifications" one-liner on the README roadmap.
 
 ## Problem Statement
