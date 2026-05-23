@@ -701,7 +701,13 @@ export class AthletesListComponent implements OnInit {
     if (this.hasMonthlyFee() && !athlete.is_self) {
       items.push({
         label: this.translate.instant('athletes.list.tooltip.payments'),
-        icon: 'pi pi-wallet',
+        // Jakob's law — the payments tab on the detail
+        // (athlete-detail.component.html) carries `pi pi-euro`.
+        // Matching glyph keeps signifier parity across kebab→tab.
+        // The athlete-portal sidebar still uses `pi-wallet`; that
+        // surface is the remaining outlier (normalisation in a
+        // follow-up sweep).
+        icon: 'pi pi-euro',
         command: () => this.goToTab(athlete, 'payments'),
       });
     }
