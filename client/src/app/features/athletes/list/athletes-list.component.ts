@@ -683,7 +683,12 @@ export class AthletesListComponent implements OnInit {
     const items: MenuItem[] = [
       {
         label: this.translate.instant('athletes.list.tooltip.attendance'),
-        icon: 'pi pi-check-square',
+        // Jakob's law — the attendance tab on the detail (athlete-
+        // detail.component.html) carries `pi pi-calendar`; using the
+        // same glyph in the kebab keeps signifier parity across the
+        // journey. `pi-check-square` stays reserved for the
+        // transactional "mark today" flow elsewhere in the SPA.
+        icon: 'pi pi-calendar',
         command: () => this.goToTab(athlete, 'attendance'),
       },
       {

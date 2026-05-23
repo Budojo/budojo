@@ -744,13 +744,13 @@ describe('AthletesListComponent', () => {
 
       const items = component.cardMenuItems();
       // No monthly_fee + no handle on the default makeAthlete fixture →
-      // 5 items: viewProfile, documents, promotions, edit, delete. The
+      // 5 items: attendance, documents, promotions, edit, delete. The
       // conditional Payments + Public profile entries are exercised in
       // the follow-up assertions below.
       expect(items).toHaveLength(5);
       const icons = items.map((it) => it.icon);
       expect(icons).toEqual([
-        'pi pi-check-square',
+        'pi pi-calendar',
         'pi pi-file',
         'pi pi-trophy',
         'pi pi-pencil',
