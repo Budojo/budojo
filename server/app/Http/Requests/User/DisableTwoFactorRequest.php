@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Validates the password re-auth gate on `DELETE /me/two-factor`
- * (#1002 — controller-bloat extraction).
+ *.
  *
  * Disabling 2FA is a high-risk operation — the user must re-prove
  * the password to suppress a CSRF / session-takeover path from
