@@ -72,13 +72,43 @@
   flex-direction: column;
   gap: 0.25rem;
 
-  // Primary line — name link + age badge inline. Replaces the old
-  // single-row layout when socials were absent; structure is now
-  // primary stack + optional socials row below.
+  // Primary line — avatar link + name link + age badge inline.
+  // Replaces the old single-row layout when socials were absent;
+  // structure is now primary stack + optional socials row below.
   &__primary {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+  }
+
+  // Avatar affordance on the desktop table (#983). Same affordance
+  // rules as the mobile card: <a> when handle is set, <span> when
+  // not. The inert variant keeps the visual rhythm without claiming
+  // a tap target.
+  &__avatar-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 50%;
+    transition: opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover {
+      opacity: 0.85;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-400);
+      outline-offset: 2px;
+    }
+
+    &--inert {
+      cursor: default;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
   }
 
   // Socials row — pi-facebook / pi-instagram icons inline below the
@@ -523,6 +553,46 @@ $athletes-mobile-breakpoint: 768px;
     &:focus-visible {
       outline: 2px solid var(--p-primary-400);
       outline-offset: 2px;
+    }
+  }
+
+  // Avatar affordance — sits above the stretched-link so taps on it
+  // open the public profile (#983) instead of the athlete detail. When
+  // the linked user has no handle, the wrapping element is a <span> so
+  // the same visual rhythm is preserved without a click target.
+  // The 3rem × 3rem (48 px) min-box satisfies MD3 Fitts on mobile —
+  // the visible 32 px avatar disc sits centered inside a 48 px hit
+  // target. Negative margin keeps the surrounding layout pinned to
+  // the original visual rhythm (the disc-to-name gap reads as the
+  // previous 0.5rem from the header gap, not 1rem).
+  &__avatar-link {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 3rem;
+    min-height: 3rem;
+    margin: -0.5rem 0 -0.5rem -0.5rem;
+    border-radius: 50%;
+    transition: opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover {
+      opacity: 0.85;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-400);
+      outline-offset: 2px;
+    }
+
+    &--inert {
+      cursor: default;
+
+      &:hover {
+        opacity: 1;
+      }
     }
   }
 

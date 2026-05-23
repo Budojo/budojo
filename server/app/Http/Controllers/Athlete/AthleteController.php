@@ -95,11 +95,17 @@ class AthleteController extends Controller
             // `$athlete->address` access on each row is one batched query
             // instead of 20.
             ->with('address')
-            // Eager-load the linked user's handle column only — the
-            // AthleteResource exposes `user_handle` (#871 follow-up: the
-            // athletes-list row needs a public-profile affordance, which
-            // is gated on the athlete's user.handle being non-null).
-            ->with(['user:id,handle'])
+            // Eager-load the linked user's handle + avatar columns —
+            // AthleteResource exposes `user_handle` (gates the public-
+            // profile affordance) AND `user_avatar_url` (drives the
+            // avatar circle on every roster row, #983). The
+            // `User::getAvatarUrlAttribute()` accessor reads
+            // `avatar_path` + `updated_at` to compose the URL with a
+            // cache-busting query param — omitting either column
+            // silently returns null, so EVERY athlete on the roster
+            // would fall back to initials regardless of whether the
+            // linked user actually has an avatar uploaded.
+            ->with(['user:id,handle,avatar_path,updated_at'])
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when(
                 ! $trashedMode && $request->filled('status'),

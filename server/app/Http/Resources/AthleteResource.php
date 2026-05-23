@@ -75,6 +75,11 @@ class AthleteResource extends JsonResource
             // linked user hasn't set a handle. The SPA shows the
             // "view public profile" icon only when this is non-null.
             'user_handle' => $athlete->user?->handle,
+            // Linked-user avatar URL — drives the athletes-list avatar
+            // affordance (#983). Null when the athlete row has no
+            // linked user yet OR the user hasn't uploaded an avatar.
+            // The SPA falls back to a `pi pi-user` placeholder circle.
+            'user_avatar_url' => $athlete->user?->avatar_url,
             'joined_at' => $athlete->joined_at->toDateString(),
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'created_at' => $athlete->created_at?->toIso8601String(),

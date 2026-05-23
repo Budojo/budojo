@@ -5741,6 +5741,16 @@ components:
             linked to a user yet, OR when the linked user has no handle.
             The SPA athletes-list shows a "view public profile" icon only
             when this is non-null.
+        user_avatar_url:
+          type: string
+          format: uri
+          nullable: true
+          description: |
+            Linked-user avatar URL (#983). Null when the athlete row has
+            no linked user yet OR the user hasn't uploaded an avatar.
+            The SPA falls back to an initials placeholder in that case.
+            Absolute URL — `Storage::disk('public')->url(...)` resolves
+            against `APP_URL`, not `/storage/...`.
         invitation:
           nullable: true
           description: |
