@@ -4578,6 +4578,284 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ValidationErrorBody' }
 
+  # ─── Athlete restore + Me-side surfaces (#1019 — doc-drift recovery) ───
+  # Routes that have been live in api_v1.php but were missing from the
+  # OpenAPI spec. Documented here in a single block so a future audit
+  # can grep one anchor instead of seven scattered entries.
+
+  /athletes/{athlete}/restore:
+    post:
+      tags: [athletes]
+      summary: Restore a soft-deleted athlete (#700)
+      description: |
+        Bring a soft-deleted athlete back into the active roster. The
+        route's `withTrashed()` binding resolves both trashed + non-
+        trashed ids; non-trashed → 404 so the action stays idempotent
+        ("restore on an already-active row is not a state flip"). Same
+        ownership gate as `destroy` (owner of the athlete's academy).
+      operationId: athletesRestore
+      parameters:
+        - in: path
+          name: athlete
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Restored athlete envelope.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Athlete' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Caller lacks AthletesRestore capability.
+        '404':
+          description: Athlete not deleted (or unknown id).
+
+  /me/academy:
+    get:
+      tags: [academy]
+      summary: Read the athlete's view of their academy
+      description: |
+        Athlete-side projection of the academy they're linked to. Narrower
+        wire shape than the owner's `/academy` (no admin fields).
+      operationId: meAcademyShow
+      responses:
+        '200':
+          description: Academy snapshot for the linked user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User has no linked athlete row / academy.
+
+  /me/active-academy:
+    get:
+      tags: [auth]
+      summary: Read the user's currently-selected academy (#427)
+      description: |
+        Returns the active membership + role + capability list the SPA
+        needs for the `*budojoCan` directive. 204 No Content when the
+        user hasn't been added to any academy yet (SPA shows the empty /
+        onboarding state).
+      operationId: meActiveAcademyShow
+      responses:
+        '200':
+          description: Active membership snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: object }
+        '204':
+          description: User has zero memberships — show onboarding state.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    patch:
+      tags: [auth]
+      summary: Switch the active academy (#427, TOCTOU-safe — #990)
+      description: |
+        Swaps `users.active_academy_id`. The action re-validates the
+        membership inside a transaction with `lockForUpdate()` so a
+        concurrent revoke between FormRequest validation and persist
+        can't leave the pointer on a revoked row. On race, 409.
+      operationId: meActiveAcademyUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [academy_id]
+              properties:
+                academy_id: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Switch persisted; new membership snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '409':
+          description: Membership was revoked concurrently — refresh and try again.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /me/athlete:
+    post:
+      tags: [athletes]
+      summary: Owner self-enrolment as an athlete (#748)
+      description: |
+        Adds the calling owner to the roster of their own academy as
+        an athlete (`is_self: true`). Idempotent — re-enrolling returns
+        the existing row with 200 instead of 201. Restores any
+        previously-soft-deleted self row.
+      operationId: meAthleteStore
+      responses:
+        '200':
+          description: Already enrolled — existing row returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Athlete' }
+        '201':
+          description: Newly enrolled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Athlete' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Caller is not an owner / has no academy.
+    delete:
+      tags: [athletes]
+      summary: Owner leaves their own academy as an athlete (#748)
+      description: |
+        Soft-deletes the `is_self` athlete row. History (attendance,
+        promotions) is preserved if the owner re-enrolls later. The
+        only way to remove a self-enrolled athlete — `DELETE /athletes/{id}`
+        is gated against it.
+      operationId: meAthleteDestroy
+      responses:
+        '204':
+          description: Self-enrolled athlete removed.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User is not currently self-enrolled.
+
+  /me/athlete/state:
+    get:
+      tags: [athletes]
+      summary: Owner-as-athlete enrolment state (#748)
+      description: |
+        Returns `{ enrolled: bool, athlete: Athlete | null }` so the
+        SPA can decide whether to render the "Train at this academy"
+        toggle in the on or off state.
+      operationId: meAthleteState
+      responses:
+        '200':
+          description: State snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [enrolled]
+                    properties:
+                      enrolled: { type: boolean }
+                      athlete:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/Athlete'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/attendance:
+    get:
+      tags: [attendance]
+      summary: Athlete's own attendance history
+      description: |
+        Paginated list of the calling athlete's attendance rows.
+        Athletes use this for the personal "training log" page;
+        owners use the cross-athlete `/attendance` instead.
+      operationId: meAttendanceIndex
+      responses:
+        '200':
+          description: Paginated attendance rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User has no linked athlete row.
+
+  /me/documents:
+    get:
+      tags: [documents]
+      summary: Athlete's own documents list
+      description: |
+        Returns the documents tied to the calling athlete's row.
+        Narrower wire shape than the owner-side `/athletes/{id}/documents`:
+        the athlete sees only their own row.
+      operationId: meDocumentsIndex
+      responses:
+        '200':
+          description: Athlete's documents.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User has no linked athlete row.
+
+  /me/payments:
+    get:
+      tags: [auth]
+      summary: Athlete's own payments history
+      description: |
+        Paginated list of the calling athlete's payment rows.
+        Athletes use this on the personal "subscription / payments"
+        page; owners use the cross-athlete `/athletes/{id}/payments`.
+      operationId: mePaymentsIndex
+      responses:
+        '200':
+          description: Athlete's payments.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User has no linked athlete row.
+
 components:
 
   securitySchemes:
