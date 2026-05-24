@@ -233,8 +233,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Without it, an authenticated attacker could probe 10^6 codes
     // against `/me/two-factor/confirm` inside the 30s TOTP rotation,
     // OR against `DELETE /me/two-factor` to wipe the second factor
-    // by trying common passwords. The throttle is per-user (Sanctum
-    // tokens) so the limit doesn't share across the device.
+    // by trying common passwords. The throttle is keyed on
+    // `user_id` (Laravel default for authenticated requests), so
+    // all of a user's Sanctum tokens / devices share one 5/min
+    // budget — an attacker can't sidestep the cap by minting
+    // fresh tokens.
     Route::get('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'show']);
     Route::post('/me/two-factor/enrol', [\App\Http\Controllers\User\TwoFactorController::class, 'enrol'])
         ->middleware('throttle:5,1');

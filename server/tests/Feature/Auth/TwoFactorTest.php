@@ -5,7 +5,17 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Support\TwoFactorAuth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use PragmaRX\Google2FA\Google2FA;
+
+// The array-cache throttle counter is process-scoped — `RefreshDatabase`
+// doesn't reset it. Without an explicit clear, the new throttle tests
+// (#1006) leak `5,1` budget into subsequent tests that hit the same
+// 2FA endpoints, producing spurious 429s. Same defensive pattern as
+// `LoginTest.php`, `ChangePasswordTest.php`, `AcceptAthleteInvitationTest.php`.
+beforeEach(function (): void {
+    RateLimiter::clear('throttle:5,1');
+});
 
 // ─── Enrolment + confirmation ─────────────────────────────────────────────────
 
