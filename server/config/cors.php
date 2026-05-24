@@ -25,13 +25,31 @@ return [
 
     'paths' => ['api/*'],
 
-    'allowed_methods' => ['*'],
+    // Enumerate the verbs the SPA actually uses (#1015) instead of
+    // `['*']`. Wildcard worked but reads as "we did not think about
+    // CORS"; the explicit list documents the surface and rejects a
+    // future verb that we did not intend to expose without a
+    // deliberate config change.
+    'allowed_methods' => ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
 
     'allowed_origins' => CorsAllowlist::parse(env('CORS_ALLOWED_ORIGINS')),
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['*'],
+    // Enumerate the headers the SPA actually sends (#1015) instead
+    // of `['*']`. Same documentation argument as `allowed_methods`
+    // above; tighter surface, deliberate evolution. `X-Requested-With`
+    // covers Angular's default ajax marker; `X-Budojo-Version` is
+    // the SPA's build-stamp echo back to the API; the rest are
+    // standard browser/auth headers.
+    'allowed_headers' => [
+        'Accept',
+        'Accept-Language',
+        'Authorization',
+        'Content-Type',
+        'X-Requested-With',
+        'X-Budojo-Version',
+    ],
 
     'exposed_headers' => [],
 
