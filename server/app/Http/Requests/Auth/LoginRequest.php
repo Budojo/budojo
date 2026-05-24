@@ -20,7 +20,12 @@ class LoginRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
+            // Cap at 255 chars (#1013) — bcrypt cost-12 hashing time
+            // scales linearly with input size; without an upper bound
+            // an attacker can POST a multi-MB password and CPU-grind
+            // the hash check per request. 255 is far above any
+            // plausible real password.
+            'password' => ['required', 'string', 'max:255'],
             // Optional — only required when the user has 2FA active.
             // Either a 6-digit TOTP from the authenticator app, or
             // an 8-char backup code with the `XXXX-XXXX` dash. The
