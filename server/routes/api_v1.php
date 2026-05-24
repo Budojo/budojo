@@ -337,8 +337,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // server-side fanout uses minishlink/web-push to send pushes to
     // every row tied to a target user.
     Route::get('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'index']);
-    Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store']);
-    Route::post('/me/push-subscriptions/test', [\App\Http\Controllers\User\PushSubscriptionController::class, 'test']);
+    Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store'])
+        ->middleware('throttle:30,1');
+    // Per-user cap on the self-triggered test push (#1011) — without
+    // it, a script could spam the vendor fanout at our expense.
+    Route::post('/me/push-subscriptions/test', [\App\Http\Controllers\User\PushSubscriptionController::class, 'test'])
+        ->middleware('throttle:5,1');
     Route::delete('/me/push-subscriptions/{id}', [\App\Http\Controllers\User\PushSubscriptionController::class, 'destroy'])
         ->where('id', '[0-9]+');
 
@@ -348,7 +352,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // — distinguished by the `kind` column. Plaintext returned ONCE
     // on creation.
     Route::get('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'index']);
-    Route::post('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store']);
+    // Token mint cap (#1011) — without it an authenticated session
+    // could mint an unbounded number of long-lived tokens (each row
+    // a permanent credential until revoked). 10/min is generous for
+    // a human integrator wiring up 2-3 scripts in one sitting.
+    Route::post('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store'])
+        ->middleware('throttle:10,1');
     Route::delete('/me/api-tokens/{id}', [\App\Http\Controllers\User\ApiTokenController::class, 'destroy'])
         ->where('id', '[0-9]+');
 
@@ -360,7 +369,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // replace unlinks the previous file. The response is the full
     // UserResource so the SPA can swap its cached envelope without
     // re-fetching /me.
-    Route::post('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'upload']);
+    // Throttle on POST (#1011): multipart upload is the storage-
+    // flood vector — a tight 10/min cap protects the public disk
+    // from a buggy client retry loop. DELETE stays unthrottled (it
+    // only frees space; no spam risk).
+    Route::post('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'upload'])
+        ->middleware('throttle:10,1');
     Route::delete('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'delete']);
 
     // Resend verification email — auth required, rate-limited via

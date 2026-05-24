@@ -1547,6 +1547,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          description: |
+            Rate-limited (10/min per user, #1011). Caps unbounded
+            token mint per session — each row is a permanent
+            credential until revoked. Response carries `Retry-After`.
 
   /me/api-tokens/{id}:
     delete:
@@ -1747,6 +1752,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          description: |
+            Rate-limited (30/min per user, #1011). Caps subscribe
+            envelope spam — generous for first-session + page-refresh,
+            tight against scripts. Response carries `Retry-After`.
         '503':
           description: VAPID keys not configured on the server.
 
@@ -1822,6 +1832,11 @@ paths:
                     type: string
                     enum: [dispatch_failed]
                     example: dispatch_failed
+        '429':
+          description: |
+            Rate-limited (5/min per user, #1011). Tight cap to
+            prevent vendor-fanout spam at our expense. Response
+            carries `Retry-After`.
 
   /me/push-subscriptions/{id}:
     delete:
@@ -2280,6 +2295,12 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          description: |
+            Rate-limited (10/min per user, #1011). Caps the multipart
+            upload storage-flood vector — protects the public disk
+            from a buggy client retry loop. Response carries
+            `Retry-After`.
 
     delete:
       tags: [auth]
