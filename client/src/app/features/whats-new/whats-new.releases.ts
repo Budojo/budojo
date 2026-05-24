@@ -30,14 +30,13 @@ export const RELEASES: readonly Release[] = [
   {
     version: 'v2.31.1',
     date: '2026-05-24',
-    headline: 'Hotfix to unblock the v2.31.0 deploy. No user-visible behaviour change.',
+    headline: 'The v2.31.0 release that actually reaches your browser.',
     sections: [
       {
-        heading: '🚑 Deploy unblock',
+        heading: '🚑 Deploy fix',
         bullets: [
-          'v2.31.0 build on Cloudflare Pages failed — the athletes-list component stylesheet had grown past the 8 kB anyComponentStyle ceiling (514 bytes over) after the avatar + expanded ⋮ menu affordances. SPA on production stayed pinned to v2.30.0 bundle.',
-          'Ceiling bumped to 12 kB — leaves room for the next few affordances before a real SCSS refactor is needed.',
-          'No user-visible behaviour change — v2.31.1 is the same v2.31.0 release that now actually deploys.',
+          'Yesterday\'s v2.31.0 update — avatars on the athletes list, expanded ⋮ menu, upload-document dialog in Italian, plus the security hardening behind the scenes — was published but never reached your device because the production build crashed at the last step.',
+          'This patch unblocks it. Open the app and you should see all the v2.31.0 features now. If you don\'t, pull-to-refresh once.',
         ],
       },
     ],
