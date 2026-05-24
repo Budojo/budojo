@@ -28,6 +28,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.31.1',
+    date: '2026-05-24',
+    headline: 'The v2.31.0 release that actually reaches your browser.',
+    sections: [
+      {
+        heading: '🚑 Deploy fix',
+        bullets: [
+          "Yesterday's v2.31.0 update — avatars on the athletes list, expanded ⋮ menu, upload-document dialog in Italian, plus the security hardening behind the scenes — was published but never reached your device because the production build crashed at the last step.",
+          "This patch unblocks it. Open the app and you should see all the v2.31.0 features now. If you don't, pull-to-refresh once.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.31.0',
     date: '2026-05-24',
     headline:
