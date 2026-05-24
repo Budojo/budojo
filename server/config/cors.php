@@ -38,10 +38,14 @@ return [
 
     // Enumerate the headers the SPA actually sends (#1015) instead
     // of `['*']`. Same documentation argument as `allowed_methods`
-    // above; tighter surface, deliberate evolution. `X-Requested-With`
-    // covers Angular's default ajax marker; `X-Budojo-Version` is
-    // the SPA's build-stamp echo back to the API; the rest are
-    // standard browser/auth headers.
+    // above; tighter surface, deliberate evolution. The SPA today
+    // emits `Authorization` (auth.interceptor) and `X-Budojo-Version`
+    // (version.interceptor); `Accept` / `Accept-Language` /
+    // `Content-Type` are browser defaults; `X-Requested-With` is a
+    // forward-looking allowlist entry — Angular's HttpClient does
+    // NOT add it today (that was AngularJS 1.x / jQuery), but
+    // listing it means a future interceptor can add the marker
+    // without triggering a CORS preflight failure.
     'allowed_headers' => [
         'Accept',
         'Accept-Language',
