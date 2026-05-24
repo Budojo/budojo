@@ -49,6 +49,14 @@ it('creates a pending invitation + queues mail with the raw token (#1021)', func
 });
 
 it('refuses to invite an email already registered as a user', function (): void {
+    // Mail::fake() — belt-and-suspenders against a regression where
+    // the action falls through to `Mail::queue(...)` instead of
+    // throwing. Without it, a swallowed-throw bug would attempt a
+    // real Resend dispatch from a unit test (flaky CI; on
+    // `MAIL_MAILER` unset can crash the test process — gotchas §
+    // Resend SDK). Also pins the absence of a queued mail on the
+    // error path, which is part of the contract.
+    Mail::fake();
     User::factory()->create(['email' => 'taken@example.com']);
     /** @var User $owner */
     $owner = User::factory()->create();
@@ -63,9 +71,13 @@ it('refuses to invite an email already registered as a user', function (): void 
     $action = app(SendAthleteInvitationAction::class);
     expect(fn () => $action->execute($owner, $athlete))
         ->toThrow(ValidationException::class, 'email_already_registered');
+
+    Mail::assertNothingQueued();
 });
 
 it('throws when the athlete has no email on file', function (): void {
+    // Same belt-and-suspenders as the email-already-registered case.
+    Mail::fake();
     /** @var User $owner */
     $owner = User::factory()->create();
     /** @var Academy $academy */
@@ -78,6 +90,8 @@ it('throws when the athlete has no email on file', function (): void {
     $action = app(SendAthleteInvitationAction::class);
     expect(fn () => $action->execute($owner, $athlete))
         ->toThrow(ValidationException::class, 'email_missing');
+
+    Mail::assertNothingQueued();
 });
 
 it('re-sending replaces the token on an existing pending row (no duplicate live tokens)', function (): void {
