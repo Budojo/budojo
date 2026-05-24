@@ -28,6 +28,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.31.1',
+    date: '2026-05-24',
+    headline: 'Hotfix to unblock the v2.31.0 deploy. No user-visible behaviour change.',
+    sections: [
+      {
+        heading: '🚑 Deploy unblock',
+        bullets: [
+          'v2.31.0 build on Cloudflare Pages failed — the athletes-list component stylesheet had grown past the 8 kB anyComponentStyle ceiling (514 bytes over) after the avatar + expanded ⋮ menu affordances. SPA on production stayed pinned to v2.30.0 bundle.',
+          'Ceiling bumped to 12 kB — leaves room for the next few affordances before a real SCSS refactor is needed.',
+          'No user-visible behaviour change — v2.31.1 is the same v2.31.0 release that now actually deploys.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.31.0',
     date: '2026-05-24',
     headline:
