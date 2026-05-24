@@ -12,7 +12,7 @@ it('sets HSTS / X-Frame / X-Content-Type / Referrer / CSP on every response (#10
     expect($response->headers->get('X-Content-Type-Options'))->toBe('nosniff');
     expect($response->headers->get('Referrer-Policy'))->toBe('no-referrer');
     expect($response->headers->get('Content-Security-Policy'))
-        ->toBe("default-src 'none'; frame-ancestors 'none'");
+        ->toBe("default-src 'none'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'");
 });
 
 it('sets the same headers on authenticated routes', function (): void {
@@ -21,7 +21,7 @@ it('sets the same headers on authenticated routes', function (): void {
 
     expect($response->headers->get('X-Frame-Options'))->toBe('DENY');
     expect($response->headers->get('Content-Security-Policy'))
-        ->toBe("default-src 'none'; frame-ancestors 'none'");
+        ->toBe("default-src 'none'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'");
 });
 
 it('sets the same headers on a 4xx response (defense-in-depth)', function (): void {

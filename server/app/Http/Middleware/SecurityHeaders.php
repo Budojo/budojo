@@ -50,9 +50,17 @@ class SecurityHeaders
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'no-referrer');
+        // `default-src 'none'` covers only the FETCH directives
+        // (script-src, img-src, etc.). Per CSP3 § 6.1 the NAVIGATION
+        // directives — `form-action` and `base-uri` — do NOT inherit;
+        // we add them explicitly to complete the "most restrictive
+        // possible" posture (#1018 reviewer). `form-action 'none'`
+        // blocks `<form action="…">` submissions on an accidental
+        // HTML render; `base-uri 'none'` blocks `<base href>`
+        // injection that would otherwise rebase relative URLs.
         $response->headers->set(
             'Content-Security-Policy',
-            "default-src 'none'; frame-ancestors 'none'",
+            "default-src 'none'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'",
         );
 
         return $response;
