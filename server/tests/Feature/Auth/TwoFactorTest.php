@@ -343,3 +343,45 @@ it('login with a backup code is one-shot — the same code does not work twice',
         ->assertUnprocessable()
         ->assertJsonPath('message', 'invalid_two_factor_code');
 });
+
+it('POST /me/two-factor/confirm is rate-limited (5/min) — closes the TOTP brute-force window (#1006)', function (): void {
+    $user = User::factory()->create();
+    $user->forceFill([
+        'two_factor_secret' => TwoFactorAuth::generateSecret(),
+    ])->save();
+
+    $this->actingAs($user);
+
+    // Burn the 5-per-minute budget with deliberately wrong codes.
+    // The action returns 422 (invalid_totp) on each, NOT 429.
+    for ($i = 0; $i < 5; $i++) {
+        $this->postJson('/api/v1/me/two-factor/confirm', ['code' => '000000'])
+            ->assertUnprocessable();
+    }
+
+    // The 6th call hits the throttle ceiling — 429 Too Many Requests.
+    $this->postJson('/api/v1/me/two-factor/confirm', ['code' => '000000'])
+        ->assertStatus(429);
+});
+
+it('DELETE /me/two-factor is rate-limited (5/min) — closes the disable-by-password brute-force window (#1006)', function (): void {
+    $user = User::factory()->create();
+    $user->forceFill([
+        'two_factor_secret' => TwoFactorAuth::generateSecret(),
+        'two_factor_recovery_codes' => ['CODE-AAAA'],
+        'two_factor_confirmed_at' => now(),
+    ])->save();
+
+    $this->actingAs($user);
+
+    // Burn the 5-per-minute budget with deliberately wrong passwords.
+    // Each one returns 422 (invalid_password).
+    for ($i = 0; $i < 5; $i++) {
+        $this->deleteJson('/api/v1/me/two-factor', ['password' => 'WRONG'])
+            ->assertUnprocessable();
+    }
+
+    // The 6th call trips the throttle ceiling.
+    $this->deleteJson('/api/v1/me/two-factor', ['password' => 'WRONG'])
+        ->assertStatus(429);
+});
