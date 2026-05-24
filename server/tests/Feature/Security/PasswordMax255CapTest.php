@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Models\AthleteInvitation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -85,16 +84,15 @@ it('ChangePasswordRequest rejects new password > 255 chars (#1013)', function ()
 });
 
 it('AcceptAthleteInvitationRequest rejects password > 255 chars (#1013)', function (): void {
+    // The FormRequest's `max:255` fires before the controller (or
+    // any token-existence middleware — there is none on the route),
+    // so we don't need a real invitation row OR athlete-shape fields
+    // in the body: the 422 lands purely on the validation surface.
     $rawToken = Str::random(64);
-    $invitation = AthleteInvitation::factory()->create([
-        'token' => AthleteInvitation::hashToken($rawToken),
-    ]);
 
     $this->postJson("/api/v1/athlete-invite/{$rawToken}/accept", [
         'password' => str_repeat('a', 256),
         'password_confirmation' => str_repeat('a', 256),
-        'first_name' => 'Mario',
-        'last_name' => 'Rossi',
     ])->assertStatus(422)->assertJsonValidationErrors(['password']);
 });
 
