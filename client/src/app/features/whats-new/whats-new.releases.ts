@@ -47,7 +47,7 @@ export const RELEASES: readonly Release[] = [
           '2FA endpoints rate-limited (5/min per user) — closes TOTP brute-force window.',
           'Web Push device secrets encrypted at rest — DB-dump leak no longer enables push forgery.',
           'New rate-limits: /me/avatar (10/min), /me/api-tokens (10/min), /me/push-subscriptions/test (5/min).',
-          "Security headers on every response: HSTS, X-Frame-Options DENY, restrictive CSP, Referrer-Policy no-referrer, X-Content-Type-Options nosniff.",
+          'Security headers on every response: HSTS, X-Frame-Options DENY, restrictive CSP, Referrer-Policy no-referrer, X-Content-Type-Options nosniff.',
           'CORS allowlist tightened from wildcards to explicit method/header enumeration.',
           'Password fields capped at 255 chars across all 7 hash endpoints — closes bcrypt-DoS surface.',
         ],
