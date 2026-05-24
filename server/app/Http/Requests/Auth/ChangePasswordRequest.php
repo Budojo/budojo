@@ -36,6 +36,9 @@ class ChangePasswordRequest extends FormRequest
             'current_password' => [
                 'required',
                 'string',
+                // `max:255` (#1014) — bcrypt cost-12 hashing scales
+                // linearly with input size; cap defends against
+                // multi-MB password CPU-grind on `Hash::check`.
                 'max:255',
                 // The current-password closure rule is the single
                 // re-auth gate. Hash::check against the authenticated
@@ -53,6 +56,9 @@ class ChangePasswordRequest extends FormRequest
                 'required',
                 'string',
                 'min:8',
+                // `max:255` (#1014) — bcrypt cost-12 hashing scales
+                // linearly with input size; cap defends against
+                // multi-MB password CPU-grind on `Hash::make`.
                 'max:255',
                 'confirmed',
                 // New password must differ from the current one (#409).
