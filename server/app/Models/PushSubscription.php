@@ -45,6 +45,19 @@ class PushSubscription extends Model
     {
         return [
             'last_seen_at' => 'datetime',
+            // Encrypt-at-rest for the per-device push secrets (#1008).
+            // `auth` is the HKDF salt that derives the AES-GCM key for
+            // every payload sent to a device; `endpoint` is the bearer
+            // URL the push vendor exposes. A DB-dump leak with these
+            // in plaintext would let an attacker forge or decrypt
+            // pushes for the leaked devices. The Eloquent `encrypted`
+            // cast wraps every read/write through `Crypt::*` — IV is
+            // re-rolled per write so the same logical value produces
+            // different ciphertext each time (no deterministic-equality
+            // queries are possible; we only ever lookup by `endpoint_hash`
+            // which stays plaintext SHA-256).
+            'endpoint' => 'encrypted',
+            'auth' => 'encrypted',
         ];
     }
 }
