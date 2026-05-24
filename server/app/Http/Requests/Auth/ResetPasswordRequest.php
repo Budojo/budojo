@@ -27,8 +27,9 @@ class ResetPasswordRequest extends FormRequest
             // HIBP breach check (#415) is included here too: reset is the
             // primary path through which a user picks a new password,
             // and it would be inconsistent to enforce on register but
-            // skip on reset.
-            'password' => ['required', 'string', 'min:8', 'confirmed', app(PasswordNotBreached::class)],
+            // skip on reset. `max:255` (#1014) closes the bcrypt-DoS
+            // surface — same rationale as RegisterRequest.
+            'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed', app(PasswordNotBreached::class)],
         ];
     }
 }

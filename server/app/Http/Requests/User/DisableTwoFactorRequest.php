@@ -27,7 +27,10 @@ class DisableTwoFactorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'password' => ['required', 'string'],
+            // Cap at 255 chars (#1013) — bcrypt cost-12 scales linearly
+            // with input size; without the bound an attacker can POST
+            // a multi-MB value and CPU-grind Hash::check per request.
+            'password' => ['required', 'string', 'max:255'],
         ];
     }
 }

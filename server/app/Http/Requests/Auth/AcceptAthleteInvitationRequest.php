@@ -29,6 +29,12 @@ class AcceptAthleteInvitationRequest extends FormRequest
         return [
             'password' => [
                 'required',
+                'string',
+                // `max:255` (#1014) — bcrypt cost-12 hashing scales
+                // linearly with input size; cap defends against
+                // multi-MB password CPU-grind. Same rationale across
+                // every FormRequest that hashes the value.
+                'max:255',
                 'confirmed',
                 Password::min(8),
                 // Same HIBP breach check as RegisterRequest /
