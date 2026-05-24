@@ -28,7 +28,7 @@ class ResetPasswordRequest extends FormRequest
             // primary path through which a user picks a new password,
             // and it would be inconsistent to enforce on register but
             // skip on reset.
-            'password' => ['required', 'string', 'min:8', 'confirmed', app(PasswordNotBreached::class)],
+            'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed', app(PasswordNotBreached::class)],
         ];
     }
 }

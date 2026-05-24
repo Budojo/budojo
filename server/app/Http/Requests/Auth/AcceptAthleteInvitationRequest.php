@@ -29,6 +29,8 @@ class AcceptAthleteInvitationRequest extends FormRequest
         return [
             'password' => [
                 'required',
+                'string',
+                'max:255',
                 'confirmed',
                 Password::min(8),
                 // Same HIBP breach check as RegisterRequest /
