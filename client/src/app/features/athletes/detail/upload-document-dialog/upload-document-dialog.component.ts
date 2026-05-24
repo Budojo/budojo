@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   model,
@@ -15,6 +16,7 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
@@ -28,6 +30,7 @@ import {
   DocumentService,
   DocumentType,
 } from '../../../../core/services/document.service';
+import { LanguageService } from '../../../../core/services/language.service';
 
 interface TypeOption {
   label: string;
@@ -87,6 +90,7 @@ const expiryAfterOrEqualIssue: ValidatorFn = (
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    TranslatePipe,
     ButtonModule,
     DatePickerModule,
     DialogModule,
@@ -101,6 +105,8 @@ const expiryAfterOrEqualIssue: ValidatorFn = (
 export class UploadDocumentDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly documentService = inject(DocumentService);
+  private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
 
   /** Two-way bound. Parent owns the open/closed state — we just toggle it. */
   readonly visible = model.required<boolean>();
@@ -125,12 +131,27 @@ export class UploadDocumentDialogComponent {
   readonly acceptAttr = ACCEPT_ATTR;
   readonly maxFileBytes = MAX_FILE_BYTES;
 
-  readonly typeOptions: TypeOption[] = [
-    { label: 'ID card', value: 'id_card' },
-    { label: 'Medical certificate', value: 'medical_certificate' },
-    { label: 'Insurance', value: 'insurance' },
-    { label: 'Other', value: 'other' },
-  ];
+  /**
+   * Type-select options. Wrapped in `computed` so the labels re-resolve
+   * when the user toggles the sidebar language (Claude reviewer #980).
+   * Reading `languageService.currentLang()` registers the signal dep —
+   * the same canonical pattern used by `athletes-list.component.ts`
+   * for `beltOptions` / `statusOptions`. Without this the four labels
+   * would be frozen at construction time (eager dialog mount in
+   * `documents-list.component.html`) and stuck in EN after a toggle.
+   */
+  readonly typeOptions = computed<TypeOption[]>(() => {
+    this.languageService.currentLang();
+    return [
+      { label: this.translate.instant('documents.types.id_card'), value: 'id_card' },
+      {
+        label: this.translate.instant('documents.types.medical_certificate'),
+        value: 'medical_certificate',
+      },
+      { label: this.translate.instant('documents.types.insurance'), value: 'insurance' },
+      { label: this.translate.instant('documents.types.other'), value: 'other' },
+    ];
+  });
 
   readonly form = this.fb.group(
     {
@@ -214,7 +235,9 @@ export class UploadDocumentDialogComponent {
             ? Object.values(err.error.errors)[0]?.[0]
             : null;
           this.error.set(
-            firstFieldError ?? err.error?.message ?? 'Something went wrong. Please try again.',
+            firstFieldError ??
+              err.error?.message ??
+              this.translate.instant('documents.upload.genericError'),
           );
         },
       });

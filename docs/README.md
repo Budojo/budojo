@@ -16,6 +16,11 @@ docs/
 │   ├── athlete-promotion.md           # belt + stripe history audit log (v2.10.0, #654)
 │   ├── address.md                     # polymorphic, owned by Academy + Athlete (#72)
 │   ├── document.md
+│   ├── achievement.md                 # lifetime milestone unlocks (#961, v2.30.0)
+│   ├── community-post.md              # M9 community feed parent (#600)
+│   ├── post-reaction.md               # clap / pray emoji react on a post (M9)
+│   ├── post-comment.md                # flat-list comments on a post (M9)
+│   ├── post-rsvp.md                   # event-post RSVP (going / maybe, M9 PR-E)
 │   └── support-ticket.md              # support form submission (#423)
 ├── api/
 │   ├── README.md                      # how to view the spec locally (Swagger UI, Redocly)

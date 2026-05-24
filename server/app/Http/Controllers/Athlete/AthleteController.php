@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Athlete;
 
-use App\Actions\Address\SyncAddressAction;
+use App\Actions\Address\AddressIntent;
+use App\Actions\Athlete\CreateAthleteAction;
 use App\Actions\Athlete\RestoreAthleteAction;
+use App\Actions\Athlete\UpdateAthleteAction;
 use App\Enums\AthleteStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Athlete\StoreAthleteRequest;
@@ -19,7 +21,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Facades\DB;
 
 class AthleteController extends Controller
 {
@@ -44,7 +45,8 @@ class AthleteController extends Controller
     ];
 
     public function __construct(
-        private readonly SyncAddressAction $syncAddress,
+        private readonly CreateAthleteAction $createAthlete,
+        private readonly UpdateAthleteAction $updateAthlete,
         private readonly RestoreAthleteAction $restoreAthlete,
     ) {
     }
@@ -95,11 +97,17 @@ class AthleteController extends Controller
             // `$athlete->address` access on each row is one batched query
             // instead of 20.
             ->with('address')
-            // Eager-load the linked user's handle column only — the
-            // AthleteResource exposes `user_handle` (#871 follow-up: the
-            // athletes-list row needs a public-profile affordance, which
-            // is gated on the athlete's user.handle being non-null).
-            ->with(['user:id,handle'])
+            // Eager-load the linked user's handle + avatar columns —
+            // AthleteResource exposes `user_handle` (gates the public-
+            // profile affordance) AND `user_avatar_url` (drives the
+            // avatar circle on every roster row, #983). The
+            // `User::getAvatarUrlAttribute()` accessor reads
+            // `avatar_path` + `updated_at` to compose the URL with a
+            // cache-busting query param — omitting either column
+            // silently returns null, so EVERY athlete on the roster
+            // would fall back to initials regardless of whether the
+            // linked user actually has an avatar uploaded.
+            ->with(['user:id,handle,avatar_path,updated_at'])
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))
             ->when(
                 ! $trashedMode && $request->filled('status'),
@@ -167,23 +175,14 @@ class AthleteController extends Controller
         \assert($academy !== null);
 
         $validated = $request->validated();
-        // Address (#72b) lives on a polymorphic relation, not a column on
-        // the athletes row — strip it from the mass-assignable payload
-        // before `create()` and hand it to `SyncAddressAction` instead.
-        /** @var array<string, mixed>|null $addressPayload */
-        $addressPayload = isset($validated['address']) && \is_array($validated['address'])
-            ? $validated['address']
-            : null;
+        // Address (#72b) lives on a polymorphic relation, not a column
+        // on the athletes row — strip it from the scalar payload and
+        // carry the three-way intent via the value object, same shape
+        // as `update()` below.
+        $addressIntent = AddressIntent::fromValidated($validated);
         unset($validated['address']);
 
-        $athlete = DB::transaction(function () use ($academy, $validated, $addressPayload): Athlete {
-            $athlete = $academy->athletes()->create($validated);
-            if ($addressPayload !== null) {
-                $this->syncAddress->execute($athlete, $addressPayload);
-            }
-
-            return $athlete;
-        });
+        $athlete = $this->createAthlete->execute($academy, $validated, $addressIntent);
 
         return response()->json(['data' => new AthleteResource($athlete)], 201);
     }
@@ -217,26 +216,19 @@ class AthleteController extends Controller
         }
 
         $validated = $request->validated();
-        // Three-way semantics on `address` (#72b): absent → no change,
-        // null → clear (delete the morph row), array → upsert. Strip the
-        // key off the scalar update payload either way; the dedicated
-        // action carries it the rest of the way.
-        $addressKeyPresent = \array_key_exists('address', $validated);
-        $addressPayload = $validated['address'] ?? null;
+        // Three-way semantics on `address` (#72b) carried as a single
+        // value object (Clean Code § "no flag arguments"). The
+        // factory reads the validated payload and maps absent/null/
+        // array to skip/clear/set — controller no longer juggles a
+        // boolean + nullable payload.
+        $addressIntent = AddressIntent::fromValidated($validated);
         unset($validated['address']);
 
-        $fresh = DB::transaction(function () use ($athlete, $validated, $addressKeyPresent, $addressPayload): Athlete {
-            if ($validated !== []) {
-                $athlete->update($validated);
-            }
-            if ($addressKeyPresent) {
-                /** @var array<string, mixed>|null $payload */
-                $payload = \is_array($addressPayload) ? $addressPayload : null;
-                $this->syncAddress->execute($athlete, $payload);
-            }
-
-            return $athlete->fresh() ?? $athlete;
-        });
+        $fresh = $this->updateAthlete->execute(
+            athlete: $athlete,
+            validated: $validated,
+            address: $addressIntent,
+        );
 
         return response()->json(['data' => new AthleteResource($fresh)]);
     }

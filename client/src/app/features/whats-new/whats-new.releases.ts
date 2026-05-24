@@ -28,6 +28,44 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.31.0',
+    date: '2026-05-24',
+    headline:
+      'Athletes list affordances — avatars + expanded ⋮ menu + the upload-document dialog fully in Italian — plus a security hardening + Clean-Architecture sweep behind the scenes.',
+    sections: [
+      {
+        heading: '🥋 Athletes list: avatars, expanded ⋮ menu, i18n',
+        bullets: [
+          'Avatar circle next to every name — uploaded photo if set, initials placeholder otherwise. Tap → public profile when the athlete has a handle.',
+          'Mobile ⋮ menu now jumps direct to Attendance, Documents (medical certificate inside), Payments (if academy tracks fees), Belt history, Public profile — alongside Edit + Delete.',
+          'Upload-document dialog fully localized in Italian: labels, validation errors, toast messages.',
+        ],
+      },
+      {
+        heading: '🛡️ Security hardening',
+        bullets: [
+          '2FA endpoints rate-limited (5/min per user) — closes TOTP brute-force window.',
+          'Web Push device secrets encrypted at rest — DB-dump leak no longer enables push forgery.',
+          'New rate-limits: /me/avatar (10/min), /me/api-tokens (10/min), /me/push-subscriptions/test (5/min).',
+          'Security headers on every response: HSTS, X-Frame-Options DENY, restrictive CSP, Referrer-Policy no-referrer, X-Content-Type-Options nosniff.',
+          'CORS allowlist tightened from wildcards to explicit method/header enumeration.',
+          'Password fields capped at 255 chars across all 7 hash endpoints — closes bcrypt-DoS surface.',
+        ],
+      },
+      {
+        heading: '🧪 Under the hood',
+        bullets: [
+          '9 controller-bloat refactors: Login / Athletes (store+update) / ActiveAcademy / Onboarding / ApiTokens / PushSubscriptions / TwoFactor / NotificationPreferences — extracted into dedicated FormRequests + Actions.',
+          'New AddressIntent value object replaces a flag-argument antipattern with a discriminated three-way intent (skip / clear / set).',
+          'SwitchActiveAcademyAction returns a discriminated result type — replaces sentinel-exception control flow.',
+          'Test coverage filled in: AddressIntent + LeaderboardService + SecurityHeaders + 8 password-cap regression tests + 3 throttle tests + 3 new Action unit specs.',
+          '4 entity docs added for M9 community tables; 8 missing API routes added to OpenAPI spec; m5 PRD flipped to Shipped.',
+          'stylelint integrated with an 8dp-grid SCSS rule (warning-only baseline). OnPush change detection on Login + Register, closing the last two outliers in the SPA.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.30.0',
     date: '2026-05-23',
     headline:

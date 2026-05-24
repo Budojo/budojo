@@ -28,6 +28,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
         ]);
 
+        // Defense-in-depth security headers (#1017). The production
+        // nginx vhost (Forge) MAY set these at the edge, but we
+        // can't rely on that for dev / staging / containerised
+        // deploys. Applying at the app layer guarantees coverage —
+        // the duplication when nginx also sets them is harmless
+        // (each header is a single value, browsers apply
+        // idempotently).
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         // Disable the framework default guest-redirect callback (#769).
         // `ApplicationBuilder` registers `redirectGuestsTo(fn () =>
         // route('login'))` by default. We have no `login` route in this

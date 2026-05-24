@@ -226,11 +226,27 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // `/auth/login` consults `users.two_factor_confirmed_at` and
     // demands a `two_factor_code` body param (TOTP or backup) before
     // issuing a session token when 2FA is active.
+    //
+    // All mutative endpoints are throttled at `5,1` (5 requests per
+    // minute) — same shape as `/me/deletion-request` above — to
+    // close the brute-force window on the 6-digit TOTP code (#1006).
+    // Without it, an authenticated attacker could probe 10^6 codes
+    // against `/me/two-factor/confirm` inside the 30s TOTP rotation,
+    // OR against `DELETE /me/two-factor` to wipe the second factor
+    // by trying common passwords. The throttle is keyed on
+    // `user_id` (Laravel default for authenticated requests), so
+    // all of a user's Sanctum tokens / devices share one 5/min
+    // budget — an attacker can't sidestep the cap by minting
+    // fresh tokens.
     Route::get('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'show']);
-    Route::post('/me/two-factor/enrol', [\App\Http\Controllers\User\TwoFactorController::class, 'enrol']);
-    Route::post('/me/two-factor/confirm', [\App\Http\Controllers\User\TwoFactorController::class, 'confirm']);
-    Route::post('/me/two-factor/recovery-codes/regenerate', [\App\Http\Controllers\User\TwoFactorController::class, 'regenerateRecoveryCodes']);
-    Route::delete('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'destroy']);
+    Route::post('/me/two-factor/enrol', [\App\Http\Controllers\User\TwoFactorController::class, 'enrol'])
+        ->middleware('throttle:5,1');
+    Route::post('/me/two-factor/confirm', [\App\Http\Controllers\User\TwoFactorController::class, 'confirm'])
+        ->middleware('throttle:5,1');
+    Route::post('/me/two-factor/recovery-codes/regenerate', [\App\Http\Controllers\User\TwoFactorController::class, 'regenerateRecoveryCodes'])
+        ->middleware('throttle:5,1');
+    Route::delete('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'destroy'])
+        ->middleware('throttle:5,1');
 
     // Active sessions list with per-token revoke (#413). Surfaces every
     // Sanctum personal-access-token tied to the user; backs the
@@ -321,8 +337,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // server-side fanout uses minishlink/web-push to send pushes to
     // every row tied to a target user.
     Route::get('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'index']);
-    Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store']);
-    Route::post('/me/push-subscriptions/test', [\App\Http\Controllers\User\PushSubscriptionController::class, 'test']);
+    Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store'])
+        ->middleware('throttle:30,1');
+    // Per-user cap on the self-triggered test push (#1011) — without
+    // it, a script could spam the vendor fanout at our expense.
+    Route::post('/me/push-subscriptions/test', [\App\Http\Controllers\User\PushSubscriptionController::class, 'test'])
+        ->middleware('throttle:5,1');
     Route::delete('/me/push-subscriptions/{id}', [\App\Http\Controllers\User\PushSubscriptionController::class, 'destroy'])
         ->where('id', '[0-9]+');
 
@@ -332,7 +352,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // — distinguished by the `kind` column. Plaintext returned ONCE
     // on creation.
     Route::get('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'index']);
-    Route::post('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store']);
+    // Token mint cap (#1011) — without it an authenticated session
+    // could mint an unbounded number of long-lived tokens (each row
+    // a permanent credential until revoked). 10/min is generous for
+    // a human integrator wiring up 2-3 scripts in one sitting.
+    Route::post('/me/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store'])
+        ->middleware('throttle:10,1');
     Route::delete('/me/api-tokens/{id}', [\App\Http\Controllers\User\ApiTokenController::class, 'destroy'])
         ->where('id', '[0-9]+');
 
@@ -344,7 +369,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // replace unlinks the previous file. The response is the full
     // UserResource so the SPA can swap its cached envelope without
     // re-fetching /me.
-    Route::post('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'upload']);
+    // Throttle on POST (#1011): multipart upload is the storage-
+    // flood vector — a tight 10/min cap protects the public disk
+    // from a buggy client retry loop. DELETE stays unthrottled (it
+    // only frees space; no spam risk).
+    Route::post('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'upload'])
+        ->middleware('throttle:10,1');
     Route::delete('/me/avatar', [\App\Http\Controllers\User\AvatarController::class, 'delete']);
 
     // Resend verification email — auth required, rate-limited via

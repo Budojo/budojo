@@ -26,7 +26,11 @@ class RequestAccountDeletionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'password' => ['required', 'string'],
+            // Cap at 255 chars (#1013) — bcrypt cost-12 hashing time
+            // scales linearly with input size; without an upper bound
+            // an attacker can POST a multi-MB password and CPU-grind
+            // the hash check per request.
+            'password' => ['required', 'string', 'max:255'],
         ];
     }
 }

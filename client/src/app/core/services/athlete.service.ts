@@ -97,6 +97,13 @@ export interface Athlete {
    */
   user_handle?: string | null;
   /**
+   * Linked-user avatar URL (#983). Null when the athlete row has no
+   * linked user OR the user hasn't uploaded an avatar yet. The
+   * athletes-list renders a circular `pi pi-user` placeholder in that
+   * case so every row gets the same visual rhythm.
+   */
+  user_avatar_url?: string | null;
+  /**
    * Structured address (#72b). `null` means no address on file. Same
    * read/write asymmetry as Academy: writes require every field except
    * `line2`; reads may carry nulls for legacy rows backfilled from a

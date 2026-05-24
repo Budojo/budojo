@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\User;
 
+use App\Actions\User\CompleteOnboardingStepAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\CompleteOnboardingStepRequest;
 use App\Models\User;
 use App\Support\OnboardingStep;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 /**
  * First-run onboarding state surface (#424). Read + write over the
@@ -35,6 +35,11 @@ use Illuminate\Validation\Rule;
  */
 class OnboardingController extends Controller
 {
+    public function __construct(
+        private readonly CompleteOnboardingStepAction $completeStep,
+    ) {
+    }
+
     public function show(Request $request): JsonResponse
     {
         /** @var User $user */
@@ -49,44 +54,14 @@ class OnboardingController extends Controller
         ]);
     }
 
-    public function completeStep(Request $request): JsonResponse
+    public function completeStep(CompleteOnboardingStepRequest $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
+        /** @var array{step: string} $validated */
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'step' => ['required', 'string', Rule::in(OnboardingStep::all())],
-        ]);
-
-        // Wrapped in a transaction with `lockForUpdate()` so two
-        // concurrent POSTs targeting different steps don't lose one
-        // another's append — without the lock both can read the same
-        // pre-image array, each append its own step, and the second
-        // write clobbers the first. The lock-read-modify-write
-        // sequence is the canonical fix for the lost-update race.
-        $completed = DB::transaction(function () use ($user, $validated): array {
-            /** @var User|null $locked */
-            $locked = User::query()->lockForUpdate()->find($user->id);
-            if ($locked === null) {
-                return [];
-            }
-            $existing = $locked->onboarding_completed_steps ?? [];
-            if (! \in_array($validated['step'], $existing, true)) {
-                $existing[] = $validated['step'];
-                $locked->forceFill(['onboarding_completed_steps' => $existing])->save();
-            }
-
-            // Mirror the persisted state back onto the caller-side
-            // $user so subsequent reads on the same instance (e.g. a
-            // GET in the same test that uses actingAs($user)) see
-            // the fresh value. In production each request rehydrates
-            // from the token, so this is test-correctness scaffolding
-            // — but it also avoids surprising callers that pass a
-            // model around across multiple operations.
-            $user->setAttribute('onboarding_completed_steps', $existing);
-
-            return $existing;
-        });
+        $completed = $this->completeStep->execute($user, $validated['step']);
 
         return response()->json([
             'data' => [

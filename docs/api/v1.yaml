@@ -76,6 +76,12 @@ tags:
       identity card — avatar, first name, current belt, joined date,
       promotions timeline. Three privacy gates (unknown handle,
       opted-out target, cross-academy viewer) all collapse to 404.
+  - name: engagement
+    description: |
+      Social-engagement endpoints introduced with the v2.30.0 train
+      (#957): weekly recap (#960), monthly leaderboard (#962). These
+      surfaces are read-only aggregations driven by attendance data
+      and per-user opt-out flags on `users.*_visible` columns.
 
 paths:
 
@@ -1541,6 +1547,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          description: |
+            Rate-limited (10/min per user, #1011). Caps unbounded
+            token mint per session — each row is a permanent
+            credential until revoked. Response carries `Retry-After`.
 
   /me/api-tokens/{id}:
     delete:
@@ -1741,6 +1752,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          description: |
+            Rate-limited (30/min per user, #1011). Caps subscribe
+            envelope spam — generous for first-session + page-refresh,
+            tight against scripts. Response carries `Retry-After`.
         '503':
           description: VAPID keys not configured on the server.
 
@@ -1816,6 +1832,11 @@ paths:
                     type: string
                     enum: [dispatch_failed]
                     example: dispatch_failed
+        '429':
+          description: |
+            Rate-limited (5/min per user, #1011). Tight cap to
+            prevent vendor-fanout spam at our expense. Response
+            carries `Retry-After`.
 
   /me/push-subscriptions/{id}:
     delete:
@@ -1932,6 +1953,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           description: Password missing or incorrect.
+        '429':
+          description: |
+            Rate-limited (5/min per user). Hard cap to close the
+            brute-force window on the disable-by-password gate
+            (#1006). Response carries `Retry-After`.
 
   /me/two-factor/enrol:
     post:
@@ -1972,6 +1998,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           description: 2FA already enabled — call DELETE first to reset.
+        '429':
+          description: |
+            Rate-limited (5/min per user). Hard cap to close the
+            brute-force window on the TOTP code (#1006). Response
+            carries `Retry-After` so the SPA can render a countdown.
 
   /me/two-factor/confirm:
     post:
@@ -2021,6 +2052,11 @@ paths:
             Code missing / malformed, OR no secret was previously
             minted via `/me/two-factor/enrol`, OR 2FA is already
             confirmed for this user.
+        '429':
+          description: |
+            Rate-limited (5/min per user). Hard cap to close the
+            brute-force window on the TOTP code (#1006). Response
+            carries `Retry-After` so the SPA can render a countdown.
 
   /me/two-factor/recovery-codes/regenerate:
     post:
@@ -2055,6 +2091,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           description: 2FA not active — call /me/two-factor/enrol first.
+        '429':
+          description: |
+            Rate-limited (5/min per user). Hard cap to close the
+            brute-force window on the TOTP code (#1006). Response
+            carries `Retry-After` so the SPA can render a countdown.
 
   /me/attendance/today:
     post:
@@ -2150,6 +2191,61 @@ paths:
         '404':
           description: No athlete profile found for the caller.
 
+  /me/recap:
+    get:
+      tags: [engagement]
+      summary: Weekly recap for the authenticated user
+      description: |
+        Read-side of the Sunday 19:00 weekly recap push (#960). `week`
+        is an ISO Monday in `YYYY-MM-DD` form — server validates
+        Monday-only and rejects with 422 otherwise. Mirrors the same
+        numbers the push carried (training days, total mat hours at
+        1.5 h/session, top three peers by overlap count).
+
+        - 200 when the user has at least one attendance row in the week.
+        - 404 when the week is empty (no rows) — the SPA renders an
+          "you did not train this week" empty state.
+        - 422 when `week` is malformed or not a Monday.
+      operationId: meWeeklyRecap
+      parameters:
+        - in: query
+          name: week
+          required: true
+          schema: { type: string, format: date }
+          description: ISO Monday date that anchors the recap week.
+      responses:
+        '200':
+          description: Recap payload for the week.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [iso_week_start, sessions, hours, partners]
+                    properties:
+                      iso_week_start: { type: string, format: date }
+                      sessions: { type: integer, minimum: 1 }
+                      hours: { type: number, format: float }
+                      partners:
+                        type: array
+                        maxItems: 3
+                        items:
+                          type: object
+                          required: [first_name, last_name_initial, overlap]
+                          properties:
+                            first_name: { type: string }
+                            last_name_initial: { type: string }
+                            overlap: { type: integer, minimum: 1 }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: No attendance recorded for this week.
+        '422':
+          description: weekStart is malformed or not a Monday.
+
   /me/avatar:
     post:
       tags: [auth]
@@ -2199,6 +2295,12 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          description: |
+            Rate-limited (10/min per user, #1011). Caps the multipart
+            upload storage-flood vector — protects the public disk
+            from a buggy client retry loop. Response carries
+            `Retry-After`.
 
     delete:
       tags: [auth]
@@ -3435,6 +3537,66 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /attendance/leaderboard:
+    get:
+      tags: [engagement]
+      summary: Monthly mat-hours leaderboard for the caller's academy
+      description: |
+        Top 5 athletes by attendance session count for the given month
+        (#962). Sessions count distinct `attended_on` days, hours are
+        computed at 1.5 h per session. Defaults to the current month
+        when `month` is omitted.
+
+        Anonymisation: athletes who opted out via `users.leaderboard_visible
+        = false` still count toward the rank, but their row carries
+        `anonymous: true` with `first_name = ''` and `last_name_initial
+        = ''`. The session count remains visible so the order is faithful.
+
+        The caller's own row (when the caller is an athlete) carries
+        `is_self: true`. Owners never get `is_self` set because they
+        have no athlete row of their own.
+      operationId: attendanceLeaderboard
+      parameters:
+        - name: month
+          in: query
+          required: false
+          schema: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
+          description: YYYY-MM. Defaults to the current month.
+      responses:
+        '200':
+          description: Top 5 athletes by session count for the month.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    maxItems: 5
+                    items:
+                      type: object
+                      required: [athlete_id, first_name, last_name_initial, anonymous, sessions, hours, is_self]
+                      properties:
+                        athlete_id: { type: integer, format: int64 }
+                        first_name: { type: string, description: Empty string when anonymous. }
+                        last_name_initial: { type: string, description: Empty string when anonymous. }
+                        anonymous: { type: boolean }
+                        sessions: { type: integer, minimum: 1 }
+                        hours: { type: number, format: float }
+                        is_self: { type: boolean }
+                  meta:
+                    type: object
+                    required: [month]
+                    properties:
+                      month: { type: string, pattern: '^\d{4}-(0[1-9]|1[0-2])$' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: Caller has no academy context (orphan athlete).
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /support:
     post:
       tags: [support]
@@ -4415,6 +4577,284 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ValidationErrorBody' }
+
+  # ─── Athlete restore + Me-side surfaces (#1019 — doc-drift recovery) ───
+  # Routes that have been live in api_v1.php but were missing from the
+  # OpenAPI spec. Documented here in a single block so a future audit
+  # can grep one anchor instead of seven scattered entries.
+
+  /athletes/{athlete}/restore:
+    post:
+      tags: [athletes]
+      summary: Restore a soft-deleted athlete (#700)
+      description: |
+        Bring a soft-deleted athlete back into the active roster. The
+        route's `withTrashed()` binding resolves both trashed + non-
+        trashed ids; non-trashed → 404 so the action stays idempotent
+        ("restore on an already-active row is not a state flip"). Same
+        ownership gate as `destroy` (owner of the athlete's academy).
+      operationId: athletesRestore
+      parameters:
+        - in: path
+          name: athlete
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Restored athlete envelope.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Athlete' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Caller lacks AthletesRestore capability.
+        '404':
+          description: Athlete not deleted (or unknown id).
+
+  /me/academy:
+    get:
+      tags: [academy]
+      summary: Read the athlete's view of their academy
+      description: |
+        Athlete-side projection of the academy they're linked to. Narrower
+        wire shape than the owner's `/academy` (no admin fields).
+      operationId: meAcademyShow
+      responses:
+        '200':
+          description: Academy snapshot for the linked user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User has no linked athlete row / academy.
+
+  /me/active-academy:
+    get:
+      tags: [auth]
+      summary: Read the user's currently-selected academy (#427)
+      description: |
+        Returns the active membership + role + capability list the SPA
+        needs for the `*budojoCan` directive. 204 No Content when the
+        user hasn't been added to any academy yet (SPA shows the empty /
+        onboarding state).
+      operationId: meActiveAcademyShow
+      responses:
+        '200':
+          description: Active membership snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: object }
+        '204':
+          description: User has zero memberships — show onboarding state.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    patch:
+      tags: [auth]
+      summary: Switch the active academy (#427, TOCTOU-safe — #990)
+      description: |
+        Swaps `users.active_academy_id`. The action re-validates the
+        membership inside a transaction with `lockForUpdate()` so a
+        concurrent revoke between FormRequest validation and persist
+        can't leave the pointer on a revoked row. On race, 409.
+      operationId: meActiveAcademyUpdate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [academy_id]
+              properties:
+                academy_id: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Switch persisted; new membership snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '409':
+          description: Membership was revoked concurrently — refresh and try again.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /me/athlete:
+    post:
+      tags: [athletes]
+      summary: Owner self-enrolment as an athlete (#748)
+      description: |
+        Adds the calling owner to the roster of their own academy as
+        an athlete (`is_self: true`). Idempotent — re-enrolling returns
+        the existing row with 200 instead of 201. Restores any
+        previously-soft-deleted self row.
+      operationId: meAthleteStore
+      responses:
+        '200':
+          description: Already enrolled — existing row returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Athlete' }
+        '201':
+          description: Newly enrolled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Athlete' }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: Caller is not an owner / has no academy.
+    delete:
+      tags: [athletes]
+      summary: Owner leaves their own academy as an athlete (#748)
+      description: |
+        Soft-deletes the `is_self` athlete row. History (attendance,
+        promotions) is preserved if the owner re-enrolls later. The
+        only way to remove a self-enrolled athlete — `DELETE /athletes/{id}`
+        is gated against it.
+      operationId: meAthleteDestroy
+      responses:
+        '204':
+          description: Self-enrolled athlete removed.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User is not currently self-enrolled.
+
+  /me/athlete/state:
+    get:
+      tags: [athletes]
+      summary: Owner-as-athlete enrolment state (#748)
+      description: |
+        Returns `{ enrolled: bool, athlete: Athlete | null }` so the
+        SPA can decide whether to render the "Train at this academy"
+        toggle in the on or off state.
+      operationId: meAthleteState
+      responses:
+        '200':
+          description: State snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [enrolled]
+                    properties:
+                      enrolled: { type: boolean }
+                      athlete:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/Athlete'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /me/attendance:
+    get:
+      tags: [attendance]
+      summary: Athlete's own attendance history
+      description: |
+        Paginated list of the calling athlete's attendance rows.
+        Athletes use this for the personal "training log" page;
+        owners use the cross-athlete `/attendance` instead.
+      operationId: meAttendanceIndex
+      responses:
+        '200':
+          description: Paginated attendance rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User has no linked athlete row.
+
+  /me/documents:
+    get:
+      tags: [documents]
+      summary: Athlete's own documents list
+      description: |
+        Returns the documents tied to the calling athlete's row.
+        Narrower wire shape than the owner-side `/athletes/{id}/documents`:
+        the athlete sees only their own row.
+      operationId: meDocumentsIndex
+      responses:
+        '200':
+          description: Athlete's documents.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User has no linked athlete row.
+
+  /me/payments:
+    get:
+      tags: [auth]
+      summary: Athlete's own payments history
+      description: |
+        Paginated list of the calling athlete's payment rows.
+        Athletes use this on the personal "subscription / payments"
+        page; owners use the cross-athlete `/athletes/{id}/payments`.
+      operationId: mePaymentsIndex
+      responses:
+        '200':
+          description: Athlete's payments.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: User has no linked athlete row.
 
 components:
 
@@ -5620,6 +6060,16 @@ components:
             linked to a user yet, OR when the linked user has no handle.
             The SPA athletes-list shows a "view public profile" icon only
             when this is non-null.
+        user_avatar_url:
+          type: string
+          format: uri
+          nullable: true
+          description: |
+            Linked-user avatar URL (#983). Null when the athlete row has
+            no linked user yet OR the user hasn't uploaded an avatar.
+            The SPA falls back to an initials placeholder in that case.
+            Absolute URL — `Storage::disk('public')->url(...)` resolves
+            against `APP_URL`, not `/storage/...`.
         invitation:
           nullable: true
           description: |
@@ -6158,9 +6608,30 @@ components:
         belt_at_event: { type: string, description: 'IBJJF belt slug at the moment the event was recorded. Always present — the column is NOT NULL on every promotion row.' }
         recorded_at: { type: string, format: date-time }
 
+    PublicProfileAchievementKind:
+      type: string
+      enum: [first_class, '30_day_streak', '100_sessions', '1_year_at_academy', belt_promotion]
+      description: |
+        Lifetime milestone kind on the public profile achievements row
+        (#961). The SPA looks up the glyph per kind (🥋 / 🔥 / 💯 / 🎂 / 🎉).
+
+    PublicProfileAchievement:
+      type: object
+      required: [kind, unlocked_at]
+      properties:
+        kind: { $ref: '#/components/schemas/PublicProfileAchievementKind' }
+        unlocked_at: { type: string, format: date-time }
+        metadata:
+          type: object
+          nullable: true
+          description: |
+            Kind-specific extras. Today `belt_promotion` carries
+            `{ "belt": "<slug>" }` to remember the awarded belt; the
+            other kinds emit `null`.
+
     PublicProfile:
       type: object
-      required: [id, first_name, handle, avatar_url, belt, joined_at, promotions]
+      required: [id, first_name, handle, avatar_url, belt, joined_at, promotions, achievements]
       properties:
         id: { type: integer, format: int64 }
         first_name: { type: string }
@@ -6178,6 +6649,10 @@ components:
           type: array
           description: 'Top-50 belt + stripe promotions, newest first.'
           items: { $ref: '#/components/schemas/PublicProfilePromotion' }
+        achievements:
+          type: array
+          description: 'Lifetime milestones unlocked by the athlete (#961), newest first.'
+          items: { $ref: '#/components/schemas/PublicProfileAchievement' }
 
     CommunityPost:
       type: object

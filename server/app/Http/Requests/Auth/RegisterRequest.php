@@ -29,7 +29,12 @@ class RegisterRequest extends FormRequest
             // Password policy: min 8 + confirmed + not in HIBP (#415).
             // The breach check runs LAST and is soft-fail (HIBP outage
             // → allow) so a third-party hiccup doesn't outage signup.
-            'password' => ['required', 'string', 'min:8', 'confirmed', app(PasswordNotBreached::class)],
+            // `max:255` (#1014) — bcrypt cost-12 hashing time scales
+            // linearly with input size; without the upper bound an
+            // attacker can POST a multi-MB password and CPU-grind
+            // `Hash::make` per request. 255 is far above any plausible
+            // passphrase.
+            'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed', app(PasswordNotBreached::class)],
             // Terms of Service acceptance gate (#420). Laravel's
             // `accepted` rule rejects falsy values (false, 0, "0",
             // null, empty string, missing) AND requires one of the
