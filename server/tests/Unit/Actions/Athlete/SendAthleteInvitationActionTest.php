@@ -35,7 +35,17 @@ it('creates a pending invitation + queues mail with the raw token (#1021)', func
     expect($row->email)->toBe('mario@example.com');
     expect($row->sent_by_user_id)->toBe($owner->id);
 
-    Mail::assertQueued(AthleteInvitationMail::class);
+    // Pin the security-critical invariants of the queued mail:
+    // (a) recipient matches the athlete's stored email — anti-
+    // squatting boundary; (b) raw token in the body matches what
+    // the Action returned — a regression that emailed the hash,
+    // an empty string, or a stale token would still pass a bare
+    // `assertQueued(class)` (#1022 reviewer).
+    Mail::assertQueued(
+        AthleteInvitationMail::class,
+        fn (AthleteInvitationMail $mail): bool => $mail->hasTo('mario@example.com')
+            && $mail->rawToken === $result['rawToken'],
+    );
 });
 
 it('refuses to invite an email already registered as a user', function (): void {
@@ -47,9 +57,12 @@ it('refuses to invite an email already registered as a user', function (): void 
     /** @var Athlete $athlete */
     $athlete = Athlete::factory()->for($academy)->create(['email' => 'taken@example.com']);
 
+    // Pin the actual error key (PRD M7 PR-B contract), not just the
+    // exception class — a regression to a generic 'invalid' would
+    // pass on `toThrow(ValidationException::class)` alone.
     $action = app(SendAthleteInvitationAction::class);
     expect(fn () => $action->execute($owner, $athlete))
-        ->toThrow(ValidationException::class);
+        ->toThrow(ValidationException::class, 'email_already_registered');
 });
 
 it('throws when the athlete has no email on file', function (): void {
@@ -60,9 +73,11 @@ it('throws when the athlete has no email on file', function (): void {
     /** @var Athlete $athlete */
     $athlete = Athlete::factory()->for($academy)->create(['email' => null]);
 
+    // Pin the actual error key — same rationale as the
+    // already-registered test above (#1022 reviewer).
     $action = app(SendAthleteInvitationAction::class);
     expect(fn () => $action->execute($owner, $athlete))
-        ->toThrow(ValidationException::class);
+        ->toThrow(ValidationException::class, 'email_missing');
 });
 
 it('re-sending replaces the token on an existing pending row (no duplicate live tokens)', function (): void {
@@ -91,4 +106,20 @@ it('re-sending replaces the token on an existing pending row (no duplicate live 
     // The DB row reflects the SECOND token's hash (latest send wins).
     $row = AthleteInvitation::query()->where('athlete_id', $athlete->id)->firstOrFail();
     expect($row->token)->toBe(AthleteInvitation::hashToken($secondResult['rawToken']));
+
+    // The Action's docblock states resending ALWAYS queues mail
+    // again — "the latest email is always the one that works".
+    // Pin the side-effect: 2 distinct queued sends, each carrying
+    // its own raw token. A regression that skips the second
+    // `Mail::queue(...)` would let the SPA "Invita" button look
+    // successful while the athlete never receives the new link.
+    Mail::assertQueued(AthleteInvitationMail::class, 2);
+    Mail::assertQueued(
+        AthleteInvitationMail::class,
+        fn (AthleteInvitationMail $mail): bool => $mail->rawToken === $firstResult['rawToken'],
+    );
+    Mail::assertQueued(
+        AthleteInvitationMail::class,
+        fn (AthleteInvitationMail $mail): bool => $mail->rawToken === $secondResult['rawToken'],
+    );
 });

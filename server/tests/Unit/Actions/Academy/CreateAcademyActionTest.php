@@ -31,7 +31,7 @@ it('upserts the polymorphic address row when one is supplied', function (): void
     /** @var User $user */
     $user = User::factory()->create();
     $address = [
-        'street' => 'Via Roma 1',
+        'line1' => 'Via Roma 1',
         'city' => 'Torino',
         'province' => 'TO',
         'postal_code' => '10100',
@@ -63,7 +63,7 @@ it('rolls back the academy row when the address sync throws — transactional in
     expect(fn () => $action->execute(
         user: $user,
         name: 'Test',
-        address: ['street' => '1', 'city' => 'X', 'province' => 'P', 'postal_code' => '0', 'country' => 'IT'],
+        address: ['line1' => '1', 'city' => 'X', 'province' => 'P', 'postal_code' => '0', 'country' => 'IT'],
     ))->toThrow(\RuntimeException::class, 'simulated address-sync failure');
 
     expect(DB::table('academies')->count())->toBe($countBefore);
