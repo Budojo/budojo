@@ -28,7 +28,7 @@ export interface AppVersion {
 }
 
 export const VERSION: AppVersion = {
-  tag: 'dev',
-  sha: '0000000000000000000000000000000000000000',
-  buildTime: '2026-05-21T07:20:34.429Z',
+  tag: "dev",
+  sha: "0000000000000000000000000000000000000000",
+  buildTime: "2026-05-24T16:44:35.311Z",
 };
