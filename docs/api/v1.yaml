@@ -1938,6 +1938,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           description: Password missing or incorrect.
+        '429':
+          description: |
+            Rate-limited (5/min per user). Hard cap to close the
+            brute-force window on the disable-by-password gate
+            (#1006). Response carries `Retry-After`.
 
   /me/two-factor/enrol:
     post:
@@ -1978,6 +1983,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           description: 2FA already enabled — call DELETE first to reset.
+        '429':
+          description: |
+            Rate-limited (5/min per user). Hard cap to close the
+            brute-force window on the TOTP code (#1006). Response
+            carries `Retry-After` so the SPA can render a countdown.
 
   /me/two-factor/confirm:
     post:
@@ -2027,6 +2037,11 @@ paths:
             Code missing / malformed, OR no secret was previously
             minted via `/me/two-factor/enrol`, OR 2FA is already
             confirmed for this user.
+        '429':
+          description: |
+            Rate-limited (5/min per user). Hard cap to close the
+            brute-force window on the TOTP code (#1006). Response
+            carries `Retry-After` so the SPA can render a countdown.
 
   /me/two-factor/recovery-codes/regenerate:
     post:
@@ -2061,6 +2076,11 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '422':
           description: 2FA not active — call /me/two-factor/enrol first.
+        '429':
+          description: |
+            Rate-limited (5/min per user). Hard cap to close the
+            brute-force window on the TOTP code (#1006). Response
+            carries `Retry-After` so the SPA can render a countdown.
 
   /me/attendance/today:
     post:

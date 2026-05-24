@@ -226,11 +226,27 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // `/auth/login` consults `users.two_factor_confirmed_at` and
     // demands a `two_factor_code` body param (TOTP or backup) before
     // issuing a session token when 2FA is active.
+    //
+    // All mutative endpoints are throttled at `5,1` (5 requests per
+    // minute) — same shape as `/me/deletion-request` above — to
+    // close the brute-force window on the 6-digit TOTP code (#1006).
+    // Without it, an authenticated attacker could probe 10^6 codes
+    // against `/me/two-factor/confirm` inside the 30s TOTP rotation,
+    // OR against `DELETE /me/two-factor` to wipe the second factor
+    // by trying common passwords. The throttle is keyed on
+    // `user_id` (Laravel default for authenticated requests), so
+    // all of a user's Sanctum tokens / devices share one 5/min
+    // budget — an attacker can't sidestep the cap by minting
+    // fresh tokens.
     Route::get('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'show']);
-    Route::post('/me/two-factor/enrol', [\App\Http\Controllers\User\TwoFactorController::class, 'enrol']);
-    Route::post('/me/two-factor/confirm', [\App\Http\Controllers\User\TwoFactorController::class, 'confirm']);
-    Route::post('/me/two-factor/recovery-codes/regenerate', [\App\Http\Controllers\User\TwoFactorController::class, 'regenerateRecoveryCodes']);
-    Route::delete('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'destroy']);
+    Route::post('/me/two-factor/enrol', [\App\Http\Controllers\User\TwoFactorController::class, 'enrol'])
+        ->middleware('throttle:5,1');
+    Route::post('/me/two-factor/confirm', [\App\Http\Controllers\User\TwoFactorController::class, 'confirm'])
+        ->middleware('throttle:5,1');
+    Route::post('/me/two-factor/recovery-codes/regenerate', [\App\Http\Controllers\User\TwoFactorController::class, 'regenerateRecoveryCodes'])
+        ->middleware('throttle:5,1');
+    Route::delete('/me/two-factor', [\App\Http\Controllers\User\TwoFactorController::class, 'destroy'])
+        ->middleware('throttle:5,1');
 
     // Active sessions list with per-token revoke (#413). Surfaces every
     // Sanctum personal-access-token tied to the user; backs the
