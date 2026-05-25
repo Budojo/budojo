@@ -60,11 +60,13 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       .card {
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        /* 8dp grid — was 0.75rem off-grid; 1rem matches the panel/card spec in budojo-variants (#1044 reviewer). */
+        gap: 1rem;
         padding: 1rem;
         background: var(--p-content-background);
         border: 1px solid var(--p-content-border-color);
-        border-radius: 12px;
+        /* Design canon: use --p-border-radius-md, not raw 12px (#1044 reviewer). */
+        border-radius: var(--p-border-radius-md);
         transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
       }
 
@@ -72,12 +74,12 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         background: var(--p-content-hover-background);
       }
 
-      /* Slot defaults — consumers can override per-feature with
-         scoped CSS on their host element, but the column-flex +
-         inherited gap shape is the canon. */
-      ::ng-deep [header],
-      ::ng-deep [body],
-      ::ng-deep [footer] {
+      /* Slot defaults — column-flex + inherited gap.
+         Anchored to :host so the selector cannot leak outside the
+         component subtree (#1044 reviewer). */
+      :host ::ng-deep [header],
+      :host ::ng-deep [body],
+      :host ::ng-deep [footer] {
         display: flex;
         flex-direction: column;
         gap: inherit;
