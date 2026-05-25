@@ -144,7 +144,8 @@
           styleClass="w-full"
           [inputStyleClass]="
             'w-full' +
-            (form.errors?.['mismatch'] && passwordConfirmation.touched
+            ((passwordConfirmation.invalid || form.errors?.['mismatch']) &&
+            passwordConfirmation.touched
               ? ' ng-invalid ng-dirty'
               : '')
           "
