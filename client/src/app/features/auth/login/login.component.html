@@ -12,8 +12,12 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       @if (!twoFactorRequired()) {
-        <div class="field">
-          <label for="email">{{ 'auth.login.email' | translate }}</label>
+        <app-budojo-form-field
+          [label]="'auth.login.email' | translate"
+          [required]="true"
+          controlId="email"
+          [error]="emailError() ? (emailError()! | translate) : null"
+        >
           <input
             pInputText
             id="email"
@@ -23,20 +27,26 @@
             autocomplete="email"
             [class.ng-invalid]="email.invalid && email.touched"
             [class.ng-dirty]="email.touched"
+            [attr.aria-describedby]="emailError() ? 'email-error' : null"
           />
-          @if (email.invalid && email.touched) {
-            <small class="field-error">
-              @if (email.errors?.['required']) {
-                {{ 'auth.login.emailRequired' | translate }}
-              } @else if (email.errors?.['email']) {
-                {{ 'auth.login.emailInvalid' | translate }}
-              }
-            </small>
-          }
-        </div>
+        </app-budojo-form-field>
 
-        <div class="field">
-          <label for="password">{{ 'auth.login.password' | translate }}</label>
+        <app-budojo-form-field
+          [label]="'auth.login.password' | translate"
+          [required]="true"
+          controlId="password"
+          [error]="passwordError() ? (passwordError()! | translate) : null"
+        >
+          <!--
+            PrimeNG 21 p-password exposes [ariaLabel] + [ariaLabelledBy]
+            but NOT [ariaDescribedBy] (the inner <input> isn't
+            template-projected, so we can't reach it). The label-for
+            association via the budojo-form-field wrapper still
+            announces the label; the error <small role="alert"> is
+            announced live when it renders. Filed upstream; until
+            then this is the canon for password fields wrapped by
+            BudojoFormField (#1045 reviewer).
+          -->
           <p-password
             inputId="password"
             formControlName="password"
@@ -49,35 +59,37 @@
               'w-full' + (password.invalid && password.touched ? ' ng-invalid ng-dirty' : '')
             "
           />
-          @if (password.invalid && password.touched) {
-            <small class="field-error">{{ 'auth.login.passwordRequired' | translate }}</small>
-          }
-        </div>
+        </app-budojo-form-field>
       } @else {
         <!-- 2FA challenge step (#412). Email/password are already
              accepted by the server; we now collect the TOTP / backup
-             code and retry. -->
-        <div class="field" data-cy="auth-login-two-factor-step">
+             code and retry. The data-cy on the outer wrapper is
+             load-bearing for cypress profile-two-factor.cy.ts; keep
+             it. -->
+        <div class="auth-two-factor" data-cy="auth-login-two-factor-step">
           <p class="auth-two-factor-hint">{{ 'auth.login.twoFactor.hint' | translate }}</p>
-          <label for="twoFactorCode">{{ 'auth.login.twoFactor.codeLabel' | translate }}</label>
-          <input
-            pInputText
-            id="twoFactorCode"
-            type="text"
-            formControlName="two_factor_code"
-            inputmode="text"
-            autocomplete="one-time-code"
-            autocapitalize="characters"
-            spellcheck="false"
-            maxlength="32"
-            [placeholder]="'auth.login.twoFactor.codePlaceholder' | translate"
-            data-cy="auth-login-two-factor-code"
-          />
-          @if (twoFactorError(); as err) {
-            <small class="field-error" data-cy="auth-login-two-factor-error">
-              {{ err | translate }}
-            </small>
-          }
+          <app-budojo-form-field
+            [label]="'auth.login.twoFactor.codeLabel' | translate"
+            [required]="true"
+            controlId="twoFactorCode"
+            [error]="twoFactorError() ? (twoFactorError()! | translate) : null"
+            dataCy="auth-login-two-factor"
+          >
+            <input
+              pInputText
+              id="twoFactorCode"
+              type="text"
+              formControlName="two_factor_code"
+              inputmode="text"
+              autocomplete="one-time-code"
+              autocapitalize="characters"
+              spellcheck="false"
+              maxlength="32"
+              [placeholder]="'auth.login.twoFactor.codePlaceholder' | translate"
+              [attr.aria-describedby]="twoFactorError() ? 'twoFactorCode-error' : null"
+              data-cy="auth-login-two-factor-code"
+            />
+          </app-budojo-form-field>
         </div>
       }
 
