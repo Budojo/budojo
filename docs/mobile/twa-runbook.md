@@ -261,6 +261,30 @@ After the manual smoke is clean, the rest is Play Console UI work:
 
 ---
 
+## Step 6 — Android 15/16 compliance update (v4, Play Console pre-release findings 2026-05-25)
+
+Play Console flagged three items for the next AAB (see memory `project_play_console_pre_release_findings`). Finding #1 (edge-to-edge insets) was the SPA-side safe-area work shipped in #1046 / v2.32.0. Findings #2 + #3 are wrapper-side and handled here.
+
+**Source-config changes already applied to `twa-manifest.json`** (in the local TWA project dir — `budojo-twa/`):
+
+- `"orientation": "portrait"` → `"any"` — **finding #3** (don't restrict orientation/resize on large screens; Android 16 ignores the lock on foldables/tablets). Regenerates `LauncherActivity.java` to `setRequestedOrientation(SCREEN_ORIENTATION_UNSPECIFIED)`.
+- `appVersionCode` 3 → 4, `appVersionName`/`appVersion` "3" → "4" — next monotonic Play upload.
+- **Finding #2** (deprecated edge-to-edge APIs) is addressed by regenerating against the current Bubblewrap template + `androidbrowserhelper` (run `bubblewrap update`; bump the CLI first with `npm i -g @bubblewrap/cli` if it's old).
+
+**Web side (this repo):** `client/public/manifest.webmanifest` `"orientation"` is also set to `"any"` (#1061) — the TWA caches the web manifest, so both layers must agree. Ships through the normal PR + release pipeline.
+
+**To build + ship the v4 AAB (needs the Android SDK + signing keystore — local only):**
+
+```bash
+cd budojo-twa            # the Bubblewrap project (keystore lives here, never committed)
+bubblewrap update        # regenerate Android project from twa-manifest.json (no SDK/keystore needed)
+bubblewrap build --mode=release --skipPwaValidation   # needs ANDROID_HOME + keystore password
+# → upload app-release-bundle.aab to Play Console internal testing
+# → confirm the pre-launch report clears the edge-to-edge + large-screen findings
+```
+
+> ⚠️ **Watch the `aapt` step** for `resource string/orientation not found`: with `orientation: "any"`, `bubblewrap update` may leave the `@string/orientation` meta-data ref in `AndroidManifest.xml` without writing the matching `<string>` (observed on CLI 1.24.1, SDK not available to confirm `build` resolves it). If `build` fails on it, either add `<string name="orientation">any</string>` to `app/src/main/res/values/strings.xml` or bump the Bubblewrap CLI and re-run `update`.
+
 ## Operating principles
 
 - **Never check the keystore into git.** It's in `mobile-android/.gitignore`. Verify with `git status` before every commit in `mobile-android/`.
@@ -277,6 +301,7 @@ After the manual smoke is clean, the rest is Play Console UI work:
 | Build fails with "package not found" | Android SDK not detected | Set `ANDROID_HOME` and add `$ANDROID_HOME/cmdline-tools/latest/bin` to `PATH` |
 | Play Store rejects upload | Signing scheme mismatch | Re-run `apksigner verify --verbose` locally; the most common issue is missing v2 signature on older builds |
 | Splash flashes white before brand glyph | Missing `theme_color` in manifest | Already set — should not happen on Budojo |
+| `aapt`: `resource string/orientation not found` after setting `orientation: "any"` | Bubblewrap left the `@string/orientation` manifest ref without writing the string | Add `<string name="orientation">any</string>` to `app/src/main/res/values/strings.xml`, or bump the Bubblewrap CLI and re-run `bubblewrap update` |
 
 ## References
 
