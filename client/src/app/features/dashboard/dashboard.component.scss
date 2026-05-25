@@ -47,7 +47,10 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  // padding-top expands by the OS-reported safe-area inset on
+  // Android 15 edge-to-edge mode + iOS notched devices, so the
+  // hamburger / brand never get clipped by the status bar (#1046).
+  padding: max(0.5rem, var(--budojo-safe-top)) 1rem 0.5rem;
   min-height: $topbar-height;
   background: var(--p-surface-900);
   color: var(--p-surface-0);
@@ -181,6 +184,10 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   left: 0;
   height: 100vh;
   height: 100dvh;
+  // Push the drawer header below the status bar on edge-to-edge
+  // surfaces; the rest of the drawer content scrolls under the
+  // gradient as before (#1046).
+  padding-top: var(--budojo-safe-top);
   width: $sidebar-width;
   max-width: calc(100vw - 3rem); // never full-cover — keep a close hint
   transform: translateX(-100%);

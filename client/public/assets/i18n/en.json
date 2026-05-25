@@ -130,6 +130,7 @@
       "passwordBreached": "This password has appeared in known data breaches. Pick a longer, less common one.",
       "passwordConfirmation": "Confirm password",
       "passwordConfirmationPlaceholder": "Repeat your password",
+      "passwordConfirmationRequired": "Confirm your password.",
       "passwordsMismatch": "Passwords do not match.",
       "privacyAcceptBefore": "I have read and accept the ",
       "privacyAcceptLinkText": "privacy policy",
@@ -942,6 +943,8 @@
       "enable": "Enable on this device",
       "addDevice": "Add another device",
       "revoke": "Revoke",
+      "revokeConfirm": "Stop sending notifications to this device?",
+      "cancel": "Cancel",
       "deviceAdded": "Added",
       "enabledToast": {
         "summary": "Notifications enabled on this device"
@@ -1410,15 +1413,15 @@
       },
       "website": {
         "label": "Website",
-        "errorUrl": "Enter a full URL — e.g. <code>https://example.com</code>."
+        "errorUrl": "Enter a full URL — e.g. https://example.com."
       },
       "facebook": {
         "label": "Facebook",
-        "errorUrl": "Enter a full URL — e.g. <code>https://facebook.com/yourpage</code>."
+        "errorUrl": "Enter a full URL — e.g. https://facebook.com/yourpage."
       },
       "instagram": {
         "label": "Instagram",
-        "errorUrl": "Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>."
+        "errorUrl": "Enter a full URL — e.g. https://instagram.com/yourprofile."
       },
       "permalink": {
         "label": "Permalink",
@@ -1852,9 +1855,9 @@
           "maxLength": "Maximum 20 digits."
         },
         "url": {
-          "website": "Enter a full URL — e.g. <code>https://example.com</code>.",
-          "facebook": "Enter a full URL — e.g. <code>https://facebook.com/yourprofile</code>.",
-          "instagram": "Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>."
+          "website": "Enter a full URL — e.g. https://example.com.",
+          "facebook": "Enter a full URL — e.g. https://facebook.com/yourprofile.",
+          "instagram": "Enter a full URL — e.g. https://instagram.com/yourprofile."
         },
         "joined": {
           "required": "Joined date is required."

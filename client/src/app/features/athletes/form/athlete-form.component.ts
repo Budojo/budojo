@@ -37,6 +37,7 @@ import {
 } from '../../../core/services/athlete.service';
 import { Address, CountryCode, ItalianProvinceCode } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   COUNTRY_OPTIONS,
@@ -167,6 +168,7 @@ const urlIfPresent: ValidatorFn = (control: AbstractControl) => {
     ToastModule,
     Tooltip,
     PageHeaderComponent,
+    BudojoFormFieldComponent,
   ],
   providers: [MessageService],
   templateUrl: './athlete-form.component.html',
@@ -432,6 +434,108 @@ export class AthleteFormComponent implements OnInit {
       void this.router.navigate(['/dashboard/athletes', id]);
     }
   }
+
+  // ── Inline error keys for the BudojoFormField wrapper (#1050) ──────
+  // Each computed subscribes to its control's `events` stream (emits
+  // TouchedChangeEvent), so markAllAsTouched() on submit re-renders the
+  // inline error — the canonical pattern from the login/register
+  // migrations (#1045/#1049). Returns a translation KEY (the template
+  // pipes it through `| translate`) or null when the field is clean.
+  private readonly firstNameEvents = toSignal(this.form.controls.first_name.events, {
+    initialValue: null,
+  });
+  private readonly lastNameEvents = toSignal(this.form.controls.last_name.events, {
+    initialValue: null,
+  });
+  private readonly emailEvents = toSignal(this.form.controls.email.events, { initialValue: null });
+  private readonly phoneCountryEvents = toSignal(this.form.controls.phone_country_code.events, {
+    initialValue: null,
+  });
+  private readonly phoneNumberEvents = toSignal(this.form.controls.phone_national_number.events, {
+    initialValue: null,
+  });
+  private readonly websiteEvents = toSignal(this.form.controls.website.events, {
+    initialValue: null,
+  });
+  private readonly facebookEvents = toSignal(this.form.controls.facebook.events, {
+    initialValue: null,
+  });
+  private readonly instagramEvents = toSignal(this.form.controls.instagram.events, {
+    initialValue: null,
+  });
+  private readonly joinedAtEvents = toSignal(this.form.controls.joined_at.events, {
+    initialValue: null,
+  });
+
+  readonly firstNameError = computed<string | null>(() => {
+    void this.firstNameEvents();
+    const c = this.form.controls.first_name;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['required']) return 'athletes.form.validation.firstName.required';
+    if (c.errors?.['maxlength']) return 'athletes.form.validation.maxLength100';
+    return null;
+  });
+  readonly lastNameError = computed<string | null>(() => {
+    void this.lastNameEvents();
+    const c = this.form.controls.last_name;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['required']) return 'athletes.form.validation.lastName.required';
+    if (c.errors?.['maxlength']) return 'athletes.form.validation.maxLength100';
+    return null;
+  });
+  readonly emailError = computed<string | null>(() => {
+    void this.emailEvents();
+    const c = this.form.controls.email;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['email']) return 'athletes.form.validation.email.invalid';
+    if (c.errors?.['maxlength']) return 'athletes.form.validation.maxLength255';
+    return null;
+  });
+  // Phone is a pair (country + national number) presented as one field;
+  // surface whichever side errors first so the single wrapper slot shows
+  // a coherent message.
+  readonly phoneError = computed<string | null>(() => {
+    void this.phoneCountryEvents();
+    void this.phoneNumberEvents();
+    const cc = this.form.controls.phone_country_code;
+    const num = this.form.controls.phone_national_number;
+    if (cc.touched && cc.errors?.['phonePairRequired']) {
+      return 'athletes.form.validation.phone.countryRequired';
+    }
+    if (num.touched) {
+      if (num.errors?.['phonePairRequired']) return 'athletes.form.validation.phone.numberRequired';
+      if (num.errors?.['pattern']) return 'athletes.form.validation.phone.pattern';
+      if (num.errors?.['maxlength']) return 'athletes.form.validation.phone.maxLength';
+    }
+    return null;
+  });
+  readonly websiteError = computed<string | null>(() => {
+    void this.websiteEvents();
+    const c = this.form.controls.website;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['url']) return 'athletes.form.validation.url.website';
+    return 'athletes.form.validation.maxLength255';
+  });
+  readonly facebookError = computed<string | null>(() => {
+    void this.facebookEvents();
+    const c = this.form.controls.facebook;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['url']) return 'athletes.form.validation.url.facebook';
+    return 'athletes.form.validation.maxLength255';
+  });
+  readonly instagramError = computed<string | null>(() => {
+    void this.instagramEvents();
+    const c = this.form.controls.instagram;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['url']) return 'athletes.form.validation.url.instagram';
+    return 'athletes.form.validation.maxLength255';
+  });
+  readonly joinedAtError = computed<string | null>(() => {
+    void this.joinedAtEvents();
+    const c = this.form.controls.joined_at;
+    if (!c.touched || c.valid) return null;
+    return 'athletes.form.validation.joined.required';
+  });
 
   get firstName() {
     return this.form.controls.first_name;

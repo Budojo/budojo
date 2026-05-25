@@ -138,6 +138,15 @@
   --budojo-motion-slow: 360ms;
   --budojo-motion-decelerate: cubic-bezier(0.22, 1, 0.36, 1);
 
+  // ───── Form typography (#1039) ───────────────────────────────────
+  // Mandate uniform label / hint / error sizing so every form-field
+  // wrapper renders identical typographic weight. Pre-#1039 each
+  // form picked its own (0.75rem / 0.8125rem / 0.875rem) — drift was
+  // the largest contributor to the "forms feel uneven" Sprint 5 audit
+  // finding.
+  --budojo-form-label-size: 0.875rem;
+  --budojo-form-error-size: 0.75rem;
+
   // ───── Icon scale (audit § 5) ────────────────────────────────────
   // Five canonical sizes. Existing call sites currently use a random
   // mix of `font-size: 1.0625rem / 1.125rem / 1.25rem / 1.5rem /

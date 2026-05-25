@@ -101,4 +101,46 @@ describe('Profile → Browser notifications (#694)', () => {
     cy.get('[data-cy="profile-browser-notifications-device-42"]').should('exist');
     cy.get('[data-cy="profile-browser-notifications-revoke-42"]').should('exist');
   });
+
+  it('revoke now opens a confirm popup — click does NOT fire the DELETE until the user accepts (#1034 safety gap)', () => {
+    cy.intercept('GET', '/api/v1/me/push-subscriptions', {
+      data: [
+        {
+          id: 42,
+          endpoint_host: 'fcm.googleapis.com',
+          last_seen_at: null,
+          created_at: '2026-05-14T07:00:00+00:00',
+        },
+      ],
+      meta: { vapid_public_key: 'BN9aEK', enabled: true },
+    }).as('listDevices');
+
+    // Spy: the DELETE must NOT fire on the first click (which now
+    // only opens the confirm popup) and must NOT fire on reject.
+    let deleteAttempts = 0;
+    cy.intercept('DELETE', '/api/v1/me/push-subscriptions/42', (req) => {
+      deleteAttempts += 1;
+      req.reply({ statusCode: 204, body: '' });
+    }).as('revokeDevice');
+
+    cy.visitAuthenticated('/dashboard/profile');
+    cy.get('[data-cy="profile-tab-notifications"]').click();
+    cy.wait('@listDevices');
+
+    // First click — opens the confirm popup, no DELETE yet.
+    cy.get('[data-cy="profile-browser-notifications-revoke-42"]').click();
+    cy.get('.p-confirmpopup').should('be.visible');
+    cy.wrap(null).then(() => expect(deleteAttempts).to.equal(0));
+
+    // Reject — popup closes, still no DELETE.
+    cy.get('.p-confirmpopup-reject-button').click();
+    cy.get('.p-confirmpopup').should('not.exist');
+    cy.wrap(null).then(() => expect(deleteAttempts).to.equal(0));
+
+    // Re-open + accept — DELETE fires exactly once.
+    cy.get('[data-cy="profile-browser-notifications-revoke-42"]').click();
+    cy.get('.p-confirmpopup-accept-button').click();
+    cy.wait('@revokeDevice');
+    cy.wrap(null).then(() => expect(deleteAttempts).to.equal(1));
+  });
 });

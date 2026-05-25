@@ -105,6 +105,22 @@ describe('AcademyFormComponent', () => {
     expect(component.name.errors?.['whitespace']).toBe(true);
   });
 
+  it('renders an inline BudojoFormField error on the name field after empty-submit (#1052)', () => {
+    const { fixture, component } = setup();
+    component.form.patchValue({ name: '' });
+
+    // markAllAsTouched fires inside submit(); nameError (toSignal of
+    // control.events) re-renders so the required name surfaces an
+    // inline error via the wrapper.
+    component.submit();
+    fixture.detectChanges();
+
+    const err = (fixture.nativeElement as HTMLElement).querySelector(
+      'small.budojo-form-field__error',
+    );
+    expect(err?.textContent?.trim()).toBeTruthy();
+  });
+
   it('blocks submission when the name exceeds 255 characters', () => {
     const { component, httpMock } = setup();
     component.form.patchValue({ name: 'x'.repeat(256) });

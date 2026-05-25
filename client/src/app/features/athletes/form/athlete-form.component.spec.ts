@@ -83,6 +83,23 @@ describe('AthleteFormComponent', () => {
       expect(cmp.firstName.touched).toBe(true);
     });
 
+    it('renders inline BudojoFormField errors on empty-submit (#1050)', () => {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      fixture.detectChanges();
+      const cmp = fixture.componentInstance;
+
+      // markAllAsTouched fires inside submit(); the *Error computeds
+      // (toSignal(control.events)) re-render so first_name + last_name
+      // (both required) surface inline errors via the wrapper.
+      cmp.submit();
+      fixture.detectChanges();
+
+      const errors = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('small.budojo-form-field__error'),
+      );
+      expect(errors.length).toBeGreaterThanOrEqual(2);
+    });
+
     it("POSTs payload and navigates to the new athlete's detail on success", () => {
       const fixture = TestBed.createComponent(AthleteFormComponent);
       fixture.detectChanges();

@@ -130,6 +130,7 @@
       "passwordBreached": "Questa password è apparsa in note violazioni di dati. Scegline una più lunga e meno comune.",
       "passwordConfirmation": "Conferma password",
       "passwordConfirmationPlaceholder": "Ripeti la tua password",
+      "passwordConfirmationRequired": "Conferma la password.",
       "passwordsMismatch": "Le password non coincidono.",
       "privacyAcceptBefore": "Ho letto e accetto l'",
       "privacyAcceptLinkText": "informativa sulla privacy",
@@ -942,6 +943,8 @@
       "enable": "Attiva su questo dispositivo",
       "addDevice": "Aggiungi un altro dispositivo",
       "revoke": "Revoca",
+      "revokeConfirm": "Smettere di inviare notifiche a questo dispositivo?",
+      "cancel": "Annulla",
       "deviceAdded": "Aggiunto",
       "enabledToast": {
         "summary": "Notifiche attivate su questo dispositivo"
@@ -1410,15 +1413,15 @@
       },
       "website": {
         "label": "Sito web",
-        "errorUrl": "Inserisci un URL completo — es. <code>https://example.com</code>."
+        "errorUrl": "Inserisci un URL completo — es. https://example.com."
       },
       "facebook": {
         "label": "Facebook",
-        "errorUrl": "Inserisci un URL completo — es. <code>https://facebook.com/lapagina</code>."
+        "errorUrl": "Inserisci un URL completo — es. https://facebook.com/lapagina."
       },
       "instagram": {
         "label": "Instagram",
-        "errorUrl": "Inserisci un URL completo — es. <code>https://instagram.com/ilprofilo</code>."
+        "errorUrl": "Inserisci un URL completo — es. https://instagram.com/ilprofilo."
       },
       "permalink": {
         "label": "Permalink",
@@ -1852,9 +1855,9 @@
           "maxLength": "Massimo 20 cifre."
         },
         "url": {
-          "website": "Inserisci un URL completo — es. <code>https://example.com</code>.",
-          "facebook": "Inserisci un URL completo — es. <code>https://facebook.com/iltuoprofilo</code>.",
-          "instagram": "Inserisci un URL completo — es. <code>https://instagram.com/iltuoprofilo</code>."
+          "website": "Inserisci un URL completo — es. https://example.com.",
+          "facebook": "Inserisci un URL completo — es. https://facebook.com/iltuoprofilo.",
+          "instagram": "Inserisci un URL completo — es. https://instagram.com/iltuoprofilo."
         },
         "joined": {
           "required": "La data di iscrizione è obbligatoria."

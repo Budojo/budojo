@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -15,6 +16,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { MyAthleteService } from '../../../core/services/my-athlete.service';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
+import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 
 const noWhitespace: ValidatorFn = (control: AbstractControl) =>
   control.value?.trim() ? null : { whitespace: true };
@@ -28,6 +30,7 @@ const noWhitespace: ValidatorFn = (control: AbstractControl) =>
     InputTextModule,
     MessageModule,
     TrainingDaysPickerComponent,
+    BudojoFormFieldComponent,
     TranslatePipe,
   ],
   templateUrl: './setup.component.html',
@@ -104,6 +107,19 @@ export class SetupComponent {
   setTrainingDays(days: number[]): void {
     this.form.controls.training_days.setValue(days);
   }
+
+  // Inline error key for the BudojoFormField wrapper (#1054) — toSignal
+  // of control.events so markAllAsTouched() on submit re-renders the
+  // error (the canonical pattern from #1045/#1049/#1050/#1052).
+  private readonly nameEvents = toSignal(this.form.controls.name.events, { initialValue: null });
+  readonly nameError = computed<string | null>(() => {
+    void this.nameEvents();
+    const c = this.form.controls.name;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['required'] || c.errors?.['whitespace']) return 'setup.nameRequired';
+    if (c.errors?.['maxlength']) return 'setup.nameMaxlength';
+    return null;
+  });
 
   get name() {
     return this.form.get('name')!;

@@ -16,11 +16,13 @@
   }
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form__fields">
-    <div class="field">
-      <label for="academy-name">
-        {{ 'academy.form.name.label' | translate }}
-        <span class="field__required" aria-hidden="true">*</span>
-      </label>
+    <app-budojo-form-field
+      [label]="'academy.form.name.label' | translate"
+      [required]="true"
+      controlId="academy-name"
+      [error]="nameError() ? (nameError()! | translate) : null"
+      dataCy="academy-form-name-field"
+    >
       <input
         pInputText
         id="academy-name"
@@ -33,24 +35,23 @@
         [class.ng-invalid]="name.invalid && name.touched"
         [class.ng-dirty]="name.touched"
         [attr.aria-invalid]="name.invalid && name.touched ? 'true' : null"
-        [attr.aria-describedby]="name.invalid && name.touched ? 'academy-name-error' : null"
+        [attr.aria-describedby]="nameError() ? 'academy-name-error' : null"
       />
-      @if (name.invalid && name.touched) {
-        <small id="academy-name-error" class="field__error" data-cy="academy-form-name-error">
-          @if (name.errors?.['required'] || name.errors?.['whitespace']) {
-            {{ 'academy.form.name.errorRequired' | translate }}
-          } @else if (name.errors?.['maxlength']) {
-            {{ 'academy.form.name.errorMaxlength' | translate }}
-          }
-        </small>
-      }
-    </div>
+    </app-budojo-form-field>
 
-    <div class="field">
-      <label for="academy-phone-national-number">
-        {{ 'academy.form.phone.label' | translate }}
-        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
-      </label>
+    <!--
+      Phone is a country-code + national-number PAIR presented as one
+      field; `phoneError()` collapses whichever side errors first into
+      the wrapper's single error slot, while each inner control keeps
+      its own ng-invalid border (mirrors the athletes-form migration
+      #1050).
+    -->
+    <app-budojo-form-field
+      [label]="'academy.form.phone.label' | translate"
+      [optionalLabel]="'academy.form.optional' | translate"
+      controlId="academy-phone-national-number"
+      [error]="phoneError() ? (phoneError()! | translate) : null"
+    >
       <div class="phone-pair">
         <p-select
           inputId="academy-phone-country-code"
@@ -81,28 +82,11 @@
           data-cy="academy-form-phone-national-number"
           [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
           [class.ng-dirty]="phoneNationalNumber.touched"
+          [attr.aria-describedby]="phoneError() ? 'academy-phone-national-number-error' : null"
           class="phone-national-number"
         />
       </div>
-      @if (phoneCountryCode.invalid && phoneCountryCode.touched) {
-        <small class="field__error" data-cy="academy-form-phone-country-error">
-          @if (phoneCountryCode.errors?.['phonePairRequired']) {
-            {{ 'academy.form.phone.errorCodeRequired' | translate }}
-          }
-        </small>
-      }
-      @if (phoneNationalNumber.invalid && phoneNationalNumber.touched) {
-        <small class="field__error" data-cy="academy-form-phone-national-error">
-          @if (phoneNationalNumber.errors?.['phonePairRequired']) {
-            {{ 'academy.form.phone.errorNationalRequired' | translate }}
-          } @else if (phoneNationalNumber.errors?.['pattern']) {
-            {{ 'academy.form.phone.errorPattern' | translate }}
-          } @else if (phoneNationalNumber.errors?.['maxlength']) {
-            {{ 'academy.form.phone.errorMaxlength' | translate }}
-          }
-        </small>
-      }
-    </div>
+    </app-budojo-form-field>
 
     <!--
       Contact links (#162) — three independently nullable URL fields.
@@ -112,11 +96,12 @@
       detail page can render these as clickable `<a href>` without
       special-casing.
     -->
-    <div class="field">
-      <label for="academy-website">
-        {{ 'academy.form.website.label' | translate }}
-        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
-      </label>
+    <app-budojo-form-field
+      [label]="'academy.form.website.label' | translate"
+      [optionalLabel]="'academy.form.optional' | translate"
+      controlId="academy-website"
+      [error]="websiteError() ? (websiteError()! | translate) : null"
+    >
       <input
         pInputText
         id="academy-website"
@@ -128,23 +113,16 @@
         data-cy="academy-form-website"
         [class.ng-invalid]="website.invalid && website.touched"
         [class.ng-dirty]="website.touched"
+        [attr.aria-describedby]="websiteError() ? 'academy-website-error' : null"
       />
-      @if (website.invalid && website.touched) {
-        <small class="field__error" data-cy="academy-form-website-error">
-          @if (website.errors?.['url']) {
-            <span [innerHTML]="'academy.form.website.errorUrl' | translate"></span>
-          } @else if (website.errors?.['maxlength']) {
-            {{ 'academy.form.url.errorMaxlength' | translate }}
-          }
-        </small>
-      }
-    </div>
+    </app-budojo-form-field>
 
-    <div class="field">
-      <label for="academy-facebook">
-        {{ 'academy.form.facebook.label' | translate }}
-        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
-      </label>
+    <app-budojo-form-field
+      [label]="'academy.form.facebook.label' | translate"
+      [optionalLabel]="'academy.form.optional' | translate"
+      controlId="academy-facebook"
+      [error]="facebookError() ? (facebookError()! | translate) : null"
+    >
       <input
         pInputText
         id="academy-facebook"
@@ -156,23 +134,16 @@
         data-cy="academy-form-facebook"
         [class.ng-invalid]="facebook.invalid && facebook.touched"
         [class.ng-dirty]="facebook.touched"
+        [attr.aria-describedby]="facebookError() ? 'academy-facebook-error' : null"
       />
-      @if (facebook.invalid && facebook.touched) {
-        <small class="field__error" data-cy="academy-form-facebook-error">
-          @if (facebook.errors?.['url']) {
-            <span [innerHTML]="'academy.form.facebook.errorUrl' | translate"></span>
-          } @else if (facebook.errors?.['maxlength']) {
-            {{ 'academy.form.url.errorMaxlength' | translate }}
-          }
-        </small>
-      }
-    </div>
+    </app-budojo-form-field>
 
-    <div class="field">
-      <label for="academy-instagram">
-        {{ 'academy.form.instagram.label' | translate }}
-        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
-      </label>
+    <app-budojo-form-field
+      [label]="'academy.form.instagram.label' | translate"
+      [optionalLabel]="'academy.form.optional' | translate"
+      controlId="academy-instagram"
+      [error]="instagramError() ? (instagramError()! | translate) : null"
+    >
       <input
         pInputText
         id="academy-instagram"
@@ -184,17 +155,9 @@
         data-cy="academy-form-instagram"
         [class.ng-invalid]="instagram.invalid && instagram.touched"
         [class.ng-dirty]="instagram.touched"
+        [attr.aria-describedby]="instagramError() ? 'academy-instagram-error' : null"
       />
-      @if (instagram.invalid && instagram.touched) {
-        <small class="field__error" data-cy="academy-form-instagram-error">
-          @if (instagram.errors?.['url']) {
-            <span [innerHTML]="'academy.form.instagram.errorUrl' | translate"></span>
-          } @else if (instagram.errors?.['maxlength']) {
-            {{ 'academy.form.url.errorMaxlength' | translate }}
-          }
-        </small>
-      }
-    </div>
+    </app-budojo-form-field>
 
     <!--
       Permalink: rendered as a static info line, not an input. Using an
@@ -390,11 +353,13 @@
       reload (#280 PR-D). Empty / cleared input → `null` cents → server
       removes the fee and the payments features hide again.
     -->
-    <div class="field">
-      <label for="academy-monthly-fee">
-        {{ 'academy.form.monthlyFee.label' | translate }}
-        <span class="field__optional">{{ 'academy.form.optional' | translate }}</span>
-      </label>
+    <app-budojo-form-field
+      [label]="'academy.form.monthlyFee.label' | translate"
+      [optionalLabel]="'academy.form.optional' | translate"
+      controlId="academy-monthly-fee"
+      [error]="monthlyFeeError() ? (monthlyFeeError()! | translate) : null"
+      [hint]="'academy.form.monthlyFee.hint' | translate"
+    >
       <p-inputnumber
         inputId="academy-monthly-fee"
         formControlName="monthly_fee"
@@ -406,20 +371,13 @@
         [showButtons]="false"
         placeholder="—"
         data-cy="academy-form-monthly-fee"
+        [ariaDescribedBy]="
+          monthlyFeeError() ? 'academy-monthly-fee-error' : 'academy-monthly-fee-hint'
+        "
         [class.ng-invalid]="monthlyFee.invalid && monthlyFee.touched"
         [class.ng-dirty]="monthlyFee.touched"
       />
-      @if (monthlyFee.invalid && monthlyFee.touched) {
-        <small class="field__error" data-cy="academy-form-monthly-fee-error">
-          @if (monthlyFee.errors?.['min']) {
-            {{ 'academy.form.monthlyFee.errorMin' | translate }}
-          }
-        </small>
-      }
-      <small class="field__hint">
-        {{ 'academy.form.monthlyFee.hint' | translate }}
-      </small>
-    </div>
+    </app-budojo-form-field>
 
     <div class="field">
       <span class="field__label">

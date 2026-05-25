@@ -62,6 +62,16 @@ describe('SetupComponent — train-here step (#751)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="setup-train-here-no"]')).not.toBeNull();
   });
 
+  it('renders an inline BudojoFormField error on the name field after empty-submit (#1054)', () => {
+    const { fixture, cmp } = setup();
+    cmp.submit();
+    fixture.detectChanges();
+    const err = (fixture.nativeElement as HTMLElement).querySelector(
+      'small.budojo-form-field__error',
+    );
+    expect(err?.textContent?.trim()).toBeTruthy();
+  });
+
   it('defaults to "Not now" — no athlete enroll call on submit', () => {
     const { cmp, createAcademy, enrollMe, navigate } = setup();
     cmp['form'].patchValue({ name: 'Test Academy' });
