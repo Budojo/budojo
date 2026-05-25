@@ -38,15 +38,18 @@ describe('RegisterComponent — inline validation errors (#1048)', () => {
     // Empty-submit triggers markAllAsTouched on every control; per the
     // canonical login pattern (#1045), AbstractControl.events emits a
     // TouchedChangeEvent which re-runs the *Error computeds inside
-    // each BudojoFormField. >=4 fields (first_name, last_name, email,
-    // password) should render inline error messages.
+    // each BudojoFormField. All FIVE text/password fields carry
+    // `required` (first_name, last_name, email, password,
+    // password_confirmation), so an empty submit must render exactly 5
+    // inline errors — pinning 5 (not >=4) locks the
+    // passwordConfirmationRequired fix from 82a752d (#1049 reviewer).
     fixture.componentInstance.submit();
     fixture.detectChanges();
 
     const errors = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('small.budojo-form-field__error'),
     );
-    expect(errors.length).toBeGreaterThanOrEqual(4);
+    expect(errors.length).toBe(5);
   });
 });
 
