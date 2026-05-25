@@ -11,10 +11,12 @@
     }
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <div class="field">
-        <label for="name"
-          >{{ 'setup.nameLabel' | translate }} <span class="required">*</span></label
-        >
+      <app-budojo-form-field
+        [label]="'setup.nameLabel' | translate"
+        [required]="true"
+        controlId="name"
+        [error]="nameError() ? (nameError()! | translate) : null"
+      >
         <input
           pInputText
           id="name"
@@ -24,17 +26,9 @@
           autocomplete="organization"
           [class.ng-invalid]="name.invalid && name.touched"
           [class.ng-dirty]="name.touched"
+          [attr.aria-describedby]="nameError() ? 'name-error' : null"
         />
-        @if (name.invalid && name.touched) {
-          <small class="field-error">
-            @if (name.errors?.['required'] || name.errors?.['whitespace']) {
-              {{ 'setup.nameRequired' | translate }}
-            } @else if (name.errors?.['maxlength']) {
-              {{ 'setup.nameMaxlength' | translate }}
-            }
-          </small>
-        }
-      </div>
+      </app-budojo-form-field>
 
       <div class="field">
         <span class="field-label"
