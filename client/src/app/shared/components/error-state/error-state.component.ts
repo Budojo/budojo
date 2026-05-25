@@ -48,15 +48,37 @@ import { ButtonModule } from 'primeng/button';
     <div class="error-state" role="alert" [attr.data-cy]="dataCy() ?? null">
       <i class="error-state__icon pi pi-exclamation-triangle" aria-hidden="true"></i>
       <div class="error-state__copy">
-        <h3 class="error-state__title">{{ title() }}</h3>
+        <!-- Heading level is host-driven (#1043 reviewer) — default h2; consumers override via headingLevel. -->
+        @switch (headingLevel()) {
+          @case (1) {
+            <h1 class="error-state__title">{{ title() }}</h1>
+          }
+          @case (3) {
+            <h3 class="error-state__title">{{ title() }}</h3>
+          }
+          @case (4) {
+            <h4 class="error-state__title">{{ title() }}</h4>
+          }
+          @default {
+            <h2 class="error-state__title">{{ title() }}</h2>
+          }
+        }
         @if (hint(); as hintText) {
           <p class="error-state__hint">{{ hintText }}</p>
         }
       </div>
       @if (retryLabel(); as label) {
+        <!--
+          severity="secondary" + outlined was resolving to a FILLED
+          secondary button (PrimeNG Material preset collapses the
+          outlined variant on secondary). Use severity="warn" +
+          outlined — the variants doc lists this combo as the
+          canonical "retry / dismissable warning" treatment (#1043
+          reviewer).
+        -->
         <p-button
           type="button"
-          severity="secondary"
+          severity="warn"
           [outlined]="true"
           size="small"
           icon="pi pi-refresh"
@@ -78,19 +100,25 @@ import { ButtonModule } from 'primeng/button';
         text-align: center;
         background: var(--p-surface-100);
         border: 1px solid var(--p-content-border-color);
-        border-radius: 12px;
+        /* 8dp grid + design canon: use --p-border-radius-md, not raw 12px (#1043 reviewer). */
+        border-radius: var(--p-border-radius-md);
         color: var(--p-text-color);
       }
 
       .error-state__icon {
         font-size: 2rem;
-        color: var(--p-yellow-500, #f59f00);
+        /* Use the Budojo semantic warn token (defined in
+           budojo-theme.scss, dark-mode-safe). --p-yellow-500 from
+           PrimeNG's Material preset doesn't ship in the resolved
+           token set and was rendering blank (#1043 reviewer). */
+        color: var(--budojo-warning);
       }
 
       .error-state__copy {
         display: flex;
         flex-direction: column;
-        gap: 0.25rem;
+        /* 0.25rem is off the 8dp grid — keep copy gap on the 0.5rem step (#1043 reviewer). */
+        gap: 0.5rem;
         align-items: center;
       }
 
@@ -116,6 +144,8 @@ import { ButtonModule } from 'primeng/button';
 export class ErrorStateComponent {
   /** Required headline visible to the user — already translated. */
   readonly title = input.required<string>();
+  /** Heading element level for the title (1–4). Default h2 — host overrides for top-level pages (1) or deep widgets (3 / 4) so the document outline stays sane. */
+  readonly headingLevel = input<1 | 2 | 3 | 4>(2);
   /** Optional sub-line. */
   readonly hint = input<string | null>(null);
   /** Optional retry CTA label. When omitted, no button renders. */

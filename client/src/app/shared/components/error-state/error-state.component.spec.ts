@@ -11,6 +11,7 @@ describe('ErrorStateComponent (#1037)', () => {
     hint?: string | null;
     retryLabel?: string | null;
     dataCy?: string | null;
+    headingLevel?: 1 | 2 | 3 | 4;
   }) {
     const fixture = TestBed.createComponent(ErrorStateComponent);
     fixture.componentRef.setInput('title', inputs.title ?? 'Could not load');
@@ -18,6 +19,8 @@ describe('ErrorStateComponent (#1037)', () => {
     if (inputs.retryLabel !== undefined)
       fixture.componentRef.setInput('retryLabel', inputs.retryLabel);
     if (inputs.dataCy !== undefined) fixture.componentRef.setInput('dataCy', inputs.dataCy);
+    if (inputs.headingLevel !== undefined)
+      fixture.componentRef.setInput('headingLevel', inputs.headingLevel);
     fixture.detectChanges();
     return fixture;
   }
@@ -67,6 +70,20 @@ describe('ErrorStateComponent (#1037)', () => {
     const root: HTMLElement = fixture.nativeElement;
     expect(root.querySelector('[data-cy="athletes-error"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="athletes-error-retry"]')).not.toBeNull();
+  });
+
+  it('renders the title as an h2 by default (#1043 reviewer)', () => {
+    const fixture = mount({ title: 'Could not load' });
+    expect(fixture.nativeElement.querySelector('h2.error-state__title')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('h1.error-state__title')).toBeNull();
+    expect(fixture.nativeElement.querySelector('h3.error-state__title')).toBeNull();
+  });
+
+  it('honours headingLevel=1 / 3 / 4 overrides (#1043 reviewer)', () => {
+    for (const level of [1, 3, 4] as const) {
+      const fixture = mount({ title: 'Could not load', headingLevel: level });
+      expect(fixture.nativeElement.querySelector(`h${level}.error-state__title`)).not.toBeNull();
+    }
   });
 
   it('emits retry when the user activates the retry CTA', () => {
