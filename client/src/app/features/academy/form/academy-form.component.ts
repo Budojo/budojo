@@ -7,7 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -36,6 +36,7 @@ import {
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor } from '../../../shared/utils/locale';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
+import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
   COUNTRY_OPTIONS,
@@ -139,6 +140,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
     Tooltip,
     TranslatePipe,
     TrainingDaysPickerComponent,
+    BudojoFormFieldComponent,
     PageHeaderComponent,
   ],
   providers: [MessageService],
@@ -290,6 +292,82 @@ export class AcademyFormComponent implements OnInit {
   cancel(): void {
     void this.router.navigate(['/dashboard/academy']);
   }
+
+  // ── Inline error keys for the BudojoFormField wrapper (#1052) ──────
+  // toSignal(control.events) so markAllAsTouched() on submit re-renders
+  // the inline error — the canonical pattern from #1045/#1049/#1050.
+  private readonly nameEvents = toSignal(this.form.controls.name.events, { initialValue: null });
+  private readonly phoneCountryEvents = toSignal(this.form.controls.phone_country_code.events, {
+    initialValue: null,
+  });
+  private readonly phoneNumberEvents = toSignal(this.form.controls.phone_national_number.events, {
+    initialValue: null,
+  });
+  private readonly websiteEvents = toSignal(this.form.controls.website.events, {
+    initialValue: null,
+  });
+  private readonly facebookEvents = toSignal(this.form.controls.facebook.events, {
+    initialValue: null,
+  });
+  private readonly instagramEvents = toSignal(this.form.controls.instagram.events, {
+    initialValue: null,
+  });
+  private readonly monthlyFeeEvents = toSignal(this.form.controls.monthly_fee.events, {
+    initialValue: null,
+  });
+
+  readonly nameError = computed<string | null>(() => {
+    void this.nameEvents();
+    const c = this.form.controls.name;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['required'] || c.errors?.['whitespace'])
+      return 'academy.form.name.errorRequired';
+    if (c.errors?.['maxlength']) return 'academy.form.name.errorMaxlength';
+    return null;
+  });
+  readonly phoneError = computed<string | null>(() => {
+    void this.phoneCountryEvents();
+    void this.phoneNumberEvents();
+    const cc = this.form.controls.phone_country_code;
+    const num = this.form.controls.phone_national_number;
+    if (cc.touched && cc.errors?.['phonePairRequired']) {
+      return 'academy.form.phone.errorCodeRequired';
+    }
+    if (num.touched) {
+      if (num.errors?.['phonePairRequired']) return 'academy.form.phone.errorNationalRequired';
+      if (num.errors?.['pattern']) return 'academy.form.phone.errorPattern';
+      if (num.errors?.['maxlength']) return 'academy.form.phone.errorMaxlength';
+    }
+    return null;
+  });
+  readonly websiteError = computed<string | null>(() => {
+    void this.websiteEvents();
+    const c = this.form.controls.website;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['url']) return 'academy.form.website.errorUrl';
+    return 'academy.form.url.errorMaxlength';
+  });
+  readonly facebookError = computed<string | null>(() => {
+    void this.facebookEvents();
+    const c = this.form.controls.facebook;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['url']) return 'academy.form.facebook.errorUrl';
+    return 'academy.form.url.errorMaxlength';
+  });
+  readonly instagramError = computed<string | null>(() => {
+    void this.instagramEvents();
+    const c = this.form.controls.instagram;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['url']) return 'academy.form.instagram.errorUrl';
+    return 'academy.form.url.errorMaxlength';
+  });
+  readonly monthlyFeeError = computed<string | null>(() => {
+    void this.monthlyFeeEvents();
+    const c = this.form.controls.monthly_fee;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['min']) return 'academy.form.monthlyFee.errorMin';
+    return null;
+  });
 
   get name() {
     return this.form.controls.name;
