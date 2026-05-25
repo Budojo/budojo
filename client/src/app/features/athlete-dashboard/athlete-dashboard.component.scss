@@ -43,7 +43,10 @@ $topbar-height: 3.5rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  // padding-top expands by the OS-reported safe-area inset (#1046) —
+  // same pattern as the owner topbar so athlete + owner shells stay
+  // visually parallel on edge-to-edge surfaces.
+  padding: max(0.5rem, var(--budojo-safe-top)) 1rem 0.5rem;
   min-height: $topbar-height;
   background: var(--p-surface-900);
   color: var(--p-surface-0);
@@ -103,6 +106,10 @@ $topbar-height: 3.5rem;
     z-index: 50;
     transform: translateX(-100%);
     transition: transform 240ms cubic-bezier(0.2, 0, 0, 1);
+    // Stack the safe-area inset on top of the existing 1rem pad so
+    // the drawer header clears the status bar on edge-to-edge
+    // surfaces (#1046).
+    padding-top: calc(1rem + var(--budojo-safe-top));
 
     &--open {
       transform: translateX(0);

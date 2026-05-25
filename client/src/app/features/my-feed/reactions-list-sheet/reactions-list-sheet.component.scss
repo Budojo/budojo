@@ -92,5 +92,10 @@
     left: 0;
     right: 0;
     width: 100vw;
+    // Bottom-pinned sheet — pad by the OS safe-area inset so the
+    // last list row clears the iOS home indicator / Android gesture
+    // bar (#1047 reviewer). The sheet uses its own dialog class so
+    // it doesn't inherit the global .bottom-sheet rule.
+    padding-bottom: var(--budojo-safe-bottom);
   }
 }
