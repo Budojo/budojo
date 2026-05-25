@@ -20,14 +20,23 @@ import { Tooltip } from 'primeng/tooltip';
  *     destructive action with no confirm (browser-notifications
  *     revoke, audit #1033).
  *
- * The host parent provides `ConfirmationService` via the standalone
- * `[providers]` array (PrimeNG's pattern) or via a route-level
- * provider. The component **injects** it — never owns the service
- * lifecycle — so the same confirm popup instance is shared with any
- * other affordance on the page that opens its own confirm.
+ * **Host contract (both pieces required, #1040 reviewer):**
+ *   1. Provide `ConfirmationService` via `providers: [ConfirmationService]`
+ *      on the standalone host component (PrimeNG's pattern).
+ *   2. Render a single `<p-confirmpopup />` element somewhere in the
+ *      host template — the service has no UI of its own; the popup
+ *      surface lives on the host. Forgetting this is the common
+ *      "confirm dialog opens nothing" miswire.
+ *
+ * The component **injects** the service — never owns the lifecycle —
+ * so the same popup instance is shared with any other affordance on
+ * the page that opens its own confirm.
  *
  * @example
  * ```html
+ * <!-- Mandatory popup surface on the host -->
+ * <p-confirmpopup />
+ *
  * <app-confirm-destructive-button
  *   icon="pi pi-trash"
  *   [ariaLabel]="'athletes.delete' | translate"
