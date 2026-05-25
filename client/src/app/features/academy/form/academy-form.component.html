@@ -371,6 +371,9 @@
         [showButtons]="false"
         placeholder="—"
         data-cy="academy-form-monthly-fee"
+        [ariaDescribedBy]="
+          monthlyFeeError() ? 'academy-monthly-fee-error' : 'academy-monthly-fee-hint'
+        "
         [class.ng-invalid]="monthlyFee.invalid && monthlyFee.touched"
         [class.ng-dirty]="monthlyFee.touched"
       />
