@@ -81,7 +81,10 @@ export class FormErrorMapperService {
       for (const child of Object.values(form.controls)) {
         this.clearServerErrors(child);
       }
-      return;
+      // Fall through — a cross-field server error set on the GROUP
+      // itself (e.g. `address: "country_required_when_state_set"`)
+      // needs the same cleanup as a leaf. Without the fall-through
+      // the stale `server` key survives a retry that resolves 200.
     }
     if (form instanceof FormArray) {
       // Mirror the FormGroup recursion path — `mapServerErrors` can
@@ -91,7 +94,7 @@ export class FormErrorMapperService {
       for (const child of form.controls) {
         this.clearServerErrors(child);
       }
-      return;
+      // Fall through — same rationale as the FormGroup branch above.
     }
 
     const errs = form.errors;

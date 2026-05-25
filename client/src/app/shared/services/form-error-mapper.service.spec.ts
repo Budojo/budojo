@@ -97,4 +97,30 @@ describe('FormErrorMapperService (#1035)', () => {
 
     expect(line1?.errors).toBeNull();
   });
+
+  it('clearServerErrors recurses into FormArray children', () => {
+    TestBed.configureTestingModule({});
+    const service = TestBed.inject(FormErrorMapperService);
+    const fb = new FormBuilder();
+    const list = fb.array([fb.control(''), fb.control('')]);
+    list.at(0).setErrors({ server: 'item0_required' });
+    list.at(1).setErrors({ required: true });
+
+    service.clearServerErrors(list);
+
+    expect(list.at(0).errors).toBeNull();
+    // Non-server errors on siblings must survive the clear.
+    expect(list.at(1).errors?.['required']).toBe(true);
+  });
+
+  it('clearServerErrors strips cross-field server errors on a FormGroup container itself (#1041 reviewer)', () => {
+    const { service, form } = setup();
+    // Cross-field server error: validation on the GROUP, not on a
+    // single control (mirrors `address.country_required_when_state_set`).
+    form.get('address')?.setErrors({ server: 'country_required_when_state_set' });
+
+    service.clearServerErrors(form);
+
+    expect(form.get('address')?.errors).toBeNull();
+  });
 });
