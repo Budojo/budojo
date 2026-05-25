@@ -62,6 +62,9 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
         @if (required()) {
           <span class="budojo-form-field__required" aria-hidden="true">*</span>
         }
+        @if (optionalLabel()) {
+          <span class="budojo-form-field__optional">{{ optionalLabel() }}</span>
+        }
       </label>
       <div class="budojo-form-field__control">
         <ng-content></ng-content>
@@ -98,6 +101,16 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
         color: var(--p-form-field-invalid-border-color, var(--budojo-error, #ff453a));
       }
 
+      /* Muted, smaller "Optional" affordance — the inverse signifier of
+         the required marker. Lets a form distinguish must-fill from
+         may-fill fields without a tooltip (Norman § signifier). */
+      .budojo-form-field__optional {
+        margin-left: 0.5rem;
+        font-size: var(--budojo-form-error-size, 0.75rem);
+        font-weight: 400;
+        color: var(--p-text-muted-color);
+      }
+
       .budojo-form-field__hint {
         font-size: var(--budojo-form-error-size, 0.75rem);
         color: var(--p-text-muted-color);
@@ -115,6 +128,13 @@ export class BudojoFormFieldComponent {
   readonly label = input.required<string>();
   /** Required field marker (renders `*` aria-hidden). */
   readonly required = input<boolean>(false);
+  /**
+   * Optional-field affordance. Pass the already-translated word
+   * (e.g. `'athletes.form.optional' | translate` → "Optional"); when
+   * set, a muted marker renders after the label. Mutually exclusive
+   * with `required` in practice — a field is one or the other.
+   */
+  readonly optionalLabel = input<string | null>(null);
   /** Inline error message. Mutually exclusive with hint — error wins. */
   readonly error = input<string | null>(null);
   /** Hint sub-line (helper text). */

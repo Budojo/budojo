@@ -1413,7 +1413,7 @@
       },
       "website": {
         "label": "Website",
-        "errorUrl": "Enter a full URL — e.g. <code>https://example.com</code>."
+        "errorUrl": "Enter a full URL — e.g. https://example.com."
       },
       "facebook": {
         "label": "Facebook",
@@ -1421,7 +1421,7 @@
       },
       "instagram": {
         "label": "Instagram",
-        "errorUrl": "Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>."
+        "errorUrl": "Enter a full URL — e.g. https://instagram.com/yourprofile."
       },
       "permalink": {
         "label": "Permalink",
@@ -1855,9 +1855,9 @@
           "maxLength": "Maximum 20 digits."
         },
         "url": {
-          "website": "Enter a full URL — e.g. <code>https://example.com</code>.",
-          "facebook": "Enter a full URL — e.g. <code>https://facebook.com/yourprofile</code>.",
-          "instagram": "Enter a full URL — e.g. <code>https://instagram.com/yourprofile</code>."
+          "website": "Enter a full URL — e.g. https://example.com.",
+          "facebook": "Enter a full URL — e.g. https://facebook.com/yourprofile.",
+          "instagram": "Enter a full URL — e.g. https://instagram.com/yourprofile."
         },
         "joined": {
           "required": "Joined date is required."

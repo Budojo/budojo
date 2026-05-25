@@ -1413,7 +1413,7 @@
       },
       "website": {
         "label": "Sito web",
-        "errorUrl": "Inserisci un URL completo — es. <code>https://example.com</code>."
+        "errorUrl": "Inserisci un URL completo — es. https://example.com."
       },
       "facebook": {
         "label": "Facebook",
@@ -1855,9 +1855,9 @@
           "maxLength": "Massimo 20 cifre."
         },
         "url": {
-          "website": "Inserisci un URL completo — es. <code>https://example.com</code>.",
-          "facebook": "Inserisci un URL completo — es. <code>https://facebook.com/iltuoprofilo</code>.",
-          "instagram": "Inserisci un URL completo — es. <code>https://instagram.com/iltuoprofilo</code>."
+          "website": "Inserisci un URL completo — es. https://example.com.",
+          "facebook": "Inserisci un URL completo — es. https://facebook.com/iltuoprofilo.",
+          "instagram": "Inserisci un URL completo — es. https://instagram.com/iltuoprofilo."
         },
         "joined": {
           "required": "La data di iscrizione è obbligatoria."
