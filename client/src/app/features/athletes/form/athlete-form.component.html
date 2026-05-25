@@ -155,6 +155,7 @@
               [attr.aria-label]="'athletes.form.aria.phoneNationalNumber' | translate"
               [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
               [class.ng-dirty]="phoneNationalNumber.touched"
+              [attr.aria-describedby]="phoneError() ? 'phone_national_number-error' : null"
               class="phone-national-number"
             />
           </div>
