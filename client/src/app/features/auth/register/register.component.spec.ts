@@ -16,6 +16,40 @@ import { provideI18nTesting } from '../../../../test-utils/i18n-test';
  * that pins its semantics (required-true, blocks submit, link
  * target) is worth a few seconds of CI per run.
  */
+describe('RegisterComponent — inline validation errors (#1048)', () => {
+  it('shows required-field inline errors after an empty-form submit', () => {
+    TestBed.configureTestingModule({
+      imports: [RegisterComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        ...provideI18nTesting(),
+        { provide: AuthService, useValue: { register: vi.fn().mockReturnValue(of({})) } },
+        {
+          provide: NotificationOnboardingService,
+          useValue: { requestPromptAfterAuth: vi.fn().mockReturnValue(false) },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+
+    // Empty-submit triggers markAllAsTouched on every control; per the
+    // canonical login pattern (#1045), AbstractControl.events emits a
+    // TouchedChangeEvent which re-runs the *Error computeds inside
+    // each BudojoFormField. >=4 fields (first_name, last_name, email,
+    // password) should render inline error messages.
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+
+    const errors = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('small.budojo-form-field__error'),
+    );
+    expect(errors.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
 describe('RegisterComponent — privacy consent gate (#219)', () => {
   let fixture: ComponentFixture<RegisterComponent>;
   let component: RegisterComponent;

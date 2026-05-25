@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -10,6 +11,7 @@ import { PasswordModule } from 'primeng/password';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationOnboardingService } from '../../../core/services/notification-onboarding.service';
+import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PasswordStrengthMeterComponent } from '../../../shared/components/password-strength-meter/password-strength-meter.component';
 
 @Component({
@@ -18,6 +20,7 @@ import { PasswordStrengthMeterComponent } from '../../../shared/components/passw
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,
+    BudojoFormFieldComponent,
     CheckboxModule,
     InputTextModule,
     MessageModule,
@@ -77,6 +80,78 @@ export class RegisterComponent {
     const confirm = g.get('password_confirmation')?.value;
     return pw === confirm ? null : { mismatch: true };
   }
+
+  /**
+   * Per-control event signals so the BudojoFormField `error` input
+   * reacts on touched-flip (subscribing only to statusChanges misses
+   * markAllAsTouched — see #1045 for the canonical pattern).
+   */
+  private readonly firstNameEvents = toSignal(this.form.controls.first_name.events, {
+    initialValue: null,
+  });
+  private readonly lastNameEvents = toSignal(this.form.controls.last_name.events, {
+    initialValue: null,
+  });
+  private readonly emailEvents = toSignal(this.form.controls.email.events, {
+    initialValue: null,
+  });
+  private readonly passwordEvents = toSignal(this.form.controls.password.events, {
+    initialValue: null,
+  });
+  private readonly passwordConfirmationEvents = toSignal(
+    this.form.controls.password_confirmation.events,
+    { initialValue: null },
+  );
+  private readonly formEvents = toSignal(this.form.events, { initialValue: null });
+
+  readonly firstNameError = computed<string | null>(() => {
+    void this.firstNameEvents();
+    const c = this.form.controls.first_name;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['required']) return 'auth.register.firstNameRequired';
+    if (c.errors?.['minlength']) return 'auth.register.firstNameMinlength';
+    if (c.errors?.['maxlength']) return 'auth.register.firstNameMaxlength';
+    return null;
+  });
+
+  readonly lastNameError = computed<string | null>(() => {
+    void this.lastNameEvents();
+    const c = this.form.controls.last_name;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['required']) return 'auth.register.lastNameRequired';
+    if (c.errors?.['minlength']) return 'auth.register.lastNameMinlength';
+    if (c.errors?.['maxlength']) return 'auth.register.lastNameMaxlength';
+    return null;
+  });
+
+  readonly emailError = computed<string | null>(() => {
+    void this.emailEvents();
+    const c = this.form.controls.email;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['required']) return 'auth.register.emailRequired';
+    if (c.errors?.['email']) return 'auth.register.emailInvalid';
+    return null;
+  });
+
+  readonly passwordError = computed<string | null>(() => {
+    void this.passwordEvents();
+    const c = this.form.controls.password;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['required']) return 'auth.register.passwordRequired';
+    if (c.errors?.['minlength']) return 'auth.register.passwordMinlength';
+    return null;
+  });
+
+  // Cross-field mismatch lives on the FormGroup, not the control —
+  // depend on formEvents so the message renders the moment the
+  // confirmation diverges OR the user touches the confirmation field.
+  readonly passwordConfirmationError = computed<string | null>(() => {
+    void this.formEvents();
+    void this.passwordConfirmationEvents();
+    if (!this.form.errors?.['mismatch']) return null;
+    if (!this.form.controls.password_confirmation.touched) return null;
+    return 'auth.register.passwordsMismatch';
+  });
 
   submit(): void {
     if (this.form.invalid) {
