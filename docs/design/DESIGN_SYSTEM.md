@@ -631,6 +631,25 @@ Matches `p-inputtext` tokens (filled pill), but 16px radius, `min-height: 96px`,
 
 ---
 
+## 3.5 Budojo shared components (canonical wrappers)
+
+Reach for these before hand-rolling the same shape again. Shipped in the v2.32.0 uniformation sweep (#1033); all live under `client/src/app/shared/components/`.
+
+| Component | Use for | Enforces |
+|-----------|---------|----------|
+| `<app-budojo-form-field>` | Any labelled form control | Label + required `*` / `optionalLabel` muted marker + mutually-exclusive hint/error `<small>` (error wins) + deterministic `{controlId}-error` / `-hint` ids for `aria-describedby`. One control per `<ng-content>` slot. Tokens: `--budojo-form-label-size`, `--budojo-form-error-size`. |
+| `<app-icon-button>` | Icon-only actions | `ariaLabel` + `tooltip` are `input.required` — the compiler refuses an a11y-blind icon button. Host enforces the 48×48 touch target even when the inner `p-button` is `size="small"`. |
+| `<app-empty-state>` | "No rows yet" surfaces | Icon + host-driven heading level (`headingLevel`, default h2) + optional CTA. |
+| `<app-error-state>` | "Load failed" surfaces | `role="alert"`, warn-tone icon, optional retry CTA (`severity="warn"` outlined). |
+| `<app-card>` | Card shells | surface-0 + hairline + `--p-border-radius-md` + named `[header]`/`[body]`/`[footer]` slots. |
+| `<app-confirm-destructive-button>` | Destructive actions | `p-button[severity=danger]` + `ConfirmationService.confirm()` with required `ariaLabel` — bakes in the "destructive actions confirm" rule. |
+
+**Form-error reactivity pattern:** for inline validation that must appear on an empty submit, source the error signal from `toSignal(control.events)` (emits `TouchedChangeEvent`) — NOT `statusChanges`, which `markAllAsTouched()` doesn't fire. See `login.component.ts` for the canonical example.
+
+**Not migrated, by design:** `me-profile` keeps its bespoke inline-edit grid + rich error-object model — the wrapper's stacked-label / single-string-error shape doesn't fit it.
+
+---
+
 ## 4. Mobile mockups (390 × 844)
 
 ### 4.1 `/auth/login`
