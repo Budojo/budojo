@@ -1,3 +1,4 @@
+<p-confirmpopup />
 <div class="profile-browser-notifications" data-cy="profile-browser-notifications">
   <header class="profile-browser-notifications__header">
     <h2 class="profile-browser-notifications__title">
@@ -180,18 +181,15 @@
                 {{ device.created_at | date: 'mediumDate' }}
               </span>
             </div>
-            <p-button
-              type="button"
-              severity="danger"
+            <app-confirm-destructive-button
               icon="pi pi-times"
-              [text]="true"
-              size="small"
               [ariaLabel]="'profile.browserNotifications.revoke' | translate"
-              [pTooltip]="'profile.browserNotifications.revoke' | translate"
-              tooltipPosition="left"
+              [confirmMessage]="'profile.browserNotifications.revokeConfirm' | translate"
+              [acceptLabel]="'profile.browserNotifications.revoke' | translate"
+              [rejectLabel]="'profile.browserNotifications.cancel' | translate"
               [loading]="busy()"
-              (onClick)="revoke(device)"
-              [attr.data-cy]="'profile-browser-notifications-revoke-' + device.id"
+              (confirmed)="revoke(device)"
+              [dataCy]="'profile-browser-notifications-revoke-' + device.id"
             />
           </li>
         }

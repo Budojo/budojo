@@ -942,6 +942,8 @@
       "enable": "Attiva su questo dispositivo",
       "addDevice": "Aggiungi un altro dispositivo",
       "revoke": "Revoca",
+      "revokeConfirm": "Smettere di inviare notifiche a questo dispositivo?",
+      "cancel": "Annulla",
       "deviceAdded": "Aggiunto",
       "enabledToast": {
         "summary": "Notifiche attivate su questo dispositivo"
