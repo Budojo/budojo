@@ -42,6 +42,7 @@ import { Tooltip } from 'primeng/tooltip';
  *   [ariaLabel]="'athletes.delete' | translate"
  *   [confirmMessage]="'athletes.confirm.delete' | translate"
  *   [acceptLabel]="'common.delete' | translate"
+ *   [rejectLabel]="'common.cancel' | translate"
  *   (confirmed)="onDelete(athlete)"
  * />
  * ```
