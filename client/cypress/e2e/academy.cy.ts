@@ -182,7 +182,10 @@ describe('Academy edit form', () => {
     cy.get('[data-cy="academy-form-name"]').clear();
     cy.get('[data-cy="academy-form-save"]').click();
 
-    cy.get('[data-cy="academy-form-name-error"]').should('contain', 'Academy name is required');
+    // #1052: the name error now renders inside the BudojoFormField
+    // wrapper, which exposes it via the stable `{controlId}-error` id
+    // rather than a data-cy hook.
+    cy.get('#academy-name-error').should('contain', 'Academy name is required');
     cy.url().should('include', '/dashboard/academy/edit');
   });
 

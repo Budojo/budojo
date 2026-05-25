@@ -1417,11 +1417,11 @@
       },
       "facebook": {
         "label": "Facebook",
-        "errorUrl": "Inserisci un URL completo — es. <code>https://facebook.com/lapagina</code>."
+        "errorUrl": "Inserisci un URL completo — es. https://facebook.com/lapagina."
       },
       "instagram": {
         "label": "Instagram",
-        "errorUrl": "Inserisci un URL completo — es. <code>https://instagram.com/ilprofilo</code>."
+        "errorUrl": "Inserisci un URL completo — es. https://instagram.com/ilprofilo."
       },
       "permalink": {
         "label": "Permalink",

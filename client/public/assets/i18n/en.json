@@ -1417,7 +1417,7 @@
       },
       "facebook": {
         "label": "Facebook",
-        "errorUrl": "Enter a full URL — e.g. <code>https://facebook.com/yourpage</code>."
+        "errorUrl": "Enter a full URL — e.g. https://facebook.com/yourpage."
       },
       "instagram": {
         "label": "Instagram",
