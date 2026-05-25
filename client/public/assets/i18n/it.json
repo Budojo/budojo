@@ -130,6 +130,7 @@
       "passwordBreached": "Questa password è apparsa in note violazioni di dati. Scegline una più lunga e meno comune.",
       "passwordConfirmation": "Conferma password",
       "passwordConfirmationPlaceholder": "Ripeti la tua password",
+      "passwordConfirmationRequired": "Conferma la password.",
       "passwordsMismatch": "Le password non coincidono.",
       "privacyAcceptBefore": "Ho letto e accetto l'",
       "privacyAcceptLinkText": "informativa sulla privacy",

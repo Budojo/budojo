@@ -145,11 +145,19 @@ export class RegisterComponent {
   // Cross-field mismatch lives on the FormGroup, not the control —
   // depend on formEvents so the message renders the moment the
   // confirmation diverges OR the user touches the confirmation field.
+  // Also surface the field's own `required` validator (#1049 reviewer):
+  // before this, an empty-submit left password_confirmation as the
+  // only field with no inline error / red border. The wrapper makes
+  // closing that gap a one-line addition.
   readonly passwordConfirmationError = computed<string | null>(() => {
     void this.formEvents();
     void this.passwordConfirmationEvents();
+    const c = this.form.controls.password_confirmation;
+    if (c.touched && c.errors?.['required']) {
+      return 'auth.register.passwordConfirmationRequired';
+    }
     if (!this.form.errors?.['mismatch']) return null;
-    if (!this.form.controls.password_confirmation.touched) return null;
+    if (!c.touched) return null;
     return 'auth.register.passwordsMismatch';
   });
 
