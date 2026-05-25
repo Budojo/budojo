@@ -8,9 +8,11 @@ import {
   signal,
 } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TooltipModule } from 'primeng/tooltip';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   PushDevice,
@@ -45,7 +47,16 @@ type PanelState = 'unsupported' | 'server-disabled' | 'permission-denied' | 'off
 @Component({
   selector: 'app-profile-browser-notifications',
   standalone: true,
-  imports: [ButtonModule, DatePipe, ProgressSpinnerModule, TooltipModule, TranslatePipe],
+  imports: [
+    ButtonModule,
+    ConfirmPopup,
+    ConfirmDestructiveButtonComponent,
+    DatePipe,
+    ProgressSpinnerModule,
+    TooltipModule,
+    TranslatePipe,
+  ],
+  providers: [ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './profile-browser-notifications.component.html',
   styleUrl: './profile-browser-notifications.component.scss',
