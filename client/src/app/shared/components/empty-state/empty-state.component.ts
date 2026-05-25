@@ -47,7 +47,21 @@ import { ButtonModule } from 'primeng/button';
   template: `
     <div class="empty-state" [attr.data-cy]="dataCy() ?? null">
       <i class="empty-state__icon {{ icon() }}" aria-hidden="true"></i>
-      <h3 class="empty-state__title">{{ title() }}</h3>
+      <!-- Heading level is host-driven (#1042 reviewer) — default h2; consumers override via headingLevel. -->
+      @switch (headingLevel()) {
+        @case (1) {
+          <h1 class="empty-state__title">{{ title() }}</h1>
+        }
+        @case (3) {
+          <h3 class="empty-state__title">{{ title() }}</h3>
+        }
+        @case (4) {
+          <h4 class="empty-state__title">{{ title() }}</h4>
+        }
+        @default {
+          <h2 class="empty-state__title">{{ title() }}</h2>
+        }
+      }
       @if (hint(); as hintText) {
         <p class="empty-state__hint">{{ hintText }}</p>
       }
@@ -106,6 +120,8 @@ export class EmptyStateComponent {
   readonly icon = input<string>('pi pi-inbox');
   /** Required. Headline visible to the user — already translated. */
   readonly title = input.required<string>();
+  /** Heading element level for the title (1–4). Default h2 — the host can lift to h1 (top-level page) or push to h3/h4 (deep widget) so the document outline stays sane. */
+  readonly headingLevel = input<1 | 2 | 3 | 4>(2);
   /** Optional sub-line. */
   readonly hint = input<string | null>(null);
   /** Optional CTA label. When omitted, no button renders. */

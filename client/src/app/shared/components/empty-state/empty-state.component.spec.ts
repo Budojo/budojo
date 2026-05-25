@@ -12,6 +12,7 @@ describe('EmptyStateComponent (#1036)', () => {
     hint?: string | null;
     ctaLabel?: string | null;
     dataCy?: string | null;
+    headingLevel?: 1 | 2 | 3 | 4;
   }) {
     const fixture = TestBed.createComponent(EmptyStateComponent);
     fixture.componentRef.setInput('title', inputs.title ?? 'No rows yet');
@@ -19,6 +20,8 @@ describe('EmptyStateComponent (#1036)', () => {
     if (inputs.hint !== undefined) fixture.componentRef.setInput('hint', inputs.hint);
     if (inputs.ctaLabel !== undefined) fixture.componentRef.setInput('ctaLabel', inputs.ctaLabel);
     if (inputs.dataCy !== undefined) fixture.componentRef.setInput('dataCy', inputs.dataCy);
+    if (inputs.headingLevel !== undefined)
+      fixture.componentRef.setInput('headingLevel', inputs.headingLevel);
     fixture.detectChanges();
     return fixture;
   }
@@ -70,6 +73,20 @@ describe('EmptyStateComponent (#1036)', () => {
     const root: HTMLElement = fixture.nativeElement;
     expect(root.querySelector('[data-cy="athletes-empty"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="athletes-empty-cta"]')).not.toBeNull();
+  });
+
+  it('renders the title as an h2 by default (#1042 reviewer)', () => {
+    const fixture = mount({ title: 'No rows' });
+    expect(fixture.nativeElement.querySelector('h2.empty-state__title')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('h1.empty-state__title')).toBeNull();
+    expect(fixture.nativeElement.querySelector('h3.empty-state__title')).toBeNull();
+  });
+
+  it('honours headingLevel=1 / 3 / 4 overrides (#1042 reviewer)', () => {
+    for (const level of [1, 3, 4] as const) {
+      const fixture = mount({ title: 'No rows', headingLevel: level });
+      expect(fixture.nativeElement.querySelector(`h${level}.empty-state__title`)).not.toBeNull();
+    }
   });
 
   it('emits ctaClick when the user activates the CTA', () => {
