@@ -130,6 +130,7 @@
       "passwordBreached": "This password has appeared in known data breaches. Pick a longer, less common one.",
       "passwordConfirmation": "Confirm password",
       "passwordConfirmationPlaceholder": "Repeat your password",
+      "passwordConfirmationRequired": "Confirm your password.",
       "passwordsMismatch": "Passwords do not match.",
       "privacyAcceptBefore": "I have read and accept the ",
       "privacyAcceptLinkText": "privacy policy",

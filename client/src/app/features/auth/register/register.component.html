@@ -34,8 +34,12 @@
     }
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <div class="field">
-        <label for="first_name">{{ 'auth.register.firstName' | translate }}</label>
+      <app-budojo-form-field
+        [label]="'auth.register.firstName' | translate"
+        [required]="true"
+        controlId="first_name"
+        [error]="firstNameError() ? (firstNameError()! | translate) : null"
+      >
         <input
           pInputText
           id="first_name"
@@ -46,22 +50,16 @@
           maxlength="100"
           [class.ng-invalid]="firstName.invalid && firstName.touched"
           [class.ng-dirty]="firstName.touched"
+          [attr.aria-describedby]="firstNameError() ? 'first_name-error' : null"
         />
-        @if (firstName.invalid && firstName.touched) {
-          <small class="field-error">
-            @if (firstName.errors?.['required']) {
-              {{ 'auth.register.firstNameRequired' | translate }}
-            } @else if (firstName.errors?.['minlength']) {
-              {{ 'auth.register.firstNameMinlength' | translate }}
-            } @else if (firstName.errors?.['maxlength']) {
-              {{ 'auth.register.firstNameMaxlength' | translate }}
-            }
-          </small>
-        }
-      </div>
+      </app-budojo-form-field>
 
-      <div class="field">
-        <label for="last_name">{{ 'auth.register.lastName' | translate }}</label>
+      <app-budojo-form-field
+        [label]="'auth.register.lastName' | translate"
+        [required]="true"
+        controlId="last_name"
+        [error]="lastNameError() ? (lastNameError()! | translate) : null"
+      >
         <input
           pInputText
           id="last_name"
@@ -72,22 +70,16 @@
           maxlength="100"
           [class.ng-invalid]="lastName.invalid && lastName.touched"
           [class.ng-dirty]="lastName.touched"
+          [attr.aria-describedby]="lastNameError() ? 'last_name-error' : null"
         />
-        @if (lastName.invalid && lastName.touched) {
-          <small class="field-error">
-            @if (lastName.errors?.['required']) {
-              {{ 'auth.register.lastNameRequired' | translate }}
-            } @else if (lastName.errors?.['minlength']) {
-              {{ 'auth.register.lastNameMinlength' | translate }}
-            } @else if (lastName.errors?.['maxlength']) {
-              {{ 'auth.register.lastNameMaxlength' | translate }}
-            }
-          </small>
-        }
-      </div>
+      </app-budojo-form-field>
 
-      <div class="field">
-        <label for="email">{{ 'auth.register.email' | translate }}</label>
+      <app-budojo-form-field
+        [label]="'auth.register.email' | translate"
+        [required]="true"
+        controlId="email"
+        [error]="emailError() ? (emailError()! | translate) : null"
+      >
         <input
           pInputText
           id="email"
@@ -97,20 +89,21 @@
           autocomplete="email"
           [class.ng-invalid]="email.invalid && email.touched"
           [class.ng-dirty]="email.touched"
+          [attr.aria-describedby]="emailError() ? 'email-error' : null"
         />
-        @if (email.invalid && email.touched) {
-          <small class="field-error">
-            @if (email.errors?.['required']) {
-              {{ 'auth.register.emailRequired' | translate }}
-            } @else if (email.errors?.['email']) {
-              {{ 'auth.register.emailInvalid' | translate }}
-            }
-          </small>
-        }
-      </div>
+      </app-budojo-form-field>
 
-      <div class="field">
-        <label for="password">{{ 'auth.register.password' | translate }}</label>
+      <app-budojo-form-field
+        [label]="'auth.register.password' | translate"
+        [required]="true"
+        controlId="password"
+        [error]="passwordError() ? (passwordError()! | translate) : null"
+      >
+        <!--
+          PrimeNG 21 p-password doesn't expose [ariaDescribedBy] (#1045
+          reviewer documented limitation); the role=alert on the error
+          <small> still announces the error live.
+        -->
         <p-password
           inputId="password"
           formControlName="password"
@@ -125,25 +118,22 @@
         />
         <app-password-strength-meter [password]="password.value ?? null" />
         @if (passwordServerError() === 'breached') {
+          <!-- Server-mapped breached error sits OUTSIDE the wrapper's
+               error slot because the wrapper's error reflects the
+               client-side Validators only; breached is the dedicated
+               post-422 surface (Norman § feedback). -->
           <small class="field-error" data-cy="register-password-breached">
             {{ 'auth.register.passwordBreached' | translate }}
           </small>
         }
-        @if (password.invalid && password.touched) {
-          <small class="field-error">
-            @if (password.errors?.['required']) {
-              {{ 'auth.register.passwordRequired' | translate }}
-            } @else if (password.errors?.['minlength']) {
-              {{ 'auth.register.passwordMinlength' | translate }}
-            }
-          </small>
-        }
-      </div>
+      </app-budojo-form-field>
 
-      <div class="field">
-        <label for="password_confirmation">{{
-          'auth.register.passwordConfirmation' | translate
-        }}</label>
+      <app-budojo-form-field
+        [label]="'auth.register.passwordConfirmation' | translate"
+        [required]="true"
+        controlId="password_confirmation"
+        [error]="passwordConfirmationError() ? (passwordConfirmationError()! | translate) : null"
+      >
         <p-password
           inputId="password_confirmation"
           formControlName="password_confirmation"
@@ -154,15 +144,13 @@
           styleClass="w-full"
           [inputStyleClass]="
             'w-full' +
-            (form.errors?.['mismatch'] && passwordConfirmation.touched
+            ((passwordConfirmation.invalid || form.errors?.['mismatch']) &&
+            passwordConfirmation.touched
               ? ' ng-invalid ng-dirty'
               : '')
           "
         />
-        @if (form.errors?.['mismatch'] && passwordConfirmation.touched) {
-          <small class="field-error">{{ 'auth.register.passwordsMismatch' | translate }}</small>
-        }
-      </div>
+      </app-budojo-form-field>
 
       <div class="field privacy-consent-field" data-cy="privacy-consent-field">
         <!--
