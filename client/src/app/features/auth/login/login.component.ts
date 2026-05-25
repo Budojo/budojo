@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
@@ -9,6 +10,7 @@ import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
+import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 
 @Component({
   selector: 'app-login',
@@ -20,6 +22,7 @@ import { AuthService } from '../../../core/services/auth.service';
     MessageModule,
     PasswordModule,
     TranslatePipe,
+    BudojoFormFieldComponent,
   ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
@@ -46,6 +49,35 @@ export class LoginComponent {
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
     two_factor_code: [''],
+  });
+
+  /**
+   * touched-driven signals so the BudojoFormField `error` input can
+   * reactively show / hide messages. Reactive Forms doesn't expose
+   * touched as an observable out of the box, so we tap statusChanges
+   * + valueChanges to re-evaluate on each interaction.
+   */
+  private readonly emailStatus = toSignal(this.form.controls.email.statusChanges, {
+    initialValue: this.form.controls.email.status,
+  });
+  private readonly passwordStatus = toSignal(this.form.controls.password.statusChanges, {
+    initialValue: this.form.controls.password.status,
+  });
+
+  readonly emailError = computed<string | null>(() => {
+    void this.emailStatus(); // subscribe — re-eval on status change
+    const c = this.form.controls.email;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['required']) return 'auth.login.emailRequired';
+    if (c.errors?.['email']) return 'auth.login.emailInvalid';
+    return null;
+  });
+
+  readonly passwordError = computed<string | null>(() => {
+    void this.passwordStatus(); // subscribe
+    const c = this.form.controls.password;
+    if (!c.touched || c.valid) return null;
+    return 'auth.login.passwordRequired';
   });
 
   submit(): void {
