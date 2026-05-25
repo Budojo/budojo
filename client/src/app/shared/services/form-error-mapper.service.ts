@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AbstractControl, FormGroup } from '@angular/forms';
+import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 
 /**
  * Laravel 422 → reactive-form field errors (#1035).
@@ -14,10 +14,13 @@ import { AbstractControl, FormGroup } from '@angular/forms';
  *
  * `mapServerErrors()` flattens the Laravel `errors.<field>[0]` shape
  * onto `FormControl.errors['server']` on every matched control. The
- * sibling `ServerErrorPipe` reads that key in the template, rendering
- * the same `<small class="field-error">` element used by client-side
- * validation. End result: 422 looks identical to a `Validators.email`
- * miss — same place, same shape.
+ * template reads the key inline:
+ *
+ *   `@if (form.controls.email.errors?.['server']; as msg) { … }`
+ *
+ * rendering the same `<small class="field-error">` element used by
+ * client-side validation. End result: 422 looks identical to a
+ * `Validators.email` miss — same place, same shape.
  *
  * `clearServerErrors()` is the cleanup half. Without it, a retry
  * that resolves to 200 leaves the stale `server` error on the
@@ -76,6 +79,16 @@ export class FormErrorMapperService {
   clearServerErrors(form: AbstractControl): void {
     if (form instanceof FormGroup) {
       for (const child of Object.values(form.controls)) {
+        this.clearServerErrors(child);
+      }
+      return;
+    }
+    if (form instanceof FormArray) {
+      // Mirror the FormGroup recursion path — `mapServerErrors` can
+      // already reach array children via dotted paths like
+      // `items.0.name` (Laravel's array-error shape), so the clear
+      // half has to walk the same tree to keep them symmetric.
+      for (const child of form.controls) {
         this.clearServerErrors(child);
       }
       return;
