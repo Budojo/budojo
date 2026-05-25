@@ -86,9 +86,7 @@
               spellcheck="false"
               maxlength="32"
               [placeholder]="'auth.login.twoFactor.codePlaceholder' | translate"
-              [attr.aria-describedby]="
-                twoFactorError() ? 'twoFactorCode-error' : 'twoFactorCode-hint'
-              "
+              [attr.aria-describedby]="twoFactorError() ? 'twoFactorCode-error' : null"
               data-cy="auth-login-two-factor-code"
             />
           </app-budojo-form-field>

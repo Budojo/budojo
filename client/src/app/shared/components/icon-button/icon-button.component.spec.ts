@@ -83,4 +83,18 @@ describe('IconButtonComponent (#1039)', () => {
     expect(fixture.componentInstance.severity()).toBe('secondary');
     expect(fixture.componentInstance.text()).toBe(true);
   });
+
+  it('host enforces 48×48 touch target via CSS (Fitts / MD3) regardless of underlying p-button size (#1045 reviewer)', () => {
+    // The host element carries the min size; the inner p-button can
+    // still render with size='small' for visual density, but the
+    // touch target stays compliant.
+    const fixture = mount({ size: 'small' });
+    const host = fixture.nativeElement as HTMLElement;
+    // Append to document so getComputedStyle returns real values.
+    document.body.appendChild(host);
+    const styles = getComputedStyle(host);
+    expect(parseFloat(styles.minWidth)).toBeGreaterThanOrEqual(48);
+    expect(parseFloat(styles.minHeight)).toBeGreaterThanOrEqual(48);
+    host.remove();
+  });
 });

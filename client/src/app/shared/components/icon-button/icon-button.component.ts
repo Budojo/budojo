@@ -54,6 +54,24 @@ import { TooltipModule } from 'primeng/tooltip';
       [attr.data-cy]="dataCy() ?? null"
     />
   `,
+  styles: [
+    `
+      /* Host enforces the 48×48 minimum touch target (Fitts / MD3)
+         even when the inner p-button is sized 'small' for visual
+         density. Otherwise every icon-button shipped via this
+         wrapper would inherit p-button[size=small]'s ~32×32 box and
+         fail accessibility audits on mobile. The inner button stays
+         visually small; the host's padding absorbs the delta so the
+         tap area is honest (#1045 reviewer). */
+      :host {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 48px;
+        min-height: 48px;
+      }
+    `,
+  ],
 })
 export class IconButtonComponent {
   /** Required pi icon class. */
