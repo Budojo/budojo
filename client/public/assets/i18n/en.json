@@ -942,6 +942,8 @@
       "enable": "Enable on this device",
       "addDevice": "Add another device",
       "revoke": "Revoke",
+      "revokeConfirm": "Stop sending notifications to this device?",
+      "cancel": "Cancel",
       "deviceAdded": "Added",
       "enabledToast": {
         "summary": "Notifications enabled on this device"
