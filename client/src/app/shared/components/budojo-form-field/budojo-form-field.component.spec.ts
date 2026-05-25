@@ -12,6 +12,7 @@ describe('BudojoFormFieldComponent (#1039)', () => {
       <app-budojo-form-field
         [label]="label"
         [required]="required"
+        [optionalLabel]="optionalLabel"
         [error]="error"
         [hint]="hint"
         [controlId]="controlId"
@@ -24,6 +25,7 @@ describe('BudojoFormFieldComponent (#1039)', () => {
   class HostComponent {
     label = 'Email';
     required = false;
+    optionalLabel: string | null = null;
     error: string | null = null;
     hint: string | null = null;
     controlId = 'email-input';
@@ -53,6 +55,16 @@ describe('BudojoFormFieldComponent (#1039)', () => {
     expect(
       fixtureReq.nativeElement.querySelector('.budojo-form-field__required')?.textContent?.trim(),
     ).toBe('*');
+  });
+
+  it('renders the optional marker only when optionalLabel is set (#1050)', () => {
+    const fixtureNone = mount({});
+    expect(fixtureNone.nativeElement.querySelector('.budojo-form-field__optional')).toBeNull();
+
+    const fixtureOpt = mount({ optionalLabel: 'Optional' });
+    expect(
+      fixtureOpt.nativeElement.querySelector('.budojo-form-field__optional')?.textContent?.trim(),
+    ).toBe('Optional');
   });
 
   it('marks the required indicator aria-hidden so screen readers do not announce the asterisk', () => {
