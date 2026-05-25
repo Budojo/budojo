@@ -39,6 +39,27 @@ function typeIn(el: HTMLElement, selector: string, value: string): void {
   input.dispatchEvent(new Event('input'));
 }
 
+describe('LoginComponent — inline validation errors (#1045 reviewer)', () => {
+  it('shows the email-required inline error after an empty-form submit', async () => {
+    const { fixture, el } = setup();
+
+    // Submit with both fields empty — markAllAsTouched flips touched
+    // but does NOT emit on statusChanges. Pre-fix, the computed never
+    // re-ran and the error never rendered.
+    (fixture.componentInstance as unknown as { submit: () => void }).submit();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const errors = Array.from(
+      el.querySelectorAll('small.budojo-form-field__error'),
+    ) as HTMLElement[];
+    expect(errors.length).toBeGreaterThanOrEqual(2);
+    const text = errors.map((e) => e.textContent?.trim() ?? '').join(' | ');
+    expect(text).toMatch(/required|obbligator/i);
+  });
+});
+
 describe('LoginComponent — 2FA challenge (#412)', () => {
   it('renders the email/password step by default', () => {
     const { el } = setup();

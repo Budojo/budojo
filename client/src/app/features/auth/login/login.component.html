@@ -37,6 +37,16 @@
           controlId="password"
           [error]="passwordError() ? (passwordError()! | translate) : null"
         >
+          <!--
+            PrimeNG 21 p-password exposes [ariaLabel] + [ariaLabelledBy]
+            but NOT [ariaDescribedBy] (the inner <input> isn't
+            template-projected, so we can't reach it). The label-for
+            association via the budojo-form-field wrapper still
+            announces the label; the error <small role="alert"> is
+            announced live when it renders. Filed upstream; until
+            then this is the canon for password fields wrapped by
+            BudojoFormField (#1045 reviewer).
+          -->
           <p-password
             inputId="password"
             formControlName="password"
@@ -76,6 +86,9 @@
               spellcheck="false"
               maxlength="32"
               [placeholder]="'auth.login.twoFactor.codePlaceholder' | translate"
+              [attr.aria-describedby]="
+                twoFactorError() ? 'twoFactorCode-error' : 'twoFactorCode-hint'
+              "
               data-cy="auth-login-two-factor-code"
             />
           </app-budojo-form-field>

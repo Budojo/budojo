@@ -52,20 +52,24 @@ export class LoginComponent {
   });
 
   /**
-   * touched-driven signals so the BudojoFormField `error` input can
-   * reactively show / hide messages. Reactive Forms doesn't expose
-   * touched as an observable out of the box, so we tap statusChanges
-   * + valueChanges to re-evaluate on each interaction.
+   * touched + status driven signals so the BudojoFormField `error`
+   * input reacts on every interaction. We bind to
+   * `AbstractControl.events` (not `statusChanges`) — `events` emits
+   * `TouchedChangeEvent` when the control's touched flag flips,
+   * which is how `markAllAsTouched()` propagates. Subscribing to
+   * `statusChanges` alone (or `valueChanges`) misses the
+   * empty-submit case, so the inline "required" errors never appear
+   * (#1045 reviewer finding).
    */
-  private readonly emailStatus = toSignal(this.form.controls.email.statusChanges, {
-    initialValue: this.form.controls.email.status,
+  private readonly emailEvents = toSignal(this.form.controls.email.events, {
+    initialValue: null,
   });
-  private readonly passwordStatus = toSignal(this.form.controls.password.statusChanges, {
-    initialValue: this.form.controls.password.status,
+  private readonly passwordEvents = toSignal(this.form.controls.password.events, {
+    initialValue: null,
   });
 
   readonly emailError = computed<string | null>(() => {
-    void this.emailStatus(); // subscribe — re-eval on status change
+    void this.emailEvents();
     const c = this.form.controls.email;
     if (!c.touched || c.valid) return null;
     if (c.errors?.['required']) return 'auth.login.emailRequired';
@@ -74,7 +78,7 @@ export class LoginComponent {
   });
 
   readonly passwordError = computed<string | null>(() => {
-    void this.passwordStatus(); // subscribe
+    void this.passwordEvents();
     const c = this.form.controls.password;
     if (!c.touched || c.valid) return null;
     return 'auth.login.passwordRequired';
