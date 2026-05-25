@@ -2,12 +2,9 @@
 
 // Setup-page-specific bits. The shared `_auth-page` partial covers all
 // the canonical styling (cards, inputs, buttons, links); this file only
-// adds what's setup-specific: required/optional label markers and the
+// adds what's setup-specific: the optional label marker (the name field's
+// required `*` is now owned by the BudojoFormField wrapper, #1054) and the
 // textarea (which `_auth-page.scss` doesn't touch — only inputs).
-
-.required {
-  color: var(--budojo-danger);
-}
 
 .optional {
   font-size: 0.75rem;
