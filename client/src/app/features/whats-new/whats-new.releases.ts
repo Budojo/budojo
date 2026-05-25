@@ -28,6 +28,39 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.32.0',
+    date: '2026-05-25',
+    headline:
+      'Every form in the app now reads the same — clearer, more consistent inline validation — plus a mobile edge-to-edge fix and a safety confirmation before a device is removed from notifications.',
+    sections: [
+      {
+        heading: '🎯 Forms that read the same everywhere',
+        bullets: [
+          'The login, registration, athlete, academy, and first-run setup forms now share one field component. One consistent look: the same label position, the same red * for required fields, the same muted "Optional" tag, and the same inline error styling on every screen — no more subtle drift between forms.',
+          'Errors appear the moment you submit. Hit save on an empty form and every required field lights up at once with its message, instead of revealing problems one at a time as you tab through.',
+        ],
+      },
+      {
+        heading: '📱 Mobile: nothing hidden under the notch',
+        bullets: [
+          "On phones with a notch or running Android 15's edge-to-edge mode, the top bar and the slide-in menu now sit clear of the system status bar instead of being clipped behind it.",
+        ],
+      },
+      {
+        heading: '🔔 Safer device removal',
+        bullets: [
+          'Removing a device from browser notifications now asks you to confirm first — a single accidental tap no longer silently unsubscribes that device.',
+        ],
+      },
+      {
+        heading: 'Behind the scenes',
+        bullets: [
+          "A set of shared building blocks — empty states, error banners, card shells, and icon buttons — were standardised this release. You won't see them everywhere yet; they're the foundation for more consistent screens in the releases ahead.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.31.1',
     date: '2026-05-24',
     headline: 'The v2.31.0 release that actually reaches your browser.',
