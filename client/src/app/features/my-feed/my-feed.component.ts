@@ -212,9 +212,14 @@ export class MyFeedComponent implements OnInit {
     this.highlightedPostId.set(id);
     // Defer one tick so the @for has rendered the <li id="post-N">.
     setTimeout(() => {
-      document
-        .getElementById(`post-${id}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const el = document.getElementById(`post-${id}`);
+      // Move focus to the card (tabindex=-1 in the template) so keyboard
+      // and screen-reader users arriving from a notification get the same
+      // "here's your post" cue the highlight gives sighted users (a11y,
+      // client canon § Norman feedback). preventScroll lets scrollIntoView
+      // own the smooth scroll without a competing instant focus jump.
+      el?.focus({ preventScroll: true });
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 0);
     // Fade the highlight after it's served its "here it is" purpose.
     setTimeout(() => this.highlightedPostId.set(null), 2400);

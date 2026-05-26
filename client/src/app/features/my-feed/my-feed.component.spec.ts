@@ -847,5 +847,36 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
         ).highlightedPostId(),
       ).toBeNull();
     });
+
+    it('moves keyboard focus to the deep-linked post so non-visual users get the same cue (a11y, client canon § Norman feedback) (#1072 reviewer)', () => {
+      vi.useFakeTimers();
+      // scrollIntoView is not implemented in jsdom; the handler calls it
+      // right after .focus(), so stub it to a no-op for this test.
+      const originalScroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = vi.fn();
+      try {
+        const { fixture, http } = setup({ fragment: 'post-7' });
+        // Attach to the document: the handler resolves the target via
+        // document.getElementById, and .focus() only sets
+        // document.activeElement on a connected, focusable element.
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8]);
+        fixture.detectChanges();
+
+        // Flush the deferred scroll/focus tick (setTimeout 0).
+        vi.advanceTimersByTime(1);
+
+        const li = fixture.nativeElement.querySelector('#post-7') as HTMLElement;
+        // tabindex=-1 makes the card programmatically focusable without
+        // inserting every feed card into the tab order.
+        expect(li.getAttribute('tabindex')).toBe('-1');
+        expect(document.activeElement).toBe(li);
+
+        fixture.nativeElement.remove();
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        vi.useRealTimers();
+      }
+    });
   });
 });
