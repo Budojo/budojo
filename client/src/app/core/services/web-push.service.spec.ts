@@ -404,11 +404,9 @@ describe('WebPushService (#694)', () => {
             };
       Object.defineProperty(navigator, 'serviceWorker', {
         value: {
-          getRegistration: vi
-            .fn()
-            .mockResolvedValue({
-              pushManager: { getSubscription: vi.fn().mockResolvedValue(sub) },
-            }),
+          getRegistration: vi.fn().mockResolvedValue({
+            pushManager: { getSubscription: vi.fn().mockResolvedValue(sub) },
+          }),
         },
         configurable: true,
       });
@@ -463,7 +461,11 @@ describe('WebPushService (#694)', () => {
       const hash = await sha256hex(ENDPOINT);
 
       const p = service.reconcileCurrentDevice();
-      await flushWhenReady(http, '/api/v1/me/push-subscriptions', pushState([{ id: 1, endpoint_hash: hash }]));
+      await flushWhenReady(
+        http,
+        '/api/v1/me/push-subscriptions',
+        pushState([{ id: 1, endpoint_hash: hash }]),
+      );
 
       expect(await p).toBe('in_sync');
       http.verify(); // crucially: NO POST
