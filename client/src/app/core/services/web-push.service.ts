@@ -440,10 +440,21 @@ export class WebPushService {
    * subscription whose hash is absent from the server list, re-POST it
    * (idempotent). The user never re-accepts; reception is restored.
    *
-   * Safe against intentional revokes: revoking the CURRENT device also
-   * drops the local subscription (see the profile component +
-   * `unsubscribeLocal`), so `getSubscription()` returns null there and
-   * this is a no-op — it won't resurrect a device the user revoked.
+   * Safe against intentional revokes ON THIS BROWSER: revoking the
+   * current device also drops the local subscription (see the profile
+   * component + `unsubscribeLocal`), so `getSubscription()` returns null
+   * here and this is a no-op — it won't resurrect a device the user
+   * revoked from this browser.
+   *
+   * Known limitation (#1065 reviewer): the heal infers "rotated/410'd"
+   * from "live local sub absent from server list", which can't be told
+   * apart from "revoked from ANOTHER device while this browser still
+   * holds a live sub". So a remote revoke is undone the next time the
+   * revoked browser loads. Accepted trade-off: re-registering a browser
+   * the user is actively opening is benign (it just resumes receiving
+   * pushes); durable remote-revoke would need a server-side "revoked"
+   * tombstone, which is disproportionate for this narrow, self-
+   * correcting edge.
    *
    * Background HTTP (not user-initiated) → opt out of the offline
    * redirect so a transient blip on load doesn't bounce the user to
@@ -535,17 +546,15 @@ export class WebPushService {
    * fanout (#696) skips that browser, regardless of whether the
    * browser still holds an active `PushSubscription` object.
    *
-   * **Why we do NOT also call `swPush.unsubscribe()`**: that method
-   * unsubscribes the CURRENT browser's `PushSubscription`. If the
-   * user is revoking a different device from the list, calling it
-   * here would silently kill THIS browser's subscription while
-   * leaving its server row in place — the inverse of what the user
-   * asked for. The robust fix needs the backend to return
-   * `endpoint_hash` so we can compare against
-   * `sha256(currentSubscription.endpoint)` and only unsubscribe
-   * locally on a match; until that lands, deferring to the server
-   * delete is the safer trade-off. The orphaned local subscription
-   * is harmless — the next push fanout simply doesn't include it.
+   * This deletes the SERVER row only. Dropping the local
+   * `PushSubscription` is the caller's job and only when the revoked
+   * device is the current browser: `revoke()` in the profile component
+   * compares `endpoint_hash` (#822) and calls `unsubscribeLocal()` on a
+   * match. That split matters now that `reconcileCurrentDevice()`
+   * (#1065) re-registers any live-but-absent local sub — without the
+   * local unsub, revoking the current device would be undone on the
+   * next load. Revoking a DIFFERENT device leaves this browser's sub
+   * untouched (deleting it here would kill the wrong subscription).
    */
   async unsubscribe(id: number): Promise<void> {
     try {
