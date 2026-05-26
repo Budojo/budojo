@@ -53,7 +53,12 @@
   } @else {
     <ul class="feed__list" data-cy="my-feed-list">
       @for (post of posts(); track post.id) {
-        <li class="feed__card" [attr.data-cy]="'my-feed-post-' + post.id">
+        <li
+          class="feed__card"
+          [id]="'post-' + post.id"
+          [class.feed__card--highlight]="post.id === highlightedPostId()"
+          [attr.data-cy]="'my-feed-post-' + post.id"
+        >
           <header class="feed__author">
             @if (post.created_by.handle; as authorHandle) {
               <a

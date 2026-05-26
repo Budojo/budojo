@@ -7,6 +7,7 @@ namespace App\Notifications;
 use App\Models\PostComment;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
+use App\Support\CommunityLink;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -56,7 +57,7 @@ class CommunityReplyNotification extends Notification
         return [
             'title' => $this->title(),
             'body' => $this->body(),
-            'link' => $this->link(),
+            'link' => $this->link($notifiable),
             'kind' => 'community_reply',
             'post_id' => $this->newComment->post_id,
             'comment_id' => $this->newComment->id,
@@ -77,7 +78,7 @@ class CommunityReplyNotification extends Notification
         return [
             'title' => $this->title(),
             'body' => $this->body(),
-            'link' => $this->link(),
+            'link' => $this->link($notifiable),
             'kind' => 'community_reply',
             'post_id' => $this->newComment->post_id,
             'comment_id' => $this->newComment->id,
@@ -100,8 +101,10 @@ class CommunityReplyNotification extends Notification
         return mb_strimwidth($this->newComment->body, 0, 100, '…');
     }
 
-    private function link(): string
+    private function link(object $notifiable): string
     {
-        return \sprintf('/dashboard/me/feed#post-%d', $this->newComment->post_id);
+        \assert($notifiable instanceof User);
+
+        return CommunityLink::forPost($notifiable, $this->newComment->post_id);
     }
 }

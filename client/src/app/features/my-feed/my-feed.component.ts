@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -98,6 +98,15 @@ export class MyFeedComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly shareCard = inject(PromotionShareCardService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly route = inject(ActivatedRoute);
+
+  /**
+   * Post id to scroll to + highlight on first load, parsed from the
+   * `#post-N` route fragment that community notifications deep-link to
+   * (#1071). Cleared once consumed so paging doesn't re-trigger it.
+   */
+  private targetPostId: number | null = null;
+  protected readonly highlightedPostId = signal<number | null>(null);
 
   protected readonly composerOpen = signal(false);
 
@@ -150,6 +159,13 @@ export class MyFeedComponent implements OnInit {
   private readonly pageRequests = new Subject<number>();
 
   ngOnInit(): void {
+    // Deep-link target from a community notification (#1071): the link
+    // is `…#post-N`. Parse it once; the load handler scrolls to it when
+    // that post lands in the feed.
+    const fragment = this.route.snapshot.fragment;
+    const match = fragment ? /^post-(\d+)$/.exec(fragment) : null;
+    this.targetPostId = match ? Number(match[1]) : null;
+
     // `catchError` inside `switchMap` keeps the outer stream alive
     // when a single request fails — otherwise the first HTTP error
     // would terminate the subscription and break every subsequent
@@ -174,9 +190,34 @@ export class MyFeedComponent implements OnInit {
         this.currentPage.set(response.meta.current_page);
         this.lastPage.set(response.meta.last_page);
         this.loading.set(false);
+        this.maybeScrollToTargetPost();
       });
 
     this.load(1);
+  }
+
+  /**
+   * Scroll to + briefly highlight the notification-targeted post once
+   * it's in the rendered list (#1071). Fires at most once — clears
+   * `targetPostId` so paging doesn't yank the user back. A no-op if the
+   * post isn't on the current page (e.g. an old post past page 1); the
+   * user still lands on the feed rather than a 404, which is the win.
+   */
+  private maybeScrollToTargetPost(): void {
+    const id = this.targetPostId;
+    if (id === null || !this.posts().some((p) => p.id === id)) {
+      return;
+    }
+    this.targetPostId = null;
+    this.highlightedPostId.set(id);
+    // Defer one tick so the @for has rendered the <li id="post-N">.
+    setTimeout(() => {
+      document
+        .getElementById(`post-${id}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+    // Fade the highlight after it's served its "here it is" purpose.
+    setTimeout(() => this.highlightedPostId.set(null), 2400);
   }
 
   /**

@@ -55,9 +55,18 @@
     gap: 0.75rem;
     // Anchor for the absolute-positioned comments FAB (#777).
     position: relative;
+    // So the deep-link highlight ring (below) fades in/out rather than
+    // snapping when the class toggles (#1071).
+    transition: box-shadow var(--budojo-motion-base) var(--budojo-motion-decelerate);
 
     &--skeleton {
       gap: 0.5rem;
+    }
+
+    // Brief accent ring when arrived-at via a community notification
+    // deep-link (#1071) — set on scroll-to, cleared after ~2.4s.
+    &--highlight {
+      box-shadow: 0 0 0 2px var(--p-primary-color);
     }
   }
 
