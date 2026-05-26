@@ -1,4 +1,8 @@
 <p-toast position="top-right" />
+<!-- Dedicated on-brand toast for foreground web pushes (#1063): keyed
+     "push" so only WebPushHandlerService's messages render here —
+     clickable (deep-links) + dismissable, unlike the generic toast above. -->
+<app-push-toast />
 <router-outlet />
 <!-- Cookie consent banner (#421). Mounted at the app root so it's
      visible on every public route (landing, /privacy, /cookie-policy,

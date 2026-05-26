@@ -360,6 +360,9 @@
       "markAllRead": "Mark all read",
       "empty": "Nothing here yet. We'll let you know when something needs your attention.",
       "unreadCount": "{{count}} unread"
+    },
+    "toast": {
+      "dismiss": "Dismiss notification"
     }
   },
   "onboarding": {

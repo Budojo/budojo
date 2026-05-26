@@ -283,6 +283,16 @@ export class ProfileBrowserNotificationsComponent implements OnInit {
     this.busy.set(true);
     try {
       await this.webPushService.unsubscribe(device.id);
+      // If the revoked row IS this browser, also drop the local
+      // PushSubscription (#1065). Without this, the app-load reconcile
+      // would see a live local subscription absent from the server list
+      // and silently re-register it — resurrecting the device the user
+      // just revoked. Possible now that endpoint_hash (#822) lets us
+      // identify "this device". Other devices' local subs are untouched.
+      if (device.id === this.currentDeviceId()) {
+        await this.webPushService.unsubscribeLocal();
+        this.currentEndpointHash.set(null);
+      }
       this.devices.update((current) => current.filter((d) => d.id !== device.id));
       this.messageService.add({
         severity: 'success',

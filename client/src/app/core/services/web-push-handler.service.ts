@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
 import { MessageService } from 'primeng/api';
+import { WebPushService } from './web-push.service';
 
 /**
  * Subscribes the SPA to Angular's `SwPush` event streams so a delivered
@@ -43,6 +44,7 @@ export class WebPushHandlerService {
   private readonly swPush = inject(SwPush);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
+  private readonly webPushService = inject(WebPushService);
 
   /**
    * Wire the two `SwPush` event streams. Safe to call when the SW is
@@ -54,6 +56,13 @@ export class WebPushHandlerService {
     if (!this.swPush.isEnabled) {
       return;
     }
+
+    // Self-heal the server-side device list (#1065). After a deploy the
+    // push endpoint can rotate / the row gets 410-deleted; this silently
+    // re-registers the current browser if it fell off the list, so the
+    // user never has to re-accept and keeps receiving pushes.
+    // Fire-and-forget; errors are swallowed inside the service.
+    void this.webPushService.reconcileCurrentDevice();
 
     this.swPush.notificationClicks
       .pipe(takeUntilDestroyed(destroyRef))
@@ -80,14 +89,16 @@ export class WebPushHandlerService {
         return;
       }
       this.messageService.add({
+        // Route to the dedicated <p-toast key="push"> (PushToastComponent,
+        // #1063): an on-brand template that's clickable (deep-links via
+        // data.link) and dismissable — not the generic app-wide toast.
+        key: 'push',
         severity: 'info',
         summary: title,
         detail: typeof body === 'string' && body.length > 0 ? body : undefined,
         life: 6000,
-        // Tag the toast so a future "click to open" affordance can hook
-        // back into `notification.data.link`; not wired today because
-        // PrimeNG's toast doesn't expose click events natively, but
-        // adding the data here keeps the spike short when we do.
+        // data.link is read by the toast template's click handler to
+        // deep-link the user to the post/screen the push came from.
         data: message.notification?.data,
       });
     });
