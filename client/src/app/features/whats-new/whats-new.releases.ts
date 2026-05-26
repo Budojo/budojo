@@ -28,6 +28,29 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.32.1',
+    date: '2026-05-26',
+    headline:
+      'Notification fixes — the in-app alert is cleaner and actually useful, and your device stays remembered across updates.',
+    sections: [
+      {
+        heading: '🔔 Browser notifications, fixed',
+        bullets: [
+          "The in-app alert is on-brand now — when a notification arrives while you're using Budojo, the card matches the rest of the app instead of looking like a generic system popup.",
+          'Tap it to go there — tapping the alert opens exactly what it is about (the post, the athlete, the screen). Before, tapping did nothing.',
+          'Dismiss it — a clear × closes the alert; no more waiting for it to fade.',
+          'No more re-enabling after every update — previously each new version dropped your device off the "this device" list and you had to accept notifications again. Now your device is remembered and keeps receiving alerts across updates.',
+        ],
+      },
+      {
+        heading: '📱 Large screens',
+        bullets: [
+          'The app no longer locks to portrait — it adapts to landscape and to tablets / foldables.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.32.0',
     date: '2026-05-25',
     headline:
