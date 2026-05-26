@@ -28,6 +28,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.32.2',
+    date: '2026-05-26',
+    headline:
+      'Tapping a community notification now opens the right post — academy owners no longer hit "Page not found".',
+    sections: [
+      {
+        heading: '🔔 Notifications open the post',
+        bullets: [
+          'Tapping a community alert (a new comment, a reaction, a belt celebration, a new event) now takes you straight to that post in the feed and briefly highlights it. Academy owners used to land on a "Page not found" because the link pointed at the athlete-only feed route — fixed.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.32.1',
     date: '2026-05-26',
     headline:
