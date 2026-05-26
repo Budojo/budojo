@@ -256,16 +256,7 @@ export class WebPushService {
     }
 
     try {
-      const response = await firstValueFrom(
-        this.http.post<PushSubscribeEnvelope>(
-          `${environment.apiBase}/api/v1/me/push-subscriptions`,
-          {
-            endpoint: json.endpoint,
-            keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-          },
-        ),
-      );
-      return response.data;
+      return await this.postSubscription(json.endpoint, json.keys.p256dh, json.keys.auth);
     } catch (error: unknown) {
       const status = (error as { status?: number })?.status;
       if (status === 503) {
@@ -273,6 +264,37 @@ export class WebPushService {
       }
       throw new WebPushError('subscribe_failed', String(error));
     }
+  }
+
+  /**
+   * POST a subscription envelope to the server-side mirror. Shared by
+   * the user-initiated `subscribe()` and the background
+   * `reconcileCurrentDevice()`. The backend is idempotent on
+   * (user_id, endpoint_hash), so re-POSTing the same endpoint just
+   * refreshes the row.
+   *
+   * @param background when true, opt out of the offline-redirect
+   *   interceptor — reconcile runs on app load (not user-initiated),
+   *   and a transient blip must NOT teleport the user to `/offline`
+   *   mid-bootstrap (memory § background-polls / SKIP_OFFLINE_REDIRECT).
+   */
+  private async postSubscription(
+    endpoint: string,
+    p256dh: string,
+    auth: string,
+    background = false,
+  ): Promise<PushDevice> {
+    const options = background
+      ? { context: new HttpContext().set(SKIP_OFFLINE_REDIRECT, true) }
+      : {};
+    const response = await firstValueFrom(
+      this.http.post<PushSubscribeEnvelope>(
+        `${environment.apiBase}/api/v1/me/push-subscriptions`,
+        { endpoint, keys: { p256dh, auth } },
+        options,
+      ),
+    );
+    return response.data;
   }
 
   /**
@@ -389,13 +411,115 @@ export class WebPushService {
       if (!reg) return null;
       const sub = await reg.pushManager.getSubscription();
       if (!sub?.endpoint) return null;
-      const bytes = new TextEncoder().encode(sub.endpoint);
-      const digest = await crypto.subtle.digest('SHA-256', bytes);
-      return Array.from(new Uint8Array(digest))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
+      return await this.hashEndpoint(sub.endpoint);
     } catch {
       return null;
+    }
+  }
+
+  /** SHA-256 hex of an endpoint URL — mirrors the server's column. */
+  private async hashEndpoint(endpoint: string): Promise<string> {
+    const bytes = new TextEncoder().encode(endpoint);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  /**
+   * Self-heal the server-side device list after a deploy (#1065).
+   *
+   * On a Cloudflare deploy the SW updates and the push endpoint can
+   * rotate, and/or `WebPushChannel` 410-deletes the row on the next
+   * send. The browser keeps a live PushSubscription, but its
+   * `endpoint_hash` no longer matches any server row — so the profile
+   * UI drops the "this device" pill and the user thinks they must
+   * re-accept, and (worse) they stop receiving pushes.
+   *
+   * This reconciles silently on app load: if the browser HAS a live
+   * subscription whose hash is absent from the server list, re-POST it
+   * (idempotent). The user never re-accepts; reception is restored.
+   *
+   * Safe against intentional revokes ON THIS BROWSER: revoking the
+   * current device also drops the local subscription (see the profile
+   * component + `unsubscribeLocal`), so `getSubscription()` returns null
+   * here and this is a no-op — it won't resurrect a device the user
+   * revoked from this browser.
+   *
+   * Known limitation (#1065 reviewer): the heal infers "rotated/410'd"
+   * from "live local sub absent from server list", which can't be told
+   * apart from "revoked from ANOTHER device while this browser still
+   * holds a live sub". So a remote revoke is undone the next time the
+   * revoked browser loads. Accepted trade-off: re-registering a browser
+   * the user is actively opening is benign (it just resumes receiving
+   * pushes); durable remote-revoke would need a server-side "revoked"
+   * tombstone, which is disproportionate for this narrow, self-
+   * correcting edge.
+   *
+   * Background HTTP (not user-initiated) → opt out of the offline
+   * redirect so a transient blip on load doesn't bounce the user to
+   * `/offline`.
+   */
+  async reconcileCurrentDevice(): Promise<
+    'reregistered' | 'in_sync' | 'no_local_subscription' | 'skipped'
+  > {
+    if (!this.isSupported() || !this.swPush.isEnabled) return 'skipped';
+
+    let sub: PushSubscription | null;
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      sub = reg ? await reg.pushManager.getSubscription() : null;
+    } catch {
+      return 'skipped';
+    }
+    if (!sub?.endpoint) return 'no_local_subscription';
+
+    let hash: string;
+    try {
+      hash = await this.hashEndpoint(sub.endpoint);
+    } catch {
+      return 'skipped';
+    }
+
+    let devices: readonly PushDevice[];
+    try {
+      const envelope = await firstValueFrom(
+        this.http.get<PushStateEnvelope>(`${environment.apiBase}/api/v1/me/push-subscriptions`, {
+          context: new HttpContext().set(SKIP_OFFLINE_REDIRECT, true),
+        }),
+      );
+      devices = envelope.data;
+    } catch {
+      // Offline / server error — leave it; the next app load retries.
+      return 'skipped';
+    }
+
+    if (devices.some((d) => d.endpoint_hash === hash)) return 'in_sync';
+
+    const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return 'skipped';
+    try {
+      await this.postSubscription(json.endpoint, json.keys.p256dh, json.keys.auth, true);
+      return 'reregistered';
+    } catch {
+      return 'skipped';
+    }
+  }
+
+  /**
+   * Drop THIS browser's local PushSubscription (#1065). Called when the
+   * user revokes the current device so the server delete isn't undone
+   * by `reconcileCurrentDevice()` on the next load. Best-effort — a
+   * failure leaves an orphaned local subscription, which is harmless
+   * (the server row is already gone, so no fanout reaches it).
+   */
+  async unsubscribeLocal(): Promise<void> {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      await sub?.unsubscribe();
+    } catch {
+      // ignore — orphaned local subscription is harmless
     }
   }
 
@@ -422,17 +546,15 @@ export class WebPushService {
    * fanout (#696) skips that browser, regardless of whether the
    * browser still holds an active `PushSubscription` object.
    *
-   * **Why we do NOT also call `swPush.unsubscribe()`**: that method
-   * unsubscribes the CURRENT browser's `PushSubscription`. If the
-   * user is revoking a different device from the list, calling it
-   * here would silently kill THIS browser's subscription while
-   * leaving its server row in place — the inverse of what the user
-   * asked for. The robust fix needs the backend to return
-   * `endpoint_hash` so we can compare against
-   * `sha256(currentSubscription.endpoint)` and only unsubscribe
-   * locally on a match; until that lands, deferring to the server
-   * delete is the safer trade-off. The orphaned local subscription
-   * is harmless — the next push fanout simply doesn't include it.
+   * This deletes the SERVER row only. Dropping the local
+   * `PushSubscription` is the caller's job and only when the revoked
+   * device is the current browser: `revoke()` in the profile component
+   * compares `endpoint_hash` (#822) and calls `unsubscribeLocal()` on a
+   * match. That split matters now that `reconcileCurrentDevice()`
+   * (#1065) re-registers any live-but-absent local sub — without the
+   * local unsub, revoking the current device would be undone on the
+   * next load. Revoking a DIFFERENT device leaves this browser's sub
+   * untouched (deleting it here would kill the wrong subscription).
    */
   async unsubscribe(id: number): Promise<void> {
     try {

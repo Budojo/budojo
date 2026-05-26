@@ -444,6 +444,80 @@ describe('ProfileBrowserNotificationsComponent (#694)', () => {
     ).toBeNull();
   });
 
+  it('revoking the CURRENT device also drops the local subscription (#1065)', async () => {
+    const { fixture, http } = setup();
+    const hash = 'b'.repeat(64);
+    const svc = TestBed.inject(WebPushService);
+    const localSpy = vi.spyOn(svc, 'unsubscribeLocal').mockResolvedValue();
+    // Resolve the init-time hash lookup to this device's hash so the
+    // fire-and-forget in ngOnInit doesn't clobber it back to null mid-revoke.
+    vi.spyOn(svc, 'currentEndpointHash').mockResolvedValue(hash);
+    fixture.detectChanges();
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [
+        {
+          id: 7,
+          endpoint_host: 'fcm.googleapis.com',
+          endpoint_hash: hash,
+          last_seen_at: null,
+          created_at: '2026-05-20T19:28:00Z',
+        },
+      ],
+      meta: { vapid_public_key: 'PUB', enabled: true },
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const cmp = fixture.componentInstance as unknown as {
+      revoke(d: { id: number; endpoint_host: string; endpoint_hash: string }): Promise<void>;
+    };
+    const p = cmp.revoke({ id: 7, endpoint_host: 'fcm.googleapis.com', endpoint_hash: hash });
+    http.expectOne('/api/v1/me/push-subscriptions/7').flush({});
+    await p;
+
+    expect(localSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('revoking ANOTHER device does NOT drop the local subscription (#1065)', async () => {
+    const { fixture, http } = setup();
+    const localSpy = vi
+      .spyOn(TestBed.inject(WebPushService), 'unsubscribeLocal')
+      .mockResolvedValue();
+    fixture.detectChanges();
+    http.expectOne('/api/v1/me/push-subscriptions').flush({
+      data: [
+        {
+          id: 7,
+          endpoint_host: 'fcm.googleapis.com',
+          endpoint_hash: 'c'.repeat(64),
+          last_seen_at: null,
+          created_at: '2026-05-20T19:28:00Z',
+        },
+      ],
+      meta: { vapid_public_key: 'PUB', enabled: true },
+    });
+    // This browser is a DIFFERENT device than the one being revoked.
+    (
+      fixture.componentInstance as unknown as {
+        currentEndpointHash: { set(v: string | null): void };
+      }
+    ).currentEndpointHash.set('d'.repeat(64));
+    fixture.detectChanges();
+
+    const cmp = fixture.componentInstance as unknown as {
+      revoke(d: { id: number; endpoint_host: string; endpoint_hash: string }): Promise<void>;
+    };
+    const p = cmp.revoke({
+      id: 7,
+      endpoint_host: 'fcm.googleapis.com',
+      endpoint_hash: 'c'.repeat(64),
+    });
+    http.expectOne('/api/v1/me/push-subscriptions/7').flush({});
+    await p;
+
+    expect(localSpy).not.toHaveBeenCalled();
+  });
+
   it('hides the Add-another-device button + shows the hint when the current device is already in the list (#822)', () => {
     const { fixture, http } = setup();
     const matchingHash = 'f'.repeat(64);
