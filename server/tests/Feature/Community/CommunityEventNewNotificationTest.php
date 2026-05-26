@@ -175,7 +175,7 @@ it('falls back to a bare "New event" title when the payload title is missing or 
 
     $notification = new App\Notifications\CommunityEventNewNotification($post);
     /** @var array<string, mixed> $data */
-    $data = $notification->toDatabase((object) []);
+    $data = $notification->toDatabase(new User(['role' => 'owner']));
 
     expect($data['title'])->toBe('New event');
 });
@@ -191,7 +191,7 @@ it('via() includes the WebPushChannel and toWebPush() mirrors the database shape
     ]);
     $notification = new CommunityEventNewNotification($post);
 
-    expect($notification->via(new \stdClass()))->toContain(WebPushChannel::class);
-    expect($notification->toWebPush(new \stdClass()))
-        ->toMatchArray($notification->toDatabase(new \stdClass()));
+    expect($notification->via(new User(['role' => 'owner'])))->toContain(WebPushChannel::class);
+    expect($notification->toWebPush(new User(['role' => 'owner'])))
+        ->toMatchArray($notification->toDatabase(new User(['role' => 'owner'])));
 });
