@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { MyFeedComponent } from './my-feed.component';
 import type { CommunityFeedPage, CommunityPost } from '../../core/services/community.service';
@@ -16,7 +16,7 @@ function emptyPage(): CommunityFeedPage {
   };
 }
 
-function setup(opts: { role?: UserRole } = {}) {
+function setup(opts: { role?: UserRole; fragment?: string } = {}) {
   TestBed.configureTestingModule({
     imports: [MyFeedComponent],
     providers: [
@@ -24,6 +24,11 @@ function setup(opts: { role?: UserRole } = {}) {
       provideHttpClientTesting(),
       provideRouter([]),
       ...provideI18nTesting(),
+      // Override the route snapshot fragment for the deep-link tests
+      // (#1071). The component only reads `route.snapshot.fragment`.
+      ...(opts.fragment !== undefined
+        ? [{ provide: ActivatedRoute, useValue: { snapshot: { fragment: opts.fragment } } }]
+        : []),
     ],
   });
 
@@ -794,6 +799,84 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
       // No reaction-toggle PATCH fired — clicking the count zone must
       // stopPropagation so the outer chip's toggle handler doesn't run.
       http.expectNone((r) => r.url.endsWith('/api/v1/community/posts/42/reactions'));
+    });
+  });
+
+  describe('notification deep-link (#1071)', () => {
+    function loadPosts(http: HttpTestingController, ids: number[]): void {
+      http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+        data: ids.map((id) => postFixture({ id })),
+        meta: { current_page: 1, per_page: 20, total: ids.length, last_page: 1 },
+      });
+    }
+
+    it('highlights the post named in the #post-N fragment once the feed loads', () => {
+      const { fixture, http } = setup({ fragment: 'post-7' });
+      loadPosts(http, [7, 8]);
+      fixture.detectChanges();
+
+      expect(
+        (
+          fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+        ).highlightedPostId(),
+      ).toBe(7);
+      // The <li> carries the anchor id the notification deep-links to.
+      expect(fixture.nativeElement.querySelector('#post-7')).not.toBeNull();
+    });
+
+    it('does not highlight anything without a #post fragment', () => {
+      const { fixture, http } = setup();
+      loadPosts(http, [7, 8]);
+      fixture.detectChanges();
+
+      expect(
+        (
+          fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+        ).highlightedPostId(),
+      ).toBeNull();
+    });
+
+    it('is a no-op when the targeted post is not on the loaded page (no crash, no highlight)', () => {
+      const { fixture, http } = setup({ fragment: 'post-999' });
+      loadPosts(http, [7, 8]);
+      fixture.detectChanges();
+
+      expect(
+        (
+          fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+        ).highlightedPostId(),
+      ).toBeNull();
+    });
+
+    it('moves keyboard focus to the deep-linked post so non-visual users get the same cue (a11y, client canon § Norman feedback) (#1072 reviewer)', () => {
+      vi.useFakeTimers();
+      // scrollIntoView is not implemented in jsdom; the handler calls it
+      // right after .focus(), so stub it to a no-op for this test.
+      const originalScroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = vi.fn();
+      try {
+        const { fixture, http } = setup({ fragment: 'post-7' });
+        // Attach to the document: the handler resolves the target via
+        // document.getElementById, and .focus() only sets
+        // document.activeElement on a connected, focusable element.
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8]);
+        fixture.detectChanges();
+
+        // Flush the deferred scroll/focus tick (setTimeout 0).
+        vi.advanceTimersByTime(1);
+
+        const li = fixture.nativeElement.querySelector('#post-7') as HTMLElement;
+        // tabindex=-1 makes the card programmatically focusable without
+        // inserting every feed card into the tab order.
+        expect(li.getAttribute('tabindex')).toBe('-1');
+        expect(document.activeElement).toBe(li);
+
+        fixture.nativeElement.remove();
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        vi.useRealTimers();
+      }
     });
   });
 });

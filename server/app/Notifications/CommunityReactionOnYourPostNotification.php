@@ -8,6 +8,7 @@ use App\Enums\ReactionEmoji;
 use App\Models\CommunityPost;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
+use App\Support\CommunityLink;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -45,7 +46,7 @@ class CommunityReactionOnYourPostNotification extends Notification
      */
     public function toDatabase(object $notifiable): array
     {
-        return $this->payload();
+        return $this->payload($notifiable);
     }
 
     /**
@@ -53,18 +54,18 @@ class CommunityReactionOnYourPostNotification extends Notification
      */
     public function toWebPush(object $notifiable): array
     {
-        return $this->payload();
+        return $this->payload($notifiable);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function payload(): array
+    private function payload(object $notifiable): array
     {
         return [
             'title' => $this->title(),
             'body' => $this->body(),
-            'link' => $this->link(),
+            'link' => $this->link($notifiable),
             'kind' => 'community_reaction_on_your_post',
             'post_id' => $this->post->id,
             'emoji' => $this->emoji->value,
@@ -87,8 +88,10 @@ class CommunityReactionOnYourPostNotification extends Notification
         };
     }
 
-    private function link(): string
+    private function link(object $notifiable): string
     {
-        return \sprintf('/dashboard/me/feed#post-%d', $this->post->id);
+        \assert($notifiable instanceof User);
+
+        return CommunityLink::forPost($notifiable, $this->post->id);
     }
 }

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\CommunityPost;
+use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
+use App\Support\CommunityLink;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -43,7 +45,7 @@ class CommunityNewPostNotification extends Notification
      */
     public function toDatabase(object $notifiable): array
     {
-        return $this->payload();
+        return $this->payload($notifiable);
     }
 
     /**
@@ -51,18 +53,18 @@ class CommunityNewPostNotification extends Notification
      */
     public function toWebPush(object $notifiable): array
     {
-        return $this->payload();
+        return $this->payload($notifiable);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function payload(): array
+    private function payload(object $notifiable): array
     {
         return [
             'title' => $this->title(),
             'body' => $this->body(),
-            'link' => $this->link(),
+            'link' => $this->link($notifiable),
             'kind' => 'community_new_post',
             'post_id' => $this->post->id,
             'post_type' => $this->post->type->value,
@@ -86,8 +88,10 @@ class CommunityNewPostNotification extends Notification
         return $title !== '' ? mb_strimwidth($title, 0, 100, '…') : 'Open the feed to see what\'s new.';
     }
 
-    private function link(): string
+    private function link(object $notifiable): string
     {
-        return \sprintf('/dashboard/me/feed#post-%d', $this->post->id);
+        \assert($notifiable instanceof User);
+
+        return CommunityLink::forPost($notifiable, $this->post->id);
     }
 }
