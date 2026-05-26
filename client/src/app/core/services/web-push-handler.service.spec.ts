@@ -106,9 +106,15 @@ describe('WebPushHandlerService (#702)', () => {
 
     expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
+        // Routed to the dedicated push toast (#1063) so the on-brand,
+        // clickable, dismissable template renders it — not the generic
+        // app-wide toast.
+        key: 'push',
         severity: 'info',
         summary: 'João Almeida commented',
         detail: 'thanks for sharing',
+        // data.link rides along so the toast template can deep-link on click.
+        data: { link: '/dashboard/me/feed#post-42', kind: 'community_reply' },
       }),
     );
   });

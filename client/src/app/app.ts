@@ -6,6 +6,7 @@ import { LanguageService } from './core/services/language.service';
 import { VersionCheckService } from './core/services/version-check.service';
 import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.component';
 import { NotificationOnboardingDialogComponent } from './shared/components/notification-onboarding-dialog/notification-onboarding-dialog.component';
+import { PushToastComponent } from './shared/components/push-toast/push-toast.component';
 
 @Component({
   selector: 'app-root',
@@ -14,6 +15,7 @@ import { NotificationOnboardingDialogComponent } from './shared/components/notif
     ToastModule,
     CookieBannerComponent,
     NotificationOnboardingDialogComponent,
+    PushToastComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
