@@ -62,4 +62,32 @@ describe('PushToastComponent (#1063)', () => {
     expect(clear).toHaveBeenCalledWith('push');
     expect(navigateByUrl).not.toHaveBeenCalled();
   });
+
+  it('keyboard-dismissing the × does NOT deep-link (#1064 reviewer wiring)', async () => {
+    const { fixture, navigateByUrl } = setup();
+    const messageService = TestBed.inject(MessageService);
+
+    // Render a real push toast with a link, then drive the close button
+    // by keyboard. The card's (keydown.enter) must NOT fire — the close
+    // button's keydown.enter stopPropagation has to win.
+    messageService.add({
+      key: 'push',
+      severity: 'info',
+      summary: 'New comment',
+      data: { link: '/dashboard/me/feed#post-9' },
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const closeBtn = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-cy="push-toast-dismiss"]',
+    ) as HTMLButtonElement | null;
+    expect(closeBtn).not.toBeNull();
+
+    closeBtn!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(navigateByUrl).not.toHaveBeenCalled();
+  });
 });

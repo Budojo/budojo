@@ -58,10 +58,16 @@ interface PushToastMessage {
               <span class="push-toast__detail">{{ message.detail }}</span>
             }
           </div>
+          <!-- keydown.enter/space stopPropagation so a keyboard user
+               dismissing the × doesn't ALSO trip the card's keydown →
+               navigate (#1064 reviewer). The native button click,
+               which Enter/Space still fire, drives dismiss(). -->
           <button
             type="button"
             class="push-toast__close"
             (click)="dismiss($event)"
+            (keydown.enter)="$event.stopPropagation()"
+            (keydown.space)="$event.stopPropagation()"
             [attr.aria-label]="'notifications.toast.dismiss' | translate"
             data-cy="push-toast-dismiss"
           >
@@ -113,9 +119,9 @@ interface PushToastMessage {
         line-height: 1.4;
       }
 
-      /* Close affordance — a hairline icon button, 48x48 hit area via
-         padding so the touch target clears Fitts even though the glyph
-         is small. */
+      /* Close affordance — small x glyph, but a full 48x48 tap target
+         (Fitts / canon >= 48x48 for icon buttons). all:unset strips the
+         native button box, so the size is set explicitly here. */
       .push-toast__close {
         all: unset;
         flex: 0 0 auto;
@@ -123,8 +129,8 @@ interface PushToastMessage {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 1.5rem;
-        height: 1.5rem;
+        width: 3rem;
+        height: 3rem;
         border-radius: var(--p-border-radius-sm);
         color: var(--p-text-muted-color);
         transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
