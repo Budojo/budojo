@@ -80,14 +80,16 @@ export class WebPushHandlerService {
         return;
       }
       this.messageService.add({
+        // Route to the dedicated <p-toast key="push"> (PushToastComponent,
+        // #1063): an on-brand template that's clickable (deep-links via
+        // data.link) and dismissable — not the generic app-wide toast.
+        key: 'push',
         severity: 'info',
         summary: title,
         detail: typeof body === 'string' && body.length > 0 ? body : undefined,
         life: 6000,
-        // Tag the toast so a future "click to open" affordance can hook
-        // back into `notification.data.link`; not wired today because
-        // PrimeNG's toast doesn't expose click events natively, but
-        // adding the data here keeps the spike short when we do.
+        // data.link is read by the toast template's click handler to
+        // deep-link the user to the post/screen the push came from.
         data: message.notification?.data,
       });
     });
