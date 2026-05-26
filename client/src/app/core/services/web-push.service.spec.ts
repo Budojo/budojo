@@ -381,4 +381,143 @@ describe('WebPushService (#694)', () => {
       http.verify();
     });
   });
+
+  describe('reconcileCurrentDevice (#1065)', () => {
+    const ENDPOINT = 'https://fcm.googleapis.com/fcm/send/abc123';
+
+    async function sha256hex(input: string): Promise<string> {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    /** Point navigator.serviceWorker.getRegistration at a fake sub (or none). */
+    function mockSubscription(endpoint: string | null): void {
+      const sub =
+        endpoint === null
+          ? null
+          : {
+              endpoint,
+              toJSON: () => ({ endpoint, keys: { p256dh: 'p256', auth: 'auth' } }),
+              unsubscribe: vi.fn().mockResolvedValue(true),
+            };
+      Object.defineProperty(navigator, 'serviceWorker', {
+        value: {
+          getRegistration: vi
+            .fn()
+            .mockResolvedValue({
+              pushManager: { getSubscription: vi.fn().mockResolvedValue(sub) },
+            }),
+        },
+        configurable: true,
+      });
+    }
+
+    /**
+     * Poll a few macrotasks for a request to register, then flush it.
+     * reconcile chains several awaits (getRegistration → getSubscription
+     * → crypto digest → GET → POST), so a single fixed setTimeout is a
+     * race; this waits until the request actually appears.
+     */
+    async function flushWhenReady(
+      http: HttpTestingController,
+      url: string,
+      response: unknown,
+    ): Promise<void> {
+      for (let i = 0; i < 20; i++) {
+        await new Promise((r) => setTimeout(r, 0));
+        const matches = http.match(url);
+        if (matches.length > 0) {
+          matches[0].flush(response as object);
+          return;
+        }
+      }
+      throw new Error(`request to ${url} never registered`);
+    }
+
+    function pushState(devices: { id: number; endpoint_hash: string }[]) {
+      return {
+        data: devices.map((d) => ({
+          id: d.id,
+          endpoint_host: 'fcm.googleapis.com',
+          endpoint_hash: d.endpoint_hash,
+          last_seen_at: null,
+          created_at: '2026-05-26T00:00:00Z',
+        })),
+        meta: { vapid_public_key: 'k', enabled: true },
+      };
+    }
+
+    it('is a no-op (no_local_subscription) when the browser has no live subscription', async () => {
+      mockSubscription(null);
+      const { service, http } = setup();
+      const result = await service.reconcileCurrentDevice();
+      expect(result).toBe('no_local_subscription');
+      http.verify(); // no HTTP at all
+    });
+
+    it('is in_sync (no re-register) when the current endpoint is already in the server list', async () => {
+      mockSubscription(ENDPOINT);
+      const { service, http } = setup();
+      const hash = await sha256hex(ENDPOINT);
+
+      const p = service.reconcileCurrentDevice();
+      await flushWhenReady(http, '/api/v1/me/push-subscriptions', pushState([{ id: 1, endpoint_hash: hash }]));
+
+      expect(await p).toBe('in_sync');
+      http.verify(); // crucially: NO POST
+    });
+
+    it('re-registers when the live subscription is absent from the server list', async () => {
+      mockSubscription(ENDPOINT);
+      const { service, http } = setup();
+
+      const p = service.reconcileCurrentDevice();
+      // Server list has some OTHER device, not ours → rotation/410.
+      await flushWhenReady(
+        http,
+        '/api/v1/me/push-subscriptions',
+        pushState([{ id: 9, endpoint_hash: 'deadbeef' }]),
+      );
+      // The re-register POST appears after the GET resolves.
+      let post: ReturnType<HttpTestingController['match']>[number] | undefined;
+      for (let i = 0; i < 20 && !post; i++) {
+        await new Promise((r) => setTimeout(r, 0));
+        post = http.match((req) => req.method === 'POST').at(0);
+      }
+      expect(post, 'POST re-register never fired').toBeDefined();
+      expect(post!.request.body).toEqual({
+        endpoint: ENDPOINT,
+        keys: { p256dh: 'p256', auth: 'auth' },
+      });
+      post!.flush({
+        data: {
+          id: 10,
+          endpoint_host: 'fcm.googleapis.com',
+          endpoint_hash: 'x',
+          last_seen_at: null,
+          created_at: '2026-05-26T00:00:00Z',
+        },
+      });
+
+      expect(await p).toBe('reregistered');
+      http.verify();
+    });
+
+    it('unsubscribeLocal drops the browser PushSubscription', async () => {
+      const unsubscribe = vi.fn().mockResolvedValue(true);
+      Object.defineProperty(navigator, 'serviceWorker', {
+        value: {
+          getRegistration: vi.fn().mockResolvedValue({
+            pushManager: { getSubscription: vi.fn().mockResolvedValue({ unsubscribe }) },
+          }),
+        },
+        configurable: true,
+      });
+      const { service } = setup();
+      await service.unsubscribeLocal();
+      expect(unsubscribe).toHaveBeenCalled();
+    });
+  });
 });
