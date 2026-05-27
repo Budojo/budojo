@@ -109,6 +109,13 @@ export class MyFeedComponent implements OnInit {
   private targetPostId: number | null = null;
   protected readonly highlightedPostId = signal<number | null>(null);
 
+  /**
+   * Handle of the in-flight highlight-fade timer (#1077 reviewer). Tracked
+   * so a rapid re-navigation can cancel the previous fade before scheduling
+   * its own, and so a pending fade can't fire after teardown.
+   */
+  private fadeTimer?: ReturnType<typeof setTimeout>;
+
   protected readonly composerOpen = signal(false);
 
   /**
@@ -175,6 +182,10 @@ export class MyFeedComponent implements OnInit {
       this.maybeScrollToTargetPost();
     });
 
+    // A scheduled fade can outlive the component on a quick navigate-away;
+    // cancel it on teardown so it can't write to a destroyed view.
+    this.destroyRef.onDestroy(() => clearTimeout(this.fadeTimer));
+
     // `catchError` inside `switchMap` keeps the outer stream alive
     // when a single request fails — otherwise the first HTTP error
     // would terminate the subscription and break every subsequent
@@ -207,10 +218,11 @@ export class MyFeedComponent implements OnInit {
 
   /**
    * Scroll to + briefly highlight the notification-targeted post once
-   * it's in the rendered list (#1071). Fires at most once — clears
-   * `targetPostId` so paging doesn't yank the user back. A no-op if the
-   * post isn't on the current page (e.g. an old post past page 1); the
-   * user still lands on the feed rather than a 404, which is the win.
+   * it's in the rendered list (#1071). Fires once per resolved target —
+   * clears `targetPostId` so paging doesn't yank the user back, while a
+   * fresh notification re-arms it. A no-op if the post isn't on the
+   * current page (e.g. an old post past page 1); the user still lands on
+   * the feed rather than a 404, which is the win.
    */
   private maybeScrollToTargetPost(): void {
     const id = this.targetPostId;
@@ -231,7 +243,14 @@ export class MyFeedComponent implements OnInit {
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 0);
     // Fade the highlight after it's served its "here it is" purpose.
-    setTimeout(() => this.highlightedPostId.set(null), 2400);
+    // Cancel any in-flight fade first: rapid re-navigation (push toasts
+    // within 2.4s — the case the fragment subscription above enables)
+    // would otherwise let an older, untracked timer null a newer
+    // highlight early, including the A→B→A ordering where the same post
+    // is re-lit. Tracking + cancelling the handle leaves only the live
+    // highlight's timer pending (#1075 / #1077 reviewer).
+    clearTimeout(this.fadeTimer);
+    this.fadeTimer = setTimeout(() => this.highlightedPostId.set(null), 2400);
   }
 
   /**

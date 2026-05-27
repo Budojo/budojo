@@ -921,5 +921,78 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
         vi.useRealTimers();
       }
     });
+
+    it('keeps a newer highlight lit for its full duration when an older fade timer fires (rapid re-navigation) (#1075 reviewer)', () => {
+      vi.useFakeTimers();
+      const originalScroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = vi.fn();
+      try {
+        const { fixture, http, fragment$ } = setup({ fragment: 'post-7' });
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8, 9]);
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+
+        const highlighted = () =>
+          (
+            fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+          ).highlightedPostId();
+        expect(highlighted()).toBe(7);
+
+        // A second toast lands 1s into post-7's 2.4s highlight window.
+        vi.advanceTimersByTime(1000);
+        fragment$.next('post-9');
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+        expect(highlighted()).toBe(9);
+
+        // post-7's fade timer was cancelled when post-9 re-armed the
+        // highlight, so nothing fires at t≈2400 to null the live post-9
+        // highlight — cancel-and-reschedule leaves only post-9's timer.
+        vi.advanceTimersByTime(1400);
+        expect(highlighted()).toBe(9);
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        vi.useRealTimers();
+      }
+    });
+
+    it('keeps the re-lit post highlighted on an A→B→A re-navigation within the fade window (#1077 reviewer)', () => {
+      vi.useFakeTimers();
+      const originalScroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = vi.fn();
+      try {
+        const { fixture, http, fragment$ } = setup({ fragment: 'post-7' });
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8, 9]);
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+
+        const highlighted = () =>
+          (
+            fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+          ).highlightedPostId();
+        expect(highlighted()).toBe(7);
+
+        // A → B → A, each hop inside the previous highlight's 2.4s window.
+        vi.advanceTimersByTime(800);
+        fragment$.next('post-8');
+        fixture.detectChanges();
+        vi.advanceTimersByTime(800);
+        fragment$.next('post-7');
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+        expect(highlighted()).toBe(7);
+
+        // post-7's ORIGINAL fade timer (scheduled at t≈0) comes due at
+        // t≈2400. An id guard would null the re-lit post-7; cancelling
+        // stale timers leaves it lit until its own fresh timer.
+        vi.advanceTimersByTime(800);
+        expect(highlighted()).toBe(7);
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        vi.useRealTimers();
+      }
+    });
   });
 });
