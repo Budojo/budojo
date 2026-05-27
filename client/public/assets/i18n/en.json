@@ -278,7 +278,11 @@
     "feed": {
       "title": "Your academy's feed",
       "emptyBody": "No posts yet — grading celebrations and events from your academy will show up here.",
-      "errorBody": "We couldn't load the feed. Refresh the page and try again.",
+      "error": {
+        "title": "Couldn't load the feed",
+        "hint": "Something went wrong. Refresh the page and try again.",
+        "retry": "Try again"
+      },
       "beltPromotion": {
         "text": "{{name}} just earned a new belt!"
       },
@@ -1602,13 +1606,17 @@
         "title": "No athletes found.",
         "filteredHint": "Try clearing your filters or search."
       },
+      "error": {
+        "title": "Couldn't load the roster",
+        "hint": "Something went wrong loading your athletes. Check your connection and try again.",
+        "retry": "Try again"
+      },
       "toast": {
         "markedPaid": "Marked paid",
         "markedUnpaid": "Marked unpaid",
         "errorSummary": "Error",
         "deletedSummary": "Deleted",
         "deletedDetail": "{{name}} removed.",
-        "loadErrorDetail": "Could not load athletes. Please try again.",
         "paidErrorMissingFee": "Set a monthly fee on the academy first to record payments.",
         "paidErrorGeneric": "Couldn't update the payment. Please try again.",
         "deleteErrorDetail": "Could not delete athlete. Please try again.",

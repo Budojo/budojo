@@ -5,9 +5,11 @@
   </header>
 
   @if (errored()) {
-    <p class="stats-athletes__error" data-cy="stats-athletes-error">
-      {{ 'stats.athletes.errored' | translate }}
-    </p>
+    <app-error-state
+      [title]="'stats.athletes.errored' | translate"
+      [headingLevel]="3"
+      dataCy="stats-athletes-error"
+    />
   } @else if (loading()) {
     <p-skeleton
       height="20rem"

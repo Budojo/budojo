@@ -25,8 +25,7 @@
     height: 20rem;
   }
 
-  &__empty,
-  &__error {
+  &__empty {
     color: var(--p-text-muted-color);
     text-align: center;
     padding: 2rem;

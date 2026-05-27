@@ -62,6 +62,37 @@ describe('AthletesListComponent', () => {
     });
   });
 
+  describe('load error state (#1033)', () => {
+    it('renders an inline error-state banner when the list load fails (replaces the scroll-away toast)', () => {
+      const list = TestBed.inject(AthleteService).list as unknown as Mock;
+      list.mockReturnValue(throwError(() => new Error('load failed')));
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-cy="athletes-error"]')).not.toBeNull();
+    });
+
+    it('retry re-issues the list request and clears the banner on success', () => {
+      const list = TestBed.inject(AthleteService).list as unknown as Mock;
+      list.mockReturnValue(throwError(() => new Error('load failed')));
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const before = list.mock.calls.length;
+
+      list.mockReturnValue(
+        of({
+          data: [] as Athlete[],
+          meta: { total: 0, current_page: 1, per_page: 20, last_page: 1 },
+        }),
+      );
+      (fixture.componentInstance as unknown as { reload: () => void }).reload();
+      fixture.detectChanges();
+
+      expect(list.mock.calls.length).toBeGreaterThan(before);
+      expect(fixture.nativeElement.querySelector('[data-cy="athletes-error"]')).toBeNull();
+    });
+  });
+
   describe('Full name 4-state sort cycle (#196)', () => {
     // The synthetic Full name column cycles four states on click:
     // first asc → first desc → last asc → last desc → (loops back to first asc).

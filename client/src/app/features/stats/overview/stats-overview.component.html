@@ -6,9 +6,7 @@
   />
 
   @if (errored()) {
-    <p class="stats-page__error" role="alert" data-cy="stats-error">
-      {{ 'stats.loadError' | translate }}
-    </p>
+    <app-error-state [title]="'stats.loadError' | translate" dataCy="stats-error" />
   } @else if (loading()) {
     <div class="stats-page__skeleton" data-cy="stats-skeleton">
       <p-skeleton width="100%" height="20rem" />

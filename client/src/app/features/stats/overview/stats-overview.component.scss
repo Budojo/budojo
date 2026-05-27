@@ -16,19 +16,12 @@
     flex-direction: column;
   }
 
-  &__error,
   &__empty {
     color: var(--p-text-muted-color);
     text-align: center;
     padding: 3rem 1rem;
     border: 1px dashed var(--p-content-border-color);
     border-radius: var(--p-border-radius);
-  }
-
-  &__error {
-    color: var(--p-message-error-color);
-    border-color: var(--p-message-error-border-color);
-    background: var(--p-message-error-background);
   }
 }
 
