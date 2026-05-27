@@ -169,7 +169,7 @@ it('via() includes the WebPushChannel and toWebPush() mirrors the database shape
     $post = CommunityPost::factory()->for($this->academy)->create();
     $notification = new CommunityBeltCelebrationNotification($athlete, $post, 'white', 'blue');
 
-    expect($notification->via(new \stdClass()))->toContain(WebPushChannel::class);
-    expect($notification->toWebPush(new \stdClass()))
-        ->toMatchArray($notification->toDatabase(new \stdClass()));
+    expect($notification->via(new User(['role' => 'owner'])))->toContain(WebPushChannel::class);
+    expect($notification->toWebPush(new User(['role' => 'owner'])))
+        ->toMatchArray($notification->toDatabase(new User(['role' => 'owner'])));
 });

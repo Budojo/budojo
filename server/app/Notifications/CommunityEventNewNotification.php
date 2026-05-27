@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\CommunityPost;
+use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
+use App\Support\CommunityLink;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -54,7 +56,7 @@ class CommunityEventNewNotification extends Notification
      */
     public function toDatabase(object $notifiable): array
     {
-        return $this->payload();
+        return $this->payload($notifiable);
     }
 
     /**
@@ -62,14 +64,16 @@ class CommunityEventNewNotification extends Notification
      */
     public function toWebPush(object $notifiable): array
     {
-        return $this->payload();
+        return $this->payload($notifiable);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function payload(): array
+    private function payload(object $notifiable): array
     {
+        \assert($notifiable instanceof User);
+
         /** @var array<string, mixed> $payload */
         $payload = $this->post->payload ?? [];
         $rawTitle = \is_string($payload['title'] ?? null) ? trim($payload['title']) : '';
@@ -91,7 +95,7 @@ class CommunityEventNewNotification extends Notification
             // value gives it the timezone it needs without parsing
             // back through the post.
             'body' => $location !== null ? $location : '',
-            'link' => \sprintf('/dashboard/me/feed#post-%d', $this->post->id),
+            'link' => CommunityLink::forPost($notifiable, $this->post->id),
             'kind' => 'community_event_new',
             'post_id' => $this->post->id,
             'starts_at' => $startsAt,

@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
 import { MyFeedComponent } from './my-feed.component';
 import type { CommunityFeedPage, CommunityPost } from '../../core/services/community.service';
@@ -16,7 +17,13 @@ function emptyPage(): CommunityFeedPage {
   };
 }
 
-function setup(opts: { role?: UserRole } = {}) {
+function setup(opts: { role?: UserRole; fragment?: string } = {}) {
+  // The component subscribes to the `route.fragment` *stream* (not the
+  // one-shot snapshot) so a same-route, fragment-only navigation — a push
+  // toast landing on the feed you're already viewing — still scrolls
+  // (#1071 reviewer). Seed it with opts.fragment; tests drive re-navigation
+  // by pushing a new value through the returned `fragment$`.
+  const fragment$ = new BehaviorSubject<string | null>(opts.fragment ?? null);
   TestBed.configureTestingModule({
     imports: [MyFeedComponent],
     providers: [
@@ -24,6 +31,7 @@ function setup(opts: { role?: UserRole } = {}) {
       provideHttpClientTesting(),
       provideRouter([]),
       ...provideI18nTesting(),
+      { provide: ActivatedRoute, useValue: { fragment: fragment$ } },
     ],
   });
 
@@ -44,7 +52,7 @@ function setup(opts: { role?: UserRole } = {}) {
   const fixture = TestBed.createComponent(MyFeedComponent);
   const http = TestBed.inject(HttpTestingController);
   fixture.detectChanges();
-  return { fixture, el: fixture.nativeElement as HTMLElement, http };
+  return { fixture, el: fixture.nativeElement as HTMLElement, http, fragment$ };
 }
 
 function postFixture(overrides: Partial<CommunityPost> = {}): CommunityPost {
@@ -794,6 +802,197 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
       // No reaction-toggle PATCH fired — clicking the count zone must
       // stopPropagation so the outer chip's toggle handler doesn't run.
       http.expectNone((r) => r.url.endsWith('/api/v1/community/posts/42/reactions'));
+    });
+  });
+
+  describe('notification deep-link (#1071)', () => {
+    function loadPosts(http: HttpTestingController, ids: number[]): void {
+      http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+        data: ids.map((id) => postFixture({ id })),
+        meta: { current_page: 1, per_page: 20, total: ids.length, last_page: 1 },
+      });
+    }
+
+    it('highlights the post named in the #post-N fragment once the feed loads', () => {
+      const { fixture, http } = setup({ fragment: 'post-7' });
+      loadPosts(http, [7, 8]);
+      fixture.detectChanges();
+
+      expect(
+        (
+          fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+        ).highlightedPostId(),
+      ).toBe(7);
+      // The <li> carries the anchor id the notification deep-links to.
+      expect(fixture.nativeElement.querySelector('#post-7')).not.toBeNull();
+    });
+
+    it('does not highlight anything without a #post fragment', () => {
+      const { fixture, http } = setup();
+      loadPosts(http, [7, 8]);
+      fixture.detectChanges();
+
+      expect(
+        (
+          fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+        ).highlightedPostId(),
+      ).toBeNull();
+    });
+
+    it('is a no-op when the targeted post is not on the loaded page (no crash, no highlight)', () => {
+      const { fixture, http } = setup({ fragment: 'post-999' });
+      loadPosts(http, [7, 8]);
+      fixture.detectChanges();
+
+      expect(
+        (
+          fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+        ).highlightedPostId(),
+      ).toBeNull();
+    });
+
+    it('moves keyboard focus to the deep-linked post so non-visual users get the same cue (a11y, client canon § Norman feedback) (#1072 reviewer)', () => {
+      vi.useFakeTimers();
+      // scrollIntoView is not implemented in jsdom; the handler calls it
+      // right after .focus(), so stub it to a no-op for this test.
+      const originalScroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = vi.fn();
+      try {
+        const { fixture, http } = setup({ fragment: 'post-7' });
+        // Attach to the document: the handler resolves the target via
+        // document.getElementById, and .focus() only sets
+        // document.activeElement on a connected, focusable element.
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8]);
+        fixture.detectChanges();
+
+        // Flush the deferred scroll/focus tick (setTimeout 0).
+        vi.advanceTimersByTime(1);
+
+        const li = fixture.nativeElement.querySelector('#post-7') as HTMLElement;
+        // tabindex=-1 makes the card programmatically focusable without
+        // inserting every feed card into the tab order.
+        expect(li.getAttribute('tabindex')).toBe('-1');
+        expect(document.activeElement).toBe(li);
+
+        fixture.nativeElement.remove();
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        vi.useRealTimers();
+      }
+    });
+
+    it('re-scrolls when a same-route fragment change targets a different already-loaded post (foreground push toast on the open feed) (#1071 reviewer)', () => {
+      vi.useFakeTimers();
+      const originalScroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = vi.fn();
+      try {
+        const { fixture, http, fragment$ } = setup({ fragment: 'post-7' });
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8, 9]);
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+
+        const highlighted = () =>
+          (
+            fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+          ).highlightedPostId();
+
+        // Fresh navigation consumed the initial #post-7.
+        expect(highlighted()).toBe(7);
+        // Let that highlight fade so the second cue is unambiguous.
+        vi.advanceTimersByTime(2400);
+        expect(highlighted()).toBeNull();
+
+        // A push toast for post-9 fires while the user is ALREADY on the
+        // feed: navigateByUrl('…/feed#post-9') changes only the fragment,
+        // so ngOnInit never re-runs. Reading the snapshot once would miss
+        // this; subscribing to the fragment stream catches it.
+        fragment$.next('post-9');
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+
+        expect(highlighted()).toBe(9);
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#post-9'));
+
+        fixture.nativeElement.remove();
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        vi.useRealTimers();
+      }
+    });
+
+    it('keeps a newer highlight lit for its full duration when an older fade timer fires (rapid re-navigation) (#1075 reviewer)', () => {
+      vi.useFakeTimers();
+      const originalScroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = vi.fn();
+      try {
+        const { fixture, http, fragment$ } = setup({ fragment: 'post-7' });
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8, 9]);
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+
+        const highlighted = () =>
+          (
+            fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+          ).highlightedPostId();
+        expect(highlighted()).toBe(7);
+
+        // A second toast lands 1s into post-7's 2.4s highlight window.
+        vi.advanceTimersByTime(1000);
+        fragment$.next('post-9');
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+        expect(highlighted()).toBe(9);
+
+        // post-7's fade timer was cancelled when post-9 re-armed the
+        // highlight, so nothing fires at t≈2400 to null the live post-9
+        // highlight — cancel-and-reschedule leaves only post-9's timer.
+        vi.advanceTimersByTime(1400);
+        expect(highlighted()).toBe(9);
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        vi.useRealTimers();
+      }
+    });
+
+    it('keeps the re-lit post highlighted on an A→B→A re-navigation within the fade window (#1077 reviewer)', () => {
+      vi.useFakeTimers();
+      const originalScroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = vi.fn();
+      try {
+        const { fixture, http, fragment$ } = setup({ fragment: 'post-7' });
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8, 9]);
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+
+        const highlighted = () =>
+          (
+            fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+          ).highlightedPostId();
+        expect(highlighted()).toBe(7);
+
+        // A → B → A, each hop inside the previous highlight's 2.4s window.
+        vi.advanceTimersByTime(800);
+        fragment$.next('post-8');
+        fixture.detectChanges();
+        vi.advanceTimersByTime(800);
+        fragment$.next('post-7');
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+        expect(highlighted()).toBe(7);
+
+        // post-7's ORIGINAL fade timer (scheduled at t≈0) comes due at
+        // t≈2400. An id guard would null the re-lit post-7; cancelling
+        // stale timers leaves it lit until its own fresh timer.
+        vi.advanceTimersByTime(800);
+        expect(highlighted()).toBe(7);
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        vi.useRealTimers();
+      }
     });
   });
 });

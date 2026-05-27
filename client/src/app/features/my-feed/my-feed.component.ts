@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -98,6 +98,23 @@ export class MyFeedComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly shareCard = inject(PromotionShareCardService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly route = inject(ActivatedRoute);
+
+  /**
+   * Post id to scroll to + highlight, parsed from the `#post-N` route
+   * fragment that community notifications deep-link to (#1071). Set on
+   * each fragment emission and cleared once consumed, so paging doesn't
+   * re-trigger it while a fresh notification (a new fragment) re-arms it.
+   */
+  private targetPostId: number | null = null;
+  protected readonly highlightedPostId = signal<number | null>(null);
+
+  /**
+   * Handle of the in-flight highlight-fade timer (#1077 reviewer). Tracked
+   * so a rapid re-navigation can cancel the previous fade before scheduling
+   * its own, and so a pending fade can't fire after teardown.
+   */
+  private fadeTimer?: ReturnType<typeof setTimeout>;
 
   protected readonly composerOpen = signal(false);
 
@@ -150,6 +167,25 @@ export class MyFeedComponent implements OnInit {
   private readonly pageRequests = new Subject<number>();
 
   ngOnInit(): void {
+    // Deep-link target from a community notification (#1071): the link is
+    // `…#post-N`. Subscribe to the fragment *stream*, not the one-shot
+    // snapshot — a foreground push toast (#1063) can navigate to the feed
+    // the user is ALREADY viewing, and a same-route, fragment-only
+    // navigation reuses this component without re-running ngOnInit. A
+    // one-time snapshot read would silently ignore that hop and never
+    // scroll (reviewer, #1071). On each emission parse the target, then
+    // scroll now if the feed is already loaded (the re-navigation case);
+    // otherwise the load handler below scrolls once the page lands.
+    this.route.fragment.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((fragment) => {
+      const match = fragment ? /^post-(\d+)$/.exec(fragment) : null;
+      this.targetPostId = match ? Number(match[1]) : null;
+      this.maybeScrollToTargetPost();
+    });
+
+    // A scheduled fade can outlive the component on a quick navigate-away;
+    // cancel it on teardown so it can't write to a destroyed view.
+    this.destroyRef.onDestroy(() => clearTimeout(this.fadeTimer));
+
     // `catchError` inside `switchMap` keeps the outer stream alive
     // when a single request fails — otherwise the first HTTP error
     // would terminate the subscription and break every subsequent
@@ -174,9 +210,47 @@ export class MyFeedComponent implements OnInit {
         this.currentPage.set(response.meta.current_page);
         this.lastPage.set(response.meta.last_page);
         this.loading.set(false);
+        this.maybeScrollToTargetPost();
       });
 
     this.load(1);
+  }
+
+  /**
+   * Scroll to + briefly highlight the notification-targeted post once
+   * it's in the rendered list (#1071). Fires once per resolved target —
+   * clears `targetPostId` so paging doesn't yank the user back, while a
+   * fresh notification re-arms it. A no-op if the post isn't on the
+   * current page (e.g. an old post past page 1); the user still lands on
+   * the feed rather than a 404, which is the win.
+   */
+  private maybeScrollToTargetPost(): void {
+    const id = this.targetPostId;
+    if (id === null || !this.posts().some((p) => p.id === id)) {
+      return;
+    }
+    this.targetPostId = null;
+    this.highlightedPostId.set(id);
+    // Defer one tick so the @for has rendered the <li id="post-N">.
+    setTimeout(() => {
+      const el = document.getElementById(`post-${id}`);
+      // Move focus to the card (tabindex=-1 in the template) so keyboard
+      // and screen-reader users arriving from a notification get the same
+      // "here's your post" cue the highlight gives sighted users (a11y,
+      // client canon § Norman feedback). preventScroll lets scrollIntoView
+      // own the smooth scroll without a competing instant focus jump.
+      el?.focus({ preventScroll: true });
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+    // Fade the highlight after it's served its "here it is" purpose.
+    // Cancel any in-flight fade first: rapid re-navigation (push toasts
+    // within 2.4s — the case the fragment subscription above enables)
+    // would otherwise let an older, untracked timer null a newer
+    // highlight early, including the A→B→A ordering where the same post
+    // is re-lit. Tracking + cancelling the handle leaves only the live
+    // highlight's timer pending (#1075 / #1077 reviewer).
+    clearTimeout(this.fadeTimer);
+    this.fadeTimer = setTimeout(() => this.highlightedPostId.set(null), 2400);
   }
 
   /**
