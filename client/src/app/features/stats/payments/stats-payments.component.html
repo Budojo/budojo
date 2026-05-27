@@ -5,9 +5,7 @@
   </header>
 
   @if (errored()) {
-    <p class="stats-payments__error" data-cy="stats-payments-error">
-      {{ 'stats.payments.errored' | translate }}
-    </p>
+    <app-error-state [title]="'stats.payments.errored' | translate" dataCy="stats-payments-error" />
   } @else if (loading()) {
     <p-skeleton
       height="20rem"
