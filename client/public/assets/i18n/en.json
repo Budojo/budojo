@@ -1617,7 +1617,6 @@
         "errorSummary": "Error",
         "deletedSummary": "Deleted",
         "deletedDetail": "{{name}} removed.",
-        "loadErrorDetail": "Could not load athletes. Please try again.",
         "paidErrorMissingFee": "Set a monthly fee on the academy first to record payments.",
         "paidErrorGeneric": "Couldn't update the payment. Please try again.",
         "deleteErrorDetail": "Could not delete athlete. Please try again.",

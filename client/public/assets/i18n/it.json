@@ -1617,7 +1617,6 @@
         "errorSummary": "Errore",
         "deletedSummary": "Eliminato",
         "deletedDetail": "{{name}} rimosso.",
-        "loadErrorDetail": "Impossibile caricare gli atleti. Riprova.",
         "paidErrorMissingFee": "Imposta prima una quota mensile sull'academy per registrare i pagamenti.",
         "paidErrorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
         "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova.",
