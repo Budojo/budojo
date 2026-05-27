@@ -5,7 +5,11 @@
   </header>
 
   @if (errored()) {
-    <app-error-state [title]="'stats.athletes.errored' | translate" dataCy="stats-athletes-error" />
+    <app-error-state
+      [title]="'stats.athletes.errored' | translate"
+      [headingLevel]="3"
+      dataCy="stats-athletes-error"
+    />
   } @else if (loading()) {
     <p-skeleton
       height="20rem"

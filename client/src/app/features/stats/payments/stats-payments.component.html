@@ -5,7 +5,11 @@
   </header>
 
   @if (errored()) {
-    <app-error-state [title]="'stats.payments.errored' | translate" dataCy="stats-payments-error" />
+    <app-error-state
+      [title]="'stats.payments.errored' | translate"
+      [headingLevel]="3"
+      dataCy="stats-payments-error"
+    />
   } @else if (loading()) {
     <p-skeleton
       height="20rem"
