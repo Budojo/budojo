@@ -1602,6 +1602,11 @@
         "title": "Nessun atleta trovato.",
         "filteredHint": "Prova a rimuovere i filtri o la ricerca."
       },
+      "error": {
+        "title": "Impossibile caricare gli atleti",
+        "hint": "Si è verificato un errore durante il caricamento degli atleti. Controlla la connessione e riprova.",
+        "retry": "Riprova"
+      },
       "toast": {
         "markedPaid": "Segnato come pagato",
         "markedUnpaid": "Segnato come non pagato",

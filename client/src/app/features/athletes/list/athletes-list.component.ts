@@ -51,6 +51,7 @@ import { MonthlySummaryWidgetComponent } from '../../../shared/components/monthl
 import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpaid-this-month-widget/unpaid-this-month-widget.component';
 import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 
@@ -90,6 +91,7 @@ interface SelectOption<T extends string> {
     PaidBadgeComponent,
     OnboardingChecklistComponent,
     PageHeaderComponent,
+    ErrorStateComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',
@@ -128,6 +130,12 @@ export class AthletesListComponent implements OnInit {
     return this.translate.instant(key, { count: total });
   });
   readonly loading = signal(true);
+  /**
+   * True when the most recent roster load failed. Drives the inline
+   * <app-error-state> banner — the audit flagged the old scroll-away toast
+   * as the worst "load failed" shape (#1033 / #1037). Reset on each load.
+   */
+  readonly loadError = signal(false);
 
   selectedBelt = signal<Belt | ''>('');
   selectedStatus = signal<AthleteListStatus | ''>('');
@@ -923,8 +931,14 @@ export class AthletesListComponent implements OnInit {
     this.first.set(0);
   }
 
+  /** Retry hook for the error-state banner — re-issues the roster load. */
+  protected reload(): void {
+    this.load();
+  }
+
   private load(): void {
     this.loading.set(true);
+    this.loadError.set(false);
     const filters: AthleteFilters = { page: this.page };
     const belt = this.selectedBelt();
     const status = this.selectedStatus();
@@ -956,12 +970,10 @@ export class AthletesListComponent implements OnInit {
         error: () => {
           this.athletes.set([]);
           this.totalRecords.set(0);
-          this.messageService.add({
-            severity: 'error',
-            summary: this.translate.instant('athletes.list.toast.errorSummary'),
-            detail: this.translate.instant('athletes.list.toast.loadErrorDetail'),
-            life: 4000,
-          });
+          // Inline banner instead of a toast: a load failure must persist
+          // on screen until the user retries, not scroll away (#1033 /
+          // #1037, client canon § Norman feedback).
+          this.loadError.set(true);
         },
       });
   }

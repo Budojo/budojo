@@ -147,199 +147,208 @@
     </app-filter-sheet>
   </div>
 
-  <!-- Table -->
-  <div class="athletes-page__table-wrapper">
-    <p-table
-      [value]="athletes()"
-      [loading]="loading()"
-      [showLoader]="false"
-      [rows]="20"
-      [first]="first()"
-      [totalRecords]="totalRecords()"
-      [paginator]="totalRecords() > 20"
-      (onPage)="onPageChange($event)"
-      [lazy]="true"
-      responsiveLayout="scroll"
-      styleClass="p-datatable-sm"
-    >
-      <ng-template pTemplate="header">
-        <tr>
-          <th class="full-name-th" [attr.aria-sort]="fullNameAriaSort()">
-            <button
-              type="button"
-              class="full-name-th__btn"
-              data-cy="athletes-th-name"
-              [pTooltip]="fullNameSortTooltip()"
-              tooltipPosition="top"
-              (click)="cycleFullNameSort()"
-              [attr.aria-label]="fullNameSortTooltip()"
-            >
-              {{ 'athletes.list.table.fullName' | translate }}
-              <span
-                class="full-name-th__signifier"
-                [class.full-name-th__signifier--active]="fullNameSortLabel() !== null"
-                aria-hidden="true"
+  @if (loadError()) {
+    <app-error-state
+      [title]="'athletes.list.error.title' | translate"
+      [hint]="'athletes.list.error.hint' | translate"
+      [retryLabel]="'athletes.list.error.retry' | translate"
+      (retry)="reload()"
+      dataCy="athletes-error"
+    />
+  } @else {
+    <!-- Table -->
+    <div class="athletes-page__table-wrapper">
+      <p-table
+        [value]="athletes()"
+        [loading]="loading()"
+        [showLoader]="false"
+        [rows]="20"
+        [first]="first()"
+        [totalRecords]="totalRecords()"
+        [paginator]="totalRecords() > 20"
+        (onPage)="onPageChange($event)"
+        [lazy]="true"
+        responsiveLayout="scroll"
+        styleClass="p-datatable-sm"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th class="full-name-th" [attr.aria-sort]="fullNameAriaSort()">
+              <button
+                type="button"
+                class="full-name-th__btn"
+                data-cy="athletes-th-name"
+                [pTooltip]="fullNameSortTooltip()"
+                tooltipPosition="top"
+                (click)="cycleFullNameSort()"
+                [attr.aria-label]="fullNameSortTooltip()"
               >
-                {{ fullNameSortLabel() ?? '↕' }}
-              </span>
-            </button>
-          </th>
-          <th class="belt-th" [attr.aria-sort]="beltAriaSort()">
-            <button
-              type="button"
-              class="belt-th__btn"
-              data-cy="athletes-th-belt"
-              [pTooltip]="beltSortTooltip()"
-              tooltipPosition="top"
-              (click)="cycleBeltSort()"
-              [attr.aria-label]="beltSortTooltip()"
-            >
-              {{ 'athletes.list.table.belt' | translate }}
-              <!--
+                {{ 'athletes.list.table.fullName' | translate }}
+                <span
+                  class="full-name-th__signifier"
+                  [class.full-name-th__signifier--active]="fullNameSortLabel() !== null"
+                  aria-hidden="true"
+                >
+                  {{ fullNameSortLabel() ?? '↕' }}
+                </span>
+              </button>
+            </th>
+            <th class="belt-th" [attr.aria-sort]="beltAriaSort()">
+              <button
+                type="button"
+                class="belt-th__btn"
+                data-cy="athletes-th-belt"
+                [pTooltip]="beltSortTooltip()"
+                tooltipPosition="top"
+                (click)="cycleBeltSort()"
+                [attr.aria-label]="beltSortTooltip()"
+              >
+                {{ 'athletes.list.table.belt' | translate }}
+                <!--
                 Custom signifier (#210, follow-up to #205): drops PrimeNG's
                 `<p-sortIcon>` so the active state reads from OUR signals
                 instead of PrimeNG's internal table state. When the sort
                 moves to first/last_name (Full-name cycle), this column's
                 arrow goes back to neutral instead of staying highlighted.
               -->
-              <span
-                class="belt-th__signifier"
-                [class.belt-th__signifier--active]="sortField() === 'belt'"
-                aria-hidden="true"
-              >
-                {{ beltSortLabel() }}
-              </span>
-            </button>
-          </th>
-          <th>{{ 'athletes.list.table.status' | translate }}</th>
-          @if (hasMonthlyFee()) {
-            <!-- Header carries the current month abbreviation (#282) so an
+                <span
+                  class="belt-th__signifier"
+                  [class.belt-th__signifier--active]="sortField() === 'belt'"
+                  aria-hidden="true"
+                >
+                  {{ beltSortLabel() }}
+                </span>
+              </button>
+            </th>
+            <th>{{ 'athletes.list.table.status' | translate }}</th>
+            @if (hasMonthlyFee()) {
+              <!-- Header carries the current month abbreviation (#282) so an
                  instructor reading "Unpaid" on a row knows which month the
                  status refers to without hovering. The full month+year
                  lives in the per-row tooltip below. -->
-            <th data-cy="athletes-th-paid">
-              {{ 'athletes.list.table.paidPrefix' | translate }} · {{ currentMonthShort() }}
-            </th>
-          }
-          <th style="width: 8rem"></th>
-        </tr>
-      </ng-template>
+              <th data-cy="athletes-th-paid">
+                {{ 'athletes.list.table.paidPrefix' | translate }} · {{ currentMonthShort() }}
+              </th>
+            }
+            <th style="width: 8rem"></th>
+          </tr>
+        </ng-template>
 
-      <ng-template pTemplate="body" let-athlete>
-        <tr>
-          <td>
-            <!-- Name is the canonical affordance to open the athlete
+        <ng-template pTemplate="body" let-athlete>
+          <tr>
+            <td>
+              <!-- Name is the canonical affordance to open the athlete
                  detail (#281) — replaces the dropped folder icon as
                  the primary "go to this athlete" tap target. Pencil
                  and trash remain inline for the fast paths. -->
-            <div class="athlete-name">
-              <div class="athlete-name__primary">
-                @if (athlete.user_handle; as handle) {
+              <div class="athlete-name">
+                <div class="athlete-name__primary">
+                  @if (athlete.user_handle; as handle) {
+                    <a
+                      class="athlete-name__avatar-link"
+                      [routerLink]="['/dashboard/u', handle]"
+                      [attr.aria-label]="
+                        'athletes.list.tooltip.publicProfileAria'
+                          | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                      "
+                      [attr.data-cy]="'athlete-avatar-link-' + athlete.id"
+                    >
+                      <app-user-avatar
+                        [url]="athlete.user_avatar_url"
+                        [name]="athlete.first_name + ' ' + athlete.last_name"
+                        size="chip"
+                      />
+                    </a>
+                  } @else {
+                    <span
+                      class="athlete-name__avatar-link athlete-name__avatar-link--inert"
+                      aria-hidden="true"
+                      [attr.data-cy]="'athlete-avatar-inert-' + athlete.id"
+                    >
+                      <app-user-avatar
+                        [url]="athlete.user_avatar_url"
+                        [name]="athlete.first_name + ' ' + athlete.last_name"
+                        size="chip"
+                      />
+                    </span>
+                  }
                   <a
-                    class="athlete-name__avatar-link"
-                    [routerLink]="['/dashboard/u', handle]"
-                    [attr.aria-label]="
-                      'athletes.list.tooltip.publicProfileAria'
-                        | translate: { name: athlete.first_name + ' ' + athlete.last_name }
-                    "
-                    [attr.data-cy]="'athlete-avatar-link-' + athlete.id"
+                    class="athlete-name__text"
+                    [routerLink]="['/dashboard/athletes', athlete.id]"
+                    data-cy="athlete-name-link"
+                    >{{ athlete.first_name }} {{ athlete.last_name }}</a
                   >
-                    <app-user-avatar
-                      [url]="athlete.user_avatar_url"
-                      [name]="athlete.first_name + ' ' + athlete.last_name"
-                      size="chip"
-                    />
-                  </a>
-                } @else {
-                  <span
-                    class="athlete-name__avatar-link athlete-name__avatar-link--inert"
-                    aria-hidden="true"
-                    [attr.data-cy]="'athlete-avatar-inert-' + athlete.id"
-                  >
-                    <app-user-avatar
-                      [url]="athlete.user_avatar_url"
-                      [name]="athlete.first_name + ' ' + athlete.last_name"
-                      size="chip"
-                    />
-                  </span>
-                }
-                <a
-                  class="athlete-name__text"
-                  [routerLink]="['/dashboard/athletes', athlete.id]"
-                  data-cy="athlete-name-link"
-                  >{{ athlete.first_name }} {{ athlete.last_name }}</a
-                >
-                <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
-                <!-- Owner-as-athlete chip (#750). Tells the user at a
+                  <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
+                  <!-- Owner-as-athlete chip (#750). Tells the user at a
                      glance which roster rows are academy staff training
                      in their own academy vs. regular students. The
                      PrimeNG tag stays neutral severity to avoid
                      competing with the belt-color chip beside it. -->
-                @if (athlete.is_self) {
-                  <p-tag
-                    [value]="'athletes.list.ownerChip' | translate"
-                    severity="secondary"
-                    [rounded]="true"
-                    [attr.data-cy]="'athlete-owner-chip-' + athlete.id"
-                  />
-                }
-              </div>
-              <!-- Social icons inline below name+age. Conditional render —
+                  @if (athlete.is_self) {
+                    <p-tag
+                      [value]="'athletes.list.ownerChip' | translate"
+                      severity="secondary"
+                      [rounded]="true"
+                      [attr.data-cy]="'athlete-owner-chip-' + athlete.id"
+                    />
+                  }
+                </div>
+                <!-- Social icons inline below name+age. Conditional render —
                    no empty placeholders for athletes without socials.
                    Mirrors the academy-detail contactLinks pattern.
                    stopPropagation prevents the row's primary nav target
                    (the name link) from being triggered when the social
                    link is tapped. -->
-              @if (athlete.facebook || athlete.instagram) {
-                <div class="athlete-name__socials">
-                  @if (athlete.facebook) {
-                    <a
-                      class="athlete-name__social-link"
-                      [href]="athlete.facebook"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      [pTooltip]="'athletes.list.social.facebookLabel' | translate"
-                      [attr.aria-label]="'athletes.list.social.facebookLabel' | translate"
-                      [attr.title]="'athletes.list.social.facebookLabel' | translate"
-                      [attr.data-cy]="'athlete-social-facebook-' + athlete.id"
-                      (click)="$event.stopPropagation()"
-                    >
-                      <i class="pi pi-facebook" aria-hidden="true"></i>
-                    </a>
-                  }
-                  @if (athlete.instagram) {
-                    <a
-                      class="athlete-name__social-link"
-                      [href]="athlete.instagram"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      [pTooltip]="'athletes.list.social.instagramLabel' | translate"
-                      [attr.aria-label]="'athletes.list.social.instagramLabel' | translate"
-                      [attr.title]="'athletes.list.social.instagramLabel' | translate"
-                      [attr.data-cy]="'athlete-social-instagram-' + athlete.id"
-                      (click)="$event.stopPropagation()"
-                    >
-                      <i class="pi pi-instagram" aria-hidden="true"></i>
-                    </a>
-                  }
-                </div>
-              }
-            </div>
-          </td>
-          <td>
-            <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
-          </td>
-          <td>
-            <p-tag
-              [value]="statusLabel(athlete.status)"
-              [severity]="statusSeverity(athlete.status)"
-              [rounded]="true"
-            />
-          </td>
-          @if (hasMonthlyFee()) {
+                @if (athlete.facebook || athlete.instagram) {
+                  <div class="athlete-name__socials">
+                    @if (athlete.facebook) {
+                      <a
+                        class="athlete-name__social-link"
+                        [href]="athlete.facebook"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        [pTooltip]="'athletes.list.social.facebookLabel' | translate"
+                        [attr.aria-label]="'athletes.list.social.facebookLabel' | translate"
+                        [attr.title]="'athletes.list.social.facebookLabel' | translate"
+                        [attr.data-cy]="'athlete-social-facebook-' + athlete.id"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <i class="pi pi-facebook" aria-hidden="true"></i>
+                      </a>
+                    }
+                    @if (athlete.instagram) {
+                      <a
+                        class="athlete-name__social-link"
+                        [href]="athlete.instagram"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        [pTooltip]="'athletes.list.social.instagramLabel' | translate"
+                        [attr.aria-label]="'athletes.list.social.instagramLabel' | translate"
+                        [attr.title]="'athletes.list.social.instagramLabel' | translate"
+                        [attr.data-cy]="'athlete-social-instagram-' + athlete.id"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <i class="pi pi-instagram" aria-hidden="true"></i>
+                      </a>
+                    }
+                  </div>
+                }
+              </div>
+            </td>
             <td>
-              @if (athlete.is_self || athlete.status !== 'active') {
-                <!-- Em-dash placeholder for rows where current-month
+              <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
+            </td>
+            <td>
+              <p-tag
+                [value]="statusLabel(athlete.status)"
+                [severity]="statusSeverity(athlete.status)"
+                [rounded]="true"
+              />
+            </td>
+            @if (hasMonthlyFee()) {
+              <td>
+                @if (athlete.is_self || athlete.status !== 'active') {
+                  <!-- Em-dash placeholder for rows where current-month
                      payment is not expected:
                      - Owner-as-athlete (#750) — no payment ledger
                        surface, excluded from unpaid digest + overdue
@@ -352,9 +361,9 @@
                      a tooltip; the explicit em-dash keeps the column
                      geometry stable (the row above might be a regular
                      active athlete with a paid badge). -->
-                <span class="athlete-paid-empty" aria-hidden="true">—</span>
-              } @else {
-                <!-- Tooltip telegraphs the full month + year + status (#282)
+                  <span class="athlete-paid-empty" aria-hidden="true">—</span>
+                } @else {
+                  <!-- Tooltip telegraphs the full month + year + status (#282)
                      so the user gets unambiguous context on hover/long-press
                      without crowding the row visually. The bare badge
                      already carries Paid / Unpaid; the tooltip adds the
@@ -367,264 +376,265 @@
                      ghost tooltip reading "April 2026 — Unpaid" because
                      the ternary defaults `undefined` to "Unpaid" (Copilot
                      caught this on #289). -->
-                <app-paid-badge
-                  [paid]="athlete.paid_current_month"
-                  [clickable]="true"
-                  (paidToggle)="confirmTogglePaid($event, athlete)"
-                  [pTooltip]="
-                    athlete.paid_current_month === undefined
-                      ? ''
-                      : currentMonthLong() +
-                        ' — ' +
-                        (athlete.paid_current_month
-                          ? ('athletes.list.tooltip.paid' | translate)
-                          : ('athletes.list.tooltip.unpaid' | translate))
-                  "
-                  tooltipPosition="top"
-                />
-              }
-            </td>
-          }
-          <td class="athlete-actions">
-            <!-- Folder icon dropped (#281) — was a redundant route into
+                  <app-paid-badge
+                    [paid]="athlete.paid_current_month"
+                    [clickable]="true"
+                    (paidToggle)="confirmTogglePaid($event, athlete)"
+                    [pTooltip]="
+                      athlete.paid_current_month === undefined
+                        ? ''
+                        : currentMonthLong() +
+                          ' — ' +
+                          (athlete.paid_current_month
+                            ? ('athletes.list.tooltip.paid' | translate)
+                            : ('athletes.list.tooltip.unpaid' | translate))
+                    "
+                    tooltipPosition="top"
+                  />
+                }
+              </td>
+            }
+            <td class="athlete-actions">
+              <!-- Folder icon dropped (#281) — was a redundant route into
                  the detail (default tab is Documents anyway) and broke
                  self-evident UI per Krug. Pencil + trash kept as the
                  fast paths to "edit" and "delete this athlete".
 
                  Trashed mode (#700) collapses to a single Restore CTA —
                  Edit / Delete don't apply to a soft-deleted athlete. -->
-            @if (isTrashedMode()) {
-              <p-button
-                icon="pi pi-replay"
-                severity="primary"
-                [text]="true"
-                size="small"
-                (onClick)="confirmRestore($event, athlete)"
-                [ariaLabel]="
-                  'athletes.list.tooltip.restoreAria'
-                    | translate: { name: athlete.first_name + ' ' + athlete.last_name }
-                "
-                [pTooltip]="'athletes.list.tooltip.restore' | translate"
-                tooltipPosition="left"
-                data-cy="restore-btn"
-              />
-            } @else {
-              @if (athlete.user_handle; as handle) {
-                <a
-                  class="athletes-page__public-profile-link"
-                  [routerLink]="[PUBLIC_PROFILE_BASE, handle]"
-                  [pTooltip]="'athletes.list.tooltip.publicProfile' | translate"
-                  [attr.aria-label]="
-                    'athletes.list.tooltip.publicProfileAria'
+              @if (isTrashedMode()) {
+                <p-button
+                  icon="pi pi-replay"
+                  severity="primary"
+                  [text]="true"
+                  size="small"
+                  (onClick)="confirmRestore($event, athlete)"
+                  [ariaLabel]="
+                    'athletes.list.tooltip.restoreAria'
                       | translate: { name: athlete.first_name + ' ' + athlete.last_name }
                   "
+                  [pTooltip]="'athletes.list.tooltip.restore' | translate"
                   tooltipPosition="left"
-                  [attr.data-cy]="'public-profile-btn-' + athlete.id"
-                >
-                  <i class="pi pi-id-card" aria-hidden="true"></i>
-                </a>
+                  data-cy="restore-btn"
+                />
+              } @else {
+                @if (athlete.user_handle; as handle) {
+                  <a
+                    class="athletes-page__public-profile-link"
+                    [routerLink]="[PUBLIC_PROFILE_BASE, handle]"
+                    [pTooltip]="'athletes.list.tooltip.publicProfile' | translate"
+                    [attr.aria-label]="
+                      'athletes.list.tooltip.publicProfileAria'
+                        | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                    "
+                    tooltipPosition="left"
+                    [attr.data-cy]="'public-profile-btn-' + athlete.id"
+                  >
+                    <i class="pi pi-id-card" aria-hidden="true"></i>
+                  </a>
+                }
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  [text]="true"
+                  size="small"
+                  (onClick)="goToEdit(athlete)"
+                  [ariaLabel]="
+                    'athletes.list.tooltip.editAria'
+                      | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                  "
+                  [pTooltip]="'athletes.list.tooltip.edit' | translate"
+                  tooltipPosition="left"
+                  data-cy="edit-btn"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  size="small"
+                  (onClick)="confirmDelete($event, athlete)"
+                  [ariaLabel]="
+                    'athletes.list.tooltip.deleteAria'
+                      | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                  "
+                  [pTooltip]="'athletes.list.tooltip.delete' | translate"
+                  tooltipPosition="left"
+                />
               }
-              <p-button
-                icon="pi pi-pencil"
-                severity="secondary"
-                [text]="true"
-                size="small"
-                (onClick)="goToEdit(athlete)"
-                [ariaLabel]="
-                  'athletes.list.tooltip.editAria'
-                    | translate: { name: athlete.first_name + ' ' + athlete.last_name }
-                "
-                [pTooltip]="'athletes.list.tooltip.edit' | translate"
-                tooltipPosition="left"
-                data-cy="edit-btn"
-              />
-              <p-button
-                icon="pi pi-trash"
-                severity="danger"
-                [text]="true"
-                size="small"
-                (onClick)="confirmDelete($event, athlete)"
-                [ariaLabel]="
-                  'athletes.list.tooltip.deleteAria'
-                    | translate: { name: athlete.first_name + ' ' + athlete.last_name }
-                "
-                [pTooltip]="'athletes.list.tooltip.delete' | translate"
-                tooltipPosition="left"
-              />
-            }
-          </td>
-        </tr>
-      </ng-template>
+            </td>
+          </tr>
+        </ng-template>
 
-      <ng-template pTemplate="emptymessage">
-        <tr>
-          <td [attr.colspan]="hasMonthlyFee() ? 5 : 4" class="empty-message">
-            @if (loading()) {
-              <!-- Skeleton rows replace the PrimeNG header-spinner that
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td [attr.colspan]="hasMonthlyFee() ? 5 : 4" class="empty-message">
+              @if (loading()) {
+                <!-- Skeleton rows replace the PrimeNG header-spinner that
                    [showLoader]="false" suppressed. Canon § motion: skeletons
                    communicate shape before content, a spinner just says
                    "something is happening" — always use skeletons for list
                    loading (Krug + Norman). -->
-              <div class="athletes-list__skeleton">
-                <p-skeleton height="2rem" styleClass="mb-2" />
-                <p-skeleton height="2rem" styleClass="mb-2" />
-                <p-skeleton height="2rem" styleClass="mb-2" />
-                <p-skeleton height="2rem" styleClass="mb-2" />
-                <p-skeleton height="2rem" />
-              </div>
-            } @else {
-              <div class="empty-state">
-                <i class="pi pi-users empty-state__icon"></i>
-                <p class="empty-state__text">
-                  {{ 'athletes.list.empty.title' | translate }}
-                </p>
-                @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
-                  <p class="empty-state__hint">
-                    {{ 'athletes.list.empty.filteredHint' | translate }}
+                <div class="athletes-list__skeleton">
+                  <p-skeleton height="2rem" styleClass="mb-2" />
+                  <p-skeleton height="2rem" styleClass="mb-2" />
+                  <p-skeleton height="2rem" styleClass="mb-2" />
+                  <p-skeleton height="2rem" styleClass="mb-2" />
+                  <p-skeleton height="2rem" />
+                </div>
+              } @else {
+                <div class="empty-state">
+                  <i class="pi pi-users empty-state__icon"></i>
+                  <p class="empty-state__text">
+                    {{ 'athletes.list.empty.title' | translate }}
                   </p>
-                }
-              </div>
-            }
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
-  </div>
+                  @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
+                    <p class="empty-state__hint">
+                      {{ 'athletes.list.empty.filteredHint' | translate }}
+                    </p>
+                  }
+                </div>
+              }
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
 
-  <!-- Mobile card layout (#670). Hidden ≥ 768px via SCSS; the <p-table>
+    <!-- Mobile card layout (#670). Hidden ≥ 768px via SCSS; the <p-table>
        above is hidden < 768px. Each athlete renders as a tappable card
        (name+age → detail nav), with a 3-dot menu carrying Edit + Delete.
        Apple-minimalist look per the design system. -->
-  <div class="athletes-page__mobile-list" data-cy="athletes-mobile-list">
-    @if (loading()) {
-      <div class="athletes-page__mobile-skeletons" data-cy="athletes-mobile-loading">
-        @for (i of [1, 2, 3, 4, 5]; track i) {
-          <p-skeleton height="5rem" styleClass="mb-2" />
-        }
-      </div>
-    } @else if (athletes().length === 0) {
-      <div class="empty-state" data-cy="athletes-mobile-empty">
-        <i class="pi pi-users empty-state__icon"></i>
-        <p class="empty-state__text">{{ 'athletes.list.empty.title' | translate }}</p>
-        @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
-          <p class="empty-state__hint">{{ 'athletes.list.empty.filteredHint' | translate }}</p>
-        }
-      </div>
-    } @else {
-      <ul class="athletes-cards">
-        @for (athlete of athletes(); track athlete.id) {
-          <li class="athlete-card" [attr.data-cy]="'athlete-card-' + athlete.id">
-            <header class="athlete-card__header">
-              @if (athlete.user_handle; as handle) {
+    <div class="athletes-page__mobile-list" data-cy="athletes-mobile-list">
+      @if (loading()) {
+        <div class="athletes-page__mobile-skeletons" data-cy="athletes-mobile-loading">
+          @for (i of [1, 2, 3, 4, 5]; track i) {
+            <p-skeleton height="5rem" styleClass="mb-2" />
+          }
+        </div>
+      } @else if (athletes().length === 0) {
+        <div class="empty-state" data-cy="athletes-mobile-empty">
+          <i class="pi pi-users empty-state__icon"></i>
+          <p class="empty-state__text">{{ 'athletes.list.empty.title' | translate }}</p>
+          @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
+            <p class="empty-state__hint">{{ 'athletes.list.empty.filteredHint' | translate }}</p>
+          }
+        </div>
+      } @else {
+        <ul class="athletes-cards">
+          @for (athlete of athletes(); track athlete.id) {
+            <li class="athlete-card" [attr.data-cy]="'athlete-card-' + athlete.id">
+              <header class="athlete-card__header">
+                @if (athlete.user_handle; as handle) {
+                  <a
+                    class="athlete-card__avatar-link"
+                    [routerLink]="['/dashboard/u', handle]"
+                    (click)="$event.stopPropagation()"
+                    [attr.aria-label]="
+                      'athletes.list.tooltip.publicProfileAria'
+                        | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                    "
+                    [attr.data-cy]="'athlete-card-avatar-link-' + athlete.id"
+                  >
+                    <app-user-avatar
+                      [url]="athlete.user_avatar_url"
+                      [name]="athlete.first_name + ' ' + athlete.last_name"
+                      size="chip"
+                    />
+                  </a>
+                } @else {
+                  <span
+                    class="athlete-card__avatar-link athlete-card__avatar-link--inert"
+                    aria-hidden="true"
+                    [attr.data-cy]="'athlete-card-avatar-inert-' + athlete.id"
+                  >
+                    <app-user-avatar
+                      [url]="athlete.user_avatar_url"
+                      [name]="athlete.first_name + ' ' + athlete.last_name"
+                      size="chip"
+                    />
+                  </span>
+                }
                 <a
-                  class="athlete-card__avatar-link"
-                  [routerLink]="['/dashboard/u', handle]"
-                  (click)="$event.stopPropagation()"
+                  class="athlete-card__name athlete-card__stretched-link"
+                  [routerLink]="['/dashboard/athletes', athlete.id]"
+                  [attr.data-cy]="'athlete-card-name-' + athlete.id"
+                >
+                  <span class="athlete-card__name-text"
+                    >{{ athlete.first_name }} {{ athlete.last_name }}</span
+                  >
+                  <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
+                </a>
+                <button
+                  type="button"
+                  class="athlete-card__menu-btn"
                   [attr.aria-label]="
-                    'athletes.list.tooltip.publicProfileAria'
+                    'athletes.list.tooltip.openMenuAria'
                       | translate: { name: athlete.first_name + ' ' + athlete.last_name }
                   "
-                  [attr.data-cy]="'athlete-card-avatar-link-' + athlete.id"
+                  [attr.data-cy]="'athlete-card-menu-' + athlete.id"
+                  (click)="openCardMenu($event, athlete)"
                 >
-                  <app-user-avatar
-                    [url]="athlete.user_avatar_url"
-                    [name]="athlete.first_name + ' ' + athlete.last_name"
-                    size="chip"
-                  />
-                </a>
-              } @else {
-                <span
-                  class="athlete-card__avatar-link athlete-card__avatar-link--inert"
-                  aria-hidden="true"
-                  [attr.data-cy]="'athlete-card-avatar-inert-' + athlete.id"
-                >
-                  <app-user-avatar
-                    [url]="athlete.user_avatar_url"
-                    [name]="athlete.first_name + ' ' + athlete.last_name"
-                    size="chip"
-                  />
-                </span>
-              }
-              <a
-                class="athlete-card__name athlete-card__stretched-link"
-                [routerLink]="['/dashboard/athletes', athlete.id]"
-                [attr.data-cy]="'athlete-card-name-' + athlete.id"
-              >
-                <span class="athlete-card__name-text"
-                  >{{ athlete.first_name }} {{ athlete.last_name }}</span
-                >
-                <app-age-badge [dateOfBirth]="athlete.date_of_birth" />
-              </a>
-              <button
-                type="button"
-                class="athlete-card__menu-btn"
-                [attr.aria-label]="
-                  'athletes.list.tooltip.openMenuAria'
-                    | translate: { name: athlete.first_name + ' ' + athlete.last_name }
-                "
-                [attr.data-cy]="'athlete-card-menu-' + athlete.id"
-                (click)="openCardMenu($event, athlete)"
-              >
-                <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
-              </button>
-            </header>
-            <div class="athlete-card__badges">
-              <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
-              <p-tag
-                [value]="statusLabel(athlete.status)"
-                [severity]="statusSeverity(athlete.status)"
-                [rounded]="true"
-              />
-              @if (hasMonthlyFee() && athlete.paid_current_month !== undefined) {
-                <app-paid-badge
-                  [paid]="athlete.paid_current_month"
-                  [clickable]="true"
-                  (paidToggle)="confirmTogglePaid($event, athlete)"
+                  <i class="pi pi-ellipsis-v" aria-hidden="true"></i>
+                </button>
+              </header>
+              <div class="athlete-card__badges">
+                <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
+                <p-tag
+                  [value]="statusLabel(athlete.status)"
+                  [severity]="statusSeverity(athlete.status)"
+                  [rounded]="true"
                 />
-              }
-            </div>
-            @if (athlete.facebook || athlete.instagram) {
-              <div class="athlete-card__socials">
-                @if (athlete.facebook) {
-                  <a
-                    class="athlete-card__social-link"
-                    [href]="athlete.facebook"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    [attr.aria-label]="'athletes.list.social.facebookLabel' | translate"
-                    [attr.data-cy]="'athlete-card-social-facebook-' + athlete.id"
-                  >
-                    <i class="pi pi-facebook" aria-hidden="true"></i>
-                  </a>
-                }
-                @if (athlete.instagram) {
-                  <a
-                    class="athlete-card__social-link"
-                    [href]="athlete.instagram"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    [attr.aria-label]="'athletes.list.social.instagramLabel' | translate"
-                    [attr.data-cy]="'athlete-card-social-instagram-' + athlete.id"
-                  >
-                    <i class="pi pi-instagram" aria-hidden="true"></i>
-                  </a>
+                @if (hasMonthlyFee() && athlete.paid_current_month !== undefined) {
+                  <app-paid-badge
+                    [paid]="athlete.paid_current_month"
+                    [clickable]="true"
+                    (paidToggle)="confirmTogglePaid($event, athlete)"
+                  />
                 }
               </div>
-            }
-          </li>
-        }
-      </ul>
+              @if (athlete.facebook || athlete.instagram) {
+                <div class="athlete-card__socials">
+                  @if (athlete.facebook) {
+                    <a
+                      class="athlete-card__social-link"
+                      [href]="athlete.facebook"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      [attr.aria-label]="'athletes.list.social.facebookLabel' | translate"
+                      [attr.data-cy]="'athlete-card-social-facebook-' + athlete.id"
+                    >
+                      <i class="pi pi-facebook" aria-hidden="true"></i>
+                    </a>
+                  }
+                  @if (athlete.instagram) {
+                    <a
+                      class="athlete-card__social-link"
+                      [href]="athlete.instagram"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      [attr.aria-label]="'athletes.list.social.instagramLabel' | translate"
+                      [attr.data-cy]="'athlete-card-social-instagram-' + athlete.id"
+                    >
+                      <i class="pi pi-instagram" aria-hidden="true"></i>
+                    </a>
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
 
-      @if (totalRecords() > 20) {
-        <p-paginator
-          [rows]="20"
-          [totalRecords]="totalRecords()"
-          [first]="first()"
-          (onPageChange)="onPageChange($event)"
-          styleClass="athletes-page__mobile-paginator"
-          data-cy="athletes-mobile-paginator"
-        />
+        @if (totalRecords() > 20) {
+          <p-paginator
+            [rows]="20"
+            [totalRecords]="totalRecords()"
+            [first]="first()"
+            (onPageChange)="onPageChange($event)"
+            styleClass="athletes-page__mobile-paginator"
+            data-cy="athletes-mobile-paginator"
+          />
+        }
       }
-    }
-  </div>
+    </div>
+  }
 </div>

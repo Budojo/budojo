@@ -1602,6 +1602,11 @@
         "title": "No athletes found.",
         "filteredHint": "Try clearing your filters or search."
       },
+      "error": {
+        "title": "Couldn't load the roster",
+        "hint": "Something went wrong loading your athletes. Check your connection and try again.",
+        "retry": "Try again"
+      },
       "toast": {
         "markedPaid": "Marked paid",
         "markedUnpaid": "Marked unpaid",
