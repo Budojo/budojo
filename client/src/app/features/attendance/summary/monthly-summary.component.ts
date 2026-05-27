@@ -21,6 +21,7 @@ import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/
 import { LanguageService } from '../../../core/services/language.service';
 import { attendanceRate, countScheduledTrainingDays } from '../../../shared/utils/attendance-rate';
 import { localeFor } from '../../../shared/utils/locale';
+import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 
 interface YearMonth {
   year: number;
@@ -67,6 +68,7 @@ function compareYearMonth(a: YearMonth, b: YearMonth): number {
     TableModule,
     TranslatePipe,
     PageHeaderComponent,
+    ErrorStateComponent,
   ],
   templateUrl: './monthly-summary.component.html',
   styleUrl: './monthly-summary.component.scss',

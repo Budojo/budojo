@@ -44,10 +44,10 @@
       }
     </div>
   } @else if (errored()) {
-    <div class="summary-page__error" role="alert" data-cy="monthly-summary-error">
-      <i class="pi pi-exclamation-triangle"></i>
-      <span>{{ 'attendance.summary.error' | translate }}</span>
-    </div>
+    <app-error-state
+      [title]="'attendance.summary.error' | translate"
+      dataCy="monthly-summary-error"
+    />
   } @else if (displayRows().length === 0) {
     <div class="summary-page__empty" data-cy="monthly-summary-empty-page">
       <i class="pi pi-users" aria-hidden="true"></i>
