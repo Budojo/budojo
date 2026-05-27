@@ -12,6 +12,7 @@ Format: `→` separates the symptom from the action.
 - `[class.foo]="cond"` with no matching `.foo {}` rule in the SCSS → grep the SCSS for the class before committing. Dead state is a code smell Copilot flags.
 - Icon-only button without `pTooltip` or `ariaLabel` → always add one. Canon § Norman.
 - Reading `route.snapshot.fragment` (or `.params` / `.queryParams`) once in `ngOnInit` to drive a scroll / highlight / data fetch → a same-route, fragment-or-param-only `navigateByUrl` (e.g. a foreground push toast deep-linking to the page the user is ALREADY on) reuses the component, so `ngOnInit` never re-runs and the one-shot snapshot read silently no-ops. Subscribe to the `route.fragment` (/`paramMap`/`queryParamMap`) observable — it emits the current value on subscribe AND on every change — and re-run the handler per emission. Caught on the #1071 release re-review.
+- Swapping inline error/empty/state markup for a shared component (a #1033-style adoption pass) leaves three orphans the reviewer WILL flag — sweep all three in the SAME PR: (1) the now-unused i18n keys (the old `errorBody` / `loadErrorDetail`), (2) the dead `&__error` SCSS the inline markup carried (the `&__empty` sibling usually stays in use — drop only the migrated selector), (3) heading level — a shared component that defaults its title to `<h2>` produces sibling `<h2>`s when dropped into a section that already has one, so pass `[headingLevel]="3"` to nest it (page-header `<h1>` hosts are fine at the default h2). All three flagged across #1079's review rounds.
 
 ## Angular / PWA config
 
