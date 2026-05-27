@@ -75,7 +75,6 @@ $summary-mobile-breakpoint: 768px;
     gap: 0.5rem;
   }
 
-  &__error,
   &__empty {
     display: flex;
     align-items: center;
@@ -92,12 +91,6 @@ $summary-mobile-breakpoint: 768px;
     p {
       margin: 0;
     }
-  }
-
-  &__error {
-    color: var(--p-red-600);
-    border-color: var(--p-red-200);
-    background: var(--p-red-50);
   }
 
   &__count-col {

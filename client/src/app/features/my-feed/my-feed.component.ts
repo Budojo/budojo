@@ -38,6 +38,7 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
 import { UserFlairComponent } from '../../shared/components/user-flair/user-flair.component';
 import { MentionTextComponent } from '../../shared/components/mention-text/mention-text.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { CommentsThreadComponent } from './comments-thread/comments-thread.component';
 import { EventComposerComponent } from './event-composer/event-composer.component';
 import { EventDatePipe } from '../../shared/pipes/event-date.pipe';
@@ -77,6 +78,7 @@ import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-li
     UserAvatarComponent,
     UserFlairComponent,
     PageHeaderComponent,
+    ErrorStateComponent,
     CommentsThreadComponent,
     EventComposerComponent,
     MentionTextComponent,

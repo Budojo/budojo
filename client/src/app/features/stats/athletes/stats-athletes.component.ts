@@ -7,6 +7,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { LanguageService } from '../../../core/services/language.service';
 import { AgeBandsPayload, StatsService } from '../../../core/services/stats.service';
+import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 
 type ScopeValue = 'kids' | 'adults' | 'all';
 
@@ -14,7 +15,14 @@ type ScopeValue = 'kids' | 'adults' | 'all';
   selector: 'app-stats-athletes',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChartModule, FormsModule, SelectButtonModule, SkeletonModule, TranslatePipe],
+  imports: [
+    ChartModule,
+    FormsModule,
+    SelectButtonModule,
+    SkeletonModule,
+    TranslatePipe,
+    ErrorStateComponent,
+  ],
   templateUrl: './stats-athletes.component.html',
   styleUrl: './stats-athletes.component.scss',
 })

@@ -278,7 +278,11 @@
     "feed": {
       "title": "Il feed della tua academy",
       "emptyBody": "Nessun post per ora — le promozioni di cintura e gli eventi della tua academy compariranno qui.",
-      "errorBody": "Non siamo riusciti a caricare il feed. Aggiorna la pagina e riprova.",
+      "error": {
+        "title": "Impossibile caricare il feed",
+        "hint": "Si è verificato un errore. Aggiorna la pagina e riprova.",
+        "retry": "Riprova"
+      },
       "beltPromotion": {
         "text": "{{name}} ha appena conquistato una nuova cintura!"
       },
@@ -1602,13 +1606,17 @@
         "title": "Nessun atleta trovato.",
         "filteredHint": "Prova a rimuovere i filtri o la ricerca."
       },
+      "error": {
+        "title": "Impossibile caricare gli atleti",
+        "hint": "Si è verificato un errore durante il caricamento degli atleti. Controlla la connessione e riprova.",
+        "retry": "Riprova"
+      },
       "toast": {
         "markedPaid": "Segnato come pagato",
         "markedUnpaid": "Segnato come non pagato",
         "errorSummary": "Errore",
         "deletedSummary": "Eliminato",
         "deletedDetail": "{{name}} rimosso.",
-        "loadErrorDetail": "Impossibile caricare gli atleti. Riprova.",
         "paidErrorMissingFee": "Imposta prima una quota mensile sull'academy per registrare i pagamenti.",
         "paidErrorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
         "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova.",

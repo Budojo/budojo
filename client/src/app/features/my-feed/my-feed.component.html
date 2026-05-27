@@ -43,9 +43,13 @@
       }
     </ul>
   } @else if (loadError()) {
-    <p class="feed__empty" data-cy="my-feed-error">
-      {{ 'athletePortal.feed.errorBody' | translate }}
-    </p>
+    <app-error-state
+      [title]="'athletePortal.feed.error.title' | translate"
+      [hint]="'athletePortal.feed.error.hint' | translate"
+      [retryLabel]="'athletePortal.feed.error.retry' | translate"
+      (retry)="load(1)"
+      dataCy="my-feed-error"
+    />
   } @else if (posts().length === 0) {
     <p class="feed__empty" data-cy="my-feed-empty">
       {{ 'athletePortal.feed.emptyBody' | translate }}

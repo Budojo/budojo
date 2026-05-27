@@ -248,6 +248,26 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
     expect(el.querySelector('[data-cy="my-feed-error"]')).not.toBeNull();
   });
 
+  it('error state offers a retry that refetches the feed (#1033)', () => {
+    const { fixture, el, http } = setup();
+    http
+      .expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`)
+      .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    // The shared error-state exposes a retry CTA — the old inline <p> didn't.
+    const retry = el.querySelector('[data-cy="my-feed-error-retry"]');
+    expect(retry).not.toBeNull();
+
+    (retry!.querySelector('button') ?? (retry as HTMLElement)).click();
+    fixture.detectChanges();
+    http.expectOne(`${environment.apiBase}/api/v1/community/feed?page=1`).flush({
+      data: [],
+      meta: { current_page: 1, per_page: 20, total: 0, last_page: 1 },
+    });
+    expect(el.querySelector('[data-cy="my-feed-error"]')).toBeNull();
+  });
+
   it('clap-button click optimistically marks the button active + fires the API, reconciles on response', () => {
     const { fixture, el, http } = setup();
 
