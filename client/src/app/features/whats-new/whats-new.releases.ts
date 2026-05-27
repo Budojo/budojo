@@ -28,6 +28,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.33.0',
+    date: '2026-05-27',
+    headline:
+      'When something fails to load, you now see a clear, consistent banner — and on the athletes list and your feed, a one-tap Retry — instead of a blank screen.',
+    sections: [
+      {
+        heading: '⚠️ Clearer load errors',
+        bullets: [
+          'Across the athletes list, your community feed, the stats tabs, and the monthly attendance summary, a failed load now shows the same on-brand banner explaining what happened — instead of a silent blank table or an easy-to-miss one-liner.',
+          'On the athletes list and the feed, the banner carries a Retry button so you can re-attempt the load without leaving the page. The athletes list used to fail silently — a toast that scrolled away, leaving an empty table with no explanation.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.32.2',
     date: '2026-05-26',
     headline:
