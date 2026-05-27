@@ -278,7 +278,11 @@
     "feed": {
       "title": "Your academy's feed",
       "emptyBody": "No posts yet — grading celebrations and events from your academy will show up here.",
-      "errorBody": "We couldn't load the feed. Refresh the page and try again.",
+      "error": {
+        "title": "Couldn't load the feed",
+        "hint": "Something went wrong. Refresh the page and try again.",
+        "retry": "Try again"
+      },
       "beltPromotion": {
         "text": "{{name}} just earned a new belt!"
       },

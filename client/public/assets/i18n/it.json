@@ -278,7 +278,11 @@
     "feed": {
       "title": "Il feed della tua academy",
       "emptyBody": "Nessun post per ora — le promozioni di cintura e gli eventi della tua academy compariranno qui.",
-      "errorBody": "Non siamo riusciti a caricare il feed. Aggiorna la pagina e riprova.",
+      "error": {
+        "title": "Impossibile caricare il feed",
+        "hint": "Si è verificato un errore. Aggiorna la pagina e riprova.",
+        "retry": "Riprova"
+      },
       "beltPromotion": {
         "text": "{{name}} ha appena conquistato una nuova cintura!"
       },
