@@ -101,9 +101,10 @@ export class MyFeedComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   /**
-   * Post id to scroll to + highlight on first load, parsed from the
-   * `#post-N` route fragment that community notifications deep-link to
-   * (#1071). Cleared once consumed so paging doesn't re-trigger it.
+   * Post id to scroll to + highlight, parsed from the `#post-N` route
+   * fragment that community notifications deep-link to (#1071). Set on
+   * each fragment emission and cleared once consumed, so paging doesn't
+   * re-trigger it while a fresh notification (a new fragment) re-arms it.
    */
   private targetPostId: number | null = null;
   protected readonly highlightedPostId = signal<number | null>(null);
@@ -159,12 +160,20 @@ export class MyFeedComponent implements OnInit {
   private readonly pageRequests = new Subject<number>();
 
   ngOnInit(): void {
-    // Deep-link target from a community notification (#1071): the link
-    // is `…#post-N`. Parse it once; the load handler scrolls to it when
-    // that post lands in the feed.
-    const fragment = this.route.snapshot.fragment;
-    const match = fragment ? /^post-(\d+)$/.exec(fragment) : null;
-    this.targetPostId = match ? Number(match[1]) : null;
+    // Deep-link target from a community notification (#1071): the link is
+    // `…#post-N`. Subscribe to the fragment *stream*, not the one-shot
+    // snapshot — a foreground push toast (#1063) can navigate to the feed
+    // the user is ALREADY viewing, and a same-route, fragment-only
+    // navigation reuses this component without re-running ngOnInit. A
+    // one-time snapshot read would silently ignore that hop and never
+    // scroll (reviewer, #1071). On each emission parse the target, then
+    // scroll now if the feed is already loaded (the re-navigation case);
+    // otherwise the load handler below scrolls once the page lands.
+    this.route.fragment.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((fragment) => {
+      const match = fragment ? /^post-(\d+)$/.exec(fragment) : null;
+      this.targetPostId = match ? Number(match[1]) : null;
+      this.maybeScrollToTargetPost();
+    });
 
     // `catchError` inside `switchMap` keeps the outer stream alive
     // when a single request fails — otherwise the first HTTP error

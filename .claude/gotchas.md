@@ -11,6 +11,7 @@ Format: `→` separates the symptom from the action.
 - `[attr.aria-hidden]="!X && null"` evaluates wrong (`null` when closed, `false` when open) → use CSS `visibility: hidden` with a media query, or a viewport-aware signal. `transform: translateX(-100%)` alone does NOT hide from screen readers.
 - `[class.foo]="cond"` with no matching `.foo {}` rule in the SCSS → grep the SCSS for the class before committing. Dead state is a code smell Copilot flags.
 - Icon-only button without `pTooltip` or `ariaLabel` → always add one. Canon § Norman.
+- Reading `route.snapshot.fragment` (or `.params` / `.queryParams`) once in `ngOnInit` to drive a scroll / highlight / data fetch → a same-route, fragment-or-param-only `navigateByUrl` (e.g. a foreground push toast deep-linking to the page the user is ALREADY on) reuses the component, so `ngOnInit` never re-runs and the one-shot snapshot read silently no-ops. Subscribe to the `route.fragment` (/`paramMap`/`queryParamMap`) observable — it emits the current value on subscribe AND on every change — and re-run the handler per emission. Caught on the #1071 release re-review.
 
 ## Angular / PWA config
 

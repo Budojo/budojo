@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
 import { MyFeedComponent } from './my-feed.component';
 import type { CommunityFeedPage, CommunityPost } from '../../core/services/community.service';
@@ -17,6 +18,12 @@ function emptyPage(): CommunityFeedPage {
 }
 
 function setup(opts: { role?: UserRole; fragment?: string } = {}) {
+  // The component subscribes to the `route.fragment` *stream* (not the
+  // one-shot snapshot) so a same-route, fragment-only navigation — a push
+  // toast landing on the feed you're already viewing — still scrolls
+  // (#1071 reviewer). Seed it with opts.fragment; tests drive re-navigation
+  // by pushing a new value through the returned `fragment$`.
+  const fragment$ = new BehaviorSubject<string | null>(opts.fragment ?? null);
   TestBed.configureTestingModule({
     imports: [MyFeedComponent],
     providers: [
@@ -24,11 +31,7 @@ function setup(opts: { role?: UserRole; fragment?: string } = {}) {
       provideHttpClientTesting(),
       provideRouter([]),
       ...provideI18nTesting(),
-      // Override the route snapshot fragment for the deep-link tests
-      // (#1071). The component only reads `route.snapshot.fragment`.
-      ...(opts.fragment !== undefined
-        ? [{ provide: ActivatedRoute, useValue: { snapshot: { fragment: opts.fragment } } }]
-        : []),
+      { provide: ActivatedRoute, useValue: { fragment: fragment$ } },
     ],
   });
 
@@ -49,7 +52,7 @@ function setup(opts: { role?: UserRole; fragment?: string } = {}) {
   const fixture = TestBed.createComponent(MyFeedComponent);
   const http = TestBed.inject(HttpTestingController);
   fixture.detectChanges();
-  return { fixture, el: fixture.nativeElement as HTMLElement, http };
+  return { fixture, el: fixture.nativeElement as HTMLElement, http, fragment$ };
 }
 
 function postFixture(overrides: Partial<CommunityPost> = {}): CommunityPost {
@@ -871,6 +874,46 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
         // inserting every feed card into the tab order.
         expect(li.getAttribute('tabindex')).toBe('-1');
         expect(document.activeElement).toBe(li);
+
+        fixture.nativeElement.remove();
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        vi.useRealTimers();
+      }
+    });
+
+    it('re-scrolls when a same-route fragment change targets a different already-loaded post (foreground push toast on the open feed) (#1071 reviewer)', () => {
+      vi.useFakeTimers();
+      const originalScroll = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = vi.fn();
+      try {
+        const { fixture, http, fragment$ } = setup({ fragment: 'post-7' });
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8, 9]);
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+
+        const highlighted = () =>
+          (
+            fixture.componentInstance as unknown as { highlightedPostId: () => number | null }
+          ).highlightedPostId();
+
+        // Fresh navigation consumed the initial #post-7.
+        expect(highlighted()).toBe(7);
+        // Let that highlight fade so the second cue is unambiguous.
+        vi.advanceTimersByTime(2400);
+        expect(highlighted()).toBeNull();
+
+        // A push toast for post-9 fires while the user is ALREADY on the
+        // feed: navigateByUrl('…/feed#post-9') changes only the fragment,
+        // so ngOnInit never re-runs. Reading the snapshot once would miss
+        // this; subscribing to the fragment stream catches it.
+        fragment$.next('post-9');
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+
+        expect(highlighted()).toBe(9);
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#post-9'));
 
         fixture.nativeElement.remove();
       } finally {
