@@ -1,6 +1,16 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, map, tap, catchError, throwError, of, shareReplay, finalize } from 'rxjs';
+import {
+  Observable,
+  map,
+  tap,
+  catchError,
+  throwError,
+  of,
+  shareReplay,
+  finalize,
+  switchMap,
+} from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -227,6 +237,17 @@ export interface AcademySchedule {
 }
 
 /**
+ * Payload for `POST /api/v1/academy/schedules` (#1094 PR 2). Schedules
+ * a future `training_days` change. `effective_from` must be strictly
+ * after today — same-day changes go through `PATCH /api/v1/academy`.
+ */
+export interface ScheduleChangePayload {
+  training_days: number[] | null;
+  /** `YYYY-MM-DD`, must be > today. */
+  effective_from: string;
+}
+
+/**
  * Wire shape for `GET /api/v1/me/academy` (#618, M7 PR-D slice 2).
  * Same shape as `Academy` (omitting owner-private fields like
  * `monthly_fee_cents`) plus an `owner` block with the academy's
@@ -395,6 +416,30 @@ export class AcademyService {
         return throwError(() => err);
       }),
     );
+  }
+
+  /**
+   * Schedules a future `training_days` change (#1094). The endpoint
+   * rejects same-day and past dates — those go through `update()`.
+   * Refreshes the academy on success so the cached `next_schedule`
+   * pointer flips on the SPA without an extra round-trip.
+   */
+  scheduleChange(payload: ScheduleChangePayload): Observable<Academy> {
+    return this.http
+      .post(`${this.base}/schedules`, payload)
+      .pipe(switchMap(() => this.get({ forceRefresh: true })));
+  }
+
+  /**
+   * Cancels a pending future schedule change (#1094). 204 on success;
+   * 422 if the caller targets a past-or-today row (immutable). Refreshes
+   * the academy so the `next_schedule` pointer clears without a manual
+   * `get()`.
+   */
+  cancelPendingSchedule(scheduleId: number): Observable<Academy> {
+    return this.http
+      .delete(`${this.base}/schedules/${scheduleId}`)
+      .pipe(switchMap(() => this.get({ forceRefresh: true })));
   }
 
   uploadLogo(file: File): Observable<Academy> {

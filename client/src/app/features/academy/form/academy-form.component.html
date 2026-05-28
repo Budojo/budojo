@@ -394,6 +394,14 @@
       </small>
     </div>
 
+    <!--
+      Schedule a FUTURE change (#1094). Same-day changes are still made
+      via the training-days picker above and saved with the rest of the
+      form. This section is for "the new schedule starts on June 1" —
+      writing to a separate history row instead of overwriting today's.
+    -->
+    <app-schedule-planner data-cy="academy-form-schedule-planner" />
+
     <div class="form__actions">
       <p-button
         type="button"
