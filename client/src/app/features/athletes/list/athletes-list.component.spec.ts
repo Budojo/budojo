@@ -979,5 +979,24 @@ describe('AthletesListComponent', () => {
       // (the #1 friction point at sign-up).
       expect(empty!.querySelector('[data-cy="athletes-empty-cta"]')).not.toBeNull();
     });
+
+    it('renders a Clear filters CTA when a filter is active and the result is empty (#1090 reviewer)', () => {
+      // Exercises the filtered-empty branch + asserts the resolved
+      // translation — client/CLAUDE.md § i18n: the parity spec confirms
+      // key sets match but NOT that template paths resolve, so a fat-
+      // fingered key on this branch would ship green otherwise.
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      (
+        fixture.componentInstance as unknown as { searchTerm: { set: (v: string) => void } }
+      ).searchTerm.set('zzz');
+      fixture.detectChanges();
+
+      const cta = fixture.nativeElement.querySelector(
+        '[data-cy="athletes-empty-cta"]',
+      ) as HTMLElement | null;
+      expect(cta).not.toBeNull();
+      expect(cta!.textContent).toContain('Clear filters');
+    });
   });
 });
