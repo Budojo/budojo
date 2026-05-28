@@ -64,9 +64,10 @@ class StoreAcademyScheduleRequest extends FormRequest
     // `withValidator`, but that's a SELECT-with-no-lock and two
     // simultaneous POSTs from the same owner (multi-tab, retried
     // request) could both pass the check and both insert. The Action
-    // now opens a transaction, takes a `lockForUpdate()` SHARE lock on
-    // the owning academy row, re-checks existence, then inserts — so
-    // concurrent POSTs serialize on the academy row and the second
-    // surfaces a clean `PendingScheduleAlreadyExistsException` instead
-    // of a 500 from the DB.
+    // now opens a transaction, takes a `lockForUpdate()` exclusive lock
+    // (Laravel's `FOR UPDATE`, not `FOR SHARE`) on the owning academy
+    // row, re-checks existence, then inserts — so concurrent POSTs
+    // serialize on the academy row and the second surfaces a clean
+    // `PendingScheduleAlreadyExistsException` instead of a 500 from
+    // the DB.
 }

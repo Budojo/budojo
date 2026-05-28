@@ -23,12 +23,15 @@ use Illuminate\Support\Facades\DB;
  *      so the user-visible behaviour is correct even with a stale
  *      column).
  *
- * Wrapped in a transaction for symmetry with the other Academy actions
- * even though it's a single insert — keeps the canon ("Action owns the
- * full unit of work") tidy.
- *
- * The single-pending-future invariant lives in the FormRequest, not
- * here — same `validate()` boundary as the rest of the surface.
+ * Wrapped in a transaction because the single-pending-future invariant
+ * has to be enforced race-safely. `execute()` opens the transaction,
+ * takes a `lockForUpdate()` exclusive lock on the owning academy row,
+ * re-checks for an existing pending row inside the lock, and inserts
+ * only if none exists. Two simultaneous POSTs serialize on the academy
+ * row; the second surfaces `PendingScheduleAlreadyExistsException`
+ * which the controller translates to a 422 with the validation-error
+ * shape (so the FE handles "already pending" the same as any other
+ * per-field 422 on bad payloads).
  */
 class ScheduleAcademyChangeAction
 {
