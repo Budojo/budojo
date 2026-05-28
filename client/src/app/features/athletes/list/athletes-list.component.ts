@@ -52,6 +52,7 @@ import { UnpaidThisMonthWidgetComponent } from '../../../shared/components/unpai
 import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-badge.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 
@@ -92,6 +93,7 @@ interface SelectOption<T extends string> {
     OnboardingChecklistComponent,
     PageHeaderComponent,
     ErrorStateComponent,
+    EmptyStateComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',

@@ -964,4 +964,20 @@ describe('AthletesListComponent', () => {
       expect(tbody?.querySelectorAll('app-paid-badge').length).toBe(1);
     });
   });
+
+  describe('empty-state onboarding CTA (#1033 wave 3)', () => {
+    it('renders an Add athlete CTA when the roster is empty and no filters are set', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      const empty = fixture.nativeElement.querySelector(
+        '[data-cy="athletes-empty"]',
+      ) as HTMLElement | null;
+      expect(empty).not.toBeNull();
+      // The empty state turns into the academy owner's onboarding moment —
+      // a primary CTA wired to goToNew() reduces time-to-first-athlete
+      // (the #1 friction point at sign-up).
+      expect(empty!.querySelector('[data-cy="athletes-empty-cta"]')).not.toBeNull();
+    });
+  });
 });

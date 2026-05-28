@@ -481,18 +481,34 @@
                   <p-skeleton height="2rem" styleClass="mb-2" />
                   <p-skeleton height="2rem" />
                 </div>
+              } @else if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
+                <!--
+                  Filtered-empty: the user narrowed too far. CTA clears filters
+                  rather than dead-ending them on a blank list (Norman § match
+                  between system + real-world; #1033 wave 3).
+                -->
+                <app-empty-state
+                  icon="pi pi-users"
+                  [title]="'athletes.list.empty.title' | translate"
+                  [hint]="'athletes.list.empty.filteredHint' | translate"
+                  [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
+                  (ctaClick)="resetFilters()"
+                  dataCy="athletes-empty"
+                />
               } @else {
-                <div class="empty-state">
-                  <i class="pi pi-users empty-state__icon"></i>
-                  <p class="empty-state__text">
-                    {{ 'athletes.list.empty.title' | translate }}
-                  </p>
-                  @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
-                    <p class="empty-state__hint">
-                      {{ 'athletes.list.empty.filteredHint' | translate }}
-                    </p>
-                  }
-                </div>
+                <!--
+                  Roster genuinely empty (first-run for a new academy): turn
+                  the empty moment into the owner's primary onboarding action.
+                  The Add CTA shaves friction at the #1 time-to-value point
+                  (#1033 wave 3).
+                -->
+                <app-empty-state
+                  icon="pi pi-users"
+                  [title]="'athletes.list.empty.title' | translate"
+                  [ctaLabel]="'athletes.list.addButton' | translate"
+                  (ctaClick)="goToNew()"
+                  dataCy="athletes-empty"
+                />
               }
             </td>
           </tr>
@@ -512,13 +528,24 @@
           }
         </div>
       } @else if (athletes().length === 0) {
-        <div class="empty-state" data-cy="athletes-mobile-empty">
-          <i class="pi pi-users empty-state__icon"></i>
-          <p class="empty-state__text">{{ 'athletes.list.empty.title' | translate }}</p>
-          @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
-            <p class="empty-state__hint">{{ 'athletes.list.empty.filteredHint' | translate }}</p>
-          }
-        </div>
+        @if (selectedBelt() || selectedStatus() || selectedPaid() || searchTerm()) {
+          <app-empty-state
+            icon="pi pi-users"
+            [title]="'athletes.list.empty.title' | translate"
+            [hint]="'athletes.list.empty.filteredHint' | translate"
+            [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
+            (ctaClick)="resetFilters()"
+            dataCy="athletes-mobile-empty"
+          />
+        } @else {
+          <app-empty-state
+            icon="pi pi-users"
+            [title]="'athletes.list.empty.title' | translate"
+            [ctaLabel]="'athletes.list.addButton' | translate"
+            (ctaClick)="goToNew()"
+            dataCy="athletes-mobile-empty"
+          />
+        }
       } @else {
         <ul class="athletes-cards">
           @for (athlete of athletes(); track athlete.id) {
