@@ -12,9 +12,11 @@
       <p-skeleton width="100%" height="20rem" />
     </div>
   } @else if (totalAthletes() === 0) {
-    <p class="stats-page__empty" data-cy="stats-empty">
-      {{ 'stats.empty' | translate }}
-    </p>
+    <app-empty-state
+      icon="pi pi-chart-bar"
+      [title]="'stats.empty' | translate"
+      dataCy="stats-empty"
+    />
   } @else {
     <div class="stats-page__total" data-cy="stats-total">
       {{ 'stats.total' | translate: { count: totalAthletes() } }}

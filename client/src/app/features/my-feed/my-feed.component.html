@@ -51,9 +51,11 @@
       dataCy="my-feed-error"
     />
   } @else if (posts().length === 0) {
-    <p class="feed__empty" data-cy="my-feed-empty">
-      {{ 'athletePortal.feed.emptyBody' | translate }}
-    </p>
+    <app-empty-state
+      icon="pi pi-comments"
+      [title]="'athletePortal.feed.emptyBody' | translate"
+      dataCy="my-feed-empty"
+    />
   } @else {
     <ul class="feed__list" data-cy="my-feed-list">
       @for (post of posts(); track post.id) {
