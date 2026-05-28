@@ -32,7 +32,7 @@ Each item is a **separate PR with a measurable target**.
 
 ### 1. ~~HIGH — Native lazy-load sweep~~ **DONE**
 
-Shipped across #1092 + the follow-up: the 4 below-the-fold tags now carry `loading="lazy"`; the rest stay eager because they ARE the LCP on their pages. Nothing more to do here — re-open only if a new `<img>` ships without an explicit choice.
+Shipped across #1092 + the follow-up: the 3 below-the-fold tags now carry `loading="lazy"` where it has effect; the rest stay eager because they ARE the LCP on their pages, are already explicitly tuned, or render a `data:` URL (no network fetch — `loading="lazy"` would be a mechanical no-op, see the table above). Nothing more to do here — re-open only if a new `<img>` ships without an explicit choice.
 
 ### 2. MED — Preload / preconnect hints in `index.html`
 
