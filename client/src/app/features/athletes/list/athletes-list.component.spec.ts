@@ -987,9 +987,7 @@ describe('AthletesListComponent', () => {
       // fingered key on this branch would ship green otherwise.
       const fixture = TestBed.createComponent(AthletesListComponent);
       fixture.detectChanges();
-      (
-        fixture.componentInstance as unknown as { searchTerm: { set: (v: string) => void } }
-      ).searchTerm.set('zzz');
+      fixture.componentInstance.searchTerm.set('zzz');
       fixture.detectChanges();
 
       const cta = fixture.nativeElement.querySelector(
