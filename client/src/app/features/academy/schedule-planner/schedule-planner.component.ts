@@ -59,7 +59,12 @@ const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
     MessageModule,
     TrainingDaysPickerComponent,
   ],
-  providers: [ConfirmationService, MessageService],
+  // MessageService is provided by the host `<app-academy-form>` (which
+  // also renders the `<p-toast>` the toasts land in). Redeclaring it
+  // here would give the planner a fresh instance that nothing's
+  // subscribed to — toasts would land in a dead service. ConfirmationService
+  // stays local because the `<p-confirmpopup />` is in THIS template.
+  providers: [ConfirmationService],
   templateUrl: './schedule-planner.component.html',
   styleUrl: './schedule-planner.component.scss',
 })
@@ -102,7 +107,13 @@ export class SchedulePlannerComponent {
 
   protected readonly form = this.fb.nonNullable.group({
     effective_from: this.fb.nonNullable.control<Date | null>(null, [Validators.required]),
-    training_days: this.fb.nonNullable.control<number[]>([], [Validators.required]),
+    // No `Validators.required` on `training_days` — an empty selection is
+    // the canonical "schedule paused from {date}" wire shape (the BE
+    // accepts `training_days: null` for the same intent). The submit
+    // handler maps `[]` → `null` on the wire. Without this, the form
+    // disables the Save button on zero days and the null branch in
+    // `submit()` becomes dead code.
+    training_days: this.fb.nonNullable.control<number[]>([]),
   });
 
   protected readonly trainingDaysControl = this.form.controls.training_days;

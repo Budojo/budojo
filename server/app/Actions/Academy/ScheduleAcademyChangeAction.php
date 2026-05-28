@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Academy;
 
+use App\Exceptions\PendingScheduleAlreadyExistsException;
 use App\Models\Academy;
 use App\Models\AcademySchedule;
 use Illuminate\Support\Carbon;
@@ -40,6 +41,25 @@ class ScheduleAcademyChangeAction
         Carbon $effectiveFrom,
     ): AcademySchedule {
         return DB::transaction(function () use ($academy, $trainingDays, $effectiveFrom): AcademySchedule {
+            // Race-safe single-pending-future invariant. Without a row
+            // lock + transaction, two near-simultaneous POSTs from the
+            // same owner (multi-tab, retried request) can both pass an
+            // unlocked existence check and both insert. Locking the
+            // owning academy row serializes them on the row; the second
+            // POST sees the just-inserted row and throws an exception
+            // the controller translates to 422. Same pattern the
+            // gotchas memory has flagged on the addresses upsert.
+            Academy::query()->whereKey($academy->id)->lockForUpdate()->first();
+
+            $hasPending = $academy->schedules()
+                ->where('effective_from', '>', Carbon::today()->toDateString())
+                ->exists();
+            if ($hasPending) {
+                throw new PendingScheduleAlreadyExistsException(
+                    'A pending future schedule already exists. Cancel it before scheduling another.',
+                );
+            }
+
             /** @var AcademySchedule $schedule */
             $schedule = $academy->schedules()->create([
                 'training_days' => $trainingDays,

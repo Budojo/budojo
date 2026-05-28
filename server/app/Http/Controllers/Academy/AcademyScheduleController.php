@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Academy;
 
 use App\Actions\Academy\ScheduleAcademyChangeAction;
+use App\Exceptions\PendingScheduleAlreadyExistsException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Academy\StoreAcademyScheduleRequest;
 use App\Http\Resources\AcademyScheduleResource;
@@ -46,11 +47,21 @@ class AcademyScheduleController extends Controller
         \assert(\is_string($effectiveFromRaw));
         $effectiveFrom = Carbon::parse($effectiveFromRaw)->startOfDay();
 
-        $schedule = $this->scheduleAction->execute(
-            $academy,
-            $trainingDays,
-            $effectiveFrom,
-        );
+        try {
+            $schedule = $this->scheduleAction->execute(
+                $academy,
+                $trainingDays,
+                $effectiveFrom,
+            );
+        } catch (PendingScheduleAlreadyExistsException $e) {
+            // Match the FormRequest validation error shape so the FE
+            // handles "already pending" identically to the per-field
+            // 422s on bad payloads.
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => ['effective_from' => [$e->getMessage()]],
+            ], 422);
+        }
 
         return response()->json(['data' => new AcademyScheduleResource($schedule)], 201);
     }

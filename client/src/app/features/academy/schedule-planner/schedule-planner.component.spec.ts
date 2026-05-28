@@ -5,6 +5,7 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { By } from '@angular/platform-browser';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { signal } from '@angular/core';
+import { MessageService } from 'primeng/api';
 import { AcademyService, Academy } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
@@ -37,6 +38,11 @@ describe('SchedulePlannerComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         provideI18nTesting(),
+        // The planner expects `MessageService` to be provided by the
+        // host `<app-academy-form>`. In isolation the test bed has to
+        // stand in — same shape PrimeNG uses, no toast renders because
+        // there's no `<p-toast>` in the spec fixture.
+        MessageService,
         {
           provide: LanguageService,
           useValue: { currentLang: signal('en') },
@@ -113,7 +119,11 @@ describe('SchedulePlannerComponent', () => {
     expect(fixture.componentInstance['editing']()).toBe(false);
   });
 
-  it('maps zero selected days to a null training_days payload', () => {
+  it('maps zero selected days to a null training_days payload (schedule-paused choice)', () => {
+    // "Schedule paused starting {date}" is a real user choice — empty
+    // training_days resolves to `null` on the wire. No `clearValidators`
+    // dance here: the form has no `Validators.required` on
+    // `training_days` so the submit is reachable from real UI.
     fixture.componentInstance.startEditing();
     const future = new Date();
     future.setDate(future.getDate() + 5);
@@ -121,11 +131,7 @@ describe('SchedulePlannerComponent', () => {
       effective_from: future,
       training_days: [],
     });
-    // Manually drive submit even though the form is required — we want
-    // to verify the payload mapping the moment a submit fires. The
-    // template's `[disabled]` guard is the user-facing protection.
-    fixture.componentInstance['form'].controls.training_days.clearValidators();
-    fixture.componentInstance['form'].controls.training_days.updateValueAndValidity();
+    expect(fixture.componentInstance['form'].valid).toBe(true);
     fixture.componentInstance.submit();
 
     const req = http.expectOne((r) => r.url.endsWith('/api/v1/academy/schedules'));
@@ -138,5 +144,31 @@ describe('SchedulePlannerComponent', () => {
       .flush({
         data: buildAcademy(),
       });
+  });
+
+  it('cancels a pending schedule via DELETE + refreshes the academy on success', () => {
+    // Seed a pending change so the cancel affordance is the active
+    // branch. Drive `executeCancel` directly to skip the confirmation
+    // popup (the popup is a thin wrapper — its `accept` callback fires
+    // exactly this method).
+    const pendingId = 42;
+    academyService.academy.set(
+      buildAcademy({
+        next_schedule: { id: pendingId, training_days: [2, 4], effective_from: '2026-06-01' },
+      }),
+    );
+    fixture.detectChanges();
+
+    fixture.componentInstance['executeCancel'](pendingId);
+
+    const del = http.expectOne(
+      (r) => r.url.endsWith(`/api/v1/academy/schedules/${pendingId}`) && r.method === 'DELETE',
+    );
+    del.flush(null, { status: 204, statusText: 'No Content' });
+
+    const refresh = http.expectOne((r) => r.url.endsWith('/api/v1/academy') && r.method === 'GET');
+    refresh.flush({ data: buildAcademy() });
+
+    expect(fixture.componentInstance['cancelling']()).toBe(false);
   });
 });

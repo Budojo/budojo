@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Academy;
 
-use App\Models\AcademySchedule;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Carbon;
-use Illuminate\Validation\Validator;
 
 /**
  * Schedule a future `training_days` change (#1094).
@@ -61,35 +58,15 @@ class StoreAcademyScheduleRequest extends FormRequest
         ];
     }
 
-    /**
-     * Cross-field invariant: at most one pending future row per
-     * academy. Runs after the per-field rules so we have a clean
-     * `effective_from` value to assert against (and never error on a
-     * field whose value didn't parse).
-     */
-    public function withValidator(Validator $validator): void
-    {
-        $validator->after(function (Validator $v): void {
-            if ($v->errors()->isNotEmpty()) {
-                return;
-            }
-
-            /** @var User $user */
-            $user = $this->user();
-            /** @var \App\Models\Academy $academy */
-            $academy = $user->activeAcademy();
-
-            $existing = AcademySchedule::query()
-                ->where('academy_id', $academy->id)
-                ->where('effective_from', '>', Carbon::today()->toDateString())
-                ->exists();
-
-            if ($existing) {
-                $v->errors()->add(
-                    'effective_from',
-                    'A pending future schedule already exists. Cancel it before scheduling another.',
-                );
-            }
-        });
-    }
+    // NOTE: the single-pending-future invariant is enforced
+    // race-safely inside `ScheduleAcademyChangeAction::execute()` —
+    // a previous shape of this FormRequest checked existence here via
+    // `withValidator`, but that's a SELECT-with-no-lock and two
+    // simultaneous POSTs from the same owner (multi-tab, retried
+    // request) could both pass the check and both insert. The Action
+    // now opens a transaction, takes a `lockForUpdate()` SHARE lock on
+    // the owning academy row, re-checks existence, then inserts — so
+    // concurrent POSTs serialize on the academy row and the second
+    // surfaces a clean `PendingScheduleAlreadyExistsException` instead
+    // of a 500 from the DB.
 }
