@@ -6,6 +6,7 @@ namespace App\Actions\Academy;
 
 use App\Actions\Address\SyncAddressAction;
 use App\Models\Academy;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class UpdateAcademyAction
@@ -41,6 +42,31 @@ class UpdateAcademyAction
             $addressKeyPresent = \array_key_exists('address', $validated);
             $addressPayload = $validated['address'] ?? null;
             unset($validated['address']);
+
+            // Schedule history (#1094). Touching `training_days` via the
+            // canonical PATCH is treated as "this is the schedule starting
+            // today" — insert a new row instead of (or in addition to)
+            // mutating the denormalised cache column on `academies`. The
+            // current-day row is upserted by (academy_id, effective_from)
+            // so a same-day double-PATCH replaces the row instead of
+            // hitting the UNIQUE constraint. PR 2 will add a dedicated
+            // schedule-change endpoint that allows a future
+            // `effective_from`; for now PATCH always lands on today.
+            $trainingDaysKeyPresent = \array_key_exists('training_days', $validated);
+            if ($trainingDaysKeyPresent) {
+                /** @var list<int>|null $trainingDays */
+                $trainingDays = $validated['training_days'];
+                // Lookup column is matched against the persisted form —
+                // `effective_from` is a Y-m-d string on disk, so pre-format
+                // the Carbon instance here instead of letting the query
+                // builder cast it to the default `Y-m-d H:i:s` (which
+                // would never match an existing row and trip the UNIQUE
+                // constraint on the same-day re-PATCH).
+                $academy->schedules()->updateOrCreate(
+                    ['effective_from' => Carbon::today()->toDateString()],
+                    ['training_days' => $trainingDays],
+                );
+            }
 
             if ($validated !== []) {
                 $academy->update($validated);

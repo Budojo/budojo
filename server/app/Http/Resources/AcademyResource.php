@@ -45,6 +45,23 @@ class AcademyResource extends JsonResource
                 : null,
             'monthly_fee_cents' => $academy->monthly_fee_cents,
             'training_days' => $academy->training_days,
+            // Schedule history (#1094). `current_schedule` is what's in
+            // effect right now; `next_schedule` is the pending future
+            // change (null when none is scheduled); `schedules` is the
+            // full history the FE needs to compute per-day denominators
+            // for mid-month transitions. Lazy-loaded relation reads —
+            // for a single-row resource the cost is bounded.
+            'current_schedule' => $academy->currentSchedule() !== null
+                ? new AcademyScheduleResource($academy->currentSchedule())->toArray($request)
+                : null,
+            'next_schedule' => $academy->nextSchedule() !== null
+                ? new AcademyScheduleResource($academy->nextSchedule())->toArray($request)
+                : null,
+            'schedules' => $academy->schedules()
+                ->orderByDesc('effective_from')
+                ->get()
+                ->map(fn ($s) => new AcademyScheduleResource($s)->toArray($request))
+                ->all(),
         ];
     }
 }
