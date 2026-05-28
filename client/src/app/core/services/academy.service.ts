@@ -203,11 +203,24 @@ export interface Academy {
    * source of truth for historical reads is `schedules` below.
    */
   training_days?: number[] | null;
-  /** Schedule in effect today (#1094). Optional for fixture-compat. */
+  /**
+   * Schedule in effect today (#1094). Same `training_days` as the
+   * top-level field; carries `id` + `effective_from` so the UI can show
+   * "in effect since". Optional for fixture-compat.
+   */
   current_schedule?: AcademySchedule | null;
-  /** Pending future schedule change, or `null` when none scheduled (#1094). */
+  /**
+   * Pending future schedule change, or `null` when none is scheduled
+   * (#1094). At most one row exists at a time (single-pending-change
+   * invariant from the PRD). Optional for fixture-compat.
+   */
   next_schedule?: AcademySchedule | null;
-  /** Full schedule history (#1094), ordered most-recent first. */
+  /**
+   * Full schedule history (#1094), ordered most-recent `effective_from`
+   * first. Consumed by `countScheduledTrainingDays` to compute correct
+   * per-day denominators across mid-period schedule transitions.
+   * Optional for fixture-compat.
+   */
   schedules?: AcademySchedule[];
 }
 

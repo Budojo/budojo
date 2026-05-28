@@ -50,7 +50,17 @@ return new class extends Migration
                         // source column (Laravel cast on read, not write);
                         // copy verbatim — null stays null, arrays stay arrays.
                         'training_days' => $a->training_days,
-                        'effective_from' => $a->created_at,
+                        // Raw insert bypasses the Eloquent
+                        // `AcademySchedule::effectiveFrom` mutator —
+                        // pre-format to `Y-m-d` here so the SQLite TEXT
+                        // path doesn't store the full `Y-m-d H:i:s`
+                        // timestamp from `created_at` and break the lex
+                        // `effective_from <= ?` comparison the read
+                        // helpers depend on. MySQL DATE would silently
+                        // truncate so prod is safe either way, but
+                        // matching the mutator's wire format keeps the
+                        // two paths byte-identical.
+                        'effective_from' => \Illuminate\Support\Carbon::parse($a->created_at)->toDateString(),
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
