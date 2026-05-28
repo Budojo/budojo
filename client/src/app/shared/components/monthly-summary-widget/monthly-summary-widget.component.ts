@@ -14,7 +14,11 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
 import { LanguageService } from '../../../core/services/language.service';
-import { attendanceRate, countScheduledTrainingDays } from '../../utils/attendance-rate';
+import {
+  attendanceRate,
+  countScheduledTrainingDays,
+  schedulesForAcademy,
+} from '../../utils/attendance-rate';
 import { localeFor } from '../../utils/locale';
 
 /**
@@ -103,7 +107,8 @@ export class MonthlySummaryWidgetComponent implements OnInit {
    */
   protected readonly scheduledCount = computed<number | null>(() => {
     const [y, m] = this.month.split('-').map(Number);
-    return countScheduledTrainingDays(this.academyService.academy()?.training_days ?? null, y, m);
+    // Schedule-history aware (#1094).
+    return countScheduledTrainingDays(schedulesForAcademy(this.academyService.academy()), y, m);
   });
 
   /** Per-row whole-percent helper. `null` when the row has no denominator yet. */

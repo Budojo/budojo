@@ -24,6 +24,7 @@ import { AttendanceRecord, AttendanceService } from '../../../../core/services/a
 import {
   attendanceRate,
   countScheduledTrainingDays,
+  schedulesForAcademy,
 } from '../../../../shared/utils/attendance-rate';
 import { YearMonth, buildCalendarGrid, shiftMonth } from './calendar-grid';
 import { AttendanceMonthHeatmapComponent } from './attendance-month-heatmap.component';
@@ -168,8 +169,13 @@ export class AttendanceHistoryComponent implements OnInit {
    */
   protected readonly scheduledCount = computed(() => {
     const ym = this.visible();
+    // Schedule-history aware (#1094): a mid-month change splits the
+    // denominator across the two segments. The helper resolves each
+    // day against the schedule effective on THAT day, so May 31 uses
+    // the May schedule and Jun 1 uses the June one even if both fall
+    // inside the visible month.
     return countScheduledTrainingDays(
-      this.academyService.academy()?.training_days ?? null,
+      schedulesForAcademy(this.academyService.academy()),
       ym.year,
       ym.month,
     );
