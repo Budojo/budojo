@@ -6,6 +6,7 @@ namespace App\Actions\Academy;
 
 use App\Actions\Address\SyncAddressAction;
 use App\Models\Academy;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -56,16 +57,7 @@ class UpdateAcademyAction
             if ($trainingDaysKeyPresent) {
                 /** @var list<int>|null $trainingDays */
                 $trainingDays = $validated['training_days'];
-                // Lookup column is matched against the persisted form —
-                // `effective_from` is a Y-m-d string on disk, so pre-format
-                // the Carbon instance here instead of letting the query
-                // builder cast it to the default `Y-m-d H:i:s` (which
-                // would never match an existing row and trip the UNIQUE
-                // constraint on the same-day re-PATCH).
-                $academy->schedules()->updateOrCreate(
-                    ['effective_from' => Carbon::today()->toDateString()],
-                    ['training_days' => $trainingDays],
-                );
+                $this->upsertTodaySchedule($academy, $trainingDays);
             }
 
             if ($validated !== []) {
@@ -80,5 +72,35 @@ class UpdateAcademyAction
 
             return $academy;
         });
+    }
+
+    /**
+     * Race-safe upsert of the today-row in `academy_schedules`. The
+     * read-then-write shape of `updateOrCreate` against the
+     * `UNIQUE(academy_id, effective_from)` constraint isn't serialised
+     * by the enclosing transaction — two concurrent PATCHes from the
+     * same user (double-tap on Save, SPA retry after a 502) can both
+     * SELECT-miss, both INSERT, and one explodes with a
+     * UniqueConstraintViolation. Try the insert, fall through to an
+     * UPDATE on the duplicate-key path — second write wins,
+     * idempotently. Same shape as the gotchas-flagged `addresses`
+     * upsert.
+     *
+     * @param  list<int>|null  $trainingDays
+     */
+    private function upsertTodaySchedule(Academy $academy, ?array $trainingDays): void
+    {
+        $today = Carbon::today()->toDateString();
+
+        try {
+            $academy->schedules()->create([
+                'training_days' => $trainingDays,
+                'effective_from' => $today,
+            ]);
+        } catch (QueryException) {
+            $academy->schedules()
+                ->where('effective_from', $today)
+                ->update(['training_days' => $trainingDays]);
+        }
     }
 }
