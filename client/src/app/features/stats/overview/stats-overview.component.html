@@ -14,7 +14,8 @@
   } @else if (totalAthletes() === 0) {
     <app-empty-state
       icon="pi pi-chart-bar"
-      [title]="'stats.empty' | translate"
+      [title]="'stats.emptyTitle' | translate"
+      [hint]="'stats.emptyHint' | translate"
       dataCy="stats-empty"
     />
   } @else {

@@ -53,7 +53,8 @@
   } @else if (posts().length === 0) {
     <app-empty-state
       icon="pi pi-comments"
-      [title]="'athletePortal.feed.emptyBody' | translate"
+      [title]="'athletePortal.feed.emptyTitle' | translate"
+      [hint]="'athletePortal.feed.emptyHint' | translate"
       dataCy="my-feed-empty"
     />
   } @else {
