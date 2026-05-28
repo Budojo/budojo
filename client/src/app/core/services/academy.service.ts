@@ -188,8 +188,42 @@ export interface Academy {
    * Weekdays the academy trains on, as Carbon `dayOfWeek` ints (0=Sun..6=Sat).
    * `null` = "schedule not configured" — daily check-in falls back to
    * all-weekdays. Optional for the same fixture-compat reason as the fee.
+   *
+   * From #1094 this is a **denormalised cache of the current schedule** —
+   * source of truth for historical reads is `schedules` below.
    */
   training_days?: number[] | null;
+  /**
+   * Schedule in effect today (#1094). Same `training_days` as the
+   * top-level field; carries `id` + `effective_from` so the UI can show
+   * "in effect since". Optional for fixture-compat.
+   */
+  current_schedule?: AcademySchedule | null;
+  /**
+   * Pending future schedule change, or `null` when none is scheduled
+   * (#1094). At most one row exists at a time (single-pending-change
+   * invariant from the PRD). Optional for fixture-compat.
+   */
+  next_schedule?: AcademySchedule | null;
+  /**
+   * Full schedule history (#1094), ordered most-recent `effective_from`
+   * first. Consumed by `countScheduledTrainingDays` to compute correct
+   * per-day denominators across mid-period schedule transitions.
+   * Optional for fixture-compat.
+   */
+  schedules?: AcademySchedule[];
+}
+
+/**
+ * One row in the academy schedule history (#1094). Effective from the
+ * given calendar date forward until the next row's `effective_from`.
+ */
+export interface AcademySchedule {
+  readonly id: number;
+  /** Carbon dayOfWeek ints (0=Sun..6=Sat); `null` = "not configured" for this period. */
+  readonly training_days: number[] | null;
+  /** ISO `YYYY-MM-DD` calendar date — no time component. */
+  readonly effective_from: string;
 }
 
 /**
