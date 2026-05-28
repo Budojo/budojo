@@ -1468,6 +1468,31 @@
       },
       "errorValidation": "Validation failed.",
       "errorGeneric": "Something went wrong. Please try again."
+    },
+    "schedule": {
+      "title": "Plan a future schedule change",
+      "hint": "Use this when the academy's weekly schedule will change starting on a specific date — past months keep the schedule that was actually in effect.",
+      "pendingLabel": "Pending change",
+      "startEdit": "Plan a change",
+      "editCancel": "Cancel",
+      "save": "Schedule change",
+      "cancel": "Cancel pending change",
+      "cancelConfirm": "Cancel this pending schedule change?",
+      "cancelAccept": "Yes, cancel it",
+      "cancelReject": "Keep it",
+      "effectiveFromLabel": "Effective from",
+      "effectiveFromHint": "The new schedule starts on this day. Must be in the future — same-day changes go through the Training days picker above.",
+      "daysLabel": "Training days from that date",
+      "daysHint": "Pick every weekday the academy will hold class from the effective date onward.",
+      "notConfigured": "No training days",
+      "toast": {
+        "scheduledSummary": "Schedule change planned",
+        "scheduledDetail": "The new schedule starts on {{date}}.",
+        "cancelledSummary": "Pending change cancelled",
+        "errorSummary": "Couldn't save",
+        "errorDetail": "Try again, or pick a different date if one is already scheduled.",
+        "cancelErrorDetail": "The pending change could not be cancelled. Refresh and try again."
+      }
     }
   },
   "belts": {

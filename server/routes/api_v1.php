@@ -404,6 +404,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'uploadLogo']);
         Route::delete('/academy/logo', [\App\Http\Controllers\Academy\AcademyController::class, 'deleteLogo']);
 
+        // Schedule history (#1094). POST schedules a future
+        // training_days change effective on a calendar date (`> today`,
+        // single pending invariant enforced server-side). DELETE
+        // cancels a pending future row by id; past rows are immutable
+        // and the controller returns 422 if the caller targets one.
+        // Reads of the history are folded into the `GET /academy`
+        // resource (`current_schedule`, `next_schedule`, `schedules`),
+        // there's no dedicated index endpoint.
+        Route::post('/academy/schedules', [\App\Http\Controllers\Academy\AcademyScheduleController::class, 'store']);
+        Route::delete('/academy/schedules/{schedule}', [\App\Http\Controllers\Academy\AcademyScheduleController::class, 'destroy']);
+
         // Owner reads — no email-verification gate; owners can browse the roster before verifying their email.
         Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
             ->only(['index', 'show']);

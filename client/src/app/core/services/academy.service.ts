@@ -1,6 +1,16 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, map, tap, catchError, throwError, of, shareReplay, finalize } from 'rxjs';
+import {
+  Observable,
+  map,
+  tap,
+  catchError,
+  throwError,
+  of,
+  shareReplay,
+  finalize,
+  switchMap,
+} from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -188,8 +198,40 @@ export interface Academy {
    * Weekdays the academy trains on, as Carbon `dayOfWeek` ints (0=Sun..6=Sat).
    * `null` = "schedule not configured" — daily check-in falls back to
    * all-weekdays. Optional for the same fixture-compat reason as the fee.
+   *
+   * From #1094 this is a **denormalised cache of the current schedule** —
+   * source of truth for historical reads is `schedules` below.
    */
   training_days?: number[] | null;
+  /** Schedule in effect today (#1094). Optional for fixture-compat. */
+  current_schedule?: AcademySchedule | null;
+  /** Pending future schedule change, or `null` when none scheduled (#1094). */
+  next_schedule?: AcademySchedule | null;
+  /** Full schedule history (#1094), ordered most-recent first. */
+  schedules?: AcademySchedule[];
+}
+
+/**
+ * One row in the academy schedule history (#1094). Effective from the
+ * given calendar date forward until the next row's `effective_from`.
+ */
+export interface AcademySchedule {
+  readonly id: number;
+  /** Carbon dayOfWeek ints (0=Sun..6=Sat); `null` = "not configured" for this period. */
+  readonly training_days: number[] | null;
+  /** ISO `YYYY-MM-DD` calendar date — no time component. */
+  readonly effective_from: string;
+}
+
+/**
+ * Payload for `POST /api/v1/academy/schedules` (#1094 PR 2). Schedules
+ * a future `training_days` change. `effective_from` must be strictly
+ * after today — same-day changes go through `PATCH /api/v1/academy`.
+ */
+export interface ScheduleChangePayload {
+  training_days: number[] | null;
+  /** `YYYY-MM-DD`, must be > today. */
+  effective_from: string;
 }
 
 /**
@@ -361,6 +403,30 @@ export class AcademyService {
         return throwError(() => err);
       }),
     );
+  }
+
+  /**
+   * Schedules a future `training_days` change (#1094). The endpoint
+   * rejects same-day and past dates — those go through `update()`.
+   * Refreshes the academy on success so the cached `next_schedule`
+   * pointer flips on the SPA without an extra round-trip.
+   */
+  scheduleChange(payload: ScheduleChangePayload): Observable<Academy> {
+    return this.http
+      .post(`${this.base}/schedules`, payload)
+      .pipe(switchMap(() => this.get({ forceRefresh: true })));
+  }
+
+  /**
+   * Cancels a pending future schedule change (#1094). 204 on success;
+   * 422 if the caller targets a past-or-today row (immutable). Refreshes
+   * the academy so the `next_schedule` pointer clears without a manual
+   * `get()`.
+   */
+  cancelPendingSchedule(scheduleId: number): Observable<Academy> {
+    return this.http
+      .delete(`${this.base}/schedules/${scheduleId}`)
+      .pipe(switchMap(() => this.get({ forceRefresh: true })));
   }
 
   uploadLogo(file: File): Observable<Academy> {

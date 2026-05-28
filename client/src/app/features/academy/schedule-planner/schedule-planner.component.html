@@ -1,0 +1,110 @@
+<p-confirmpopup />
+
+<section class="schedule-planner" data-cy="schedule-planner">
+  <header class="schedule-planner__header">
+    <h2 class="schedule-planner__title">
+      {{ 'academy.schedule.title' | translate }}
+    </h2>
+    <p class="schedule-planner__hint">
+      {{ 'academy.schedule.hint' | translate }}
+    </p>
+  </header>
+
+  @if (nextSchedule(); as next) {
+    <!--
+      Pending change. The line gives the new effective date plus the
+      new weekday list so the owner can verify they scheduled what
+      they meant; the cancel button lets them roll back as long as
+      effective_from > today (server-side guard).
+    -->
+    <div class="schedule-planner__pending" data-cy="schedule-planner-pending">
+      <div class="schedule-planner__pending-text">
+        <span class="schedule-planner__pending-label">
+          {{ 'academy.schedule.pendingLabel' | translate }}
+        </span>
+        <span class="schedule-planner__pending-value" data-cy="schedule-planner-pending-summary">
+          {{ nextScheduleLabel() }}
+        </span>
+      </div>
+      <p-button
+        [label]="'academy.schedule.cancel' | translate"
+        icon="pi pi-times"
+        severity="danger"
+        [text]="true"
+        [loading]="cancelling()"
+        (onClick)="confirmCancel($event)"
+        data-cy="schedule-planner-cancel"
+      />
+    </div>
+  } @else if (!editing()) {
+    <div class="schedule-planner__idle">
+      <p-button
+        [label]="'academy.schedule.startEdit' | translate"
+        icon="pi pi-calendar-plus"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="startEditing()"
+        data-cy="schedule-planner-start"
+      />
+    </div>
+  }
+
+  @if (editing()) {
+    <form
+      class="schedule-planner__form"
+      [formGroup]="form"
+      (ngSubmit)="submit()"
+      data-cy="schedule-planner-form"
+    >
+      <div class="field">
+        <label for="schedule-planner-date" class="field__label">
+          {{ 'academy.schedule.effectiveFromLabel' | translate }}
+        </label>
+        <p-datepicker
+          inputId="schedule-planner-date"
+          formControlName="effective_from"
+          [minDate]="minDate"
+          dateFormat="dd/mm/yy"
+          appendTo="body"
+          [showIcon]="true"
+          data-cy="schedule-planner-date"
+        />
+        <small class="field__hint">
+          {{ 'academy.schedule.effectiveFromHint' | translate }}
+        </small>
+      </div>
+
+      <div class="field">
+        <span class="field__label">
+          {{ 'academy.schedule.daysLabel' | translate }}
+        </span>
+        <app-training-days-picker
+          [value]="trainingDaysControl.value"
+          (valueChange)="setTrainingDays($event)"
+          data-cy="schedule-planner-days"
+        />
+        <small class="field__hint">
+          {{ 'academy.schedule.daysHint' | translate }}
+        </small>
+      </div>
+
+      <div class="schedule-planner__actions">
+        <p-button
+          type="button"
+          [label]="'academy.schedule.editCancel' | translate"
+          severity="secondary"
+          [text]="true"
+          (onClick)="cancelEditing()"
+          data-cy="schedule-planner-edit-cancel"
+        />
+        <p-button
+          type="submit"
+          [label]="'academy.schedule.save' | translate"
+          [loading]="submitting()"
+          [disabled]="form.invalid || submitting()"
+          data-cy="schedule-planner-save"
+        />
+      </div>
+    </form>
+  }
+</section>
