@@ -18,7 +18,7 @@ Method: static grep of the codebase + reading of `app.config.ts`, `app.routes.ts
 | Container/Presentational | ✅ Smart vs dumb component split (e.g. feature components vs `shared/components/*`) | — | — |
 | Provider | ✅ Angular DI everywhere (`inject()` + `providedIn: 'root'`) | — | — |
 | Mediator / Observer | ✅ RxJS `Subject` + signals for cross-component state | — | — |
-| **Native image lazy loading** | ⚠️ **1 of 25 `<img>` tags** carries `loading="lazy"` (UserAvatarComponent, shipped in this PR) | 24 `<img>` tags missing the attribute | **HIGH** |
+| **Native image lazy loading** | ✅ **4 of ~15 real `<img>` tags** carry `loading="lazy"` (UserAvatar + academy-detail logo + profile two-factor QR + my-academy academy-logo). The remaining ~11 are LCP candidates (auth-page logos, dashboard topbar/sidebar logos, public-profile avatar) or already explicitly tuned (landing hero with `fetchpriority="high"`) and stay eager by design. The initial "1 of 25" count in #1092 was a raw grep that included `.ts` doc-comment mentions of `<img>` (not real tags) and didn't distinguish LCP from below-the-fold | None — the surface is closed | — |
 | **`<link rel=preload / prefetch / preconnect>`** | ❌ **None in `client/src/index.html`** | No critical-chunk preload, no CDN preconnect | **MED** |
 | **Intersection Observer** | ❌ **0 refs** in `client/src` | No systematic in-viewport gating (feed reactions, lazy image fallback, infinite-scroll trigger) | MED |
 | Dynamic imports (app-level) | Partial — used for lazy routes only; the only large lib that needs it (zxcvbn) was already lazy per `perf/lazy-zxcvbn-password-meter` | Other big libs to audit (charts, etc.) | LOW |
@@ -30,12 +30,9 @@ Method: static grep of the codebase + reading of `app.config.ts`, `app.routes.ts
 
 Each item is a **separate PR with a measurable target**.
 
-### 1. HIGH — Native lazy-load sweep across the remaining 24 `<img>` tags
+### 1. ~~HIGH — Native lazy-load sweep~~ **DONE**
 
-- **Pattern**: [Native Lazy Loading](https://www.patterns.dev/vanilla/native-lazyload).
-- **Scope**: every `<img>` that is **not** an above-the-fold LCP candidate. Logo glyphs in auth pages and the dashboard topbar/sidebar stay eager (they often ARE the LCP). Feed thumbnails, academy detail logos, profile/two-factor QR images, list-row badges all become lazy.
-- **Measured target**: TBT reduction on feed scroll (long-list scenario); LCP unchanged on auth + dashboard routes.
-- **Effort**: small. Single PR.
+Shipped across #1092 + the follow-up: the 4 below-the-fold tags now carry `loading="lazy"`; the rest stay eager because they ARE the LCP on their pages. Nothing more to do here — re-open only if a new `<img>` ships without an explicit choice.
 
 ### 2. MED — Preload / preconnect hints in `index.html`
 
