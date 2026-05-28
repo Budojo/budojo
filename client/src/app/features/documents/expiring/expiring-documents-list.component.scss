@@ -78,35 +78,6 @@
     }
   }
 
-  &__empty {
-    padding: 2rem 0;
-  }
-
-  &__empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 2rem;
-    color: var(--p-text-muted-color);
-
-    i {
-      font-size: 2rem;
-    }
-  }
-
-  &__empty-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--p-text-color);
-    margin: 0;
-  }
-
-  &__empty-hint {
-    font-size: 0.875rem;
-    margin: 0;
-  }
-
   &__skeleton {
     display: flex;
     flex-direction: column;
