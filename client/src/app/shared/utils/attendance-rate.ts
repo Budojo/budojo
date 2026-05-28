@@ -53,9 +53,11 @@ export function scheduleForDate(
  * schedule. Each day in the month is checked against the schedule that
  * was in effect on THAT day.
  *
- * Returns `null` when there's no schedule history at all, OR when every
- * day in the visible range was covered by a `training_days: null`
- * schedule (i.e. "schedule not configured" for the whole period). The
+ * Returns `null` when there's no schedule history at all, OR when the
+ * **entire history** is the `training_days: null` sentinel (i.e.
+ * "schedule not configured anywhere ever"). A configured row OUTSIDE
+ * the visible range is enough to switch the result from `null` to `0`
+ * — the denominator is then "known to be zero," not "unknown." The
  * caller treats `null` as "hide the percentage UI; show the raw count".
  *
  * `month` is 1..12 (calendar), not 0-indexed.
