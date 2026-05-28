@@ -21,7 +21,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 | `facebook` | string(255) | nullable | Facebook page URL (#162). Same shape as `website`. |
 | `instagram` | string(255) | nullable | Instagram profile URL (#162). Same shape as `website`. |
 | `monthly_fee_cents` | unsigned int | nullable | Academy-wide membership fee, **stored in cents** to avoid float pitfalls (€95.00 = `9500`). `null` means "fee not configured" — the payments endpoints reject `POST` with 422 until the owner sets it. Settable via `PATCH /api/v1/academy` |
-| `training_days` | json (list&lt;int&gt;) | nullable | Weekdays the academy trains on, Carbon `dayOfWeek` ints (0=Sun…6=Sat). Cast to `array` on the model. `null` means "schedule not configured" — the daily check-in UI falls back to all-weekdays in that state. Settable on create + update |
+| `training_days` | json (list&lt;int&gt;) | nullable | Weekdays the academy trains on, Carbon `dayOfWeek` ints (0=Sun…6=Sat). Cast to `array` on the model. `null` means "schedule not configured" — the daily check-in UI falls back to all-weekdays in that state. Kept alive as a **denormalised cache of the current schedule** — the source of truth for historical reads is the `academy_schedules` table (#1094); see [`academy-schedule.md`](./academy-schedule.md). Settable on create + update |
 | `created_at` | timestamp | nullable | |
 | `updated_at` | timestamp | nullable | |
 
@@ -29,6 +29,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 
 - `belongsTo(User::class, 'user_id')` — exposed as the `owner()` method
 - `hasMany(Athlete::class)` — all athletes in this academy
+- `hasMany(AcademySchedule::class)` — schedule history (#1094); see [`academy-schedule.md`](./academy-schedule.md). Read-side helpers: `scheduleForDate(Carbon)`, `currentSchedule()`, `nextSchedule()`
 - `morphOne(Address::class, 'addressable')` — structured address (#72), see [`address.md`](./address.md)
 
 ## Indexes
@@ -44,6 +45,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 - **Address (#72) is a separate polymorphic entity.** `addresses` lives in its own table (`addressable_type` + `addressable_id`); the academy exposes it via `morphOne`. The 1:1 invariant is NOT carried by `morphOne` alone (Eloquent's morph relation just returns the first match) — it's enforced by the UNIQUE index on `(addressable_type, addressable_id)` in the `addresses` table, plus `SyncAcademyAddressAction` going through the relation's `updateOrCreate(...)` so concurrent inserts hit the constraint instead of producing duplicates. PATCH semantics: send `address: { line1, line2, city, postal_code, province, country }` to upsert in place, `address: null` to clear (delete the row), or omit the key to leave untouched. See [`address.md`](./address.md).
 - **Slug is server-generated, not user-supplied.** The shape is `slugified(name) + '-' + 8 lowercase random chars`, e.g. `gracie-barra-lisboa-a3f9kx2b`. This guarantees uniqueness without exposing collision logic to the user.
 - **`monthly_fee_cents` snapshots into payment rows.** When `RecordAthletePaymentAction` records a payment, it copies the academy's *current* `monthly_fee_cents` into `athlete_payments.amount_cents`. Future fee changes therefore do NOT rewrite past payment history.
+- **`training_days` changes are historized, not overwritten (#1094).** Every `PATCH /api/v1/academy` that touches `training_days` inserts a row into `academy_schedules` with `effective_from = today` (idempotent on a same-day re-PATCH — the lookup is `(academy_id, effective_from)`). The `academies.training_days` column is updated in lockstep so existing readers that just want the "current" schedule keep working; the schedule-history table is the source of truth for historical reads. See [`academy-schedule.md`](./academy-schedule.md) for the read API.
 - **The SPA's `/dashboard` routes are guarded by `hasAcademyGuard`.** A logged-in user without an academy is redirected to `/setup`. A user with an academy trying to visit `/setup` is redirected to `/dashboard`.
 - **Academy-scoping on every authenticated request** is handled in the controllers, not in a policy or model scope — we match the Athlete pattern. `StoreAthleteRequest::authorize()` and similar check `$user->academy !== null`; the controller then uses `$user->academy->id` to filter queries.
 - **No soft-delete.** Deleting a user cascades to their academy which cascades to their athletes.
