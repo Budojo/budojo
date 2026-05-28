@@ -50,3 +50,19 @@ body.app-drawer-open {
     touch-action: none;
   }
 }
+
+// Respect the user's OS / browser reduced-motion preference (#1074
+// motion convention). Disables every CSS transition / animation site in
+// one rule, plus CSS scroll-behavior. JS-driven motion (e.g. the
+// `scrollIntoView({ behavior: 'smooth' })` in my-feed) gates separately
+// via the `prefersReducedMotion()` helper in shared/utils.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

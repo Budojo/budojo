@@ -17,9 +17,12 @@
       [attr.aria-label]="'stats.athletes.loading' | translate"
     />
   } @else if (isEmpty()) {
-    <p class="stats-athletes__empty" data-cy="stats-athletes-empty">
-      {{ 'stats.athletes.empty' | translate }}
-    </p>
+    <app-empty-state
+      icon="pi pi-users"
+      [title]="'stats.athletes.empty' | translate"
+      [headingLevel]="3"
+      dataCy="stats-athletes-empty"
+    />
   } @else {
     <div class="stats-athletes__toolbar">
       <p-selectbutton

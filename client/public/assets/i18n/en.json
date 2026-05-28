@@ -277,7 +277,8 @@
     },
     "feed": {
       "title": "Your academy's feed",
-      "emptyBody": "No posts yet — grading celebrations and events from your academy will show up here.",
+      "emptyTitle": "No posts yet",
+      "emptyHint": "Grading celebrations and events from your academy will show up here.",
       "error": {
         "title": "Couldn't load the feed",
         "hint": "Something went wrong. Refresh the page and try again.",
@@ -1955,7 +1956,8 @@
     "title": "Academy at a glance",
     "subtitle": "Quick read on your academy — belt distribution — pulled live from your athletes.",
     "loadError": "Couldn't load the stats. Please try again.",
-    "empty": "Add your first athlete and the charts will populate here.",
+    "emptyTitle": "Not enough data yet",
+    "emptyHint": "Add your first athlete and the charts will populate here.",
     "total": "Across {{count}} athletes on file.",
     "belt": {
       "title": "Belts",

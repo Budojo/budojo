@@ -1,11 +1,14 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  Injector,
   OnInit,
   ViewChild,
   computed,
   inject,
+  runInInjectionContext,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -39,6 +42,8 @@ import { UserFlairComponent } from '../../shared/components/user-flair/user-flai
 import { MentionTextComponent } from '../../shared/components/mention-text/mention-text.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
+import { prefersReducedMotion } from '../../shared/utils/prefers-reduced-motion';
 import { CommentsThreadComponent } from './comments-thread/comments-thread.component';
 import { EventComposerComponent } from './event-composer/event-composer.component';
 import { EventDatePipe } from '../../shared/pipes/event-date.pipe';
@@ -79,6 +84,7 @@ import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-li
     UserFlairComponent,
     PageHeaderComponent,
     ErrorStateComponent,
+    EmptyStateComponent,
     CommentsThreadComponent,
     EventComposerComponent,
     MentionTextComponent,
@@ -94,6 +100,7 @@ import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-li
 export class MyFeedComponent implements OnInit {
   private readonly communityService = inject(CommunityService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   private readonly messageService = inject(MessageService);
   private readonly translateService = inject(TranslateService);
   private readonly authService = inject(AuthService);
@@ -233,17 +240,27 @@ export class MyFeedComponent implements OnInit {
     }
     this.targetPostId = null;
     this.highlightedPostId.set(id);
-    // Defer one tick so the @for has rendered the <li id="post-N">.
-    setTimeout(() => {
-      const el = document.getElementById(`post-${id}`);
-      // Move focus to the card (tabindex=-1 in the template) so keyboard
-      // and screen-reader users arriving from a notification get the same
-      // "here's your post" cue the highlight gives sighted users (a11y,
-      // client canon § Norman feedback). preventScroll lets scrollIntoView
-      // own the smooth scroll without a competing instant focus jump.
-      el?.focus({ preventScroll: true });
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 0);
+    // Defer to after the next render so the @for has rendered the
+    // <li id="post-N"> — afterNextRender is the Angular-21-idiomatic
+    // replacement for the old setTimeout(0) tick-defer (#1074).
+    runInInjectionContext(this.injector, () => {
+      afterNextRender(() => {
+        const el = document.getElementById(`post-${id}`);
+        // Move focus to the card (tabindex=-1 in the template) so keyboard
+        // and screen-reader users arriving from a notification get the same
+        // "here's your post" cue the highlight gives sighted users (a11y,
+        // client canon § Norman feedback). preventScroll lets scrollIntoView
+        // own the smooth scroll without a competing instant focus jump.
+        el?.focus({ preventScroll: true });
+        // The JS behavior option wins over CSS scroll-behavior, so the
+        // prefers-reduced-motion guard gates the JS choice here too —
+        // the CSS layer is caught globally in styles.scss (#1074).
+        el?.scrollIntoView({
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+          block: 'center',
+        });
+      });
+    });
     // Fade the highlight after it's served its "here it is" purpose.
     // Cancel any in-flight fade first: rapid re-navigation (push toasts
     // within 2.4s — the case the fragment subscription above enables)

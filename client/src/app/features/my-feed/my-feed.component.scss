@@ -201,12 +201,6 @@
     white-space: pre-line;
   }
 
-  &__empty {
-    color: var(--p-text-color-secondary);
-    text-align: center;
-    padding: 2rem 1rem;
-  }
-
   // RSVP row on event posts (Going / Maybe). Visually distinct from the
   // reactions footer below — explicit gap + margin-top so the two
   // clusters read as separate touch zones on phone widths.

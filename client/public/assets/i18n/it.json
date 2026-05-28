@@ -277,7 +277,8 @@
     },
     "feed": {
       "title": "Il feed della tua academy",
-      "emptyBody": "Nessun post per ora — le promozioni di cintura e gli eventi della tua academy compariranno qui.",
+      "emptyTitle": "Nessun post per ora",
+      "emptyHint": "Le promozioni di cintura e gli eventi della tua academy compariranno qui.",
       "error": {
         "title": "Impossibile caricare il feed",
         "hint": "Si è verificato un errore. Aggiorna la pagina e riprova.",
@@ -1955,7 +1956,8 @@
     "title": "L'accademia a colpo d'occhio",
     "subtitle": "Lettura rapida dell’accademia — distribuzione cinture — calcolata in tempo reale dai tuoi atleti.",
     "loadError": "Impossibile caricare le statistiche. Riprova.",
-    "empty": "Aggiungi il primo atleta e i grafici si popolano qui.",
+    "emptyTitle": "Dati non sufficienti",
+    "emptyHint": "Aggiungi il primo atleta e i grafici si popoleranno qui.",
     "total": "Su {{count}} atleti totali.",
     "belt": {
       "title": "Cinture",

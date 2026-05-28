@@ -1014,5 +1014,42 @@ describe('MyFeedComponent (#614, M9 PR-B2 client)', () => {
         vi.useRealTimers();
       }
     });
+
+    it('honours prefers-reduced-motion on the deep-link scroll — passes behavior auto, not smooth (#1074)', () => {
+      vi.useFakeTimers();
+      const originalScroll = Element.prototype.scrollIntoView;
+      const scrollSpy = vi.fn();
+      Element.prototype.scrollIntoView = scrollSpy;
+      const originalMatch = window.matchMedia;
+      window.matchMedia = vi.fn((q: string) => ({
+        matches: q.includes('reduce'),
+        media: q,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        onchange: null,
+      })) as unknown as typeof window.matchMedia;
+      try {
+        const { fixture, http } = setup({ fragment: 'post-7' });
+        document.body.appendChild(fixture.nativeElement);
+        loadPosts(http, [7, 8]);
+        fixture.detectChanges();
+        vi.advanceTimersByTime(1);
+
+        // CSS scroll-behavior can be overridden globally by the
+        // @media (prefers-reduced-motion: reduce) rule, but the JS option
+        // passed to scrollIntoView wins over CSS — so the JS site must
+        // gate on the helper too.
+        expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'auto', block: 'center' });
+
+        fixture.nativeElement.remove();
+      } finally {
+        Element.prototype.scrollIntoView = originalScroll;
+        window.matchMedia = originalMatch;
+        vi.useRealTimers();
+      }
+    });
   });
 });
