@@ -24,6 +24,7 @@
             class="my-academy__logo"
             [src]="a.logo_url"
             [alt]="'athletePortal.academy.logoAlt' | translate: { name: a.name }"
+            loading="lazy"
           />
         } @else {
           <span class="my-academy__logo-placeholder" aria-hidden="true">
