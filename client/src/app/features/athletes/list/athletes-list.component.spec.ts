@@ -980,6 +980,22 @@ describe('AthletesListComponent', () => {
       expect(empty!.querySelector('[data-cy="athletes-empty-cta"]')).not.toBeNull();
     });
 
+    it('the empty-state Clear filters action also clears searchTerm — not just the dropdowns (#1090 reviewer)', () => {
+      // resetFilters() is contracted to leave the search box untouched
+      // (#704 mobile-sheet Reset). The empty-state CTA mustn't dead-end
+      // a user who landed there via a search term — wire to a sibling
+      // that clears everything, search included.
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.searchTerm.set('zzz');
+      expect(component.searchTerm()).toBe('zzz');
+
+      (component as unknown as { clearAllFiltersAndSearch: () => void }).clearAllFiltersAndSearch();
+
+      expect(component.searchTerm()).toBe('');
+    });
+
     it('renders a Clear filters CTA when a filter is active and the result is empty (#1090 reviewer)', () => {
       // Exercises the filtered-empty branch + asserts the resolved
       // translation — client/CLAUDE.md § i18n: the parity spec confirms

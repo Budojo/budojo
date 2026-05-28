@@ -443,6 +443,19 @@ export class AthletesListComponent implements OnInit {
   }
 
   /**
+   * Empty-state "Clear filters" CTA target (#1090 reviewer). Unlike
+   * `resetFilters()` — which preserves the search box because the mobile
+   * filter-sheet has its own dedicated search affordance (#704) — this
+   * action clears EVERYTHING that could have narrowed the user into the
+   * filtered-empty branch, search included. Without this distinction the
+   * CTA dead-ends a user who arrived there via a search term.
+   */
+  protected clearAllFiltersAndSearch(): void {
+    this.searchTerm.set('');
+    this.resetFilters();
+  }
+
+  /**
    * "Reset" action on the mobile filter-sheet (#704). Clears every
    * dropdown in one shot and re-runs the load. The free-text search
    * box stays untouched — clearing it is its own dedicated affordance.

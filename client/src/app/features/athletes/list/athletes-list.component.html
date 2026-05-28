@@ -493,7 +493,7 @@
                   [hint]="'athletes.list.empty.filteredHint' | translate"
                   ctaIcon="pi pi-filter-slash"
                   [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
-                  (ctaClick)="resetFilters()"
+                  (ctaClick)="clearAllFiltersAndSearch()"
                   dataCy="athletes-empty"
                 />
               } @else {
@@ -536,7 +536,7 @@
             [hint]="'athletes.list.empty.filteredHint' | translate"
             ctaIcon="pi pi-filter-slash"
             [ctaLabel]="'athletes.list.empty.clearFilters' | translate"
-            (ctaClick)="resetFilters()"
+            (ctaClick)="clearAllFiltersAndSearch()"
             dataCy="athletes-mobile-empty"
           />
         } @else {
