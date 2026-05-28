@@ -19,7 +19,11 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { AcademyService } from '../../../core/services/academy.service';
 import { AttendanceService, AttendanceSummaryRow } from '../../../core/services/attendance.service';
 import { LanguageService } from '../../../core/services/language.service';
-import { attendanceRate, countScheduledTrainingDays } from '../../../shared/utils/attendance-rate';
+import {
+  attendanceRate,
+  countScheduledTrainingDays,
+  schedulesForAcademy,
+} from '../../../shared/utils/attendance-rate';
 import { localeFor } from '../../../shared/utils/locale';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 
@@ -132,8 +136,10 @@ export class MonthlySummaryComponent implements OnInit {
    */
   protected readonly scheduledCount = computed<number | null>(() => {
     const ym = this.visible();
+    // Schedule-history aware (#1094) — see attendance-history.component
+    // for the segment-math rationale.
     return countScheduledTrainingDays(
-      this.academyService.academy()?.training_days ?? null,
+      schedulesForAcademy(this.academyService.academy()),
       ym.year,
       ym.month,
     );

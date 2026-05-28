@@ -1468,6 +1468,31 @@
       },
       "errorValidation": "Validazione non riuscita.",
       "errorGeneric": "Qualcosa è andato storto. Riprova."
+    },
+    "schedule": {
+      "title": "Pianifica un cambio calendario futuro",
+      "hint": "Usa questa sezione quando i giorni di allenamento cambieranno a partire da una data precisa — i mesi passati conservano i giorni effettivamente in vigore allora.",
+      "pendingLabel": "Cambio pianificato",
+      "startEdit": "Pianifica un cambio",
+      "editCancel": "Annulla",
+      "save": "Pianifica cambio",
+      "cancel": "Annulla cambio pianificato",
+      "cancelConfirm": "Annullare il cambio pianificato?",
+      "cancelAccept": "Sì, annulla",
+      "cancelReject": "Mantienilo",
+      "effectiveFromLabel": "Effettivo dal",
+      "effectiveFromHint": "Il nuovo calendario parte da questo giorno. Deve essere una data futura — per cambiare con effetto immediato usa il selettore dei giorni di allenamento qui sopra.",
+      "daysLabel": "Giorni di allenamento da quella data",
+      "daysHint": "Seleziona ogni giorno della settimana in cui si terrà lezione a partire dalla data effettiva.",
+      "notConfigured": "Nessun giorno di allenamento",
+      "toast": {
+        "scheduledSummary": "Cambio calendario pianificato",
+        "scheduledDetail": "Il nuovo calendario parte il {{date}}.",
+        "cancelledSummary": "Cambio pianificato annullato",
+        "errorSummary": "Non sono riuscito a salvare",
+        "errorDetail": "Riprova, o scegli un'altra data se ce n'è già una pianificata.",
+        "cancelErrorDetail": "Non sono riuscito ad annullare il cambio. Aggiorna la pagina e riprova."
+      }
     }
   },
   "belts": {
@@ -1605,7 +1630,8 @@
       },
       "empty": {
         "title": "Nessun atleta trovato.",
-        "filteredHint": "Prova a rimuovere i filtri o la ricerca."
+        "filteredHint": "Prova a rimuovere i filtri o la ricerca.",
+        "clearFilters": "Rimuovi filtri"
       },
       "error": {
         "title": "Impossibile caricare gli atleti",

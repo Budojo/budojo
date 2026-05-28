@@ -28,6 +28,31 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.35.0',
+    date: '2026-05-28',
+    headline: 'Plan ahead: a future schedule change no longer erases past attendance math.',
+    sections: [
+      {
+        heading: '📅 Plan a future schedule change',
+        bullets: [
+          "From the academy page, you can now schedule a new training-days set effective on any future date. Past months keep the schedule that was actually in effect — your May percentage stays calculated against May's Tue/Thu instead of silently switching to June's Mon/Wed/Fri the moment you save. Mid-month transitions split the denominator correctly across the two segments. A pending change shows up on the academy page until the day arrives or you cancel it.",
+        ],
+      },
+      {
+        heading: '📭 Empty states with onboarding CTAs',
+        bullets: [
+          'The empty athletes roster now opens the new-athlete form on tap — your very first visit after signup IS the call-to-action instead of a dead-end placeholder. A narrowed filter that finds nothing offers a one-tap Clear filters. The expiring-documents page also moves onto the shared empty/error states, completing the wave-3 adoption pass.',
+        ],
+      },
+      {
+        heading: '⚡ Faster image loads',
+        bullets: [
+          'Academy logos in the detail page, the my-academy page, and athlete avatars now load lazily via the native browser pattern (no JS), so the initial page weight on the first paint drops. The QR-code data URL on the my-academy page stays eager because lazy is a no-op for data URLs anyway.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.34.0',
     date: '2026-05-28',
     headline:

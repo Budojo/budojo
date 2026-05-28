@@ -36,6 +36,7 @@ import {
 import { LanguageService } from '../../../core/services/language.service';
 import { localeFor } from '../../../shared/utils/locale';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
+import { SchedulePlannerComponent } from '../schedule-planner/schedule-planner.component';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
@@ -140,6 +141,7 @@ const COUNTRY_CODE_OPTIONS: SelectOption<string>[] = [
     Tooltip,
     TranslatePipe,
     TrainingDaysPickerComponent,
+    SchedulePlannerComponent,
     BudojoFormFieldComponent,
     PageHeaderComponent,
   ],

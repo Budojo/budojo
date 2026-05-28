@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int                 $id
@@ -92,6 +93,53 @@ class Academy extends Model implements HasAddress
     public function address(): MorphOne
     {
         return $this->morphOne(Address::class, 'addressable');
+    }
+
+    /**
+     * Schedule history (#1094). One row per "this is the schedule
+     * starting on this date" event, ordered by `effective_from`. Reads
+     * for any past or future date resolve through `scheduleForDate()` —
+     * never iterate this relation directly outside resource shaping.
+     *
+     * @return HasMany<AcademySchedule, $this>
+     */
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(AcademySchedule::class);
+    }
+
+    /**
+     * The schedule effective on a given date — the row with the largest
+     * `effective_from <= $date` (#1094). Returns null when no row
+     * covers the date (post-backfill that means the date is before
+     * the academy's birthday — practically never).
+     */
+    public function scheduleForDate(Carbon $date): ?AcademySchedule
+    {
+        return $this->schedules()
+            ->where('effective_from', '<=', $date->toDateString())
+            ->orderByDesc('effective_from')
+            ->first();
+    }
+
+    /** Schedule in effect right now — convenience for today's lookup. */
+    public function currentSchedule(): ?AcademySchedule
+    {
+        return $this->scheduleForDate(Carbon::today());
+    }
+
+    /**
+     * The pending future schedule, if the owner has scheduled one. By
+     * application invariant (enforced in the upcoming Schedule FormRequests
+     * — PR 2), at most one such row exists at a time. This helper just
+     * returns the soonest `effective_from > today` row.
+     */
+    public function nextSchedule(): ?AcademySchedule
+    {
+        return $this->schedules()
+            ->where('effective_from', '>', Carbon::today()->toDateString())
+            ->orderBy('effective_from')
+            ->first();
     }
 
     /**

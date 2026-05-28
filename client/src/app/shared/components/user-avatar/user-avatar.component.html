@@ -11,6 +11,7 @@
       [alt]="alt() ?? ''"
       [attr.aria-hidden]="alt() === null ? true : null"
       (error)="onImageError()"
+      loading="lazy"
       data-cy="user-avatar-image"
     />
   } @else {

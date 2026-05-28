@@ -22,6 +22,12 @@ describe('UserAvatarComponent (#411)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="user-avatar-initials"]')).toBeNull();
   });
 
+  it('opts into native lazy loading so off-screen avatars do not block the feed (patterns.dev native lazy-load, #1091)', () => {
+    const fixture = render({ url: '/storage/users/avatars/1.jpg', name: 'Mario Rossi' });
+    const img = fixture.nativeElement.querySelector('[data-cy="user-avatar-image"]');
+    expect(img.getAttribute('loading')).toBe('lazy');
+  });
+
   it('falls back to initials when the url is null', () => {
     const fixture = render({ url: null, name: 'Mario Rossi' });
     const initials = fixture.nativeElement.querySelector('[data-cy="user-avatar-initials"]');

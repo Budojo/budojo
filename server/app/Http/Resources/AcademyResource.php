@@ -7,6 +7,7 @@ namespace App\Http\Resources;
 use App\Models\Academy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 class AcademyResource extends JsonResource
@@ -45,6 +46,54 @@ class AcademyResource extends JsonResource
                 : null,
             'monthly_fee_cents' => $academy->monthly_fee_cents,
             'training_days' => $academy->training_days,
+            // Schedule history (#1094). Pull the full history once,
+            // then derive current/next from the in-memory collection —
+            // 1 query instead of separate `currentSchedule()` /
+            // `nextSchedule()` round-trips that would each re-issue
+            // their own SELECT (and we'd call each twice, once for the
+            // null-check and once for the Resource argument — five
+            // queries vs. one). `current_schedule` and `next_schedule`
+            // are also now byte-for-byte identical to entries in
+            // `schedules`, no two-source-of-truth risk.
+            ...$this->schedulePayload($academy, $request),
+        ];
+    }
+
+    /**
+     * Derives `schedules` / `current_schedule` / `next_schedule` from a
+     * single ordered fetch. The list is DESC by `effective_from`, so:
+     *   - first row with `effective_from <= today` → current
+     *   - last row with `effective_from >  today` → next
+     *     (last-in-DESC-order is the smallest `effective_from` among
+     *     the futures — i.e. the soonest one)
+     *
+     * @return array<string, mixed>
+     */
+    private function schedulePayload(Academy $academy, Request $request): array
+    {
+        $today = Carbon::today();
+
+        $schedules = $academy->schedules()
+            ->orderByDesc('effective_from')
+            ->get();
+
+        $current = $schedules->first(
+            static fn ($s): bool => $s->effective_from->lessThanOrEqualTo($today),
+        );
+        $next = $schedules->last(
+            static fn ($s): bool => $s->effective_from->greaterThan($today),
+        );
+
+        return [
+            'current_schedule' => $current !== null
+                ? new AcademyScheduleResource($current)->toArray($request)
+                : null,
+            'next_schedule' => $next !== null
+                ? new AcademyScheduleResource($next)->toArray($request)
+                : null,
+            'schedules' => $schedules
+                ->map(fn ($s) => new AcademyScheduleResource($s)->toArray($request))
+                ->all(),
         ];
     }
 }

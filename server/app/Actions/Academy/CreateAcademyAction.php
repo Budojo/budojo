@@ -7,6 +7,7 @@ namespace App\Actions\Academy;
 use App\Actions\Address\SyncAddressAction;
 use App\Models\Academy;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -37,6 +38,19 @@ class CreateAcademyAction
                 'name' => $name,
                 'slug' => $this->uniqueSlug($name),
                 'training_days' => $trainingDays,
+            ]);
+
+            // Schedule history (#1094). Seed the brand-new academy's
+            // history with one row carrying the same `training_days`,
+            // effective today. Without this, new academies created via
+            // POST start with empty `schedules` and `currentSchedule()`
+            // returns null — the migration's backfill only covers rows
+            // that already existed. `effective_from = today` matches
+            // the natural reading: "this is what the schedule is, as
+            // of when the academy was created".
+            $academy->schedules()->create([
+                'training_days' => $trainingDays,
+                'effective_from' => Carbon::today(),
             ]);
 
             if ($address !== null) {

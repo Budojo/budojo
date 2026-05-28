@@ -2686,6 +2686,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
 
+  /academy/schedules:
+    post:
+      tags: [academy]
+      summary: Schedule a future training_days change (#1094)
+      description: |
+        Inserts a new row into the academy's schedule history with the
+        given `training_days` effective from a future calendar date.
+        `effective_from` MUST be strictly after today — same-day changes
+        go through `PATCH /api/v1/academy`.
+
+        Invariant: at most ONE pending future schedule per academy at any
+        time (the "single pending change" model from the PRD). A second
+        POST while a pending row exists returns 422. The owner cancels
+        the pending row via `DELETE /api/v1/academy/schedules/{id}`
+        before scheduling another.
+
+        Reads of the schedule history are folded into the academy
+        resource (`current_schedule`, `next_schedule`, `schedules`) —
+        there is no dedicated GET for an index here.
+      operationId: academyScheduleStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [training_days, effective_from]
+              properties:
+                training_days:
+                  $ref: '#/components/schemas/TrainingDays'
+                effective_from:
+                  type: string
+                  format: date
+                  description: ISO YYYY-MM-DD; must be strictly after today.
+                  example: '2026-06-01'
+      responses:
+        '201':
+          description: Schedule change planned
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AcademySchedule'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: The authenticated user has no academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy/schedules/{schedule}:
+    delete:
+      tags: [academy]
+      summary: Cancel a pending future schedule change (#1094)
+      description: |
+        Deletes the targeted `academy_schedules` row. Only rows with
+        `effective_from > today` are deletable — past or today rows are
+        immutable and a 422 fires if the caller targets one. Mismatched
+        ownership (the row belongs to another academy) collapses to a
+        404 so existence isn't leaked across tenants.
+      operationId: academyScheduleDelete
+      parameters:
+        - in: path
+          name: schedule
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: The schedule row id to cancel.
+      responses:
+        '204':
+          description: Pending schedule cancelled
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: The schedule does not belong to the authenticated user's academy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '422':
+          description: The schedule is past or today (immutable)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+
   /search:
     get:
       tags: [auth]
@@ -5697,6 +5791,9 @@ components:
           website,
           facebook,
           instagram,
+          current_schedule,
+          next_schedule,
+          schedules,
         ]
       properties:
         id:
@@ -5770,6 +5867,51 @@ components:
           example: 9500
         training_days:
           $ref: '#/components/schemas/TrainingDays'
+        current_schedule:
+          allOf:
+            - $ref: '#/components/schemas/AcademySchedule'
+          nullable: true
+          description: |
+            Schedule history (#1094) — the row in effect today. `null` only
+            when the academy was migrated in but has no history row covering
+            today (e.g. `effective_from > today` for every row, which the
+            backfill prevents for legacy academies). Same data as
+            `training_days` for the current state; this surface exposes the
+            ID + `effective_from` so the FE can render "in effect since".
+        next_schedule:
+          allOf:
+            - $ref: '#/components/schemas/AcademySchedule'
+          nullable: true
+          description: |
+            Schedule history (#1094) — the pending future change, or `null`
+            when no future row exists. By application invariant at most one
+            pending row exists at a time.
+        schedules:
+          type: array
+          description: |
+            Full schedule history (#1094), ordered most-recent-`effective_from`
+            first. Use this to compute per-day denominators for mid-period
+            transitions on the FE.
+          items:
+            $ref: '#/components/schemas/AcademySchedule'
+
+    AcademySchedule:
+      type: object
+      required: [id, training_days, effective_from]
+      description: |
+        One row in the schedule history (#1094) — "this is the schedule
+        starting on `effective_from`". See `docs/entities/academy-schedule.md`.
+      properties:
+        id:
+          type: integer
+          format: int64
+        training_days:
+          $ref: '#/components/schemas/TrainingDays'
+        effective_from:
+          type: string
+          format: date
+          description: ISO calendar date (YYYY-MM-DD), no time component.
+          example: '2026-06-01'
 
     TrainingDays:
       type: array

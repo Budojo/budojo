@@ -11,15 +11,11 @@
   />
 
   @if (errored()) {
-    <div class="expiring-page__empty-state" data-cy="expiring-list-error">
-      <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
-      <p class="expiring-page__empty-title">
-        {{ 'documents.expiringList.error.title' | translate }}
-      </p>
-      <p class="expiring-page__empty-hint">
-        {{ 'documents.expiringList.error.hint' | translate }}
-      </p>
-    </div>
+    <app-error-state
+      [title]="'documents.expiringList.error.title' | translate"
+      [hint]="'documents.expiringList.error.hint' | translate"
+      dataCy="expiring-list-error"
+    />
   } @else if (loading()) {
     <div class="expiring-page__skeleton" data-cy="expiring-skeleton">
       <p-skeleton height="1.5rem" styleClass="mb-2" />
@@ -30,15 +26,12 @@
     <!-- Combined empty state — both lists are empty. Single block keeps
          the "nothing to worry about" cue strong instead of stacking two
          identical empty blocks (Norman: don't repeat the same signal). -->
-    <div class="expiring-page__empty-state" data-cy="all-clear-empty">
-      <i class="pi pi-check-circle" aria-hidden="true"></i>
-      <p class="expiring-page__empty-title">
-        {{ 'documents.expiringList.allClear.title' | translate }}
-      </p>
-      <p class="expiring-page__empty-hint">
-        {{ 'documents.expiringList.allClear.hint' | translate }}
-      </p>
-    </div>
+    <app-empty-state
+      icon="pi pi-check-circle"
+      [title]="'documents.expiringList.allClear.title' | translate"
+      [hint]="'documents.expiringList.allClear.hint' | translate"
+      dataCy="all-clear-empty"
+    />
   } @else {
     <!-- ─── Atleti senza certificato medico (#891) ────────────────────────
          Surfaced ABOVE the expiring list because "missing entirely" is a

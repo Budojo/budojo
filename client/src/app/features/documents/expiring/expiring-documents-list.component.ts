@@ -24,6 +24,8 @@ import {
 } from '../../../core/services/document.service';
 import { ExpiryStatusBadgeComponent } from '../../../shared/components/expiry-status-badge/expiry-status-badge.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { triggerBrowserDownload } from '../../../shared/utils/download';
 
 /**
@@ -49,6 +51,8 @@ import { triggerBrowserDownload } from '../../../shared/utils/download';
     TranslatePipe,
     ExpiryStatusBadgeComponent,
     PageHeaderComponent,
+    ErrorStateComponent,
+    EmptyStateComponent,
   ],
   providers: [MessageService],
   templateUrl: './expiring-documents-list.component.html',

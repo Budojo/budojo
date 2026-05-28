@@ -24,6 +24,7 @@ The SPA is judged against four shared references. When a reviewer cites one by n
 | **Don't Make Me Think** — Steve Krug | Self-evident UI — if the user has to think about what a button does, you failed |
 | **The Design of Everyday Things** — Donald Norman | Affordances, signifiers, feedback, constraints, mapping |
 | **[Laws of UX](https://lawsofux.com/)** — Jon Yablonski | Hick's, Miller's, Jakob's, Fitts's — quantitative cognitive rules, not vibes |
+| **[patterns.dev](https://www.patterns.dev/)** — Addy Osmani / Lydia Hallie | Performance + architecture + rendering patterns (#1091). Scoped to **CSR Angular 21**: lazy loading, code splitting, PRPL, native image lazy-load, intersection observer, web workers, dynamic imports, preload/prefetch, runtime caching, Container/Presentational, Provider/Mediator/Observer. **Not in scope**: React-only idioms (HOC, Render Props, Hooks-as-API — Angular signals are the analogue); SSR / SSG / ISR / Islands / Progressive Hydration (we're CSR by design). New adoptions ship with a measurable target (Lighthouse delta, bundle bytes, TBT) — no cargo-cult. |
 
 Full per-source operational rules (e.g. Krug's three laws, Norman's affordance/feedback/constraints set, the LoUX table) live in [`docs/design/DESIGN_SYSTEM.md`](../docs/design/DESIGN_SYSTEM.md). The hard rules below are the load-bearing subset.
 
@@ -210,7 +211,7 @@ Run locally via `./.claude/scripts/test-client.sh` (prettier --write + lint + vi
 
 - **Suggest a PrimeNG component by name** when building any UI element. Check [primeng.org](https://primeng.org/) before rolling custom.
 - **Explain FE decisions** in plain terms — the developer is BE-focused.
-- **Write code under the design canon.** MD3, Don't Make Me Think, Norman, Laws of UX — a citation by a reviewer is a valid critique.
+- **Write code under the design canon.** MD3, Don't Make Me Think, Norman, Laws of UX, patterns.dev — a citation by a reviewer is a valid critique.
 - **Components are OnPush by default.** No exceptions without a comment.
 - **State via signals**, not `BehaviorSubject` where a `signal()` works.
 - **Reactive Forms, not template-driven**, for anything beyond a two-field filter.

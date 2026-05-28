@@ -964,4 +964,53 @@ describe('AthletesListComponent', () => {
       expect(tbody?.querySelectorAll('app-paid-badge').length).toBe(1);
     });
   });
+
+  describe('empty-state onboarding CTA (#1033 wave 3)', () => {
+    it('renders an Add athlete CTA when the roster is empty and no filters are set', () => {
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+
+      const empty = fixture.nativeElement.querySelector(
+        '[data-cy="athletes-empty"]',
+      ) as HTMLElement | null;
+      expect(empty).not.toBeNull();
+      // The empty state turns into the academy owner's onboarding moment —
+      // a primary CTA wired to goToNew() reduces time-to-first-athlete
+      // (the #1 friction point at sign-up).
+      expect(empty!.querySelector('[data-cy="athletes-empty-cta"]')).not.toBeNull();
+    });
+
+    it('the empty-state Clear filters action also clears searchTerm — not just the dropdowns (#1090 reviewer)', () => {
+      // resetFilters() is contracted to leave the search box untouched
+      // (#704 mobile-sheet Reset). The empty-state CTA mustn't dead-end
+      // a user who landed there via a search term — wire to a sibling
+      // that clears everything, search included.
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.searchTerm.set('zzz');
+      expect(component.searchTerm()).toBe('zzz');
+
+      (component as unknown as { clearAllFiltersAndSearch: () => void }).clearAllFiltersAndSearch();
+
+      expect(component.searchTerm()).toBe('');
+    });
+
+    it('renders a Clear filters CTA when a filter is active and the result is empty (#1090 reviewer)', () => {
+      // Exercises the filtered-empty branch + asserts the resolved
+      // translation — client/CLAUDE.md § i18n: the parity spec confirms
+      // key sets match but NOT that template paths resolve, so a fat-
+      // fingered key on this branch would ship green otherwise.
+      const fixture = TestBed.createComponent(AthletesListComponent);
+      fixture.detectChanges();
+      fixture.componentInstance.searchTerm.set('zzz');
+      fixture.detectChanges();
+
+      const cta = fixture.nativeElement.querySelector(
+        '[data-cy="athletes-empty-cta"]',
+      ) as HTMLElement | null;
+      expect(cta).not.toBeNull();
+      expect(cta!.textContent).toContain('Clear filters');
+    });
+  });
 });
