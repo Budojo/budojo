@@ -1605,7 +1605,8 @@
       },
       "empty": {
         "title": "Nessun atleta trovato.",
-        "filteredHint": "Prova a rimuovere i filtri o la ricerca."
+        "filteredHint": "Prova a rimuovere i filtri o la ricerca.",
+        "clearFilters": "Rimuovi filtri"
       },
       "error": {
         "title": "Impossibile caricare gli atleti",

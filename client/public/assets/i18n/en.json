@@ -1605,7 +1605,8 @@
       },
       "empty": {
         "title": "No athletes found.",
-        "filteredHint": "Try clearing your filters or search."
+        "filteredHint": "Try clearing your filters or search.",
+        "clearFilters": "Clear filters"
       },
       "error": {
         "title": "Couldn't load the roster",
