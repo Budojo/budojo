@@ -28,6 +28,26 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.34.0',
+    date: '2026-05-28',
+    headline:
+      'Cleaner empty states across the app, and the app now respects your reduced-motion accessibility preference.',
+    sections: [
+      {
+        heading: '📭 Empty states, uniformed',
+        bullets: [
+          "Lists with nothing to show — your community feed and the four stats tabs — now share one clean shape: a topic icon, a short headline, and a one-line explainer of what'll appear there once data lands. Replaces five one-off styles.",
+        ],
+      },
+      {
+        heading: '♿ Motion respects your accessibility settings',
+        bullets: [
+          "If your device is set to prefer reduced motion (iOS Settings → Accessibility → Motion · Android Settings → Accessibility → Remove animations), the app's transitions and smooth-scrolls now go straight to their target instead of animating. No setting to flip in Budojo — it picks up the OS preference automatically.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.33.0',
     date: '2026-05-27',
     headline:
