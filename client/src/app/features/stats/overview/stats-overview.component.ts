@@ -18,6 +18,7 @@ import { Athlete, AthleteService, Belt } from '../../../core/services/athlete.se
 import { LanguageService } from '../../../core/services/language.service';
 import { BELT_KEYS, BELT_ORDER } from '../../../shared/utils/i18n-enum-keys';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
 /**
  * Belt colour palette — one entry per IBJJF rank. Hex values rather
@@ -98,6 +99,7 @@ interface DoughnutData {
     LeaderboardCardComponent,
     SkeletonModule,
     ErrorStateComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './stats-overview.component.html',
   styleUrl: './stats-overview.component.scss',

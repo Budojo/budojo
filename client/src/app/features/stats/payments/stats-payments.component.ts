@@ -5,12 +5,13 @@ import { ChartModule } from 'primeng/chart';
 import { SkeletonModule } from 'primeng/skeleton';
 import { MonthlyPaymentsBucket, StatsService } from '../../../core/services/stats.service';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-stats-payments',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChartModule, SkeletonModule, TranslatePipe, ErrorStateComponent],
+  imports: [ChartModule, SkeletonModule, TranslatePipe, ErrorStateComponent, EmptyStateComponent],
   templateUrl: './stats-payments.component.html',
   styleUrl: './stats-payments.component.scss',
 })

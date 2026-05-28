@@ -24,9 +24,12 @@
       [attr.aria-label]="'stats.attendance.loading' | translate"
     />
   } @else if (isEmpty()) {
-    <p class="stats-attendance__empty" data-cy="stats-attendance-empty">
-      {{ 'stats.attendance.empty' | translate }}
-    </p>
+    <app-empty-state
+      icon="pi pi-calendar"
+      [title]="'stats.attendance.empty' | translate"
+      [headingLevel]="3"
+      dataCy="stats-attendance-empty"
+    />
   } @else {
     <app-attendance-heatmap
       [points]="points()"

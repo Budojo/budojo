@@ -13,6 +13,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { DailyAttendancePoint, StatsService } from '../../../core/services/stats.service';
 import { AttendanceHeatmapComponent } from './attendance-heatmap.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
 interface RangeOption {
   label: string;
@@ -36,6 +37,7 @@ const RANGE_OPTIONS: RangeOption[] = [
     SkeletonModule,
     TranslatePipe,
     ErrorStateComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './stats-attendance.component.html',
   styleUrl: './stats-attendance.component.scss',

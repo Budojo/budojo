@@ -8,6 +8,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { LanguageService } from '../../../core/services/language.service';
 import { AgeBandsPayload, StatsService } from '../../../core/services/stats.service';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
 type ScopeValue = 'kids' | 'adults' | 'all';
 
@@ -22,6 +23,7 @@ type ScopeValue = 'kids' | 'adults' | 'all';
     SkeletonModule,
     TranslatePipe,
     ErrorStateComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './stats-athletes.component.html',
   styleUrl: './stats-athletes.component.scss',

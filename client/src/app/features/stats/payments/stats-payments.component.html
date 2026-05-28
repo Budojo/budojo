@@ -17,9 +17,12 @@
       [attr.aria-label]="'stats.payments.loading' | translate"
     />
   } @else if (isEmpty()) {
-    <p class="stats-payments__empty" data-cy="stats-payments-empty">
-      {{ 'stats.payments.empty' | translate }}
-    </p>
+    <app-empty-state
+      icon="pi pi-wallet"
+      [title]="'stats.payments.empty' | translate"
+      [headingLevel]="3"
+      dataCy="stats-payments-empty"
+    />
   } @else {
     <div class="stats-payments__chart-wrap" data-cy="stats-payments-chart">
       <p-chart type="bar" [data]="chartData()" [options]="chartOptions" />

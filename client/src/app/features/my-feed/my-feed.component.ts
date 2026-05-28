@@ -42,6 +42,7 @@ import { UserFlairComponent } from '../../shared/components/user-flair/user-flai
 import { MentionTextComponent } from '../../shared/components/mention-text/mention-text.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { prefersReducedMotion } from '../../shared/utils/prefers-reduced-motion';
 import { CommentsThreadComponent } from './comments-thread/comments-thread.component';
 import { EventComposerComponent } from './event-composer/event-composer.component';
@@ -83,6 +84,7 @@ import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-li
     UserFlairComponent,
     PageHeaderComponent,
     ErrorStateComponent,
+    EmptyStateComponent,
     CommentsThreadComponent,
     EventComposerComponent,
     MentionTextComponent,
