@@ -1,0 +1,32 @@
+<p-dialog
+  [visible]="isOpen()"
+  (visibleChange)="isOpen.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="true"
+  [header]="'language.label' | translate"
+  styleClass="bottom-sheet"
+  [style]="{ width: '24rem' }"
+  [breakpoints]="{ '768px': '100vw' }"
+>
+  <ul class="language-sheet__options">
+    @for (opt of options; track opt.code) {
+      <li>
+        <button
+          type="button"
+          class="language-sheet__option"
+          [class.language-sheet__option--active]="currentLang() === opt.code"
+          [attr.aria-current]="currentLang() === opt.code ? 'true' : null"
+          (click)="select(opt.code)"
+          [attr.data-cy]="'lang-option-' + opt.code"
+        >
+          <span>{{ opt.labelKey | translate }}</span>
+          @if (currentLang() === opt.code) {
+            <i class="pi pi-check" aria-hidden="true"></i>
+          }
+        </button>
+      </li>
+    }
+  </ul>
+</p-dialog>

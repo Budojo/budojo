@@ -253,7 +253,16 @@
       "academy": "Academy",
       "attendance": "Attendance",
       "payments": "Payments",
-      "documents": "Documents"
+      "documents": "Documents",
+      "barAriaLabel": "Primary"
+    },
+    "more": {
+      "title": "More"
+    },
+    "create": {
+      "title": "Create",
+      "checkIn": "Check in",
+      "post": "New post"
     },
     "profile": {
       "title": "Settings",

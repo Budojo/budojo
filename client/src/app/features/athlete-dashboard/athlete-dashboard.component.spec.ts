@@ -5,6 +5,7 @@ import { EMPTY } from 'rxjs';
 import { AthleteDashboardComponent } from './athlete-dashboard.component';
 import { AuthService } from '../../core/services/auth.service';
 import type { User } from '../../core/services/auth.service';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 function setup(opts: { cachedUser?: Partial<User> | null } = {}) {
@@ -20,6 +21,7 @@ function setup(opts: { cachedUser?: Partial<User> | null } = {}) {
       // the internal initialization of provideRouter (which needs a
       // real root config the partial-mock pattern can't supply).
       provideRouter([]),
+      provideAnimationsAsync(),
       {
         provide: AuthService,
         useValue: { user, loadCurrentUser, logout } as unknown as AuthService,
@@ -73,7 +75,6 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
     });
 
     const root = fixture.nativeElement as HTMLElement;
-    expect(root.querySelector('[data-cy="topbar-hamburger"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-me-feed"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-me-academy"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-me-attendance"]')).not.toBeNull();
@@ -83,6 +84,42 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
     // Athlete with a handle gets the public-profile sidebar row (#863).
     expect(root.querySelector('[data-cy="nav-me-my-profile"]')).not.toBeNull();
     expect(root.querySelector('[data-cy="nav-sign-out"]')).not.toBeNull();
+  });
+
+  describe('mobile bottom nav (#1109)', () => {
+    const ATHLETE = {
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      full_name: 'Mario Rossi',
+      handle: 'mariobjj',
+      avatar_url: null,
+    } as User;
+
+    it('renders the bottom nav with feed / academy / attendance / more tabs + the create button', () => {
+      const { fixture } = setup({ cachedUser: ATHLETE });
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('app-bottom-nav')).not.toBeNull();
+      expect(root.querySelector('[data-cy="bottomnav-feed"]')).not.toBeNull();
+      expect(root.querySelector('[data-cy="bottomnav-academy"]')).not.toBeNull();
+      expect(root.querySelector('[data-cy="bottomnav-attendance"]')).not.toBeNull();
+      expect(root.querySelector('[data-cy="bottomnav-more"]')).not.toBeNull();
+      expect(root.querySelector('[data-cy="bottomnav-create"]')).not.toBeNull();
+    });
+
+    it('opens the create sheet when the center ➕ is activated', () => {
+      const { fixture } = setup({ cachedUser: ATHLETE });
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('[role="dialog"]')).toBeNull();
+
+      (root.querySelector('[data-cy="bottomnav-create"]') as HTMLElement).click();
+      fixture.detectChanges();
+      expect(root.querySelector('[role="dialog"]')).not.toBeNull();
+    });
+
+    it('retires the hamburger drawer toggle (replaced by the bottom nav)', () => {
+      const { fixture } = setup({ cachedUser: ATHLETE });
+      expect(fixture.nativeElement.querySelector('[data-cy="topbar-hamburger"]')).toBeNull();
+    });
   });
 
   describe('sidebar profile / settings split (#863, M9 slice C — athlete shell)', () => {

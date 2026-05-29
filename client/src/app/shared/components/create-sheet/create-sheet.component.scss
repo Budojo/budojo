@@ -1,0 +1,30 @@
+// The bottom-sheet chrome (slide-up, elevation, top radius, safe-area)
+// comes from the global `.p-dialog.bottom-sheet` rule in budojo-theme.scss
+// (#1109). Only the action-row list lives here.
+.create-sheet__actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.create-sheet__action {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 48px;
+  padding: 0 0.5rem;
+  text-decoration: none;
+  color: var(--p-text-color);
+  font-size: 1rem;
+  border-radius: var(--p-border-radius-md);
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+}
+
+.create-sheet__action:hover {
+  background: var(--p-content-hover-background);
+}
+
+.create-sheet__action i {
+  font-size: 1.25rem;
+  color: var(--p-primary-color);
+}
