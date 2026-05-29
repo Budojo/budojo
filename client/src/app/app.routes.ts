@@ -149,6 +149,15 @@ export const routes: Routes = [
           import('./features/my-feed/my-feed.component').then((m) => m.MyFeedComponent),
       },
       {
+        // Social-native notifications page (#1129). Shared component; the
+        // topbar bell links here. Guards inherit from the parent shell.
+        path: 'notifications',
+        loadComponent: () =>
+          import('./features/notifications/notifications-page.component').then(
+            (m) => m.NotificationsPageComponent,
+          ),
+      },
+      {
         path: 'academy',
         loadComponent: () =>
           import('./features/my-academy/my-academy.component').then((m) => m.MyAcademyComponent),
@@ -351,6 +360,15 @@ export const routes: Routes = [
         path: 'whats-new',
         loadComponent: () =>
           import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),
+      },
+      {
+        // Social-native notifications page (#1129). Shared component; the
+        // topbar bell links here. Guards inherit from the parent shell.
+        path: 'notifications',
+        loadComponent: () =>
+          import('./features/notifications/notifications-page.component').then(
+            (m) => m.NotificationsPageComponent,
+          ),
       },
       {
         // Owner-only audit log (#429). The page itself is auth-walled by

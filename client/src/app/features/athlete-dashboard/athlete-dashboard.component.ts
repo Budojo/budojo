@@ -26,6 +26,7 @@ import {
   SideRailComponent,
 } from '../../shared/components/side-rail/side-rail.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
+import { NotificationBellComponent } from '../notifications/notification-bell.component';
 
 /**
  * Athlete-side dashboard shell (#610). Social-native navigation (#1109):
@@ -49,6 +50,7 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
     CreateSheetComponent,
     SideRailComponent,
     UserAvatarComponent,
+    NotificationBellComponent,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

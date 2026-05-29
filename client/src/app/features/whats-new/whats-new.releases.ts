@@ -28,6 +28,25 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.37.0',
+    date: '2026-05-30',
+    headline: 'Cleaner pages, and a proper notifications center.',
+    sections: [
+      {
+        heading: '🔔 A social-style notifications page',
+        bullets: [
+          "Your notifications now open as their own full-screen page from the bell — and it reads like the apps you already use. They're grouped into New, Today, This week and Earlier; each row shows who it's about with their avatar (or a colored icon for system updates like payments and your weekly recap); and a tap takes you straight to whatever it's telling you about. There's a quick Unread filter and a one-tap mark all as read. Athletes get the bell too now — it was owner-only before.",
+        ],
+      },
+      {
+        heading: '📐 Consistent titles on every page',
+        bullets: [
+          "Every page title now comes from the same building block, so headings look identical across the whole app — same size, same weight, the same tidy spacing underneath. We also dropped a stray little label that wasn't pulling its weight and tightened the gap that read as a touch too big on some screens.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.36.0',
     date: '2026-05-29',
     headline: 'A fresh, app-like way to get around Budojo — on your phone and on the desktop.',

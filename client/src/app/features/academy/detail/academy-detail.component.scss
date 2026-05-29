@@ -3,9 +3,6 @@
 // system, client/CLAUDE.md) — no raw hex, no invented spacing.
 
 .detail {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
   // Narrow-card layout — kept at 40rem until the hierarchy rework
   // (#261 follow-up) lands a wide header + narrow card aligned left
   // INSIDE a wide content container. Until then we centre on desktop
@@ -17,6 +14,14 @@
   // shared token as part of the UI uniformity sweep (#889).
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
+
+  // <app-page-header> owns the title→body gap (#1126); the body keeps the
+  // grouped-list rhythm.
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
 }
 
 // Grouped-list card — flat surface-0 fill, hairline border, 12 px radius,

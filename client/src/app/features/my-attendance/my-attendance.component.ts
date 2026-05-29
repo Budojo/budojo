@@ -13,6 +13,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AttendanceRecord, AttendanceService } from '../../core/services/attendance.service';
 import { AttendanceSummaryChartComponent } from '../../shared/components/attendance-summary-chart/attendance-summary-chart.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /**
  * Athlete-portal attendance history page (M7 PR-D slice 3). Read-only
@@ -27,7 +28,13 @@ import { AttendanceSummaryChartComponent } from '../../shared/components/attenda
 @Component({
   selector: 'app-my-attendance',
   standalone: true,
-  imports: [TranslatePipe, DatePipe, SkeletonModule, AttendanceSummaryChartComponent],
+  imports: [
+    PageHeaderComponent,
+    TranslatePipe,
+    DatePipe,
+    SkeletonModule,
+    AttendanceSummaryChartComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-attendance.component.html',
   styleUrl: './my-attendance.component.scss',

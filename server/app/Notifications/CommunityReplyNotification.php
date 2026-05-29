@@ -8,6 +8,7 @@ use App\Models\PostComment;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
 use App\Support\CommunityLink;
+use App\Support\NotificationActor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -59,6 +60,7 @@ class CommunityReplyNotification extends Notification
             'body' => $this->body(),
             'link' => $this->link($notifiable),
             'kind' => 'community_reply',
+            'actor' => NotificationActor::fromUser($this->author),
             'post_id' => $this->newComment->post_id,
             'comment_id' => $this->newComment->id,
         ];
@@ -80,6 +82,7 @@ class CommunityReplyNotification extends Notification
             'body' => $this->body(),
             'link' => $this->link($notifiable),
             'kind' => 'community_reply',
+            'actor' => NotificationActor::fromUser($this->author),
             'post_id' => $this->newComment->post_id,
             'comment_id' => $this->newComment->id,
         ];
@@ -89,7 +92,7 @@ class CommunityReplyNotification extends Notification
     {
         return \sprintf(
             '%s commented on a post you replied to',
-            trim($this->author->first_name . ' ' . $this->author->last_name),
+            $this->author->full_name,
         );
     }
 
