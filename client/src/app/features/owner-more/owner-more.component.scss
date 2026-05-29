@@ -1,18 +1,18 @@
-// Page inside the athlete shell — the shell owns padding; the page only
-// sets its measure + centres (per client/CLAUDE.md § page chrome, #261).
-.me-more {
+// Page inside the owner dashboard shell — the shell owns padding; the page
+// only sets its measure + centres (per client/CLAUDE.md § page chrome, #261).
+.owner-more {
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
 }
 
-.me-more__title {
+.owner-more__title {
   margin: 0 0 1rem;
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--p-text-color);
 }
 
-.me-more__list {
+.owner-more__list {
   list-style: none;
   margin: 0 0 1.5rem;
   padding: 0;
@@ -23,11 +23,11 @@
 }
 
 // Hairline divider between rows (not above the first).
-.me-more__list li + li .me-more__row {
+.owner-more__list li + li .owner-more__row {
   border-top: 1px solid var(--p-content-border-color);
 }
 
-.me-more__row {
+.owner-more__row {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -44,11 +44,11 @@
   transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 }
 
-.me-more__row:hover {
+.owner-more__row:hover {
   background: var(--p-content-hover-background);
 }
 
-.me-more__row > i:first-child {
+.owner-more__row > i:first-child {
   font-size: 1.125rem;
   color: var(--p-text-color-secondary);
 }
@@ -58,32 +58,32 @@
 // colour on the label + leading icon, plus a heavier background-coloured
 // top border that reads as a grouping gap (the iOS-Settings pattern —
 // sign-out sits apart from the navigation rows above it).
-.me-more__row--signout,
-.me-more__row--signout > i:first-child {
+.owner-more__row--signout,
+.owner-more__row--signout > i:first-child {
   color: var(--budojo-danger);
 }
 
-.me-more__list li + li .me-more__row--signout {
+.owner-more__list li + li .owner-more__row--signout {
   border-top-width: 0.5rem;
   border-top-color: var(--p-content-background);
 }
 
-.me-more__label {
+.owner-more__label {
   flex: 1 1 auto;
 }
 
-.me-more__chevron {
+.owner-more__chevron {
   color: var(--p-text-color-secondary);
   font-size: 0.875rem;
 }
 
 // Trailing value (e.g. the current language) sits right-aligned before the chevron.
-.me-more__value {
+.owner-more__value {
   color: var(--p-text-color-secondary);
   font-size: 0.875rem;
 }
 
-.me-more__footer {
+.owner-more__footer {
   margin: 0;
   text-align: center;
   color: var(--p-text-color-secondary);
@@ -91,7 +91,7 @@
   line-height: 1.4;
 }
 
-.me-more__footer-link {
+.owner-more__footer-link {
   color: var(--p-text-color-secondary);
   text-decoration: none;
 

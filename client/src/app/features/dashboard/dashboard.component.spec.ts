@@ -3,6 +3,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { SwPush } from '@angular/service-worker';
 import { MessageService } from 'primeng/api';
 import { Subject, of } from 'rxjs';
@@ -48,6 +49,7 @@ describe('DashboardComponent', () => {
       imports: [DashboardComponent],
       providers: [
         provideRouter([]),
+        provideAnimationsAsync(),
         provideHttpClient(),
         provideHttpClientTesting(),
         ...provideI18nTesting(),
@@ -137,8 +139,8 @@ describe('DashboardComponent', () => {
 
   describe('sidebar footer — sign-out is the only signout entry (#166)', () => {
     // After retiring the brand-dropdown signout, this row is the singular,
-    // always-visible affordance. Verify it exists, clicks through to the
-    // logout path, and closes the mobile drawer in the same tick.
+    // always-visible affordance. Verify it exists and clicks through to the
+    // logout path.
     it('renders a sign-out button at the bottom of the sidebar with pi-sign-out icon', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
@@ -152,25 +154,16 @@ describe('DashboardComponent', () => {
       expect(btn!.querySelector('i.pi-sign-out')).not.toBeNull();
     });
 
-    it('clicking the footer sign-out button logs out + navigates + closes the drawer', () => {
+    it('clicking the footer sign-out button logs out + navigates to login', () => {
       const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
       const fixture = TestBed.createComponent(DashboardComponent);
-      const component = fixture.componentInstance as unknown as {
-        toggleSidebar: () => void;
-        sidebarOpen: () => boolean;
-      };
       fixture.detectChanges();
-
-      // Open the drawer first so we can verify closeSidebar() fires.
-      component.toggleSidebar();
-      expect(component.sidebarOpen()).toBe(true);
 
       const btn = fixture.nativeElement.querySelector(
         '[data-cy="nav-sign-out"]',
       ) as HTMLButtonElement;
       btn.click();
 
-      expect(component.sidebarOpen()).toBe(false);
       expect(authService.logout).toHaveBeenCalledTimes(1);
       expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
     });
@@ -328,220 +321,61 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('mobile drawer state', () => {
-    it('starts closed — the off-canvas sidebar is hidden by default', () => {
+  describe('bottom-nav + ➕ create-sheet (#1111)', () => {
+    // Social-native nav: the hamburger off-canvas drawer is retired in
+    // favour of a mobile bottom tab bar + a center ➕ create-sheet. The
+    // desktop sidebar (asserted above) is unchanged.
+    it('renders the mobile bottom nav with the owner tabs + center create', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
 
       const el: HTMLElement = fixture.nativeElement;
-      const sidebar = el.querySelector('.sidebar') as HTMLElement | null;
-      expect(sidebar).not.toBeNull();
-      expect(sidebar!.classList.contains('sidebar--open')).toBe(false);
-      // Backdrop is only rendered when the drawer is open.
-      expect(el.querySelector('[data-cy="drawer-backdrop"]')).toBeNull();
-    });
-
-    it('toggleSidebar flips the open state; closeSidebar resets it', () => {
-      const fixture = TestBed.createComponent(DashboardComponent);
-      const component = fixture.componentInstance as unknown as {
-        toggleSidebar: () => void;
-        closeSidebar: () => void;
-        sidebarOpen: () => boolean;
-      };
-
-      expect(component.sidebarOpen()).toBe(false);
-      component.toggleSidebar();
-      expect(component.sidebarOpen()).toBe(true);
-      component.toggleSidebar();
-      expect(component.sidebarOpen()).toBe(false);
-
-      component.toggleSidebar();
-      component.closeSidebar();
-      expect(component.sidebarOpen()).toBe(false);
-    });
-
-    // ── Swipe-to-close drawer (#668) ──────────────────────────────────
-    //
-    // The drawer drag-to-dismiss gesture. We exercise the component
-    // handlers directly with mock PointerEvent shapes — full DOM
-    // pointer-event simulation in vitest is more flake than it's
-    // worth, and the handlers themselves don't depend on browser
-    // internals (the actual transform binding is template-only).
-
-    function fakePointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent {
-      const noop = vi.fn();
-      const target = {
-        offsetWidth: 200,
-        setPointerCapture: noop,
-        releasePointerCapture: noop,
-      };
-      return {
-        pointerId: 1,
-        isPrimary: true,
-        clientX: 0,
-        clientY: 0,
-        timeStamp: 0,
-        target,
-        currentTarget: target,
-        preventDefault: noop,
-        stopPropagation: noop,
-        ...overrides,
-      } as unknown as PointerEvent;
-    }
-
-    // Save and restore the original `window.innerWidth` descriptor so the
-    // mobile-viewport stub doesn't leak into tests that run after this
-    // block. In jsdom `window.innerWidth` is typically NOT an own
-    // property — it's the prototype getter on `WindowProxy` — so the
-    // descriptor read here usually comes back `undefined`. We restore by
-    // either reinstating the saved descriptor (if one existed) or
-    // deleting the override (so the prototype getter takes back over),
-    // never by overwriting the getter with a plain numeric data
-    // property. Copilot review on #684 caught the value-only restore.
-    let originalInnerWidthDescriptor: PropertyDescriptor | undefined;
-    beforeEach(() => {
-      originalInnerWidthDescriptor = Object.getOwnPropertyDescriptor(window, 'innerWidth');
-    });
-    afterEach(() => {
-      if (originalInnerWidthDescriptor) {
-        Object.defineProperty(window, 'innerWidth', originalInnerWidthDescriptor);
-      } else {
-        Reflect.deleteProperty(window, 'innerWidth');
+      expect(el.querySelector('app-bottom-nav')).not.toBeNull();
+      for (const cy of [
+        'bottomnav-academy',
+        'bottomnav-athletes',
+        'bottomnav-community',
+        'bottomnav-more',
+        'bottomnav-create',
+      ]) {
+        expect(el.querySelector(`[data-cy="${cy}"]`), cy).not.toBeNull();
       }
     });
 
-    function ensureMobileViewport(): void {
-      Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
-    }
-
-    it('swipe past 40% of width closes the drawer', () => {
-      ensureMobileViewport();
+    it('the More tab points at the /dashboard/more hub', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
-      const component = fixture.componentInstance as unknown as {
-        toggleSidebar: () => void;
-        sidebarOpen: () => boolean;
-        onSidebarPointerDown: (e: PointerEvent) => void;
-        onSidebarPointerMove: (e: PointerEvent) => void;
-        onSidebarPointerUp: (e: PointerEvent) => void;
-      };
-      component.toggleSidebar();
+      fixture.detectChanges();
 
-      // Start drag at x=200, finger moves left to x=50 — that's 150px of
-      // 200px width = 75%, well above the 40% close threshold.
-      component.onSidebarPointerDown(fakePointerEvent({ clientX: 200, clientY: 100 }));
-      component.onSidebarPointerMove(fakePointerEvent({ clientX: 150, clientY: 105 }));
-      component.onSidebarPointerMove(fakePointerEvent({ clientX: 50, clientY: 105 }));
-      component.onSidebarPointerUp(fakePointerEvent({ clientX: 50, clientY: 105, timeStamp: 200 }));
-
-      expect(component.sidebarOpen()).toBe(false);
+      const more = fixture.nativeElement.querySelector(
+        '[data-cy="bottomnav-more"]',
+      ) as HTMLAnchorElement | null;
+      expect(more).not.toBeNull();
+      expect(more!.getAttribute('href')).toBe('/dashboard/more');
     });
 
-    it('short swipe (<40% of width, slow release) snaps the drawer back open', () => {
-      ensureMobileViewport();
+    it('opens the ➕ create sheet with the owner quick actions when the center button fires', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
-      const component = fixture.componentInstance as unknown as {
-        toggleSidebar: () => void;
-        sidebarOpen: () => boolean;
-        onSidebarPointerDown: (e: PointerEvent) => void;
-        onSidebarPointerMove: (e: PointerEvent) => void;
-        onSidebarPointerUp: (e: PointerEvent) => void;
-      };
-      component.toggleSidebar();
+      fixture.detectChanges();
 
-      // Start at 200, finger ends at 180 — 20px of 200 = 10%, below
-      // the 40% threshold. Slow release (200ms) keeps velocity below
-      // fling threshold (0.5 px/ms ⇒ 0.1 here).
-      component.onSidebarPointerDown(fakePointerEvent({ clientX: 200, clientY: 100 }));
-      component.onSidebarPointerMove(fakePointerEvent({ clientX: 190, clientY: 105 }));
-      component.onSidebarPointerMove(fakePointerEvent({ clientX: 180, clientY: 105 }));
-      component.onSidebarPointerUp(
-        fakePointerEvent({ clientX: 180, clientY: 105, timeStamp: 200 }),
-      );
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[role="dialog"]')).toBeNull();
 
-      expect(component.sidebarOpen()).toBe(true);
+      (el.querySelector('[data-cy="bottomnav-create"]') as HTMLElement).click();
+      fixture.detectChanges();
+
+      expect(el.querySelector('[role="dialog"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="create-attendance"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="create-athlete"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="create-post"]')).not.toBeNull();
     });
 
-    it('vertical-dominant first move aborts the gesture entirely (no drawer close on later horizontal moves)', () => {
-      ensureMobileViewport();
-      const fixture = TestBed.createComponent(DashboardComponent);
-      const component = fixture.componentInstance as unknown as {
-        toggleSidebar: () => void;
-        sidebarOpen: () => boolean;
-        onSidebarPointerDown: (e: PointerEvent) => void;
-        onSidebarPointerMove: (e: PointerEvent) => void;
-        onSidebarPointerUp: (e: PointerEvent) => void;
-      };
-      component.toggleSidebar();
-
-      component.onSidebarPointerDown(fakePointerEvent({ clientX: 200, clientY: 100 }));
-      // First move past threshold is vertical-dominant (deltaY > deltaX) →
-      // intent abort, gesture is dead even if later moves are horizontal.
-      component.onSidebarPointerMove(fakePointerEvent({ clientX: 205, clientY: 150 }));
-      component.onSidebarPointerMove(fakePointerEvent({ clientX: 30, clientY: 200 }));
-      component.onSidebarPointerUp(fakePointerEvent({ clientX: 30, clientY: 200, timeStamp: 300 }));
-
-      expect(component.sidebarOpen()).toBe(true);
-    });
-
-    it('hamburger button exposes aria-expanded and aria-controls pointing at the sidebar', () => {
+    it('retires the hamburger drawer — no hamburger button, no backdrop', () => {
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
 
-      const hamburger = fixture.nativeElement.querySelector(
-        '[data-cy="topbar-hamburger"]',
-      ) as HTMLButtonElement | null;
-      expect(hamburger).not.toBeNull();
-      expect(hamburger!.getAttribute('aria-expanded')).toBe('false');
-      expect(hamburger!.getAttribute('aria-controls')).toBe('app-sidebar');
-      // Accessible label flips based on open state.
-      expect(hamburger!.getAttribute('aria-label')).toBe('Open navigation');
-    });
-
-    // ── Body scroll-lock (#671) ────────────────────────────────────────
-    //
-    // When the drawer opens, the dashboard component must add
-    // `app-drawer-open` to <body> so the global rule in styles.scss can
-    // lock body scrolling (iOS Safari touch bleed-through fix). When the
-    // drawer closes — or the component itself is destroyed mid-drawer-
-    // open — the class must come back off so the next page isn't stuck
-    // with perma-locked scroll.
-
-    it('adds `app-drawer-open` to <body> when the drawer opens, removes it on close', () => {
-      const fixture = TestBed.createComponent(DashboardComponent);
-      fixture.detectChanges();
-      const component = fixture.componentInstance as unknown as {
-        toggleSidebar: () => void;
-        closeSidebar: () => void;
-      };
-
-      expect(document.body.classList.contains('app-drawer-open')).toBe(false);
-
-      component.toggleSidebar();
-      fixture.detectChanges();
-      expect(document.body.classList.contains('app-drawer-open')).toBe(true);
-
-      component.closeSidebar();
-      fixture.detectChanges();
-      expect(document.body.classList.contains('app-drawer-open')).toBe(false);
-    });
-
-    it('strips `app-drawer-open` from <body> on destroy even if the drawer was open', () => {
-      const fixture = TestBed.createComponent(DashboardComponent);
-      fixture.detectChanges();
-      const component = fixture.componentInstance as unknown as {
-        toggleSidebar: () => void;
-      };
-
-      component.toggleSidebar();
-      fixture.detectChanges();
-      expect(document.body.classList.contains('app-drawer-open')).toBe(true);
-
-      // Route change / hard navigation / error redirect — anything that
-      // destroys the dashboard while the drawer is open. Without the
-      // DestroyRef cleanup, the class would persist and lock scroll on
-      // every subsequent page.
-      fixture.destroy();
-      expect(document.body.classList.contains('app-drawer-open')).toBe(false);
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-cy="topbar-hamburger"]')).toBeNull();
+      expect(el.querySelector('[data-cy="drawer-backdrop"]')).toBeNull();
     });
   });
 

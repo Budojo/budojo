@@ -339,6 +339,15 @@ export const routes: Routes = [
           import('./features/my-feed/my-feed.component').then((m) => m.MyFeedComponent),
       },
       {
+        // Owner "More" hub (#1111) — homes the destinations demoted off
+        // the mobile bottom tab bar (attendance, stats, activity, settings,
+        // support, what's-new, language, sign-out). Guards inherit from the
+        // parent `dashboard` route.
+        path: 'more',
+        loadComponent: () =>
+          import('./features/owner-more/owner-more.component').then((m) => m.OwnerMoreComponent),
+      },
+      {
         path: 'whats-new',
         loadComponent: () =>
           import('./features/whats-new/whats-new.component').then((m) => m.WhatsNewComponent),

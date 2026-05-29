@@ -1,0 +1,109 @@
+<div class="owner-more" data-cy="owner-more">
+  <h1 class="owner-more__title">{{ 'nav.more' | translate }}</h1>
+
+  <ul class="owner-more__list">
+    <li>
+      <a class="owner-more__row" routerLink="/dashboard/attendance" data-cy="owner-more-attendance">
+        <i class="pi pi-check-square" aria-hidden="true"></i>
+        <span class="owner-more__label">{{ 'nav.attendance' | translate }}</span>
+        <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a class="owner-more__row" routerLink="/dashboard/stats" data-cy="owner-more-stats">
+        <i class="pi pi-chart-pie" aria-hidden="true"></i>
+        <span class="owner-more__label">{{ 'nav.stats' | translate }}</span>
+        <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a
+        class="owner-more__row"
+        routerLink="/dashboard/academy/activity"
+        data-cy="owner-more-activity"
+      >
+        <i class="pi pi-history" aria-hidden="true"></i>
+        <span class="owner-more__label">{{ 'nav.activity' | translate }}</span>
+        <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    @if (user()?.handle; as handle) {
+      <li>
+        <a
+          class="owner-more__row"
+          [routerLink]="['/dashboard/u', handle]"
+          data-cy="owner-more-public-profile"
+        >
+          <i class="pi pi-id-card" aria-hidden="true"></i>
+          <span class="owner-more__label">{{ 'nav.myProfile' | translate }}</span>
+          <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+        </a>
+      </li>
+    }
+    <li>
+      <a class="owner-more__row" routerLink="/dashboard/profile" data-cy="owner-more-settings">
+        <i class="pi pi-cog" aria-hidden="true"></i>
+        <span class="owner-more__label">{{ 'nav.settings' | translate }}</span>
+        <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a class="owner-more__row" routerLink="/dashboard/support" data-cy="owner-more-support">
+        <i class="pi pi-comment" aria-hidden="true"></i>
+        <span class="owner-more__label">{{ 'nav.support' | translate }}</span>
+        <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a class="owner-more__row" routerLink="/dashboard/whats-new" data-cy="owner-more-whats-new">
+        <i class="pi pi-sparkles" aria-hidden="true"></i>
+        <span class="owner-more__label">{{ 'nav.whatsNew' | translate }}</span>
+        <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <button
+        type="button"
+        class="owner-more__row"
+        (click)="openLanguage()"
+        data-cy="owner-more-language"
+      >
+        <i class="pi pi-globe" aria-hidden="true"></i>
+        <span class="owner-more__label">{{ 'language.label' | translate }}</span>
+        <span class="owner-more__value">
+          {{ (currentLang() === 'it' ? 'language.italian' : 'language.english') | translate }}
+        </span>
+        <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+      </button>
+    </li>
+    <li>
+      <button
+        type="button"
+        class="owner-more__row owner-more__row--signout"
+        (click)="signOut()"
+        data-cy="owner-more-signout"
+      >
+        <i class="pi pi-sign-out" aria-hidden="true"></i>
+        <span class="owner-more__label">{{ 'nav.signOut' | translate }}</span>
+      </button>
+    </li>
+  </ul>
+
+  <p class="owner-more__footer" data-cy="owner-more-footer">
+    <a class="owner-more__footer-link" routerLink="/help" data-cy="owner-more-help">
+      {{ 'nav.help' | translate }}
+    </a>
+    <span aria-hidden="true">·</span>
+    <a
+      class="owner-more__footer-link"
+      [routerLink]="currentLang() === 'it' ? '/privacy/it' : '/privacy'"
+      data-cy="owner-more-privacy"
+    >
+      {{ 'nav.privacy' | translate }}
+    </a>
+    <span aria-hidden="true">·</span>
+    <span class="owner-more__version">{{ versionTag }}</span>
+  </p>
+</div>
+
+<app-language-sheet />
