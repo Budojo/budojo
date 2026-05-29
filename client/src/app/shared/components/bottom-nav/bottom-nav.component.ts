@@ -175,18 +175,13 @@ export interface BottomNavCenterAction {
         filter: brightness(1.05);
       }
 
-      /* Branded keyboard focus ring (WCAG 2.4.7 / MD3). The active-state
-         colour signals the selected route, not focus — keyboard users need a
-         distinct ring on the most thumb-trafficked chrome (#1114 reviewer). */
-      .bottom-nav__tab:focus-visible,
-      .bottom-nav__create:focus-visible {
-        outline: 2px solid var(--p-primary-color);
-        outline-offset: 2px;
-      }
-
-      /* Corner radius only on the tab — the ➕ keeps its 50% circle; the
-         shared rule above would otherwise win on specificity and morph it
-         into a rounded square on focus (#1114 reviewer). */
+      /* The branded focus ring comes from the GLOBAL :focus-visible rule in
+         budojo-variants.scss (the --budojo-focus-ring-* tokens) — no local
+         outline here (it would hardcode what the tokens already own, #1114
+         reviewer). The tab adds a small corner radius so its ring isn't a
+         sharp square around the stacked icon+label; the plus button keeps its
+         50% circle (its base radius wins on source order over the global
+         border-radius: inherit). */
       .bottom-nav__tab:focus-visible {
         border-radius: 0.25rem;
       }
