@@ -93,6 +93,18 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
       expect(rail!.querySelector('a[href="/dashboard/me/more"]')).not.toBeNull();
     });
 
+    it('points the brand link at the feed (the athlete home), matching its "go to home" aria-label', () => {
+      // The brand advertises "go to dashboard home"; the athlete's home is the
+      // feed (the pi-home tab), NOT the /dashboard/me index — which redirects
+      // to settings/profile. #1118 reviewer (Norman/Krug affordance).
+      const { fixture } = setup({ cachedUser: ATHLETE });
+      const brand = fixture.nativeElement.querySelector(
+        'a.rail__brand',
+      ) as HTMLAnchorElement | null;
+      expect(brand).not.toBeNull();
+      expect(brand!.getAttribute('href')).toBe('/dashboard/me/feed');
+    });
+
     it('opens the create sheet from the rail ➕ Create button', () => {
       const { fixture } = setup({ cachedUser: ATHLETE });
       const root = fixture.nativeElement as HTMLElement;

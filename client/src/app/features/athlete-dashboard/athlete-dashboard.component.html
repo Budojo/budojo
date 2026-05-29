@@ -3,7 +3,7 @@
        drawer is retired (#1109) — the bottom tab bar is the primary nav. -->
   <header class="topbar" role="banner">
     <a
-      routerLink="/dashboard/me"
+      routerLink="/dashboard/me/feed"
       class="topbar__title"
       [attr.aria-label]="'nav.homeAriaLabel' | translate"
       data-cy="topbar-home-link"
@@ -23,7 +23,7 @@
        navigation. -->
   <aside class="rail" role="navigation" [attr.aria-label]="navAriaLabel()" data-cy="athlete-rail">
     <a
-      routerLink="/dashboard/me"
+      routerLink="/dashboard/me/feed"
       class="rail__brand"
       [attr.aria-label]="'nav.homeAriaLabel' | translate"
     >
