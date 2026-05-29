@@ -6,6 +6,8 @@ Living roadmap of mobile-ux gaps found in the SPA, prioritised against the desig
 
 ## ── Drawer + chrome
 
+> **Superseded by the social-native nav (epic #1107).** The hamburger off-canvas drawer is **retired** — replaced by a mobile **bottom tab bar** + ➕ create-sheet (#1109 athlete · #1111 owner) and a desktop **left rail** (#1110 athlete · #1112 owner, extracted to the shared `app-side-rail` in #1120). The findings below shipped against the old drawer model and stay historically 🟢; the touch-bleed / rubber-band / swipe-dismiss gestures they fixed went away with the drawer itself.
+
 | # | Gap | Status | PR / Issue |
 |---|---|---|---|
 | 1 | Open drawer + drag inside it → page below scrolls (touch bleed-through) | 🟢 | #671 → #672 (body scroll-lock + `overscroll-behavior: contain`) |
@@ -51,7 +53,7 @@ The athletes-list filter bar shows three `<p-select>` dropdowns + a search field
 | # | Surface | Status | Notes |
 |---|---|---|---|
 | 17 | All `<p-button icon="..." [text]="true">` inline action buttons (Edit / Delete / etc.) | 🟢 | Already 40+ px with default PrimeNG sizing per the design system audit; spot-check on 320px viewport when porting each list to cards |
-| 18 | Topbar hamburger + avatar | 🟢 | 48 × 48 (#411) |
+| 18 | Topbar touch targets (avatar / bell) | 🟢 | 48 × 48 (#411). The hamburger is retired (#1107) — the mobile topbar is brand + bell + avatar; primary nav is the bottom tab bar |
 
 ## ── Forms
 
