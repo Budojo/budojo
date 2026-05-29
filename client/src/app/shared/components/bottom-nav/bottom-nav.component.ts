@@ -193,8 +193,8 @@ export class BottomNavComponent {
   readonly tabs = input.required<BottomNavTab[]>();
   /** The center create action; `null` → no ➕ button. */
   readonly centerAction = input<BottomNavCenterAction | null>(null);
-  /** `<nav>` landmark label — the host passes a translated string. */
-  readonly ariaLabel = input<string>('Primary');
+  /** `<nav>` landmark label — required so no host ships an English default to other locales (#1114 reviewer). The host passes a translated string. */
+  readonly ariaLabel = input.required<string>();
 
   /** Fires when the center ➕ is tapped. */
   readonly centerActivated = output<void>();
