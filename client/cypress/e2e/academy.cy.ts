@@ -48,11 +48,11 @@ describe('Academy home page', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
-  it('reaches the academy home via the sidebar nav', () => {
+  it('reaches the academy home via the rail nav (#1112)', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait('@academy');
 
-    cy.get('[data-cy="nav-academy"]').click();
+    cy.get('[data-cy="owner-rail"] a.rail__item[href$="/dashboard/academy"]').click();
     cy.url().should('include', '/dashboard/academy');
     cy.get('[data-cy="academy-detail"]').should('exist');
   });

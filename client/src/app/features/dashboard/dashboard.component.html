@@ -1,10 +1,11 @@
 <div class="layout">
   <!-- Mobile topbar (<768px): brand + notification bell + avatar. The
        hamburger off-canvas drawer is retired (#1111) — the bottom tab bar
-       is the primary nav. -->
+       is the primary nav. The brand → /dashboard/academy (the owner's home,
+       the pi-home Home tab), matching its "go to home" aria-label (#1112). -->
   <header class="topbar" role="banner">
     <a
-      routerLink="/dashboard"
+      routerLink="/dashboard/academy"
       class="topbar__title"
       [attr.aria-label]="'nav.homeAriaLabel' | translate"
       data-cy="topbar-home-link"
@@ -19,8 +20,7 @@
     </a>
     <!-- In-app notification center (#418). Bell + unread badge + dropdown.
          Kept in the owner topbar on mobile — the bottom bar carries no
-         Notifications tab — and sits LEFT of the avatar chip so the chip's
-         top-right "manage my account" affordance is unchanged. -->
+         Notifications tab — and sits LEFT of the avatar chip. -->
     <app-notification-bell />
     <a
       routerLink="/dashboard/profile"
@@ -32,136 +32,58 @@
     </a>
   </header>
 
-  <!-- Desktop sidebar (>=768px) — hidden on mobile, where the bottom tab bar
-       replaces it. The desktop social rail is a later slice (#1112). -->
-  <aside id="app-sidebar" class="sidebar">
-    <!-- Brand area is non-interactive (#166) — the academy name reads as the
-         dominant brand identity; sign-out lives in the footer row below. -->
-    <div class="sidebar__brand" data-cy="sidebar-brand">
+  <!-- Desktop social rail (>=768px, #1112) — the Instagram/X left-rail
+       pattern, mirroring the athlete shell (#1110). Same IA as the mobile
+       bottom tab bar (the shared tabs()), a prominent ➕ Create, and the
+       profile pinned at the bottom; the dense SaaS sidebar is retired.
+       Hidden on mobile, where the bottom nav owns navigation. -->
+  <aside class="rail" role="navigation" [attr.aria-label]="navAriaLabel()" data-cy="owner-rail">
+    <a
+      routerLink="/dashboard/academy"
+      class="rail__brand"
+      [attr.aria-label]="'nav.homeAriaLabel' | translate"
+      data-cy="rail-brand"
+    >
       @if (academyLogoUrl(); as url) {
-        <img [src]="url" alt="" class="sidebar__logo" aria-hidden="true" />
+        <img [src]="url" alt="" class="rail__logo" aria-hidden="true" />
       } @else {
-        <!-- Inline so stroke="currentColor" inherits the sidebar text color (#99). -->
-        <app-brand-glyph class="sidebar__logo" data-cy="brand-glyph-fallback" />
+        <!-- Inline so stroke="currentColor" inherits the rail text color (#99). -->
+        <app-brand-glyph class="rail__logo" data-cy="brand-glyph-fallback" />
       }
-      <span class="sidebar__brand-text">
-        <span class="sidebar__brand-eyebrow">Budojo</span>
-        <span class="sidebar__brand-name">{{ brandLabel() }}</span>
-      </span>
-    </div>
+      <span class="rail__brand-text">{{ brandLabel() }}</span>
+    </a>
 
-    <nav class="sidebar__nav">
-      <a
-        routerLink="academy"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-academy"
-      >
-        <i class="pi pi-home"></i>
-        <span>{{ 'nav.academy' | translate }}</span>
-      </a>
-      <a
-        routerLink="athletes"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-      >
-        <i class="pi pi-users"></i>
-        <span>{{ 'nav.athletes' | translate }}</span>
-      </a>
-      <a
-        routerLink="attendance"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-attendance"
-      >
-        <i class="pi pi-check-square"></i>
-        <span>{{ 'nav.attendance' | translate }}</span>
-      </a>
-      <a
-        routerLink="stats"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-stats"
-      >
-        <i class="pi pi-chart-pie" aria-hidden="true"></i>
-        <span>{{ 'nav.stats' | translate }}</span>
-      </a>
-      <a
-        routerLink="academy/activity"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-audit-activity"
-      >
-        <i class="pi pi-history" aria-hidden="true"></i>
-        <span>{{ 'nav.activity' | translate }}</span>
-      </a>
-      <a
-        routerLink="community"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-community"
-      >
-        <i class="pi pi-comments" aria-hidden="true"></i>
-        <span>{{ 'nav.community' | translate }}</span>
-      </a>
-      @if (user()?.handle) {
+    <button type="button" class="rail__create" (click)="onCreate()" data-cy="rail-create">
+      <i class="pi pi-plus" aria-hidden="true"></i>
+      <span>{{ createTitle() }}</span>
+    </button>
+
+    <nav class="rail__nav">
+      @for (tab of tabs(); track tab.routerLink) {
         <a
-          [routerLink]="['/dashboard/u', user()?.handle]"
-          routerLinkActive="sidebar__nav-item--active"
-          class="sidebar__nav-item"
-          data-cy="nav-my-profile"
+          class="rail__item"
+          [routerLink]="tab.routerLink"
+          routerLinkActive="rail__item--active"
+          #rla="routerLinkActive"
+          [attr.aria-current]="rla.isActive ? 'page' : null"
         >
-          <i class="pi pi-id-card" aria-hidden="true"></i>
-          <span>{{ 'nav.myProfile' | translate }}</span>
+          <i [class]="tab.icon" aria-hidden="true"></i>
+          <span class="rail__label">{{ tab.label }}</span>
         </a>
       }
-      <a
-        routerLink="profile"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-settings"
-      >
-        <i class="pi pi-cog" aria-hidden="true"></i>
-        <span>{{ 'nav.settings' | translate }}</span>
-      </a>
     </nav>
 
-    <!-- Sign out: dedicated, always-visible row, set apart from the nav to
-         signal finality. "What's new" sits ABOVE Sign out (#254) so a
-         returning user spots the changelog before the finality of signing
-         out; "Contact support" is the single "talk to us" channel. -->
-    <div class="sidebar__footer">
-      <a
-        routerLink="support"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item sidebar__nav-item--support"
-        data-cy="nav-support"
-      >
-        <i class="pi pi-comment" aria-hidden="true"></i>
-        <span>{{ 'nav.support' | translate }}</span>
+    @if (user(); as railUser) {
+      <a routerLink="/dashboard/more" class="rail__profile" data-cy="rail-profile">
+        <app-user-avatar [name]="userName()" [url]="userAvatarUrl()" />
+        <span class="rail__profile-meta">
+          <span class="rail__profile-name">{{ userName() }}</span>
+          @if (railUser.handle) {
+            <span class="rail__profile-handle">&#64;{{ railUser.handle }}</span>
+          }
+        </span>
       </a>
-      <a
-        routerLink="whats-new"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item sidebar__nav-item--whats-new"
-        data-cy="nav-whats-new"
-      >
-        <i class="pi pi-sparkles" aria-hidden="true"></i>
-        <span>{{ 'nav.whatsNew' | translate }}</span>
-      </a>
-      <button
-        type="button"
-        class="sidebar__nav-item sidebar__nav-item--signout"
-        (click)="signOut()"
-        data-cy="nav-sign-out"
-      >
-        <i class="pi pi-sign-out" aria-hidden="true"></i>
-        <span>{{ 'nav.signOut' | translate }}</span>
-      </button>
-      <!-- Lang picker + Help · Privacy · vX.Y.Z block, shared with the
-           athlete-portal shell (#902). -->
-      <app-sidebar-footer-meta />
-    </div>
+    }
   </aside>
 
   <main class="main">

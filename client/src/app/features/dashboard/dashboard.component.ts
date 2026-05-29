@@ -7,7 +7,7 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -23,7 +23,6 @@ import {
   CreateSheetAction,
   CreateSheetComponent,
 } from '../../shared/components/create-sheet/create-sheet.component';
-import { SidebarFooterMetaComponent } from '../../shared/components/sidebar-footer-meta/sidebar-footer-meta.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { SearchPaletteComponent } from '../search/search-palette.component';
 import { NotificationBellComponent } from '../notifications/notification-bell.component';
@@ -31,11 +30,11 @@ import { VERSION } from '../../../environments/version';
 
 /**
  * Owner-side dashboard shell. Social-native navigation (#1111): a bottom
- * tab bar + center ➕ create-sheet on mobile (`<768px`); the desktop
- * sidebar above. The hamburger off-canvas drawer — and its swipe-to-close
- * gesture + body-scroll-lock — is retired; the destinations demoted off
- * the bar (attendance, stats, activity, settings, support, what's-new,
- * language, sign-out) live on the `/dashboard/more` hub.
+ * tab bar + center ➕ create-sheet on mobile (`<768px`); a desktop social
+ * rail (#1112) above. The hamburger off-canvas drawer — and its
+ * swipe-to-close gesture + body-scroll-lock — is retired; the destinations
+ * demoted off the bar (attendance, stats, activity, settings, support,
+ * what's-new, language, sign-out) live on the `/dashboard/more` hub.
  *
  * Bottom-tab labels resolve reactively to the runtime language: each
  * computed reads `languageService.currentLang()` so `translate.instant()`
@@ -54,7 +53,6 @@ import { VERSION } from '../../../environments/version';
     UserAvatarComponent,
     SearchPaletteComponent,
     NotificationBellComponent,
-    SidebarFooterMetaComponent,
     TranslatePipe,
   ],
   templateUrl: './dashboard.component.html',
@@ -65,7 +63,6 @@ export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly languageService = inject(LanguageService);
   private readonly translate = inject(TranslateService);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly webPushHandler = inject(WebPushHandlerService);
 
@@ -194,13 +191,5 @@ export class DashboardComponent implements OnInit {
 
   protected onCreate(): void {
     this.createSheet().open();
-  }
-
-  protected signOut(): void {
-    // `AuthService.logout()` invalidates the academy cache (epoch-bumped
-    // invalidation from #41), so the brand-label computed resets in the
-    // same tick.
-    this.authService.logout();
-    void this.router.navigate(['/auth/login']);
   }
 }

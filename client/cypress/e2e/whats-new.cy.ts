@@ -84,19 +84,9 @@ describe("What's new page (#254)", () => {
     cy.location('pathname').should('eq', '/dashboard/athletes');
   });
 
-  it("the sidebar carries a What's new link above Sign out", () => {
-    cy.get('[data-cy="nav-whats-new"]').should('be.visible').and('contain.text', "What's new");
-    // Lives in the same .sidebar__footer block as Sign out — assert
-    // the order: the What's new <a> is rendered BEFORE the Sign out
-    // <button> in the document.
-    cy.get('[data-cy="nav-whats-new"]').then(($whatsNew) => {
-      cy.get('[data-cy="nav-sign-out"]').then(($signOut) => {
-        const whatsNewIdx = $whatsNew[0].compareDocumentPosition($signOut[0]);
-        // DOCUMENT_POSITION_FOLLOWING = 4 — sign-out follows what's-new.
-        expect(whatsNewIdx & 4, "sign-out follows what's-new").to.equal(4);
-      });
-    });
-  });
+  // What's-new + sign-out moved off the desktop sidebar into the owner More
+  // hub with the rail refactor (#1112) — their presence is covered by
+  // owner-more.component.spec.ts (owner-more-whats-new, owner-more-signout).
 });
 
 MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
