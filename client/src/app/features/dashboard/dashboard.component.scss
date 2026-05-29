@@ -1,12 +1,12 @@
-// Owner dashboard shell — mobile-first, scales up at the sidebar breakpoint.
-// Social-native nav (#1111): mobile (<768px) is a topbar (brand + bell +
-// avatar) + a fixed bottom tab bar; the hamburger off-canvas drawer is
-// retired. Desktop (>=768px) is the two-column layout (fixed sidebar +
-// main); the desktop social rail is #1112. Canon: MD3 8dp grid, theme
-// tokens only, motion on the decelerate-cubic standard.
+// Owner dashboard shell — mobile-first, scales up at the rail breakpoint.
+// Social-native nav: mobile (<768px) is a topbar (brand + bell + avatar) +
+// a fixed bottom tab bar (#1111); desktop (>=768px) is a left social rail
+// (#1112, the Instagram/X pattern, mirroring the athlete shell) — the same
+// IA as the bottom nav, surfaced vertically, with the dense SaaS sidebar
+// retired. Canon: MD3 8dp grid, theme tokens only, decelerate-cubic motion.
 
 $sidebar-breakpoint: 768px;
-$sidebar-width: 16rem;
+$rail-width: 15rem;
 $topbar-height: 3.5rem;
 $bottom-nav-height: 3.5rem;
 
@@ -32,9 +32,6 @@ $bottom-nav-height: 3.5rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  // padding-top expands by the OS-reported safe-area inset on Android 15
-  // edge-to-edge mode + iOS notched devices, so the brand never gets
-  // clipped by the status bar (#1046).
   padding: max(0.5rem, var(--budojo-safe-top)) 1rem 0.5rem;
   min-height: $topbar-height;
   background: var(--p-surface-900);
@@ -78,8 +75,6 @@ $bottom-nav-height: 3.5rem;
     flex-shrink: 0;
   }
 
-  // User-avatar chip at the trailing edge (#411). Tap target = chip avatar
-  // (32px) + 0.5rem padding each side = 48px, honouring Fitts.
   &__user-link {
     display: inline-flex;
     align-items: center;
@@ -102,154 +97,167 @@ $bottom-nav-height: 3.5rem;
   }
 }
 
-// ── Sidebar (desktop only) ───────────────────────────────────────────────────
+// ── Desktop social rail (>=768px) ───────────────────────────────────────────
 
-.sidebar {
+.rail {
   display: flex;
   flex-direction: column;
-  background: var(--p-surface-900);
-  color: var(--p-surface-0);
-  overflow-y: auto;
+  gap: 0.25rem;
+  width: $rail-width;
+  padding: 1rem 0.75rem;
+  background: var(--p-content-background);
+  border-right: 1px solid var(--p-content-border-color);
 
-  // Mobile: the sidebar is replaced by the bottom tab bar (#1111).
+  // Mobile: the rail is replaced by the bottom tab bar.
   @media (max-width: $sidebar-breakpoint - 1) {
     display: none;
   }
 
-  // Desktop: static, always visible, fixed-width column.
   @media (min-width: $sidebar-breakpoint) {
-    flex: 0 0 $sidebar-width;
-    width: $sidebar-width;
-    min-width: $sidebar-width;
+    flex: 0 0 $rail-width;
     height: 100dvh;
   }
 
-  // ── Brand area (academy identity, non-interactive after #166) ─────────────
-
   &__brand {
-    box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    width: 100%;
-    padding: 1rem;
-    min-height: 3rem;
-    border-bottom: 1px solid var(--p-surface-700);
+    padding: 0.5rem 0.75rem 1rem;
+    color: var(--p-text-color);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.125rem;
+    min-width: 0;
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+      border-radius: var(--p-border-radius-sm);
+    }
   }
 
-  // Brand logo — 32px tile. Either an academy-uploaded <img> OR the inline
-  // Budojo <svg> fallback (#99); the border-radius applies to the raster
-  // branch and is harmless on the transparent inline SVG.
   &__logo {
-    width: 2rem;
-    height: 2rem;
+    width: 1.75rem;
+    height: 1.75rem;
     border-radius: var(--p-border-radius-sm);
     flex-shrink: 0;
   }
 
   &__brand-text {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-align: left;
-  }
-
-  &__brand-eyebrow {
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--p-surface-400);
-    line-height: 1.1;
-  }
-
-  &__brand-name {
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--p-surface-0);
-    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  // ── Nav ───────────────────────────────────────────────────────────────────
-
-  &__nav {
-    flex: 1;
-    padding: 0.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  &__nav-item {
+  // Prominent ➕ — the social-app "create" affordance. Filled indigo, the
+  // one primary CTA in the rail; opens the shared create sheet.
+  &__create {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    min-height: 3rem; // 48px — Fitts
-    border-radius: var(--p-border-radius-md);
-    color: var(--p-surface-300);
-    text-decoration: none;
-    font-size: 0.9375rem; // MD3 label-large
-    transition:
-      background var(--budojo-motion-base) var(--budojo-motion-decelerate),
-      color var(--budojo-motion-base) var(--budojo-motion-decelerate);
+    margin: 0 0.25rem 0.75rem;
+    padding: 0.75rem 1rem;
+    min-height: 3rem;
+    border: 0;
+    border-radius: var(--p-border-radius-lg);
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: filter var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
     i {
-      font-size: 1rem;
-      width: 1rem;
-      text-align: center;
+      font-size: 1.125rem;
     }
 
     &:hover {
-      background: var(--p-surface-700);
-      color: var(--p-surface-0);
+      filter: brightness(1.05);
+    }
+  }
+
+  &__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 3rem; // 48px — Fitts
+    border-radius: var(--p-border-radius-md);
+    color: var(--p-text-color);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    i {
+      font-size: 1.25rem;
+      width: 1.5rem;
+      text-align: center;
+      color: var(--p-text-color-secondary);
     }
 
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+
+    // Active: the IG/X treatment — bold label + indigo glyph, on a faint
+    // fill so the current destination reads at a glance.
     &--active {
-      background: var(--p-primary-600);
-      color: var(--p-surface-0);
+      font-weight: 600;
+      background: var(--p-content-hover-background);
 
-      &:hover {
-        background: var(--p-primary-700);
-      }
-    }
-
-    // Sign-out modifier — the row is a <button>, so neutralise the button
-    // defaults but keep the inherited flex/padding/color from the block.
-    &--signout {
-      appearance: none;
-      background: transparent;
-      border: 0;
-      font: inherit;
-      cursor: pointer;
-      text-align: left;
-
-      &:focus-visible {
-        outline: 2px solid var(--p-primary-400);
-        outline-offset: -2px;
+      i {
+        color: var(--p-primary-color);
       }
     }
   }
 
-  // Footer — separated from the nav so sign-out doesn't read as another
-  // destination. Pushed to the bottom via margin-top auto; flex column so
-  // the sign-out button stretches to the full sidebar width.
-  &__footer {
-    padding: 0.5rem;
+  // Profile pinned at the bottom (the IG/X account anchor) → the More hub
+  // (settings, language, sign-out live there).
+  &__profile {
     margin-top: auto;
-    border-top: 1px solid var(--p-surface-800);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--p-border-radius-md);
+    color: var(--p-text-color);
+    text-decoration: none;
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+  }
+
+  &__profile-meta {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+  }
+
+  &__profile-name {
+    font-weight: 500;
+    font-size: 0.9375rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__profile-handle {
+    font-size: 0.8125rem;
+    color: var(--p-text-color-secondary);
   }
 }
 
-// Bottom tab bar — mobile only; the sidebar/rail owns navigation on desktop.
+// Bottom tab bar — mobile only; the rail owns navigation on desktop.
 .mobile-nav {
   @media (min-width: $sidebar-breakpoint) {
     display: none;
