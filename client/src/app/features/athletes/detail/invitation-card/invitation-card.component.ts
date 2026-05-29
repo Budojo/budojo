@@ -8,7 +8,6 @@ import {
   signal,
 } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { ConfirmPopup } from 'primeng/confirmpopup';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { TagModule } from 'primeng/tag';
@@ -21,6 +20,7 @@ import {
 } from '../../../../core/services/athlete.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { localeFor } from '../../../../shared/utils/locale';
+import { CardComponent } from '../../../../shared/components/card/card.component';
 
 /**
  * "Account & invito" card on the athlete detail page (#467, M7 PR-B-UI).
@@ -43,7 +43,7 @@ import { localeFor } from '../../../../shared/utils/locale';
 @Component({
   selector: 'app-athlete-invitation-card',
   standalone: true,
-  imports: [ButtonModule, CardModule, ConfirmPopup, TagModule, TranslatePipe],
+  imports: [ButtonModule, CardComponent, ConfirmPopup, TagModule, TranslatePipe],
   providers: [ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './invitation-card.component.html',

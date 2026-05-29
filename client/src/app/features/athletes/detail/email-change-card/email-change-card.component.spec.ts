@@ -163,4 +163,10 @@ describe('EmailChangeCardComponent (#476)', () => {
 
     expect(cmp['serverError']()).toBe('throttled');
   });
+
+  it('renders on the canonical app-card shell, not a raw p-card (#1101)', () => {
+    const { fixture } = setup();
+    expect(fixture.nativeElement.querySelector('app-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('p-card')).toBeNull();
+  });
 });

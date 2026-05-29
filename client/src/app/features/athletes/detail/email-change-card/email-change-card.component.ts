@@ -9,7 +9,6 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
@@ -21,6 +20,7 @@ import {
   AthleteEmailChangeMode,
   AthleteService,
 } from '../../../../core/services/athlete.service';
+import { CardComponent } from '../../../../shared/components/card/card.component';
 
 /**
  * Owner-side email-change card on athlete detail (#476). The card
@@ -53,7 +53,7 @@ import {
   standalone: true,
   imports: [
     ButtonModule,
-    CardModule,
+    CardComponent,
     ConfirmDialog,
     InputTextModule,
     ReactiveFormsModule,

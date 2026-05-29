@@ -273,3 +273,11 @@ describe('InvitationCardComponent — accepted state (#467)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="athlete-invitation-invite"]')).toBeNull();
   });
 });
+
+describe('InvitationCardComponent — design system (#1101)', () => {
+  it('renders on the canonical app-card shell, not a raw p-card', () => {
+    const { fixture } = setup();
+    expect(fixture.nativeElement.querySelector('app-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('p-card')).toBeNull();
+  });
+});
