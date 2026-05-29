@@ -8,6 +8,7 @@ use App\Models\CommunityPost;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
 use App\Support\CommunityLink;
+use App\Support\NotificationActor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -97,6 +98,7 @@ class CommunityEventNewNotification extends Notification
             'body' => $location !== null ? $location : '',
             'link' => CommunityLink::forPost($notifiable, $this->post->id),
             'kind' => 'community_event_new',
+            'actor' => NotificationActor::fromUser($this->post->createdBy),
             'post_id' => $this->post->id,
             'starts_at' => $startsAt,
         ];

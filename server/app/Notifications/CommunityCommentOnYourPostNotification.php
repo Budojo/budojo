@@ -8,6 +8,7 @@ use App\Models\PostComment;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
 use App\Support\CommunityLink;
+use App\Support\NotificationActor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -64,6 +65,7 @@ class CommunityCommentOnYourPostNotification extends Notification
             'body' => $this->body(),
             'link' => $this->link($notifiable),
             'kind' => 'community_comment_on_your_post',
+            'actor' => NotificationActor::fromUser($this->commenter),
             'post_id' => $this->newComment->post_id,
             'comment_id' => $this->newComment->id,
         ];

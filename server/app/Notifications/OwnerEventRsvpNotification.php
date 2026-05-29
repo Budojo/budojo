@@ -9,6 +9,7 @@ use App\Models\CommunityPost;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
 use App\Support\CommunityLink;
+use App\Support\NotificationActor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -64,6 +65,7 @@ class OwnerEventRsvpNotification extends Notification
             'body' => $this->body(),
             'link' => CommunityLink::forPost($notifiable, $this->post->id),
             'kind' => 'owner_event_rsvp',
+            'actor' => NotificationActor::fromUser($this->responder),
             'post_id' => $this->post->id,
             'response' => $this->response->value,
         ];

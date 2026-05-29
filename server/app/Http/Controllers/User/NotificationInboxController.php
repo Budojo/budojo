@@ -49,6 +49,7 @@ class NotificationInboxController extends Controller
                 $body = $data['body'] ?? '';
                 $link = $data['link'] ?? null;
                 $kind = $data['kind'] ?? null;
+                $actor = $data['actor'] ?? null;
 
                 return [
                     'id' => $n->id,
@@ -62,6 +63,10 @@ class NotificationInboxController extends Controller
                     // Notifications without a `kind` (legacy rows
                     // from before this field landed) surface as null.
                     'kind' => \is_string($kind) ? $kind : null,
+                    // Actor identity for the avatar (#1131). Community
+                    // notifications carry `{name, avatar_url}`; system
+                    // notifications (recap, payment, …) carry no actor.
+                    'actor' => \is_array($actor) ? $actor : null,
                     'read_at' => $n->read_at?->toIso8601String(),
                     'created_at' => $n->created_at?->toIso8601String(),
                 ];

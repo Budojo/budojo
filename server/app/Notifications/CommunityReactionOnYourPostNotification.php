@@ -9,6 +9,7 @@ use App\Models\CommunityPost;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
 use App\Support\CommunityLink;
+use App\Support\NotificationActor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -67,6 +68,7 @@ class CommunityReactionOnYourPostNotification extends Notification
             'body' => $this->body(),
             'link' => $this->link($notifiable),
             'kind' => 'community_reaction_on_your_post',
+            'actor' => NotificationActor::fromUser($this->reactor),
             'post_id' => $this->post->id,
             'emoji' => $this->emoji->value,
         ];
