@@ -182,6 +182,12 @@ export interface BottomNavCenterAction {
       .bottom-nav__create:focus-visible {
         outline: 2px solid var(--p-primary-color);
         outline-offset: 2px;
+      }
+
+      /* Corner radius only on the tab — the ➕ keeps its 50% circle; the
+         shared rule above would otherwise win on specificity and morph it
+         into a rounded square on focus (#1114 reviewer). */
+      .bottom-nav__tab:focus-visible {
         border-radius: 0.25rem;
       }
     `,
