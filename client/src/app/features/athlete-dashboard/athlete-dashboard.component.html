@@ -3,7 +3,7 @@
        drawer is retired (#1109) — the bottom tab bar is the primary nav. -->
   <header class="topbar" role="banner">
     <a
-      routerLink="/dashboard/me"
+      routerLink="/dashboard/me/feed"
       class="topbar__title"
       [attr.aria-label]="'nav.homeAriaLabel' | translate"
       data-cy="topbar-home-link"
@@ -16,124 +16,52 @@
     }
   </header>
 
-  <!-- Desktop sidebar (>=768px) — hidden on mobile (the bottom nav replaces
-       it). The desktop social rail is a later slice (#1110). -->
-  <aside
-    id="app-athlete-sidebar"
-    class="sidebar"
-    role="navigation"
-    [attr.aria-label]="'nav.sidebarAriaLabel' | translate"
-  >
-    <div class="sidebar__brand">
-      <app-brand-glyph class="sidebar__logo" />
-      <span class="sidebar__brand-text">Budojo</span>
-    </div>
+  <!-- Desktop social rail (>=768px) — the Instagram/X left-rail pattern
+       (#1110). Same IA as the mobile bottom tab bar (the shared `tabs()`),
+       a prominent ➕ create, and the profile pinned at the bottom; the dense
+       SaaS sidebar is retired. Hidden on mobile, where the bottom nav owns
+       navigation. -->
+  <aside class="rail" role="navigation" [attr.aria-label]="navAriaLabel()" data-cy="athlete-rail">
+    <a
+      routerLink="/dashboard/me/feed"
+      class="rail__brand"
+      [attr.aria-label]="'nav.homeAriaLabel' | translate"
+    >
+      <app-brand-glyph class="rail__logo" />
+      <span class="rail__brand-text">Budojo</span>
+    </a>
 
-    @if (user(); as currentUser) {
-      <div class="sidebar__user">
-        <app-user-avatar [name]="currentUser.full_name" [url]="currentUser.avatar_url" />
-        <div class="sidebar__user-meta">
-          <span class="sidebar__user-name"
-            >{{ currentUser.first_name }} {{ currentUser.last_name }}</span
-          >
-          @if (currentUser.handle) {
-            <span class="sidebar__user-handle">&#64;{{ currentUser.handle }}</span>
-          }
-        </div>
-      </div>
-    }
+    <button type="button" class="rail__create" (click)="onCreate()" data-cy="rail-create">
+      <i class="pi pi-plus" aria-hidden="true"></i>
+      <span>{{ createTitle() }}</span>
+    </button>
 
-    <nav class="sidebar__nav">
-      <ul>
-        <li>
-          <a
-            routerLink="/dashboard/me/feed"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            data-cy="nav-me-feed"
-          >
-            <i class="pi pi-comments" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.feed' | translate }}</span>
-          </a>
-        </li>
-        <li>
-          <a
-            routerLink="/dashboard/me/academy"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            data-cy="nav-me-academy"
-          >
-            <i class="pi pi-building" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.academy' | translate }}</span>
-          </a>
-        </li>
-        <li>
-          <a
-            routerLink="/dashboard/me/attendance"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            data-cy="nav-me-attendance"
-          >
-            <i class="pi pi-calendar" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.attendance' | translate }}</span>
-          </a>
-        </li>
-        <li>
-          <a
-            routerLink="/dashboard/me/payments"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            data-cy="nav-me-payments"
-          >
-            <i class="pi pi-wallet" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.payments' | translate }}</span>
-          </a>
-        </li>
-        <li>
-          <a
-            routerLink="/dashboard/me/documents"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            data-cy="nav-me-documents"
-          >
-            <i class="pi pi-file" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.documents' | translate }}</span>
-          </a>
-        </li>
-        @if (user()?.handle) {
-          <li>
-            <a
-              [routerLink]="['/dashboard/me/u', user()?.handle]"
-              routerLinkActive="sidebar__link--active"
-              class="sidebar__link"
-              data-cy="nav-me-my-profile"
-            >
-              <i class="pi pi-id-card" aria-hidden="true"></i>
-              <span>{{ 'athletePortal.nav.myProfile' | translate }}</span>
-            </a>
-          </li>
-        }
-        <li>
-          <a
-            routerLink="/dashboard/me/profile"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            data-cy="nav-me-settings"
-          >
-            <i class="pi pi-cog" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.settings' | translate }}</span>
-          </a>
-        </li>
-      </ul>
+    <nav class="rail__nav">
+      @for (tab of tabs(); track tab.routerLink) {
+        <a
+          class="rail__item"
+          [routerLink]="tab.routerLink"
+          routerLinkActive="rail__item--active"
+          #rla="routerLinkActive"
+          [attr.aria-current]="rla.isActive ? 'page' : null"
+        >
+          <i [class]="tab.icon" aria-hidden="true"></i>
+          <span class="rail__label">{{ tab.label }}</span>
+        </a>
+      }
     </nav>
 
-    <div class="sidebar__footer">
-      <button type="button" class="sidebar__signout" (click)="signOut()" data-cy="nav-sign-out">
-        <i class="pi pi-sign-out" aria-hidden="true"></i>
-        <span>{{ 'nav.signOut' | translate }}</span>
-      </button>
-      <app-sidebar-footer-meta />
-    </div>
+    @if (user(); as railUser) {
+      <a routerLink="/dashboard/me/more" class="rail__profile" data-cy="rail-profile">
+        <app-user-avatar [name]="railUser.full_name" [url]="railUser.avatar_url" />
+        <span class="rail__profile-meta">
+          <span class="rail__profile-name">{{ railUser.first_name }} {{ railUser.last_name }}</span>
+          @if (railUser.handle) {
+            <span class="rail__profile-handle">&#64;{{ railUser.handle }}</span>
+          }
+        </span>
+      </a>
+    }
   </aside>
 
   <main class="main">

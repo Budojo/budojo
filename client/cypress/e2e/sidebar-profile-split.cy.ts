@@ -1,21 +1,19 @@
 /**
  * Cypress E2E for the sidebar profile / settings split (#863, M9
- * social-profile epic slice C).
+ * social-profile epic slice C) — OWNER shell.
  *
- * Verifies the rename + new voice land on both shells:
+ * The owner shell `/dashboard/*` keeps the desktop sidebar: the "Profilo"
+ * voice is "Settings" (cog icon, same `/dashboard/profile` route hosting the
+ * settings tabs), and a "My profile" voice points to the public profile at
+ * `/dashboard/u/<handle>` — visible only when the cached user has a handle.
  *
- *  - Owner shell `/dashboard/*` — the existing "Profilo" voice becomes
- *    "Settings" (cog icon, same `/dashboard/profile` route hosting the
- *    settings tabs). A NEW "My profile" voice points to the public
- *    profile at `/dashboard/u/<handle>` — visible only when the
- *    cached user has a handle.
- *  - Athlete shell `/dashboard/me/*` — same rename + new voice with
- *    the athlete-side route `/dashboard/me/u/<handle>`.
+ * The athlete shell no longer carries these as sidebar rows: since #1110 its
+ * desktop chrome is the social rail (Feed/Academy/Attendance/More + ➕), and
+ * Settings / My profile live on the `/dashboard/me/more` hub — covered by
+ * `me-more.component.spec.ts` (`me-more-settings`, `me-more-public-profile`).
  *
- * The link is asserted to EXIST (and carry the expected href) — we do
- * NOT navigate through it. Slice A registers the route on the API/SPA
- * side; this slice ships the sidebar discoverability. Order is
- * enforced at merge time, not at branch time.
+ * The link is asserted to EXIST (and carry the expected href) — we do NOT
+ * navigate through it.
  */
 
 const ACADEMY_OK = {
@@ -33,7 +31,7 @@ const ACADEMY_OK = {
   },
 };
 
-describe('Sidebar profile / settings split (#863)', () => {
+describe('Sidebar profile / settings split (#863) — owner shell', () => {
   beforeEach(() => {
     cy.intercept('GET', '/api/v1/academy*', ACADEMY_OK);
     cy.intercept('GET', '/api/v1/athletes*', {
@@ -106,61 +104,5 @@ describe('Sidebar profile / settings split (#863)', () => {
 
     cy.get('[data-cy="nav-settings"]').should('exist');
     cy.get('[data-cy="nav-my-profile"]').should('not.exist');
-  });
-
-  it('athlete shell: renders Settings voice with cog icon + My profile voice when handle is set', () => {
-    cy.intercept('GET', '/api/v1/auth/me*', {
-      statusCode: 200,
-      body: {
-        data: {
-          id: 2,
-          first_name: 'Alice',
-          last_name: 'Athlete',
-          full_name: 'Alice Athlete',
-          handle: 'alicebjj',
-          email: 'alice@example.com',
-          email_verified_at: '2026-01-01T00:00:00Z',
-          avatar_url: null,
-          role: 'athlete',
-        },
-      },
-    });
-
-    cy.visitAuthenticated('/dashboard/me/feed');
-
-    cy.get('[data-cy="nav-me-settings"]')
-      .should('exist')
-      .and('contain.text', 'Settings')
-      .find('i.pi-cog')
-      .should('exist');
-
-    cy.get('[data-cy="nav-me-my-profile"]')
-      .should('exist')
-      .and('contain.text', 'My profile')
-      .and('have.attr', 'href', '/dashboard/me/u/alicebjj');
-  });
-
-  it('athlete shell: hides the My profile voice when the athlete has no handle', () => {
-    cy.intercept('GET', '/api/v1/auth/me*', {
-      statusCode: 200,
-      body: {
-        data: {
-          id: 2,
-          first_name: 'Alice',
-          last_name: 'Athlete',
-          full_name: 'Alice Athlete',
-          handle: null,
-          email: 'alice@example.com',
-          email_verified_at: '2026-01-01T00:00:00Z',
-          avatar_url: null,
-          role: 'athlete',
-        },
-      },
-    });
-
-    cy.visitAuthenticated('/dashboard/me/feed');
-
-    cy.get('[data-cy="nav-me-settings"]').should('exist');
-    cy.get('[data-cy="nav-me-my-profile"]').should('not.exist');
   });
 });

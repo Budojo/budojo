@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { EMPTY } from 'rxjs';
 import { AthleteDashboardComponent } from './athlete-dashboard.component';
 import { AuthService } from '../../core/services/auth.service';
@@ -16,10 +16,6 @@ function setup(opts: { cachedUser?: Partial<User> | null } = {}) {
   TestBed.configureTestingModule({
     imports: [AthleteDashboardComponent],
     providers: [
-      // Real Router with an empty route set. We spy on its
-      // `navigate` after the TestBed configures so we don't fight
-      // the internal initialization of provideRouter (which needs a
-      // real root config the partial-mock pattern can't supply).
       provideRouter([]),
       provideAnimationsAsync(),
       {
@@ -30,13 +26,18 @@ function setup(opts: { cachedUser?: Partial<User> | null } = {}) {
     ],
   });
 
-  const router = TestBed.inject(Router);
-  const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-
   const fixture = TestBed.createComponent(AthleteDashboardComponent);
   fixture.detectChanges();
-  return { fixture, cmp: fixture.componentInstance, loadCurrentUser, logout, navigateSpy };
+  return { fixture, loadCurrentUser };
 }
+
+const ATHLETE = {
+  first_name: 'Mario',
+  last_name: 'Rossi',
+  full_name: 'Mario Rossi',
+  handle: 'mariobjj',
+  avatar_url: null,
+} as User;
 
 describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
   it('hydrates the cached user via /auth/me on init when the signal is null', () => {
@@ -51,50 +52,7 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
     expect(loadCurrentUser).not.toHaveBeenCalled();
   });
 
-  it('signOut() calls auth.logout and navigates to /auth/login', () => {
-    const { cmp, logout, navigateSpy } = setup({
-      cachedUser: { first_name: 'Mario', last_name: 'Rossi' } as User,
-    });
-
-    cmp.signOut();
-
-    expect(logout).toHaveBeenCalledOnce();
-    expect(navigateSpy).toHaveBeenCalledOnce();
-    expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
-  });
-
-  it('renders the brand glyph, sidebar nav, and sign-out button (skeleton chrome)', () => {
-    const { fixture } = setup({
-      cachedUser: {
-        first_name: 'Mario',
-        last_name: 'Rossi',
-        full_name: 'Mario Rossi',
-        handle: 'mariobjj',
-        avatar_url: null,
-      } as User,
-    });
-
-    const root = fixture.nativeElement as HTMLElement;
-    expect(root.querySelector('[data-cy="nav-me-feed"]')).not.toBeNull();
-    expect(root.querySelector('[data-cy="nav-me-academy"]')).not.toBeNull();
-    expect(root.querySelector('[data-cy="nav-me-attendance"]')).not.toBeNull();
-    expect(root.querySelector('[data-cy="nav-me-payments"]')).not.toBeNull();
-    expect(root.querySelector('[data-cy="nav-me-documents"]')).not.toBeNull();
-    expect(root.querySelector('[data-cy="nav-me-settings"]')).not.toBeNull();
-    // Athlete with a handle gets the public-profile sidebar row (#863).
-    expect(root.querySelector('[data-cy="nav-me-my-profile"]')).not.toBeNull();
-    expect(root.querySelector('[data-cy="nav-sign-out"]')).not.toBeNull();
-  });
-
   describe('mobile bottom nav (#1109)', () => {
-    const ATHLETE = {
-      first_name: 'Mario',
-      last_name: 'Rossi',
-      full_name: 'Mario Rossi',
-      handle: 'mariobjj',
-      avatar_url: null,
-    } as User;
-
     it('renders the bottom nav with feed / academy / attendance / more tabs + the create button', () => {
       const { fixture } = setup({ cachedUser: ATHLETE });
       const root = fixture.nativeElement as HTMLElement;
@@ -122,64 +80,57 @@ describe('AthleteDashboardComponent (#610, M7 PR-D slice 1)', () => {
     });
   });
 
-  describe('sidebar profile / settings split (#863, M9 slice C — athlete shell)', () => {
-    it('renders the Settings nav voice with the cog icon (renamed from Profile)', () => {
-      const { fixture } = setup({
-        cachedUser: {
-          first_name: 'Mario',
-          last_name: 'Rossi',
-          full_name: 'Mario Rossi',
-          handle: 'mariobjj',
-          avatar_url: null,
-        } as User,
-      });
-
-      const link = fixture.nativeElement.querySelector(
-        '[data-cy="nav-me-settings"]',
-      ) as HTMLAnchorElement | null;
-      expect(link).not.toBeNull();
-      expect(link!.textContent).toContain('Settings');
-      expect(link!.querySelector('i.pi-cog')).not.toBeNull();
-      // Route is unchanged — /dashboard/me/profile still hosts the
-      // athlete-side identity surface; only the label + icon changed.
-      expect(link!.getAttribute('href')).toBe('/dashboard/me/profile');
+  describe('desktop social rail (#1110)', () => {
+    it('renders the rail with the same destinations as the bottom nav (feed/academy/attendance/more)', () => {
+      const { fixture } = setup({ cachedUser: ATHLETE });
+      const rail = fixture.nativeElement.querySelector(
+        '[data-cy="athlete-rail"]',
+      ) as HTMLElement | null;
+      expect(rail).not.toBeNull();
+      expect(rail!.querySelector('a[href="/dashboard/me/feed"]')).not.toBeNull();
+      expect(rail!.querySelector('a[href="/dashboard/me/academy"]')).not.toBeNull();
+      expect(rail!.querySelector('a[href="/dashboard/me/attendance"]')).not.toBeNull();
+      expect(rail!.querySelector('a[href="/dashboard/me/more"]')).not.toBeNull();
     });
 
-    it('renders the My profile voice linking to /dashboard/me/u/<handle> when the user has a handle', () => {
-      const { fixture } = setup({
-        cachedUser: {
-          first_name: 'Mario',
-          last_name: 'Rossi',
-          full_name: 'Mario Rossi',
-          handle: 'mariobjj',
-          avatar_url: null,
-        } as User,
-      });
-
-      const link = fixture.nativeElement.querySelector(
-        '[data-cy="nav-me-my-profile"]',
+    it('points the brand link at the feed (the athlete home), matching its "go to home" aria-label', () => {
+      // The brand advertises "go to dashboard home"; the athlete's home is the
+      // feed (the pi-home tab), NOT the /dashboard/me index — which redirects
+      // to settings/profile. #1118 reviewer (Norman/Krug affordance).
+      const { fixture } = setup({ cachedUser: ATHLETE });
+      const brand = fixture.nativeElement.querySelector(
+        'a.rail__brand',
       ) as HTMLAnchorElement | null;
-      expect(link).not.toBeNull();
-      expect(link!.textContent).toContain('My profile');
-      expect(link!.querySelector('i.pi-id-card')).not.toBeNull();
-      expect(link!.getAttribute('href')).toBe('/dashboard/me/u/mariobjj');
+      expect(brand).not.toBeNull();
+      expect(brand!.getAttribute('href')).toBe('/dashboard/me/feed');
     });
 
-    it('hides the My profile voice when the user has no handle (handle is opt-in today)', () => {
-      const { fixture } = setup({
-        cachedUser: {
-          first_name: 'Mario',
-          last_name: 'Rossi',
-          full_name: 'Mario Rossi',
-          handle: null,
-          avatar_url: null,
-        } as User,
-      });
+    it('opens the create sheet from the rail ➕ Create button', () => {
+      const { fixture } = setup({ cachedUser: ATHLETE });
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('[role="dialog"]')).toBeNull();
 
-      const link = fixture.nativeElement.querySelector(
-        '[data-cy="nav-me-my-profile"]',
+      (root.querySelector('[data-cy="rail-create"]') as HTMLElement).click();
+      fixture.detectChanges();
+      expect(root.querySelector('[role="dialog"]')).not.toBeNull();
+    });
+
+    it('pins a profile chip linking to the More hub, showing the handle', () => {
+      const { fixture } = setup({ cachedUser: ATHLETE });
+      const chip = fixture.nativeElement.querySelector(
+        '[data-cy="rail-profile"]',
       ) as HTMLAnchorElement | null;
-      expect(link).toBeNull();
+      expect(chip).not.toBeNull();
+      expect(chip!.getAttribute('href')).toBe('/dashboard/me/more');
+      expect(chip!.textContent).toContain('@mariobjj');
+    });
+
+    it('demotes settings / payments / documents off the rail (they live on the More hub)', () => {
+      const { fixture } = setup({ cachedUser: ATHLETE });
+      const rail = fixture.nativeElement.querySelector('[data-cy="athlete-rail"]') as HTMLElement;
+      expect(rail.querySelector('a[href="/dashboard/me/payments"]')).toBeNull();
+      expect(rail.querySelector('a[href="/dashboard/me/documents"]')).toBeNull();
+      expect(rail.querySelector('a[href="/dashboard/me/profile"]')).toBeNull();
     });
   });
 });
