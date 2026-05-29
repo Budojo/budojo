@@ -25,8 +25,8 @@ class HostComponent {
   tabs: BottomNavTab[] = [
     { icon: 'pi pi-home', label: 'Feed', routerLink: '/feed', dataCy: 'nav-feed' },
     { icon: 'pi pi-bolt', label: 'Academy', routerLink: '/academy', dataCy: 'nav-academy' },
-    { icon: 'pi pi-bell', label: 'Alerts', routerLink: '/alerts', dataCy: 'nav-alerts' },
-    { icon: 'pi pi-user', label: 'Profile', routerLink: '/profile', dataCy: 'nav-profile' },
+    { icon: 'pi pi-bell', label: 'Alerts', routerLink: '/alerts', dataCy: 'nav-alerts', badge: 3 },
+    { icon: 'pi pi-user', label: 'Profile', routerLink: '/profile', dataCy: 'nav-profile', badge: 0 },
   ];
   center: BottomNavCenterAction | null = CENTER;
   centerCount = 0;
@@ -90,5 +90,16 @@ describe('BottomNavComponent (#1108)', () => {
     fixture.detectChanges();
     expect(el.querySelector('[data-cy="nav-academy"]')?.getAttribute('aria-current')).toBe('page');
     expect(el.querySelector('[data-cy="nav-feed"]')?.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('renders an aria-hidden badge only on tabs with a truthy count (#1114 reviewer)', () => {
+    const { el } = setup();
+    // Truthy count → badge with the value + aria-hidden (no double SR announce).
+    const badge = el.querySelector('[data-cy="nav-alerts"] .bottom-nav__badge');
+    expect(badge?.textContent?.trim()).toBe('3');
+    expect(badge?.getAttribute('aria-hidden')).toBe('true');
+    // Falsy counts render nothing: 0 (Profile) and undefined (Feed).
+    expect(el.querySelector('[data-cy="nav-profile"] .bottom-nav__badge')).toBeNull();
+    expect(el.querySelector('[data-cy="nav-feed"] .bottom-nav__badge')).toBeNull();
   });
 });
