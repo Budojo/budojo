@@ -78,4 +78,50 @@ describe('ConfirmDestructiveButtonComponent (#1034)', () => {
     storedAccept?.();
     expect(emitCount).toBe(1);
   });
+
+  it('passes confirmIcon to the popup when set, omits it when null (#1103)', () => {
+    const { fixture, confirmationService } = setup({});
+    let icon: string | undefined = 'sentinel';
+    const spy = vi.spyOn(confirmationService, 'confirm').mockImplementation((opts) => {
+      icon = opts.icon;
+      return confirmationService;
+    });
+
+    // Default (null) → no icon flows into the confirm config.
+    (fixture.componentInstance as unknown as { open: (e: Event) => void }).open(
+      new MouseEvent('click'),
+    );
+    expect(icon).toBeUndefined();
+
+    // Opt-in → the warning glyph reaches the popup (Norman § signifier).
+    fixture.componentRef.setInput('confirmIcon', 'pi pi-exclamation-triangle');
+    fixture.detectChanges();
+    (fixture.componentInstance as unknown as { open: (e: Event) => void }).open(
+      new MouseEvent('click'),
+    );
+    expect(icon).toBe('pi pi-exclamation-triangle');
+
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('suppresses the tooltip on a labelled button; keeps ariaLabel for icon-only (#1104)', () => {
+    const { fixture } = setup({ ariaLabel: 'Revoke session' });
+    const cmp = fixture.componentInstance as unknown as {
+      resolvedTooltip: () => string | undefined;
+    };
+
+    // Icon-only (no label) → ariaLabel is the only affordance, so it tooltips.
+    expect(cmp.resolvedTooltip()).toBe('Revoke session');
+
+    // Labelled → the visible label IS the affordance; no duplicate tooltip
+    // (undefined, not null — PrimeNG's pTooltip rejects null).
+    fixture.componentRef.setInput('label', 'Sign out other sessions');
+    fixture.detectChanges();
+    expect(cmp.resolvedTooltip()).toBeUndefined();
+
+    // Explicit tooltip always wins, even with a label.
+    fixture.componentRef.setInput('tooltip', 'Custom hint');
+    fixture.detectChanges();
+    expect(cmp.resolvedTooltip()).toBe('Custom hint');
+  });
 });
