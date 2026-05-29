@@ -1,10 +1,7 @@
 <p-toast position="top-right" />
 
 <section class="form" data-cy="academy-form">
-  <app-page-header
-    [eyebrow]="'academy.form.eyebrow' | translate"
-    [title]="'academy.form.title' | translate"
-  />
+  <app-page-header [title]="'academy.form.title' | translate" />
 
   @if (error()) {
     <p-message

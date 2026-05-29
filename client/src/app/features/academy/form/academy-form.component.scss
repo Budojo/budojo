@@ -2,9 +2,6 @@
 // all through design-system tokens. No raw hex, no invented spacing.
 
 .form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
   // Narrow-card layout — kept at 40rem until the hierarchy rework
   // (#261 follow-up) lands a wide header + narrow card aligned left
   // INSIDE a wide content container. Until then we centre on desktop
@@ -13,6 +10,14 @@
   // where the wrapper already fills the shell content area.
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
+
+  // <app-page-header> owns the title→body gap (#1126); the body keeps the
+  // grouped-list rhythm.
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
 }
 
 .form__alert {

@@ -1,7 +1,4 @@
 .profile-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
   // Narrow-card layout — kept at 640px until the hierarchy rework
   // (#261 follow-up) lands a wide header + narrow card aligned left
   // INSIDE a wide content container. Until then we centre on desktop
@@ -11,6 +8,14 @@
   max-width: 640px;
   margin: 0 auto;
 
+  // <app-page-header> owns the title→body gap (#1126); the body keeps the
+  // settings rhythm.
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
   // Tab strip (#847). Same shape as `athlete-detail-page__tabs` — a
   // small top margin separates it from the page header above, and the
   // `p-tab` host carries an icon + label flex pair via ::ng-deep so
@@ -19,8 +24,6 @@
   // matching the athlete-detail strip keeps the dashboard's tab chrome
   // consistent across surfaces.
   &__tabs {
-    margin-top: 0.5rem;
-
     ::ng-deep p-tab {
       display: inline-flex;
       align-items: center;

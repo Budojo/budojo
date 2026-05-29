@@ -1,11 +1,16 @@
 .stats-page {
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
 
-  // __header / __eyebrow / __title / __subtitle now live in <app-page-header>.
+  // <app-page-header> owns the title→body gap (#1126); the body keeps the
+  // page rhythm. (__header / __eyebrow / __title / __subtitle live in the
+  // shared header component.)
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
   &__total {
     color: var(--p-text-muted-color);
     font-size: 0.9rem;

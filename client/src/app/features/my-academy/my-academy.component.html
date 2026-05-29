@@ -1,77 +1,79 @@
 <div class="my-academy">
-  <h1 class="my-academy__title">{{ 'athletePortal.academy.title' | translate }}</h1>
+  <app-page-header [title]="'athletePortal.academy.title' | translate" />
 
-  @if (loading()) {
-    <div class="my-academy__card" data-cy="my-academy-loading">
-      <p-skeleton width="60%" height="1.5rem" />
-      <p-skeleton width="100%" height="1rem" styleClass="mt-3" />
-      <p-skeleton width="80%" height="1rem" styleClass="mt-2" />
-      <p-skeleton width="40%" height="1rem" styleClass="mt-2" />
-    </div>
-  } @else if (loadError()) {
-    <p class="my-academy__empty" data-cy="my-academy-error">
-      {{ 'athletePortal.academy.errorBody' | translate }}
-    </p>
-  } @else if (academy() === null) {
-    <p class="my-academy__empty" data-cy="my-academy-empty">
-      {{ 'athletePortal.academy.emptyBody' | translate }}
-    </p>
-  } @else if (academy(); as a) {
-    <article class="my-academy__card" data-cy="my-academy-card">
-      <header class="my-academy__header">
-        @if (a.logo_url) {
-          <img
-            class="my-academy__logo"
-            [src]="a.logo_url"
-            [alt]="'athletePortal.academy.logoAlt' | translate: { name: a.name }"
-            loading="lazy"
-          />
-        } @else {
-          <span class="my-academy__logo-placeholder" aria-hidden="true">
-            {{ a.name.charAt(0) }}
-          </span>
-        }
-        <h2 class="my-academy__name" data-cy="my-academy-name">{{ a.name }}</h2>
-      </header>
+  <div class="my-academy__body">
+    @if (loading()) {
+      <div class="my-academy__card" data-cy="my-academy-loading">
+        <p-skeleton width="60%" height="1.5rem" />
+        <p-skeleton width="100%" height="1rem" styleClass="mt-3" />
+        <p-skeleton width="80%" height="1rem" styleClass="mt-2" />
+        <p-skeleton width="40%" height="1rem" styleClass="mt-2" />
+      </div>
+    } @else if (loadError()) {
+      <p class="my-academy__empty" data-cy="my-academy-error">
+        {{ 'athletePortal.academy.errorBody' | translate }}
+      </p>
+    } @else if (academy() === null) {
+      <p class="my-academy__empty" data-cy="my-academy-empty">
+        {{ 'athletePortal.academy.emptyBody' | translate }}
+      </p>
+    } @else if (academy(); as a) {
+      <article class="my-academy__card" data-cy="my-academy-card">
+        <header class="my-academy__header">
+          @if (a.logo_url) {
+            <img
+              class="my-academy__logo"
+              [src]="a.logo_url"
+              [alt]="'athletePortal.academy.logoAlt' | translate: { name: a.name }"
+              loading="lazy"
+            />
+          } @else {
+            <span class="my-academy__logo-placeholder" aria-hidden="true">
+              {{ a.name.charAt(0) }}
+            </span>
+          }
+          <h2 class="my-academy__name" data-cy="my-academy-name">{{ a.name }}</h2>
+        </header>
 
-      <dl class="my-academy__fields">
-        @if (addressLine(a); as addr) {
-          <div class="my-academy__row">
-            <dt>{{ 'athletePortal.academy.addressLabel' | translate }}</dt>
-            <dd data-cy="my-academy-address">{{ addr }}</dd>
-          </div>
-        }
-        @if (phoneLine(a); as phone) {
-          <div class="my-academy__row">
-            <dt>{{ 'athletePortal.academy.phoneLabel' | translate }}</dt>
-            <dd>
-              <a [href]="phoneHref(a)" data-cy="my-academy-phone">{{ phone }}</a>
-            </dd>
-          </div>
-        }
-        @if (a.website) {
-          <div class="my-academy__row">
-            <dt>{{ 'athletePortal.academy.websiteLabel' | translate }}</dt>
-            <dd>
-              <a [href]="a.website" target="_blank" rel="noopener noreferrer">{{ a.website }}</a>
-            </dd>
-          </div>
-        }
-      </dl>
+        <dl class="my-academy__fields">
+          @if (addressLine(a); as addr) {
+            <div class="my-academy__row">
+              <dt>{{ 'athletePortal.academy.addressLabel' | translate }}</dt>
+              <dd data-cy="my-academy-address">{{ addr }}</dd>
+            </div>
+          }
+          @if (phoneLine(a); as phone) {
+            <div class="my-academy__row">
+              <dt>{{ 'athletePortal.academy.phoneLabel' | translate }}</dt>
+              <dd>
+                <a [href]="phoneHref(a)" data-cy="my-academy-phone">{{ phone }}</a>
+              </dd>
+            </div>
+          }
+          @if (a.website) {
+            <div class="my-academy__row">
+              <dt>{{ 'athletePortal.academy.websiteLabel' | translate }}</dt>
+              <dd>
+                <a [href]="a.website" target="_blank" rel="noopener noreferrer">{{ a.website }}</a>
+              </dd>
+            </div>
+          }
+        </dl>
 
-      @if (a.owner; as owner) {
-        <section class="my-academy__owner" data-cy="my-academy-owner">
-          <h3 class="my-academy__subtitle">
-            {{ 'athletePortal.academy.ownerSection' | translate }}
-          </h3>
-          <p class="my-academy__owner-name">{{ owner.first_name }} {{ owner.last_name }}</p>
-          <p>
-            <a [href]="'mailto:' + owner.email" data-cy="my-academy-owner-email">{{
-              owner.email
-            }}</a>
-          </p>
-        </section>
-      }
-    </article>
-  }
+        @if (a.owner; as owner) {
+          <section class="my-academy__owner" data-cy="my-academy-owner">
+            <h3 class="my-academy__subtitle">
+              {{ 'athletePortal.academy.ownerSection' | translate }}
+            </h3>
+            <p class="my-academy__owner-name">{{ owner.first_name }} {{ owner.last_name }}</p>
+            <p>
+              <a [href]="'mailto:' + owner.email" data-cy="my-academy-owner-email">{{
+                owner.email
+              }}</a>
+            </p>
+          </section>
+        }
+      </article>
+    }
+  </div>
 </div>

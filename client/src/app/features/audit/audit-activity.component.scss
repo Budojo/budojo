@@ -1,9 +1,14 @@
 .audit-page {
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+
+  // <app-page-header> owns the title→body gap (#1126); the body keeps the
+  // page rhythm.
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
 
   &__filters {
     display: flex;

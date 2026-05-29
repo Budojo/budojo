@@ -15,9 +15,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * Content projection slot `[pageHeaderCta]` for the primary CTA button.
  * Pages that have no CTA just omit it; the header collapses cleanly.
  *
- * The header itself has no extra outer margin — the parent page's grid
- * decides how much vertical room it gets. Component is purely visual,
- * OnPush.
+ * The header owns the title→body gap via a uniform bottom margin on its
+ * host (#1126) — the spacing under the title is identical on every
+ * dashboard page. Each page keeps its own card rhythm in a sibling
+ * container below the header. Component is purely visual, OnPush.
  */
 @Component({
   selector: 'app-page-header',
@@ -26,9 +27,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   template: `
     <header class="page-header" data-cy="page-header">
       <div class="page-header__title-area">
-        @if (eyebrow(); as e) {
-          <p class="page-header__eyebrow" data-cy="page-header-eyebrow">{{ e }}</p>
-        }
         <div class="page-header__title-row">
           <h1 class="page-header__title" data-cy="page-header-title">{{ title() }}</h1>
           @if (countLabel(); as count) {
@@ -46,13 +44,21 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   `,
   styles: [
     `
+      /* The header owns the title→body gap for every dashboard page (#1126):
+         one uniform value on the host keeps the spacing under the title
+         identical everywhere, while each page keeps its own card rhythm in a
+         sibling __body container below the header. */
+      :host {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+
       .page-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
         flex-wrap: wrap;
-        margin-bottom: 1rem;
       }
 
       .page-header__title-area {
@@ -60,16 +66,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         flex-direction: column;
         gap: 0.5rem;
         min-width: 0;
-      }
-
-      .page-header__eyebrow {
-        margin: 0;
-        font-size: 0.75rem;
-        font-weight: 500;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: var(--p-surface-500);
-        line-height: 1;
       }
 
       .page-header__title-row {
@@ -112,6 +108,5 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 export class PageHeaderComponent {
   readonly title = input.required<string>();
   readonly countLabel = input<string | null>(null);
-  readonly eyebrow = input<string | null>(null);
   readonly subtitle = input<string | null>(null);
 }

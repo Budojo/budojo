@@ -10,6 +10,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService, MeAcademy } from '../../core/services/academy.service';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /**
  * Athlete-portal "My academy" page (#618, M7 PR-D slice 2). Read-only
@@ -27,7 +28,7 @@ import { AcademyService, MeAcademy } from '../../core/services/academy.service';
 @Component({
   selector: 'app-my-academy',
   standalone: true,
-  imports: [TranslatePipe, SkeletonModule],
+  imports: [PageHeaderComponent, TranslatePipe, SkeletonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-academy.component.html',
   styleUrl: './my-academy.component.scss',

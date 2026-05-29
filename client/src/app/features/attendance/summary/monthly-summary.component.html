@@ -1,9 +1,5 @@
 <section class="summary-page" data-cy="monthly-summary-page">
-  <app-page-header
-    [eyebrow]="'attendance.summary.eyebrow' | translate"
-    [title]="monthLabel()"
-    [countLabel]="summaryCountLabel()"
-  >
+  <app-page-header [title]="monthLabel()" [countLabel]="summaryCountLabel()">
     <div pageHeaderCta class="summary-page__nav">
       <p-button
         icon="pi pi-chevron-left"
