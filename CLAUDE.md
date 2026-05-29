@@ -23,6 +23,7 @@ The repo uses a **hierarchical `CLAUDE.md`** layout. Claude Code loads the neare
 - [`release-flow.md`](./docs/development/release-flow.md) — semantic-release cadence, `## Auto-closes` block, auto-sweep, post-release sweep
 - [`reviewer-workflow.md`](./docs/development/reviewer-workflow.md) — Claude reviewer pipeline, reply rules, auto-poll loop
 - [`pr-labels.md`](./docs/development/pr-labels.md) — type/status labels, PR checklist, PR body conventions
+- [`visual-verification.md`](./docs/development/visual-verification.md) — mandatory in-browser smoke before push for visible UI changes; local screenshot recipe
 
 If a rule here and a rule in a sub-file conflict, **the sub-file wins** for that scope. If a rule here and a runbook conflict, **the runbook is the implementation detail** — fix whichever drifted.
 

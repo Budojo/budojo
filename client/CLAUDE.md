@@ -203,6 +203,8 @@ Run locally via `./.claude/scripts/test-client.sh` (prettier --write + lint + vi
 - Apply multi-viewport only where layout actually matters (forms, lists, modals, navigation chrome). Pure logic specs stay at default viewport.
 - The non-trivial assertion at narrow viewports: `document.scrollWidth <= clientWidth` — true exactly when no child element broke out of the viewport. CSS `text-overflow: ellipsis` does NOT change `textContent`, so checking visible text alone is a false-positive guard.
 
+Multi-viewport specs catch layout breaks mechanically, but the rendered result of any visible change still needs a real-browser smoke before push — gates don't see pixels. The local screenshot recipe (the `cypress/included` image; the Alpine `budojo_client` container can't launch Cypress itself) lives in [`docs/development/visual-verification.md`](../docs/development/visual-verification.md).
+
 ---
 
 ## What Claude Should Always Do — client-specific
@@ -216,4 +218,5 @@ Run locally via `./.claude/scripts/test-client.sh` (prettier --write + lint + vi
 - **State via signals**, not `BehaviorSubject` where a `signal()` works.
 - **Reactive Forms, not template-driven**, for anything beyond a two-field filter.
 - **Run `./.claude/scripts/test-client.sh` before every push.** All three (prettier + lint + vitest) must be clean. Cypress runs in CI.
+- **Visually verify EVERY visible change before push.** Gates verify code, not the rendered result. Anything the user sees — template, SCSS, icon, copy, colour, layout, shared-component adoption, responsive — gets a real-browser smoke at desktop + mobile (no "trivial" exception). See [`docs/development/visual-verification.md`](../docs/development/visual-verification.md) for the screenshot recipe. Skip only when the environment genuinely can't render it — then say so explicitly.
 - **Keep `docs/api/v1.yaml` in sync** if you change how the SPA consumes the API (e.g. new query param). See root `CLAUDE.md` § Documentation discipline.
