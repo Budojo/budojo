@@ -7,7 +7,7 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -23,6 +23,11 @@ import {
   CreateSheetAction,
   CreateSheetComponent,
 } from '../../shared/components/create-sheet/create-sheet.component';
+import {
+  RailBrand,
+  RailProfile,
+  SideRailComponent,
+} from '../../shared/components/side-rail/side-rail.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { SearchPaletteComponent } from '../search/search-palette.component';
 import { NotificationBellComponent } from '../notifications/notification-bell.component';
@@ -46,10 +51,10 @@ import { VERSION } from '../../../environments/version';
   imports: [
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
     BottomNavComponent,
     CreateSheetComponent,
     BrandGlyphComponent,
+    SideRailComponent,
     UserAvatarComponent,
     SearchPaletteComponent,
     NotificationBellComponent,
@@ -161,6 +166,26 @@ export class DashboardComponent implements OnInit {
   protected readonly navAriaLabel = computed<string>(() => {
     this.languageService.currentLang();
     return this.translate.instant('nav.barAriaLabel');
+  });
+
+  /** Desktop rail brand — academy name + logo → the academy home. */
+  protected readonly railBrand = computed<RailBrand>(() => ({
+    label: this.brandLabel(),
+    logoUrl: this.academyLogoUrl(),
+    routerLink: '/dashboard/academy',
+  }));
+
+  /** Desktop rail profile chip → the More hub; null until the user hydrates. */
+  protected readonly railProfile = computed<RailProfile | null>(() => {
+    const u = this.user();
+    return u
+      ? {
+          name: this.userName(),
+          avatarUrl: this.userAvatarUrl(),
+          handle: u.handle,
+          routerLink: '/dashboard/more',
+        }
+      : null;
   });
 
   /** Role-aware quick actions for the ➕ sheet (owner: mark attendance / add athlete / post). */

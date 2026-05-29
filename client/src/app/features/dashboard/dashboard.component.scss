@@ -1,12 +1,10 @@
 // Owner dashboard shell — mobile-first, scales up at the rail breakpoint.
 // Social-native nav: mobile (<768px) is a topbar (brand + bell + avatar) +
-// a fixed bottom tab bar (#1111); desktop (>=768px) is a left social rail
-// (#1112, the Instagram/X pattern, mirroring the athlete shell) — the same
-// IA as the bottom nav, surfaced vertically, with the dense SaaS sidebar
-// retired. Canon: MD3 8dp grid, theme tokens only, decelerate-cubic motion.
+// a fixed bottom tab bar (#1111); desktop (>=768px) is the shared
+// app-side-rail (#1120, mirroring the athlete shell). The dense SaaS sidebar
+// is retired. Canon: MD3 8dp grid, theme tokens only, decelerate-cubic motion.
 
 $sidebar-breakpoint: 768px;
-$rail-width: 15rem;
 $topbar-height: 3.5rem;
 $bottom-nav-height: 3.5rem;
 
@@ -97,165 +95,8 @@ $bottom-nav-height: 3.5rem;
   }
 }
 
-// ── Desktop social rail (>=768px) ───────────────────────────────────────────
-
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  width: $rail-width;
-  padding: 1rem 0.75rem;
-  background: var(--p-content-background);
-  border-right: 1px solid var(--p-content-border-color);
-
-  // Mobile: the rail is replaced by the bottom tab bar.
-  @media (max-width: $sidebar-breakpoint - 1) {
-    display: none;
-  }
-
-  @media (min-width: $sidebar-breakpoint) {
-    flex: 0 0 $rail-width;
-    height: 100dvh;
-  }
-
-  &__brand {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem 1rem;
-    color: var(--p-text-color);
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 1.125rem;
-    min-width: 0;
-
-    &:focus-visible {
-      outline: 2px solid var(--p-primary-color);
-      outline-offset: 2px;
-      border-radius: var(--p-border-radius-sm);
-    }
-  }
-
-  &__logo {
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: var(--p-border-radius-sm);
-    flex-shrink: 0;
-  }
-
-  &__brand-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  // Prominent ➕ — the social-app "create" affordance. Filled indigo, the
-  // one primary CTA in the rail; opens the shared create sheet.
-  &__create {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin: 0 0.25rem 0.75rem;
-    padding: 0.75rem 1rem;
-    min-height: 3rem;
-    border: 0;
-    border-radius: var(--p-border-radius-lg);
-    background: var(--p-primary-color);
-    color: var(--p-primary-contrast-color);
-    font: inherit;
-    font-weight: 600;
-    font-size: 0.9375rem;
-    cursor: pointer;
-    transition: filter var(--budojo-motion-fast) var(--budojo-motion-decelerate);
-
-    i {
-      font-size: 1.125rem;
-    }
-
-    &:hover {
-      filter: brightness(1.05);
-    }
-  }
-
-  &__nav {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  &__item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    min-height: 3rem; // 48px — Fitts
-    border-radius: var(--p-border-radius-md);
-    color: var(--p-text-color);
-    text-decoration: none;
-    font-size: 0.9375rem;
-    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
-
-    i {
-      font-size: 1.25rem;
-      width: 1.5rem;
-      text-align: center;
-      color: var(--p-text-color-secondary);
-    }
-
-    &:hover {
-      background: var(--p-content-hover-background);
-    }
-
-    // Active: the IG/X treatment — bold label + indigo glyph, on a faint
-    // fill so the current destination reads at a glance.
-    &--active {
-      font-weight: 600;
-      background: var(--p-content-hover-background);
-
-      i {
-        color: var(--p-primary-color);
-      }
-    }
-  }
-
-  // Profile pinned at the bottom (the IG/X account anchor) → the More hub
-  // (settings, language, sign-out live there).
-  &__profile {
-    margin-top: auto;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--p-border-radius-md);
-    color: var(--p-text-color);
-    text-decoration: none;
-    transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
-
-    &:hover {
-      background: var(--p-content-hover-background);
-    }
-  }
-
-  &__profile-meta {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-
-  &__profile-name {
-    font-weight: 500;
-    font-size: 0.9375rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__profile-handle {
-    font-size: 0.8125rem;
-    color: var(--p-text-color-secondary);
-  }
-}
+// Desktop social rail (>=768px) is the shared `app-side-rail` (#1120) — its
+// chrome lives in that component; the shell only feeds it inputs.
 
 // Bottom tab bar — mobile only; the rail owns navigation on desktop.
 .mobile-nav {
