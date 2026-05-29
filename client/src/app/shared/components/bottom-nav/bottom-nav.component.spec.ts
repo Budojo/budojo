@@ -26,7 +26,13 @@ class HostComponent {
     { icon: 'pi pi-home', label: 'Feed', routerLink: '/feed', dataCy: 'nav-feed' },
     { icon: 'pi pi-bolt', label: 'Academy', routerLink: '/academy', dataCy: 'nav-academy' },
     { icon: 'pi pi-bell', label: 'Alerts', routerLink: '/alerts', dataCy: 'nav-alerts', badge: 3 },
-    { icon: 'pi pi-user', label: 'Profile', routerLink: '/profile', dataCy: 'nav-profile', badge: 0 },
+    {
+      icon: 'pi pi-user',
+      label: 'Profile',
+      routerLink: '/profile',
+      dataCy: 'nav-profile',
+      badge: 0,
+    },
   ];
   center: BottomNavCenterAction | null = CENTER;
   centerCount = 0;
