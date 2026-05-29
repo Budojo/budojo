@@ -1025,7 +1025,9 @@ paths:
                               type: string
                             avatar_url:
                               type: string
+                              format: uri
                               nullable: true
+                              example: 'https://api.budojo.local/storage/avatars/u-42.jpg?v=1716840000'
                         read_at:
                           type: string
                           format: date-time
