@@ -20,7 +20,7 @@ final class NotificationActor
     public static function fromUser(User $user): array
     {
         return [
-            'name' => trim($user->first_name . ' ' . $user->last_name),
+            'name' => $user->full_name,
             'avatar_url' => $user->avatar_url,
         ];
     }
