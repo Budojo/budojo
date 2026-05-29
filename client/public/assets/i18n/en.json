@@ -34,7 +34,15 @@
     "signOut": "Sign out",
     "privacy": "Privacy",
     "stats": "Stats",
-    "help": "Help"
+    "help": "Help",
+    "more": "More",
+    "barAriaLabel": "Primary",
+    "create": {
+      "title": "Create",
+      "markAttendance": "Mark attendance",
+      "addAthlete": "Add athlete",
+      "post": "New post"
+    }
   },
   "auth": {
     "shared": {

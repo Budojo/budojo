@@ -1,10 +1,11 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
 
-// M3.5 — mobile viewport smoke tests. Runs every spec at 390 × 844
-// (iPhone 13 portrait). The goal is to assert the shell behaves
-// correctly on a small viewport, not to re-test every feature — those
-// feature specs run at the Cypress default viewport and cover the
-// business logic.
+// M3.5 — mobile viewport smoke tests. Runs at 390 × 844 (iPhone 13
+// portrait). Asserts the owner shell behaves on a small viewport — since
+// the social-native nav refactor (#1111) that's the bottom tab bar + a
+// center ➕ create sheet; the hamburger off-canvas drawer is retired.
+// Feature specs run at the Cypress default viewport and cover the business
+// logic.
 
 const ACADEMY_OK = {
   statusCode: 200,
@@ -24,62 +25,56 @@ describe('Mobile shell (390 × 844)', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
     cy.viewport(390, 844);
+    // Catch-all FIRST so no unmocked background GET (e.g. the notification
+    // bell's /me/notifications hydrate) reaches the dev server and re-renders
+    // the shell mid-interaction — that surfaced as `cy.click()` "page updated
+    // while executing" flakes on the bottom-nav buttons. Specific overrides
+    // are registered after, so they win (Cypress resolves the most-recently-
+    // defined matching intercept).
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
-  it('shows the topbar hamburger and hides the off-canvas sidebar on load', () => {
+  it('shows the bottom tab bar on load and retires the hamburger drawer', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait(['@academy', '@athletes']);
 
-    cy.get('[data-cy="topbar-hamburger"]').should('be.visible');
-    cy.get('[data-cy="topbar-hamburger"]').should('have.attr', 'aria-expanded', 'false');
+    cy.get('[data-cy="bottomnav-athletes"]').should('be.visible');
+    cy.get('[data-cy="bottomnav-create"]').should('be.visible');
+    cy.get('[data-cy="bottomnav-more"]').should('be.visible');
 
-    // Sidebar element is in the DOM but off-canvas — its brand-name text
-    // should not be in the reachable tap zone (translateX(-100%)).
+    // The off-canvas drawer + its hamburger are gone (#1111).
+    cy.get('[data-cy="topbar-hamburger"]').should('not.exist');
     cy.get('[data-cy="drawer-backdrop"]').should('not.exist');
   });
 
-  it('opens the drawer on hamburger tap and closes it on backdrop tap', () => {
+  it('opens the ➕ create sheet from the center button and dismisses it', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait(['@academy', '@athletes']);
 
-    cy.get('[data-cy="topbar-hamburger"]').click();
-    cy.get('[data-cy="topbar-hamburger"]').should('have.attr', 'aria-expanded', 'true');
-    // `.exist` over `.be.visible`: the backdrop is conditionally mounted
-    // via `@if (sidebarOpen())`, so existing in the DOM IS the assertion
-    // we want. Cypress' `be.visible` runs the same "not covered" check
-    // that biases the click() below — at this viewport the sidebar
-    // covers the backdrop's center and the visibility check would
-    // false-fail even though the user can clearly see the right edge.
-    cy.get('[data-cy="drawer-backdrop"]').should('exist');
-    cy.get('.sidebar--open').should('exist');
-    cy.get('.sidebar__brand-name').should('contain.text', 'Test Academy');
+    cy.get('[role="dialog"]').should('not.exist');
 
-    // The backdrop is a full-viewport fixed element, but at 390×844 the
-    // sidebar (16 rem = 256 px) covers the left 2/3. Cypress runs a
-    // visibility check on the ELEMENT (not the click coord) before the
-    // click — and "covered by another element" makes the whole element
-    // fail visibility upfront, so `.click('right')` alone doesn't escape.
-    // `{ force: true }` is Cypress' documented bypass for this case
-    // (https://docs.cypress.io/guides/core-concepts/interacting-with-elements#Visibility):
-    // the element IS user-visible at the chosen coord, the geometry
-    // check is just wrong. Real users tap there every day.
-    cy.get('[data-cy="drawer-backdrop"]').click('right', { force: true });
-    cy.get('[data-cy="drawer-backdrop"]').should('not.exist');
-    cy.get('[data-cy="topbar-hamburger"]').should('have.attr', 'aria-expanded', 'false');
+    cy.get('[data-cy="bottomnav-create"]').click();
+    cy.get('[role="dialog"]').should('exist');
+    cy.get('[data-cy="create-attendance"]').should('be.visible');
+    cy.get('[data-cy="create-athlete"]').should('be.visible');
+    cy.get('[data-cy="create-post"]').should('be.visible');
+
+    // Esc closes the p-dialog bottom sheet.
+    cy.get('body').type('{esc}');
+    cy.get('[role="dialog"]').should('not.exist');
   });
 
-  it('closes the drawer when a nav link is tapped', () => {
+  it('navigates to the More hub from the bottom-nav More tab', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait(['@academy', '@athletes']);
 
-    cy.get('[data-cy="topbar-hamburger"]').click();
-    cy.get('.sidebar__nav-item').contains('Athletes').click();
-
-    // Already on /dashboard/athletes; the closeSidebar side-effect still fires.
-    cy.get('[data-cy="drawer-backdrop"]').should('not.exist');
+    cy.get('[data-cy="bottomnav-more"]').click();
+    cy.location('pathname').should('eq', '/dashboard/more');
+    cy.get('[data-cy="owner-more"]').should('be.visible');
+    cy.get('[data-cy="owner-more-signout"]').should('be.visible');
   });
 
   it('athletes list page fits the viewport (no horizontal overflow)', () => {

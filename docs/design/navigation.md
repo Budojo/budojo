@@ -31,13 +31,13 @@ Bottom nav = **max 5 slots** (Miller + iOS/Material guidance). The center slot i
 | 2 | `pi pi-users` | Athletes | the roster — core daily |
 | 3 (center) | `pi pi-plus` | **➕ create** | mark attendance / + athlete / post |
 | 4 | `pi pi-comments` | Community | the feed |
-| 5 | `pi pi-bars` | Profile / More | avatar → the demoted destinations |
+| 5 | `pi pi-ellipsis-h` | More | a hub page (`/dashboard/more`) of the demoted destinations + sign-out |
 
-### Demoted to a Profile / More screen (NOT tabs)
+### Demoted to the More hub (NOT tabs)
 
-`Stats`, `Activity`, `Settings`, `Support`, `What's-new`, `Sign out`, language toggle. These move off the primary bar into a "Profile / More" screen reached from slot 5. The hamburger drawer is retired (its swipe-gesture + scroll-lock code goes with it) or repurposed as that "More" screen.
+`Attendance`, `Stats`, `Activity`, `Settings`, `My profile`, `Support`, `What's-new`, a dedicated `Language` picker, and `Sign out`. These live on the `/dashboard/more` hub (`OwnerMoreComponent`, #1111) reached from slot 5 — the mirror of the athlete `/dashboard/me/more` hub (#1109). The hamburger off-canvas drawer — and its swipe-to-close gesture + body-scroll-lock — is retired with this slice. The full daily attendance grid is one tap into More; the ➕ "Mark attendance" is the fast path to today's marking.
 
-What **stays**: the Cmd/Ctrl-K command palette (`#426`) and the notification bell remain reachable (the bell folds into the athlete Notifications tab; on owner it stays in the topbar or folds into More — decided in the owner slice).
+What **stays**: the Cmd/Ctrl-K command palette (`#426`) and the notification bell remain reachable (the bell folds into the athlete Notifications tab; on owner it stays in the mobile topbar (#1111)).
 
 ## The ➕ create action — `app-create-sheet`
 

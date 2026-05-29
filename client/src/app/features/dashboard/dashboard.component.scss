@@ -1,13 +1,14 @@
-// Dashboard shell — mobile-first, scales up to desktop at the sidebar
-// breakpoint. Canon: MD3 8dp grid, theme tokens only, transitions on the
-// MD3 easing standard.
-//
-// Breakpoint: 768px. Below, we get a mobile topbar + off-canvas drawer.
-// At/above, the traditional two-column layout (fixed sidebar + main).
+// Owner dashboard shell — mobile-first, scales up at the sidebar breakpoint.
+// Social-native nav (#1111): mobile (<768px) is a topbar (brand + bell +
+// avatar) + a fixed bottom tab bar; the hamburger off-canvas drawer is
+// retired. Desktop (>=768px) is the two-column layout (fixed sidebar +
+// main); the desktop social rail is #1112. Canon: MD3 8dp grid, theme
+// tokens only, motion on the decelerate-cubic standard.
 
 $sidebar-breakpoint: 768px;
 $sidebar-width: 16rem;
-$topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
+$topbar-height: 3.5rem;
+$bottom-nav-height: 3.5rem;
 
 .layout {
   display: flex;
@@ -23,22 +24,6 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     height: 100dvh;
     overflow: hidden;
   }
-
-  &__backdrop {
-    position: fixed;
-    inset: 0;
-    // `--p-mask-background` is the PrimeNG semantic token for modal/overlay
-    // backdrops (`rgba(0,0,0,0.4)` in light, `0.6` in dark). Same token
-    // PrimeNG's own p-dialog uses — we stay consistent with the overlay
-    // darkness rhythm.
-    background: var(--p-mask-background);
-    z-index: 40;
-    animation: fade-in 200ms cubic-bezier(0.2, 0, 0, 1);
-
-    @media (min-width: $sidebar-breakpoint) {
-      display: none;
-    }
-  }
 }
 
 // ── Mobile topbar ──────────────────────────────────────────────────────────────
@@ -47,9 +32,9 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  // padding-top expands by the OS-reported safe-area inset on
-  // Android 15 edge-to-edge mode + iOS notched devices, so the
-  // hamburger / brand never get clipped by the status bar (#1046).
+  // padding-top expands by the OS-reported safe-area inset on Android 15
+  // edge-to-edge mode + iOS notched devices, so the brand never gets
+  // clipped by the status bar (#1046).
   padding: max(0.5rem, var(--budojo-safe-top)) 1rem 0.5rem;
   min-height: $topbar-height;
   background: var(--p-surface-900);
@@ -57,40 +42,10 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   border-bottom: 1px solid var(--p-surface-700);
   position: sticky;
   top: 0;
-  // Sits above both the backdrop (40) and the drawer sidebar (50) so the
-  // hamburger stays interactive while the drawer is open — tap it a second
-  // time to close, matching the "Close navigation" aria-label.
   z-index: 60;
 
   @media (min-width: $sidebar-breakpoint) {
     display: none;
-  }
-
-  &__hamburger {
-    all: unset;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 3rem;
-    height: 3rem; // 48 × 48 — Fitts
-    border-radius: var(--p-border-radius-md);
-    cursor: pointer;
-    transition: background 200ms cubic-bezier(0.2, 0, 0, 1);
-
-    i {
-      font-size: 1.25rem;
-    }
-
-    &:hover,
-    &:focus-visible {
-      background: var(--p-surface-800);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--p-primary-400);
-      outline-offset: -2px;
-    }
   }
 
   &__title {
@@ -100,9 +55,7 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: -0.01em;
-    // The title is now an <a> (routes to /dashboard) — strip the default
-    // underline + inherited blue. The logo tile + wordmark already signal
-    // affordance without needing the link chrome.
+    margin-right: auto;
     color: inherit;
     text-decoration: none;
     transition: opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
@@ -118,9 +71,6 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     }
   }
 
-  // The logo tile has its own dark background + rounded corners baked in.
-  // Size: 28 px — visually weighted against the ~16 px word mark next to it
-  // without dominating the 48 px topbar.
   &__logo {
     width: 1.75rem;
     height: 1.75rem;
@@ -128,12 +78,9 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     flex-shrink: 0;
   }
 
-  // User-avatar chip sits at the trailing edge of the topbar (#411). The
-  // `margin-left: auto` is what visually separates it from the brand-link
-  // group. Tap target = chip avatar (32 px) + 0.5rem padding on each side
-  // = 48 px total, honouring Fitts.
+  // User-avatar chip at the trailing edge (#411). Tap target = chip avatar
+  // (32px) + 0.5rem padding each side = 48px, honouring Fitts.
   &__user-link {
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -155,7 +102,7 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   }
 }
 
-// ── Sidebar ────────────────────────────────────────────────────────────────────
+// ── Sidebar (desktop only) ───────────────────────────────────────────────────
 
 .sidebar {
   display: flex;
@@ -163,81 +110,24 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   background: var(--p-surface-900);
   color: var(--p-surface-0);
   overflow-y: auto;
-  // `overscroll-behavior: contain` stops iOS Safari + Android Chrome from
-  // rubber-banding the drawer when the user drags inside it past the
-  // scrollable bounds. Combined with the body scroll-lock toggle in
-  // styles.scss (`body.app-drawer-open { overflow: hidden }`), this kills
-  // the "drawer bounces up and down + page underneath scrolls" bug pair
-  // that landed in v2.10.1 (#671).
-  overscroll-behavior: contain;
-  // `touch-action: pan-y` tells the browser to keep handling native vertical
-  // scrolling on the drawer's overflow-y, but to leave horizontal gestures
-  // to our pointer handlers (swipe-to-close, #668). Without this hint some
-  // browsers preemptively cancel pointermove on horizontal touches because
-  // they think we want native horizontal pan, making the swipe unreliable.
-  touch-action: pan-y;
 
-  // Mobile: off-canvas drawer. Fixed position, slides in from left when
-  // `.sidebar--open` is applied. Sits above the backdrop, below the topbar.
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  height: 100dvh;
-  // Push the drawer header below the status bar on edge-to-edge
-  // surfaces; the rest of the drawer content scrolls under the
-  // gradient as before (#1046).
-  padding-top: var(--budojo-safe-top);
-  width: $sidebar-width;
-  max-width: calc(100vw - 3rem); // never full-cover — keep a close hint
-  transform: translateX(-100%);
-  // `visibility: hidden` hides the off-canvas drawer from assistive tech AND
-  // keyboard tab order — screen readers respect it, `transform` alone doesn't.
-  // Delayed by the transition duration so the slide-out animation still plays
-  // before the element becomes inert; on slide-in, visibility flips to `visible`
-  // immediately so the content is reachable as soon as it starts animating in.
-  visibility: hidden;
-  transition:
-    transform 200ms cubic-bezier(0.2, 0, 0, 1),
-    visibility 0s linear 200ms;
-  z-index: 50;
-  will-change: transform;
-
-  &--open {
-    transform: translateX(0);
-    visibility: visible;
-    transition:
-      transform 200ms cubic-bezier(0.2, 0, 0, 1),
-      visibility 0s linear 0s;
+  // Mobile: the sidebar is replaced by the bottom tab bar (#1111).
+  @media (max-width: $sidebar-breakpoint - 1) {
+    display: none;
   }
 
-  // During a swipe-to-close drag the transform is bound inline from the
-  // component (`[style.transform]`) so the drawer follows the finger 1:1.
-  // Stripping the CSS transition here removes the easing curve that would
-  // otherwise add ~200ms of lag behind the finger on every pointermove. On
-  // release the `--dragging` class is removed and the rule above takes over
-  // again, animating either the snap-back-to-open or the snap-to-closed in
-  // the canon's 200ms decelerate.
-  &--dragging {
-    transition: none;
-  }
-
-  // Desktop: static, always visible — drops the off-canvas visibility logic.
+  // Desktop: static, always visible, fixed-width column.
   @media (min-width: $sidebar-breakpoint) {
-    position: static;
-    transform: none;
-    visibility: visible;
-    height: auto;
+    flex: 0 0 $sidebar-width;
     width: $sidebar-width;
     min-width: $sidebar-width;
-    max-width: none;
+    height: 100dvh;
   }
 
   // ── Brand area (academy identity, non-interactive after #166) ─────────────
 
   &__brand {
     box-sizing: border-box;
-
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -247,11 +137,9 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     border-bottom: 1px solid var(--p-surface-700);
   }
 
-  // Brand logo — 32 px tile. Renders either an academy-uploaded <img> OR
-  // the inline Budojo <svg> fallback (#99). Both share these dimensions;
-  // the border-radius applies to the <img> branch (raster/photo logo) and
-  // is harmless on the transparent inline SVG. `flex-shrink: 0` keeps the
-  // tile size locked while the brand text ellipses.
+  // Brand logo — 32px tile. Either an academy-uploaded <img> OR the inline
+  // Budojo <svg> fallback (#99); the border-radius applies to the raster
+  // branch and is harmless on the transparent inline SVG.
   &__logo {
     width: 2rem;
     height: 2rem;
@@ -303,14 +191,14 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    min-height: 3rem; // 48px — Fitts touch (bumped from 40px for mobile)
+    min-height: 3rem; // 48px — Fitts
     border-radius: var(--p-border-radius-md);
     color: var(--p-surface-300);
     text-decoration: none;
     font-size: 0.9375rem; // MD3 label-large
     transition:
-      background 200ms cubic-bezier(0.2, 0, 0, 1),
-      color 200ms cubic-bezier(0.2, 0, 0, 1);
+      background var(--budojo-motion-base) var(--budojo-motion-decelerate),
+      color var(--budojo-motion-base) var(--budojo-motion-decelerate);
 
     i {
       font-size: 1rem;
@@ -332,12 +220,8 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
       }
     }
 
-    // Sign-out modifier — the row is a <button>, so we neutralise the
-    // browser's button defaults (background, border, font, cursor) but
-    // keep the inherited `.sidebar__nav-item` flex/padding/color rules.
-    // No `all: unset` — that resets `font-size` and `min-height` too, and
-    // we don't want to redeclare half the parent block. Width comes from
-    // the flex-column parent (`__footer`), so no explicit `width: 100%`.
+    // Sign-out modifier — the row is a <button>, so neutralise the button
+    // defaults but keep the inherited flex/padding/color from the block.
     &--signout {
       appearance: none;
       background: transparent;
@@ -353,10 +237,9 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     }
   }
 
-  // Footer section — separated from the nav so the sign-out doesn't read
-  // as another destination. Pushed to the bottom via margin-top auto.
-  // Flex column mirrors `__nav` so the sign-out button stretches to the
-  // full sidebar width like every other nav row, no `width: 100%` magic.
+  // Footer — separated from the nav so sign-out doesn't read as another
+  // destination. Pushed to the bottom via margin-top auto; flex column so
+  // the sign-out button stretches to the full sidebar width.
   &__footer {
     padding: 0.5rem;
     margin-top: auto;
@@ -364,87 +247,12 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
     display: flex;
     flex-direction: column;
   }
+}
 
-  // Language toggle (#273) — two pill buttons inline, the active
-  // language is disabled + visually emphasised. Sits in the footer
-  // block as a preference control. Touch target ≥ 44 px via padding
-  // (canon § Fitts; pill targets relax the 48 floor a touch since
-  // they live below the dense nav rows and don't compete for thumb
-  // reach the way nav rows do).
-  &__lang {
-    display: flex;
-    gap: 0.25rem;
-    margin: 0.5rem 0.5rem 0.25rem;
-    padding: 0.25rem;
-    background: var(--p-surface-800);
-    border-radius: var(--p-border-radius-md);
-  }
-
-  &__lang-option {
-    appearance: none;
-    background: transparent;
-    border: 0;
-    color: var(--p-surface-300);
-    font: inherit;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    flex: 1;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--p-border-radius-sm);
-    cursor: pointer;
-    transition:
-      background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
-      color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
-
-    &:hover:not(:disabled) {
-      background: var(--p-surface-700);
-      color: var(--p-surface-0);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--p-primary-400);
-      outline-offset: 2px;
-    }
-
-    &--active {
-      background: var(--p-surface-0);
-      color: var(--p-surface-900);
-      cursor: default;
-    }
-
-    &:disabled {
-      cursor: default;
-    }
-  }
-
-  // App version footer (#160) + Privacy link (#219). Apple-minimal —
-  // muted, 0.75rem, single line, separated by a middle dot. The
-  // Privacy link sits beside the version because both are footer-of-
-  // every-page chrome; one anchor + one identifier, nothing more.
-  &__version {
-    margin: 0.5rem 0 0;
-    padding: 0 0.5rem;
-    font-size: 0.75rem;
-    line-height: 1;
-    color: var(--p-surface-500);
-    font-variant-numeric: tabular-nums;
-    text-align: center;
-    user-select: text; // user can copy-paste the tag in a bug report
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.375rem;
-  }
-
-  &__legal-link {
-    color: var(--p-surface-500);
-    text-decoration: none;
-
-    &:hover,
-    &:focus-visible {
-      color: var(--p-primary-color);
-      text-decoration: underline;
-    }
+// Bottom tab bar — mobile only; the sidebar/rail owns navigation on desktop.
+.mobile-nav {
+  @media (min-width: $sidebar-breakpoint) {
+    display: none;
   }
 }
 
@@ -455,25 +263,18 @@ $topbar-height: 3.5rem; // 56px — Fitts touch target for the hamburger
   overflow-y: auto;
   background: var(--p-surface-50);
 
-  // Single source of truth for page-chrome padding (#261). Tokens scale
-  // at the 768px breakpoint via the rule in `styles/budojo-theme.scss`,
-  // so we don't need a media query here. Pages keep their own
-  // `max-width` + `margin: 0 auto` consuming the DERIVED inner-width
-  // tokens (`--budojo-page-content-max` / `--budojo-page-prose-max`)
-  // but never declare their own padding — the prose pages override only
-  // when their reading rhythm genuinely demands it. The bare
-  // `--budojo-container-*` tokens are the OUTER visual extent and are
-  // reserved for partials that keep their own padding (`_legal-page.scss`).
+  // Single source of truth for page-chrome padding (#261). Tokens scale at
+  // the 768px breakpoint via the rule in `styles/budojo-theme.scss`.
   padding: var(--budojo-page-padding-y) var(--budojo-page-padding-x);
-}
 
-// ── Motion ─────────────────────────────────────────────────────────────────────
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
+  // Clear the fixed bottom tab bar (+ iOS home indicator) on mobile.
+  @media (max-width: $sidebar-breakpoint - 1) {
+    padding-bottom: calc(
+      var(--budojo-page-padding-y) + #{$bottom-nav-height} + var(--budojo-safe-bottom)
+    );
   }
-  to {
-    opacity: 1;
+
+  @media (min-width: $sidebar-breakpoint) {
+    height: 100dvh;
   }
 }

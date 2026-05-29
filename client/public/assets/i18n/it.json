@@ -34,7 +34,15 @@
     "signOut": "Esci",
     "privacy": "Privacy",
     "stats": "Statistiche",
-    "help": "Aiuto"
+    "help": "Aiuto",
+    "more": "Altro",
+    "barAriaLabel": "Navigazione principale",
+    "create": {
+      "title": "Crea",
+      "markAttendance": "Segna presenza",
+      "addAthlete": "Aggiungi atleta",
+      "post": "Nuovo post"
+    }
   },
   "auth": {
     "shared": {
