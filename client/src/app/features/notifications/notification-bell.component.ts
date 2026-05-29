@@ -1,50 +1,21 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  HostListener,
-  OnInit,
-  ViewChild,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { DatePipe } from '@angular/common';
-import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
-import { Popover, PopoverModule } from 'primeng/popover';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TranslatePipe } from '@ngx-translate/core';
-import {
-  InboxNotification,
-  NotificationInboxService,
-} from '../../core/services/notification-inbox.service';
+import { NotificationInboxService } from '../../core/services/notification-inbox.service';
 
 /**
- * Bell-icon notification center (#418). Sits in the dashboard topbar
- * next to the user-avatar chip. Shows a badge with the unread count;
- * tapping the bell opens a PrimeNG `p-popover` listing the latest 20
- * rows. Each row is clickable — clicking navigates to the row's
- * `link` (when present) AND flips the row to read in the same call.
- * A "Mark all as read" CTA at the top bulk-flips.
- *
- * Data hydrates lazily — the first time the bell renders we fire one
- * GET to `/me/notifications`. The dashboard shell mounts the bell
- * once per page load, and the component re-fetches when the
- * document's visibility flips to `visible` (the user switched back
- * to the tab) so a notification produced server-side while the tab
- * was inactive lands in the badge on next focus without polling.
+ * Topbar notification bell (#418, #1129). Shows the unread badge and,
+ * on tap, navigates to the full-screen notifications page — the social
+ * refactor replaced the popover dropdown with a dedicated page, so the
+ * bell is now a pure entry point + unread indicator. The count hydrates
+ * on init and refreshes when the tab regains focus, so the badge stays
+ * truthful without polling.
  */
 @Component({
   selector: 'app-notification-bell',
   standalone: true,
-  imports: [
-    ButtonModule,
-    DatePipe,
-    PopoverModule,
-    ProgressSpinnerModule,
-    TooltipModule,
-    TranslatePipe,
-  ],
+  imports: [TooltipModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './notification-bell.component.html',
   styleUrl: './notification-bell.component.scss',
@@ -53,52 +24,36 @@ export class NotificationBellComponent implements OnInit {
   private readonly inboxService = inject(NotificationInboxService);
   private readonly router = inject(Router);
 
-  @ViewChild('panel') panel!: Popover;
-
-  protected readonly rows = this.inboxService.rows;
   protected readonly unread = this.inboxService.unread;
   protected readonly hasUnread = this.inboxService.hasUnread;
-  protected readonly loading = signal<boolean>(false);
 
   ngOnInit(): void {
     this.refresh();
   }
 
-  protected toggle(event: Event): void {
-    this.panel.toggle(event);
+  /**
+   * Tap the bell → the full-screen notifications page for the active shell.
+   * The shell is derived from the current URL, not the auth signal: the bell
+   * renders outside the `@if (user())` guard, so a tap before `/auth/me`
+   * hydrates would route an athlete to the owner page (#1130 review).
+   */
+  protected open(): void {
+    const target = this.router.url.includes('/dashboard/me/')
+      ? '/dashboard/me/notifications'
+      : '/dashboard/notifications';
+    void this.router.navigateByUrl(target);
   }
 
-  protected refresh(): void {
-    this.loading.set(true);
-    this.inboxService.load().subscribe({
-      next: () => this.loading.set(false),
-      error: () => this.loading.set(false),
-    });
-  }
-
-  protected openRow(row: InboxNotification): void {
-    if (row.read_at === null) {
-      this.inboxService.markAsRead(row.id).subscribe();
-    }
-    if (row.link !== null) {
-      this.router.navigate([row.link]);
-    }
-    this.panel.hide();
-  }
-
-  protected markAllRead(): void {
-    this.inboxService.markAllAsRead().subscribe();
+  private refresh(): void {
+    this.inboxService.load().subscribe({ error: () => undefined });
   }
 
   /**
-   * Refresh the list when the user switches BACK to this tab —
+   * Refresh the unread count when the user switches BACK to this tab —
    * `document:visibilitychange` firing with `visibilityState ===
-   * 'visible'` is the standard "tab is active again" signal. Covers
-   * the case where a notification was sent server-side while the tab
-   * was inactive; one indexed query, no background polling. Note:
-   * this is NOT a popover onShow hook — re-opening the bell popover
-   * within the same focused tab reads the in-memory state without an
-   * extra fetch, which is the right cost trade-off.
+   * 'visible'` is the standard "tab active again" signal. Covers a
+   * notification produced server-side while the tab was inactive; one
+   * indexed query, no background polling.
    */
   @HostListener('document:visibilitychange')
   onVisibilityChange(): void {

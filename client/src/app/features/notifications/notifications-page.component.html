@@ -1,0 +1,123 @@
+<div class="notifications">
+  <app-page-header [title]="'notifications.title' | translate">
+    @if (unread() > 0) {
+      <button
+        type="button"
+        pageHeaderCta
+        class="notifications__mark-all"
+        (click)="markAllAsRead()"
+        data-cy="notifications-mark-all"
+      >
+        {{ 'notifications.markAll' | translate }}
+      </button>
+    }
+  </app-page-header>
+
+  <div class="notifications__body">
+    <div class="notifications__filters" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        class="notifications__filter"
+        [class.notifications__filter--active]="!unreadOnly()"
+        [attr.aria-selected]="!unreadOnly()"
+        (click)="setUnreadOnly(false)"
+        data-cy="notifications-filter-all"
+      >
+        {{ 'notifications.filter.all' | translate }}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="notifications__filter"
+        [class.notifications__filter--active]="unreadOnly()"
+        [attr.aria-selected]="unreadOnly()"
+        (click)="setUnreadOnly(true)"
+        data-cy="notifications-filter-unread"
+      >
+        {{ 'notifications.filter.unread' | translate }}
+        @if (unread() > 0) {
+          <span class="notifications__filter-count">{{ unread() }}</span>
+        }
+      </button>
+    </div>
+
+    @if (loading()) {
+      <div class="notifications__skeletons" data-cy="notifications-loading">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <div class="notifications__skeleton-row">
+            <p-skeleton shape="circle" size="2.75rem" />
+            <div class="notifications__skeleton-lines">
+              <p-skeleton width="70%" height="0.9rem" />
+              <p-skeleton width="40%" height="0.8rem" styleClass="mt-2" />
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (loadError()) {
+      <p class="notifications__empty" data-cy="notifications-error">
+        {{ 'notifications.error' | translate }}
+      </p>
+    } @else if (isEmpty()) {
+      <div class="notifications__empty" data-cy="notifications-empty">
+        <i class="pi pi-bell-slash" aria-hidden="true"></i>
+        <p>
+          {{ (unreadOnly() ? 'notifications.emptyUnread' : 'notifications.empty') | translate }}
+        </p>
+      </div>
+    } @else {
+      @for (group of groups(); track group.key) {
+        <section class="notifications__group" [attr.data-cy]="'notifications-group-' + group.key">
+          <h2 class="notifications__group-label">
+            {{ 'notifications.group.' + group.key | translate }}
+          </h2>
+          <ul class="notifications__list">
+            @for (n of group.items; track n.id) {
+              @let v = visualFor(n.kind);
+              <li>
+                <button
+                  type="button"
+                  class="notification"
+                  [class.notification--unread]="!n.read_at"
+                  (click)="open(n)"
+                  [attr.data-cy]="'notification-' + n.id"
+                >
+                  <span class="notification__media">
+                    @if (n.actor; as actor) {
+                      <app-user-avatar [name]="actor.name" [url]="actor.avatar_url" size="chip" />
+                      <span
+                        [class]="'notification__badge notification__badge--' + v.tone"
+                        aria-hidden="true"
+                      >
+                        <i [class]="v.icon"></i>
+                      </span>
+                    } @else {
+                      <span
+                        [class]="'notification__tile notification__tile--' + v.tone"
+                        aria-hidden="true"
+                      >
+                        <i [class]="v.icon"></i>
+                      </span>
+                    }
+                  </span>
+
+                  <span class="notification__content">
+                    <span class="notification__title">{{ n.title }}</span>
+                    @if (n.body) {
+                      <span class="notification__detail">{{ n.body }}</span>
+                    }
+                    <span class="notification__time">{{ n.created_at | relativeTime }}</span>
+                  </span>
+
+                  @if (!n.read_at) {
+                    <span class="notification__dot" aria-hidden="true"></span>
+                  }
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+  </div>
+</div>

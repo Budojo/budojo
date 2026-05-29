@@ -11,6 +11,7 @@
       <app-brand-glyph class="topbar__logo" />
       Budojo
     </a>
+    <app-notification-bell />
     @if (user(); as topbarUser) {
       <app-user-avatar [name]="topbarUser.full_name" [url]="topbarUser.avatar_url" />
     }

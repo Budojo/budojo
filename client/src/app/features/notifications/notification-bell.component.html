@@ -4,7 +4,7 @@
   [attr.aria-label]="'notifications.bell.ariaLabel' | translate"
   [pTooltip]="'notifications.bell.tooltip' | translate"
   tooltipPosition="bottom"
-  (click)="toggle($event)"
+  (click)="open()"
   data-cy="notification-bell"
 >
   <i class="pi pi-bell" aria-hidden="true"></i>
@@ -18,68 +18,3 @@
     </span>
   }
 </button>
-
-<!--
-  Notification panel popover (#779). Carries a `styleClass` so the
-  global mobile override in `src/styles/budojo-theme.scss` can target
-  it — below 768px the popover is forced to an edge-to-edge pinned
-  panel under the topbar (no arrow), because at the bell's mid-topbar
-  position the auto-anchored PrimeNG popover slid to the viewport
-  edge and the arrow stopped pointing at the bell.
--->
-<p-popover
-  #panel
-  styleClass="notification-bell-popover"
-  [style]="{ width: '24rem', maxWidth: '90vw' }"
->
-  <div class="notification-panel" data-cy="notification-panel">
-    <header class="notification-panel__header">
-      <h2 class="notification-panel__title">
-        {{ 'notifications.bell.panelTitle' | translate }}
-      </h2>
-      @if (hasUnread()) {
-        <button
-          type="button"
-          class="notification-panel__mark-all"
-          (click)="markAllRead()"
-          data-cy="notification-mark-all-read"
-        >
-          {{ 'notifications.bell.markAllRead' | translate }}
-        </button>
-      }
-    </header>
-
-    @if (loading() && rows().length === 0) {
-      <div class="notification-panel__state" data-cy="notification-panel-loading">
-        <p-progress-spinner strokeWidth="3" styleClass="notification-panel__spinner" />
-      </div>
-    } @else if (rows().length === 0) {
-      <div class="notification-panel__state" data-cy="notification-panel-empty">
-        <i class="pi pi-inbox" aria-hidden="true"></i>
-        <p>{{ 'notifications.bell.empty' | translate }}</p>
-      </div>
-    } @else {
-      <ul class="notification-panel__list" data-cy="notification-panel-list">
-        @for (row of rows(); track row.id) {
-          <li>
-            <button
-              type="button"
-              class="notification-panel__row"
-              [class.notification-panel__row--unread]="row.read_at === null"
-              (click)="openRow(row)"
-              [attr.data-cy]="'notification-row-' + row.id"
-            >
-              <span class="notification-panel__row-title">{{ row.title }}</span>
-              <span class="notification-panel__row-body">{{ row.body }}</span>
-              @if (row.created_at) {
-                <span class="notification-panel__row-when">
-                  {{ row.created_at | date: 'short' }}
-                </span>
-              }
-            </button>
-          </li>
-        }
-      </ul>
-    }
-  </div>
-</p-popover>
