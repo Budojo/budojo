@@ -4,6 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
 import { LanguageSheetComponent } from '../../shared/components/language-sheet/language-sheet.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { VERSION } from '../../../environments/version';
 
 /**
@@ -17,7 +18,7 @@ import { VERSION } from '../../../environments/version';
   selector: 'app-me-more',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, LanguageSheetComponent],
+  imports: [PageHeaderComponent, RouterLink, TranslatePipe, LanguageSheetComponent],
   templateUrl: './me-more.component.html',
   styleUrl: './me-more.component.scss',
 })

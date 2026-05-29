@@ -9,20 +9,20 @@
   // aligns this list with its operative siblings.
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
 
-  &__header {
+  // <app-page-header> owns the title→body gap (#1126); the body keeps the
+  // page rhythm.
+  &__body {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 1rem;
   }
 
   &__back {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    margin-bottom: 1rem;
     color: var(--p-text-muted-color);
     text-decoration: none;
     font-size: 0.875rem;

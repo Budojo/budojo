@@ -4,49 +4,19 @@
 // stay ≥ 48 px on the row click target.
 
 .attendance {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
   // Page chrome (max-width + side padding) comes from the dashboard
   // shell tokens — see `styles/budojo-theme.scss` and `.main` in the
   // dashboard component.
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
-}
 
-.attendance__header {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
+  // <app-page-header> owns the title→body gap (#1126); the body keeps the
+  // check-in list rhythm.
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
-}
-
-.attendance__heading {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.attendance__eyebrow {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--p-text-muted-color);
-}
-
-.attendance__title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--p-surface-900);
 }
 
 // ── No-class-today banner (#854) ──────────────────────────────────────────────

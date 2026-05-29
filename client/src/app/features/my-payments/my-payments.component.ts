@@ -14,6 +14,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { AthletePayment, PaymentService } from '../../core/services/payment.service';
 import { LanguageService } from '../../core/services/language.service';
 import { localeFor } from '../../shared/utils/locale';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /**
  * Athlete-portal monthly payments page (M7 PR-D slice 4). Read-only
@@ -27,7 +28,7 @@ import { localeFor } from '../../shared/utils/locale';
 @Component({
   selector: 'app-my-payments',
   standalone: true,
-  imports: [TranslatePipe, DatePipe, SkeletonModule],
+  imports: [PageHeaderComponent, TranslatePipe, DatePipe, SkeletonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-payments.component.html',
   styleUrl: './my-payments.component.scss',

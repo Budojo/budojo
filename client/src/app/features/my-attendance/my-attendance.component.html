@@ -1,51 +1,53 @@
 <div class="my-attendance">
-  <h1 class="my-attendance__title">{{ 'athletePortal.attendance.title' | translate }}</h1>
+  <app-page-header [title]="'athletePortal.attendance.title' | translate" />
 
-  @if (loading()) {
-    <div class="my-attendance__card" data-cy="my-attendance-loading">
-      <p-skeleton width="40%" height="1.25rem" />
-      <p-skeleton width="100%" height="0.875rem" styleClass="mt-3" />
-      <p-skeleton width="100%" height="0.875rem" styleClass="mt-2" />
-      <p-skeleton width="60%" height="0.875rem" styleClass="mt-2" />
-    </div>
-  } @else if (loadError()) {
-    <p class="my-attendance__empty" data-cy="my-attendance-error">
-      {{ 'athletePortal.attendance.errorBody' | translate }}
-    </p>
-  } @else if (noProfile()) {
-    <p class="my-attendance__empty" data-cy="my-attendance-no-profile">
-      {{ 'athletePortal.attendance.noProfileBody' | translate }}
-    </p>
-  } @else if (records().length === 0) {
-    <p class="my-attendance__empty" data-cy="my-attendance-empty">
-      {{ 'athletePortal.attendance.emptyBody' | translate }}
-    </p>
-  } @else {
-    @if (chartAthleteId(); as id) {
-      <!-- 90-day attendance trend chart (#894). Above the session list
+  <div class="my-attendance__body">
+    @if (loading()) {
+      <div class="my-attendance__card" data-cy="my-attendance-loading">
+        <p-skeleton width="40%" height="1.25rem" />
+        <p-skeleton width="100%" height="0.875rem" styleClass="mt-3" />
+        <p-skeleton width="100%" height="0.875rem" styleClass="mt-2" />
+        <p-skeleton width="60%" height="0.875rem" styleClass="mt-2" />
+      </div>
+    } @else if (loadError()) {
+      <p class="my-attendance__empty" data-cy="my-attendance-error">
+        {{ 'athletePortal.attendance.errorBody' | translate }}
+      </p>
+    } @else if (noProfile()) {
+      <p class="my-attendance__empty" data-cy="my-attendance-no-profile">
+        {{ 'athletePortal.attendance.noProfileBody' | translate }}
+      </p>
+    } @else if (records().length === 0) {
+      <p class="my-attendance__empty" data-cy="my-attendance-empty">
+        {{ 'athletePortal.attendance.emptyBody' | translate }}
+      </p>
+    } @else {
+      @if (chartAthleteId(); as id) {
+        <!-- 90-day attendance trend chart (#894). Above the session list
            so the high-level "% di presenze" is the first thing the
            athlete sees on their own attendance page. -->
-      <app-attendance-summary-chart [athleteId]="id" />
-    }
-
-    <section class="my-attendance__summary" data-cy="my-attendance-summary">
-      <span class="my-attendance__summary-count">{{ last30Count() }}</span>
-      <span class="my-attendance__summary-label">{{
-        'athletePortal.attendance.last30Days' | translate
-      }}</span>
-    </section>
-
-    <ul class="my-attendance__list" data-cy="my-attendance-list">
-      @for (rec of records(); track rec.id) {
-        <li class="my-attendance__row" [attr.data-cy]="'attendance-' + rec.id">
-          <time [dateTime]="rec.attended_on" class="my-attendance__date">
-            {{ toLocalDate(rec.attended_on) | date: 'fullDate' }}
-          </time>
-          @if (rec.notes) {
-            <p class="my-attendance__notes">{{ rec.notes }}</p>
-          }
-        </li>
+        <app-attendance-summary-chart [athleteId]="id" />
       }
-    </ul>
-  }
+
+      <section class="my-attendance__summary" data-cy="my-attendance-summary">
+        <span class="my-attendance__summary-count">{{ last30Count() }}</span>
+        <span class="my-attendance__summary-label">{{
+          'athletePortal.attendance.last30Days' | translate
+        }}</span>
+      </section>
+
+      <ul class="my-attendance__list" data-cy="my-attendance-list">
+        @for (rec of records(); track rec.id) {
+          <li class="my-attendance__row" [attr.data-cy]="'attendance-' + rec.id">
+            <time [dateTime]="rec.attended_on" class="my-attendance__date">
+              {{ toLocalDate(rec.attended_on) | date: 'fullDate' }}
+            </time>
+            @if (rec.notes) {
+              <p class="my-attendance__notes">{{ rec.notes }}</p>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
 </div>

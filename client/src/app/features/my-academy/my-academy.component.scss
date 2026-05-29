@@ -6,15 +6,12 @@
 .my-academy {
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  // Title→body gap is owned by <app-page-header> (uniform across pages, #1126).
 
-  &__title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--p-text-color);
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
   }
 
   &__card {

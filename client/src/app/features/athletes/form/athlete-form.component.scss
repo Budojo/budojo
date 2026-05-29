@@ -4,9 +4,14 @@
   // comes from the dashboard shell.
   max-width: var(--budojo-page-content-max);
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+
+  // <app-page-header> owns the title→body gap (#1126); the body keeps the
+  // form rhythm.
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
 
   &__loading {
     display: flex;

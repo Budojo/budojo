@@ -1,9 +1,5 @@
 <div class="stats-page">
-  <app-page-header
-    [eyebrow]="'stats.eyebrow' | translate"
-    [title]="'stats.title' | translate"
-    [subtitle]="'stats.subtitle' | translate"
-  />
+  <app-page-header [title]="'stats.title' | translate" [subtitle]="'stats.subtitle' | translate" />
 
   @if (errored()) {
     <app-error-state [title]="'stats.loadError' | translate" dataCy="stats-error" />

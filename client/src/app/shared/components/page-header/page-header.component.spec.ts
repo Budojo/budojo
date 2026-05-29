@@ -7,12 +7,7 @@ import { PageHeaderComponent } from './page-header.component';
   standalone: true,
   imports: [PageHeaderComponent],
   template: `
-    <app-page-header
-      [title]="title"
-      [countLabel]="countLabel"
-      [eyebrow]="eyebrow"
-      [subtitle]="subtitle"
-    >
+    <app-page-header [title]="title" [countLabel]="countLabel" [subtitle]="subtitle">
       @if (showCta) {
         <button pageHeaderCta type="button" data-cy="host-cta">Add</button>
       }
@@ -22,7 +17,6 @@ import { PageHeaderComponent } from './page-header.component';
 class HostComponent {
   title = 'Atleti';
   countLabel: string | null = null;
-  eyebrow: string | null = null;
   subtitle: string | null = null;
   showCta = false;
 }
@@ -71,28 +65,6 @@ describe('PageHeaderComponent (#883)', () => {
     const cta = fixture.nativeElement.querySelector('[data-cy="host-cta"]');
     expect(cta).not.toBeNull();
     expect(cta.textContent.trim()).toBe('Add');
-  });
-
-  it('renders the eyebrow when provided', () => {
-    TestBed.configureTestingModule({ imports: [HostComponent] });
-    const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.title = 'Daily attendance';
-    fixture.componentInstance.eyebrow = 'PRESENZE';
-    fixture.detectChanges();
-
-    const eyebrow = fixture.nativeElement.querySelector('[data-cy="page-header-eyebrow"]');
-    expect(eyebrow).not.toBeNull();
-    expect(eyebrow.textContent.trim()).toBe('PRESENZE');
-  });
-
-  it('hides the eyebrow when null', () => {
-    TestBed.configureTestingModule({ imports: [HostComponent] });
-    const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.title = 'Settings';
-    fixture.componentInstance.eyebrow = null;
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('[data-cy="page-header-eyebrow"]')).toBeNull();
   });
 
   it('renders the subtitle when provided', () => {

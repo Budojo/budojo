@@ -15,63 +15,64 @@
     "
   />
 
-  @if (error()) {
-    <p-message severity="error" [text]="error()!" styleClass="w-full" />
-  }
+  <div class="athlete-form-page__body">
+    @if (error()) {
+      <p-message severity="error" [text]="error()!" styleClass="w-full" />
+    }
 
-  @if (loading()) {
-    <div class="athlete-form-page__loading">
-      <i class="pi pi-spin pi-spinner"></i>
-      <span>{{ 'athletes.form.loading' | translate }}</span>
-    </div>
-  } @else {
-    <form
-      [formGroup]="form"
-      (ngSubmit)="submit()"
-      novalidate
-      class="athlete-form"
-      data-cy="athlete-form"
-    >
-      <div class="athlete-form__row">
-        <app-budojo-form-field
-          [label]="'athletes.form.label.firstName' | translate"
-          [required]="true"
-          controlId="first_name"
-          [error]="firstNameError() ? (firstNameError()! | translate) : null"
-        >
-          <input
-            pInputText
-            id="first_name"
-            type="text"
-            formControlName="first_name"
-            autocomplete="given-name"
-            [class.ng-invalid]="firstName.invalid && firstName.touched"
-            [class.ng-dirty]="firstName.touched"
-            [attr.aria-describedby]="firstNameError() ? 'first_name-error' : null"
-          />
-        </app-budojo-form-field>
-
-        <app-budojo-form-field
-          [label]="'athletes.form.label.lastName' | translate"
-          [required]="true"
-          controlId="last_name"
-          [error]="lastNameError() ? (lastNameError()! | translate) : null"
-        >
-          <input
-            pInputText
-            id="last_name"
-            type="text"
-            formControlName="last_name"
-            autocomplete="family-name"
-            [class.ng-invalid]="lastName.invalid && lastName.touched"
-            [class.ng-dirty]="lastName.touched"
-            [attr.aria-describedby]="lastNameError() ? 'last_name-error' : null"
-          />
-        </app-budojo-form-field>
+    @if (loading()) {
+      <div class="athlete-form-page__loading">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>{{ 'athletes.form.loading' | translate }}</span>
       </div>
+    } @else {
+      <form
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+        novalidate
+        class="athlete-form"
+        data-cy="athlete-form"
+      >
+        <div class="athlete-form__row">
+          <app-budojo-form-field
+            [label]="'athletes.form.label.firstName' | translate"
+            [required]="true"
+            controlId="first_name"
+            [error]="firstNameError() ? (firstNameError()! | translate) : null"
+          >
+            <input
+              pInputText
+              id="first_name"
+              type="text"
+              formControlName="first_name"
+              autocomplete="given-name"
+              [class.ng-invalid]="firstName.invalid && firstName.touched"
+              [class.ng-dirty]="firstName.touched"
+              [attr.aria-describedby]="firstNameError() ? 'first_name-error' : null"
+            />
+          </app-budojo-form-field>
 
-      <div class="athlete-form__row">
-        <!-- Email is editable inline ONLY at create time. Once the
+          <app-budojo-form-field
+            [label]="'athletes.form.label.lastName' | translate"
+            [required]="true"
+            controlId="last_name"
+            [error]="lastNameError() ? (lastNameError()! | translate) : null"
+          >
+            <input
+              pInputText
+              id="last_name"
+              type="text"
+              formControlName="last_name"
+              autocomplete="family-name"
+              [class.ng-invalid]="lastName.invalid && lastName.touched"
+              [class.ng-dirty]="lastName.touched"
+              [attr.aria-describedby]="lastNameError() ? 'last_name-error' : null"
+            />
+          </app-budojo-form-field>
+        </div>
+
+        <div class="athlete-form__row">
+          <!-- Email is editable inline ONLY at create time. Once the
              athlete exists, the dedicated email-change-card on the
              detail page (`features/athletes/detail/email-change-card`)
              is the canonical editor — it routes through the verification
@@ -79,27 +80,27 @@
              (state B), neither of which makes sense from a generic
              form PUT. v2.1.0 user report: "two emails which one do I
              edit" — collapses the third editor for `athletes.email`. -->
-        @if (mode() === 'create') {
-          <app-budojo-form-field
-            [label]="'athletes.form.label.email' | translate"
-            [optionalLabel]="'athletes.form.optional' | translate"
-            controlId="email"
-            [error]="emailError() ? (emailError()! | translate) : null"
-          >
-            <input
-              pInputText
-              id="email"
-              type="email"
-              formControlName="email"
-              autocomplete="email"
-              [class.ng-invalid]="email.invalid && email.touched"
-              [class.ng-dirty]="email.touched"
-              [attr.aria-describedby]="emailError() ? 'email-error' : null"
-            />
-          </app-budojo-form-field>
-        }
+          @if (mode() === 'create') {
+            <app-budojo-form-field
+              [label]="'athletes.form.label.email' | translate"
+              [optionalLabel]="'athletes.form.optional' | translate"
+              controlId="email"
+              [error]="emailError() ? (emailError()! | translate) : null"
+            >
+              <input
+                pInputText
+                id="email"
+                type="email"
+                formControlName="email"
+                autocomplete="email"
+                [class.ng-invalid]="email.invalid && email.touched"
+                [class.ng-dirty]="email.touched"
+                [attr.aria-describedby]="emailError() ? 'email-error' : null"
+              />
+            </app-budojo-form-field>
+          }
 
-        <!--
+          <!--
           Phone is a country-code + national-number PAIR presented as a
           single field. The wrapper's slot holds the .phone-pair flex
           row; `phoneError()` collapses whichever side errors first into
@@ -107,27 +108,27 @@
           [class.ng-invalid] bindings stay so each control still lights
           its own red border.
         -->
-        <app-budojo-form-field
-          [label]="'athletes.form.label.phone' | translate"
-          [optionalLabel]="'athletes.form.optional' | translate"
-          controlId="phone_national_number"
-          [error]="phoneError() ? (phoneError()! | translate) : null"
-        >
-          <div class="phone-pair">
-            <p-select
-              inputId="phone_country_code"
-              [options]="countryCodeOptions()"
-              formControlName="phone_country_code"
-              optionLabel="label"
-              optionValue="value"
-              [placeholder]="'athletes.form.placeholder.phoneCountryCode' | translate"
-              [ariaLabel]="'athletes.form.aria.phoneCountryCode' | translate"
-              appendTo="body"
-              styleClass="phone-country-code"
-              [showClear]="true"
-              [class.ng-invalid]="phoneCountryCode.invalid && phoneCountryCode.touched"
-            >
-              <!--
+          <app-budojo-form-field
+            [label]="'athletes.form.label.phone' | translate"
+            [optionalLabel]="'athletes.form.optional' | translate"
+            controlId="phone_national_number"
+            [error]="phoneError() ? (phoneError()! | translate) : null"
+          >
+            <div class="phone-pair">
+              <p-select
+                inputId="phone_country_code"
+                [options]="countryCodeOptions()"
+                formControlName="phone_country_code"
+                optionLabel="label"
+                optionValue="value"
+                [placeholder]="'athletes.form.placeholder.phoneCountryCode' | translate"
+                [ariaLabel]="'athletes.form.aria.phoneCountryCode' | translate"
+                appendTo="body"
+                styleClass="phone-country-code"
+                [showClear]="true"
+                [class.ng-invalid]="phoneCountryCode.invalid && phoneCountryCode.touched"
+              >
+                <!--
                 In the closed trigger we only show the prefix value (e.g. "+39"),
                 not the full "+39 Italy" label. The label is reserved for the
                 open panel so users can identify each country comfortably; the
@@ -141,185 +142,185 @@
                 So we read `selected?.value` (the prefix string) off the option
                 here, with the full "+39 Italy" label only on the open panel.
               -->
-              <ng-template pTemplate="selectedItem" let-selected>
-                {{ selected?.value }}
-              </ng-template>
-            </p-select>
-            <input
-              pInputText
-              id="phone_national_number"
-              type="tel"
-              formControlName="phone_national_number"
-              autocomplete="tel-national"
-              [placeholder]="'athletes.form.placeholder.phoneNationalNumber' | translate"
-              [attr.aria-label]="'athletes.form.aria.phoneNationalNumber' | translate"
-              [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
-              [class.ng-dirty]="phoneNationalNumber.touched"
-              [attr.aria-describedby]="phoneError() ? 'phone_national_number-error' : null"
-              class="phone-national-number"
-            />
-          </div>
-        </app-budojo-form-field>
-      </div>
+                <ng-template pTemplate="selectedItem" let-selected>
+                  {{ selected?.value }}
+                </ng-template>
+              </p-select>
+              <input
+                pInputText
+                id="phone_national_number"
+                type="tel"
+                formControlName="phone_national_number"
+                autocomplete="tel-national"
+                [placeholder]="'athletes.form.placeholder.phoneNationalNumber' | translate"
+                [attr.aria-label]="'athletes.form.aria.phoneNationalNumber' | translate"
+                [class.ng-invalid]="phoneNationalNumber.invalid && phoneNationalNumber.touched"
+                [class.ng-dirty]="phoneNationalNumber.touched"
+                [attr.aria-describedby]="phoneError() ? 'phone_national_number-error' : null"
+                class="phone-national-number"
+              />
+            </div>
+          </app-budojo-form-field>
+        </div>
 
-      <!--
+        <!--
         Contact links (#162) — three independently nullable URLs.
         Same shape as the academy form's contact-link block.
       -->
-      <div class="athlete-form__row">
-        <app-budojo-form-field
-          [label]="'athletes.form.label.website' | translate"
-          [optionalLabel]="'athletes.form.optional' | translate"
-          controlId="website"
-          [error]="websiteError() ? (websiteError()! | translate) : null"
-        >
-          <input
-            pInputText
-            id="website"
-            type="url"
-            formControlName="website"
-            autocomplete="url"
-            [placeholder]="'athletes.form.placeholder.website' | translate"
-            maxlength="255"
-            data-cy="athlete-form-website"
-            [class.ng-invalid]="website.invalid && website.touched"
-            [class.ng-dirty]="website.touched"
-            [attr.aria-describedby]="websiteError() ? 'website-error' : null"
-          />
-        </app-budojo-form-field>
+        <div class="athlete-form__row">
+          <app-budojo-form-field
+            [label]="'athletes.form.label.website' | translate"
+            [optionalLabel]="'athletes.form.optional' | translate"
+            controlId="website"
+            [error]="websiteError() ? (websiteError()! | translate) : null"
+          >
+            <input
+              pInputText
+              id="website"
+              type="url"
+              formControlName="website"
+              autocomplete="url"
+              [placeholder]="'athletes.form.placeholder.website' | translate"
+              maxlength="255"
+              data-cy="athlete-form-website"
+              [class.ng-invalid]="website.invalid && website.touched"
+              [class.ng-dirty]="website.touched"
+              [attr.aria-describedby]="websiteError() ? 'website-error' : null"
+            />
+          </app-budojo-form-field>
 
-        <app-budojo-form-field
-          [label]="'athletes.form.label.facebook' | translate"
-          [optionalLabel]="'athletes.form.optional' | translate"
-          controlId="facebook"
-          [error]="facebookError() ? (facebookError()! | translate) : null"
-        >
-          <input
-            pInputText
-            id="facebook"
-            type="url"
-            formControlName="facebook"
-            autocomplete="url"
-            [placeholder]="'athletes.form.placeholder.facebook' | translate"
-            maxlength="255"
-            data-cy="athlete-form-facebook"
-            [class.ng-invalid]="facebook.invalid && facebook.touched"
-            [class.ng-dirty]="facebook.touched"
-            [attr.aria-describedby]="facebookError() ? 'facebook-error' : null"
-          />
-        </app-budojo-form-field>
-      </div>
+          <app-budojo-form-field
+            [label]="'athletes.form.label.facebook' | translate"
+            [optionalLabel]="'athletes.form.optional' | translate"
+            controlId="facebook"
+            [error]="facebookError() ? (facebookError()! | translate) : null"
+          >
+            <input
+              pInputText
+              id="facebook"
+              type="url"
+              formControlName="facebook"
+              autocomplete="url"
+              [placeholder]="'athletes.form.placeholder.facebook' | translate"
+              maxlength="255"
+              data-cy="athlete-form-facebook"
+              [class.ng-invalid]="facebook.invalid && facebook.touched"
+              [class.ng-dirty]="facebook.touched"
+              [attr.aria-describedby]="facebookError() ? 'facebook-error' : null"
+            />
+          </app-budojo-form-field>
+        </div>
 
-      <div class="athlete-form__row">
-        <app-budojo-form-field
-          [label]="'athletes.form.label.instagram' | translate"
-          [optionalLabel]="'athletes.form.optional' | translate"
-          controlId="instagram"
-          [error]="instagramError() ? (instagramError()! | translate) : null"
-        >
-          <input
-            pInputText
-            id="instagram"
-            type="url"
-            formControlName="instagram"
-            autocomplete="url"
-            [placeholder]="'athletes.form.placeholder.instagram' | translate"
-            maxlength="255"
-            data-cy="athlete-form-instagram"
-            [class.ng-invalid]="instagram.invalid && instagram.touched"
-            [class.ng-dirty]="instagram.touched"
-            [attr.aria-describedby]="instagramError() ? 'instagram-error' : null"
-          />
-        </app-budojo-form-field>
-        <div class="field"><!-- empty cell to keep the 2-col grid balance --></div>
-      </div>
+        <div class="athlete-form__row">
+          <app-budojo-form-field
+            [label]="'athletes.form.label.instagram' | translate"
+            [optionalLabel]="'athletes.form.optional' | translate"
+            controlId="instagram"
+            [error]="instagramError() ? (instagramError()! | translate) : null"
+          >
+            <input
+              pInputText
+              id="instagram"
+              type="url"
+              formControlName="instagram"
+              autocomplete="url"
+              [placeholder]="'athletes.form.placeholder.instagram' | translate"
+              maxlength="255"
+              data-cy="athlete-form-instagram"
+              [class.ng-invalid]="instagram.invalid && instagram.touched"
+              [class.ng-dirty]="instagram.touched"
+              [attr.aria-describedby]="instagramError() ? 'instagram-error' : null"
+            />
+          </app-budojo-form-field>
+          <div class="field"><!-- empty cell to keep the 2-col grid balance --></div>
+        </div>
 
-      <div class="athlete-form__row">
-        <app-budojo-form-field
-          [label]="'athletes.form.label.dateOfBirth' | translate"
-          [optionalLabel]="'athletes.form.optional' | translate"
-          controlId="date_of_birth"
-        >
-          <p-datepicker
-            inputId="date_of_birth"
-            formControlName="date_of_birth"
-            dateFormat="yy-mm-dd"
-            [showIcon]="true"
-            [maxDate]="today"
-            appendTo="body"
-            styleClass="w-full"
-          />
-        </app-budojo-form-field>
+        <div class="athlete-form__row">
+          <app-budojo-form-field
+            [label]="'athletes.form.label.dateOfBirth' | translate"
+            [optionalLabel]="'athletes.form.optional' | translate"
+            controlId="date_of_birth"
+          >
+            <p-datepicker
+              inputId="date_of_birth"
+              formControlName="date_of_birth"
+              dateFormat="yy-mm-dd"
+              [showIcon]="true"
+              [maxDate]="today"
+              appendTo="body"
+              styleClass="w-full"
+            />
+          </app-budojo-form-field>
 
-        <app-budojo-form-field
-          [label]="'athletes.form.label.joined' | translate"
-          [required]="true"
-          controlId="joined_at"
-          [error]="joinedAtError() ? (joinedAtError()! | translate) : null"
-        >
-          <p-datepicker
-            inputId="joined_at"
-            formControlName="joined_at"
-            dateFormat="yy-mm-dd"
-            [showIcon]="true"
-            appendTo="body"
-            styleClass="w-full"
-            [class.ng-invalid]="joinedAt.invalid && joinedAt.touched"
-          />
-        </app-budojo-form-field>
-      </div>
+          <app-budojo-form-field
+            [label]="'athletes.form.label.joined' | translate"
+            [required]="true"
+            controlId="joined_at"
+            [error]="joinedAtError() ? (joinedAtError()! | translate) : null"
+          >
+            <p-datepicker
+              inputId="joined_at"
+              formControlName="joined_at"
+              dateFormat="yy-mm-dd"
+              [showIcon]="true"
+              appendTo="body"
+              styleClass="w-full"
+              [class.ng-invalid]="joinedAt.invalid && joinedAt.touched"
+            />
+          </app-budojo-form-field>
+        </div>
 
-      <div class="athlete-form__row athlete-form__row--three">
-        <app-budojo-form-field
-          [label]="'athletes.form.label.belt' | translate"
-          [required]="true"
-          controlId="belt"
-        >
-          <p-select
-            inputId="belt"
-            [options]="beltOptions()"
-            formControlName="belt"
-            optionLabel="label"
-            optionValue="value"
-            appendTo="body"
-            styleClass="w-full"
-          />
-        </app-budojo-form-field>
+        <div class="athlete-form__row athlete-form__row--three">
+          <app-budojo-form-field
+            [label]="'athletes.form.label.belt' | translate"
+            [required]="true"
+            controlId="belt"
+          >
+            <p-select
+              inputId="belt"
+              [options]="beltOptions()"
+              formControlName="belt"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            />
+          </app-budojo-form-field>
 
-        <app-budojo-form-field
-          [label]="'athletes.form.label.stripes' | translate"
-          [required]="true"
-          controlId="stripes"
-        >
-          <p-select
-            inputId="stripes"
-            [options]="stripesOptions()"
-            formControlName="stripes"
-            optionLabel="label"
-            optionValue="value"
-            appendTo="body"
-            styleClass="w-full"
-          />
-        </app-budojo-form-field>
+          <app-budojo-form-field
+            [label]="'athletes.form.label.stripes' | translate"
+            [required]="true"
+            controlId="stripes"
+          >
+            <p-select
+              inputId="stripes"
+              [options]="stripesOptions()"
+              formControlName="stripes"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            />
+          </app-budojo-form-field>
 
-        <app-budojo-form-field
-          [label]="'athletes.form.label.status' | translate"
-          [required]="true"
-          controlId="status"
-        >
-          <p-select
-            inputId="status"
-            [options]="statusOptions()"
-            formControlName="status"
-            optionLabel="label"
-            optionValue="value"
-            appendTo="body"
-            styleClass="w-full"
-          />
-        </app-budojo-form-field>
-      </div>
+          <app-budojo-form-field
+            [label]="'athletes.form.label.status' | translate"
+            [required]="true"
+            controlId="status"
+          >
+            <p-select
+              inputId="status"
+              [options]="statusOptions()"
+              formControlName="status"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            />
+          </app-budojo-form-field>
+        </div>
 
-      <!--
+        <!--
         The address block stays on its bespoke <fieldset>/<legend>
         markup rather than the BudojoFormField wrapper (#1050): it's a
         nested form GROUP (not a single label+control+error), its
@@ -328,59 +329,15 @@
         group itself (`addressIncomplete`). Wrapping each sub-field
         would lose those semantics — out of scope for the wrapper.
       -->
-      <fieldset class="field address-group" formGroupName="address">
-        <legend class="field__label">
-          {{ 'athletes.form.label.addressLegend' | translate }}
-          <span class="optional">{{ 'athletes.form.optionalAddress' | translate }}</span>
-        </legend>
+        <fieldset class="field address-group" formGroupName="address">
+          <legend class="field__label">
+            {{ 'athletes.form.label.addressLegend' | translate }}
+            <span class="optional">{{ 'athletes.form.optionalAddress' | translate }}</span>
+          </legend>
 
-        <div class="field">
-          <label for="athlete-address-line1">
-            {{ 'athletes.form.label.addressLine1' | translate }}
-            <span
-              class="required-when-filled"
-              [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
-              tooltipPosition="top"
-              [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
-            >
-              *
-            </span>
-          </label>
-          <input
-            pInputText
-            id="athlete-address-line1"
-            type="text"
-            formControlName="line1"
-            autocomplete="address-line1"
-            [placeholder]="'athletes.form.placeholder.address.line1' | translate"
-            maxlength="255"
-            data-cy="athlete-form-address-line1"
-            [class.ng-invalid]="addressLine1.invalid && addressLine1.touched"
-            [class.ng-dirty]="addressLine1.touched"
-          />
-        </div>
-
-        <div class="field">
-          <label for="athlete-address-line2">
-            {{ 'athletes.form.label.addressLine2' | translate }}
-            <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
-          </label>
-          <input
-            pInputText
-            id="athlete-address-line2"
-            type="text"
-            formControlName="line2"
-            autocomplete="address-line2"
-            [placeholder]="'athletes.form.placeholder.address.line2' | translate"
-            maxlength="255"
-            data-cy="athlete-form-address-line2"
-          />
-        </div>
-
-        <div class="address-group__row">
           <div class="field">
-            <label for="athlete-address-postal-code">
-              {{ 'athletes.form.label.addressZip' | translate }}
+            <label for="athlete-address-line1">
+              {{ 'athletes.form.label.addressLine1' | translate }}
               <span
                 class="required-when-filled"
                 [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
@@ -392,78 +349,122 @@
             </label>
             <input
               pInputText
-              id="athlete-address-postal-code"
+              id="athlete-address-line1"
               type="text"
-              formControlName="postal_code"
-              autocomplete="postal-code"
-              [placeholder]="'athletes.form.placeholder.address.zip' | translate"
-              inputmode="numeric"
-              maxlength="5"
-              data-cy="athlete-form-address-postal-code"
-              [class.ng-invalid]="addressPostalCode.invalid && addressPostalCode.touched"
-              [class.ng-dirty]="addressPostalCode.touched"
+              formControlName="line1"
+              autocomplete="address-line1"
+              [placeholder]="'athletes.form.placeholder.address.line1' | translate"
+              maxlength="255"
+              data-cy="athlete-form-address-line1"
+              [class.ng-invalid]="addressLine1.invalid && addressLine1.touched"
+              [class.ng-dirty]="addressLine1.touched"
             />
-            @if (addressPostalCode.invalid && addressPostalCode.touched) {
-              <small class="field-error">
-                @if (addressPostalCode.errors?.['pattern']) {
-                  {{ 'athletes.form.validation.address.postalCode' | translate }}
-                }
-              </small>
-            }
           </div>
 
           <div class="field">
-            <label for="athlete-address-city">
-              {{ 'athletes.form.label.addressCity' | translate }}
-              <span
-                class="required-when-filled"
-                [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
-                tooltipPosition="top"
-                [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
-              >
-                *
-              </span>
+            <label for="athlete-address-line2">
+              {{ 'athletes.form.label.addressLine2' | translate }}
+              <span class="optional">{{ 'athletes.form.optional' | translate }}</span>
             </label>
             <input
               pInputText
-              id="athlete-address-city"
+              id="athlete-address-line2"
               type="text"
-              formControlName="city"
-              autocomplete="address-level2"
-              [placeholder]="'athletes.form.placeholder.address.city' | translate"
-              maxlength="100"
-              data-cy="athlete-form-address-city"
+              formControlName="line2"
+              autocomplete="address-line2"
+              [placeholder]="'athletes.form.placeholder.address.line2' | translate"
+              maxlength="255"
+              data-cy="athlete-form-address-line2"
             />
           </div>
 
-          <div class="field">
-            <label for="athlete-address-province">
-              {{ 'athletes.form.label.addressProvince' | translate }}
-              <span
-                class="required-when-filled"
-                [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
-                tooltipPosition="top"
-                [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
-              >
-                *
-              </span>
-            </label>
-            <p-select
-              inputId="athlete-address-province"
-              [options]="provinceOptions"
-              formControlName="province"
-              optionLabel="label"
-              optionValue="value"
-              [ariaLabel]="'athletes.form.aria.province' | translate"
-              appendTo="body"
-              styleClass="w-full"
-              [showClear]="true"
-              data-cy="athlete-form-address-province"
-            />
-          </div>
-        </div>
+          <div class="address-group__row">
+            <div class="field">
+              <label for="athlete-address-postal-code">
+                {{ 'athletes.form.label.addressZip' | translate }}
+                <span
+                  class="required-when-filled"
+                  [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
+                  tooltipPosition="top"
+                  [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
+                >
+                  *
+                </span>
+              </label>
+              <input
+                pInputText
+                id="athlete-address-postal-code"
+                type="text"
+                formControlName="postal_code"
+                autocomplete="postal-code"
+                [placeholder]="'athletes.form.placeholder.address.zip' | translate"
+                inputmode="numeric"
+                maxlength="5"
+                data-cy="athlete-form-address-postal-code"
+                [class.ng-invalid]="addressPostalCode.invalid && addressPostalCode.touched"
+                [class.ng-dirty]="addressPostalCode.touched"
+              />
+              @if (addressPostalCode.invalid && addressPostalCode.touched) {
+                <small class="field-error">
+                  @if (addressPostalCode.errors?.['pattern']) {
+                    {{ 'athletes.form.validation.address.postalCode' | translate }}
+                  }
+                </small>
+              }
+            </div>
 
-        <!--
+            <div class="field">
+              <label for="athlete-address-city">
+                {{ 'athletes.form.label.addressCity' | translate }}
+                <span
+                  class="required-when-filled"
+                  [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
+                  tooltipPosition="top"
+                  [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
+                >
+                  *
+                </span>
+              </label>
+              <input
+                pInputText
+                id="athlete-address-city"
+                type="text"
+                formControlName="city"
+                autocomplete="address-level2"
+                [placeholder]="'athletes.form.placeholder.address.city' | translate"
+                maxlength="100"
+                data-cy="athlete-form-address-city"
+              />
+            </div>
+
+            <div class="field">
+              <label for="athlete-address-province">
+                {{ 'athletes.form.label.addressProvince' | translate }}
+                <span
+                  class="required-when-filled"
+                  [pTooltip]="'athletes.form.tooltip.requiredWhenFilled' | translate"
+                  tooltipPosition="top"
+                  [attr.aria-label]="'athletes.form.aria.requiredWhenFilled' | translate"
+                >
+                  *
+                </span>
+              </label>
+              <p-select
+                inputId="athlete-address-province"
+                [options]="provinceOptions"
+                formControlName="province"
+                optionLabel="label"
+                optionValue="value"
+                [ariaLabel]="'athletes.form.aria.province' | translate"
+                appendTo="body"
+                styleClass="w-full"
+                [showClear]="true"
+                data-cy="athlete-form-address-province"
+              />
+            </div>
+          </div>
+
+          <!--
           Country is locked to Italy in MVP. The form control still binds
           via `formControlName="country"` (initialized to 'IT' in the
           component) so the API contract is unchanged; the visible select
@@ -471,47 +472,48 @@
           actually fills in. Re-surface when a second Country enum case
           lands.
         -->
-        <div hidden>
-          <p-select
-            inputId="athlete-address-country"
-            [options]="countryOptions"
-            formControlName="country"
-            optionLabel="label"
-            optionValue="value"
-            appendTo="body"
-            data-cy="athlete-form-address-country"
+          <div hidden>
+            <p-select
+              inputId="athlete-address-country"
+              [options]="countryOptions"
+              formControlName="country"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              data-cy="athlete-form-address-country"
+            />
+          </div>
+
+          @if (addressGroup.errors?.['addressIncomplete'] && addressGroup.touched) {
+            <small class="field-error" data-cy="athlete-form-address-error">
+              {{ 'athletes.form.validation.address.incomplete' | translate }}
+            </small>
+          }
+          <small class="field-hint">{{ 'athletes.form.hint.address' | translate }}</small>
+        </fieldset>
+
+        <div class="athlete-form__actions">
+          <p-button
+            type="button"
+            [label]="'athletes.form.button.cancel' | translate"
+            severity="secondary"
+            [text]="true"
+            (onClick)="cancel()"
+            [disabled]="submitting()"
+          />
+          <p-button
+            type="submit"
+            [label]="
+              (mode() === 'create'
+                ? 'athletes.form.button.submitCreate'
+                : 'athletes.form.button.submitEdit'
+              ) | translate
+            "
+            [loading]="submitting()"
+            [disabled]="submitting()"
           />
         </div>
-
-        @if (addressGroup.errors?.['addressIncomplete'] && addressGroup.touched) {
-          <small class="field-error" data-cy="athlete-form-address-error">
-            {{ 'athletes.form.validation.address.incomplete' | translate }}
-          </small>
-        }
-        <small class="field-hint">{{ 'athletes.form.hint.address' | translate }}</small>
-      </fieldset>
-
-      <div class="athlete-form__actions">
-        <p-button
-          type="button"
-          [label]="'athletes.form.button.cancel' | translate"
-          severity="secondary"
-          [text]="true"
-          (onClick)="cancel()"
-          [disabled]="submitting()"
-        />
-        <p-button
-          type="submit"
-          [label]="
-            (mode() === 'create'
-              ? 'athletes.form.button.submitCreate'
-              : 'athletes.form.button.submitEdit'
-            ) | translate
-          "
-          [loading]="submitting()"
-          [disabled]="submitting()"
-        />
-      </div>
-    </form>
-  }
+      </form>
+    }
+  </div>
 </div>

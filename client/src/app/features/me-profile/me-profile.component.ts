@@ -15,6 +15,7 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { AuthService } from '../../core/services/auth.service';
 import { LeaderboardCardComponent } from '../../shared/components/leaderboard-card/leaderboard-card.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /**
  * Athlete-side profile page (#610, M7 PR-D slice 1 + slice 6 edit).
@@ -46,6 +47,7 @@ const noTrailingDot: ValidatorFn = (control: AbstractControl): ValidationErrors 
   selector: 'app-me-profile',
   standalone: true,
   imports: [
+    PageHeaderComponent,
     TranslatePipe,
     ReactiveFormsModule,
     ButtonModule,

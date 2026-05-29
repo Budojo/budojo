@@ -1,5 +1,5 @@
 <div class="me-more" data-cy="me-more">
-  <h1 class="me-more__title">{{ 'athletePortal.more.title' | translate }}</h1>
+  <app-page-header [title]="'athletePortal.more.title' | translate" />
 
   <ul class="me-more__list">
     @if (user()?.handle; as handle) {
