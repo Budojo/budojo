@@ -92,7 +92,7 @@ class CommunityReplyNotification extends Notification
     {
         return \sprintf(
             '%s commented on a post you replied to',
-            trim($this->author->first_name . ' ' . $this->author->last_name),
+            $this->author->full_name,
         );
     }
 

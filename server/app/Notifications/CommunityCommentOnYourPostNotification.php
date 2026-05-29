@@ -75,7 +75,7 @@ class CommunityCommentOnYourPostNotification extends Notification
     {
         return \sprintf(
             '%s commented on your post',
-            trim($this->commenter->first_name . ' ' . $this->commenter->last_name),
+            $this->commenter->full_name,
         );
     }
 

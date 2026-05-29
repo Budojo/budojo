@@ -75,7 +75,7 @@ class OwnerEventRsvpNotification extends Notification
     {
         return \sprintf(
             '%s RSVP\'d to your event',
-            trim($this->responder->first_name . ' ' . $this->responder->last_name),
+            $this->responder->full_name,
         );
     }
 

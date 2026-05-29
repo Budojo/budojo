@@ -78,7 +78,7 @@ class CommunityReactionOnYourPostNotification extends Notification
     {
         return \sprintf(
             '%s reacted to your post',
-            trim($this->reactor->first_name . ' ' . $this->reactor->last_name),
+            $this->reactor->full_name,
         );
     }
 
