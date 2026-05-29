@@ -111,10 +111,7 @@ describe('Support page (#423)', () => {
     cy.get('[data-cy="support-body"]').should('contain.value', 'Body I do not want to retype');
   });
 
-  it('the sidebar nav-support link is the only "talk to us" entry', () => {
-    // Post-consolidation: the legacy nav-feedback entry was folded
-    // into nav-support (#446). Support is now the sole channel.
-    cy.get('[data-cy="nav-support"]').should('be.visible').and('contain.text', 'Contact support');
-    cy.get('[data-cy="nav-feedback"]').should('not.exist');
-  });
+  // Support discoverability moved off the desktop sidebar into the owner More
+  // hub with the rail refactor (#1112) — covered by owner-more.component.spec.ts
+  // (owner-more-support). The legacy nav-feedback entry stays retired (#446).
 });

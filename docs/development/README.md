@@ -12,6 +12,7 @@ The split exists so CLAUDE.md stays loadable in agent context (every session pay
 | [`release-flow.md`](./release-flow.md) | semantic-release beta/stable cadence, `## Auto-closes` block construction, auto-sweep main → develop, user-facing changelog discipline, post-release tech-debt sweep |
 | [`reviewer-workflow.md`](./reviewer-workflow.md) | Post-push Claude reviewer pipeline: comment fetch, fix commit, `reviewer-replies.sh` usage, auto-poll-and-fix loop, reply rules |
 | [`pr-labels.md`](./pr-labels.md) | Type label per branch prefix, status labels lifecycle, board status moves |
+| [`visual-verification.md`](./visual-verification.md) | Mandatory in-browser smoke before push for visible UI changes; the `cypress/included` screenshot recipe + the dev-server / login-redirect traps |
 
 ## When to update
 
@@ -21,5 +22,6 @@ A runbook update is required in the same PR whenever:
 - A GitHub Actions workflow changes the release / review / sweep flow
 - A new branch type / commit type / label is added
 - A discipline rule (e.g. `## Auto-closes` block) changes semantics
+- The local visual-verification recipe changes (Cypress image version, dev-server / redirect quirks)
 
 If you change CLAUDE.md to mention a step, check whether the runbook here is the source of truth and keep both in lock-step (CLAUDE.md links here; the link must not rot).

@@ -10,17 +10,20 @@
     </div>
 
     @if (hasOtherSessions()) {
-      <p-button
-        type="button"
-        severity="secondary"
-        [outlined]="true"
-        size="small"
+      <app-confirm-destructive-button
         icon="pi pi-sign-out"
         [label]="'profile.sessions.revokeOthersCta' | translate"
+        [ariaLabel]="'profile.sessions.revokeOthersCta' | translate"
+        [confirmMessage]="'profile.sessions.confirmRevokeOthers' | translate"
+        [acceptLabel]="'profile.sessions.confirmAccept' | translate"
+        [rejectLabel]="'profile.sessions.confirmReject' | translate"
+        confirmIcon="pi pi-exclamation-triangle"
+        [text]="false"
+        [outlined]="true"
         [loading]="revokingOthers()"
         [disabled]="revokingOthers()"
-        (onClick)="confirmRevokeOthers($event)"
-        data-cy="profile-sessions-revoke-others"
+        (confirmed)="revokeOthers()"
+        dataCy="profile-sessions-revoke-others"
       />
     }
   </header>
@@ -72,24 +75,31 @@
               </p>
             }
           </div>
-          <p-button
-            type="button"
-            severity="secondary"
-            [text]="true"
-            size="small"
+          <app-confirm-destructive-button
             icon="pi pi-trash"
-            [pTooltip]="'profile.sessions.revoke' | translate"
-            tooltipPosition="left"
             [ariaLabel]="'profile.sessions.revoke' | translate"
+            tooltipPosition="left"
+            [confirmMessage]="
+              (session.is_current
+                ? 'profile.sessions.confirmRevokeCurrent'
+                : 'profile.sessions.confirmRevoke'
+              ) | translate: { device: session.name }
+            "
+            [acceptLabel]="'profile.sessions.confirmAccept' | translate"
+            [rejectLabel]="'profile.sessions.confirmReject' | translate"
+            confirmIcon="pi pi-exclamation-triangle"
             [loading]="revokingId() === session.id"
             [disabled]="revokingId() !== null || revokingOthers()"
-            (onClick)="confirmRevoke($event, session)"
-            [attr.data-cy]="'profile-session-revoke-' + session.id"
+            (confirmed)="revoke(session)"
+            [dataCy]="'profile-session-revoke-' + session.id"
           />
         </li>
       }
     </ul>
   }
 
+  <!-- Confirm surface for the per-row + revoke-others destructive buttons.
+       app-confirm-destructive-button injects the host's ConfirmationService;
+       the popup itself must live on the host (PrimeNG's pattern). -->
   <p-confirmpopup />
 </div>

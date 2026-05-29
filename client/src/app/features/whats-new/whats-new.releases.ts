@@ -28,6 +28,25 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.36.0',
+    date: '2026-05-29',
+    headline: 'A fresh, app-like way to get around Budojo — on your phone and on the desktop.',
+    sections: [
+      {
+        heading: '🧭 A new way to move around the app',
+        bullets: [
+          'Budojo\'s navigation got a ground-up redesign that feels like the apps you already use every day. On your phone, a bottom tab bar puts your main destinations one thumb-tap away — no more hunting through a hamburger menu. A big ➕ button in the middle opens a quick "create" sheet for the things you do most (mark attendance, add an athlete, write a post). On a computer the same destinations live in a clean side rail down the left, with your profile pinned at the bottom. Same places, same labels — only the layout adapts to the screen you\'re on.',
+        ],
+      },
+      {
+        heading: '✨ Everything in its place',
+        bullets: [
+          'The things you reach less often — settings, stats, activity, language, sign out — now live together on a tidy "More" page, so the main bar stays focused on what you use every day. The experience is more consistent between phone and desktop, and more accessible too: clearer keyboard focus and better screen-reader labels throughout the new navigation.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.35.0',
     date: '2026-05-28',
     headline: 'Plan ahead: a future schedule change no longer erases past attendance math.',

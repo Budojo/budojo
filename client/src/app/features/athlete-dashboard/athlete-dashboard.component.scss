@@ -1,16 +1,10 @@
-// Athlete-side dashboard shell (#610). Same shape as the owner shell
-// (mobile topbar + off-canvas drawer below 768px, fixed sidebar above)
-// but stripped of owner-only chrome (search palette, notification bell,
-// language toggle, version stamp). M9 PR-F will add the notification
-// bell back specifically for the athlete-relevant feed events.
-//
-// When a 2nd athlete page lands (Slice 2: MyAcademyComponent) the
-// sidebar nav list grows. Keep this file lean — heavy chrome belongs
-// in shared partials, not in per-feature SCSS.
+// Athlete-side dashboard shell (#610). Social-native nav: mobile (<768px) is
+// a topbar (brand + avatar) + a fixed bottom tab bar; desktop (>=768px) is the
+// shared app-side-rail (#1120). The dense SaaS sidebar is retired.
 
 $sidebar-breakpoint: 768px;
-$sidebar-width: 16rem;
 $topbar-height: 3.5rem;
+$bottom-nav-height: 3.5rem;
 
 .layout {
   display: flex;
@@ -28,24 +22,10 @@ $topbar-height: 3.5rem;
   }
 }
 
-.backdrop {
-  position: fixed;
-  inset: 0;
-  background: var(--p-mask-background);
-  z-index: 40;
-
-  @media (min-width: $sidebar-breakpoint) {
-    display: none;
-  }
-}
-
 .topbar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  // padding-top expands by the OS-reported safe-area inset (#1046) —
-  // same pattern as the owner topbar so athlete + owner shells stay
-  // visually parallel on edge-to-edge surfaces.
   padding: max(0.5rem, var(--budojo-safe-top)) 1rem 0.5rem;
   min-height: $topbar-height;
   background: var(--p-surface-900);
@@ -57,22 +37,6 @@ $topbar-height: 3.5rem;
 
   @media (min-width: $sidebar-breakpoint) {
     display: none;
-  }
-
-  &__hamburger {
-    all: unset;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 3rem;
-    height: 3rem;
-    border-radius: var(--p-border-radius-md);
-    cursor: pointer;
-
-    i {
-      font-size: 1.25rem;
-    }
   }
 
   &__title {
@@ -91,136 +55,12 @@ $topbar-height: 3.5rem;
   }
 }
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  width: $sidebar-width;
-  background: var(--p-surface-900);
-  color: var(--p-surface-0);
-  padding: 1rem 0;
+// Desktop social rail (>=768px) is the shared `app-side-rail` (#1120) — its
+// chrome lives in that component; the shell only feeds it inputs.
 
-  // Mobile: off-canvas drawer.
-  @media (max-width: $sidebar-breakpoint - 1) {
-    position: fixed;
-    inset: 0 auto 0 0;
-    z-index: 50;
-    transform: translateX(-100%);
-    transition: transform 240ms cubic-bezier(0.2, 0, 0, 1);
-    // Stack the safe-area inset on top of the existing 1rem pad so
-    // the drawer header clears the status bar on edge-to-edge
-    // surfaces (#1046).
-    padding-top: calc(1rem + var(--budojo-safe-top));
-
-    &--open {
-      transform: translateX(0);
-    }
-  }
-
+.mobile-nav {
   @media (min-width: $sidebar-breakpoint) {
-    flex: 0 0 $sidebar-width;
-    height: 100dvh;
-  }
-
-  &__brand {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1.5rem 1rem;
-    font-weight: 600;
-    font-size: 1.125rem;
-
-    @media (max-width: $sidebar-breakpoint - 1) {
-      display: none;
-    }
-  }
-
-  &__logo {
-    width: 1.5rem;
-    height: 1.5rem;
-  }
-
-  &__user {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 1.5rem 1rem;
-    border-bottom: 1px solid var(--p-surface-700);
-    margin-bottom: 1rem;
-  }
-
-  &__user-meta {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-
-  &__user-name {
-    font-weight: 500;
-    font-size: 0.95rem;
-    color: var(--p-surface-0);
-  }
-
-  &__user-handle {
-    font-size: 0.825rem;
-    color: var(--p-surface-300);
-  }
-
-  &__nav {
-    flex: 1;
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-  }
-
-  &__link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1.5rem;
-    color: var(--p-surface-200);
-    text-decoration: none;
-
-    i {
-      font-size: 1rem;
-    }
-
-    &:hover {
-      background: var(--p-surface-800);
-      color: var(--p-surface-0);
-    }
-
-    &--active {
-      background: var(--p-surface-800);
-      color: var(--p-surface-0);
-      border-left: 3px solid var(--p-primary-500);
-    }
-  }
-
-  &__footer {
-    border-top: 1px solid var(--p-surface-700);
-    padding: 0.5rem 0.5rem 0.5rem;
-    margin-top: 0.5rem;
-  }
-
-  &__signout {
-    all: unset;
-    box-sizing: border-box;
-    display: flex;
-    width: 100%;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    color: var(--p-surface-200);
-    cursor: pointer;
-    border-radius: var(--p-border-radius-md);
-
-    &:hover {
-      background: var(--p-surface-800);
-      color: var(--p-surface-0);
-    }
+    display: none;
   }
 }
 
@@ -228,6 +68,13 @@ $topbar-height: 3.5rem;
   flex: 1;
   overflow-y: auto;
   padding: var(--budojo-page-padding-y) var(--budojo-page-padding-x);
+
+  // Clear the fixed bottom tab bar (+ iOS home indicator) on mobile.
+  @media (max-width: $sidebar-breakpoint - 1) {
+    padding-bottom: calc(
+      var(--budojo-page-padding-y) + #{$bottom-nav-height} + var(--budojo-safe-bottom)
+    );
+  }
 
   @media (min-width: $sidebar-breakpoint) {
     height: 100dvh;

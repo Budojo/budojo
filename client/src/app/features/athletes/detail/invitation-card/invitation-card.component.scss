@@ -1,15 +1,9 @@
-// "Account & invito" card on athlete detail (#467, M7 PR-B-UI). Lives
-// between the page header and the tab strip — same vertical rhythm
-// as the academy-detail sub-cards. Mobile-first: stacks vertically;
-// at >=768px the row puts chip + actions on one line.
+// "Account & invito" card on athlete detail (#467, M7 PR-B-UI). The
+// shell (surface, hairline, radius, padding, header/body slot spacing)
+// comes from the canonical <app-card> (#1101) — only the feature-level
+// layout lives here. Mobile-first: stacks vertically; at >=768px the
+// row puts chip + actions on one line.
 .invitation-card {
-  &__header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
   &__eyebrow {
     font-size: 0.875rem;
     font-weight: 600;
@@ -17,7 +11,9 @@
   }
 
   &__hint {
-    margin: 0 0 0.75rem 0;
+    // app-card's body slot supplies the 1rem gap between the hint and
+    // the invite button; the element carries no margin of its own.
+    margin: 0;
     font-size: 0.8125rem;
     line-height: 1.45;
     color: var(--p-text-color-secondary);

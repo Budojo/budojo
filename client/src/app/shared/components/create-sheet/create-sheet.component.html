@@ -1,0 +1,28 @@
+<p-dialog
+  [visible]="isOpen()"
+  (visibleChange)="isOpen.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [dismissableMask]="true"
+  [header]="heading()"
+  styleClass="bottom-sheet"
+  [style]="{ width: '28rem' }"
+  [breakpoints]="{ '768px': '100vw' }"
+>
+  <ul class="create-sheet__actions">
+    @for (action of actions(); track action.routerLink) {
+      <li>
+        <a
+          class="create-sheet__action"
+          [routerLink]="action.routerLink"
+          (click)="close()"
+          [attr.data-cy]="action.dataCy ?? null"
+        >
+          <i [class]="action.icon" aria-hidden="true"></i>
+          <span>{{ action.label }}</span>
+        </a>
+      </li>
+    }
+  </ul>
+</p-dialog>

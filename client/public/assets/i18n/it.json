@@ -34,7 +34,15 @@
     "signOut": "Esci",
     "privacy": "Privacy",
     "stats": "Statistiche",
-    "help": "Aiuto"
+    "help": "Aiuto",
+    "more": "Altro",
+    "barAriaLabel": "Navigazione principale",
+    "create": {
+      "title": "Crea",
+      "markAttendance": "Segna presenza",
+      "addAthlete": "Aggiungi atleta",
+      "post": "Nuovo post"
+    }
   },
   "auth": {
     "shared": {
@@ -253,7 +261,16 @@
       "academy": "Academy",
       "attendance": "Presenze",
       "payments": "Pagamenti",
-      "documents": "Documenti"
+      "documents": "Documenti",
+      "barAriaLabel": "Navigazione principale"
+    },
+    "more": {
+      "title": "Altro"
+    },
+    "create": {
+      "title": "Crea",
+      "checkIn": "Segna presenza",
+      "post": "Nuovo post"
     },
     "profile": {
       "title": "Impostazioni",

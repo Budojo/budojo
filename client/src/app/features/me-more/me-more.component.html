@@ -1,0 +1,84 @@
+<div class="me-more" data-cy="me-more">
+  <h1 class="me-more__title">{{ 'athletePortal.more.title' | translate }}</h1>
+
+  <ul class="me-more__list">
+    @if (user()?.handle; as handle) {
+      <li>
+        <a
+          class="me-more__row"
+          [routerLink]="['/dashboard/me/u', handle]"
+          data-cy="me-more-public-profile"
+        >
+          <i class="pi pi-id-card" aria-hidden="true"></i>
+          <span class="me-more__label">{{ 'athletePortal.nav.myProfile' | translate }}</span>
+          <i class="pi pi-angle-right me-more__chevron" aria-hidden="true"></i>
+        </a>
+      </li>
+    }
+    <li>
+      <a class="me-more__row" routerLink="/dashboard/me/payments" data-cy="me-more-payments">
+        <i class="pi pi-wallet" aria-hidden="true"></i>
+        <span class="me-more__label">{{ 'athletePortal.nav.payments' | translate }}</span>
+        <i class="pi pi-angle-right me-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a class="me-more__row" routerLink="/dashboard/me/documents" data-cy="me-more-documents">
+        <i class="pi pi-file" aria-hidden="true"></i>
+        <span class="me-more__label">{{ 'athletePortal.nav.documents' | translate }}</span>
+        <i class="pi pi-angle-right me-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <a class="me-more__row" routerLink="/dashboard/me/profile" data-cy="me-more-settings">
+        <i class="pi pi-cog" aria-hidden="true"></i>
+        <span class="me-more__label">{{ 'athletePortal.nav.settings' | translate }}</span>
+        <i class="pi pi-angle-right me-more__chevron" aria-hidden="true"></i>
+      </a>
+    </li>
+    <li>
+      <button
+        type="button"
+        class="me-more__row"
+        (click)="openLanguage()"
+        data-cy="me-more-language"
+      >
+        <i class="pi pi-globe" aria-hidden="true"></i>
+        <span class="me-more__label">{{ 'language.label' | translate }}</span>
+        <span class="me-more__value">
+          {{ (currentLang() === 'it' ? 'language.italian' : 'language.english') | translate }}
+        </span>
+        <i class="pi pi-angle-right me-more__chevron" aria-hidden="true"></i>
+      </button>
+    </li>
+    <li>
+      <button
+        type="button"
+        class="me-more__row me-more__row--signout"
+        (click)="signOut()"
+        data-cy="me-more-signout"
+      >
+        <i class="pi pi-sign-out" aria-hidden="true"></i>
+        <span class="me-more__label">{{ 'nav.signOut' | translate }}</span>
+      </button>
+    </li>
+  </ul>
+
+  <p class="me-more__footer" data-cy="me-more-footer">
+    <a class="me-more__footer-link" routerLink="/help" data-cy="me-more-help">
+      {{ 'nav.help' | translate }}
+    </a>
+    <span aria-hidden="true">·</span>
+    <a
+      class="me-more__footer-link"
+      [routerLink]="currentLang() === 'it' ? '/privacy/it' : '/privacy'"
+      data-cy="me-more-privacy"
+    >
+      {{ 'nav.privacy' | translate }}
+    </a>
+    <span aria-hidden="true">·</span>
+    <span class="me-more__version">{{ versionTag }}</span>
+  </p>
+</div>
+
+<app-language-sheet />

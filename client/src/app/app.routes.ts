@@ -192,6 +192,14 @@ export const routes: Routes = [
           ),
       },
       {
+        // "More" hub (#1109) — homes the destinations demoted off the
+        // mobile bottom tab bar (public profile, payments, documents,
+        // settings, sign-out, language).
+        path: 'more',
+        loadComponent: () =>
+          import('./features/me-more/me-more.component').then((m) => m.MeMoreComponent),
+      },
+      {
         // Same-academy peer public-profile lookup (#862, M9 social
         // profile epic slice A). Lives inside the athlete shell so
         // the shared sidebar stays visible. The component itself is
@@ -329,6 +337,15 @@ export const routes: Routes = [
         path: 'community',
         loadComponent: () =>
           import('./features/my-feed/my-feed.component').then((m) => m.MyFeedComponent),
+      },
+      {
+        // Owner "More" hub (#1111) — homes the destinations demoted off
+        // the mobile bottom tab bar (attendance, stats, activity, settings,
+        // support, what's-new, language, sign-out). Guards inherit from the
+        // parent `dashboard` route.
+        path: 'more',
+        loadComponent: () =>
+          import('./features/owner-more/owner-more.component').then((m) => m.OwnerMoreComponent),
       },
       {
         path: 'whats-new',

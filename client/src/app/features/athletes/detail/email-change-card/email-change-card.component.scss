@@ -1,10 +1,12 @@
+// Owner-side email-change card on athlete detail (#476). The shell
+// (surface, hairline, radius, padding) comes from the canonical
+// <app-card> (#1101) — only the row/field layout lives here.
 .email-change-card {
   &__row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0;
 
     &--edit {
       flex-direction: column;

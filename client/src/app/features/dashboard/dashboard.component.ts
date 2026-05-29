@@ -3,38 +3,61 @@ import {
   Component,
   DestroyRef,
   OnInit,
-  Renderer2,
   computed,
-  effect,
   inject,
-  signal,
+  viewChild,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { RouterLink, RouterOutlet } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
-import { LanguageService, SupportedLanguage } from '../../core/services/language.service';
+import { LanguageService } from '../../core/services/language.service';
 import { WebPushHandlerService } from '../../core/services/web-push-handler.service';
+import {
+  BottomNavCenterAction,
+  BottomNavComponent,
+  BottomNavTab,
+} from '../../shared/components/bottom-nav/bottom-nav.component';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
-import { SidebarFooterMetaComponent } from '../../shared/components/sidebar-footer-meta/sidebar-footer-meta.component';
+import {
+  CreateSheetAction,
+  CreateSheetComponent,
+} from '../../shared/components/create-sheet/create-sheet.component';
+import {
+  RailBrand,
+  RailProfile,
+  SideRailComponent,
+} from '../../shared/components/side-rail/side-rail.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { SearchPaletteComponent } from '../search/search-palette.component';
 import { NotificationBellComponent } from '../notifications/notification-bell.component';
 import { VERSION } from '../../../environments/version';
 
+/**
+ * Owner-side dashboard shell. Social-native navigation (#1111): a bottom
+ * tab bar + center ➕ create-sheet on mobile (`<768px`); a desktop social
+ * rail (#1112) above. The hamburger off-canvas drawer — and its
+ * swipe-to-close gesture + body-scroll-lock — is retired; the destinations
+ * demoted off the bar (attendance, stats, activity, settings, support,
+ * what's-new, language, sign-out) live on the `/dashboard/more` hub.
+ *
+ * Bottom-tab labels resolve reactively to the runtime language: each
+ * computed reads `languageService.currentLang()` so `translate.instant()`
+ * re-runs on a locale switch (same pattern as the athlete shell).
+ */
 @Component({
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
+    BottomNavComponent,
+    CreateSheetComponent,
     BrandGlyphComponent,
+    SideRailComponent,
     UserAvatarComponent,
     SearchPaletteComponent,
     NotificationBellComponent,
-    SidebarFooterMetaComponent,
     TranslatePipe,
   ],
   templateUrl: './dashboard.component.html',
@@ -44,283 +67,154 @@ export class DashboardComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly authService = inject(AuthService);
   private readonly languageService = inject(LanguageService);
-  private readonly router = inject(Router);
-  private readonly renderer = inject(Renderer2);
-  private readonly document = inject(DOCUMENT);
+  private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly webPushHandler = inject(WebPushHandlerService);
-  private static readonly BODY_DRAWER_OPEN_CLASS = 'app-drawer-open';
-
-  constructor() {
-    // Body scroll lock while the mobile drawer is open. Without this iOS
-    // Safari + Android Chrome let touches inside the open drawer leak
-    // through to the underlying page, plus the drawer itself rubber-bands
-    // on touch-drag. The class hook is consumed by a media-gated rule in
-    // `client/src/styles.scss` so desktop (where the sidebar is always
-    // visible and never "open") is unaffected.
-    effect(() => {
-      const open = this.sidebarOpen();
-      const cls = DashboardComponent.BODY_DRAWER_OPEN_CLASS;
-      if (open) {
-        this.renderer.addClass(this.document.body, cls);
-      } else {
-        this.renderer.removeClass(this.document.body, cls);
-      }
-    });
-
-    // Defensive teardown: if the component is destroyed while the drawer
-    // is still open (route change / hard navigation / error redirect),
-    // the body class would otherwise persist and lock scroll on subsequent
-    // pages (Copilot review on PR #672). The effect above stops running
-    // on destroy, so the class would never get removed naturally.
-    this.destroyRef.onDestroy(() => {
-      this.renderer.removeClass(this.document.body, DashboardComponent.BODY_DRAWER_OPEN_CLASS);
-    });
-  }
-
-  /** Bound by the sidebar language toggle (#273). Read of `currentLang`
-   *  drives the active-state styling; `setLang()` writes through the
-   *  service which persists to localStorage and flips ngx-translate. */
-  protected readonly currentLang = this.languageService.currentLang;
 
   /**
-   * The cached user — drives the verification pillola in the sidebar header.
-   * Hydrated by `ngOnInit()` calling `loadCurrentUser()`. Re-hydration after
-   * register/login is handled by `AuthService` directly (the response data
-   * already populates `user`).
+   * The cached user — drives the topbar avatar chip. Hydrated by
+   * `ngOnInit()` on a hard refresh (the in-memory signal is lost but the
+   * auth token survives, so `/auth/me` round-trips it back).
    */
   protected readonly user = this.authService.user;
 
+  /** The ➕ create sheet — opened when the bottom-nav center button fires. */
+  protected readonly createSheet = viewChild.required(CreateSheetComponent);
+
   ngOnInit(): void {
     // Page-reload bootstrap: if a token is present (auth guard already ran)
-    // but `user` is still null, fetch /auth/me so the pillola has data to
-    // render. No-op if `user` is already populated by a fresh login.
+    // but `user` is still null, fetch /auth/me so the avatar chip has data.
     if (this.authService.getToken() && this.authService.user() === null) {
       this.authService.loadCurrentUser().subscribe({ error: () => undefined });
     }
 
     // Wire the Web Push event streams (#702). Only authenticated users
-    // reach the dashboard shell, so this is the right scope: the
-    // `notificationClicks` → router navigation handler fires only when
-    // someone's signed in, and the foreground in-app toast lifecycle
-    // ends on sign-out (the destroyRef closes the subscriptions).
+    // reach the dashboard shell, so this is the right scope.
     this.webPushHandler.initialize(this.destroyRef);
   }
 
   /**
    * The sidebar brand label. The academy name is the operationally dominant
-   * identity (Krug + Norman): what the user *actually* interacts with. The
-   * string "Budojo" is a defensive fallback — in practice `hasAcademyGuard`
-   * keeps the user off `/dashboard/*` until the academy resolves, so this
-   * branch is only hit during the first render tick or on a malformed session.
+   * identity (Krug + Norman); "Budojo" is a defensive fallback for the first
+   * render tick before `hasAcademyGuard` has resolved the academy.
    */
   protected readonly brandLabel = computed(() => this.academyService.academy()?.name ?? 'Budojo');
 
   /**
-   * Academy logo URL when the academy has uploaded one, otherwise `null`.
-   * A null result is the signal for the template to render the inline
-   * Budojo glyph fallback. Why inline + null instead of falling back to a
-   * static `/logo-glyph.svg`: an `<img>`-loaded SVG is sandboxed from host
-   * CSS, so `stroke="currentColor"` resolves to the SVG's own root (black)
-   * — invisible against the dark sidebar surface (#99).
+   * Academy logo URL when uploaded, otherwise `null` — the signal for the
+   * template to render the inline Budojo glyph fallback (an `<img>`-loaded
+   * SVG is sandboxed from host CSS, so `stroke="currentColor"` would resolve
+   * black and vanish against the dark sidebar — #99).
    */
   protected readonly academyLogoUrl = computed(
     () => this.academyService.academy()?.logo_url ?? null,
   );
 
-  /**
-   * User avatar URL + name for the topbar chip (#411). Reading both off the
-   * cached `user` signal so the chip re-renders the moment an avatar
-   * upload / removal swaps the value in `AuthService`.
-   */
+  /** Avatar URL + name for the topbar chip (#411), re-derived off `user`. */
   protected readonly userAvatarUrl = computed(() => this.authService.user()?.avatar_url ?? null);
   protected readonly userName = computed(() => this.authService.user()?.full_name ?? null);
 
   /**
-   * Mobile sidebar drawer state. On viewports below the sidebar breakpoint
-   * (see dashboard.component.scss @media) the sidebar is hidden off-canvas
-   * by default; tapping the hamburger in the mobile topbar flips this to
-   * `true` and CSS slides the sidebar in. Desktop viewports ignore this
-   * signal — the sidebar is always visible there.
-   */
-  protected readonly sidebarOpen = signal(false);
-
-  /**
    * App version surfaced quietly in the sidebar footer (#160). Resolved from
-   * `git describe --tags --always` at build time by `scripts/write-version.cjs`
-   * — see `client/src/environments/version.ts`. Renders "dev" on hot-reload
-   * dev servers; the prod build replaces it with the tag the bundle was cut
-   * from (e.g. `v1.1.0`, or `v1.1.0-3-gabc1234` between tags).
+   * `git describe` at build time by `scripts/write-version.cjs`.
    */
   protected readonly versionTag = VERSION.tag;
 
-  protected toggleSidebar(): void {
-    this.sidebarOpen.update((v) => !v);
-  }
+  /** Mobile bottom-tab destinations. The ➕ (create) splits them 2·➕·2. */
+  protected readonly tabs = computed<BottomNavTab[]>(() => {
+    this.languageService.currentLang();
+    const t = (key: string): string => this.translate.instant(key);
+    return [
+      {
+        icon: 'pi pi-home',
+        label: t('nav.academy'),
+        routerLink: '/dashboard/academy',
+        dataCy: 'bottomnav-academy',
+      },
+      {
+        icon: 'pi pi-users',
+        label: t('nav.athletes'),
+        routerLink: '/dashboard/athletes',
+        dataCy: 'bottomnav-athletes',
+      },
+      {
+        icon: 'pi pi-comments',
+        label: t('nav.community'),
+        routerLink: '/dashboard/community',
+        dataCy: 'bottomnav-community',
+      },
+      {
+        icon: 'pi pi-ellipsis-h',
+        label: t('nav.more'),
+        routerLink: '/dashboard/more',
+        dataCy: 'bottomnav-more',
+      },
+    ];
+  });
 
-  protected closeSidebar(): void {
-    this.sidebarOpen.set(false);
-  }
+  protected readonly createTitle = computed<string>(() => {
+    this.languageService.currentLang();
+    return this.translate.instant('nav.create.title');
+  });
 
-  // ── Swipe-to-close drawer ────────────────────────────────────────────────
-  //
-  // Standard Android nav-drawer dismissal gesture: drag the open drawer to
-  // the left, snap to closed if dragged past ~40% of width OR released with
-  // a leftward fling. Below the threshold the drawer animates back to fully
-  // open. The design canon allows gesture interactions where the business
-  // flow genuinely benefits (`client/CLAUDE.md` § Mobile-first → Gesture-
-  // based interactions); a nav drawer dismiss is exactly that case — every
-  // user who's used an Android app expects it.
-  //
-  // Implementation notes:
-  // - Pointer events (no Hammer.js dependency); intent detection (X vs Y
-  //   delta) so vertical scrolling inside the drawer isn't hijacked.
-  // - During the drag, `[style.transform]` is bound inline so the drawer
-  //   follows the finger 1:1. The `--dragging` class strips the CSS
-  //   transition so there's no animation lag against the finger.
-  // - On release the inline transform is cleared; the SCSS rule re-takes
-  //   over and animates the snap-close / snap-open in 200ms decelerate.
-  // - Desktop viewports early-return — the drawer is `position: static`
-  //   there and we don't want inline transforms competing with the layout.
-  private static readonly SIDEBAR_BREAKPOINT_PX = 768;
-  private static readonly DRAG_INTENT_THRESHOLD_PX = 10;
-  private static readonly DRAG_CLOSE_RATIO = 0.4;
-  private static readonly FLING_VELOCITY_PX_PER_MS = 0.5;
+  protected readonly centerAction = computed<BottomNavCenterAction>(() => ({
+    icon: 'pi pi-plus',
+    ariaLabel: this.createTitle(),
+    dataCy: 'bottomnav-create',
+  }));
 
-  private dragStartX: number | null = null;
-  private dragStartY: number | null = null;
-  private dragStartTimeMs = 0;
-  private isHorizontalDrag = false;
-  private sidebarWidthPx = 0;
-  private capturedPointerId: number | null = null;
-  private capturedPointerElement: Element | null = null;
+  protected readonly navAriaLabel = computed<string>(() => {
+    this.languageService.currentLang();
+    return this.translate.instant('nav.barAriaLabel');
+  });
 
-  protected readonly dragOffsetPx = signal(0);
-  protected readonly isDragging = signal(false);
+  /** Desktop rail brand — academy name + logo → the academy home. */
+  protected readonly railBrand = computed<RailBrand>(() => ({
+    label: this.brandLabel(),
+    logoUrl: this.academyLogoUrl(),
+    routerLink: '/dashboard/academy',
+  }));
 
-  protected onSidebarPointerDown(event: PointerEvent): void {
-    if (!this.sidebarOpen()) return;
-    if (!event.isPrimary) return;
-    if (window.innerWidth >= DashboardComponent.SIDEBAR_BREAKPOINT_PX) return;
+  /** Desktop rail profile chip → the More hub; null until the user hydrates. */
+  protected readonly railProfile = computed<RailProfile | null>(() => {
+    const u = this.user();
+    return u
+      ? {
+          name: this.userName(),
+          avatarUrl: this.userAvatarUrl(),
+          handle: u.handle,
+          routerLink: '/dashboard/more',
+        }
+      : null;
+  });
 
-    this.dragStartX = event.clientX;
-    this.dragStartY = event.clientY;
-    this.dragStartTimeMs = event.timeStamp;
-    this.isHorizontalDrag = false;
-    this.sidebarWidthPx = (event.currentTarget as HTMLElement).offsetWidth;
-    this.dragOffsetPx.set(0);
-    // No setPointerCapture() on pointerdown — capturing the pointer here
-    // would retarget subsequent events away from the drawer's nav-link
-    // children, breaking <a routerLink> taps that should propagate
-    // through to the browser's click handling (Copilot review on #683).
-    // Capture only kicks in once horizontal-drag intent is confirmed in
-    // onSidebarPointerMove below; the edge case of "user releases outside
-    // the drawer before intent threshold" is harmless — drag state
-    // auto-resets on the next pointerdown.
-  }
+  /** Role-aware quick actions for the ➕ sheet (owner: mark attendance / add athlete / post). */
+  protected readonly createActions = computed<CreateSheetAction[]>(() => {
+    this.languageService.currentLang();
+    const t = (key: string): string => this.translate.instant(key);
+    return [
+      {
+        icon: 'pi pi-check-circle',
+        label: t('nav.create.markAttendance'),
+        routerLink: '/dashboard/attendance',
+        dataCy: 'create-attendance',
+      },
+      {
+        icon: 'pi pi-user-plus',
+        label: t('nav.create.addAthlete'),
+        routerLink: '/dashboard/athletes/new',
+        dataCy: 'create-athlete',
+      },
+      {
+        icon: 'pi pi-pencil',
+        label: t('nav.create.post'),
+        routerLink: '/dashboard/community',
+        dataCy: 'create-post',
+      },
+    ];
+  });
 
-  protected onSidebarPointerMove(event: PointerEvent): void {
-    if (this.dragStartX === null || this.dragStartY === null) return;
-
-    const deltaX = event.clientX - this.dragStartX;
-    const deltaY = event.clientY - this.dragStartY;
-    const threshold = DashboardComponent.DRAG_INTENT_THRESHOLD_PX;
-
-    if (!this.isHorizontalDrag && (Math.abs(deltaX) > threshold || Math.abs(deltaY) > threshold)) {
-      if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        this.isHorizontalDrag = true;
-        this.isDragging.set(true);
-        // NOW capture — horizontal-drag intent is confirmed, we want every
-        // subsequent pointerup/cancel regardless of where the finger lands
-        // (even outside the drawer). Nav-link clicks below this point are
-        // intentionally inert: the user is in the middle of a gesture, not
-        // a tap.
-        const target = event.currentTarget as Element;
-        target.setPointerCapture(event.pointerId);
-        this.capturedPointerId = event.pointerId;
-        this.capturedPointerElement = target;
-      } else {
-        // Vertical scroll wins — abort the gesture state (no pointer was
-        // captured yet, so nothing to release).
-        this.dragStartX = null;
-        this.dragStartY = null;
-        return;
-      }
-    }
-
-    if (this.isHorizontalDrag) {
-      // Clamp to negative (left) only: the drawer can't move further than
-      // fully open, so positive deltaX is pinned at 0.
-      this.dragOffsetPx.set(Math.min(0, deltaX));
-    }
-  }
-
-  protected onSidebarPointerUp(event: PointerEvent): void {
-    if (this.dragStartX === null || !this.isHorizontalDrag) {
-      this.resetDrag();
-      return;
-    }
-
-    const deltaX = event.clientX - this.dragStartX;
-    const elapsedMs = Math.max(1, event.timeStamp - this.dragStartTimeMs);
-    const velocity = Math.abs(deltaX) / elapsedMs;
-
-    const draggedFarEnough = -deltaX > this.sidebarWidthPx * DashboardComponent.DRAG_CLOSE_RATIO;
-    const flungLeft = deltaX < 0 && velocity > DashboardComponent.FLING_VELOCITY_PX_PER_MS;
-
-    if (draggedFarEnough || flungLeft) {
-      this.closeSidebar();
-    }
-    this.resetDrag();
-  }
-
-  private releaseCapturedPointer(): void {
-    if (this.capturedPointerElement !== null && this.capturedPointerId !== null) {
-      try {
-        this.capturedPointerElement.releasePointerCapture(this.capturedPointerId);
-      } catch {
-        // Pointer may already have been released by the browser on
-        // pointerup — swallow the "Invalid pointer id" DOMException.
-      }
-    }
-    this.capturedPointerId = null;
-    this.capturedPointerElement = null;
-  }
-
-  private resetDrag(): void {
-    this.dragStartX = null;
-    this.dragStartY = null;
-    this.isHorizontalDrag = false;
-    this.isDragging.set(false);
-    this.dragOffsetPx.set(0);
-    this.releaseCapturedPointer();
-  }
-
-  private logout(): void {
-    // `AuthService.logout()` already invalidates the academy cache
-    // (see AcademyService.clear() — epoch-bumped invalidation from #41),
-    // so the brand label's signal-backed computed resets in the same tick.
-    this.authService.logout();
-    void this.router.navigate(['/auth/login']);
-  }
-
-  /**
-   * Template-facing wrapper around the private `logout()`. Declared
-   * `protected` so the HTML binding can call it while the real auth
-   * invalidation stays encapsulated on the class. Also closes the
-   * mobile drawer first so the user doesn't land on `/auth/login`
-   * with a drawer still slid in (Krug forgiveness — a click should
-   * complete ONE interaction, not leave trailing UI state).
-   */
-  protected signOut(): void {
-    this.closeSidebar();
-    this.logout();
-  }
-
-  /** Sidebar language toggle (#273). Same call path the legal pages will
-   *  use — `LanguageService` is the single source of truth for the active
-   *  language across the SPA. */
-  protected setLang(lang: SupportedLanguage): void {
-    this.languageService.setLanguage(lang);
+  protected onCreate(): void {
+    this.createSheet().open();
   }
 }

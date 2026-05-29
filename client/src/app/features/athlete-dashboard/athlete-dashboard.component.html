@@ -1,21 +1,9 @@
 <div class="layout">
-  <!-- Mobile topbar (visible below the sidebar breakpoint). Same shape
-       as the owner-side topbar but stripped: no search palette, no
-       notification bell (M9 PR-F adds it). -->
+  <!-- Mobile topbar (<768px): brand + avatar. The hamburger off-canvas
+       drawer is retired (#1109) — the bottom tab bar is the primary nav. -->
   <header class="topbar" role="banner">
-    <button
-      type="button"
-      class="topbar__hamburger"
-      [attr.aria-label]="(sidebarOpen() ? 'nav.close' : 'nav.open') | translate"
-      [attr.aria-expanded]="sidebarOpen()"
-      aria-controls="app-athlete-sidebar"
-      (click)="toggleSidebar()"
-      data-cy="topbar-hamburger"
-    >
-      <i class="pi pi-bars" aria-hidden="true"></i>
-    </button>
     <a
-      routerLink="/dashboard/me"
+      routerLink="/dashboard/me/feed"
       class="topbar__title"
       [attr.aria-label]="'nav.homeAriaLabel' | translate"
       data-cy="topbar-home-link"
@@ -28,150 +16,30 @@
     }
   </header>
 
-  <!-- Off-canvas backdrop closes the drawer when tapped (mobile only).
-       aria-hidden — the close-by-tap is a visual affordance; keyboard
-       users close via Esc / the hamburger button which carries its
-       own aria-label (matches the owner-side dashboard convention). -->
-  @if (sidebarOpen()) {
-    <div
-      class="backdrop"
-      aria-hidden="true"
-      (click)="closeSidebar()"
-      data-cy="sidebar-backdrop"
-    ></div>
-  }
-
-  <aside
-    id="app-athlete-sidebar"
-    class="sidebar"
-    [class.sidebar--open]="sidebarOpen()"
-    role="navigation"
-    [attr.aria-label]="'nav.sidebarAriaLabel' | translate"
-  >
-    <div class="sidebar__brand">
-      <app-brand-glyph class="sidebar__logo" />
-      <span class="sidebar__brand-text">Budojo</span>
-    </div>
-
-    @if (user(); as currentUser) {
-      <div class="sidebar__user">
-        <app-user-avatar [name]="currentUser.full_name" [url]="currentUser.avatar_url" />
-        <div class="sidebar__user-meta">
-          <span class="sidebar__user-name"
-            >{{ currentUser.first_name }} {{ currentUser.last_name }}</span
-          >
-          @if (currentUser.handle) {
-            <span class="sidebar__user-handle">&#64;{{ currentUser.handle }}</span>
-          }
-        </div>
-      </div>
-    }
-
-    <nav class="sidebar__nav">
-      <ul>
-        <li>
-          <a
-            routerLink="/dashboard/me/feed"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            (click)="closeSidebar()"
-            data-cy="nav-me-feed"
-          >
-            <i class="pi pi-comments" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.feed' | translate }}</span>
-          </a>
-        </li>
-        <li>
-          <a
-            routerLink="/dashboard/me/academy"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            (click)="closeSidebar()"
-            data-cy="nav-me-academy"
-          >
-            <i class="pi pi-building" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.academy' | translate }}</span>
-          </a>
-        </li>
-        <li>
-          <a
-            routerLink="/dashboard/me/attendance"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            (click)="closeSidebar()"
-            data-cy="nav-me-attendance"
-          >
-            <i class="pi pi-calendar" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.attendance' | translate }}</span>
-          </a>
-        </li>
-        <li>
-          <a
-            routerLink="/dashboard/me/payments"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            (click)="closeSidebar()"
-            data-cy="nav-me-payments"
-          >
-            <i class="pi pi-wallet" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.payments' | translate }}</span>
-          </a>
-        </li>
-        <li>
-          <a
-            routerLink="/dashboard/me/documents"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            (click)="closeSidebar()"
-            data-cy="nav-me-documents"
-          >
-            <i class="pi pi-file" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.documents' | translate }}</span>
-          </a>
-        </li>
-        @if (user()?.handle) {
-          <li>
-            <a
-              [routerLink]="['/dashboard/me/u', user()?.handle]"
-              routerLinkActive="sidebar__link--active"
-              class="sidebar__link"
-              (click)="closeSidebar()"
-              data-cy="nav-me-my-profile"
-            >
-              <i class="pi pi-id-card" aria-hidden="true"></i>
-              <span>{{ 'athletePortal.nav.myProfile' | translate }}</span>
-            </a>
-          </li>
-        }
-        <li>
-          <a
-            routerLink="/dashboard/me/profile"
-            routerLinkActive="sidebar__link--active"
-            class="sidebar__link"
-            (click)="closeSidebar()"
-            data-cy="nav-me-settings"
-          >
-            <i class="pi pi-cog" aria-hidden="true"></i>
-            <span>{{ 'athletePortal.nav.settings' | translate }}</span>
-          </a>
-        </li>
-      </ul>
-    </nav>
-
-    <div class="sidebar__footer">
-      <button type="button" class="sidebar__signout" (click)="signOut()" data-cy="nav-sign-out">
-        <i class="pi pi-sign-out" aria-hidden="true"></i>
-        <span>{{ 'nav.signOut' | translate }}</span>
-      </button>
-      <!-- Lang toggle + Help · Privacy · vX.Y.Z (#902). Pre-fix the
-           athlete shell had only Sign-out here, leaving athletes
-           without a way to confirm their app version or switch
-           language inside the shell. -->
-      <app-sidebar-footer-meta />
-    </div>
-  </aside>
+  <!-- Desktop social rail (>=768px) — the shared app-side-rail (#1120). Same
+       IA as the mobile bottom tab bar; hidden on mobile, where the bottom nav
+       owns navigation. -->
+  <app-side-rail
+    data-cy="athlete-rail"
+    [tabs]="tabs()"
+    [brand]="railBrand"
+    [profile]="railProfile()"
+    [createLabel]="createTitle()"
+    [ariaLabel]="navAriaLabel()"
+    (createActivated)="onCreate()"
+  />
 
   <main class="main">
     <router-outlet />
   </main>
+
+  <!-- Mobile bottom tab bar (<768px) + the role's ➕ create sheet (#1109). -->
+  <app-bottom-nav
+    class="mobile-nav"
+    [tabs]="tabs()"
+    [centerAction]="centerAction()"
+    [ariaLabel]="navAriaLabel()"
+    (centerActivated)="onCreate()"
+  />
+  <app-create-sheet [actions]="createActions()" [heading]="createTitle()" />
 </div>

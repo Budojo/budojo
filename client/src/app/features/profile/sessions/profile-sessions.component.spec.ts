@@ -124,27 +124,17 @@ describe('ProfileSessionsComponent (#413)', () => {
     expect(el.querySelector('[data-cy="profile-sessions-retry"]')).not.toBeNull();
   });
 
-  it('revokes a single non-current session via DELETE then refreshes the list and toasts', async () => {
-    const { fixture, httpMock, addToastSpy, confirmationService } = setup();
+  it('revokes a single non-current session via DELETE then refreshes the list and toasts', () => {
+    const { fixture, httpMock, addToastSpy } = setup();
     httpMock.expectOne(SESSIONS_URL).flush({ data: [ROW_SAFARI_CURRENT, ROW_CHROME] });
     fixture.detectChanges();
 
-    // Bypass the p-confirmpopup interaction in the spec — call the
-    // confirm handler directly with a fake event so the accept arm
-    // fires synchronously. The confirmation popup shape itself is
-    // exercised by the e2e spec.
-    const acceptSpy = vi.fn();
-    vi.spyOn(confirmationService, 'confirm').mockImplementation((opts) => {
-      acceptSpy.mockImplementation(() => opts.accept?.());
-      acceptSpy();
-      return confirmationService;
-    });
-
-    (
-      fixture.componentInstance as unknown as {
-        confirmRevoke: (e: MouseEvent, s: typeof ROW_CHROME) => void;
-      }
-    ).confirmRevoke(new MouseEvent('click'), ROW_CHROME);
+    // The confirm step lives in app-confirm-destructive-button (#1103);
+    // drive the accept-arm handler directly. The popup shape is covered
+    // by the shell's own spec + the e2e.
+    (fixture.componentInstance as unknown as { revoke: (s: typeof ROW_CHROME) => void }).revoke(
+      ROW_CHROME,
+    );
 
     httpMock
       .expectOne((r) => r.method === 'DELETE' && r.url === `${SESSIONS_URL}/${ROW_CHROME.id}`)
@@ -158,20 +148,13 @@ describe('ProfileSessionsComponent (#413)', () => {
   });
 
   it('revokes the current session WITHOUT firing a refresh (next request will 401)', () => {
-    const { fixture, httpMock, addToastSpy, confirmationService } = setup();
+    const { fixture, httpMock, addToastSpy } = setup();
     httpMock.expectOne(SESSIONS_URL).flush({ data: [ROW_SAFARI_CURRENT] });
     fixture.detectChanges();
 
-    vi.spyOn(confirmationService, 'confirm').mockImplementation((opts) => {
-      opts.accept?.();
-      return confirmationService;
-    });
-
     (
-      fixture.componentInstance as unknown as {
-        confirmRevoke: (e: MouseEvent, s: typeof ROW_SAFARI_CURRENT) => void;
-      }
-    ).confirmRevoke(new MouseEvent('click'), ROW_SAFARI_CURRENT);
+      fixture.componentInstance as unknown as { revoke: (s: typeof ROW_SAFARI_CURRENT) => void }
+    ).revoke(ROW_SAFARI_CURRENT);
 
     httpMock
       .expectOne(`${SESSIONS_URL}/${ROW_SAFARI_CURRENT.id}`)
@@ -184,18 +167,11 @@ describe('ProfileSessionsComponent (#413)', () => {
   });
 
   it('revokes-others: DELETE without id, refresh, success toast', () => {
-    const { fixture, httpMock, addToastSpy, confirmationService } = setup();
+    const { fixture, httpMock, addToastSpy } = setup();
     httpMock.expectOne(SESSIONS_URL).flush({ data: [ROW_SAFARI_CURRENT, ROW_CHROME, ROW_FIREFOX] });
     fixture.detectChanges();
 
-    vi.spyOn(confirmationService, 'confirm').mockImplementation((opts) => {
-      opts.accept?.();
-      return confirmationService;
-    });
-
-    (
-      fixture.componentInstance as unknown as { confirmRevokeOthers: (e: MouseEvent) => void }
-    ).confirmRevokeOthers(new MouseEvent('click'));
+    (fixture.componentInstance as unknown as { revokeOthers: () => void }).revokeOthers();
 
     httpMock
       .expectOne((r) => r.method === 'DELETE' && r.url === SESSIONS_URL)
@@ -208,25 +184,33 @@ describe('ProfileSessionsComponent (#413)', () => {
   });
 
   it('revoke error → error toast, no list refresh, retry CTA still works', () => {
-    const { fixture, httpMock, addToastSpy, confirmationService } = setup();
+    const { fixture, httpMock, addToastSpy } = setup();
     httpMock.expectOne(SESSIONS_URL).flush({ data: [ROW_SAFARI_CURRENT, ROW_CHROME] });
     fixture.detectChanges();
 
-    vi.spyOn(confirmationService, 'confirm').mockImplementation((opts) => {
-      opts.accept?.();
-      return confirmationService;
-    });
-
-    (
-      fixture.componentInstance as unknown as {
-        confirmRevoke: (e: MouseEvent, s: typeof ROW_CHROME) => void;
-      }
-    ).confirmRevoke(new MouseEvent('click'), ROW_CHROME);
+    (fixture.componentInstance as unknown as { revoke: (s: typeof ROW_CHROME) => void }).revoke(
+      ROW_CHROME,
+    );
 
     httpMock
       .expectOne(`${SESSIONS_URL}/${ROW_CHROME.id}`)
       .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
 
     expect(addToastSpy).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }));
+  });
+
+  it('renders both revoke actions through app-confirm-destructive-button (#1103)', () => {
+    const { fixture, httpMock, el } = setup();
+    httpMock.expectOne(SESSIONS_URL).flush({ data: [ROW_SAFARI_CURRENT, ROW_CHROME] });
+    fixture.detectChanges();
+
+    // Per-row revoke + the "revoke others" CTA are the canonical shell;
+    // the data-cy hooks now resolve on the shell's inner button.
+    expect(
+      el.querySelector('app-confirm-destructive-button [data-cy="profile-session-revoke-1"]'),
+    ).not.toBeNull();
+    expect(
+      el.querySelector('app-confirm-destructive-button [data-cy="profile-sessions-revoke-others"]'),
+    ).not.toBeNull();
   });
 });

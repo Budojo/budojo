@@ -34,7 +34,15 @@
     "signOut": "Sign out",
     "privacy": "Privacy",
     "stats": "Stats",
-    "help": "Help"
+    "help": "Help",
+    "more": "More",
+    "barAriaLabel": "Primary",
+    "create": {
+      "title": "Create",
+      "markAttendance": "Mark attendance",
+      "addAthlete": "Add athlete",
+      "post": "New post"
+    }
   },
   "auth": {
     "shared": {
@@ -253,7 +261,16 @@
       "academy": "Academy",
       "attendance": "Attendance",
       "payments": "Payments",
-      "documents": "Documents"
+      "documents": "Documents",
+      "barAriaLabel": "Primary"
+    },
+    "more": {
+      "title": "More"
+    },
+    "create": {
+      "title": "Create",
+      "checkIn": "Check in",
+      "post": "New post"
     },
     "profile": {
       "title": "Settings",

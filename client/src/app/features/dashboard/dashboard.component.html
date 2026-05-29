@@ -1,26 +1,11 @@
 <div class="layout">
-  <!-- Mobile topbar: visible only below the sidebar breakpoint (see SCSS).
-       Hamburger opens the off-canvas sidebar; the app name stays as a static
-       anchor because the full brand menu (incl. sign-out) lives in the drawer
-       where the academy name already is.
-       Topbar sits ABOVE the backdrop (z-index ordering) so the hamburger
-       stays tappable while the drawer is open — it's what closes the drawer
-       when the user taps it a second time, matching the "Close navigation"
-       aria-label. -->
+  <!-- Mobile topbar (<768px): brand + notification bell + avatar. The
+       hamburger off-canvas drawer is retired (#1111) — the bottom tab bar
+       is the primary nav. The brand → /dashboard/academy (the owner's home,
+       the pi-home Home tab), matching its "go to home" aria-label (#1112). -->
   <header class="topbar" role="banner">
-    <button
-      type="button"
-      class="topbar__hamburger"
-      [attr.aria-label]="(sidebarOpen() ? 'nav.close' : 'nav.open') | translate"
-      [attr.aria-expanded]="sidebarOpen()"
-      aria-controls="app-sidebar"
-      (click)="toggleSidebar()"
-      data-cy="topbar-hamburger"
-    >
-      <i class="pi pi-bars" aria-hidden="true"></i>
-    </button>
     <a
-      routerLink="/dashboard"
+      routerLink="/dashboard/academy"
       class="topbar__title"
       [attr.aria-label]="'nav.homeAriaLabel' | translate"
       data-cy="topbar-home-link"
@@ -33,218 +18,48 @@
       }
       Budojo
     </a>
-    <!--
-      User avatar chip (#411). Surfaces the uploaded image OR an initials
-      fallback. Tapping the chip lands the user on /dashboard/profile,
-      matching Jakob's Law (top-right user chip is the universal "manage
-      my account" affordance). Hidden on viewports where the sidebar is
-      always visible — the static sidebar's profile link plus its own
-      future avatar slot makes the topbar chip redundant there. Below the
-      sidebar breakpoint it's the only non-hamburger control in the topbar.
-    -->
-    <!-- In-app notification center (#418). Bell + unread badge +
-         dropdown panel listing the latest 20 rows. Self-hydrates on
-         first render; sits LEFT of the avatar chip to keep the chip's
-         top-right "manage my account" affordance unchanged. -->
+    <!-- In-app notification center (#418). Bell + unread badge + dropdown.
+         Kept in the owner topbar on mobile — the bottom bar carries no
+         Notifications tab — and sits LEFT of the avatar chip. -->
     <app-notification-bell />
     <a
       routerLink="/dashboard/profile"
       class="topbar__user-link"
       [attr.aria-label]="'nav.profileAriaLabel' | translate"
-      (click)="closeSidebar()"
       data-cy="topbar-user-avatar"
     >
       <app-user-avatar [url]="userAvatarUrl()" [name]="userName()" size="chip" />
     </a>
   </header>
 
-  <!-- The sidebar is hidden from assistive tech via CSS (`visibility: hidden`)
-       when off-canvas on mobile, and always visible on desktop. No JS viewport
-       detection needed — the media query inside the SCSS handles both states.
-       See dashboard.component.scss § .sidebar for the visibility transitions. -->
-  <aside
-    id="app-sidebar"
-    class="sidebar"
-    [class.sidebar--open]="sidebarOpen()"
-    [class.sidebar--dragging]="isDragging()"
-    [style.transform]="isDragging() ? 'translateX(' + dragOffsetPx() + 'px)' : null"
-    (pointerdown)="onSidebarPointerDown($event)"
-    (pointermove)="onSidebarPointerMove($event)"
-    (pointerup)="onSidebarPointerUp($event)"
-    (pointercancel)="onSidebarPointerUp($event)"
-  >
-    <!--
-      Brand area is non-interactive (#166). Previously this was a button that
-      toggled a single-item dropdown ("Sign out"); the bottom-of-sidebar Sign
-      out row already carries that action, so the dropdown was redundant
-      noise (Krug § "one obvious destination per verb"). Plain header now —
-      the academy name still reads as the dominant brand identity.
-    -->
-    <div class="sidebar__brand" data-cy="sidebar-brand">
-      @if (academyLogoUrl(); as url) {
-        <img [src]="url" alt="" class="sidebar__logo" aria-hidden="true" />
-      } @else {
-        <!-- Inline so stroke="currentColor" inherits the sidebar text color (#99). -->
-        <app-brand-glyph class="sidebar__logo" data-cy="brand-glyph-fallback" />
-      }
-      <span class="sidebar__brand-text">
-        <span class="sidebar__brand-eyebrow">Budojo</span>
-        <span class="sidebar__brand-name">{{ brandLabel() }}</span>
-      </span>
-    </div>
-
-    <nav class="sidebar__nav">
-      <a
-        routerLink="academy"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-academy"
-        (click)="closeSidebar()"
-      >
-        <i class="pi pi-home"></i>
-        <span>{{ 'nav.academy' | translate }}</span>
-      </a>
-      <a
-        routerLink="athletes"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        (click)="closeSidebar()"
-      >
-        <i class="pi pi-users"></i>
-        <span>{{ 'nav.athletes' | translate }}</span>
-      </a>
-      <a
-        routerLink="attendance"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-attendance"
-        (click)="closeSidebar()"
-      >
-        <i class="pi pi-check-square"></i>
-        <span>{{ 'nav.attendance' | translate }}</span>
-      </a>
-      <a
-        routerLink="stats"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        (click)="closeSidebar()"
-        data-cy="nav-stats"
-      >
-        <i class="pi pi-chart-pie" aria-hidden="true"></i>
-        <span>{{ 'nav.stats' | translate }}</span>
-      </a>
-      <a
-        routerLink="academy/activity"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        (click)="closeSidebar()"
-        data-cy="nav-audit-activity"
-      >
-        <i class="pi pi-history" aria-hidden="true"></i>
-        <span>{{ 'nav.activity' | translate }}</span>
-      </a>
-      <a
-        routerLink="community"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-community"
-        (click)="closeSidebar()"
-      >
-        <i class="pi pi-comments" aria-hidden="true"></i>
-        <span>{{ 'nav.community' | translate }}</span>
-      </a>
-      @if (user()?.handle) {
-        <a
-          [routerLink]="['/dashboard/u', user()?.handle]"
-          routerLinkActive="sidebar__nav-item--active"
-          class="sidebar__nav-item"
-          data-cy="nav-my-profile"
-          (click)="closeSidebar()"
-        >
-          <i class="pi pi-id-card" aria-hidden="true"></i>
-          <span>{{ 'nav.myProfile' | translate }}</span>
-        </a>
-      }
-      <a
-        routerLink="profile"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item"
-        data-cy="nav-settings"
-        (click)="closeSidebar()"
-      >
-        <i class="pi pi-cog" aria-hidden="true"></i>
-        <span>{{ 'nav.settings' | translate }}</span>
-      </a>
-    </nav>
-
-    <!-- Sign out: dedicated, always-visible row. Lives apart from the nav
-         to signal finality via the `--signout` modifier color. This is
-         the only signout entry point in the shell after #166 retired the
-         redundant brand-area dropdown (Krug + Don't Make Me Think).
-         "What's new" sits ABOVE Sign out (#254) so a returning user
-         spots the changelog before the finality of signing out.
-         "Contact support" (post v1.17.0 consolidation) is the single
-         "talk to us" channel — the previous "Send feedback" entry was
-         folded into support with a `feedback` category for messages
-         that don't expect a reply (Krug § "one obvious destination per
-         verb"). Icon is `pi-comment` (universal "speak up") rather than
-         `pi-life-ring` (read as emergency-only). -->
-    <div class="sidebar__footer">
-      <a
-        routerLink="support"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item sidebar__nav-item--support"
-        (click)="closeSidebar()"
-        data-cy="nav-support"
-      >
-        <i class="pi pi-comment" aria-hidden="true"></i>
-        <span>{{ 'nav.support' | translate }}</span>
-      </a>
-      <a
-        routerLink="whats-new"
-        routerLinkActive="sidebar__nav-item--active"
-        class="sidebar__nav-item sidebar__nav-item--whats-new"
-        (click)="closeSidebar()"
-        data-cy="nav-whats-new"
-      >
-        <i class="pi pi-sparkles" aria-hidden="true"></i>
-        <span>{{ 'nav.whatsNew' | translate }}</span>
-      </a>
-      <button
-        type="button"
-        class="sidebar__nav-item sidebar__nav-item--signout"
-        (click)="signOut()"
-        data-cy="nav-sign-out"
-      >
-        <i class="pi pi-sign-out" aria-hidden="true"></i>
-        <span>{{ 'nav.signOut' | translate }}</span>
-      </button>
-      <!-- Lang toggle + Help · Privacy · vX.Y.Z block now shared with
-           the athlete-portal shell (#902). -->
-      <app-sidebar-footer-meta />
-    </div>
-  </aside>
-
-  <!-- Backdrop: only mounted when the mobile drawer is open. Click dismisses.
-       Sits above the main content (so a tap closes the drawer instead of
-       interacting with the page beneath) but below the sidebar AND the topbar
-       (so both remain interactive — tap backdrop OR tap hamburger to close). -->
-  @if (sidebarOpen()) {
-    <div
-      class="layout__backdrop"
-      aria-hidden="true"
-      (click)="closeSidebar()"
-      data-cy="drawer-backdrop"
-    ></div>
-  }
+  <!-- Desktop social rail (>=768px) — the shared app-side-rail (#1120),
+       mirroring the athlete shell. Hidden on mobile, where the bottom nav
+       owns navigation. -->
+  <app-side-rail
+    data-cy="owner-rail"
+    [tabs]="tabs()"
+    [brand]="railBrand()"
+    [profile]="railProfile()"
+    [createLabel]="createTitle()"
+    [ariaLabel]="navAriaLabel()"
+    (createActivated)="onCreate()"
+  />
 
   <main class="main">
     <router-outlet />
   </main>
 
-  <!-- Global Cmd/Ctrl-K command palette (#426). Mounted once at the
-       dashboard shell so the keyboard shortcut works on every
-       authenticated route. The component owns its own visibility +
-       hotkey listener; the shell only needs to host it. -->
+  <!-- Mobile bottom tab bar (<768px) + the role's ➕ create sheet (#1111). -->
+  <app-bottom-nav
+    class="mobile-nav"
+    [tabs]="tabs()"
+    [centerAction]="centerAction()"
+    [ariaLabel]="navAriaLabel()"
+    (centerActivated)="onCreate()"
+  />
+  <app-create-sheet [actions]="createActions()" [heading]="createTitle()" />
+
+  <!-- Global Cmd/Ctrl-K command palette (#426), hosted once at the shell so
+       the shortcut works on every authenticated route. -->
   <app-search-palette />
 </div>
