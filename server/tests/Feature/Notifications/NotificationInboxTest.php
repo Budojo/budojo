@@ -125,3 +125,33 @@ it('inbox endpoints all 401 without authentication', function (): void {
         ->assertUnauthorized();
     $this->postJson('/api/v1/me/notifications/read-all')->assertUnauthorized();
 });
+
+it('GET /me/notifications projects the actor block when the notification carries one', function (): void {
+    $user = userWithAcademy();
+    makeDbNotification($user, [
+        'title' => 'Marco Rossi reacted to your post',
+        'body' => '',
+        'link' => '/dashboard/me/feed',
+        'kind' => 'community_reaction_on_your_post',
+        'actor' => ['name' => 'Marco Rossi', 'avatar_url' => 'https://cdn.example/a.png'],
+    ]);
+
+    $this->actingAs($user)->getJson('/api/v1/me/notifications')
+        ->assertOk()
+        ->assertJsonPath('data.0.actor.name', 'Marco Rossi')
+        ->assertJsonPath('data.0.actor.avatar_url', 'https://cdn.example/a.png');
+});
+
+it('GET /me/notifications returns a null actor for system notifications', function (): void {
+    $user = userWithAcademy();
+    makeDbNotification($user, [
+        'title' => 'Your weekly recap',
+        'body' => '3 sessions this week',
+        'link' => '/dashboard/me/recap/2026-05-18',
+        'kind' => 'weekly_recap',
+    ]);
+
+    $this->actingAs($user)->getJson('/api/v1/me/notifications')
+        ->assertOk()
+        ->assertJsonPath('data.0.actor', null);
+});

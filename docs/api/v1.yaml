@@ -1010,6 +1010,24 @@ paths:
                           type: string
                           nullable: true
                           example: '/dashboard/athletes/42/documents'
+                        kind:
+                          type: string
+                          nullable: true
+                          description: Stable category discriminator driving the type badge.
+                          example: community_reaction_on_your_post
+                        actor:
+                          type: object
+                          nullable: true
+                          description: Who triggered it (avatar + name); null for system notifications (recap, payment, …).
+                          required: [name, avatar_url]
+                          properties:
+                            name:
+                              type: string
+                            avatar_url:
+                              type: string
+                              format: uri
+                              nullable: true
+                              example: 'https://api.budojo.local/storage/avatars/u-42.jpg?v=1716840000'
                         read_at:
                           type: string
                           format: date-time
