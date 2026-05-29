@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, HostListener, OnInit, inject } from
 import { Router } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AuthService } from '../../core/services/auth.service';
 import { NotificationInboxService } from '../../core/services/notification-inbox.service';
 
 /**
@@ -23,7 +22,6 @@ import { NotificationInboxService } from '../../core/services/notification-inbox
 })
 export class NotificationBellComponent implements OnInit {
   private readonly inboxService = inject(NotificationInboxService);
-  private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
   protected readonly unread = this.inboxService.unread;
@@ -33,12 +31,16 @@ export class NotificationBellComponent implements OnInit {
     this.refresh();
   }
 
-  /** Tap the bell → the full-screen notifications page for the active shell. */
+  /**
+   * Tap the bell → the full-screen notifications page for the active shell.
+   * The shell is derived from the current URL, not the auth signal: the bell
+   * renders outside the `@if (user())` guard, so a tap before `/auth/me`
+   * hydrates would route an athlete to the owner page (#1130 review).
+   */
   protected open(): void {
-    const target =
-      this.auth.user()?.role === 'athlete'
-        ? '/dashboard/me/notifications'
-        : '/dashboard/notifications';
+    const target = this.router.url.includes('/dashboard/me/')
+      ? '/dashboard/me/notifications'
+      : '/dashboard/notifications';
     void this.router.navigateByUrl(target);
   }
 

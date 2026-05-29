@@ -7,16 +7,12 @@ import {
   InboxNotification,
   NotificationInboxService,
 } from '../../core/services/notification-inbox.service';
-import { AuthService } from '../../core/services/auth.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
-function setup(
-  opts: { unread?: number; role?: 'owner' | 'athlete'; loadResponse?: 'ok' | 'error' } = {},
-) {
+function setup(opts: { unread?: number; url?: string; loadResponse?: 'ok' | 'error' } = {}) {
   const unreadSig = signal(opts.unread ?? 0);
   const rowsSig = signal<readonly InboxNotification[]>([]);
   const hasUnreadSig = computed(() => unreadSig() > 0);
-  const userSig = signal<{ role?: string } | null>({ role: opts.role ?? 'owner' });
 
   const load = vi.fn(() =>
     opts.loadResponse === 'error'
@@ -37,8 +33,10 @@ function setup(
           load,
         } as unknown as NotificationInboxService,
       },
-      { provide: AuthService, useValue: { user: userSig.asReadonly() } as unknown as AuthService },
-      { provide: Router, useValue: { navigateByUrl } as Partial<Router> },
+      {
+        provide: Router,
+        useValue: { navigateByUrl, url: opts.url ?? '/dashboard/me/feed' } as Partial<Router>,
+      },
       ...provideI18nTesting(),
     ],
   });
@@ -60,16 +58,16 @@ describe('NotificationBellComponent (#418, #1129)', () => {
     expect(load).toHaveBeenCalledOnce();
   });
 
-  it('navigates an owner to the owner notifications page on open', () => {
-    const { cmp, navigateByUrl } = setup({ role: 'owner' });
-    (cmp as unknown as { open: () => void }).open();
-    expect(navigateByUrl).toHaveBeenCalledWith('/dashboard/notifications');
-  });
-
-  it('navigates an athlete to the athlete notifications page on open', () => {
-    const { cmp, navigateByUrl } = setup({ role: 'athlete' });
+  it('navigates to the athlete page when on the athlete shell', () => {
+    const { cmp, navigateByUrl } = setup({ url: '/dashboard/me/feed' });
     (cmp as unknown as { open: () => void }).open();
     expect(navigateByUrl).toHaveBeenCalledWith('/dashboard/me/notifications');
+  });
+
+  it('navigates to the owner page when on the owner shell', () => {
+    const { cmp, navigateByUrl } = setup({ url: '/dashboard/athletes' });
+    (cmp as unknown as { open: () => void }).open();
+    expect(navigateByUrl).toHaveBeenCalledWith('/dashboard/notifications');
   });
 
   it('survives a failed load without throwing (badge stays at zero)', () => {

@@ -1,5 +1,7 @@
 /// <reference types="cypress" />
 
+import { VIEWPORT_IPHONE_SE } from '../support/viewports';
+
 // Social-native notifications page (#1129). All API calls are stubbed —
 // a full paginated envelope on the catch-all so paginated shell pages
 // (feed, etc.) don't choke on a missing `meta.current_page`, then the
@@ -100,11 +102,12 @@ describe('Notifications page (#1129)', () => {
   });
 
   it('the topbar bell navigates to the notifications page', () => {
+    // The bell lives in the mobile topbar (the desktop shell uses the side
+    // rail), so assert it at a phone viewport where it's genuinely visible —
+    // no force-click escape hatch needed.
+    cy.viewport(VIEWPORT_IPHONE_SE.width, VIEWPORT_IPHONE_SE.height);
     cy.visitAuthenticated('/dashboard/me/feed');
-    // force: the bell is visibly rendered, but the sticky dark topbar trips
-    // Cypress's strict-visibility check on the icon button — the navigation
-    // is what this asserts.
-    cy.get('[data-cy="notification-bell"]').click({ force: true });
+    cy.get('[data-cy="notification-bell"]').should('be.visible').click();
     cy.url().should('include', '/dashboard/me/notifications');
   });
 });
