@@ -3,12 +3,21 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export interface NotificationActor {
+  readonly name: string;
+  readonly avatar_url: string | null;
+}
+
 export interface InboxNotification {
   readonly id: string;
   readonly type: string;
+  /** Stable category discriminator (e.g. `community_reaction_on_your_post`) — drives the type badge. */
+  readonly kind?: string | null;
   readonly title: string;
   readonly body: string;
   readonly link: string | null;
+  /** Who triggered it (for the avatar). Null/absent for system notifications (recap, payment, …). */
+  readonly actor?: NotificationActor | null;
   readonly read_at: string | null;
   readonly created_at: string | null;
 }

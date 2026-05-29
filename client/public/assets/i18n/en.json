@@ -375,6 +375,21 @@
     }
   },
   "notifications": {
+    "title": "Notifications",
+    "markAll": "Mark all as read",
+    "filter": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "group": {
+      "new": "New",
+      "today": "Today",
+      "week": "This week",
+      "earlier": "Earlier"
+    },
+    "empty": "You're all caught up.",
+    "emptyUnread": "No unread notifications.",
+    "error": "Couldn't load your notifications. Try again.",
     "bell": {
       "ariaLabel": "Notifications",
       "tooltip": "Notifications",

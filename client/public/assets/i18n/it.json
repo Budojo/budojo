@@ -375,6 +375,21 @@
     }
   },
   "notifications": {
+    "title": "Notifiche",
+    "markAll": "Segna tutte come lette",
+    "filter": {
+      "all": "Tutte",
+      "unread": "Non lette"
+    },
+    "group": {
+      "new": "Nuove",
+      "today": "Oggi",
+      "week": "Questa settimana",
+      "earlier": "Prima"
+    },
+    "empty": "Sei in pari, nessuna notifica.",
+    "emptyUnread": "Nessuna notifica non letta.",
+    "error": "Non riesco a caricare le notifiche. Riprova.",
     "bell": {
       "ariaLabel": "Notifiche",
       "tooltip": "Notifiche",
