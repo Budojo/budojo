@@ -13,7 +13,9 @@
   <span>{{ createLabel() }}</span>
 </button>
 
-<nav class="rail__nav">
+<!-- A plain container, NOT a nested <nav> landmark — the host element is
+     already the single role="navigation" landmark for the rail (#1121). -->
+<div class="rail__nav">
   @for (tab of tabs(); track tab.routerLink) {
     <a
       class="rail__item"
@@ -26,7 +28,7 @@
       <span class="rail__label">{{ tab.label }}</span>
     </a>
   }
-</nav>
+</div>
 
 @if (profile(); as p) {
   <a class="rail__profile" [routerLink]="p.routerLink" data-cy="rail-profile">

@@ -85,4 +85,11 @@ describe('SideRailComponent (#1120)', () => {
     expect(host?.getAttribute('role')).toBe('navigation');
     expect(host?.getAttribute('aria-label')).toBe('Primary');
   });
+
+  it('uses a single navigation landmark — no nested <nav> inside the rail (#1121)', () => {
+    const { el } = setup();
+    // The tab links live in a plain container; a second <nav> would nest a
+    // redundant landmark inside the host's role="navigation".
+    expect(el.querySelector('app-side-rail nav')).toBeNull();
+  });
 });
