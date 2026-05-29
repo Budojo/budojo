@@ -6,7 +6,7 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
@@ -20,6 +20,11 @@ import {
   CreateSheetAction,
   CreateSheetComponent,
 } from '../../shared/components/create-sheet/create-sheet.component';
+import {
+  RailBrand,
+  RailProfile,
+  SideRailComponent,
+} from '../../shared/components/side-rail/side-rail.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 
 /**
@@ -39,10 +44,10 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
   imports: [
     RouterOutlet,
     RouterLink,
-    RouterLinkActive,
     BrandGlyphComponent,
     BottomNavComponent,
     CreateSheetComponent,
+    SideRailComponent,
     UserAvatarComponent,
     TranslatePipe,
   ],
@@ -104,6 +109,26 @@ export class AthleteDashboardComponent implements OnInit {
   protected readonly navAriaLabel = computed<string>(() => {
     this.languageService.currentLang();
     return this.translate.instant('athletePortal.nav.barAriaLabel');
+  });
+
+  /** Desktop rail brand — the Budojo glyph + wordmark → the feed (athlete home). */
+  protected readonly railBrand: RailBrand = {
+    label: 'Budojo',
+    logoUrl: null,
+    routerLink: '/dashboard/me/feed',
+  };
+
+  /** Desktop rail profile chip → the More hub; null until the user hydrates. */
+  protected readonly railProfile = computed<RailProfile | null>(() => {
+    const u = this.user();
+    return u
+      ? {
+          name: u.full_name,
+          avatarUrl: u.avatar_url,
+          handle: u.handle,
+          routerLink: '/dashboard/me/more',
+        }
+      : null;
   });
 
   /** Role-aware quick actions for the ➕ sheet (athlete: check-in / post). */

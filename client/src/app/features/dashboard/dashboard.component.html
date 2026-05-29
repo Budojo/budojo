@@ -32,59 +32,18 @@
     </a>
   </header>
 
-  <!-- Desktop social rail (>=768px, #1112) — the Instagram/X left-rail
-       pattern, mirroring the athlete shell (#1110). Same IA as the mobile
-       bottom tab bar (the shared tabs()), a prominent ➕ Create, and the
-       profile pinned at the bottom; the dense SaaS sidebar is retired.
-       Hidden on mobile, where the bottom nav owns navigation. -->
-  <aside class="rail" role="navigation" [attr.aria-label]="navAriaLabel()" data-cy="owner-rail">
-    <a
-      routerLink="/dashboard/academy"
-      class="rail__brand"
-      [attr.aria-label]="'nav.homeAriaLabel' | translate"
-      data-cy="rail-brand"
-    >
-      @if (academyLogoUrl(); as url) {
-        <img [src]="url" alt="" class="rail__logo" aria-hidden="true" />
-      } @else {
-        <!-- Inline so stroke="currentColor" inherits the rail text color (#99). -->
-        <app-brand-glyph class="rail__logo" data-cy="brand-glyph-fallback" />
-      }
-      <span class="rail__brand-text">{{ brandLabel() }}</span>
-    </a>
-
-    <button type="button" class="rail__create" (click)="onCreate()" data-cy="rail-create">
-      <i class="pi pi-plus" aria-hidden="true"></i>
-      <span>{{ createTitle() }}</span>
-    </button>
-
-    <nav class="rail__nav">
-      @for (tab of tabs(); track tab.routerLink) {
-        <a
-          class="rail__item"
-          [routerLink]="tab.routerLink"
-          routerLinkActive="rail__item--active"
-          #rla="routerLinkActive"
-          [attr.aria-current]="rla.isActive ? 'page' : null"
-        >
-          <i [class]="tab.icon" aria-hidden="true"></i>
-          <span class="rail__label">{{ tab.label }}</span>
-        </a>
-      }
-    </nav>
-
-    @if (user(); as railUser) {
-      <a routerLink="/dashboard/more" class="rail__profile" data-cy="rail-profile">
-        <app-user-avatar [name]="userName()" [url]="userAvatarUrl()" />
-        <span class="rail__profile-meta">
-          <span class="rail__profile-name">{{ userName() }}</span>
-          @if (railUser.handle) {
-            <span class="rail__profile-handle">&#64;{{ railUser.handle }}</span>
-          }
-        </span>
-      </a>
-    }
-  </aside>
+  <!-- Desktop social rail (>=768px) — the shared app-side-rail (#1120),
+       mirroring the athlete shell. Hidden on mobile, where the bottom nav
+       owns navigation. -->
+  <app-side-rail
+    data-cy="owner-rail"
+    [tabs]="tabs()"
+    [brand]="railBrand()"
+    [profile]="railProfile()"
+    [createLabel]="createTitle()"
+    [ariaLabel]="navAriaLabel()"
+    (createActivated)="onCreate()"
+  />
 
   <main class="main">
     <router-outlet />

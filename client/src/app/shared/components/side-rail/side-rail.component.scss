@@ -1,0 +1,173 @@
+// Shared desktop social rail (#1120) — the host element IS the rail box
+// (the role="navigation" landmark). Hidden on mobile, where the host renders
+// the bottom tab bar instead.
+
+$sidebar-breakpoint: 768px;
+$rail-width: 15rem;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: $rail-width;
+  padding: 1rem 0.75rem;
+  background: var(--p-content-background);
+  border-right: 1px solid var(--p-content-border-color);
+
+  // Mobile: the rail is replaced by the bottom tab bar.
+  @media (max-width: $sidebar-breakpoint - 1) {
+    display: none;
+  }
+
+  @media (min-width: $sidebar-breakpoint) {
+    flex: 0 0 $rail-width;
+    height: 100dvh;
+  }
+}
+
+.rail__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 1rem;
+  color: var(--p-text-color);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.125rem;
+  min-width: 0;
+}
+
+.rail__logo {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--p-border-radius-sm);
+  flex-shrink: 0;
+}
+
+.rail__brand-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Prominent ➕ — the social-app "create" affordance. Filled indigo, the one
+// primary CTA in the rail; emits to the host, which opens the create-sheet.
+.rail__create {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0 0.25rem 0.75rem;
+  padding: 0.75rem 1rem;
+  min-height: 3rem;
+  border: 0;
+  border-radius: var(--p-border-radius-lg);
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: filter var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  i {
+    font-size: 1.125rem;
+  }
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+}
+
+.rail__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rail__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 3rem; // 48px — Fitts
+  border-radius: var(--p-border-radius-md);
+  color: var(--p-text-color);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  i {
+    font-size: 1.25rem;
+    width: 1.5rem;
+    text-align: center;
+    color: var(--p-text-color-secondary);
+  }
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+
+  // Active: the IG/X treatment — bold label + indigo glyph, on a faint fill.
+  &--active {
+    font-weight: 600;
+    background: var(--p-content-hover-background);
+
+    i {
+      color: var(--p-primary-color);
+    }
+  }
+}
+
+// Profile pinned at the bottom (the IG/X account anchor) → the "me / more" hub.
+.rail__profile {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--p-border-radius-md);
+  color: var(--p-text-color);
+  text-decoration: none;
+  transition: background var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover {
+    background: var(--p-content-hover-background);
+  }
+}
+
+.rail__profile-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rail__profile-name {
+  font-weight: 500;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rail__profile-handle {
+  font-size: 0.8125rem;
+  color: var(--p-text-color-secondary);
+}
+
+// Keyboard focus ring: the branded ring comes from the GLOBAL :focus-visible
+// rule (budojo-variants.scss, --budojo-focus-ring-* tokens) — no local
+// outline (#1114 canon). The interactive elements only re-declare
+// border-radius so the ring rounds to their own shape; the global rule's
+// `border-radius: inherit` would otherwise take the parent's (0), leaving a
+// square ring. Fixes #1119 — every interactive rail element now shows a ring,
+// not only the brand.
+.rail__brand:focus-visible,
+.rail__item:focus-visible,
+.rail__profile:focus-visible {
+  border-radius: var(--p-border-radius-md);
+}
+
+.rail__create:focus-visible {
+  border-radius: var(--p-border-radius-lg);
+}
