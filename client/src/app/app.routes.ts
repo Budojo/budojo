@@ -192,6 +192,14 @@ export const routes: Routes = [
           ),
       },
       {
+        // "More" hub (#1109) — homes the destinations demoted off the
+        // mobile bottom tab bar (public profile, payments, documents,
+        // settings, sign-out, language).
+        path: 'more',
+        loadComponent: () =>
+          import('./features/me-more/me-more.component').then((m) => m.MeMoreComponent),
+      },
+      {
         // Same-academy peer public-profile lookup (#862, M9 social
         // profile epic slice A). Lives inside the athlete shell so
         // the shared sidebar stays visible. The component itself is

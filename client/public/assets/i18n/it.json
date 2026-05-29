@@ -253,7 +253,16 @@
       "academy": "Academy",
       "attendance": "Presenze",
       "payments": "Pagamenti",
-      "documents": "Documenti"
+      "documents": "Documenti",
+      "barAriaLabel": "Navigazione principale"
+    },
+    "more": {
+      "title": "Altro"
+    },
+    "create": {
+      "title": "Crea",
+      "checkIn": "Segna presenza",
+      "post": "Nuovo post"
     },
     "profile": {
       "title": "Impostazioni",
