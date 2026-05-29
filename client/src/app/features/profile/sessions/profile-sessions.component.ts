@@ -3,10 +3,10 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { ButtonModule } from 'primeng/button';
 import { ConfirmPopupModule } from 'primeng/confirmpopup';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ActiveSession, SessionService } from '../../../core/services/session.service';
+import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 
 /**
  * "Active sessions" panel on `/dashboard/profile` (#413).
@@ -25,10 +25,10 @@ import { ActiveSession, SessionService } from '../../../core/services/session.se
   standalone: true,
   imports: [
     ButtonModule,
+    ConfirmDestructiveButtonComponent,
     ConfirmPopupModule,
     DatePipe,
     ProgressSpinnerModule,
-    TooltipModule,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,7 +38,6 @@ import { ActiveSession, SessionService } from '../../../core/services/session.se
 })
 export class ProfileSessionsComponent implements OnInit {
   private readonly sessionService = inject(SessionService);
-  private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
 
@@ -68,33 +67,10 @@ export class ProfileSessionsComponent implements OnInit {
   }
 
   /**
-   * Revoke a single session. Two-step UX: a `p-confirmpopup` anchored
-   * to the clicked button so a fat-finger doesn't kill an active
-   * session by accident — Krug § Forgiveness for mistakes.
+   * Confirmed-handler for the per-row revoke. The confirm step now lives
+   * in `app-confirm-destructive-button` (#1103); this runs on accept.
    */
-  protected confirmRevoke(event: MouseEvent, session: ActiveSession): void {
-    this.confirmationService.confirm({
-      // `currentTarget` (the element the listener is bound to) is the
-      // p-button host; `event.target` can be an inner `<span>` or
-      // `<i>` (PrimeNG icon) which mis-anchors the popup. Matches the
-      // pattern used by the rest of the app.
-      target: event.currentTarget as EventTarget,
-      message: this.translate.instant(
-        session.is_current
-          ? 'profile.sessions.confirmRevokeCurrent'
-          : 'profile.sessions.confirmRevoke',
-        { device: session.name },
-      ),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: this.translate.instant('profile.sessions.confirmAccept'),
-      rejectLabel: this.translate.instant('profile.sessions.confirmReject'),
-      acceptButtonProps: { severity: 'danger', size: 'small' },
-      rejectButtonProps: { severity: 'secondary', size: 'small', text: true },
-      accept: () => this.revoke(session),
-    });
-  }
-
-  private revoke(session: ActiveSession): void {
+  protected revoke(session: ActiveSession): void {
     this.revokingId.set(session.id);
     this.sessionService.revoke(session.id).subscribe({
       next: () => {
@@ -133,24 +109,8 @@ export class ProfileSessionsComponent implements OnInit {
     });
   }
 
-  protected confirmRevokeOthers(event: MouseEvent): void {
-    this.confirmationService.confirm({
-      // `currentTarget` (the element the listener is bound to) is the
-      // p-button host; `event.target` can be an inner `<span>` or
-      // `<i>` (PrimeNG icon) which mis-anchors the popup. Matches the
-      // pattern used by the rest of the app.
-      target: event.currentTarget as EventTarget,
-      message: this.translate.instant('profile.sessions.confirmRevokeOthers'),
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: this.translate.instant('profile.sessions.confirmAccept'),
-      rejectLabel: this.translate.instant('profile.sessions.confirmReject'),
-      acceptButtonProps: { severity: 'danger', size: 'small' },
-      rejectButtonProps: { severity: 'secondary', size: 'small', text: true },
-      accept: () => this.revokeOthers(),
-    });
-  }
-
-  private revokeOthers(): void {
+  /** Confirmed-handler for "revoke all others" — the confirm lives in the shell (#1103). */
+  protected revokeOthers(): void {
     this.revokingOthers.set(true);
     this.sessionService.revokeOthers().subscribe({
       next: (count) => {

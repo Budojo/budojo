@@ -91,6 +91,14 @@ export class ConfirmDestructiveButtonComponent {
   /** Reject-button copy on the popup. Already-translated. */
   readonly rejectLabel = input.required<string>();
 
+  /**
+   * Optional warning glyph for the confirm popup (e.g.
+   * `pi pi-exclamation-triangle`). Null → no icon (PrimeNG default).
+   * Opt-in so existing adopters render unchanged; preserves the
+   * affordance that open-coded confirms carried when they migrate (#1103).
+   */
+  readonly confirmIcon = input<string | null>(null);
+
   /** Visual variant — text and outlined map to PrimeNG button modifiers. Defaults match the canonical low-stakes destructive style on list rows. */
   readonly text = input<boolean>(true);
   readonly outlined = input<boolean>(false);
@@ -109,6 +117,7 @@ export class ConfirmDestructiveButtonComponent {
     this.confirmationService.confirm({
       target: event.target as EventTarget,
       message: this.confirmMessage(),
+      icon: this.confirmIcon() ?? undefined,
       acceptLabel: this.acceptLabel(),
       rejectLabel: this.rejectLabel(),
       acceptButtonProps: { severity: 'danger' },
