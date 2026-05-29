@@ -6,7 +6,7 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
@@ -20,13 +20,12 @@ import {
   CreateSheetAction,
   CreateSheetComponent,
 } from '../../shared/components/create-sheet/create-sheet.component';
-import { SidebarFooterMetaComponent } from '../../shared/components/sidebar-footer-meta/sidebar-footer-meta.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 
 /**
  * Athlete-side dashboard shell (#610). Social-native navigation (#1109):
  * a bottom tab bar + center ➕ create-sheet on mobile (`<768px`), the
- * desktop sidebar above. The hamburger off-canvas drawer is retired — the
+ * desktop social rail (#1110) above. The hamburger off-canvas drawer is retired — the
  * destinations demoted off the bar (public profile, payments, documents,
  * settings, sign-out, language) live on the `/dashboard/me/more` hub.
  *
@@ -44,7 +43,6 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
     BrandGlyphComponent,
     BottomNavComponent,
     CreateSheetComponent,
-    SidebarFooterMetaComponent,
     UserAvatarComponent,
     TranslatePipe,
   ],
@@ -54,7 +52,6 @@ import { UserAvatarComponent } from '../../shared/components/user-avatar/user-av
 })
 export class AthleteDashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
 
@@ -141,10 +138,5 @@ export class AthleteDashboardComponent implements OnInit {
     if (this.user() === null) {
       this.authService.loadCurrentUser().subscribe({ error: () => undefined });
     }
-  }
-
-  signOut(): void {
-    this.authService.logout();
-    void this.router.navigate(['/auth/login']);
   }
 }

@@ -50,7 +50,9 @@ Shared component; the host passes the role-appropriate action list. The center �
 
 ## Desktop — social rail (not the dense SaaS sidebar)
 
-Desktop is modernized too (epic decision). Same IA as mobile, surfaced as a **left rail** (the Instagram / X web pattern): the 5 primary destinations as icon+label rows, a prominent ➕ button, secondary destinations behind a "More" expander, and the profile/avatar pinned at the bottom. The bottom tab bar is mobile-only; the rail is desktop-only. Same destinations, same labels — only the chrome differs by breakpoint. (Owner + athlete desktop rails are the `#1110` / `#1112` slices.)
+Desktop is modernized too (epic decision). Same IA as mobile, surfaced as a **left rail** (the Instagram / X web pattern): the same destinations as the bottom tab bar as icon+label rows (active → bold + indigo glyph), a prominent ➕ **Create** button, and the profile pinned at the bottom. The bottom tab bar is mobile-only; the rail is desktop-only. Same destinations, same labels — only the chrome differs by breakpoint.
+
+The **athlete rail shipped in #1110** (light surface, hairline right border): Feed · Academy · Attendance · More as rows, ➕ Create (reuses the shared create-sheet), and the profile chip → the `/dashboard/me/more` hub (where settings / language / sign-out live). "More" is a row that opens the hub, not an in-rail expander — so the demoted destinations (payments, documents, settings, public profile) sit on the same hub as on mobile. The **owner rail is #1112**.
 
 ## Component contracts
 
