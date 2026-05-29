@@ -77,8 +77,8 @@ The primary form factor is the phone: instructor moves around the mat with devic
 
 | Token | Pixel | Meaning |
 |-------|-------|---------|
-| — | < 768px | Mobile (default). Topbar + off-canvas drawer, single-column, full-bleed cards. |
-| `768px` | tablet / small desktop | Sidebar shell appears, multi-column grids can emerge. |
+| — | < 768px | Mobile (default). Topbar + bottom tab bar + ➕ create-sheet (#1107), single-column, full-bleed cards. |
+| `768px` | tablet / small desktop | The desktop social rail (#1107) replaces the bottom bar, multi-column grids can emerge. |
 | `1024px` | desktop | Full two-column dashboard, wider dialogs, more horizontal nav. |
 | `1440px` | wide desktop | Max-width content, no further scaling. |
 
