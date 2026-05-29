@@ -174,6 +174,16 @@ export interface BottomNavCenterAction {
       .bottom-nav__create:hover {
         filter: brightness(1.05);
       }
+
+      /* Branded keyboard focus ring (WCAG 2.4.7 / MD3). The active-state
+         colour signals the selected route, not focus — keyboard users need a
+         distinct ring on the most thumb-trafficked chrome (#1114 reviewer). */
+      .bottom-nav__tab:focus-visible,
+      .bottom-nav__create:focus-visible {
+        outline: 2px solid var(--p-primary-color);
+        outline-offset: 2px;
+        border-radius: 0.25rem;
+      }
     `,
   ],
 })
