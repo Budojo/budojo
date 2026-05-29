@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmationService } from 'primeng/api';
 import { Tooltip } from 'primeng/tooltip';
@@ -64,7 +64,7 @@ import { Tooltip } from 'primeng/tooltip';
       [loading]="loading()"
       [disabled]="disabled() || loading()"
       [ariaLabel]="ariaLabel()"
-      [pTooltip]="tooltip() ?? ariaLabel()"
+      [pTooltip]="resolvedTooltip()"
       [tooltipPosition]="tooltipPosition()"
       (onClick)="open($event)"
       [attr.data-cy]="dataCy()"
@@ -80,7 +80,7 @@ export class ConfirmDestructiveButtonComponent {
   readonly label = input<string | null>(null);
   /** Required for accessibility. Falls back into `pTooltip` when no explicit tooltip is set. */
   readonly ariaLabel = input.required<string>();
-  /** Explicit tooltip override. When omitted, the `ariaLabel` is reused. */
+  /** Explicit tooltip override. When omitted, `ariaLabel` is reused for icon-only buttons; a labelled button gets no tooltip (see `resolvedTooltip`). */
   readonly tooltip = input<string | null>(null);
   readonly tooltipPosition = input<'top' | 'right' | 'bottom' | 'left'>('left');
 
@@ -98,6 +98,17 @@ export class ConfirmDestructiveButtonComponent {
    * affordance that open-coded confirms carried when they migrate (#1103).
    */
   readonly confirmIcon = input<string | null>(null);
+
+  /**
+   * The tooltip actually rendered. Explicit `tooltip` wins; a labelled
+   * button needs none — its visible label is the affordance, and a
+   * tooltip duplicating the label is signal-vs-noise (Norman / Krug,
+   * #1104 reviewer); an icon-only button falls back to `ariaLabel` so
+   * the affordance is never lost.
+   */
+  protected readonly resolvedTooltip = computed(
+    () => this.tooltip() ?? (this.label() !== null ? undefined : this.ariaLabel()),
+  );
 
   /** Visual variant — text and outlined map to PrimeNG button modifiers. Defaults match the canonical low-stakes destructive style on list rows. */
   readonly text = input<boolean>(true);

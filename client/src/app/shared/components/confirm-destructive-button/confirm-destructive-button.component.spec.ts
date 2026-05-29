@@ -103,4 +103,25 @@ describe('ConfirmDestructiveButtonComponent (#1034)', () => {
 
     expect(spy).toHaveBeenCalledTimes(2);
   });
+
+  it('suppresses the tooltip on a labelled button; keeps ariaLabel for icon-only (#1104)', () => {
+    const { fixture } = setup({ ariaLabel: 'Revoke session' });
+    const cmp = fixture.componentInstance as unknown as {
+      resolvedTooltip: () => string | undefined;
+    };
+
+    // Icon-only (no label) → ariaLabel is the only affordance, so it tooltips.
+    expect(cmp.resolvedTooltip()).toBe('Revoke session');
+
+    // Labelled → the visible label IS the affordance; no duplicate tooltip
+    // (undefined, not null — PrimeNG's pTooltip rejects null).
+    fixture.componentRef.setInput('label', 'Sign out other sessions');
+    fixture.detectChanges();
+    expect(cmp.resolvedTooltip()).toBeUndefined();
+
+    // Explicit tooltip always wins, even with a label.
+    fixture.componentRef.setInput('tooltip', 'Custom hint');
+    fixture.detectChanges();
+    expect(cmp.resolvedTooltip()).toBe('Custom hint');
+  });
 });
