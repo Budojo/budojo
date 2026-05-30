@@ -53,6 +53,8 @@ import { PaidBadgeComponent } from '../../../shared/components/paid-badge/paid-b
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { IconButtonComponent } from '../../../shared/components/icon-button/icon-button.component';
+import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 
@@ -94,6 +96,8 @@ interface SelectOption<T extends string> {
     PageHeaderComponent,
     ErrorStateComponent,
     EmptyStateComponent,
+    IconButtonComponent,
+    ConfirmDestructiveButtonComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',
@@ -803,19 +807,6 @@ export class AthletesListComponent implements OnInit {
     });
   }
 
-  confirmDelete(event: Event, athlete: Athlete): void {
-    this.confirmationService.confirm({
-      target: event.target as EventTarget,
-      message: this.translate.instant('athletes.list.confirm.deleteMessage', {
-        name: `${athlete.first_name} ${athlete.last_name}`,
-      }),
-      acceptLabel: this.translate.instant('athletes.list.confirm.deleteAccept'),
-      rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
-      acceptButtonProps: { severity: 'danger' },
-      accept: () => this.delete(athlete),
-    });
-  }
-
   /**
    * Inline paid toggle on the athletes list (#182). Click the badge →
    * confirm popup anchored on the badge button → POST /payments to mark
@@ -993,7 +984,7 @@ export class AthletesListComponent implements OnInit {
       });
   }
 
-  private delete(athlete: Athlete): void {
+  protected delete(athlete: Athlete): void {
     this.athleteService.delete(athlete.id).subscribe({
       next: () => {
         this.athletes.update((list) => list.filter((a) => a.id !== athlete.id));
