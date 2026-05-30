@@ -28,6 +28,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.39.2',
+    date: '2026-05-30',
+    headline: 'Budojo stays upright on your phone.',
+    sections: [
+      {
+        heading: '📱 No more sideways flip',
+        bullets: [
+          'When you installed Budojo to your home screen, turning your phone used to flip the whole app into landscape — which looked off, since every screen is built for upright use. Budojo now stays in portrait, so rotating your phone no longer twists the layout.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.39.1',
     date: '2026-05-30',
     headline: 'A couple of fixes for shared videos on the phone.',
