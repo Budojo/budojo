@@ -49,6 +49,23 @@ it('returns null on a failed fetch', function (): void {
     expect($this->action->execute('https://cdn.test/gone.jpg'))->toBeNull();
 });
 
+it('does not follow a redirect (SSRF guard) — degrades to null', function (): void {
+    // allow_redirects is off, so a 302 toward an internal host is never
+    // fetched; the 3xx has no image content-type → null.
+    Http::fake(['https://cdn.test/*' => Http::response('', 302, ['Location' => 'http://169.254.169.254/latest/meta-data/'])]);
+
+    expect($this->action->execute('https://cdn.test/redirects.jpg'))->toBeNull();
+});
+
+it('rejects by declared Content-Length before buffering', function (): void {
+    Http::fake(['https://cdn.test/*' => Http::response('tiny', 200, [
+        'Content-Type' => 'image/jpeg',
+        'Content-Length' => (string) (6 * 1024 * 1024),
+    ])]);
+
+    expect($this->action->execute('https://cdn.test/lies.jpg'))->toBeNull();
+});
+
 it('returns null when there is no thumbnail to cache', function (): void {
     expect($this->action->execute(null))->toBeNull();
 });

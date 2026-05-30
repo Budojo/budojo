@@ -40,7 +40,13 @@ class CacheVideoThumbnailAction
         }
 
         try {
-            $response = Http::timeout(self::TIMEOUT_SECONDS)->get($thumbnailUrl);
+            // Do NOT follow redirects: this second hop fetches a CDN URL with no
+            // host re-check, so a 302 to an internal host (e.g. cloud metadata at
+            // 169.254.169.254) would otherwise be fetched + persisted (SSRF). A
+            // 3xx carries no image content-type below → degrades to null.
+            $response = Http::timeout(self::TIMEOUT_SECONDS)
+                ->withOptions(['allow_redirects' => false])
+                ->get($thumbnailUrl);
         } catch (\Throwable) {
             return null;
         }
@@ -51,6 +57,13 @@ class CacheVideoThumbnailAction
 
         $contentType = strtolower((string) $response->header('Content-Type'));
         if (! str_starts_with($contentType, 'image/')) {
+            return null;
+        }
+
+        // Reject by declared size BEFORE buffering the body into memory (cheap;
+        // spoofable, so the post-buffer strlen below stays as a backstop).
+        $declaredLength = (int) $response->header('Content-Length');
+        if ($declaredLength > self::MAX_BYTES) {
             return null;
         }
 
