@@ -28,6 +28,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.39.1',
+    date: '2026-05-30',
+    headline: 'A couple of fixes for shared videos on the phone.',
+    sections: [
+      {
+        heading: '📱 Cleaner video sharing on mobile',
+        bullets: [
+          'On your academy feed, the page title no longer gets squeezed into a sliver next to the buttons on a phone — the title now sits on its own line, with the actions neatly below it.',
+          'A shared TikTok or Instagram reel now shows in its full upright shape instead of being cropped into a wide box, so you see the whole video the way it was filmed.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.39.0',
     date: '2026-05-30',
     headline: 'Share technique videos straight to your academy feed.',
