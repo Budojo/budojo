@@ -9,7 +9,10 @@
         type="button"
         class="video-facade__cover"
         (click)="play()"
-        [attr.aria-label]="'community.video.play' | translate: { provider: providerLabel() }"
+        [attr.aria-label]="
+          (opensExternally() ? 'community.video.openOn' : 'community.video.play')
+            | translate: { provider: providerLabel() }
+        "
         data-cy="video-facade-cover"
       >
         @if (thumbnailUrl(); as thumb) {
@@ -19,7 +22,7 @@
             <i [class]="providerGlyph()"></i>
           </span>
         }
-        <span class="video-facade__play" aria-hidden="true"><i class="pi pi-play-circle"></i></span>
+        <span class="video-facade__play" aria-hidden="true"><i [class]="overlayGlyph()"></i></span>
         <span class="video-facade__badge" aria-hidden="true"
           ><i [class]="providerGlyph()"></i
         ></span>
@@ -62,7 +65,11 @@
     </a>
     @if (!playing()) {
       <p class="video-facade__hint">
-        {{ 'community.video.loadsHint' | translate: { provider: providerLabel() } }}
+        @if (opensExternally()) {
+          {{ 'community.video.opensHint' | translate: { provider: providerLabel() } }}
+        } @else {
+          {{ 'community.video.loadsHint' | translate: { provider: providerLabel() } }}
+        }
       </p>
     }
   </figcaption>
