@@ -35,6 +35,9 @@ class ResolveVideoPreviewAction
 {
     private const int TIMEOUT_SECONDS = 6;
 
+    /** Bound the user-influenced IG page read so a hostile/huge body can't be slurped into memory. */
+    private const int MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+
     /** Instagram serves `og:` tags to link-preview bots, not to plain clients. */
     private const string CRAWLER_UA = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 
@@ -133,26 +136,43 @@ class ResolveVideoPreviewAction
 
     private function fetchHtml(string $url): string
     {
-        $response = $this->get($url);
+        $response = $this->get($url, stream: true);
         // 4xx/5xx = deleted / blocked → reject. A 2xx/3xx with no OG tags is
         // the degrade case, handled by the caller (null thumbnail).
         if ($response->status() >= 400) {
             throw new InvalidVideoUrlException("Instagram returned {$response->status()}.");
         }
 
-        return $response->body();
+        // Read at most MAX_RESPONSE_BYTES — the body is the only user-influenced
+        // fetch target, so cap it pre-emptively rather than buffering an
+        // unbounded response into memory (the timeout alone doesn't bound size).
+        $stream = $response->toPsrResponse()->getBody();
+        $html = '';
+        while (! $stream->eof() && \strlen($html) < self::MAX_RESPONSE_BYTES) {
+            $html .= $stream->read(8192);
+        }
+        $stream->close();
+
+        return $html;
     }
 
     /**
      * @param array<string, scalar> $query
      */
-    private function get(string $url, array $query = []): Response
+    private function get(string $url, array $query = [], bool $stream = false): Response
     {
         try {
-            return Http::timeout(self::TIMEOUT_SECONDS)
+            $request = Http::timeout(self::TIMEOUT_SECONDS)
                 ->withoutRedirecting()
-                ->withHeaders(['User-Agent' => self::CRAWLER_UA])
-                ->get($url, $query);
+                ->withHeaders(['User-Agent' => self::CRAWLER_UA]);
+
+            if ($stream) {
+                // Don't eager-buffer the whole body — fetchHtml() reads it
+                // bounded so a huge response is truncated, not slurped.
+                $request = $request->withOptions(['stream' => true]);
+            }
+
+            return $request->get($url, $query);
         } catch (ConnectionException $e) {
             throw new InvalidVideoUrlException('Could not reach the video provider.', previous: $e);
         }

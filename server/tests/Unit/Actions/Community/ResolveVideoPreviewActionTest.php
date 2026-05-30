@@ -89,6 +89,25 @@ it('rejects a look-alike host (youtube.com.evil.test)', function (): void {
     $this->action->execute('https://youtube.com.evil.test/watch?v=x');
 })->throws(InvalidVideoUrlException::class);
 
+it('rejects a userinfo-spoofed host (instagram.com@internal-ip)', function (): void {
+    // parse_url takes the real host after `@` (169.254.169.254), not the
+    // userinfo — so the allowlist rejects it (no SSRF to link-local).
+    $this->action->execute('https://instagram.com@169.254.169.254/reel/x');
+})->throws(InvalidVideoUrlException::class);
+
+it('caps the Instagram body read at the size limit', function (): void {
+    // og:image up front, then 3 MB of filler. The bounded read pulls the
+    // early tag without slurping the whole body into memory.
+    $body = '<meta property="og:image" content="https://cdninstagram.com/ig.jpg" />'
+        . str_repeat('x', 3 * 1024 * 1024);
+    Http::fake(['*instagram.com/*' => Http::response($body)]);
+
+    $preview = $this->action->execute('https://www.instagram.com/reel/CapTest123/');
+
+    expect($preview->videoId)->toBe('CapTest123')
+        ->and($preview->thumbnailUrl)->toBe('https://cdninstagram.com/ig.jpg');
+});
+
 it('rejects an allowlisted URL whose provider returns an error', function (): void {
     Http::fake(['*youtube.com/oembed*' => Http::response('', 404)]);
 

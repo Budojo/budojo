@@ -100,6 +100,16 @@ it('rejects an unauthenticated request with 401', function (): void {
         ->assertStatus(401);
 });
 
+it('rejects a user who belongs to no academy with 403', function (): void {
+    // An athlete-role user with no roster row resolves to no academy → the
+    // membership gate (the first athlete-write boundary) denies the post.
+    $orphan = User::factory()->create(['role' => 'athlete']);
+
+    $this->actingAs($orphan)
+        ->postJson('/api/v1/community/videos', ['url' => 'https://www.youtube.com/watch?v=abc123XYZ'])
+        ->assertStatus(403);
+});
+
 it('caps the caption at 500 chars', function (): void {
     $athlete = videoAthlete($this->academy);
 

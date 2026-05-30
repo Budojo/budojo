@@ -57,7 +57,7 @@ Rides `community_posts` — **no new table**.
 
 ## API
 
-- **Create** — open to athletes + owners: `POST /api/v1/community/posts` with `{ type: 'shared_video', url, caption? }`. The server resolves the preview (below), stores the cached thumbnail, and persists the post. 422 on a non-allowlisted / unresolvable URL.
+- **Create** — open to athletes + owners: `POST /api/v1/community/videos` with `{ url, caption? }`. The server resolves the preview (below) and persists a `shared_video` post. 422 on a non-allowlisted / unresolvable URL. Throttled (each create makes an outbound fetch).
 - **Read** — `CommunityPostResource` projects the `shared_video` payload (provider, video_id, thumbnail url, title, author, caption) so the SPA renders the facade + the embed on tap.
 - Documented in `docs/api/v1.yaml` + `docs/entities/community-post.md`.
 
@@ -65,15 +65,16 @@ Rides `community_posts` — **no new table**.
 
 1. **Validate** the URL host against the allowlist (`instagram.com`, `youtube.com`, `youtu.be`, `tiktok.com`, incl. `www.`). Reject anything else → 422.
 2. **Resolve** metadata by provider: YouTube oEmbed, TikTok oEmbed, Instagram crawler-UA OG fetch.
-3. **Download + store** the cover thumbnail to our storage (don't hotlink — CDN URLs expire and hotlinking leaks the viewer's IP to the provider).
+3. **Cover thumbnail** — slice 1 (#1154) stores the provider `thumbnail_url` on the payload. **Slice 2 (#1155) must download + cache it to our storage before the facade renders the cover** — hotlinking the cover would leak the viewer's IP to the provider (defeating the click-to-load privacy point) and TikTok CDN URLs expire. Hard slice-2 acceptance criterion; slice 1 is BE-only (no cover is rendered yet, so no leak occurs in the interim).
 
-### Security — SSRF guard (mandatory)
+### Security — SSRF guard
 
-The resolver fetches a user-supplied URL → classic SSRF surface. Guards:
-- Host **allowlist check before any network call** (only the four domains above).
-- Resolve DNS and **reject private / link-local / loopback IPs** (no `10/8`, `127/8`, `169.254/16`, `192.168/16`, `::1`, metadata `169.254.169.254`).
-- Request **timeout** + **response size cap**; do not follow redirects off the allowlisted hosts.
-- Caption is **sanitized** (rendered as feed text).
+The resolver fetches a user-supplied URL → classic SSRF surface. Guards (as implemented in #1154):
+- Host **allowlist check before any network call** (only the four domains above). `parse_url` host extraction defeats userinfo spoofs (`instagram.com@169.254.169.254` → host `169.254.169.254` → rejected) — unit-tested.
+- **No redirects followed** (`withoutRedirecting`) — a 30x can't carry the fetch off-host.
+- Request **timeout** (6s) + a **bounded response read** (2 MB cap on the only user-influenced fetch, the IG page) so a hostile/huge body isn't slurped into memory.
+- **DNS / private-IP rejection is intentionally NOT implemented.** That's the guard for *arbitrary-host* fetchers; here every fetch target is one of three **fixed, non-attacker-controlled** public domains, so DNS-rebinding to an internal address isn't reachable (an attacker can't change `instagram.com`'s DNS). The host allowlist IS the complete SSRF boundary for this design — revisit only if the provider list ever opens to arbitrary hosts.
+- Caption is escaped by the SPA (Angular text interpolation) + length-capped server-side.
 
 ## UX
 
