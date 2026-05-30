@@ -242,6 +242,21 @@
                   </p>
                 </div>
               }
+              @case ('shared_video') {
+                <div class="feed__body" data-cy="post-shared-video">
+                  @if (videoData(post); as video) {
+                    <app-video-facade
+                      [provider]="video.provider"
+                      [videoId]="video.videoId"
+                      [thumbnailUrl]="video.thumbnailUrl"
+                      [title]="video.title"
+                      [authorName]="video.authorName"
+                      [caption]="video.caption"
+                      [url]="video.url"
+                    />
+                  }
+                </div>
+              }
             }
 
             <!--

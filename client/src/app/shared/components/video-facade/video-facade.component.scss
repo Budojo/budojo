@@ -1,0 +1,129 @@
+.video-facade {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.video-facade__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--p-border-radius-md, 12px);
+  overflow: hidden;
+  background: var(--p-surface-900);
+}
+
+.video-facade__cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: var(--p-surface-800);
+  display: block;
+}
+
+.video-facade__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.video-facade__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--p-surface-400);
+  font-size: 3rem;
+}
+
+.video-facade__play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  // Literal white + scrim shadow: contrast on arbitrary video cover art,
+  // where no theme color role applies (same exception class as the count badge).
+  color: #fff;
+  font-size: 3.5rem;
+  text-shadow: 0 1px 4px rgb(10 10 11 / 50%);
+  transition: transform var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+}
+
+.video-facade__cover:hover .video-facade__play {
+  transform: scale(1.08);
+}
+
+.video-facade__badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  // Scrim chip over media — no semantic token for an on-media overlay.
+  background: rgb(10 10 11 / 60%);
+  color: #fff;
+  font-size: 0.875rem;
+}
+
+.video-facade__embed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.video-facade__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.video-facade__caption {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--p-text-color);
+}
+
+.video-facade__source {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--p-surface-500);
+}
+
+.video-facade__title {
+  font-weight: 600;
+  color: var(--p-text-color);
+}
+
+.video-facade__open {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  color: var(--p-primary-color);
+  text-decoration: none;
+}
+
+.video-facade__open:hover {
+  text-decoration: underline;
+}
+
+.video-facade__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--p-surface-400);
+}

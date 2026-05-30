@@ -25,7 +25,8 @@ export type CommunityPostType =
   | 'belt_promotion'
   | 'stripe_promotion'
   | 'event'
-  | 'owner_announcement';
+  | 'owner_announcement'
+  | 'shared_video';
 export type CommunityPostVisibility = 'academy' | 'public';
 export type ReactionEmoji = 'clap' | 'pray';
 export type RsvpResponse = 'going' | 'maybe';
