@@ -103,6 +103,34 @@ describe('VideoFacadeComponent (#1155)', () => {
     ).toContain('instagram.com/reel/C8abc_-/embed');
   });
 
+  it('shows portrait media for a TikTok reel (not cropped into 16:9)', () => {
+    const { el } = setup({
+      provider: 'tiktok',
+      videoId: '7123',
+      url: 'https://www.tiktok.com/@c/video/7123',
+    });
+    const media = el.querySelector('.video-facade__media') as HTMLElement;
+    expect(media.classList.contains('video-facade__media--portrait')).toBe(true);
+    expect(media.classList.contains('video-facade__media--landscape')).toBe(false);
+  });
+
+  it('shows portrait media for an Instagram reel', () => {
+    const { el } = setup({
+      provider: 'instagram',
+      videoId: 'C8x',
+      url: 'https://www.instagram.com/reel/C8x/',
+    });
+    const media = el.querySelector('.video-facade__media') as HTMLElement;
+    expect(media.classList.contains('video-facade__media--portrait')).toBe(true);
+  });
+
+  it('keeps landscape (16:9) media for a YouTube video', () => {
+    const { el } = setup({ provider: 'youtube' });
+    const media = el.querySelector('.video-facade__media') as HTMLElement;
+    expect(media.classList.contains('video-facade__media--landscape')).toBe(true);
+    expect(media.classList.contains('video-facade__media--portrait')).toBe(false);
+  });
+
   it('always offers an "open on provider" link to the original', () => {
     const { el } = setup();
     const open = el.querySelector('[data-cy="video-facade-open"]') as HTMLAnchorElement;

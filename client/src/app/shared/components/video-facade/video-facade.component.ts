@@ -44,6 +44,15 @@ export class VideoFacadeComponent {
   /** Flips on the first tap; only then is the third-party embed mounted. */
   protected readonly playing = signal(false);
 
+  /**
+   * Instagram and TikTok are reels — native 9:16 portrait. YouTube is
+   * 16:9 landscape. The media box follows the provider so the original
+   * isn't cropped into the wrong aspect ratio (#1166).
+   */
+  protected readonly isPortrait = computed<boolean>(
+    () => this.provider() === 'instagram' || this.provider() === 'tiktok',
+  );
+
   protected readonly providerLabel = computed<string>(
     () => ({ instagram: 'Instagram', youtube: 'YouTube', tiktok: 'TikTok' })[this.provider()],
   );
