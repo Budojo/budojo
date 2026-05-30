@@ -28,6 +28,30 @@
       <span class="rail__label">{{ tab.label }}</span>
     </a>
   }
+
+  @if (notifications(); as notif) {
+    <a
+      class="rail__item"
+      [routerLink]="notif.routerLink"
+      routerLinkActive="rail__item--active"
+      #notifRla="routerLinkActive"
+      [attr.aria-current]="notifRla.isActive ? 'page' : null"
+      data-cy="rail-notifications"
+    >
+      <span class="rail__item-bell">
+        <i class="pi pi-bell" aria-hidden="true"></i>
+        @if (notif.unread > 0) {
+          <span
+            class="rail__badge"
+            data-cy="rail-notifications-badge"
+            [attr.aria-label]="notif.unreadAriaLabel"
+            >{{ notif.unread > 99 ? '99+' : notif.unread }}</span
+          >
+        }
+      </span>
+      <span class="rail__label">{{ notif.label }}</span>
+    </a>
+  }
 </div>
 
 @if (profile(); as p) {

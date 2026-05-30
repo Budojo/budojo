@@ -23,6 +23,23 @@ export interface RailProfile {
   readonly routerLink: string | readonly unknown[];
 }
 
+/** Optional notifications entry in the rail nav — the bell + unread badge (#1136). */
+export interface RailNotifications {
+  /** The notifications page for this shell. */
+  readonly routerLink: string | readonly unknown[];
+  /** Unread count for the badge; 0 → no badge. */
+  readonly unread: number;
+  /** Visible (translated) label, also the accessible name. */
+  readonly label: string;
+  /**
+   * Accessible label for the unread badge (translated by the host, e.g.
+   * "5 unread"). Rides into the link's accessible name so screen-reader
+   * users hear the count — the badge digit alone is `aria-hidden`-grade
+   * noise. Only used when `unread > 0`.
+   */
+  readonly unreadAriaLabel: string;
+}
+
 /**
  * Social-native desktop side rail (#1120) — the Instagram/X left-rail shell,
  * shared by the owner (`dashboard`) + athlete (`athlete-dashboard`) shells
@@ -61,6 +78,8 @@ export class SideRailComponent {
   readonly brand = input.required<RailBrand>();
   /** Profile chip pinned at the bottom; `null` → omitted (e.g. user not yet hydrated). */
   readonly profile = input<RailProfile | null>(null);
+  /** Optional notifications entry (bell + unread badge) in the nav; `null` → omitted. */
+  readonly notifications = input<RailNotifications | null>(null);
   /** Visible label on the ➕ Create button (translated by the host). */
   readonly createLabel = input.required<string>();
   /** The `<nav>` landmark label (translated by the host). */

@@ -119,6 +119,30 @@ $rail-width: 15rem;
   }
 }
 
+// Notifications bell + unread badge in the rail nav (#1136). The bell sits in
+// a relative wrapper so the count badge can clip to its top-right corner.
+.rail__item-bell {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.rail__badge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.375rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--p-red-500, #ef4444);
+  color: #fff; // contrast glyph on the solid badge
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1.05rem;
+  text-align: center;
+}
+
 // Profile pinned at the bottom (the IG/X account anchor) → the "me / more" hub.
 .rail__profile {
   margin-top: auto;
