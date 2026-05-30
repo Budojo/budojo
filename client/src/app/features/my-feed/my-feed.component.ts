@@ -49,6 +49,10 @@ import { EventComposerComponent } from './event-composer/event-composer.componen
 import { EventDatePipe } from '../../shared/pipes/event-date.pipe';
 import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
 import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-list-sheet.component';
+import {
+  VideoFacadeComponent,
+  VideoProvider,
+} from '../../shared/components/video-facade/video-facade.component';
 
 /**
  * Athlete-portal community timeline (#614, M9 PR-B2). Consumes the
@@ -89,6 +93,7 @@ import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-li
     EventComposerComponent,
     MentionTextComponent,
     ReactionsListSheetComponent,
+    VideoFacadeComponent,
     RelativeTimePipe,
     EventDatePipe,
   ],
@@ -463,6 +468,43 @@ export class MyFeedComponent implements OnInit {
   protected athleteNameOf(post: CommunityPost): string {
     const raw = post.payload['athlete_name'];
     return typeof raw === 'string' ? raw : '';
+  }
+
+  /**
+   * Narrow a `shared_video` post's payload (#1155) into the typed shape the
+   * facade tile renders. `thumbnail_url` is already our same-origin cached
+   * URL (resolved server-side); returns null if the payload is malformed.
+   */
+  protected videoData(post: CommunityPost): {
+    provider: VideoProvider;
+    videoId: string;
+    thumbnailUrl: string | null;
+    title: string | null;
+    authorName: string | null;
+    caption: string | null;
+    url: string;
+  } | null {
+    const p = post.payload;
+    const provider = p['provider'];
+    const videoId = p['video_id'];
+    const url = p['url'];
+    if (
+      (provider !== 'instagram' && provider !== 'youtube' && provider !== 'tiktok') ||
+      typeof videoId !== 'string' ||
+      typeof url !== 'string'
+    ) {
+      return null;
+    }
+    const str = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? v : null);
+    return {
+      provider,
+      videoId,
+      url,
+      thumbnailUrl: str(p['thumbnail_url']),
+      title: str(p['title']),
+      authorName: str(p['author_name']),
+      caption: str(p['caption']),
+    };
   }
 
   protected eventTitle(post: CommunityPost): string {

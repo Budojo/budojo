@@ -210,6 +210,11 @@
     }
   },
   "community": {
+    "video": {
+      "play": "Play {{provider}} video",
+      "openOn": "Open on {{provider}}",
+      "loadsHint": "Tap to load from {{provider}}"
+    },
     "reactionsList": {
       "title": "Reactions",
       "openAria": "See who reacted",

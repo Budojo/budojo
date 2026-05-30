@@ -1,0 +1,81 @@
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { TranslatePipe } from '@ngx-translate/core';
+
+export type VideoProvider = 'instagram' | 'youtube' | 'tiktok';
+
+/**
+ * Tap-to-play facade for a shared external technique video (#1155, epic
+ * #1153). Renders OUR cached cover (or a cover-less branded card) + a play
+ * button by default — **nothing third-party loads**. On tap it swaps in the
+ * provider's official embed in a **sandboxed** iframe, so the video plays
+ * inline in Budojo and the user only pulls in a third party by choosing to.
+ *
+ * Instagram reels don't always embed inline; the iframe still renders the IG
+ * embed (which links out when it must), and slice #1156 hardens the
+ * inline-vs-degrade decision.
+ */
+@Component({
+  selector: 'app-video-facade',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TranslatePipe],
+  templateUrl: './video-facade.component.html',
+  styleUrl: './video-facade.component.scss',
+})
+export class VideoFacadeComponent {
+  private readonly sanitizer = inject(DomSanitizer);
+
+  readonly provider = input.required<VideoProvider>();
+  /** Provider video id / shortcode. */
+  readonly videoId = input.required<string>();
+  /** Our cached, same-origin cover URL; null → cover-less branded card. */
+  readonly thumbnailUrl = input<string | null>(null);
+  readonly title = input<string | null>(null);
+  readonly authorName = input<string | null>(null);
+  /** The sharer's own note. */
+  readonly caption = input<string | null>(null);
+  /** The original watch URL — the "Open on <provider>" fallback. */
+  readonly url = input.required<string>();
+
+  /** Flips on the first tap; only then is the third-party embed mounted. */
+  protected readonly playing = signal(false);
+
+  protected readonly providerLabel = computed<string>(
+    () => ({ instagram: 'Instagram', youtube: 'YouTube', tiktok: 'TikTok' })[this.provider()],
+  );
+
+  protected readonly providerGlyph = computed<string>(
+    () =>
+      ({
+        instagram: 'pi pi-instagram',
+        youtube: 'pi pi-youtube',
+        tiktok: 'pi pi-tiktok',
+      })[this.provider()],
+  );
+
+  /**
+   * The sandboxed embed URL, built only once `playing()` is true. Privacy-
+   * enhanced where the provider offers it (YouTube `-nocookie`). Marked
+   * trusted because it's derived from a fixed per-provider template with a
+   * server-validated id — never raw user input.
+   */
+  protected readonly embedSrc = computed<SafeResourceUrl | null>(() => {
+    if (!this.playing()) {
+      return null;
+    }
+
+    const id = encodeURIComponent(this.videoId());
+    const raw = {
+      youtube: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`,
+      tiktok: `https://www.tiktok.com/embed/v2/${id}`,
+      instagram: `https://www.instagram.com/reel/${id}/embed/`,
+    }[this.provider()];
+
+    return this.sanitizer.bypassSecurityTrustResourceUrl(raw);
+  });
+
+  protected play(): void {
+    this.playing.set(true);
+  }
+}
