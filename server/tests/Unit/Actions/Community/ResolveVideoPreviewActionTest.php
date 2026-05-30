@@ -96,16 +96,18 @@ it('rejects a userinfo-spoofed host (instagram.com@internal-ip)', function (): v
 })->throws(InvalidVideoUrlException::class);
 
 it('caps the Instagram body read at the size limit', function (): void {
-    // og:image up front, then 3 MB of filler. The bounded read pulls the
-    // early tag without slurping the whole body into memory.
-    $body = '<meta property="og:image" content="https://cdninstagram.com/ig.jpg" />'
-        . str_repeat('x', 3 * 1024 * 1024);
+    // og:image placed AFTER the 2 MB cap. A bounded read stops before
+    // reaching it → thumbnailUrl is null. Drop the cap and the tag leaks
+    // through — so this fails if the bound regresses (vs. an up-front tag,
+    // which would pass with no cap at all).
+    $body = str_repeat('x', 2 * 1024 * 1024 + 1024)
+        . '<meta property="og:image" content="https://cdninstagram.com/late.jpg" />';
     Http::fake(['*instagram.com/*' => Http::response($body)]);
 
     $preview = $this->action->execute('https://www.instagram.com/reel/CapTest123/');
 
     expect($preview->videoId)->toBe('CapTest123')
-        ->and($preview->thumbnailUrl)->toBe('https://cdninstagram.com/ig.jpg');
+        ->and($preview->thumbnailUrl)->toBeNull();
 });
 
 it('rejects an allowlisted URL whose provider returns an error', function (): void {
