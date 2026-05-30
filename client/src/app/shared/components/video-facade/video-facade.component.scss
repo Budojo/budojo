@@ -8,10 +8,23 @@
 .video-facade__media {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
   border-radius: var(--p-border-radius-md, 12px);
   overflow: hidden;
   background: var(--p-surface-900);
+}
+
+// YouTube — landscape 16:9.
+.video-facade__media--landscape {
+  aspect-ratio: 16 / 9;
+}
+
+// Instagram / TikTok reels — native 9:16 portrait, so the original isn't
+// cropped (#1166). Capped + centered so a portrait tile stays a sane size
+// (full-bleed on a phone, a centered column on desktop).
+.video-facade__media--portrait {
+  aspect-ratio: 9 / 16;
+  max-width: 22rem;
+  margin-inline: auto;
 }
 
 .video-facade__cover {

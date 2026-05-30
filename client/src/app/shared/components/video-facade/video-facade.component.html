@@ -1,5 +1,9 @@
 <figure class="video-facade" data-cy="video-facade">
-  <div class="video-facade__media">
+  <div
+    class="video-facade__media"
+    [class.video-facade__media--portrait]="isPortrait()"
+    [class.video-facade__media--landscape]="!isPortrait()"
+  >
     @if (!playing()) {
       <button
         type="button"

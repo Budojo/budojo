@@ -53,16 +53,34 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         margin-bottom: 0.5rem;
       }
 
+      /* Mobile-first: stack the title above the CTA(s) so the title always
+         gets the full width. The old always-inline rule (#1147) crushed the
+         title into a sliver once a page had two CTAs (the feed: "Share a
+         video" + "Post event"), wrapping it character-by-character (#1166).
+         Stacking is uniform across every page on a phone, so the layout is
+         still consistent — the consistency #1147 was really after. */
       .page-header {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
-        /* Keep the CTA inline with the title (#1147). A long title wraps its
-           OWN text within the title column rather than dropping the CTA to a
-           second line — so the title/CTA layout stays consistent page-to-page
-           instead of depending on how long the title happens to be. */
-        flex-wrap: nowrap;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      /* Desktop: back to the canonical one-row title-left / CTA-right shape,
+         where there's room for both. */
+      @media (min-width: 768px) {
+        .page-header {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.5rem;
+          flex-wrap: nowrap;
+        }
+
+        /* Desktop: shrink back to content so the CTA sits on the right. */
+        .page-header__cta {
+          align-self: auto;
+        }
       }
 
       .page-header__title-area {
@@ -104,9 +122,16 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       }
 
       .page-header__cta {
-        display: inline-flex;
+        display: flex;
         align-items: center;
         flex-shrink: 0;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        /* Mobile: span the header width so the wrap is load-bearing — two
+           long i18n CTA labels (IT/DE) wrap to a second line instead of
+           overflowing the viewport. An inline-flex wrapper would size to
+           max-content and overflow horizontally instead (reviewer #1167). */
+        align-self: stretch;
       }
 
       .page-header__cta:empty {
