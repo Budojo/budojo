@@ -76,6 +76,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
           gap: 0.5rem;
           flex-wrap: nowrap;
         }
+
+        /* Desktop: shrink back to content so the CTA sits on the right. */
+        .page-header__cta {
+          align-self: auto;
+        }
       }
 
       .page-header__title-area {
@@ -117,13 +122,16 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       }
 
       .page-header__cta {
-        display: inline-flex;
+        display: flex;
         align-items: center;
         flex-shrink: 0;
-        /* Two CTAs (the feed) wrap to a second line on a very narrow phone
-           instead of overflowing the viewport. */
         flex-wrap: wrap;
         gap: 0.5rem;
+        /* Mobile: span the header width so the wrap is load-bearing — two
+           long i18n CTA labels (IT/DE) wrap to a second line instead of
+           overflowing the viewport. An inline-flex wrapper would size to
+           max-content and overflow horizontally instead (reviewer #1167). */
+        align-self: stretch;
       }
 
       .page-header__cta:empty {
