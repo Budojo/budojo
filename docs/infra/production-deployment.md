@@ -215,7 +215,7 @@ The SPA does **not** currently send a `Content-Security-Policy` (Cloudflare Page
 frame-src https://www.youtube-nocookie.com https://www.tiktok.com https://www.instagram.com;
 ```
 
-These mirror the server-side host allowlist (`App\Enums\VideoProvider::hosts()`) and the embed templates in `VideoFacadeComponent`. Note the cover images are already same-origin (cached to our `public` disk), so `img-src 'self'` is sufficient for the facade thumbnails — no provider CDN needed in `img-src`.
+These mirror the embed templates in `VideoFacadeComponent.embedSrc()` — the source of truth for which third-party origins our iframes load from. (Note: this is a different list from the server-side SSRF / ingress allowlist `App\Enums\VideoProvider::hosts()`, which governs where a *shared URL* is allowed to come from — e.g. YouTube ingress is `youtube.com`/`youtu.be` while YouTube embeds load from `youtube-nocookie.com`.) The cover images are already same-origin (cached to our `public` disk), so `img-src 'self'` is sufficient for the facade thumbnails — no provider CDN needed in `img-src`.
 
 ### Preview deployments — disabled (2026-04-28)
 
