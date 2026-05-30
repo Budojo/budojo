@@ -30,4 +30,8 @@ enum CommunityPostType: string
     case StripePromotion = 'stripe_promotion';
     case Event = 'event';
     case OwnerAnnouncement = 'owner_announcement';
+    // Athlete- or owner-shared external technique video (#1153). Payload:
+    // `{ provider, url, video_id, thumbnail_url, title?, author_name?,
+    // caption? }`. The first feed content type athletes can author.
+    case SharedVideo = 'shared_video';
 }

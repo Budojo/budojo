@@ -1,5 +1,17 @@
 <div class="feed">
   <app-page-header [title]="'athletePortal.feed.title' | translate">
+    <!-- Open to athletes AND owners (the first feed write athletes can do).
+         Outlined when the owner also has the primary "Post event" CTA, so
+         there's one primary action per view. -->
+    <p-button
+      pageHeaderCta
+      [label]="'community.video.composer.openButton' | translate"
+      icon="pi pi-video"
+      size="small"
+      [outlined]="canPostEvents()"
+      (onClick)="openVideoComposer()"
+      data-cy="my-feed-open-video-composer"
+    />
     @if (canPostEvents()) {
       <p-button
         pageHeaderCta
@@ -20,6 +32,12 @@
         (created)="onEventCreated($event)"
       />
     }
+
+    <app-video-composer
+      [visible]="videoComposerOpen()"
+      (visibleChange)="videoComposerOpen.set($event)"
+      (created)="onVideoCreated($event)"
+    />
 
     @if (canModerate()) {
       <p-confirmdialog />
@@ -240,6 +258,21 @@
                   <p class="feed__announcement">
                     <app-mention-text [text]="announcementBody(post)" />
                   </p>
+                </div>
+              }
+              @case ('shared_video') {
+                <div class="feed__body" data-cy="post-shared-video">
+                  @if (videoData(post); as video) {
+                    <app-video-facade
+                      [provider]="video.provider"
+                      [videoId]="video.videoId"
+                      [thumbnailUrl]="video.thumbnailUrl"
+                      [title]="video.title"
+                      [authorName]="video.authorName"
+                      [caption]="video.caption"
+                      [url]="video.url"
+                    />
+                  }
                 </div>
               }
             }

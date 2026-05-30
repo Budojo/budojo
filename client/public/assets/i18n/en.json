@@ -210,6 +210,26 @@
     }
   },
   "community": {
+    "video": {
+      "play": "Play {{provider}} video",
+      "openOn": "Open on {{provider}}",
+      "loadsHint": "Tap to load from {{provider}}",
+      "composer": {
+        "openButton": "Share a video",
+        "title": "Share a video",
+        "urlLabel": "Video link",
+        "urlPlaceholder": "Paste an Instagram, YouTube or TikTok link",
+        "urlHint": "We'll pull the preview from the link.",
+        "captionLabel": "Add a note (optional)",
+        "captionPlaceholder": "Why is this one worth a watch?",
+        "submit": "Share",
+        "cancel": "Cancel",
+        "successSummary": "Shared",
+        "successDetail": "Your video is now in the feed.",
+        "errorUnreadable": "We couldn't read that link. Use an Instagram, YouTube, or TikTok link.",
+        "errorGeneric": "Something went wrong. Try again in a moment."
+      }
+    },
     "reactionsList": {
       "title": "Reactions",
       "openAria": "See who reacted",

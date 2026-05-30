@@ -1,0 +1,65 @@
+<figure class="video-facade" data-cy="video-facade">
+  <div class="video-facade__media">
+    @if (!playing()) {
+      <button
+        type="button"
+        class="video-facade__cover"
+        (click)="play()"
+        [attr.aria-label]="'community.video.play' | translate: { provider: providerLabel() }"
+        data-cy="video-facade-cover"
+      >
+        @if (thumbnailUrl(); as thumb) {
+          <img [src]="thumb" alt="" class="video-facade__img" loading="lazy" />
+        } @else {
+          <span class="video-facade__placeholder" aria-hidden="true">
+            <i [class]="providerGlyph()"></i>
+          </span>
+        }
+        <span class="video-facade__play" aria-hidden="true"><i class="pi pi-play-circle"></i></span>
+        <span class="video-facade__badge" aria-hidden="true"
+          ><i [class]="providerGlyph()"></i
+        ></span>
+      </button>
+    } @else {
+      <iframe
+        [src]="embedSrc()"
+        class="video-facade__embed"
+        sandbox="allow-scripts allow-same-origin allow-presentation"
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        referrerpolicy="strict-origin-when-cross-origin"
+        [title]="title() ?? providerLabel()"
+        data-cy="video-facade-embed"
+      ></iframe>
+    }
+  </div>
+
+  <figcaption class="video-facade__meta">
+    @if (caption(); as c) {
+      <p class="video-facade__caption"><app-mention-text [text]="c" /></p>
+    }
+    @if (title() || authorName()) {
+      <p class="video-facade__source">
+        @if (title(); as t) {
+          <span class="video-facade__title">{{ t }}</span>
+        }
+        @if (authorName(); as a) {
+          <span class="video-facade__author">{{ a }}</span>
+        }
+      </p>
+    }
+    <a
+      class="video-facade__open"
+      [href]="url()"
+      target="_blank"
+      rel="noopener noreferrer"
+      data-cy="video-facade-open"
+    >
+      {{ 'community.video.openOn' | translate: { provider: providerLabel() } }}
+    </a>
+    @if (!playing()) {
+      <p class="video-facade__hint">
+        {{ 'community.video.loadsHint' | translate: { provider: providerLabel() } }}
+      </p>
+    }
+  </figcaption>
+</figure>

@@ -210,6 +210,26 @@
     }
   },
   "community": {
+    "video": {
+      "play": "Riproduci il video {{provider}}",
+      "openOn": "Apri su {{provider}}",
+      "loadsHint": "Tocca per caricare da {{provider}}",
+      "composer": {
+        "openButton": "Condividi un video",
+        "title": "Condividi un video",
+        "urlLabel": "Link del video",
+        "urlPlaceholder": "Incolla un link Instagram, YouTube o TikTok",
+        "urlHint": "Prendiamo l'anteprima dal link.",
+        "captionLabel": "Aggiungi una nota (facoltativo)",
+        "captionPlaceholder": "Perché vale la pena guardarlo?",
+        "submit": "Condividi",
+        "cancel": "Annulla",
+        "successSummary": "Condiviso",
+        "successDetail": "Il tuo video è ora nel feed.",
+        "errorUnreadable": "Non siamo riusciti a leggere quel link. Usa un link Instagram, YouTube o TikTok.",
+        "errorGeneric": "Qualcosa è andato storto. Riprova tra poco."
+      }
+    },
     "reactionsList": {
       "title": "Reazioni",
       "openAria": "Vedi chi ha reagito",
