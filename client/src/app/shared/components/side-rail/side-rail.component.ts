@@ -31,6 +31,13 @@ export interface RailNotifications {
   readonly unread: number;
   /** Visible (translated) label, also the accessible name. */
   readonly label: string;
+  /**
+   * Accessible label for the unread badge (translated by the host, e.g.
+   * "5 unread"). Rides into the link's accessible name so screen-reader
+   * users hear the count — the badge digit alone is `aria-hidden`-grade
+   * noise. Only used when `unread > 0`.
+   */
+  readonly unreadAriaLabel: string;
 }
 
 /**

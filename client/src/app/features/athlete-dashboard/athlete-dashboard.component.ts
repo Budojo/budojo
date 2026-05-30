@@ -108,10 +108,12 @@ export class AthleteDashboardComponent implements OnInit {
   /** Desktop rail notifications entry → the athlete notifications page, with the unread badge. */
   protected readonly railNotifications = computed<RailNotifications>(() => {
     this.languageService.currentLang();
+    const unread = this.inbox.unread();
     return {
       routerLink: '/dashboard/me/notifications',
-      unread: this.inbox.unread(),
+      unread,
       label: this.translate.instant('notifications.title'),
+      unreadAriaLabel: this.translate.instant('notifications.bell.unreadCount', { count: unread }),
     };
   });
 

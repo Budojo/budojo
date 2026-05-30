@@ -93,7 +93,12 @@ describe('SideRailComponent (#1120)', () => {
 
   it('renders the notifications entry with the unread badge when provided', () => {
     const { el } = setup({
-      notifications: { routerLink: '/dashboard/notifications', unread: 5, label: 'Notifications' },
+      notifications: {
+        routerLink: '/dashboard/notifications',
+        unread: 5,
+        label: 'Notifications',
+        unreadAriaLabel: '5 unread',
+      },
     });
     const item = el.querySelector('[data-cy="rail-notifications"]') as HTMLAnchorElement;
     expect(item).not.toBeNull();
@@ -102,9 +107,31 @@ describe('SideRailComponent (#1120)', () => {
     expect(el.querySelector('[data-cy="rail-notifications-badge"]')?.textContent?.trim()).toBe('5');
   });
 
+  it('exposes the unread count to assistive tech via the badge aria-label (#1136 a11y)', () => {
+    // The digit alone is visual noise to a screen reader; the host-supplied
+    // aria-label rides into the link's accessible name so SR users hear the
+    // count — parity with the topbar bell.
+    const { el } = setup({
+      notifications: {
+        routerLink: '/dashboard/notifications',
+        unread: 5,
+        label: 'Notifications',
+        unreadAriaLabel: '5 unread',
+      },
+    });
+    const badge = el.querySelector('[data-cy="rail-notifications-badge"]');
+    expect(badge?.getAttribute('aria-label')).toBe('5 unread');
+    expect(badge?.getAttribute('aria-hidden')).toBeNull();
+  });
+
   it('omits the badge when there are no unread notifications', () => {
     const { el } = setup({
-      notifications: { routerLink: '/dashboard/notifications', unread: 0, label: 'Notifications' },
+      notifications: {
+        routerLink: '/dashboard/notifications',
+        unread: 0,
+        label: 'Notifications',
+        unreadAriaLabel: '0 unread',
+      },
     });
     expect(el.querySelector('[data-cy="rail-notifications"]')).not.toBeNull();
     expect(el.querySelector('[data-cy="rail-notifications-badge"]')).toBeNull();

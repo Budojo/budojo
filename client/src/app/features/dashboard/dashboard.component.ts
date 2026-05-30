@@ -163,10 +163,12 @@ export class DashboardComponent implements OnInit {
   /** Desktop rail notifications entry → the owner notifications page, with the unread badge. */
   protected readonly railNotifications = computed<RailNotifications>(() => {
     this.languageService.currentLang();
+    const unread = this.inbox.unread();
     return {
       routerLink: '/dashboard/notifications',
-      unread: this.inbox.unread(),
+      unread,
       label: this.translate.instant('notifications.title'),
+      unreadAriaLabel: this.translate.instant('notifications.bell.unreadCount', { count: unread }),
     };
   });
 

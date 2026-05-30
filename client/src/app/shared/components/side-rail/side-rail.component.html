@@ -41,9 +41,12 @@
       <span class="rail__item-bell">
         <i class="pi pi-bell" aria-hidden="true"></i>
         @if (notif.unread > 0) {
-          <span class="rail__badge" data-cy="rail-notifications-badge" aria-hidden="true">{{
-            notif.unread > 99 ? '99+' : notif.unread
-          }}</span>
+          <span
+            class="rail__badge"
+            data-cy="rail-notifications-badge"
+            [attr.aria-label]="notif.unreadAriaLabel"
+            >{{ notif.unread > 99 ? '99+' : notif.unread }}</span
+          >
         }
       </span>
       <span class="rail__label">{{ notif.label }}</span>
