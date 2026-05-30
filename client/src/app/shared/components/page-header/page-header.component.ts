@@ -58,7 +58,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
-        flex-wrap: wrap;
+        /* Keep the CTA inline with the title (#1147). A long title wraps its
+           OWN text within the title column rather than dropping the CTA to a
+           second line — so the title/CTA layout stays consistent page-to-page
+           instead of depending on how long the title happens to be. */
+        flex-wrap: nowrap;
       }
 
       .page-header__title-area {
@@ -97,6 +101,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       .page-header__cta {
         display: inline-flex;
         align-items: center;
+        flex-shrink: 0;
       }
 
       .page-header__cta:empty {
