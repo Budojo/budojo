@@ -28,6 +28,31 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.39.0',
+    date: '2026-05-30',
+    headline: 'Share technique videos straight to your academy feed.',
+    sections: [
+      {
+        heading: '🎬 Share a video from Instagram, YouTube or TikTok',
+        bullets: [
+          "Spotted a great technique on a reel or a YouTube clip? Now you can share it straight to your academy's feed. Paste the link, add a note if you like, and it becomes a post your teammates can watch — right inside Budojo. It works with Instagram, YouTube and TikTok, and it's the first kind of post athletes can publish to the feed themselves, not just owners.",
+        ],
+      },
+      {
+        heading: '▶️ Tap to play, right in the feed',
+        bullets: [
+          'A shared video shows a cover with a play button. Tap it and the video plays inline, without leaving Budojo — and nothing loads from the other app until you choose to play, so your feed stays fast and your scrolling stays private. There\'s always an "Open on Instagram / YouTube / TikTok" link too, in case you\'d rather watch it on the original app.',
+        ],
+      },
+      {
+        heading: '💬 React, comment and @mention like any post',
+        bullets: [
+          'Shared videos are full feed posts: your teammates can clap, comment, and @mention each other right under the video — perfect for "let\'s drill this on Thursday."',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.38.1',
     date: '2026-05-30',
     headline: 'A couple of small fixes for the phone.',
