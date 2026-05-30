@@ -28,6 +28,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.39.3',
+    date: '2026-05-31',
+    headline: 'Shared Instagram reels now open in Instagram.',
+    sections: [
+      {
+        heading: '🎬 Tap an Instagram reel, watch it on Instagram',
+        bullets: [
+          'Instagram doesn\'t let its reels play inside other apps, so a shared reel used to show a "log in to Instagram" card when you tapped it. Now the preview stays as it was, and tapping opens the reel straight in Instagram — where it actually plays. YouTube and TikTok videos still play right inside Budojo.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.39.2',
     date: '2026-05-30',
     headline: 'Budojo stays upright on your phone.',
