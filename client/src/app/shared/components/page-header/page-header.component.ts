@@ -84,6 +84,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         font-weight: 700;
         color: var(--p-surface-900);
         line-height: 1.2;
+        /* With the CTA pinned inline (#1147), an unbreakable user-input title
+           (e.g. a spaceless academy name) must be able to break inside a word
+           as a last resort instead of spilling over the CTA at 375px. No-op on
+           normal spaced titles. */
+        overflow-wrap: anywhere;
       }
 
       .page-header__count {
