@@ -66,17 +66,15 @@ describe('Athletes desktop row delete (#1033)', () => {
 
   it('opens a confirm popup on delete and fires DELETE only on accept', () => {
     cy.get('[data-cy="delete-btn"]').click();
-    cy.get('.p-confirmpopup, .p-confirm-popup, [role="alertdialog"]')
-      .should('be.visible')
-      .and('contain.text', 'Marco Rossi');
-    cy.contains('.p-confirmpopup button, .p-confirm-popup button', 'Delete').click();
+    cy.get('.p-confirmpopup').should('be.visible').and('contain.text', 'Marco Rossi');
+    cy.get('.p-confirmpopup-accept-button').click();
     cy.wait('@del');
   });
 
   it('does not delete when the popup is cancelled', () => {
     cy.get('[data-cy="delete-btn"]').click();
-    cy.contains('.p-confirmpopup button, .p-confirm-popup button', 'Cancel').click();
-    cy.get('.p-confirmpopup, .p-confirm-popup').should('not.exist');
+    cy.get('.p-confirmpopup-reject-button').click();
+    cy.get('.p-confirmpopup').should('not.exist');
     cy.get('@del.all').should('have.length', 0);
   });
 });
