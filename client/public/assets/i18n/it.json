@@ -223,9 +223,9 @@
         "captionLabel": "Aggiungi una nota (facoltativo)",
         "captionPlaceholder": "Perché vale la pena guardarlo?",
         "submit": "Condividi",
+        "cancel": "Annulla",
         "successSummary": "Condiviso",
         "successDetail": "Il tuo video è ora nel feed.",
-        "errorSummary": "Impossibile condividere",
         "errorUnreadable": "Non siamo riusciti a leggere quel link. Usa un link Instagram, YouTube o TikTok.",
         "errorGeneric": "Qualcosa è andato storto. Riprova tra poco."
       }

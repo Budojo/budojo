@@ -223,9 +223,9 @@
         "captionLabel": "Add a note (optional)",
         "captionPlaceholder": "Why is this one worth a watch?",
         "submit": "Share",
+        "cancel": "Cancel",
         "successSummary": "Shared",
         "successDetail": "Your video is now in the feed.",
-        "errorSummary": "Couldn't share",
         "errorUnreadable": "We couldn't read that link. Use an Instagram, YouTube, or TikTok link.",
         "errorGeneric": "Something went wrong. Try again in a moment."
       }

@@ -91,6 +91,12 @@ describe('VideoComposerComponent (#1155)', () => {
     expect(composer['form'].controls.url.hasError('url')).toBe(true);
   });
 
+  it('rejects a non-https URL — every allowlisted provider is https-only', () => {
+    const { composer } = mount();
+    composer['form'].controls.url.setValue('http://www.youtube.com/watch?v=abc');
+    expect(composer['form'].controls.url.hasError('url')).toBe(true);
+  });
+
   it('POSTs the trimmed url + caption and emits `created` on success', () => {
     const { fixture, composer } = mount();
     composer['form'].controls.url.setValue('  https://www.youtube.com/watch?v=abc  ');
@@ -109,7 +115,7 @@ describe('VideoComposerComponent (#1155)', () => {
     expect(composer['submitting']()).toBe(false);
   });
 
-  it('keeps the dialog open + clears submitting on a 422 (unresolvable link)', () => {
+  it('keeps the dialog open + shows the inline unreadable error on a 422', () => {
     const { fixture, composer } = mount();
     // A syntactically valid URL the client accepts but the SERVER rejects
     // as a non-allowlisted provider.
@@ -125,5 +131,19 @@ describe('VideoComposerComponent (#1155)', () => {
 
     expect(fixture.componentInstance.lastCreated()).toBeNull();
     expect(composer['submitting']()).toBe(false);
+    // Persistent inline error (not a fading toast) so the user can fix the
+    // link without re-typing.
+    expect(composer['submitError']()).toBe('unreadable');
+  });
+
+  it('clears the inline error the moment the user edits the URL', () => {
+    const { composer } = mount();
+    composer['form'].controls.url.setValue('https://vimeo.com/12345');
+    composer['onSubmit']();
+    httpMock.expectOne(URL).flush({}, { status: 422, statusText: 'Unprocessable' });
+    expect(composer['submitError']()).toBe('unreadable');
+
+    composer['form'].controls.url.setValue('https://www.youtube.com/watch?v=ok');
+    expect(composer['submitError']()).toBeNull();
   });
 });

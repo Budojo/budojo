@@ -26,6 +26,12 @@
   width: 100%;
 }
 
+.video-composer__error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--budojo-danger);
+}
+
 .video-composer__actions {
   display: flex;
   justify-content: flex-end;

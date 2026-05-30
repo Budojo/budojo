@@ -51,10 +51,21 @@
       ></textarea>
     </label>
 
+    @if (submitError(); as err) {
+      <p class="video-composer__error" role="alert" data-cy="video-composer-error">
+        {{
+          (err === 'unreadable'
+            ? 'community.video.composer.errorUnreadable'
+            : 'community.video.composer.errorGeneric'
+          ) | translate
+        }}
+      </p>
+    }
+
     <footer class="video-composer__actions">
       <p-button
         type="button"
-        [label]="'community.composer.cancel' | translate"
+        [label]="'community.video.composer.cancel' | translate"
         severity="secondary"
         [text]="true"
         [disabled]="submitting()"
