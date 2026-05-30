@@ -46,6 +46,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { prefersReducedMotion } from '../../shared/utils/prefers-reduced-motion';
 import { CommentsThreadComponent } from './comments-thread/comments-thread.component';
 import { EventComposerComponent } from './event-composer/event-composer.component';
+import { VideoComposerComponent } from './video-composer/video-composer.component';
 import { EventDatePipe } from '../../shared/pipes/event-date.pipe';
 import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
 import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-list-sheet.component';
@@ -91,6 +92,7 @@ import {
     EmptyStateComponent,
     CommentsThreadComponent,
     EventComposerComponent,
+    VideoComposerComponent,
     MentionTextComponent,
     ReactionsListSheetComponent,
     VideoFacadeComponent,
@@ -131,6 +133,7 @@ export class MyFeedComponent implements OnInit {
   private fadeTimer?: ReturnType<typeof setTimeout>;
 
   protected readonly composerOpen = signal(false);
+  protected readonly videoComposerOpen = signal(false);
 
   /**
    * Reactions-list sheet state. Open on tap of a post's reactions
@@ -296,6 +299,16 @@ export class MyFeedComponent implements OnInit {
    * pagination.
    */
   protected onEventCreated(post: CommunityPost): void {
+    this.posts.update((existing) => [post, ...existing]);
+  }
+
+  /** Open the "Share a video" composer — available to athletes + owners. */
+  protected openVideoComposer(): void {
+    this.videoComposerOpen.set(true);
+  }
+
+  /** Composer success: prepend the shared-video post so it appears at the top. */
+  protected onVideoCreated(post: CommunityPost): void {
     this.posts.update((existing) => [post, ...existing]);
   }
 
