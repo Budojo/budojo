@@ -28,6 +28,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.38.1',
+    date: '2026-05-30',
+    headline: 'A couple of small fixes for the phone.',
+    sections: [
+      {
+        heading: '📱 Mobile polish',
+        bullets: [
+          "The Unread filter on your notifications page is now clearly readable when you tap it. On a phone the selected filter could turn white-on-white and all but disappear — that's fixed.",
+          'On your academy feed, the Publish event button now stays neatly beside the page title instead of dropping onto its own line.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.38.0',
     date: '2026-05-30',
     headline: 'Notifications that stay calm when a post takes off.',
