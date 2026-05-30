@@ -1,4 +1,7 @@
 import { Component } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { VideoFacadeComponent, VideoProvider } from './video-facade.component';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
@@ -27,7 +30,17 @@ class HostComponent {
 }
 
 function setup(opts: Partial<HostComponent> = {}) {
-  TestBed.configureTestingModule({ imports: [HostComponent], providers: [provideI18nTesting()] });
+  TestBed.configureTestingModule({
+    imports: [HostComponent],
+    // MentionTextComponent (caption) pulls in AuthService (→ HttpClient) and
+    // renders @handle links via routerLink (→ Router).
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideRouter([]),
+      provideI18nTesting(),
+    ],
+  });
   const fixture = TestBed.createComponent(HostComponent);
   Object.assign(fixture.componentInstance, opts);
   fixture.detectChanges();
@@ -95,5 +108,21 @@ describe('VideoFacadeComponent (#1155)', () => {
     const open = el.querySelector('[data-cy="video-facade-open"]') as HTMLAnchorElement;
     expect(open.getAttribute('href')).toBe('https://www.youtube.com/watch?v=abc123');
     expect(open.getAttribute('rel')).toContain('noopener');
+  });
+
+  it('keeps the embed referrer to the origin — never the deep-link path', () => {
+    const { el, play } = setup();
+    play();
+    const iframe = el.querySelector('[data-cy="video-facade-embed"]') as HTMLIFrameElement;
+    expect(iframe.getAttribute('referrerpolicy')).toBe('strict-origin-when-cross-origin');
+  });
+
+  it('renders @handle mentions in the caption as profile links', () => {
+    const { el } = setup({ caption: 'Watch @coachmarco break this down' });
+    const link = el.querySelector(
+      '.video-facade__caption [data-cy="mention-link"]',
+    ) as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.textContent).toContain('coachmarco');
   });
 });

@@ -26,6 +26,7 @@
         class="video-facade__embed"
         sandbox="allow-scripts allow-same-origin allow-presentation"
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        referrerpolicy="strict-origin-when-cross-origin"
         [title]="title() ?? providerLabel()"
         data-cy="video-facade-embed"
       ></iframe>
@@ -34,7 +35,7 @@
 
   <figcaption class="video-facade__meta">
     @if (caption(); as c) {
-      <p class="video-facade__caption">{{ c }}</p>
+      <p class="video-facade__caption"><app-mention-text [text]="c" /></p>
     }
     @if (title() || authorName()) {
       <p class="video-facade__source">
