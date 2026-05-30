@@ -8,6 +8,8 @@ use App\Enums\RsvpResponse;
 use App\Models\CommunityPost;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
+use App\Notifications\Contracts\AggregatesInInbox;
+use App\Support\AggregatedTitle;
 use App\Support\CommunityLink;
 use App\Support\NotificationActor;
 use Illuminate\Bus\Queueable;
@@ -18,7 +20,7 @@ use Illuminate\Notifications\Notification;
  * (#729 C2). Recipient = the event post author. The RSVP-ing user
  * is excluded by the trigger site.
  */
-class OwnerEventRsvpNotification extends Notification
+class OwnerEventRsvpNotification extends Notification implements AggregatesInInbox
 {
     use Queueable;
 
@@ -42,7 +44,10 @@ class OwnerEventRsvpNotification extends Notification
      */
     public function toDatabase(object $notifiable): array
     {
-        return $this->payload($notifiable);
+        // `aggregate_actor_ids` is inbox-only bookkeeping for the write-time
+        // aggregation (#1139); the push fires once and carries no aggregate
+        // state, so it stays out of toWebPush().
+        return [...$this->payload($notifiable), 'aggregate_actor_ids' => [$this->responder->id]];
     }
 
     /**
@@ -51,6 +56,26 @@ class OwnerEventRsvpNotification extends Notification
     public function toWebPush(object $notifiable): array
     {
         return $this->payload($notifiable);
+    }
+
+    public function inboxPostId(): int
+    {
+        return $this->post->id;
+    }
+
+    public function inboxActor(): User
+    {
+        return $this->responder;
+    }
+
+    public function inboxAggregatedTitle(string $recentActorName, int $otherCount): string
+    {
+        return AggregatedTitle::make($recentActorName, $otherCount, 'RSVP\'d to your event');
+    }
+
+    public function inboxBody(): string
+    {
+        return $this->body();
     }
 
     /**
@@ -73,10 +98,7 @@ class OwnerEventRsvpNotification extends Notification
 
     private function title(): string
     {
-        return \sprintf(
-            '%s RSVP\'d to your event',
-            $this->responder->full_name,
-        );
+        return $this->inboxAggregatedTitle($this->responder->full_name, 0);
     }
 
     private function body(): string

@@ -7,6 +7,8 @@ namespace App\Notifications;
 use App\Models\PostComment;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
+use App\Notifications\Contracts\AggregatesInInbox;
+use App\Support\AggregatedTitle;
 use App\Support\CommunityLink;
 use App\Support\NotificationActor;
 use Illuminate\Bus\Queueable;
@@ -21,7 +23,7 @@ use Illuminate\Notifications\Notification;
  * The commenter is never the recipient (no self-ping); the trigger
  * site (`CreateCommentAction`) excludes them.
  */
-class CommunityCommentOnYourPostNotification extends Notification
+class CommunityCommentOnYourPostNotification extends Notification implements AggregatesInInbox
 {
     use Queueable;
 
@@ -44,7 +46,10 @@ class CommunityCommentOnYourPostNotification extends Notification
      */
     public function toDatabase(object $notifiable): array
     {
-        return $this->payload($notifiable);
+        // `aggregate_actor_ids` is inbox-only bookkeeping for the write-time
+        // aggregation (#1139); the push fires once and carries no aggregate
+        // state, so it stays out of toWebPush().
+        return [...$this->payload($notifiable), 'aggregate_actor_ids' => [$this->commenter->id]];
     }
 
     /**
@@ -53,6 +58,26 @@ class CommunityCommentOnYourPostNotification extends Notification
     public function toWebPush(object $notifiable): array
     {
         return $this->payload($notifiable);
+    }
+
+    public function inboxPostId(): int
+    {
+        return $this->newComment->post_id;
+    }
+
+    public function inboxActor(): User
+    {
+        return $this->commenter;
+    }
+
+    public function inboxAggregatedTitle(string $recentActorName, int $otherCount): string
+    {
+        return AggregatedTitle::make($recentActorName, $otherCount, 'commented on your post');
+    }
+
+    public function inboxBody(): string
+    {
+        return $this->body();
     }
 
     /**
@@ -73,10 +98,7 @@ class CommunityCommentOnYourPostNotification extends Notification
 
     private function title(): string
     {
-        return \sprintf(
-            '%s commented on your post',
-            $this->commenter->full_name,
-        );
+        return $this->inboxAggregatedTitle($this->commenter->full_name, 0);
     }
 
     private function body(): string

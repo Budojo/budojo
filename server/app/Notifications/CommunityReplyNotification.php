@@ -7,6 +7,8 @@ namespace App\Notifications;
 use App\Models\PostComment;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
+use App\Notifications\Contracts\AggregatesInInbox;
+use App\Support\AggregatedTitle;
 use App\Support\CommunityLink;
 use App\Support\NotificationActor;
 use Illuminate\Bus\Queueable;
@@ -32,7 +34,7 @@ use Illuminate\Notifications\Notification;
  * only for recipients who have NOT opted out. The single gate
  * covers both channels.
  */
-class CommunityReplyNotification extends Notification
+class CommunityReplyNotification extends Notification implements AggregatesInInbox
 {
     use Queueable;
 
@@ -63,6 +65,10 @@ class CommunityReplyNotification extends Notification
             'actor' => NotificationActor::fromUser($this->author),
             'post_id' => $this->newComment->post_id,
             'comment_id' => $this->newComment->id,
+            // Inbox-only bookkeeping for the write-time aggregation (#1139);
+            // the push fires once and carries no aggregate state, so the
+            // toWebPush() payload omits it.
+            'aggregate_actor_ids' => [$this->author->id],
         ];
     }
 
@@ -88,12 +94,29 @@ class CommunityReplyNotification extends Notification
         ];
     }
 
+    public function inboxPostId(): int
+    {
+        return $this->newComment->post_id;
+    }
+
+    public function inboxActor(): User
+    {
+        return $this->author;
+    }
+
+    public function inboxAggregatedTitle(string $recentActorName, int $otherCount): string
+    {
+        return AggregatedTitle::make($recentActorName, $otherCount, 'commented on a post you replied to');
+    }
+
+    public function inboxBody(): string
+    {
+        return $this->body();
+    }
+
     private function title(): string
     {
-        return \sprintf(
-            '%s commented on a post you replied to',
-            $this->author->full_name,
-        );
+        return $this->inboxAggregatedTitle($this->author->full_name, 0);
     }
 
     private function body(): string
