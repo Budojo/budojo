@@ -619,5 +619,14 @@ Route::middleware('auth:sanctum')->group(function (): void {
             'events',
             [\App\Http\Controllers\Community\CommunityEventsController::class, 'store'],
         );
+
+        // Athlete- or owner-shared external technique video (#1154). The
+        // server resolves the preview (allowlisted provider: Instagram /
+        // YouTube / TikTok) and stores a shared_video post. Throttled —
+        // each create makes an outbound oEmbed / OG fetch.
+        Route::post(
+            'videos',
+            [\App\Http\Controllers\Community\CommunitySharedVideosController::class, 'store'],
+        )->middleware('throttle:20,1');
     });
 });

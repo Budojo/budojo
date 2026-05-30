@@ -59,4 +59,20 @@ class CommunityPostFactory extends Factory
             ],
         ]);
     }
+
+    public function sharedVideo(string $provider = 'youtube', ?string $caption = null): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => CommunityPostType::SharedVideo,
+            'payload' => array_filter([
+                'provider' => $provider,
+                'url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'video_id' => 'dQw4w9WgXcQ',
+                'thumbnail_url' => 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+                'title' => 'Technique of the week',
+                'author_name' => 'BJJ Channel',
+                'caption' => $caption,
+            ], static fn (mixed $v): bool => $v !== null),
+        ]);
+    }
 }
