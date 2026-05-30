@@ -25,19 +25,22 @@ final readonly class ResolvedVideoPreview
     }
 
     /**
-     * The persisted `community_posts.payload` shape. Null metadata is omitted
-     * (a missing thumbnail is the IG degrade case — the card still renders).
+     * The persisted `community_posts.payload` shape. `$thumbnailPath` is OUR
+     * cached cover (a relative `public`-disk path; the Resource resolves it to
+     * a same-origin URL) — never the provider CDN URL, to keep the facade
+     * cover first-party (#1155). Null metadata is omitted (a null thumbnail is
+     * the degrade case — the card still renders, cover-less).
      *
      * @return array<string, mixed>
      */
-    public function toPayload(?string $caption): array
+    public function toPayload(?string $caption, ?string $thumbnailPath): array
     {
         return array_filter(
             [
                 'provider' => $this->provider->value,
                 'url' => $this->url,
                 'video_id' => $this->videoId,
-                'thumbnail_url' => $this->thumbnailUrl,
+                'thumbnail_path' => $thumbnailPath,
                 'title' => $this->title,
                 'author_name' => $this->authorName,
                 'caption' => $caption,

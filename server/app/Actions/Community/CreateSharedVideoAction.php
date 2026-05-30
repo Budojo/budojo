@@ -32,6 +32,7 @@ class CreateSharedVideoAction
 {
     public function __construct(
         private readonly ResolveVideoPreviewAction $resolver,
+        private readonly CacheVideoThumbnailAction $thumbnailCache,
     ) {
     }
 
@@ -39,12 +40,16 @@ class CreateSharedVideoAction
     {
         $preview = $this->resolver->execute($url);
 
+        // Cache the cover on our disk so the facade renders it first-party
+        // (#1155). Best-effort — null degrades to a cover-less card.
+        $thumbnailPath = $this->thumbnailCache->execute($preview->thumbnailUrl);
+
         /** @var CommunityPost $post */
         $post = CommunityPost::create([
             'academy_id' => $academyId,
             'type' => CommunityPostType::SharedVideo,
             'visibility' => CommunityPostVisibility::Academy,
-            'payload' => $preview->toPayload($caption),
+            'payload' => $preview->toPayload($caption, $thumbnailPath),
             'created_by_user_id' => $author->id,
         ]);
 

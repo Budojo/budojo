@@ -68,7 +68,7 @@ class CommunityPostFactory extends Factory
                 'provider' => $provider,
                 'url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
                 'video_id' => 'dQw4w9WgXcQ',
-                'thumbnail_url' => 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+                'thumbnail_path' => 'community/video-thumbnails/sample.jpg',
                 'title' => 'Technique of the week',
                 'author_name' => 'BJJ Channel',
                 'caption' => $caption,

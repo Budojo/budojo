@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\CommunityPostType;
 use App\Models\CommunityPost;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Wire shape for a single community post (#612, M9 PR-B server). The
@@ -44,7 +46,7 @@ class CommunityPostResource extends JsonResource
             'id' => $post->id,
             'type' => $post->type->value,
             'visibility' => $post->visibility->value,
-            'payload' => $post->payload,
+            'payload' => $this->projectPayload($post),
             'created_at' => $post->created_at?->toIso8601String(),
             'created_by' => [
                 'id' => $author->id,
@@ -85,5 +87,28 @@ class CommunityPostResource extends JsonResource
             // caller hasn't responded.
             'your_rsvp' => $post->rsvps->first()?->response->value,
         ];
+    }
+
+    /**
+     * Project the payload. For `shared_video` (#1155) the internally-stored
+     * `thumbnail_path` (our `public`-disk cache) is resolved to a same-origin
+     * `thumbnail_url` so the facade cover is never a hotlinked provider CDN
+     * URL; the path itself is not exposed. Other types project verbatim.
+     *
+     * @return array<string, mixed>
+     */
+    private function projectPayload(CommunityPost $post): array
+    {
+        $payload = $post->payload;
+
+        if ($post->type === CommunityPostType::SharedVideo) {
+            $path = $payload['thumbnail_path'] ?? null;
+            unset($payload['thumbnail_path']);
+            $payload['thumbnail_url'] = (\is_string($path) && $path !== '')
+                ? Storage::disk('public')->url($path)
+                : null;
+        }
+
+        return $payload;
     }
 }
