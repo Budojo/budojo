@@ -4690,6 +4690,57 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ValidationErrorBody' }
 
+  /community/videos:
+    post:
+      tags: [community]
+      summary: Share an external technique video to the feed
+      description: |
+        Share an Instagram reel / YouTube / TikTok technique video into the
+        caller's academy feed. Open to **athletes and owners** (any academy
+        member with feed-interaction) — the first feed write athletes can
+        author. The server resolves the preview from the allowlisted provider
+        (that host allowlist is also the SSRF boundary for the outbound fetch)
+        and stores a `shared_video` post; the SPA renders a tap-to-play facade
+        card. Throttled — each create makes an outbound oEmbed / OG fetch.
+      operationId: createCommunitySharedVideo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  maxLength: 2048
+                  description: 'Instagram / YouTube / TikTok video URL (allowlisted hosts only).'
+                caption: { type: string, nullable: true, maxLength: 500, description: "The sharer's own note." }
+      responses:
+        '201':
+          description: Shared-video post created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/CommunityPost' }
+        '401': { description: Unauthenticated }
+        '403':
+          description: Forbidden — caller is not a member of an academy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: Forbidden. }
+        '422':
+          description: URL is not an allowlisted provider, or its preview could not be resolved (deleted / private / provider error).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationErrorBody' }
+        '429': { description: Too many shares — throttled. }
+
   # ─── Athlete restore + Me-side surfaces (#1019 — doc-drift recovery) ───
   # Routes that have been live in api_v1.php but were missing from the
   # OpenAPI spec. Documented here in a single block so a future audit
@@ -6649,17 +6700,23 @@ components:
 
     CommunityPostType:
       type: string
-      enum: [belt_promotion, event, owner_announcement]
+      enum: [belt_promotion, stripe_promotion, event, owner_announcement, shared_video]
       description: |
-        Discriminator on `payload` shape. Today V1 ships these three:
+        Discriminator on `payload` shape:
         - `belt_promotion` — emitted by the AthleteObserver when an
           athlete's belt column changes. Payload: `{ athlete_id,
           old_belt, new_belt, promoted_at }`.
+        - `stripe_promotion` — emitted by the AthleteObserver on a
+          stripes change. Payload: `{ athlete_id, belt, old_stripes,
+          new_stripes, promoted_at }`.
         - `event` — owner-authored open mat / seminar / grading.
           Payload carries title + start time + optional location
           (text address, lat, lon nullable).
         - `owner_announcement` — generic owner-side broadcast (also
           the factory default).
+        - `shared_video` — athlete- or owner-shared external technique
+          video (#1153). Payload: `{ provider, url, video_id,
+          thumbnail_url?, title?, author_name?, caption? }`.
 
     CommunityPostVisibility:
       type: string
