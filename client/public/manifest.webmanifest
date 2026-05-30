@@ -5,7 +5,7 @@
   "lang": "en",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
-  "orientation": "any",
+  "orientation": "portrait",
   "start_url": "/dashboard/athletes",
   "scope": "/",
   "background_color": "#0a0a0b",
