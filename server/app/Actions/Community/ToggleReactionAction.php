@@ -9,6 +9,7 @@ use App\Models\CommunityPost;
 use App\Models\PostReaction;
 use App\Models\User;
 use App\Notifications\CommunityReactionOnYourPostNotification;
+use App\Support\InboxAggregator;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Database\QueryException;
@@ -48,6 +49,10 @@ use Illuminate\Support\Facades\Log;
  */
 class ToggleReactionAction
 {
+    public function __construct(private readonly InboxAggregator $aggregator)
+    {
+    }
+
     /**
      * @return ReactionResult
      */
@@ -123,7 +128,7 @@ class ToggleReactionAction
         }
 
         try {
-            $author->notify(new CommunityReactionOnYourPostNotification($post, $reactor, $emoji));
+            $this->aggregator->record($author, new CommunityReactionOnYourPostNotification($post, $reactor, $emoji));
         } catch (\Throwable $e) {
             Log::warning('community_reaction_on_your_post notification failed', [
                 'post_id' => $post->id,

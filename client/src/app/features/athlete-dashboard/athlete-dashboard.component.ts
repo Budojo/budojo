@@ -10,6 +10,7 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
+import { NotificationInboxService } from '../../core/services/notification-inbox.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import {
   BottomNavCenterAction,
@@ -22,6 +23,7 @@ import {
 } from '../../shared/components/create-sheet/create-sheet.component';
 import {
   RailBrand,
+  RailNotifications,
   RailProfile,
   SideRailComponent,
 } from '../../shared/components/side-rail/side-rail.component';
@@ -61,6 +63,7 @@ export class AthleteDashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+  private readonly inbox = inject(NotificationInboxService);
 
   protected readonly user = this.authService.user;
   protected readonly createSheet = viewChild.required(CreateSheetComponent);
@@ -100,6 +103,18 @@ export class AthleteDashboardComponent implements OnInit {
   protected readonly createTitle = computed<string>(() => {
     this.languageService.currentLang();
     return this.translate.instant('athletePortal.create.title');
+  });
+
+  /** Desktop rail notifications entry → the athlete notifications page, with the unread badge. */
+  protected readonly railNotifications = computed<RailNotifications>(() => {
+    this.languageService.currentLang();
+    const unread = this.inbox.unread();
+    return {
+      routerLink: '/dashboard/me/notifications',
+      unread,
+      label: this.translate.instant('notifications.title'),
+      unreadAriaLabel: this.translate.instant('notifications.bell.unreadCount', { count: unread }),
+    };
   });
 
   protected readonly centerAction = computed<BottomNavCenterAction>(() => ({

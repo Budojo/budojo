@@ -8,6 +8,8 @@ use App\Enums\ReactionEmoji;
 use App\Models\CommunityPost;
 use App\Models\User;
 use App\Notifications\Channels\WebPushChannel;
+use App\Notifications\Contracts\AggregatesInInbox;
+use App\Support\AggregatedTitle;
 use App\Support\CommunityLink;
 use App\Support\NotificationActor;
 use Illuminate\Bus\Queueable;
@@ -23,7 +25,7 @@ use Illuminate\Notifications\Notification;
  * batch via a queued job that flushes per-author / per-post after a
  * short debounce window. Out of scope for v1 of this notification.
  */
-class CommunityReactionOnYourPostNotification extends Notification
+class CommunityReactionOnYourPostNotification extends Notification implements AggregatesInInbox
 {
     use Queueable;
 
@@ -47,7 +49,10 @@ class CommunityReactionOnYourPostNotification extends Notification
      */
     public function toDatabase(object $notifiable): array
     {
-        return $this->payload($notifiable);
+        // `aggregate_actor_ids` is inbox-only bookkeeping for the write-time
+        // aggregation (#1139); the push fires once and carries no aggregate
+        // state, so it stays out of toWebPush().
+        return [...$this->payload($notifiable), 'aggregate_actor_ids' => [$this->reactor->id]];
     }
 
     /**
@@ -56,6 +61,26 @@ class CommunityReactionOnYourPostNotification extends Notification
     public function toWebPush(object $notifiable): array
     {
         return $this->payload($notifiable);
+    }
+
+    public function inboxPostId(): int
+    {
+        return $this->post->id;
+    }
+
+    public function inboxActor(): User
+    {
+        return $this->reactor;
+    }
+
+    public function inboxAggregatedTitle(string $recentActorName, int $otherCount): string
+    {
+        return AggregatedTitle::make($recentActorName, $otherCount, 'reacted to your post');
+    }
+
+    public function inboxBody(): string
+    {
+        return $this->body();
     }
 
     /**
@@ -76,10 +101,7 @@ class CommunityReactionOnYourPostNotification extends Notification
 
     private function title(): string
     {
-        return \sprintf(
-            '%s reacted to your post',
-            $this->reactor->full_name,
-        );
+        return $this->inboxAggregatedTitle($this->reactor->full_name, 0);
     }
 
     private function body(): string

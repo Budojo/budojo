@@ -12,6 +12,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
+import { NotificationInboxService } from '../../core/services/notification-inbox.service';
 import { WebPushHandlerService } from '../../core/services/web-push-handler.service';
 import {
   BottomNavCenterAction,
@@ -25,6 +26,7 @@ import {
 } from '../../shared/components/create-sheet/create-sheet.component';
 import {
   RailBrand,
+  RailNotifications,
   RailProfile,
   SideRailComponent,
 } from '../../shared/components/side-rail/side-rail.component';
@@ -70,6 +72,7 @@ export class DashboardComponent implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly webPushHandler = inject(WebPushHandlerService);
+  private readonly inbox = inject(NotificationInboxService);
 
   /**
    * The cached user — drives the topbar avatar chip. Hydrated by
@@ -155,6 +158,18 @@ export class DashboardComponent implements OnInit {
   protected readonly createTitle = computed<string>(() => {
     this.languageService.currentLang();
     return this.translate.instant('nav.create.title');
+  });
+
+  /** Desktop rail notifications entry → the owner notifications page, with the unread badge. */
+  protected readonly railNotifications = computed<RailNotifications>(() => {
+    this.languageService.currentLang();
+    const unread = this.inbox.unread();
+    return {
+      routerLink: '/dashboard/notifications',
+      unread,
+      label: this.translate.instant('notifications.title'),
+      unreadAriaLabel: this.translate.instant('notifications.bell.unreadCount', { count: unread }),
+    };
   });
 
   protected readonly centerAction = computed<BottomNavCenterAction>(() => ({

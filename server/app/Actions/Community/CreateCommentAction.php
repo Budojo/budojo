@@ -9,10 +9,10 @@ use App\Models\PostComment;
 use App\Models\User;
 use App\Notifications\CommunityCommentOnYourPostNotification;
 use App\Notifications\CommunityReplyNotification;
+use App\Support\InboxAggregator;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 
 /**
  * Insert a 1-level comment under a community post (#604, M9 PR-D
@@ -27,17 +27,22 @@ use Illuminate\Support\Facades\Notification;
  * **Fanout (M9 PR-F slice 1, #606)**: after inserting, the Action
  * notifies every prior sibling commenter under the same post who
  * has the `community_reply` category enabled, excluding the new
- * comment's author. The fanout is best-effort: `Notification::send`
- * is invoked once for the full eligible collection, wrapped in a
- * single try/catch on the Action's side. So a failure on the inbox
- * insert is logged and swallowed (the comment row has already
- * committed), but the recipients are NOT processed one-by-one — a
- * database hiccup mid-batch surfaces as a single warning entry, not
- * one per recipient. Acceptable for V1: the inbox row is best-effort
- * UX, not a delivery guarantee.
+ * comment's author. Each recipient is routed through the
+ * {@see InboxAggregator} (#1139) so a burst of comments folds into a
+ * single "X and N others …" inbox row per recipient instead of
+ * stacking a fresh row + push each time. The whole fanout is
+ * best-effort — wrapped in one try/catch on the Action's side: a DB
+ * hiccup is logged and swallowed (the comment row has already
+ * committed) and surfaces as a single warning entry, not one per
+ * recipient. Acceptable for V1: the inbox row is best-effort UX, not
+ * a delivery guarantee.
  */
 class CreateCommentAction
 {
+    public function __construct(private readonly InboxAggregator $aggregator)
+    {
+    }
+
     public function execute(CommunityPost $post, User $author, string $body): PostComment
     {
         $comment = PostComment::create([
@@ -92,16 +97,16 @@ class CreateCommentAction
             return;
         }
 
-        // Best-effort fanout: if the inbox INSERT throws (DB hiccup,
-        // deadlock, exotic driver error) the comment write has
-        // already committed; the controller's 201 path should
-        // remain. Logging preserves the audit trail without
-        // surfacing a 500 to the caller — the docblock above
-        // promises this shape; previously the unwrapped
-        // `Notification::send` could 500 after a successful insert
-        // (Copilot review on PR #629).
+        // Best-effort fanout: if a fold/insert throws (DB hiccup,
+        // deadlock, exotic driver error) the comment write has already
+        // committed; the controller's 201 path must remain. One
+        // try/catch around the whole loop logs once and swallows — the
+        // docblock above promises this shape (an unwrapped fanout could
+        // 500 after a successful insert; Copilot review on PR #629).
         try {
-            Notification::send($eligible, new CommunityReplyNotification($newComment, $author));
+            foreach ($eligible as $recipient) {
+                $this->aggregator->record($recipient, new CommunityReplyNotification($newComment, $author));
+            }
         } catch (\Throwable $e) {
             Log::warning('community_reply notification fanout failed', [
                 'post_id' => $newComment->post_id,
@@ -134,7 +139,7 @@ class CreateCommentAction
         }
 
         try {
-            $postAuthor->notify(new CommunityCommentOnYourPostNotification($newComment, $author));
+            $this->aggregator->record($postAuthor, new CommunityCommentOnYourPostNotification($newComment, $author));
         } catch (\Throwable $e) {
             Log::warning('community_comment_on_your_post notification failed', [
                 'post_id' => $newComment->post_id,

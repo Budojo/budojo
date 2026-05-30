@@ -28,6 +28,25 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.38.0',
+    date: '2026-05-30',
+    headline: 'Notifications that stay calm when a post takes off.',
+    sections: [
+      {
+        heading: '🔔 Reactions and replies bundle into one',
+        bullets: [
+          'When several people react to, comment on, or RSVP to the same post, Budojo now folds them into a single notification — "Marco and 3 others reacted to your post" — instead of a separate one for each. A popular post no longer floods your inbox or buzzes your phone over and over: you get one notification that quietly updates as more people join in.',
+        ],
+      },
+      {
+        heading: '💻 Notifications in the desktop side rail',
+        bullets: [
+          'On a computer, your notifications now have their own spot in the left side rail, with a badge showing how many are unread — so you can reach them without going up to the bell.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.37.0',
     date: '2026-05-30',
     headline: 'Cleaner pages, and a proper notifications center.',

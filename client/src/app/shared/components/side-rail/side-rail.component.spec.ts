@@ -1,7 +1,12 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { SideRailComponent, RailBrand, RailProfile } from './side-rail.component';
+import {
+  SideRailComponent,
+  RailBrand,
+  RailNotifications,
+  RailProfile,
+} from './side-rail.component';
 import { BottomNavTab } from '../bottom-nav/bottom-nav.component';
 
 @Component({
@@ -11,6 +16,7 @@ import { BottomNavTab } from '../bottom-nav/bottom-nav.component';
     [tabs]="tabs"
     [brand]="brand"
     [profile]="profile"
+    [notifications]="notifications"
     [createLabel]="'Create'"
     [ariaLabel]="'Primary'"
     (createActivated)="created = created + 1"
@@ -28,14 +34,20 @@ class HostComponent {
     handle: 'marcobjj',
     routerLink: '/dashboard/me/more',
   };
+  notifications: RailNotifications | null = null;
   created = 0;
 }
 
-function setup(opts: { profile?: RailProfile | null } = {}) {
+function setup(
+  opts: { profile?: RailProfile | null; notifications?: RailNotifications | null } = {},
+) {
   TestBed.configureTestingModule({ imports: [HostComponent], providers: [provideRouter([])] });
   const fixture = TestBed.createComponent(HostComponent);
   if (opts.profile !== undefined) {
     fixture.componentInstance.profile = opts.profile;
+  }
+  if (opts.notifications !== undefined) {
+    fixture.componentInstance.notifications = opts.notifications;
   }
   fixture.detectChanges();
   return { fixture, host: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
@@ -77,6 +89,57 @@ describe('SideRailComponent (#1120)', () => {
   it('hides the profile chip when no profile is provided', () => {
     const { el } = setup({ profile: null });
     expect(el.querySelector('[data-cy="rail-profile"]')).toBeNull();
+  });
+
+  it('renders the notifications entry with the unread badge when provided', () => {
+    const { el } = setup({
+      notifications: {
+        routerLink: '/dashboard/notifications',
+        unread: 5,
+        label: 'Notifications',
+        unreadAriaLabel: '5 unread',
+      },
+    });
+    const item = el.querySelector('[data-cy="rail-notifications"]') as HTMLAnchorElement;
+    expect(item).not.toBeNull();
+    expect(item.getAttribute('href')).toBe('/dashboard/notifications');
+    expect(item.textContent).toContain('Notifications');
+    expect(el.querySelector('[data-cy="rail-notifications-badge"]')?.textContent?.trim()).toBe('5');
+  });
+
+  it('exposes the unread count to assistive tech via the badge aria-label (#1136 a11y)', () => {
+    // The digit alone is visual noise to a screen reader; the host-supplied
+    // aria-label rides into the link's accessible name so SR users hear the
+    // count — parity with the topbar bell.
+    const { el } = setup({
+      notifications: {
+        routerLink: '/dashboard/notifications',
+        unread: 5,
+        label: 'Notifications',
+        unreadAriaLabel: '5 unread',
+      },
+    });
+    const badge = el.querySelector('[data-cy="rail-notifications-badge"]');
+    expect(badge?.getAttribute('aria-label')).toBe('5 unread');
+    expect(badge?.getAttribute('aria-hidden')).toBeNull();
+  });
+
+  it('omits the badge when there are no unread notifications', () => {
+    const { el } = setup({
+      notifications: {
+        routerLink: '/dashboard/notifications',
+        unread: 0,
+        label: 'Notifications',
+        unreadAriaLabel: '0 unread',
+      },
+    });
+    expect(el.querySelector('[data-cy="rail-notifications"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="rail-notifications-badge"]')).toBeNull();
+  });
+
+  it('omits the notifications entry when none is provided', () => {
+    const { el } = setup();
+    expect(el.querySelector('[data-cy="rail-notifications"]')).toBeNull();
   });
 
   it('exposes a navigation landmark with the passed aria-label on the host', () => {

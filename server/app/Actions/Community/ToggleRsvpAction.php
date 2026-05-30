@@ -9,6 +9,7 @@ use App\Models\CommunityPost;
 use App\Models\PostRsvp;
 use App\Models\User;
 use App\Notifications\OwnerEventRsvpNotification;
+use App\Support\InboxAggregator;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Database\QueryException;
@@ -40,6 +41,10 @@ use Illuminate\Support\Facades\Log;
  */
 class ToggleRsvpAction
 {
+    public function __construct(private readonly InboxAggregator $aggregator)
+    {
+    }
+
     /**
      * @return RsvpResult
      */
@@ -112,7 +117,7 @@ class ToggleRsvpAction
         }
 
         try {
-            $author->notify(new OwnerEventRsvpNotification($post, $responder, $response));
+            $this->aggregator->record($author, new OwnerEventRsvpNotification($post, $responder, $response));
         } catch (\Throwable $e) {
             Log::warning('owner_event_rsvp notification failed', [
                 'post_id' => $post->id,
