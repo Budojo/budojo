@@ -224,6 +224,22 @@ export class CommunityService {
       .post<{ data: CommunityPost }>(`${this.base}/events`, normalised)
       .pipe(map((res) => res.data));
   }
+
+  /**
+   * Share an external technique video (#1155) — Instagram / YouTube /
+   * TikTok. The server resolves the preview from the allowlisted provider
+   * and returns the full `shared_video` post so the SPA can prepend it to
+   * the feed. A 422 means the URL isn't an allowlisted provider or its
+   * preview couldn't be resolved.
+   */
+  createSharedVideo(payload: CreateSharedVideoPayload): Observable<CommunityPost> {
+    return this.http
+      .post<{ data: CommunityPost }>(`${this.base}/videos`, {
+        url: payload.url.trim(),
+        caption: blankToNull(payload.caption),
+      })
+      .pipe(map((res) => res.data));
+  }
 }
 
 /** Trim + collapse empty / whitespace-only strings to `null`. */
@@ -269,4 +285,9 @@ export interface CreateEventPayload {
   readonly location_lat?: number | null;
   readonly location_lon?: number | null;
   readonly max_attendees?: number | null;
+}
+
+export interface CreateSharedVideoPayload {
+  readonly url: string;
+  readonly caption: string | null;
 }
