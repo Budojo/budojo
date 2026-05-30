@@ -1,0 +1,24 @@
+// Shared unread-count pill (#1138) — ONE definition for the topbar bell
+// badge and the desktop side-rail badge, replacing the two near-identical
+// hand-rolled blocks that had drifted (different sizes / font-sizes /
+// centering, raw `#fff`). Values come from the `--budojo-count-badge-*`
+// tokens in budojo-theme.scss.
+//
+// The caller adds only its own absolute position — the overlap offset is
+// genuinely per-surface (the bell sits inside its button; the rail badge
+// hangs off the corner of its icon).
+@mixin budojo-count-badge {
+  position: absolute;
+  min-width: var(--budojo-count-badge-size);
+  height: var(--budojo-count-badge-size);
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--budojo-count-badge-bg);
+  color: var(--budojo-count-badge-fg);
+  font-size: var(--budojo-count-badge-font-size);
+  font-weight: 600;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

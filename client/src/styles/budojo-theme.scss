@@ -172,6 +172,16 @@
   --budojo-icon-lg: 20px;
   --budojo-icon-xl: 24px;
 
+  // Unread count badge (#1138) — the red overlay pill shared by the topbar
+  // bell + the desktop rail (see styles/_count-badge.scss). Off the 8dp grid
+  // by design: a micro-affordance pill, same exception class as belt chips.
+  // The foreground stays literal white in both light + dark (contrast on the
+  // solid red), same rationale as the iOS toggle handle further down.
+  --budojo-count-badge-size: 1.125rem;
+  --budojo-count-badge-font-size: 0.7rem;
+  --budojo-count-badge-bg: var(--p-red-500, #ef4444);
+  --budojo-count-badge-fg: #fff;
+
   --budojo-safe-top: env(safe-area-inset-top, 0px);
   --budojo-safe-bottom: env(safe-area-inset-bottom, 0px);
 

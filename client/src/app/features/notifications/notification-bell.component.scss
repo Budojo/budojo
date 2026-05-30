@@ -1,3 +1,5 @@
+@use '../../../styles/count-badge' as *;
+
 .notification-bell {
   position: relative;
   display: inline-flex;
@@ -21,21 +23,10 @@
     font-size: 1.125rem;
   }
 
+  // Shared count pill (#1138) — the bell sits the badge inside its button.
   &__badge {
-    position: absolute;
+    @include budojo-count-badge;
     top: 0.25rem;
     right: 0.25rem;
-    min-width: 1.125rem;
-    height: 1.125rem;
-    padding: 0 0.25rem;
-    background: var(--p-red-500, #ef4444);
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 600;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
   }
 }
