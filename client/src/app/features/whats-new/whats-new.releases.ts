@@ -28,6 +28,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.40.0',
+    date: '2026-05-31',
+    headline: 'Easier-to-tap actions on the athletes list.',
+    sections: [
+      {
+        heading: '♿ Bigger, clearer edit & delete buttons',
+        bullets: [
+          "The edit and delete buttons on each athlete row now have larger, easier-to-tap targets and proper labels for screen readers, so they're quicker to hit on a phone and friendlier with assistive tech. Deleting still asks you to confirm first — nothing changed there.",
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.39.3',
     date: '2026-05-31',
     headline: 'Shared Instagram reels now open in Instagram.',
