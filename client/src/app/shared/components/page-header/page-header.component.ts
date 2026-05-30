@@ -58,7 +58,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         align-items: center;
         justify-content: space-between;
         gap: 0.5rem;
-        flex-wrap: wrap;
+        /* Keep the CTA inline with the title (#1147). A long title wraps its
+           OWN text within the title column rather than dropping the CTA to a
+           second line — so the title/CTA layout stays consistent page-to-page
+           instead of depending on how long the title happens to be. */
+        flex-wrap: nowrap;
       }
 
       .page-header__title-area {
@@ -80,6 +84,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         font-weight: 700;
         color: var(--p-surface-900);
         line-height: 1.2;
+        /* With the CTA pinned inline (#1147), an unbreakable user-input title
+           (e.g. a spaceless academy name) must be able to break inside a word
+           as a last resort instead of spilling over the CTA at 375px. No-op on
+           normal spaced titles. */
+        overflow-wrap: anywhere;
       }
 
       .page-header__count {
@@ -97,6 +106,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       .page-header__cta {
         display: inline-flex;
         align-items: center;
+        flex-shrink: 0;
       }
 
       .page-header__cta:empty {

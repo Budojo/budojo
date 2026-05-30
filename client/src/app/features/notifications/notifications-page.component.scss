@@ -49,8 +49,18 @@
     background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
     border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
 
-  &:hover {
-    background: var(--p-content-hover-background);
+  // Hover affordance only on real pointer devices. On touch, :hover sticks
+  // after a tap and — being more specific than --active — overrides the
+  // active tab's indigo fill, leaving white text on a light pill (#1146).
+  @media (hover: hover) {
+    &:hover {
+      background: var(--p-content-hover-background);
+    }
+
+    // Keep the active tab's fill when it's the one being hovered.
+    &--active:hover {
+      background: var(--p-primary-color);
+    }
   }
 
   &--active {
