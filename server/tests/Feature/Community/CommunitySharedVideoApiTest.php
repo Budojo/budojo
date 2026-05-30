@@ -8,6 +8,7 @@ use App\Models\Athlete;
 use App\Models\CommunityPost;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Feature tests for `POST /api/v1/community/videos` (#1154, epic #1153) —
@@ -34,11 +35,15 @@ function videoAthlete(Academy $academy): User
 }
 
 it('lets an athlete share a YouTube video into their academy feed', function (): void {
-    Http::fake(['*youtube.com/oembed*' => Http::response([
-        'title' => 'Armbar from guard',
-        'author_name' => 'BJJ Channel',
-        'thumbnail_url' => 'https://i.ytimg.com/vi/abc123XYZ/hqdefault.jpg',
-    ])]);
+    Storage::fake('public');
+    Http::fake([
+        '*youtube.com/oembed*' => Http::response([
+            'title' => 'Armbar from guard',
+            'author_name' => 'BJJ Channel',
+            'thumbnail_url' => 'https://i.ytimg.com/vi/abc123XYZ/hqdefault.jpg',
+        ]),
+        'https://i.ytimg.com/*' => Http::response('fake-jpeg-bytes', 200, ['Content-Type' => 'image/jpeg']),
+    ]);
     $athlete = videoAthlete($this->academy);
 
     $response = $this->actingAs($athlete)
@@ -51,9 +56,15 @@ it('lets an athlete share a YouTube video into their academy feed', function ():
     expect($response->json('data.type'))->toBe('shared_video')
         ->and($response->json('data.payload.provider'))->toBe('youtube')
         ->and($response->json('data.payload.video_id'))->toBe('abc123XYZ')
-        ->and($response->json('data.payload.thumbnail_url'))->toBe('https://i.ytimg.com/vi/abc123XYZ/hqdefault.jpg')
         ->and($response->json('data.payload.caption'))->toBe('Great detail on the grip')
         ->and($response->json('data.created_by.id'))->toBe($athlete->id);
+
+    // Cover is cached + served from OUR domain, never hotlinked from the provider.
+    $thumbnailUrl = $response->json('data.payload.thumbnail_url');
+    expect($thumbnailUrl)->toContain('community/video-thumbnails/')
+        ->and($thumbnailUrl)->not->toContain('ytimg.com')
+        ->and($response->json('data.payload.thumbnail_path'))->toBeNull(); // internal path not exposed
+    expect(Storage::disk('public')->files('community/video-thumbnails'))->toHaveCount(1);
 
     expect(
         CommunityPost::query()
@@ -64,11 +75,15 @@ it('lets an athlete share a YouTube video into their academy feed', function ():
 });
 
 it('lets an owner share a TikTok video', function (): void {
-    Http::fake(['*tiktok.com/oembed*' => Http::response([
-        'title' => 'Sweep drill',
-        'author_name' => 'Coach',
-        'thumbnail_url' => 'https://p16.tiktokcdn.com/x.jpg',
-    ])]);
+    Storage::fake('public');
+    Http::fake([
+        '*tiktok.com/oembed*' => Http::response([
+            'title' => 'Sweep drill',
+            'author_name' => 'Coach',
+            'thumbnail_url' => 'https://p16.tiktokcdn.com/x.jpg',
+        ]),
+        'https://p16.tiktokcdn.com/*' => Http::response('img', 200, ['Content-Type' => 'image/jpeg']),
+    ]);
 
     $this->actingAs($this->owner)
         ->postJson('/api/v1/community/videos', [
