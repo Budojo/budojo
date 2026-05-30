@@ -100,4 +100,16 @@ describe('Mobile shell (390 × 844)', () => {
     cy.get('meta[name="theme-color"]').should('have.attr', 'content', '#0a0a0b');
     cy.get('meta[name="apple-mobile-web-app-capable"]').should('have.attr', 'content', 'yes');
   });
+
+  it('locks the installed app to portrait orientation (#1171)', () => {
+    // Budojo is portrait-first (the installed PWA / Play Store TWA is the
+    // primary surface). `orientation: portrait` stops the app flipping to
+    // landscape when the phone rotates. Locked here so it can't regress to
+    // `any`. (A plain iOS Safari tab can't honour this — platform limit.)
+    cy.request('manifest.webmanifest')
+      .its('body')
+      .should((manifest) => {
+        expect(manifest.orientation).to.eq('portrait');
+      });
+  });
 });
