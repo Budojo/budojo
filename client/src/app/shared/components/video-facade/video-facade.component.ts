@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { TranslatePipe } from '@ngx-translate/core';
+import { MentionTextComponent } from '../mention-text/mention-text.component';
 
 export type VideoProvider = 'instagram' | 'youtube' | 'tiktok';
 
@@ -11,15 +12,17 @@ export type VideoProvider = 'instagram' | 'youtube' | 'tiktok';
  * provider's official embed in a **sandboxed** iframe, so the video plays
  * inline in Budojo and the user only pulls in a third party by choosing to.
  *
- * Instagram reels don't always embed inline; the iframe still renders the IG
- * embed (which links out when it must), and slice #1156 hardens the
- * inline-vs-degrade decision.
+ * Instagram reels don't always embed inline (their embed can show a login
+ * wall): the iframe still attempts the IG embed, and the always-present
+ * "Open on Instagram" link in the meta is the degrade path. The embed is
+ * sandboxed and pinned to a privacy `referrerpolicy` so a tapped provider
+ * only ever learns our origin, never the feed deep-link (#1156).
  */
 @Component({
   selector: 'app-video-facade',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, MentionTextComponent],
   templateUrl: './video-facade.component.html',
   styleUrl: './video-facade.component.scss',
 })

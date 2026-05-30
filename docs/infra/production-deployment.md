@@ -205,6 +205,18 @@ Behaviour:
 
 > **Historical note.** Pre-#382 the SPA fallback lived in `client/public/_redirects` (`/* /index.html 200`) plus a 308 redirect for `/api/*` that acted as a safety net for stale clients still calling `budojo.it/api/...` (PRs #126 / #136 / #147 — the 200-status rewrite gotcha is recorded in `.claude/gotchas.md`). The simple `/* → /index.html 200` rule served HTML for **every** unknown path, including missing chunk files, which surfaced as the v1.14.1 → v1.14.3 blank-page hotfix chain. The `_redirects` file was removed in favour of the binding-only setup with `not_found_handling: "single-page-application"` (commit `202e284`), then replaced again with the worker-gated fallback above (#382 / #388, v1.15.0). Stale clients calling `budojo.it/api/...` from the pre-#147 bundle now receive a real 404 (the `*` Accept header doesn't trip the navigation gate), which is acceptable: those clients are off-bundle anyway and the frontend self-heal added in #381 reloads them on the next chunk-load failure.
 
+### SPA `frame-src` — community video embeds (#1156)
+
+The SPA does **not** currently send a `Content-Security-Policy` (Cloudflare Pages serves the static bundle with default headers; the Worker only does SPA-fallback routing). The shared-video facade (`shared/components/video-facade/`) embeds third-party players in a sandboxed `<iframe>` only after the user taps play. The iframe is pinned to `referrerpolicy="strict-origin-when-cross-origin"`, so a tapped provider learns only our origin, never the feed deep-link.
+
+**If a SPA CSP is ever introduced** (via a Pages `_headers` file or the Worker), its `frame-src` directive MUST allow the embed origins or every shared video breaks:
+
+```
+frame-src https://www.youtube-nocookie.com https://www.tiktok.com https://www.instagram.com;
+```
+
+These mirror the embed templates in `VideoFacadeComponent.embedSrc()` — the source of truth for which third-party origins our iframes load from. (Note: this is a different list from the server-side SSRF / ingress allowlist `App\Enums\VideoProvider::hosts()`, which governs where a *shared URL* is allowed to come from — e.g. YouTube ingress is `youtube.com`/`youtu.be` while YouTube embeds load from `youtube-nocookie.com`.) The cover images are already same-origin (cached to our `public` disk), so `img-src 'self'` is sufficient for the facade thumbnails — no provider CDN needed in `img-src`.
+
 ### Preview deployments — disabled (2026-04-28)
 
 Cloudflare Pages can auto-build every non-production branch and PR head into a `<branch|hash>.budojo.pages.dev` preview URL. **We've disabled that toggle.**
