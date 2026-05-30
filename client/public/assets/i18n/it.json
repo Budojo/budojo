@@ -214,6 +214,7 @@
       "play": "Riproduci il video {{provider}}",
       "openOn": "Apri su {{provider}}",
       "loadsHint": "Tocca per caricare da {{provider}}",
+      "opensHint": "Tocca per guardare su {{provider}}",
       "composer": {
         "openButton": "Condividi un video",
         "title": "Condividi un video",

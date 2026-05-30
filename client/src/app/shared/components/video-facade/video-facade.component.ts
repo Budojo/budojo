@@ -12,11 +12,12 @@ export type VideoProvider = 'instagram' | 'youtube' | 'tiktok';
  * provider's official embed in a **sandboxed** iframe, so the video plays
  * inline in Budojo and the user only pulls in a third party by choosing to.
  *
- * Instagram reels don't always embed inline (their embed can show a login
- * wall): the iframe still attempts the IG embed, and the always-present
- * "Open on Instagram" link in the meta is the degrade path. The embed is
- * sandboxed and pinned to a privacy `referrerpolicy` so a tapped provider
- * only ever learns our origin, never the feed deep-link (#1156).
+ * YouTube + TikTok play inline. Instagram **gates third-party embeds**, so
+ * its iframe only renders a login/broken card (confirmed on-device, #1175) —
+ * we never mount it: the IG cover keeps our cached preview and tapping opens
+ * the reel on Instagram. The inline embeds are sandboxed and pinned to a
+ * privacy `referrerpolicy` so a tapped provider only ever learns our origin,
+ * never the feed deep-link (#1156).
  */
 @Component({
   selector: 'app-video-facade',
@@ -67,13 +68,29 @@ export class VideoFacadeComponent {
   );
 
   /**
+   * Instagram can't be played inline (it gates embeds), so its cover opens
+   * the reel on Instagram instead of mounting the broken embed (#1175).
+   */
+  protected readonly opensExternally = computed<boolean>(() => this.provider() === 'instagram');
+
+  /**
+   * Centre overlay on the cover: a play triangle for the inline providers,
+   * the provider glyph for IG so it signals "opens Instagram", not "plays
+   * here".
+   */
+  protected readonly overlayGlyph = computed<string>(() =>
+    this.opensExternally() ? this.providerGlyph() : 'pi pi-play-circle',
+  );
+
+  /**
    * The sandboxed embed URL, built only once `playing()` is true. Privacy-
    * enhanced where the provider offers it (YouTube `-nocookie`). Marked
    * trusted because it's derived from a fixed per-provider template with a
    * server-validated id — never raw user input.
    */
   protected readonly embedSrc = computed<SafeResourceUrl | null>(() => {
-    if (!this.playing()) {
+    // IG never plays inline (opensExternally) — the embed is never mounted.
+    if (!this.playing() || this.opensExternally()) {
       return null;
     }
 
@@ -88,6 +105,11 @@ export class VideoFacadeComponent {
   });
 
   protected play(): void {
+    if (this.opensExternally()) {
+      // IG: open the reel on Instagram rather than mounting the broken embed.
+      window.open(this.url(), '_blank', 'noopener,noreferrer');
+      return;
+    }
     this.playing.set(true);
   }
 }

@@ -214,6 +214,7 @@
       "play": "Play {{provider}} video",
       "openOn": "Open on {{provider}}",
       "loadsHint": "Tap to load from {{provider}}",
+      "opensHint": "Tap to watch on {{provider}}",
       "composer": {
         "openButton": "Share a video",
         "title": "Share a video",

@@ -84,6 +84,12 @@ function authMeAs(role: 'owner' | 'athlete') {
 
 describe('Feed @handle mention rendering (#864)', () => {
   beforeEach(() => {
+    // Catch-all FIRST so no unmocked background GET (e.g. the notification
+    // bell's /me/notifications poll) reaches the dev backend, 401s on the
+    // fake token, and trips the auth redirect to /login before the feed
+    // renders — that surfaced as a flaky "post-announcement never found" on
+    // the athlete-feed case. Specific stubs are registered after, so they win.
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/academy*', ACADEMY_OK);
     // Every test stubs an explicit role on /auth/me — without it the
     // default test-user has no `role` and MentionTextComponent silently

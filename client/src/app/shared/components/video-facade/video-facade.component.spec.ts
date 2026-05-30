@@ -91,18 +91,6 @@ describe('VideoFacadeComponent (#1155)', () => {
     ).toContain('tiktok.com/embed/v2/7123456789');
   });
 
-  it('builds the Instagram embed url on play', () => {
-    const { el, play } = setup({
-      provider: 'instagram',
-      videoId: 'C8abc_-',
-      url: 'https://www.instagram.com/reel/C8abc_-/',
-    });
-    play();
-    expect(
-      (el.querySelector('[data-cy="video-facade-embed"]') as HTMLIFrameElement).getAttribute('src'),
-    ).toContain('instagram.com/reel/C8abc_-/embed');
-  });
-
   it('shows portrait media for a TikTok reel (not cropped into 16:9)', () => {
     const { el } = setup({
       provider: 'tiktok',
@@ -129,6 +117,37 @@ describe('VideoFacadeComponent (#1155)', () => {
     const media = el.querySelector('.video-facade__media') as HTMLElement;
     expect(media.classList.contains('video-facade__media--landscape')).toBe(true);
     expect(media.classList.contains('video-facade__media--portrait')).toBe(false);
+  });
+
+  it('opens Instagram externally on tap — never mounts the (broken) IG embed', () => {
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    const { el } = setup({
+      provider: 'instagram',
+      videoId: 'C8abc_-',
+      url: 'https://www.instagram.com/reel/C8abc_-/',
+    });
+    (el.querySelector('[data-cy="video-facade-cover"]') as HTMLElement).click();
+
+    // IG gates third-party embeds → the iframe just renders a login/broken
+    // card, so we never mount it; tapping opens the reel on Instagram.
+    expect(el.querySelector('[data-cy="video-facade-embed"]')).toBeNull();
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://www.instagram.com/reel/C8abc_-/',
+      '_blank',
+      expect.stringContaining('noopener'),
+    );
+    openSpy.mockRestore();
+  });
+
+  it('marks the IG cover with the Instagram glyph, not a play triangle', () => {
+    const { el } = setup({
+      provider: 'instagram',
+      videoId: 'C8x',
+      url: 'https://www.instagram.com/reel/C8x/',
+    });
+    const overlay = el.querySelector('.video-facade__play i') as HTMLElement;
+    expect(overlay.className).toContain('pi-instagram');
+    expect(overlay.className).not.toContain('pi-play-circle');
   });
 
   it('always offers an "open on provider" link to the original', () => {
