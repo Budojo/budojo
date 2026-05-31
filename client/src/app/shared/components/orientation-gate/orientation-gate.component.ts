@@ -16,6 +16,11 @@ import { TranslatePipe } from '@ngx-translate/core';
  * viewport (`max-height: 480px`) — i.e. a phone. Tablets and foldables have a
  * taller landscape viewport, so they keep landscape for large-screen support;
  * a desktop is virtually never a sub-480px-tall window.
+ *
+ * The message carries `role="alert"` so a screen reader announces it the
+ * moment the overlay appears. Known gap (acceptable for a phone-landscape
+ * gate, not an oversight): being CSS-only, the app behind the overlay isn't
+ * `inert`, so a paired Bluetooth keyboard could still tab hidden controls.
  */
 @Component({
   selector: 'app-orientation-gate',
@@ -23,7 +28,7 @@ import { TranslatePipe } from '@ngx-translate/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
   template: `
-    <div class="orientation-gate__inner">
+    <div class="orientation-gate__inner" role="alert">
       <i class="pi pi-mobile" aria-hidden="true"></i>
       <p class="orientation-gate__message">{{ 'shared.orientationGate.message' | translate }}</p>
     </div>
@@ -44,7 +49,7 @@ import { TranslatePipe } from '@ngx-translate/core';
           justify-content: center;
           padding: 1.5rem;
           text-align: center;
-          background: var(--p-surface-0, #ffffff);
+          background: var(--p-surface-0);
         }
       }
 
@@ -56,7 +61,7 @@ import { TranslatePipe } from '@ngx-translate/core';
       }
 
       .orientation-gate__inner i {
-        font-size: 2.5rem;
+        font-size: 2rem;
         color: var(--p-primary-color);
       }
 
