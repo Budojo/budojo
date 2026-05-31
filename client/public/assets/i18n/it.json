@@ -2000,9 +2000,6 @@
     "december": "dicembre"
   },
   "shared": {
-    "orientationGate": {
-      "message": "Ruota il telefono in verticale per usare Budojo."
-    },
     "paidBadge": {
       "paid": "Pagato",
       "unpaid": "Non pagato",

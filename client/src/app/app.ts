@@ -6,7 +6,6 @@ import { LanguageService } from './core/services/language.service';
 import { VersionCheckService } from './core/services/version-check.service';
 import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.component';
 import { NotificationOnboardingDialogComponent } from './shared/components/notification-onboarding-dialog/notification-onboarding-dialog.component';
-import { OrientationGateComponent } from './shared/components/orientation-gate/orientation-gate.component';
 import { PushToastComponent } from './shared/components/push-toast/push-toast.component';
 
 @Component({
@@ -16,7 +15,6 @@ import { PushToastComponent } from './shared/components/push-toast/push-toast.co
     ToastModule,
     CookieBannerComponent,
     NotificationOnboardingDialogComponent,
-    OrientationGateComponent,
     PushToastComponent,
   ],
   templateUrl: './app.html',

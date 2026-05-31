@@ -2000,9 +2000,6 @@
     "december": "December"
   },
   "shared": {
-    "orientationGate": {
-      "message": "Rotate your phone upright to use Budojo."
-    },
     "paidBadge": {
       "paid": "Paid",
       "unpaid": "Unpaid",
