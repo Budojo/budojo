@@ -433,32 +433,34 @@
                     <i class="pi pi-id-card" aria-hidden="true"></i>
                   </a>
                 }
-                <p-button
+                <app-icon-button
                   icon="pi pi-pencil"
                   severity="secondary"
-                  [text]="true"
-                  size="small"
-                  (onClick)="goToEdit(athlete)"
                   [ariaLabel]="
                     'athletes.list.tooltip.editAria'
                       | translate: { name: athlete.first_name + ' ' + athlete.last_name }
                   "
-                  [pTooltip]="'athletes.list.tooltip.edit' | translate"
+                  [tooltip]="'athletes.list.tooltip.edit' | translate"
                   tooltipPosition="left"
-                  data-cy="edit-btn"
+                  (clicked)="goToEdit(athlete)"
+                  dataCy="edit-btn"
                 />
-                <p-button
+                <app-confirm-destructive-button
                   icon="pi pi-trash"
-                  severity="danger"
-                  [text]="true"
-                  size="small"
-                  (onClick)="confirmDelete($event, athlete)"
                   [ariaLabel]="
                     'athletes.list.tooltip.deleteAria'
                       | translate: { name: athlete.first_name + ' ' + athlete.last_name }
                   "
-                  [pTooltip]="'athletes.list.tooltip.delete' | translate"
+                  [tooltip]="'athletes.list.tooltip.delete' | translate"
                   tooltipPosition="left"
+                  [confirmMessage]="
+                    'athletes.list.confirm.deleteMessage'
+                      | translate: { name: athlete.first_name + ' ' + athlete.last_name }
+                  "
+                  [acceptLabel]="'athletes.list.confirm.deleteAccept' | translate"
+                  [rejectLabel]="'athletes.list.confirm.cancel' | translate"
+                  (confirmed)="delete(athlete)"
+                  dataCy="delete-btn"
                 />
               }
             </td>
