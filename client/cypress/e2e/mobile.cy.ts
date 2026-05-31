@@ -101,16 +101,15 @@ describe('Mobile shell (390 × 844)', () => {
     cy.get('meta[name="apple-mobile-web-app-capable"]').should('have.attr', 'content', 'yes');
   });
 
-  it('keeps the manifest orientation unlocked so tablets/foldables can rotate (#1171)', () => {
-    // Portrait is enforced for PHONES by a CSS gate (app-orientation-gate),
-    // NOT the manifest: the manifest `orientation` field is ignored by iOS,
-    // by a desktop/Android browser tab, and by the Play Store TWA (native
-    // config), and locking it to `portrait` would also force tablets /
-    // foldables upright — regressing large-screen support. So it stays `any`.
+  it('pins the manifest orientation to portrait for installed PWAs (#1186)', () => {
+    // Budojo is portrait-first. The manifest `orientation` locks an installed
+    // standalone PWA on Android (Chrome honours it; Android 15+ still lets
+    // large screens override). The Play Store TWA is locked separately in its
+    // native config (`android:screenOrientation=portrait`, twa-manifest.json).
     cy.request('manifest.webmanifest')
       .its('body')
       .should((manifest) => {
-        expect(manifest.orientation).to.eq('any');
+        expect(manifest.orientation).to.eq('portrait');
       });
   });
 });
