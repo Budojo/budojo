@@ -70,6 +70,23 @@ import { Tooltip } from 'primeng/tooltip';
       [attr.data-cy]="dataCy()"
     />
   `,
+  styles: [
+    `
+      /* Mirror app-icon-button (#1045): the host carries the 48×48 minimum
+         touch target (Fitts / MD3), so an icon-only destructive button is a
+         compliant tap target even though the inner p-button renders 'small'.
+         Keeps the icon-button + confirm-button family visually + a11y
+         consistent on a list row, so an adoption pass delivers the Fitts
+         upgrade end-to-end (#1033 reviewer). */
+      :host {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 48px;
+        min-height: 48px;
+      }
+    `,
+  ],
 })
 export class ConfirmDestructiveButtonComponent {
   private readonly confirmationService = inject(ConfirmationService);

@@ -30,6 +30,17 @@ describe('ConfirmDestructiveButtonComponent (#1034)', () => {
     expect(fixture.componentInstance.icon()).toBe('pi pi-trash');
   });
 
+  it('host enforces the 48×48 touch target (Fitts / MD3), matching app-icon-button (#1033)', () => {
+    const { fixture } = setup({});
+    const host = fixture.nativeElement as HTMLElement;
+    // Append to document so getComputedStyle returns real values.
+    document.body.appendChild(host);
+    const styles = getComputedStyle(host);
+    expect(parseFloat(styles.minWidth)).toBeGreaterThanOrEqual(48);
+    expect(parseFloat(styles.minHeight)).toBeGreaterThanOrEqual(48);
+    host.remove();
+  });
+
   it('opens a confirm popup via ConfirmationService on click with the supplied copy', () => {
     const { fixture, confirmationService } = setup({
       ariaLabel: 'Revoke device',
