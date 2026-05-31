@@ -15,3 +15,9 @@
      component is dormant in the DOM whenever the state machine sits
      at `idle` (no visible cost on every route). -->
 <app-notification-onboarding-dialog />
+<!-- Portrait gate (#1171 follow-up): covers the screen with a "rotate to
+     portrait" message when a phone is held in landscape. CSS-only, so it
+     works in a browser tab, an installed PWA, and the Play Store TWA alike —
+     unlike the manifest `orientation` field, which none of those honour
+     reliably. Tablets/foldables (taller landscape) and desktops are exempt. -->
+<app-orientation-gate />
