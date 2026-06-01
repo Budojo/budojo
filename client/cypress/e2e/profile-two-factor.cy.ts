@@ -27,6 +27,12 @@ const STATUS_ACTIVE = { enabled: true, pending: false, recovery_codes_remaining:
 describe('Two-factor authentication panel (#412)', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
+    // Catch-all FIRST — any un-stubbed GET gets a benign response instead of
+    // leaking to the dev-server proxy (under `ng serve`) or hitting the CI
+    // static server's SPA fallback, which returns index.html and poisons the
+    // JSON parse. The specific intercepts below and the per-test ones win
+    // (Cypress resolves the most-recently-defined matching intercept).
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/auth/me', { statusCode: 200, body: { data: FAKE_USER } });
     cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: MOCK_ACADEMY } });
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
