@@ -329,42 +329,73 @@ jobs:
         run: npm run format:check
         working-directory: client
 
-  # Cypress is the slowest CI gate; sharding across N runners cuts the
-  # wall-clock from 5-7 min to ~2-3 min. Manual matrix sharding (no
-  # Cypress Cloud account / no $CYPRESS_RECORD_KEY secret needed) —
-  # each shard runs a deterministic subset of the spec list built by
-  # enumerating `cypress/e2e/*.cy.ts` with `find`, sorting, and walking
-  # the array with a bash modulo (i+1) % N == shard % N. Sort-then-modulo
-  # gives a stable mapping that doesn't churn when a spec is added or
-  # renamed: a new spec ends up in the (count % N)-th bucket, the others
-  # shift by at most one slot. Closes #295.
+  # Cypress E2E — re-enabled on the self-hosted runners (#1193). We build
+  # the SPA ONCE (`cypress-build`) and each shard serves the static dist
+  # with a tiny http server instead of running `ng serve`. That was the
+  # #758 failure: 4× concurrent `ng serve` cold-starts saturated the
+  # Slimbook's disk so :4200 never bound in time. A static serve binds
+  # instantly, so E2E is a real gate again while we stay self-hosted.
+  # Gated on the `client` path-filter (#1192) — Cypress only runs when
+  # `client/**` changes; otherwise the shards skip and the aggregator
+  # passes on `skipped`.
   #
-  # The required-status-check name (`🎭 Cypress E2E`) is preserved by
-  # the aggregator job below — `cypress-e2e-shard` produces N matrix
-  # checks (`Cypress E2E shard 1` etc.) that the aggregator depends
-  # on, so the develop / main rulesets keep working without any
-  # ruleset-edit coordination.
+  # Manual matrix sharding (no Cypress Cloud / no $CYPRESS_RECORD_KEY) —
+  # each shard runs a deterministic subset of `cypress/e2e/*.cy.ts` via a
+  # sort-then-modulo split (i+1) % N == shard % N: stable across renames /
+  # additions (a new spec shifts buckets by at most one slot). Closes #295.
+  # The required-status-check name (`🎭 Cypress E2E`) is preserved by the
+  # aggregator below, so the develop / main rulesets need no edits.
+  cypress-build:
+    name: "🏗️ Cypress build (SPA dist)"
+    runs-on: [self-hosted, budojo]
+    needs: changes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.client == 'true'
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        if: needs.changes.outputs.client == 'true'
+        run: npm ci
+        working-directory: client
+
+      - name: Build the SPA once (development config — mirrors `ng serve`)
+        if: needs.changes.outputs.client == 'true'
+        # `ng build --configuration development` is exactly what `ng serve`
+        # compiles (its default serve configuration), just emitted to disk:
+        # dev mode, NO service worker (the SW is production-only), unminified.
+        # Run `ng` directly (not `npm run build`) to SKIP the `prebuild`
+        # version-stamp hook, so `version.ts` / `version.json` keep their
+        # committed `dev` sentinels — the version-check service is a no-op on
+        # the `dev` SHA, so no `/version.json` reload fires mid-E2E. This is
+        # the same environment the specs were written against.
+        run: npx ng build --configuration development
+        working-directory: client
+
+      - name: Upload SPA dist for the shards
+        if: needs.changes.outputs.client == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: spa-dist
+          path: client/dist
+          retention-days: 1
+
   cypress-e2e-shard:
     name: "Cypress E2E shard ${{ matrix.shard }}"
     runs-on: [self-hosted, budojo]
-    # Skipped entirely during the GHA spending-limit workaround window
-    # (#758, 2026-05-15 → 2026-05-31). 4× concurrent npm ci + ng serve
-    # cold-starts saturate disk on the self-hosted Slimbook and ng serve
-    # never binds to :4200 in time — infrastructure issue, not a test
-    # regression. Cypress is gated locally by the author via
-    # `docker exec budojo_client npm run cy:run` before every push.
-    # Revert (delete this `if`) alongside the rest of pr-checks.yml when
-    # GitHub-hosted is back in budget. Required status check "🎭 Cypress
-    # E2E" stays green via the aggregator's force-pass below.
-    if: false
-    # Temporary container override during GHA spending-limit block (#758).
-    # Cypress needs Chrome + xvfb pre-installed; `cypress/browsers` has
-    # both, plus Node 22. Revert alongside the rest of this file when
-    # GitHub-hosted is back in budget.
+    needs: [changes, cypress-build]
+    # Only run when the SPA changed (path-filter from #1192). When `client`
+    # is untouched the shards skip and the aggregator passes on `skipped`.
+    if: needs.changes.outputs.client == 'true'
+    # Chrome + xvfb come pre-installed in cypress/browsers; the self-hosted
+    # Slimbook is Fedora and has neither. Pinned to a digest (not :latest)
+    # so an upstream cypress release can't break unrelated PRs (Copilot #1).
     container:
-      # Pinned to digest (not :latest) so the temp override is bisectable —
-      # cypress/browsers retags `latest` on every cypress release, so a
-      # mid-window upstream push could break unrelated PRs (Copilot #1).
       image: cypress/browsers@sha256:c74663385d3d42f1ed1f4cebba387baf90de01e4cb1f43b470742107a9d3b3d5
     strategy:
       # Run all shards even if one fails — full visibility on which
@@ -383,6 +414,12 @@ jobs:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: client/package-lock.json
+
+      - name: Download the prebuilt SPA dist
+        uses: actions/download-artifact@v4
+        with:
+          name: spa-dist
+          path: client/dist
 
       - name: Compute spec list for this shard
         id: specs
@@ -423,18 +460,19 @@ jobs:
           echo "Shard ${{ matrix.shard }} runs:"
           printf '  %s\n' "${SHARD_SPECS[@]}"
 
-      - name: Cypress run
+      - name: Cypress run (against the static dist)
         uses: cypress-io/github-action@v6
         with:
           working-directory: client
-          start: npm run start
+          # Serve the prebuilt SPA statically instead of `ng serve` — binds
+          # to :4200 instantly, no webpack cold-start to saturate the disk.
+          # `-s` = single-page fallback so deep routes
+          # (cy.visit('/dashboard/…')) return index.html and the Angular
+          # router takes over. The E2E specs stub every API call with
+          # cy.intercept, so no backend is needed.
+          start: npx --yes serve -s dist/client/browser -l 4200
           wait-on: "http://localhost:4200"
-          # Bumped from 120s — 4 Cypress shards now run in parallel on the
-          # same physical machine (one budojo-slimbook-N runner each), and
-          # 4× concurrent `npm ci` + `ng serve` cold-starts saturate disk
-          # and CPU long enough that ng serve isn't bound to :4200 within
-          # the old budget (observed ECONNREFUSED on run #3 shard 1).
-          wait-on-timeout: 300
+          wait-on-timeout: 120
           browser: chrome
           spec: ${{ steps.specs.outputs.spec }}
 
@@ -449,38 +487,26 @@ jobs:
 
   cypress-e2e:
     # Aggregator — preserves the `🎭 Cypress E2E` required-status-check
-    # name so the develop / main rulesets don't need editing. Fails if
-    # any shard failed (`needs.<job>.result` aggregates matrix
-    # outcomes via the `success / failure / cancelled / skipped`
-    # rollup).
+    # name so the develop / main rulesets don't need editing. Passes when
+    # the shards succeeded OR were skipped (client untouched); fails if any
+    # shard failed. `needs.<job>.result` rolls up the matrix outcome.
     name: "🎭 Cypress E2E"
     needs: [cypress-e2e-shard]
     if: always()
     runs-on: [self-hosted, budojo]
     steps:
-      - name: Verify all Cypress shards passed
+      - name: Verify Cypress shards
         run: |
-          # During the GHA spending-limit workaround window (#758),
-          # Cypress shards are skipped entirely (`if: false` on the
-          # matrix job) — no infra cost, no failure noise. The required
-          # status check `🎭 Cypress E2E` keeps passing here so PRs
-          # aren't blocked. Cypress is gated locally by the author via
-          # `docker exec budojo_client npm run cy:run` before every push.
-          # Revert this whole block alongside the matrix `if: false`
-          # when GitHub-hosted is back in budget.
-          # `::warning::` (not `::notice::`) so the workaround status shows
-          # as a yellow ⚠️ annotation in the PR Checks UI — Copilot review
-          # on #763 flagged that `::notice::` reads softer than the
-          # semantics warrant: a CI-enforced gate has been downgraded to
-          # author trust for the ~16-day window. The warning surfaces the
-          # workaround in the same row as the required check, so a
-          # future engineer running `git bisect` against the `v2.18.0`
-          # tag (or any commit later within
-          # the window) sees the marker without having to click into
-          # the job logs. Revert to `::notice::` or drop the line entirely
-          # when GitHub-hosted is back in budget.
-          echo "::warning::Cypress skipped during self-hosted workaround (see #758). PR author verified Cypress locally before push. Revert by 2026-05-31."
-          exit 0
+          result="${{ needs.cypress-e2e-shard.result }}"
+          echo "cypress-e2e-shard result: $result"
+          # 'skipped' = client/** untouched (path-filter from #1192) → there
+          # was nothing to E2E-test. 'success' = all shards green. Anything
+          # else (failure / cancelled) blocks the PR.
+          if [ "$result" = "success" ] || [ "$result" = "skipped" ]; then
+            exit 0
+          fi
+          echo "::error::A Cypress shard did not pass (result: $result)."
+          exit 1
 
   openapi-lint:
     name: "🔬 OpenAPI Lint (Spectral)"
