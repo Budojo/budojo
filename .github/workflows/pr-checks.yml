@@ -37,6 +37,13 @@ jobs:
   changes:
     name: "🧭 Detect changed areas"
     runs-on: [self-hosted, budojo]
+    # paths-filter has no checkout, so it lists changed files via the PR
+    # "list files" API — which needs `pull-requests: read` on top of the
+    # workflow-wide `contents: read` lockdown. Job-level permissions replace
+    # (not merge with) the workflow default, so restate `contents: read` too.
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       server: ${{ steps.filter.outputs.server }}
       client: ${{ steps.filter.outputs.client }}
