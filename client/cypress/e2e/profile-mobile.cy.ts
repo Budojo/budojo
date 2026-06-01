@@ -44,14 +44,6 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
   describe(`Profile page fits on mobile (${name}, ${width}×${height})`, () => {
     beforeEach(() => {
       cy.viewport(width, height);
-      // Catch-all FIRST so any un-stubbed background GET (the profile sibling
-      // panels — sessions, login-history, notification-preferences, …) gets a
-      // benign response instead of leaking through. Under `ng serve` those
-      // leaked to the dev-server proxy; in CI the static server's SPA fallback
-      // returns index.html, which poisons the JSON parse and stops the page
-      // from rendering. Specific overrides below win (Cypress resolves the
-      // most-recently-defined matching intercept).
-      cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
       cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
       cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
       cy.intercept('GET', '/api/v1/documents/expiring*', EXPIRING_EMPTY);

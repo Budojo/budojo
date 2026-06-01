@@ -329,66 +329,24 @@ jobs:
         run: npm run format:check
         working-directory: client
 
-  # Cypress E2E — re-enabled on the self-hosted runners (#1193). We build
-  # the SPA ONCE (`cypress-build`) and each shard serves the static dist
-  # with a tiny http server instead of running `ng serve`. That was the
-  # #758 failure: 4× concurrent `ng serve` cold-starts saturated the
-  # Slimbook's disk so :4200 never bound in time. A static serve binds
-  # instantly, so E2E is a real gate again while we stay self-hosted.
-  # Gated on the `client` path-filter (#1192) — Cypress only runs when
-  # `client/**` changes; otherwise the shards skip and the aggregator
-  # passes on `skipped`.
+  # Cypress E2E — sharded across the self-hosted runners, re-enabled (#1193).
+  # Runs the real `ng serve` (the exact environment the specs were written
+  # against — dev-server proxy included) but **caps concurrency**: 4
+  # simultaneous `ng serve` cold-starts saturated the Slimbook's disk so
+  # :4200 never bound in time (#758). `max-parallel: 2` keeps the dev server
+  # reliable on one machine. Gated on the `client` path-filter (#1192) —
+  # Cypress only runs when `client/**` changes; otherwise the shards skip and
+  # the aggregator passes on `skipped`.
   #
   # Manual matrix sharding (no Cypress Cloud / no $CYPRESS_RECORD_KEY) —
   # each shard runs a deterministic subset of `cypress/e2e/*.cy.ts` via a
-  # sort-then-modulo split (i+1) % N == shard % N: stable across renames /
-  # additions (a new spec shifts buckets by at most one slot). Closes #295.
-  # The required-status-check name (`🎭 Cypress E2E`) is preserved by the
+  # sort-then-modulo split (i+1) % N == shard % N. Closes #295. The
+  # required-status-check name (`🎭 Cypress E2E`) is preserved by the
   # aggregator below, so the develop / main rulesets need no edits.
-  cypress-build:
-    name: "🏗️ Cypress build (SPA dist)"
-    runs-on: [self-hosted, budojo]
-    needs: changes
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        if: needs.changes.outputs.client == 'true'
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: client/package-lock.json
-
-      - name: Install dependencies
-        if: needs.changes.outputs.client == 'true'
-        run: npm ci
-        working-directory: client
-
-      - name: Build the SPA once (development config — mirrors `ng serve`)
-        if: needs.changes.outputs.client == 'true'
-        # `ng build --configuration development` is exactly what `ng serve`
-        # compiles (its default serve configuration), just emitted to disk:
-        # dev mode, NO service worker (the SW is production-only), unminified.
-        # Run `ng` directly (not `npm run build`) to SKIP the `prebuild`
-        # version-stamp hook, so `version.ts` / `version.json` keep their
-        # committed `dev` sentinels — the version-check service is a no-op on
-        # the `dev` SHA, so no `/version.json` reload fires mid-E2E. This is
-        # the same environment the specs were written against.
-        run: npx ng build --configuration development
-        working-directory: client
-
-      - name: Upload SPA dist for the shards
-        if: needs.changes.outputs.client == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: spa-dist
-          path: client/dist
-          retention-days: 1
-
   cypress-e2e-shard:
     name: "Cypress E2E shard ${{ matrix.shard }}"
     runs-on: [self-hosted, budojo]
-    needs: [changes, cypress-build]
+    needs: changes
     # Only run when the SPA changed (path-filter from #1192). When `client`
     # is untouched the shards skip and the aggregator passes on `skipped`.
     if: needs.changes.outputs.client == 'true'
@@ -399,9 +357,11 @@ jobs:
       image: cypress/browsers@sha256:c74663385d3d42f1ed1f4cebba387baf90de01e4cb1f43b470742107a9d3b3d5
     strategy:
       # Run all shards even if one fails — full visibility on which
-      # specs broke per shard. Sequential failures would mask up to
-      # N-1 other shards' results.
+      # specs broke per shard.
       fail-fast: false
+      # Cap concurrency: 4 simultaneous `ng serve` cold-starts saturate the
+      # Slimbook's disk so :4200 times out (#758). Two at a time is reliable.
+      max-parallel: 2
       matrix:
         shard: [1, 2, 3, 4]
     env:
@@ -414,12 +374,6 @@ jobs:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: client/package-lock.json
-
-      - name: Download the prebuilt SPA dist
-        uses: actions/download-artifact@v4
-        with:
-          name: spa-dist
-          path: client/dist
 
       - name: Compute spec list for this shard
         id: specs
@@ -451,7 +405,7 @@ jobs:
           # Comma-separated for cypress's --spec arg. Empty fallback
           # is `cypress/e2e/__none__.cy.ts` which cypress treats as a
           # no-match; the shard step succeeds with 0 specs. Defensive
-          # only — at TOTAL_SHARDS=4 / 18 specs, every shard gets ≥4.
+          # only — at TOTAL_SHARDS=4 / 14 specs, every shard gets ≥3.
           if [ ${#SHARD_SPECS[@]} -eq 0 ]; then
             echo "spec=cypress/e2e/__none__.cy.ts" >> "$GITHUB_OUTPUT"
           else
@@ -460,19 +414,17 @@ jobs:
           echo "Shard ${{ matrix.shard }} runs:"
           printf '  %s\n' "${SHARD_SPECS[@]}"
 
-      - name: Cypress run (against the static dist)
+      - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
           working-directory: client
-          # Serve the prebuilt SPA statically instead of `ng serve` — binds
-          # to :4200 instantly, no webpack cold-start to saturate the disk.
-          # `-s` = single-page fallback so deep routes
-          # (cy.visit('/dashboard/…')) return index.html and the Angular
-          # router takes over. The E2E specs stub every API call with
-          # cy.intercept, so no backend is needed.
-          start: npx --yes serve -s dist/client/browser -l 4200
+          # Real `ng serve` — the exact environment the specs target (the dev
+          # proxy forwards un-stubbed /api calls, which some specs rely on).
+          start: npm run start
           wait-on: "http://localhost:4200"
-          wait-on-timeout: 120
+          # A cold `ng serve` on the shared Slimbook needs headroom even with
+          # concurrency capped at 2.
+          wait-on-timeout: 300
           browser: chrome
           spec: ${{ steps.specs.outputs.spec }}
 
