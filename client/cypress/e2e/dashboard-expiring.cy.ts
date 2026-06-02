@@ -68,10 +68,7 @@ describe('Expiring documents widget + deep-link', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait(['@academy', '@athletes', '@getExpiring']);
 
-    cy.get('[data-cy="expiring-widget-count"]').should(
-      'contain.text',
-      '3 documents need attention',
-    );
+    cy.get('[data-cy="expiring-widget-count"]').should('contain.text', '3 athletes need attention');
 
     cy.get('[data-cy="expiring-widget"]').click();
 
