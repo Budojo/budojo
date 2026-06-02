@@ -49,18 +49,17 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.intercept('GET', '/api/v1/documents/expiring*', EXPIRING_EMPTY);
       cy.intercept('GET', '/api/v1/auth/me', ME_OK);
       cy.visitAuthenticated('/dashboard/profile');
+      // Assert the profile data loaded BEFORE switching tabs:
+      // `[data-cy="profile-name"]` lives inside the Identity tab's
+      // `@if (editingName()) {} @else {}` block (the sr-only / aria-hidden
+      // full-name summary used by screen readers, per the split into visible
+      // first/last fields in #848). Once we click the Account tab below,
+      // the Identity tab content — and `profile-name` with it — is unmounted.
+      cy.get('[data-cy="profile-name"]').should('exist').and('contain.text', 'Mario');
       cy.get('[data-cy="profile-tab-account"]').click();
     });
 
     it('renders profile + Your data card without horizontal overflow', () => {
-      // `[data-cy="profile-name"]` is the sr-only / aria-hidden full-name
-      // summary at the top of the page — always in DOM regardless of which
-      // tab is active. The split visible `profile-first-name` /
-      // `profile-last-name` fields (per #848) live INSIDE the Identity tab,
-      // which is unmounted once the Account tab above is clicked. So here
-      // we read the persistent sr-only node to confirm the profile data
-      // loaded; the visible-name render is covered by the Identity-tab spec.
-      cy.get('[data-cy="profile-name"]').should('exist').and('contain.text', 'Mario');
       cy.get('[data-cy="profile-email"]').should('be.visible');
       cy.get('[data-cy="profile-data-export"]').should('be.visible');
       cy.get('[data-cy="profile-export-data"]').should('be.visible');
