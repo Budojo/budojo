@@ -11,19 +11,14 @@ export default defineConfig({
     // into "no specs found"). See scripts/design-inventory.cjs for how
     // the inventory glob gets enabled on demand.
     specPattern: 'cypress/e2e/**/*.cy.ts',
-    // Temporarily excluded specs surfaced by re-enabling Cypress in CI (#1195
-    // / closes #1193). Each is a real product regression accumulated while
-    // Cypress was off in CI (#758, 2026-05-15 → 2026-06-01) — not a flake,
-    // not an infra artefact (reproduced on self-hosted static-serve,
-    // self-hosted ng-serve, and github-hosted ng-serve). Drop the
-    // corresponding line once the underlying render bug is fixed; the gate
-    // then catches future regressions on these pages again. Per the comment
-    // above, Cypress 13 applies excludeSpecPattern even when `--spec` is
-    // passed explicitly, so the matrix-sharded runs in pr-checks.yml will
-    // silently skip these too.
-    excludeSpecPattern: [
-      'cypress/e2e/profile-two-factor.cy.ts', // TODO(#1198): profile-two-factor-qr not rendering after enrol
-    ],
+    // Empty: every spec surfaced by re-enabling Cypress in CI (#1195 /
+    // closes #1193, regressions #1196–#1204 accumulated while Cypress was
+    // off #758 2026-05-15 → 2026-06-01) is now fixed and back in the gate.
+    // Re-add a `'cypress/e2e/<spec>.cy.ts', // TODO(#NNNN)` line only to
+    // park a confirmed regression while its fix is in flight — Cypress 13
+    // applies excludeSpecPattern even when `--spec` is passed explicitly,
+    // so the matrix-sharded runs in pr-checks.yml will skip it too.
+    excludeSpecPattern: [],
     supportFile: 'cypress/support/e2e.ts',
     viewportWidth: 1280,
     viewportHeight: 720,

@@ -27,6 +27,12 @@ const STATUS_ACTIVE = { enabled: true, pending: false, recovery_codes_remaining:
 describe('Two-factor authentication panel (#412)', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
+    // Catch-all FIRST so no unmocked background GET (e.g. the notification
+    // bell's /me/notifications poll, #729) reaches the dev backend, 401s on
+    // the fake token, and trips the auth-interceptor redirect to /auth/login
+    // before the security panel renders. Specific stubs are registered after,
+    // so they win (Cypress resolves most-recently-defined).
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/auth/me', { statusCode: 200, body: { data: FAKE_USER } });
     cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: MOCK_ACADEMY } });
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
@@ -83,7 +89,15 @@ describe('Two-factor authentication panel (#412)', () => {
     cy.wait('@enrol');
 
     cy.get('[data-cy="profile-two-factor-secret"]').should('contain.text', 'JBSWY3DPEHPK3PXP');
-    cy.get('[data-cy="profile-two-factor-qr"]').should('be.visible');
+    // The QR <img> is gated on a dynamic `import('qrcode')` (#877). qrcode
+    // is CommonJS: under the esbuild prod build (and a cold vite
+    // dep-optimize on CI's first lazy load) the import namespace only
+    // carries `default`, so the old `mod.toDataURL` was undefined, threw,
+    // and the component's silent `.catch` left the QR unrendered — only a
+    // warm local vite (synthesized named exports) papered over it. The
+    // component now reaches through `mod.default`, so the QR renders
+    // everywhere. Timeout kept modest for CI page-load variance.
+    cy.get('[data-cy="profile-two-factor-qr"]', { timeout: 10000 }).should('be.visible');
 
     // After confirm the status refresh fires — return the active state.
     cy.intercept('GET', '/api/v1/me/two-factor', {
