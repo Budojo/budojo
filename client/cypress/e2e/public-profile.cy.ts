@@ -61,6 +61,7 @@ function profile(overrides: Record<string, unknown> = {}) {
           recorded_at: '2026-01-15T10:00:00+00:00',
         },
       ],
+      achievements: [],
       ...overrides,
     },
   };
