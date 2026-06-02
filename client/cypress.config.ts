@@ -26,7 +26,6 @@ export default defineConfig({
       'cypress/e2e/profile-two-factor.cy.ts', // TODO(#1198): profile-two-factor-qr not rendering after enrol
       'cypress/e2e/public-profile.cy.ts', // TODO(#1199): timeline rows not rendering
       'cypress/e2e/whats-new.cy.ts', // TODO(#1203): whats-new spec failure
-      'cypress/e2e/athlete-invite.cy.ts', // TODO(#1204): athlete-invite failure
     ],
     supportFile: 'cypress/support/e2e.ts',
     viewportWidth: 1280,
