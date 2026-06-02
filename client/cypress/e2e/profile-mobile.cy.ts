@@ -53,12 +53,14 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     });
 
     it('renders profile + Your data card without horizontal overflow', () => {
-      // `[data-cy="profile-name"]` is `sr-only` + `aria-hidden` (renders the
-      // full name for screen readers only). The user-visible name is split
-      // across `profile-first-name` / `profile-last-name` per #848. Assert on
-      // the visible first-name element so this catches a real render
-      // regression instead of an a11y-only one.
-      cy.get('[data-cy="profile-first-name"]').should('be.visible').and('contain.text', 'Mario');
+      // `[data-cy="profile-name"]` is the sr-only / aria-hidden full-name
+      // summary at the top of the page — always in DOM regardless of which
+      // tab is active. The split visible `profile-first-name` /
+      // `profile-last-name` fields (per #848) live INSIDE the Identity tab,
+      // which is unmounted once the Account tab above is clicked. So here
+      // we read the persistent sr-only node to confirm the profile data
+      // loaded; the visible-name render is covered by the Identity-tab spec.
+      cy.get('[data-cy="profile-name"]').should('exist').and('contain.text', 'Mario');
       cy.get('[data-cy="profile-email"]').should('be.visible');
       cy.get('[data-cy="profile-data-export"]').should('be.visible');
       cy.get('[data-cy="profile-export-data"]').should('be.visible');
