@@ -23,7 +23,6 @@ export default defineConfig({
     // silently skip these too.
     excludeSpecPattern: [
       'cypress/e2e/attendance-summary.cy.ts', // TODO(#1196): monthly-summary-total not rendering
-      'cypress/e2e/profile-mobile.cy.ts', // TODO(#1197): profile-name not rendering on mobile
       'cypress/e2e/profile-two-factor.cy.ts', // TODO(#1198): profile-two-factor-qr not rendering after enrol
       'cypress/e2e/public-profile.cy.ts', // TODO(#1199): timeline rows not rendering
       'cypress/e2e/academy.cy.ts', // TODO(#1200): academy-name not rendering

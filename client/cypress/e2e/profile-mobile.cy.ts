@@ -53,7 +53,12 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     });
 
     it('renders profile + Your data card without horizontal overflow', () => {
-      cy.get('[data-cy="profile-name"]').should('be.visible').and('contain.text', 'Mario');
+      // `[data-cy="profile-name"]` is `sr-only` + `aria-hidden` (renders the
+      // full name for screen readers only). The user-visible name is split
+      // across `profile-first-name` / `profile-last-name` per #848. Assert on
+      // the visible first-name element so this catches a real render
+      // regression instead of an a11y-only one.
+      cy.get('[data-cy="profile-first-name"]').should('be.visible').and('contain.text', 'Mario');
       cy.get('[data-cy="profile-email"]').should('be.visible');
       cy.get('[data-cy="profile-data-export"]').should('be.visible');
       cy.get('[data-cy="profile-export-data"]').should('be.visible');
