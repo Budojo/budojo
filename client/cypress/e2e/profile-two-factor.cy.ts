@@ -89,7 +89,13 @@ describe('Two-factor authentication panel (#412)', () => {
     cy.wait('@enrol');
 
     cy.get('[data-cy="profile-two-factor-secret"]').should('contain.text', 'JBSWY3DPEHPK3PXP');
-    cy.get('[data-cy="profile-two-factor-qr"]').should('be.visible');
+    // The QR <img> is gated on a dynamic `import('qrcode')` (#877) — a
+    // lazy chunk the dev server compiles on FIRST request. Under CI's
+    // cold `ng serve` that compile can exceed Cypress's 4 s default, so
+    // the element appears late even though it appears instantly once the
+    // chunk is warm (why this passes locally). Give it the same 8 s grace
+    // the downstream recovery-codes assertion already uses.
+    cy.get('[data-cy="profile-two-factor-qr"]', { timeout: 8000 }).should('be.visible');
 
     // After confirm the status refresh fires — return the active state.
     cy.intercept('GET', '/api/v1/me/two-factor', {
