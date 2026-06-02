@@ -89,13 +89,15 @@ describe('Two-factor authentication panel (#412)', () => {
     cy.wait('@enrol');
 
     cy.get('[data-cy="profile-two-factor-secret"]').should('contain.text', 'JBSWY3DPEHPK3PXP');
-    // The QR <img> is gated on a dynamic `import('qrcode')` (#877) — a
-    // lazy chunk the dev server compiles on FIRST request. Under CI's
-    // cold `ng serve` that compile can exceed Cypress's 4 s default, so
-    // the element appears late even though it appears instantly once the
-    // chunk is warm (why this passes locally). Give it the same 8 s grace
-    // the downstream recovery-codes assertion already uses.
-    cy.get('[data-cy="profile-two-factor-qr"]', { timeout: 8000 }).should('be.visible');
+    // The QR <img> is gated on a dynamic `import('qrcode')` (#877) — a CJS
+    // lazy chunk `ng serve` compiles on the FIRST request (here, the first
+    // enrolment in the whole suite). Cold-compiling it measured ~3.9 s on a
+    // fast local box; on CI's slower, loaded `ubuntu-latest` runner it
+    // overran the 4 s default AND an 8 s bump. The QR itself is fine — it
+    // renders with no error once the chunk lands (verified cold locally) —
+    // so this is pure compile latency. 20 s (≈5× local cold) absorbs the CI
+    // variance without masking a real regression.
+    cy.get('[data-cy="profile-two-factor-qr"]', { timeout: 20000 }).should('be.visible');
 
     // After confirm the status refresh fires — return the active state.
     cy.intercept('GET', '/api/v1/me/two-factor', {
