@@ -19,6 +19,7 @@ Format: `→` separates the symptom from the action.
 - Listed `/index.csr.html` in `ngsw-config.json` without SSR enabled → the file is only emitted with `@angular/ssr`. Remove if the project doesn't use SSR.
 - `"serviceWorker": "ngsw-config.json"` at `angular.json` build `options` root → applies to dev too, fights HMR with stale caches. Put it in `configurations.production` only.
 - `provideServiceWorker(..., { enabled: true })` in dev → same problem. Gate with `enabled: !isDevMode()`.
+- Dynamic `import('pkg')` of a **CommonJS** dependency (e.g. `qrcode`) accessed via a named export (`mod.toDataURL`) → under the esbuild production build (and a cold vite dep-optimize) the namespace carries **only `default`**, so `mod.toDataURL` is `undefined`, throws, and a silent `.catch` swallows it — the feature dies in prod/CI while warm vite (synthesizes named exports) hides it locally. Reach through `.default`: `const api = (mod.default ?? mod)`. Real prod bug, not a test flake (#877/#1198).
 
 ## SCSS / layout
 
