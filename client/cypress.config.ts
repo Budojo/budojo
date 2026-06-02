@@ -22,7 +22,6 @@ export default defineConfig({
     // passed explicitly, so the matrix-sharded runs in pr-checks.yml will
     // silently skip these too.
     excludeSpecPattern: [
-      'cypress/e2e/attendance-summary.cy.ts', // TODO(#1196): monthly-summary-total not rendering
       'cypress/e2e/profile-two-factor.cy.ts', // TODO(#1198): profile-two-factor-qr not rendering after enrol
       'cypress/e2e/whats-new.cy.ts', // TODO(#1203): whats-new spec failure
     ],
