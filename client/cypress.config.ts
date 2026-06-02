@@ -23,7 +23,6 @@ export default defineConfig({
     // silently skip these too.
     excludeSpecPattern: [
       'cypress/e2e/profile-two-factor.cy.ts', // TODO(#1198): profile-two-factor-qr not rendering after enrol
-      'cypress/e2e/whats-new.cy.ts', // TODO(#1203): whats-new spec failure
     ],
     supportFile: 'cypress/support/e2e.ts',
     viewportWidth: 1280,
