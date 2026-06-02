@@ -27,6 +27,12 @@ const STATUS_ACTIVE = { enabled: true, pending: false, recovery_codes_remaining:
 describe('Two-factor authentication panel (#412)', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
+    // Catch-all FIRST so no unmocked background GET (e.g. the notification
+    // bell's /me/notifications poll, #729) reaches the dev backend, 401s on
+    // the fake token, and trips the auth-interceptor redirect to /auth/login
+    // before the security panel renders. Specific stubs are registered after,
+    // so they win (Cypress resolves most-recently-defined).
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/auth/me', { statusCode: 200, body: { data: FAKE_USER } });
     cy.intercept('GET', '/api/v1/academy', { statusCode: 200, body: { data: MOCK_ACADEMY } });
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
