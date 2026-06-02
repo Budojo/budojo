@@ -28,6 +28,25 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.40.1',
+    date: '2026-06-02',
+    headline: 'A couple of fixes for two-factor setup and the Android app.',
+    sections: [
+      {
+        heading: '🔐 The two-factor setup QR code shows up again',
+        bullets: [
+          'When you turned on two-factor authentication, the QR code you scan with your authenticator app was coming up blank, so there was nothing to scan. It now renders correctly — start the setup and the code is right there. You can still type the secret in by hand if you prefer.',
+        ],
+      },
+      {
+        heading: '📱 The Android app stays upright',
+        bullets: [
+          'If you installed Budojo from the Play Store, the app could still flip sideways when you turned your phone, even after the last update. The Android app now stays in portrait like the rest of Budojo, so rotating your phone no longer twists the layout.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.40.0',
     date: '2026-05-31',
     headline: 'Easier-to-tap actions on the athletes list.',
