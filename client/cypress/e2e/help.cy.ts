@@ -45,7 +45,7 @@ describe('Public help / FAQ page (#422)', () => {
     cy.get('.help-page__entry').should('have.length', 1);
   });
 
-  it('the dashboard sidebar footer carries a /help link', () => {
+  it('the dashboard More hub carries a /help link', () => {
     cy.intercept('GET', '/api/v1/academy', {
       statusCode: 200,
       body: {
@@ -102,9 +102,17 @@ describe('Public help / FAQ page (#422)', () => {
       },
     });
 
-    cy.visitAuthenticated('/dashboard/athletes');
-    cy.get('[data-cy="sidebar-help-link"]').should('be.visible').and('contain.text', 'Help');
-    cy.get('[data-cy="sidebar-help-link"]').click();
+    // After the social-native nav refactor (#1111–#1121) the legacy sidebar
+    // that hosted the /help link (via the now-deleted
+    // `app-sidebar-footer-meta`) is gone — the link lives in the More-hub
+    // footer instead: `owner-more.component.html`
+    // (`data-cy="owner-more-help"`) for the owner shell, with athlete
+    // shells mirroring it via `me-more.component.html`
+    // (`data-cy="me-more-help"`). Visit `/dashboard/more` directly so the
+    // test asserts the contract (More hub carries a /help link) without
+    // depending on the bottom-nav vs desktop-rail viewport split.
+    cy.visitAuthenticated('/dashboard/more');
+    cy.get('[data-cy="owner-more-help"]').should('be.visible').click();
     cy.location('pathname').should('eq', '/help');
   });
 

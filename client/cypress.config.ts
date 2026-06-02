@@ -28,7 +28,6 @@ export default defineConfig({
       'cypress/e2e/public-profile.cy.ts', // TODO(#1199): timeline rows not rendering
       'cypress/e2e/academy.cy.ts', // TODO(#1200): academy-name not rendering
       'cypress/e2e/dashboard-expiring.cy.ts', // TODO(#1201): expiring-widget-count not rendering
-      'cypress/e2e/help.cy.ts', // TODO(#1202): sidebar-help-link not rendering (likely shared-component root cause)
       'cypress/e2e/whats-new.cy.ts', // TODO(#1203): whats-new spec failure
       'cypress/e2e/athlete-invite.cy.ts', // TODO(#1204): athlete-invite failure
     ],
