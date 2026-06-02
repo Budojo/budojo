@@ -25,8 +25,6 @@ export default defineConfig({
       'cypress/e2e/attendance-summary.cy.ts', // TODO(#1196): monthly-summary-total not rendering
       'cypress/e2e/profile-two-factor.cy.ts', // TODO(#1198): profile-two-factor-qr not rendering after enrol
       'cypress/e2e/public-profile.cy.ts', // TODO(#1199): timeline rows not rendering
-      'cypress/e2e/dashboard-expiring.cy.ts', // TODO(#1201): expiring-widget-count not rendering
-      'cypress/e2e/athlete-invite.cy.ts', // TODO(#1204): athlete-invite failure
     ],
     supportFile: 'cypress/support/e2e.ts',
     viewportWidth: 1280,

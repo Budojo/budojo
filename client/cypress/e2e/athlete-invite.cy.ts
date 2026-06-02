@@ -51,6 +51,13 @@ const ATHLETE_ACCEPTED = {
 describe('Athlete invitation card on athlete detail (#467)', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
+    // Catch-all FIRST so no unmocked background GET (e.g. the notification
+    // bell's /me/notifications poll, #729) reaches the dev backend, 401s on
+    // the fake token, and trips the auth-interceptor redirect to /auth/login
+    // before the detail page renders — that drops the whole invitation card
+    // out of the DOM (and re-renders mid-`cy.click()`). Specific stubs are
+    // registered after, so they win (Cypress resolves most-recently-defined).
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/athletes/42/documents*', {
@@ -84,7 +91,16 @@ describe('Athlete invitation card on athlete detail (#467)', () => {
     cy.wait('@getAthlete');
 
     cy.get('[data-cy="athlete-invitation-card"]').should('exist');
-    cy.get('[data-cy="athlete-invitation-invite"]').scrollIntoView().should('be.visible').click();
+    // Click the inner <button>, not the <p-button> host: in the empty
+    // (no-invitation) branch the host is a full-width block while the
+    // content-width button sits left-aligned inside it, so a host-center
+    // click lands in empty space and never fires onClick. The resend/revoke
+    // buttons live in a tight flex row where the host wraps the button, so
+    // they don't need this.
+    cy.get('[data-cy="athlete-invitation-invite"] button')
+      .scrollIntoView()
+      .should('be.visible')
+      .click();
 
     cy.wait('@invite');
     cy.get('[data-cy="athlete-invitation-pending"]').should('exist');
@@ -169,7 +185,9 @@ describe('Athlete invitation card on athlete detail (#467)', () => {
     cy.visitAuthenticated('/dashboard/athletes/42');
     cy.wait('@getAthlete');
 
-    cy.get('[data-cy="athlete-invitation-invite"]').scrollIntoView().click();
+    // Inner <button>, not the <p-button> host — see the no-invitation
+    // branch note above.
+    cy.get('[data-cy="athlete-invitation-invite"] button').scrollIntoView().click();
     cy.wait('@invite');
 
     cy.contains("Couldn't send the invitation").should('be.visible');

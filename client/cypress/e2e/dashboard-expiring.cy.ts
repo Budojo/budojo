@@ -36,6 +36,23 @@ function expiringDoc(overrides: Record<string, unknown> = {}) {
 describe('Expiring documents widget + deep-link', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
+    // Catch-all FIRST so no unmocked background GET reaches the dev
+    // backend, 401s on the fake token, and trips the auth redirect.
+    // Specific stubs registered after still win (most-recently-defined).
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    // The `/dashboard/athletes` page co-mounts <app-onboarding-checklist>
+    // (#424) ABOVE <app-expiring-documents-widget> in the template. The
+    // checklist reads `data.completed_steps` / `data.available_steps`; the
+    // catch-all's bare `{ data: [] }` leaves those undefined, the checklist
+    // throws during change detection, and that throw aborts the CD tick
+    // that would paint the expiring widget below it — so the count never
+    // renders. Stub the dismissed object so the checklist self-hides.
+    cy.intercept('GET', '/api/v1/me/onboarding', {
+      statusCode: 200,
+      body: {
+        data: { dismissed_at: '2026-01-01T00:00:00Z', completed_steps: [], available_steps: [] },
+      },
+    });
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY).as('athletes');
   });
@@ -44,6 +61,11 @@ describe('Expiring documents widget + deep-link', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', {
       statusCode: 200,
       body: {
+        // Composite envelope (#881): the widget reads
+        // `missing_medical_certificate` and calls `.length` on it with no
+        // `?? []` guard (expiring-documents-widget.component.ts:65), so a
+        // bare `{ data: [...] }` leaves it undefined and the widget throws
+        // during change detection — freezing its own tile on the skeleton.
         data: [
           expiringDoc({
             id: 1,
@@ -62,16 +84,14 @@ describe('Expiring documents widget + deep-link', () => {
             athlete: { id: 99, first_name: 'Luca', last_name: 'Verdi' },
           }),
         ],
+        missing_medical_certificate: [],
       },
     }).as('getExpiring');
 
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait(['@academy', '@athletes', '@getExpiring']);
 
-    cy.get('[data-cy="expiring-widget-count"]').should(
-      'contain.text',
-      '3 documents need attention',
-    );
+    cy.get('[data-cy="expiring-widget-count"]').should('contain.text', '3 athletes need attention');
 
     cy.get('[data-cy="expiring-widget"]').click();
 
@@ -83,9 +103,11 @@ describe('Expiring documents widget + deep-link', () => {
   });
 
   it('renders the "up to date" state on the widget when the list is empty', () => {
+    // Composite envelope (#881) — the widget throws on an undefined
+    // `missing_medical_certificate` (see the count test above).
     cy.intercept('GET', '/api/v1/documents/expiring*', {
       statusCode: 200,
-      body: { data: [] },
+      body: { data: [], missing_medical_certificate: [] },
     }).as('getExpiring');
 
     cy.visitAuthenticated('/dashboard/athletes');
