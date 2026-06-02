@@ -263,6 +263,8 @@ After the manual smoke is clean, the rest is Play Console UI work:
 
 ## Step 6 — Android 15/16 compliance update (v4, Play Console pre-release findings 2026-05-25)
 
+> **⚠️ Finding #3 (orientation → `any`) was reversed in [Step 7](#step-7--re-lock-portrait-v5-2026-05-31).** A user on the Play Store TWA reported the `any` build rotating into a broken sideways layout and wanted it locked. v5 re-locks `portrait`. Steps 1–2 below (edge-to-edge, deprecated APIs) still stand; only the orientation line is undone. Keep this section for the history.
+
 Play Console flagged three items for the next AAB (see memory `project_play_console_pre_release_findings`). Finding #1 (edge-to-edge insets) was the SPA-side safe-area work shipped in #1046 / v2.32.0. Findings #2 + #3 are wrapper-side and handled here.
 
 **Source-config changes already applied to `twa-manifest.json`** (in the local TWA project dir — `budojo-twa/`):
@@ -285,6 +287,28 @@ bubblewrap build --mode=release --skipPwaValidation   # needs ANDROID_HOME + key
 
 > ⚠️ **Watch the `aapt` step** for `resource string/orientation not found`: with `orientation: "any"`, `bubblewrap update` may leave the `@string/orientation` meta-data ref in `AndroidManifest.xml` without writing the matching `<string>` (observed on CLI 1.24.1, SDK not available to confirm `build` resolves it). If `build` fails on it, either add `<string name="orientation">any</string>` to `app/src/main/res/values/strings.xml` or bump the Bubblewrap CLI and re-run `update`.
 
+## Step 7 — re-lock portrait (v5, 2026-05-31)
+
+Reverses finding #3 from Step 6. A user on the Play Store TWA reported the `any` build flipping into a broken sideways (desktop-width) layout on a phone and wanted it locked upright (#1186). The two earlier Step-6 items (edge-to-edge, deprecated-API regeneration) are unaffected.
+
+**Source-config changes applied to `budojo-twa/twa-manifest.json`** (the local TWA project — the canonical build config; the repo keeps a synced copy at `docs/marketing/twa-manifest.json`):
+
+- `"orientation": "any"` → `"portrait"` — locks phones. Large screens are **not** harmed: Android 16 ignores the `screenOrientation` lock on foldables/tablets (>600dp), so they still rotate/resize. The Play Console large-screen advisory may re-surface as a **soft warning** — accepted trade-off, the user explicitly wants phones portrait.
+- `appVersionCode` 4 → 5, `appVersionName`/`appVersion` "4" → "5" — next monotonic Play upload.
+
+**Web side (this repo):** `client/public/manifest.webmanifest` `"orientation"` restored to `"portrait"` (locks installed standalone PWAs; Android 15+ still lets large screens override). Shipped via the normal PR + release pipeline. (The #1187 CSS "rotate to portrait" gate was a dead end — a browser tab / TWA can't be CSS-locked, and it read like a 404 — and was reverted in the same PR.)
+
+**To build + ship the v5 AAB (needs the Android SDK + signing keystore — local only):**
+
+```bash
+cd budojo-twa
+bubblewrap update        # regenerate from twa-manifest.json — writes @string/orientation = portrait
+bubblewrap build         # needs ANDROID_HOME + keystore password (run in your own terminal — keep the password out of any shared log)
+# → upload app-release-bundle.aab to the Play Console (versionCode 5 > the live one)
+```
+
+With `orientation: "portrait"` the `aapt resource string/orientation not found` symptom from Step 6 does **not** apply: `app/build.gradle`'s `resValue "string", "orientation", twaManifest.orientation` injects `@string/orientation = portrait`, so the manifest meta-data ref resolves at build.
+
 ## Operating principles
 
 - **Never check the keystore into git.** It's in `mobile-android/.gitignore`. Verify with `git status` before every commit in `mobile-android/`.
@@ -301,7 +325,7 @@ bubblewrap build --mode=release --skipPwaValidation   # needs ANDROID_HOME + key
 | Build fails with "package not found" | Android SDK not detected | Set `ANDROID_HOME` and add `$ANDROID_HOME/cmdline-tools/latest/bin` to `PATH` |
 | Play Store rejects upload | Signing scheme mismatch | Re-run `apksigner verify --verbose` locally; the most common issue is missing v2 signature on older builds |
 | Splash flashes white before brand glyph | Missing `theme_color` in manifest | Already set — should not happen on Budojo |
-| `aapt`: `resource string/orientation not found` after setting `orientation: "any"` | Bubblewrap left the `@string/orientation` manifest ref without writing the string | Add `<string name="orientation">any</string>` to `app/src/main/res/values/strings.xml`, or bump the Bubblewrap CLI and re-run `bubblewrap update` |
+| `aapt`: `resource string/orientation not found` after setting `orientation: "any"` (Step 6 only) | Bubblewrap left the `@string/orientation` manifest ref without writing the string | Add `<string name="orientation">any</string>` to `app/src/main/res/values/strings.xml`, or bump the Bubblewrap CLI and re-run `bubblewrap update`. **N/A since Step 7** — `portrait` is written via `resValue`, so the ref resolves |
 
 ## References
 

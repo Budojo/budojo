@@ -23,8 +23,35 @@ const SUMMARY_THREE = {
 
 describe('monthly attendance summary', () => {
   beforeEach(() => {
+    // Catch-all FIRST so no unmocked background GET (e.g. the notification
+    // bell's /me/notifications poll, #729) reaches the dev backend, 401s on
+    // the fake token, and trips the auth-interceptor redirect to /auth/login
+    // before the dashboard widget renders. Specific stubs are registered
+    // after, so they win (Cypress resolves most-recently-defined).
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    // The athletes-list page also mounts <app-onboarding-checklist> (#424),
+    // which reads `data.completed_steps` / `data.available_steps`. The
+    // catch-all's bare `{ data: [] }` (an array) makes those undefined, the
+    // checklist throws during change detection, and the throw poisons every
+    // subsequent CD tick — so when the summary widget's response sets
+    // loading=false the re-render throws again and the widget stays frozen on
+    // its skeleton. Stub the dismissed object so the checklist self-hides.
+    cy.intercept('GET', '/api/v1/me/onboarding', {
+      statusCode: 200,
+      body: {
+        data: { dismissed_at: '2026-01-01T00:00:00Z', completed_steps: [], available_steps: [] },
+      },
+    });
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
-    cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
+    // Composite envelope (#881): the sibling expiring-documents widget reads
+    // `missing_medical_certificate` and calls `.length` on it. A bare
+    // `{ data: [] }` leaves it undefined, the widget throws during change
+    // detection, and — because it sits above the summary widget in the tree —
+    // that throw aborts the CD tick that would clear the summary's skeleton.
+    cy.intercept('GET', '/api/v1/documents/expiring*', {
+      statusCode: 200,
+      body: { data: [], missing_medical_certificate: [] },
+    });
     cy.intercept('GET', '/api/v1/athletes*', {
       statusCode: 200,
       body: {
