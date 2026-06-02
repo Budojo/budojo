@@ -89,14 +89,15 @@ describe('Two-factor authentication panel (#412)', () => {
     cy.wait('@enrol');
 
     cy.get('[data-cy="profile-two-factor-secret"]').should('contain.text', 'JBSWY3DPEHPK3PXP');
-    // The QR <img> is gated on a dynamic `import('qrcode')` (#877). On a
-    // cold `ng serve` (CI) the first-ever load of that lazy chunk didn't
-    // resolve inside the click→assert window — enrolment + secret painted
-    // but the QR never did, and the component's silent `.catch` hid it.
-    // The component now pre-warms the chunk as soon as the panel loads in a
-    // non-enabled state, so by the click it's cached and the render is
-    // instant. Generous timeout kept as belt-and-suspenders for CI variance.
-    cy.get('[data-cy="profile-two-factor-qr"]', { timeout: 20000 }).should('be.visible');
+    // The QR <img> is gated on a dynamic `import('qrcode')` (#877). qrcode
+    // is CommonJS: under the esbuild prod build (and a cold vite
+    // dep-optimize on CI's first lazy load) the import namespace only
+    // carries `default`, so the old `mod.toDataURL` was undefined, threw,
+    // and the component's silent `.catch` left the QR unrendered — only a
+    // warm local vite (synthesized named exports) papered over it. The
+    // component now reaches through `mod.default`, so the QR renders
+    // everywhere. Timeout kept modest for CI page-load variance.
+    cy.get('[data-cy="profile-two-factor-qr"]', { timeout: 10000 }).should('be.visible');
 
     // After confirm the status refresh fires — return the active state.
     cy.intercept('GET', '/api/v1/me/two-factor', {

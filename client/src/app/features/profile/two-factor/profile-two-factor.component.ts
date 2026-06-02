@@ -101,15 +101,6 @@ export class ProfileTwoFactorComponent implements OnInit {
       next: (s) => {
         this.status.set(s);
         this.loading.set(false);
-        // Pre-warm the lazy `qrcode` chunk (#877) as soon as we know 2FA
-        // isn't active yet, so the otpauth→data-URL render is instant on
-        // Enable instead of racing a first-request cold chunk load. On a
-        // cold `ng serve` (CI) the QR <img> otherwise misses its render
-        // window even though enrolment + secret already painted. Fire-and-
-        // forget; the module loader caches the promise for onEnable's import.
-        if (!s.enabled) {
-          void import('qrcode').catch(() => undefined);
-        }
       },
       error: () => {
         this.errored.set(true);
@@ -132,9 +123,19 @@ export class ProfileTwoFactorComponent implements OnInit {
         // cached at module level by the JS loader so subsequent
         // enrolments don't re-fetch the chunk.
         import('qrcode')
-          .then((QRCode: typeof QRCodeType) =>
-            QRCode.toDataURL(data.provisioning_uri, { margin: 1, scale: 4 }),
-          )
+          .then((mod) => {
+            // qrcode is a CommonJS package. Under the esbuild production
+            // build (and a cold vite dep-optimize, e.g. CI's first lazy
+            // load) the dynamic-import namespace carries ONLY `default` —
+            // `toDataURL` is not hoisted as a named export, so
+            // `mod.toDataURL` is undefined and the QR silently never
+            // renders (this broke the prod enrolment QR too, not just CI).
+            // Reach through `.default`, with a fallback for bundlers that
+            // do hoist the names (warm vite).
+            const QRCode = ((mod as { default?: typeof QRCodeType }).default ??
+              mod) as typeof QRCodeType;
+            return QRCode.toDataURL(data.provisioning_uri, { margin: 1, scale: 4 });
+          })
           .then((url) => this.qrDataUrl.set(url))
           .catch(() => this.qrDataUrl.set(null));
         this.status.set({ enabled: false, pending: true, recovery_codes_remaining: 0 });
