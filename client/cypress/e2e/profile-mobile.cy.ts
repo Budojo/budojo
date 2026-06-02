@@ -50,11 +50,14 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.intercept('GET', '/api/v1/auth/me', ME_OK);
       cy.visitAuthenticated('/dashboard/profile');
       // Assert Identity-tab content (default active) BEFORE switching to
-      // Account: both `profile-name` (sr-only full name, #848) and
-      // `profile-email` live in the Identity tab body (see the
-      // `@if (activeTab() === 'identity')` block in `profile.component.html`).
-      // Once we click the Account tab below, the whole Identity tab is
-      // unmounted, so these can't be asserted from inside the it() block.
+      // Account. `profile-name` is a `__sr-only` + `aria-hidden="true"` span
+      // (profile.component.scss:239-243) — invisible to sighted users AND out
+      // of the accessibility tree, kept purely as a selector hook after #848
+      // split the visible name into `profile-first-name`/`profile-last-name`.
+      // So assert `exist` (it can never be `be.visible`). Both it and
+      // `profile-email` live inside the `@if (activeTab() === 'identity')`
+      // block, which Angular unmounts once we click the Account tab below —
+      // hence these run here, not inside the it().
       cy.get('[data-cy="profile-name"]').should('exist').and('contain.text', 'Mario');
       cy.get('[data-cy="profile-email"]').should('be.visible');
       cy.get('[data-cy="profile-tab-account"]').click();
