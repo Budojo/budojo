@@ -89,14 +89,13 @@ describe('Two-factor authentication panel (#412)', () => {
     cy.wait('@enrol');
 
     cy.get('[data-cy="profile-two-factor-secret"]').should('contain.text', 'JBSWY3DPEHPK3PXP');
-    // The QR <img> is gated on a dynamic `import('qrcode')` (#877) — a CJS
-    // lazy chunk `ng serve` compiles on the FIRST request (here, the first
-    // enrolment in the whole suite). Cold-compiling it measured ~3.9 s on a
-    // fast local box; on CI's slower, loaded `ubuntu-latest` runner it
-    // overran the 4 s default AND an 8 s bump. The QR itself is fine — it
-    // renders with no error once the chunk lands (verified cold locally) —
-    // so this is pure compile latency. 20 s (≈5× local cold) absorbs the CI
-    // variance without masking a real regression.
+    // The QR <img> is gated on a dynamic `import('qrcode')` (#877). On a
+    // cold `ng serve` (CI) the first-ever load of that lazy chunk didn't
+    // resolve inside the click→assert window — enrolment + secret painted
+    // but the QR never did, and the component's silent `.catch` hid it.
+    // The component now pre-warms the chunk as soon as the panel loads in a
+    // non-enabled state, so by the click it's cached and the render is
+    // instant. Generous timeout kept as belt-and-suspenders for CI variance.
     cy.get('[data-cy="profile-two-factor-qr"]', { timeout: 20000 }).should('be.visible');
 
     // After confirm the status refresh fires — return the active state.

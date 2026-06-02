@@ -101,6 +101,15 @@ export class ProfileTwoFactorComponent implements OnInit {
       next: (s) => {
         this.status.set(s);
         this.loading.set(false);
+        // Pre-warm the lazy `qrcode` chunk (#877) as soon as we know 2FA
+        // isn't active yet, so the otpauth→data-URL render is instant on
+        // Enable instead of racing a first-request cold chunk load. On a
+        // cold `ng serve` (CI) the QR <img> otherwise misses its render
+        // window even though enrolment + secret already painted. Fire-and-
+        // forget; the module loader caches the promise for onEnable's import.
+        if (!s.enabled) {
+          void import('qrcode').catch(() => undefined);
+        }
       },
       error: () => {
         this.errored.set(true);
