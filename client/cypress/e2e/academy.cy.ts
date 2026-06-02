@@ -61,7 +61,7 @@ describe('Academy home page', () => {
     cy.visitAuthenticated('/dashboard/academy');
     cy.wait('@academy');
 
-    cy.get('[data-cy="academy-name"]').should('contain', 'Gracie Barra Torino');
+    cy.get('[data-cy="academy-row-name"]').should('contain', 'Gracie Barra Torino');
     cy.get('[data-cy="academy-row-slug"]').should('contain', 'gracie-barra-torino-a1b2c3d4');
     // Angular's conditional rendering inserts indentation between the
     // `{{ postal_code }}` / `{{ city }}` / `({{ province }})` interpolations,
@@ -148,10 +148,13 @@ describe('Academy edit form', () => {
     });
 
     cy.url().should('match', /\/dashboard\/academy$/);
-    cy.get('[data-cy="academy-name"]').should('contain', 'Gracie Barra Torino Centro');
-    // Sidebar brand label is bound to the service signal; updating through
-    // the service's tap() means it flips without a refetch.
-    cy.contains('.sidebar__brand-name', 'Gracie Barra Torino Centro').should('exist');
+    cy.get('[data-cy="academy-row-name"]').should('contain', 'Gracie Barra Torino Centro');
+    // Desktop rail brand label is bound to the academy service signal
+    // (dashboard.component.ts `brandLabel` → `railBrand`); updating through
+    // the service's tap() means it flips without a refetch. (#1111–#1121
+    // retired the legacy `.sidebar__brand-name`; the live label now lives in
+    // `[data-cy="rail-brand"]`.)
+    cy.get('[data-cy="rail-brand"]').should('contain', 'Gracie Barra Torino Centro');
   });
 
   it('blocks submit and shows the all-or-nothing error when address fields are partially cleared (#72)', () => {
@@ -218,6 +221,6 @@ describe('Academy edit form', () => {
 
     cy.url().should('match', /\/dashboard\/academy$/);
     // Unchanged on detail — the cancel didn't PATCH anything.
-    cy.get('[data-cy="academy-name"]').should('contain', 'Gracie Barra Torino');
+    cy.get('[data-cy="academy-row-name"]').should('contain', 'Gracie Barra Torino');
   });
 });
