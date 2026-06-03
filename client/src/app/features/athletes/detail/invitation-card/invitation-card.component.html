@@ -27,14 +27,16 @@
               (onClick)="resend()"
               data-cy="athlete-invitation-resend"
             />
-            <p-button
+            <app-confirm-destructive-button
               [label]="'athletes.invitation.revoke' | translate"
-              severity="secondary"
-              [text]="true"
-              size="small"
+              [ariaLabel]="'athletes.invitation.revoke' | translate"
+              [confirmMessage]="'athletes.invitation.confirm.revokeMessage' | translate"
+              [acceptLabel]="'athletes.invitation.confirm.revokeAccept' | translate"
+              [rejectLabel]="'athletes.invitation.confirm.revokeReject' | translate"
+              [loading]="revoking()"
               [disabled]="resending() || revoking()"
-              (onClick)="confirmRevoke($event)"
-              data-cy="athlete-invitation-revoke"
+              (confirmed)="revoke()"
+              dataCy="athlete-invitation-revoke"
             />
           </div>
         </div>

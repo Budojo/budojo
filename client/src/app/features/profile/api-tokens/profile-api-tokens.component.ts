@@ -15,13 +15,13 @@ import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { TooltipModule } from 'primeng/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   ApiToken,
   ApiTokenService,
   CreatedApiToken,
 } from '../../../core/services/api-token.service';
+import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 
 /**
  * "API tokens" panel on `/dashboard/profile` (#431). Lets the user
@@ -43,6 +43,7 @@ import {
   standalone: true,
   imports: [
     ButtonModule,
+    ConfirmDestructiveButtonComponent,
     ConfirmPopupModule,
     DatePipe,
     DialogModule,
@@ -50,7 +51,6 @@ import {
     InputTextModule,
     ProgressSpinnerModule,
     ReactiveFormsModule,
-    TooltipModule,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,7 +60,6 @@ import {
 })
 export class ProfileApiTokensComponent implements OnInit {
   private readonly tokenService = inject(ApiTokenService);
-  private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
@@ -161,17 +160,7 @@ export class ProfileApiTokensComponent implements OnInit {
       });
   }
 
-  protected confirmRevoke(event: MouseEvent, token: ApiToken): void {
-    this.confirmationService.confirm({
-      target: event.currentTarget as EventTarget,
-      message: this.translate.instant('profile.apiTokens.confirmRevoke', { name: token.name }),
-      acceptLabel: this.translate.instant('profile.apiTokens.confirmRevokeAccept'),
-      rejectLabel: this.translate.instant('profile.apiTokens.confirmRevokeReject'),
-      accept: () => this.revoke(token),
-    });
-  }
-
-  private revoke(token: ApiToken): void {
+  protected revoke(token: ApiToken): void {
     this.revokingId.set(token.id);
     this.tokenService.revoke(token.id).subscribe({
       next: () => {

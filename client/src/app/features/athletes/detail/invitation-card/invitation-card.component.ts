@@ -21,6 +21,7 @@ import {
 import { LanguageService } from '../../../../core/services/language.service';
 import { localeFor } from '../../../../shared/utils/locale';
 import { CardComponent } from '../../../../shared/components/card/card.component';
+import { ConfirmDestructiveButtonComponent } from '../../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 
 /**
  * "Account & invito" card on the athlete detail page (#467, M7 PR-B-UI).
@@ -43,7 +44,14 @@ import { CardComponent } from '../../../../shared/components/card/card.component
 @Component({
   selector: 'app-athlete-invitation-card',
   standalone: true,
-  imports: [ButtonModule, CardComponent, ConfirmPopup, TagModule, TranslatePipe],
+  imports: [
+    ButtonModule,
+    CardComponent,
+    ConfirmDestructiveButtonComponent,
+    ConfirmPopup,
+    TagModule,
+    TranslatePipe,
+  ],
   providers: [ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './invitation-card.component.html',
@@ -52,7 +60,6 @@ import { CardComponent } from '../../../../shared/components/card/card.component
 export class InvitationCardComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
   private readonly messageService = inject(MessageService);
-  private readonly confirmationService = inject(ConfirmationService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
 
@@ -202,22 +209,11 @@ export class InvitationCardComponent implements OnInit {
   }
 
   /**
-   * Confirm-then-revoke for the pending invite (Krug § forgiveness for
-   * mistakes). Same `p-confirmpopup` pattern the avatar-remove flow
-   * uses on the profile page.
+   * Revoke the pending invite. The confirm-then-execute gate (Krug §
+   * forgiveness for mistakes) lives in the shared
+   * `app-confirm-destructive-button` that fires `(confirmed)` here.
    */
-  confirmRevoke(event: Event): void {
-    this.confirmationService.confirm({
-      target: event.currentTarget as HTMLElement,
-      message: this.translate.instant('athletes.invitation.confirm.revokeMessage'),
-      acceptLabel: this.translate.instant('athletes.invitation.confirm.revokeAccept'),
-      rejectLabel: this.translate.instant('athletes.invitation.confirm.revokeReject'),
-      acceptButtonProps: { severity: 'danger' },
-      accept: () => this.revoke(),
-    });
-  }
-
-  private revoke(): void {
+  protected revoke(): void {
     const current = this.invitation();
     if (current === null || this.revoking()) return;
 
