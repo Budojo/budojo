@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Services\PwnedPasswordsClient;
+use App\Support\DesktopDriverGuard;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\CanResetPassword;
@@ -55,6 +56,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // A desktop instance running the wrong drivers fails silently, not
+        // loudly (#1220) — a queued reminder is written and never picked up
+        // because there is no worker. Refuse to boot instead.
+        DesktopDriverGuard::assert();
+
         // Non-production safety net (#458). Hijacks every Mailable's
         // recipient list and redirects them to the configured test
         // address, so a misconfigured `MAIL_MAILER=resend` (or any

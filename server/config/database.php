@@ -38,9 +38,25 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
-            'synchronous' => null,
+
+            // SQLite pragmas for a database file that outlives the process
+            // (#1220). The PEST suite runs `:memory:`, where none of these
+            // matter; the desktop app (#1218) keeps one file for years, where
+            // all of them do.
+            //
+            // busy_timeout — turn a momentary lock collision into a short
+            //   wait instead of an immediate "database is locked" thrown at
+            //   the user. The 60s scheduler tick and the UI do overlap.
+            // journal_mode WAL — readers stop blocking the writer, so a
+            //   background reminder scan no longer freezes the interface.
+            //   Ignored on `:memory:`, which always reports "memory".
+            // synchronous NORMAL — the documented companion to WAL: durable
+            //   across application crashes, trading only a power-loss window
+            //   for far fewer fsyncs. FULL would fsync on every commit and is
+            //   overkill for a single-user desktop app.
+            'busy_timeout' => env('DB_BUSY_TIMEOUT', 5000),
+            'journal_mode' => env('DB_JOURNAL_MODE', 'WAL'),
+            'synchronous' => env('DB_SYNCHRONOUS', 'NORMAL'),
             'transaction_mode' => 'DEFERRED',
         ],
 
