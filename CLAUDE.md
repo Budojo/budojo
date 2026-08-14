@@ -21,7 +21,6 @@ The repo uses a **hierarchical `CLAUDE.md`** layout. Claude Code loads the neare
 
 - [`git-flow.md`](./docs/development/git-flow.md) — branch model, naming, commit format, daily/hotfix flow
 - [`release-flow.md`](./docs/development/release-flow.md) — semantic-release cadence, `## Auto-closes` block, auto-sweep, post-release sweep
-- [`reviewer-workflow.md`](./docs/development/reviewer-workflow.md) — Claude reviewer pipeline, reply rules, auto-poll loop
 - [`pr-labels.md`](./docs/development/pr-labels.md) — type/status labels, PR checklist, PR body conventions
 - [`visual-verification.md`](./docs/development/visual-verification.md) — mandatory in-browser smoke before push for visible UI changes; local screenshot recipe
 
@@ -77,7 +76,7 @@ Both gate suites run inside Docker via wrappers under `.claude/scripts/`:
 
 Subcommands: `all` (default), `quick` (skip `--write` formatters when re-running mid-session), or any individual gate name. Run formatters/fixers **before staging**, static analysis / lint **after staging**. Never rely on CI to catch these.
 
-**Before `git push`, also scan [`.claude/gotchas.md`](.claude/gotchas.md)** — a living checklist of mistakes we've made before. 30-second read vs. a 5-minute reviewer round-trip. When the reviewer flags a new non-typo mistake in review, add a `→` entry to the correct category in the **same PR** that fixes it.
+**Before `git push`, also scan [`.claude/gotchas.md`](.claude/gotchas.md)** — a living checklist of mistakes we've made before. 30-second read vs. a 5-minute debugging round-trip. When a mistake of this kind bites again, add a `→` entry to the correct category in the **same PR** that fixes it.
 
 **Optional: `/prereview` before pushing.** Dispatches a fresh sub-agent to read the diff vs `develop` and surface up to 5 actionable issues. ~30 s vs. one CI round-trip. Use on non-trivial diffs; skip for one-line typo fixes.
 
@@ -90,7 +89,7 @@ Full checklist + labels + body conventions in [`docs/development/pr-labels.md`](
 1. **Title** — `type(scope): description`, lower-case.
 2. **Body** — fill the `What / Why / How / Notes / Out of scope / References / Test plan` template (English). Write the body to a **per-PR file** under `.claude/pr-bodies/<branch-or-pr>.md` and use `--body-file` (never `--body "..."` or a heredoc).
 3. **Assignee** — `m-bonanno` on every PR.
-4. **Labels** — one type label at creation (per branch prefix); `🟢 ready to merge` once reviewer comments are resolved.
+4. **Labels** — one type label at creation (per branch prefix); `🟢 ready to merge` once CI is green.
 5. **Board** — add the PR and the issue to the [`org-level project number 2`](https://github.com/orgs/Budojo/projects/2) and set both to `In Progress`:
    ```bash
    ./.claude/scripts/board-set.sh <PR-N> in-progress
@@ -98,16 +97,13 @@ Full checklist + labels + body conventions in [`docs/development/pr-labels.md`](
    ```
 6. **No AI attribution — ever** — no "Generated with Claude Code", "Co-Authored-By: Claude", or any Anthropic / AI text anywhere.
 
-### Claude reviewer flow
+### Review
 
-Full pipeline in [`docs/development/reviewer-workflow.md`](./docs/development/reviewer-workflow.md). Key rules:
+The automated post-push reviewer was retired in #1234 — it cost a paid API key per PR and this is a single-developer project. What replaces it:
 
-- After every push the local agent enters an **autonomous review-fix loop** without user prompt — `ScheduleWakeup ~90s`, max 3 iterations, then merge when CI green + threads resolved.
-- During the loop, **work in parallel on the next branch** — don't sit idle staring at CI.
-- Reply to every reviewer comment via `./.claude/scripts/reviewer-replies.sh <PR-N> "Fixed in <sha>. <rationale>."` (idempotent).
-- Replies are **English only**, **first-person developer voice**, **always cite the short commit SHA**.
-- After fixing, **re-read the PR body** and update anything the fixes changed (counts, paths, commands). Tick Test plan checkboxes verified.
-- **Don't re-trigger the review on every push** — the reviewer's first pass is load-bearing; merge after fix-commit-resolve unless the user explicitly asks for a re-review.
+- Run `/prereview` on anything non-trivial **before** pushing. It is now the only independent pass a change gets.
+- Merge once CI is green. There are no reviewer threads left to resolve.
+- The PR body still matters: it is the record of why a change looks the way it does.
 
 ---
 
@@ -123,7 +119,6 @@ Full mechanics in [`docs/development/release-flow.md`](./docs/development/releas
 - **Every release ships the user-facing changelog** in the same commit history: `docs/changelog/user-facing/vX.Y.Z.md` + prepend to the `releases` array in `client/src/app/features/whats-new/whats-new.component.ts`.
 - **Post-release `main → develop` sweep is mandatory** — otherwise develop's next beta tag stays on the old train.
 - **Post-release tech-debt + docs sweep is mandatory** — see [release-flow.md § post-release sweep](./docs/development/release-flow.md#post-release-tech-debt--docscode-cleanup-sweep). Empty findings IS a valid outcome.
-- **Workflow changes need an immediate release** — any merge to `develop` touching `pr-claude-review.yml` or the reviewer subagent prompt breaks the reviewer on subsequent PRs until shipped to `main`.
 
 ---
 
@@ -137,7 +132,7 @@ docs/
 ├── entities/*.md          # one file per persisted entity (user, academy, athlete, …)
 ├── api/v1.yaml            # OpenAPI 3.0 contract for /api/v1
 ├── specs/*.md             # milestone PRDs
-├── development/*.md       # procedural runbooks (git, release, reviewer, labels)
+├── development/*.md       # procedural runbooks (git, release, labels)
 ├── design/*.md            # design system, mobile audit, brand kit
 └── infra/*.md             # production deployment, branch rulesets
 ```
@@ -159,7 +154,7 @@ Pure internal refactor, formatting, dependency bumps, test-only additions, CI tw
 ### Enforcement
 
 - **Spectral** lints `docs/api/v1.yaml` in CI (`🔬 OpenAPI Lint` job) — malformed YAML, missing `operationId`, ghost `$ref`, summary-less operations block merge.
-- **The reviewer** will reject a PR where code and docs disagree.
+- **A PR where code and docs disagree is not done.** Nothing automated enforces this any more — it is on you.
 
 ---
 
@@ -194,9 +189,9 @@ Cross-cutting rules. Backend-only rules (Uncle Bob canon, PHP gates, controller 
 5. **Merge `develop` into the feature branch** when it falls behind — no rebase.
 6. **Squash merge** PRs into `develop`; merge commit (no squash) into `main`.
 7. **Never create a `version` field** in `package.json` — semantic-release owns versioning entirely.
-8. **Reply to every reviewer comment** after fixing — English, first-person, cite the short SHA, re-read and update the PR body, then switch label to `🟢 ready to merge`. The auto-poll-and-fix loop in [reviewer-workflow.md](./docs/development/reviewer-workflow.md) runs this without a user prompt.
+8. **Run `/prereview` before pushing a non-trivial diff** — with the automated reviewer gone (#1234), it is the only review pass a change gets before it lands.
 9. **Never add AI attribution** — no "Generated with Claude Code", "Co-Authored-By: Claude", or similar anywhere.
 10. **Keep `docs/` in sync** — every PR that changes a migration, enum, API route, request/response shape, or business rule updates the relevant `docs/entities/` or `docs/api/v1.yaml` in the same commit history. Internal refactors, formatting, dependency bumps are exempt.
 11. **Respect the local canon.** Backend → Uncle Bob (`server/CLAUDE.md`). Frontend → UX canon (`client/CLAUDE.md`). A reviewer's citation of a book or law in those canons is a valid critique on its own — push back only with a specific pragmatic reason, never with taste.
 12. **Consult the graphify knowledge graph before touching unfamiliar code.** If `graphify-out/graph.json` exists, run `graphify explain "<EntityOrClass>"` or `graphify query "what touches <X>"` **before the first edit** when an issue lands you in an area you haven't worked on recently. ~6k tokens vs. several minutes of grep + risk of missing a caller. The graph auto-refreshes the AST layer on commit/checkout; run `graphify --update` manually only after `docs/`, migrations, or new specs land. Skip for one-line typos, formatting-only PRs, or files edited in the last hour.
-13. **Consult the Uncle Bob skills when judging or shaping code.** The `clean-code` and `clean-architecture` skills distil R.C. Martin's canon (Clean Code 2e: functions, naming, tests, SOLID — and Clean Architecture: the Dependency Rule, boundaries, components, entities/use-cases). Run `/clean-code <topic>` or `/clean-architecture <topic>` **before responding** when a reviewer cites a book or law (rule 11), when making a SOLID/boundary call you're not certain of, or when shaping a new Action/boundary/migration — pull the exact formulation, not a paraphrase. Skip for typos, formatting, or anything the local canon already settles. They are user-level skills; environments without them (e.g. the CI reviewer) ignore this rule.
+13. **Consult the Uncle Bob skills when judging or shaping code.** The `clean-code` and `clean-architecture` skills distil R.C. Martin's canon (Clean Code 2e: functions, naming, tests, SOLID — and Clean Architecture: the Dependency Rule, boundaries, components, entities/use-cases). Run `/clean-code <topic>` or `/clean-architecture <topic>` **before responding** when a reviewer cites a book or law (rule 11), when making a SOLID/boundary call you're not certain of, or when shaping a new Action/boundary/migration — pull the exact formulation, not a paraphrase. Skip for typos, formatting, or anything the local canon already settles. They are user-level skills; environments without them ignore this rule.

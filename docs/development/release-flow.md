@@ -84,7 +84,7 @@ If the auto sweep ever misfires, open the sweep PR by hand from a `chore/sync-ma
 
 ### Sweep merges immediately
 
-The post-release `main → develop` sweep PR merges immediately — it's alignment-only and has no business logic. It does NOT wait for the Claude reviewer pass (per `feedback_post_push_reviewer_dance` in agent memory § Exceptions).
+The post-release `main → develop` sweep PR merges immediately — it's alignment-only and has no business logic.
 
 ## User-facing changelog (#254)
 
@@ -113,7 +113,3 @@ After every stable release — that is: release PR (`develop → main`) merged, 
 - **Project-board**: stale issues (>90d no activity), umbrella issues carry honest current-state snapshots.
 
 The sweep is **not optional**, but finding nothing IS a valid outcome — an empty sweep that documents "checked everything, nothing to do" is a successful sweep. Squash-merge to develop; chore commits don't bump version. Findings that require real code change beyond hygiene (real bugs, missing tests, doc rewrites) get their own follow-up issue and a stub pointer in the sweep PR.
-
-## Workflow changes need an immediate release
-
-Any merge to `develop` that touches `.github/workflows/pr-claude-review.yml` or the pr-code-reviewer subagent prompt breaks the reviewer on every subsequent PR until shipped to `main`. The release PR is the **next bash**, not a future action.

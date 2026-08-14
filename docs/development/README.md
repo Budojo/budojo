@@ -10,7 +10,6 @@ The split exists so CLAUDE.md stays loadable in agent context (every session pay
 |---|---|
 | [`git-flow.md`](./git-flow.md) | Branch model (GitFlow), branch naming, commit-message format, daily TDD cycle, hotfix flow |
 | [`release-flow.md`](./release-flow.md) | semantic-release beta/stable cadence, `## Auto-closes` block construction, auto-sweep main → develop, user-facing changelog discipline, post-release tech-debt sweep |
-| [`reviewer-workflow.md`](./reviewer-workflow.md) | Post-push Claude reviewer pipeline: comment fetch, fix commit, `reviewer-replies.sh` usage, auto-poll-and-fix loop, reply rules |
 | [`pr-labels.md`](./pr-labels.md) | Type label per branch prefix, status labels lifecycle, board status moves |
 | [`visual-verification.md`](./visual-verification.md) | Mandatory in-browser smoke before push for visible UI changes; the `cypress/included` screenshot recipe + the dev-server / login-redirect traps |
 

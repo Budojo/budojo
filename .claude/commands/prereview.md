@@ -1,11 +1,11 @@
 ---
-description: Pre-push review of the current branch's diff vs develop. Dispatches a fresh sub-agent that reads the diff and surfaces up to 5 actionable issues — bugs, wrong assumptions, missing test coverage, security holes — before the post-push Claude reviewer has to flag them on the PR.
+description: Pre-push review of the current branch's diff vs develop. Dispatches a fresh sub-agent that reads the diff and surfaces up to 5 actionable issues — bugs, wrong assumptions, missing test coverage, security holes — before they reach develop.
 argument-hint: '[--base <branch>]'
 ---
 
 # /prereview
 
-Run a reviewer-style pre-review on the current branch's diff. The goal is to catch the kind of bug the post-push Claude reviewer would catch on the PR (see `.claude/agents/pr-code-reviewer.md` + `.github/workflows/pr-claude-review.yml`), but BEFORE the push so we save a CI round-trip.
+Run a reviewer-style pre-review on the current branch's diff. Since the automated post-push reviewer was retired (#1234), this is the only independent review pass a change gets before it lands — run it on anything non-trivial.
 
 ## Steps
 
