@@ -95,6 +95,8 @@ Format: `→` separates the symptom from the action.
 
 ## Docker dev-env
 
+- → Never give the `api` service an `env_file` in `docker-compose.yml`. Compose turns it into real environment variables, and Laravel's `env()` resolves `$_SERVER` **before** `$_ENV` — so a blank key in that file silently overrides both `server/.env` and the `<env>` values in `server/phpunit.xml`. A blank `VAPID_PUBLIC_KEY` turned 13 push tests into 503s, and `DB_DATABASE` pointed `RefreshDatabase` at the *development* database (only `--parallel`'s `_test_N` suffix saved it; a plain `vendor/bin/pest` would have dropped every table). `force="true"` on the phpunit `<env>` entries does **not** help — PHPUnit sets `putenv()` and `$_ENV`, never `$_SERVER`. The app is configured by `server/.env` alone, which is also exactly what CI does (`pr-checks.yml` runs PEST in `server/`, not in the container). If the local gate and CI ever disagree again, check env provenance first.
+
 - After pulling a branch that adds a client npm dependency, the `budojo_client` container still runs the old `node_modules` (the volume was populated at build time). Angular barfs with `TS2307 Cannot find module '<new-dep>'`. Fix: `docker exec budojo_client sh -c "cd /app && npm install"` after `git pull`. Rule of thumb: if `package.json` changed in the diff you just pulled, sync the container before running anything.
 
 ## Cypress — whitespace in interpolated text

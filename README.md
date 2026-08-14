@@ -41,21 +41,36 @@ Architecture, deploy flow, env vars, runbook and gotchas: **[`docs/infra/product
 ### Prerequisites
 
 - Docker + Docker Compose
-- A `.env` file at the repo root (copy `.env.example` and fill in the values)
+
+That is the whole list. There is no `.env` to copy and no key to generate — the
+API container's entrypoint installs Composer dependencies, seeds `server/.env`
+from `server/.env.example`, generates `APP_KEY`, creates the SQLite database
+and migrates it. Every step is idempotent, so restarts are no-ops.
 
 ```bash
-cp .env.example .env   # fill in DB_ROOT_PASSWORD, DB_PASSWORD, LOCAL_ADMIN_PASSWORD, etc.
 docker compose up --build
-docker exec budojo_api php artisan key:generate   # generates APP_KEY on first run
 ```
 
 | Service | URL |
 |---------|-----|
 | Angular SPA | http://localhost:4200 |
 | Laravel API | http://localhost:8000/api/v1 |
-| MySQL | localhost:3306 |
+| Mailpit (catches all outbound mail) | http://localhost:8025 |
 
-Database migrations run automatically on API container start.
+The database is **SQLite**, matching the desktop runtime (M11). It lives on the
+`sqlite_data` named volume rather than the bind mount, because Docker Desktop's
+host filesystem share does not implement POSIX advisory locking faithfully and
+SQLite depends on it. Inspect it with:
+
+```bash
+docker exec -it budojo_api sqlite3 /var/www/api/database/sqlite/budojo.sqlite
+```
+
+`docker compose down` keeps your data; `docker compose down -v` destroys it.
+
+> **The app is configured by `server/.env` only.** The compose file deliberately
+> has no `env_file` — see the comment in `docker-compose.yml` for the bug that
+> caused.
 
 ### Seed test data
 
@@ -64,7 +79,7 @@ docker exec budojo_api php artisan db:seed
 ```
 
 This creates:
-- `admin@example.it` / `<LOCAL_ADMIN_PASSWORD>` — admin user with a pre-configured academy (no athletes seeded for this account)
+- `admin@example.it` / the value of `LOCAL_ADMIN_PASSWORD` in `server/.env` (`password` by default) — admin user with a pre-configured academy (no athletes seeded for this account)
 - 5 additional users each with their own academy
 - 3 additional users without an academy (to exercise the `/setup` first-login flow)
 
