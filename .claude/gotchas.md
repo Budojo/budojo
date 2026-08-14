@@ -70,6 +70,8 @@ Format: `→` separates the symptom from the action.
 
 ## Git hygiene
 
+- → Never pipe a **completeness** scan through `head`. Removing a concept from the repo ends with "grep finds nothing", and `grep -rn '<term>' . | head` answers a different question: "the first ten hits". #1234 declared the Claude-reviewer cleanup finished on a truncated scan and left two stale claims in `server/CLAUDE.md`. Use `head` while exploring; drop it — or use `grep -rc` / `| wc -l` — the moment the output is the evidence that something is gone.
+
 - `prettier --write` over a broad glob (`"**/*.ts"`) → normalises CRLF↔LF on files outside your intended scope. **Run `git diff --stat` before staging**; revert files showing `0 insertions(+), 0 deletions(-)` with `git checkout --`.
 - Accidentally `git add server/` while a binary like `server/budojo` (SQLite local DB) sits in the working tree → commits the binary to the repo. Use targeted `git add <file>` or verify `git status` doesn't show the binary before `-A`.
 - Pushed commit to develop when the ruleset forbids direct pushes → branches protected. Always open a PR, even for trivial fixes.
