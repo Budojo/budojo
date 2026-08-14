@@ -18,23 +18,6 @@ Set the project-board status for an issue or PR in budojo's Project #2.
 
 Encapsulates the 3-step GraphQL pipeline (lookup node id, add to project, set Status field) and the hardcoded `PVT_*` IDs. The IDs live ONLY in this script — anything else referencing them is drift.
 
-### `reviewer-replies.sh`
-
-Post the same reply to every open Claude-reviewer inline comment on a PR, then resolve all reviewer-authored review threads. Replaces the old `copilot-replies.sh` (chore #790, when the post-push reviewer moved from GitHub Copilot to `anthropics/claude-code-action`).
-
-```bash
-./.claude/scripts/reviewer-replies.sh 289 \
-  "Fixed in ee27fb6. Both valid catches: (1) ... (2) ..."
-
-# Override the bot login if the action posts under a different account:
-BOT_LOGIN='github-actions[bot]' \
-  ./.claude/scripts/reviewer-replies.sh 289 "Fixed in ee27fb6. ..."
-```
-
-Idempotent — replies skip threads already replied to, resolves skip already-resolved threads. Filter is parametrized via `BOT_LOGIN` (default `claude[bot]`); the resolve step queries `reviewThreads` and filters on the same login so human-reviewer threads stay untouched.
-
-**Discipline (memory):** the message MUST cite the fix commit SHA — `Fixed in <short-sha>. <one-sentence-rationale>`. Lazy "Fixed" without a SHA gets called out.
-
 ### `test-client.sh` / `test-server.sh`
 
 Wrap the `docker exec <container> sh -c "cd /app && <cmd>"` prefix that wraps every pre-push gate.
