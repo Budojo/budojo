@@ -1,3 +1,13 @@
+# Local development environment.
+#
+# Runtime parity note: the shipped desktop app (M11) runs on SQLite, so dev
+# runs on SQLite too. A MySQL-backed dev environment would let grammar
+# differences (JSON path syntax, LIKE case-sensitivity, strict-mode casting)
+# hide until packaging time.
+#
+# This file is DEVELOPMENT ONLY. There is no production compose file any more
+# — see docs/desktop/ for how the desktop app boots its own PHP runtime.
+
 services:
 
   api:
@@ -10,15 +20,27 @@ services:
       - "8000:80"
     volumes:
       - ./server:/var/www/api
-    env_file:
-      - .env
+      # The SQLite database lives on a named volume, NOT on the bind mount
+      # above. Docker Desktop's host filesystem share (9p / virtiofs) does not
+      # implement POSIX advisory locking faithfully, and SQLite relies on it
+      # for WAL coordination — the failure mode is a silently corrupt database
+      # rather than an error. A named volume is backed by the VM's own ext4,
+      # where locking behaves. Inspect it with:
+      #   docker exec -it budojo_api sqlite3 /var/www/api/database/sqlite/budojo.sqlite
+      - sqlite_data:/var/www/api/database/sqlite
+    # NOTE: deliberately NO `env_file`. Compose injects an env_file into the
+    # container as real environment variables, and Laravel resolves env() from
+    # $_SERVER before $_ENV — so every blank key in a root .env silently
+    # overrode both server/.env AND the <env> values in phpunit.xml. That is
+    # how a blank VAPID_PUBLIC_KEY turned 13 push tests into 503s, and how
+    # DB_DATABASE pointed RefreshDatabase at the development database.
+    # phpunit force="true" does NOT fix it: PHPUnit sets putenv() and $_ENV,
+    # never $_SERVER. The app is configured by server/.env, full stop — which
+    # is also exactly what CI does (pr-checks.yml runs PEST in server/).
     environment:
       RUN_MIGRATIONS: "1"
     networks:
       - budojo_network
-    depends_on:
-      db:
-        condition: service_healthy
 
   client:
     build:
@@ -36,24 +58,19 @@ services:
     depends_on:
       - api
 
-  db:
-    image: mysql:8.4
-    container_name: budojo_db
+  # Catches every outbound mail so the 9 Mailables can be exercised without
+  # a Resend key and without any risk of reaching a real inbox.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: budojo_mailpit
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "8025:8025"   # web UI
+      - "1025:1025"   # SMTP
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
     networks:
       - budojo_network
 
@@ -62,4 +79,4 @@ networks:
     driver: bridge
 
 volumes:
-  db_data:
+  sqlite_data:
