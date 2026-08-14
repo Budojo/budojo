@@ -26,7 +26,7 @@ permissions:
 jobs:
   release:
     name: "🚀 Semantic Release"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     # Belt-and-suspenders ref guard — `workflow_dispatch` accepts any
     # ref from the Actions UI / CLI, but semantic-release is configured
     # to release ONLY from `main` (stable) and `develop` (beta). Without
@@ -125,7 +125,7 @@ jobs:
   # or approve pull requests". One-time admin toggle.
   sweep:
     name: "🔁 Post-release main → develop sweep"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: release
     if: |
       github.ref == 'refs/heads/main' &&
@@ -307,7 +307,7 @@ jobs:
         # says the sweep is alignment-only — no reviewer wait, no
         # review surface — so auto-merging the moment CI is green
         # is the documented policy (chore/sync-* is also `if:`-
-        # skipped in pr-claude-review.yml). This memory supersedes
+        # skipped when the reviewer still ran). This memory supersedes
         # the historical `feedback_release_pr_wait_for_copilot`.
         if: env.HAS_BOT_TOKEN == 'true'
         env:

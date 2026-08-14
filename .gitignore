@@ -53,13 +53,13 @@ db_data/
 #   local overrides). The `/*` suffix (instead of `.claude/`) lets us re-include
 #   specific files — git can't re-include files inside an ignored directory.
 # - `gotchas.md` + `settings.json` are checked in so the team shares them.
-# - `scripts/` (workflow helpers — board, reviewer-replies, docker gates) is
+# - `scripts/` (workflow helpers — board, docker gates) is
 #   checked in. Same for `pr-bodies/` so the per-PR body convention works
 #   without a first-time mkdir step (the bodies themselves stay local scratch).
 # - `commands/` (project-local slash commands like /prereview, /feedback-digest)
 #   is checked in so the workflow patterns are shared, not per-developer.
-# - `agents/` (project-local subagent definitions like pr-code-reviewer) is
-#   checked in so CI workflows (e.g. pr-claude-review.yml) and local Agent
+# - `agents/` (project-local subagent definitions) is
+#   checked in so local Agent
 #   tool invocations resolve the same system prompt.
 .claude/*
 !.claude/gotchas.md
