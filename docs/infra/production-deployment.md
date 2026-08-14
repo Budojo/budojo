@@ -4,6 +4,16 @@ Single source of truth for how Budojo runs in production. Updated when any
 piece of the stack changes — registrar, DNS, server, certificate, env var,
 deploy script.
 
+> **Host addresses are redacted** (#1236). The repository is public and this
+> infrastructure is being decommissioned under M11 (#1218); publishing the
+> droplet IP, SSH user and exact software versions turned a host that had to
+> be found by scanning into one indexed on GitHub next to a version list.
+> Read the real values from the DigitalOcean and Forge dashboards.
+>
+> Redaction does not erase git history — earlier revisions still carry the
+> addresses. The actual fix is destroying the droplet (#1230). Until then,
+> treat the key rotation note in #1236 as the live mitigation.
+
 ## Live URLs
 
 | Component | URL | Hosted on |
@@ -42,7 +52,7 @@ deploy script.
 Domain `budojo.it` is registered at **Netsons** (registrar). Authoritative
 DNS is delegated to **Cloudflare** (nameservers `*.ns.cloudflare.com`). The
 Netsons hosting/cPanel records that came with the original zone import
-(`46.252.152.35`, `cpanel.budojo.it` CNAME chain, autoconfig/autodiscover)
+(`<LEGACY_NETSONS_IP>`, `cpanel.budojo.it` CNAME chain, autoconfig/autodiscover)
 are inert leftovers — clean up when convenient.
 
 ## DNS records (Cloudflare)
@@ -51,7 +61,7 @@ are inert leftovers — clean up when convenient.
 |------|------|---------|-------|-----|
 | (managed) | `budojo.it` | Cloudflare Pages project | 🟠 proxied | apex points to Pages via Cloudflare's CNAME flattening |
 | (managed) | `www.budojo.it` | Cloudflare Pages project | 🟠 proxied | www alias |
-| `A` | `api` | `161.35.20.25` (droplet IP) | ⚪ DNS only | grey cloud is **mandatory** for Forge's Let's Encrypt http-01 validation — see Gotchas |
+| `A` | `api` | `<DROPLET_PUBLIC_IP>` (droplet IP) | ⚪ DNS only | grey cloud is **mandatory** for Forge's Let's Encrypt http-01 validation — see Gotchas |
 
 Anything else still in the zone (`mail`, `cpanel`, `*` wildcard, the cpanel
 CNAME chain) is a Netsons leftover and can be removed.
@@ -64,8 +74,8 @@ CNAME chain) is a Netsons leftover and can be removed.
 - **Region**: Frankfurt
 - **Plan**: Hobby (currently the cheapest tier that fits the API + DB on one
   box; revisit when traffic justifies a managed DB)
-- **Public IP**: `161.35.20.25`
-- **Private IP**: `10.114.0.2`
+- **Public IP**: `<DROPLET_PUBLIC_IP>`
+- **Private IP**: `<DROPLET_PRIVATE_IP>`
 - **OS**: Ubuntu 24.04
 - **Stack**: nginx + PHP-FPM 8.4 + MySQL 8.4 (all on the same box)
 
@@ -335,7 +345,7 @@ table — query via `php artisan queue:failed` and retry with
 ### Access the droplet via SSH
 
 ```bash
-ssh -i ~/.ssh/budojo_forge forge@161.35.20.25
+ssh -i ~/.ssh/budojo_forge forge@<DROPLET_PUBLIC_IP>
 ```
 
 The SSH key (`~/.ssh/budojo_forge.pub`) is registered on Forge → Server →
@@ -355,7 +365,7 @@ access, no firewall opening needed. Connect via SSH tunnel:
 | Database | `budojo` |
 | SSL mode | `PREFERRED`, cert fields **empty** — see Gotchas |
 | Over SSH | ON |
-| SSH Server | `161.35.20.25:22` |
+| SSH Server | `<DROPLET_PUBLIC_IP>:22` |
 | SSH User | `forge` |
 | SSH Key | path to `~/.ssh/budojo_forge` |
 
@@ -390,7 +400,7 @@ sudo tail -f /var/log/nginx/api.budojo.it-error.log
 do this if you suspect the key is compromised.
 
 ```bash
-ssh forge@161.35.20.25
+ssh forge@<DROPLET_PUBLIC_IP>
 cd ~/api.budojo.it/current/server
 php artisan key:generate --show     # shows the new key without writing
 # then edit Forge → Environment, paste the new key, save
