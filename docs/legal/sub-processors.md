@@ -81,4 +81,4 @@ sub-processor we forgot to disclose — which is a privacy incident.
 
 - DPA template — `docs/legal/dpa-template.md` (#220)
 - Cookie audit — `docs/legal/cookie-audit.md` (#221)
-- Production deployment runbook — `docs/infra/production-deployment.md`
+- Production deployment runbook (archived — the hosted stack was decommissioned in #1230) — `docs/infra/archive/production-deployment.md`

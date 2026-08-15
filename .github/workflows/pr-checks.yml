@@ -32,11 +32,11 @@ jobs:
   # aggregator works around). So every gate job still runs and reports
   # green; its costly steps are guarded by these outputs and no-op when
   # the area is untouched. A docs-only PR now finishes in seconds instead
-  # of saturating the 4 self-hosted runners for ~5 min. Any change to this
+  # of burning runner minutes for ~5 min. Any change to this
   # workflow file re-runs every area (fail-safe — see each filter below).
   changes:
     name: "🧭 Detect changed areas"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     # paths-filter has no checkout, so it lists changed files via the PR
     # "list files" API — which needs `pull-requests: read` on top of the
     # workflow-wide `contents: read` lockdown. Job-level permissions replace
@@ -48,7 +48,7 @@ jobs:
       server: ${{ steps.filter.outputs.server }}
       client: ${{ steps.filter.outputs.client }}
       api: ${{ steps.filter.outputs.api }}
-      worker: ${{ steps.filter.outputs.worker }}
+      desktop: ${{ steps.filter.outputs.desktop }}
     steps:
       - uses: dorny/paths-filter@v3
         id: filter
@@ -63,21 +63,14 @@ jobs:
             api:
               - 'docs/api/**'
               - '.github/workflows/pr-checks.yml'
-            worker:
-              - 'worker/**'
+            desktop:
+              - 'desktop/**'
               - '.github/workflows/pr-checks.yml'
 
   phpstan:
     name: "🔬 PHPStan (level 9)"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: changes
-    # Temporary container override during GHA spending-limit block (#758).
-    # `shivammathur/setup-php@v2` only supports Debian/Ubuntu hosts;
-    # self-hosted runner runs on Fedora 44, so PHP jobs are wrapped in an
-    # Ubuntu container so the setup action's apt-based install path works.
-    # Revert this file when GitHub-hosted is back in budget.
-    container:
-      image: ubuntu:24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -108,26 +101,10 @@ jobs:
         run: vendor/bin/phpstan analyse --no-progress --error-format=github
         working-directory: server
 
-      - name: Restore workspace ownership for host runner cleanup
-        # Container ran as root and wrote files to the mounted workspace.
-        # The next non-container job runs as the host user (uid 1000) and
-        # cannot rm root-owned files (actions/checkout's auto-clean step
-        # fails with EACCES). Reset before exiting. Temporary workaround
-        # for #758; revert alongside the rest of this file.
-        if: always()
-        # $GITHUB_WORKSPACE (env var) is the in-container path; the
-        # ${{ github.workspace }} expression expands to the host path which
-        # doesn't exist inside the container. Both maps to the same bind
-        # mount, so chown via the in-container path still affects host
-        # ownership.
-        run: chown -R 1000:1000 "$GITHUB_WORKSPACE" 2>/dev/null || true
-
   pest:
     name: "🧪 PEST Tests"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: changes
-    container:
-      image: ubuntu:24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -173,21 +150,10 @@ jobs:
         run: vendor/bin/pest --parallel --coverage
         working-directory: server
 
-      - name: Restore workspace ownership for host runner cleanup
-        if: always()
-        # $GITHUB_WORKSPACE (env var) is the in-container path; the
-        # ${{ github.workspace }} expression expands to the host path which
-        # doesn't exist inside the container. Both maps to the same bind
-        # mount, so chown via the in-container path still affects host
-        # ownership.
-        run: chown -R 1000:1000 "$GITHUB_WORKSPACE" 2>/dev/null || true
-
   php-cs-fixer:
     name: "🎨 PHP CS Fixer (dry-run)"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: changes
-    container:
-      image: ubuntu:24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -218,18 +184,9 @@ jobs:
         run: vendor/bin/php-cs-fixer fix --dry-run --diff --ansi --show-progress=none
         working-directory: server
 
-      - name: Restore workspace ownership for host runner cleanup
-        if: always()
-        # $GITHUB_WORKSPACE (env var) is the in-container path; the
-        # ${{ github.workspace }} expression expands to the host path which
-        # doesn't exist inside the container. Both maps to the same bind
-        # mount, so chown via the in-container path still affects host
-        # ownership.
-        run: chown -R 1000:1000 "$GITHUB_WORKSPACE" 2>/dev/null || true
-
   angular-test:
     name: "🧪 Angular Tests (Vitest)"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: changes
     steps:
       - uses: actions/checkout@v4
@@ -253,7 +210,7 @@ jobs:
 
   angular-lint:
     name: "🔍 Angular Lint (ESLint)"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: changes
     steps:
       - uses: actions/checkout@v4
@@ -283,7 +240,7 @@ jobs:
     # follow-up sweep PRs. New violations show up in PR diffs so reviewers
     # (human + Claude) can push back proactively.
     name: "🎨 SCSS Lint (stylelint, 8dp grid)"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: changes
     steps:
       - uses: actions/checkout@v4
@@ -307,7 +264,7 @@ jobs:
 
   angular-format:
     name: "✨ Angular Format (Prettier)"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: changes
     steps:
       - uses: actions/checkout@v4
@@ -329,14 +286,13 @@ jobs:
         run: npm run format:check
         working-directory: client
 
-  # Cypress E2E — sharded on **GitHub-hosted** runners (#1193). The
-  # self-hosted Slimbook lacks the headroom to run `ng serve` alongside the
-  # PHP/Angular gates without saturating disk (#758 + four reproductions on
-  # the parked #1194: ECONNREFUSED on :4200, plus load-induced Vitest
-  # flakes). Moving JUST Cypress to `ubuntu-latest` gives each shard a
-  # fresh, clean disk; the cheap PHP/Angular gates stay self-hosted. With
-  # the `client` path-filter (#1192) we only burn GHA minutes when the SPA
-  # actually changes — comfortably inside the free tier.
+  # Cypress E2E — sharded across parallel runners (#1193). Sharding stays
+  # worthwhile on hosted runners: it keeps wall-clock down and gives each
+  # shard a clean disk, which is what fixed the ECONNREFUSED on :4200 and
+  # the load-induced Vitest flakes seen on the old shared box (#758, #1194).
+  # The `client` path-filter (#1192) still skips the whole matrix when the
+  # SPA is untouched. The repository is public, so Actions minutes are free
+  # and unmetered — no quota to ration.
   #
   # Manual matrix sharding (no Cypress Cloud / no $CYPRESS_RECORD_KEY) —
   # each shard runs a deterministic subset of `cypress/e2e/*.cy.ts` via a
@@ -425,11 +381,10 @@ jobs:
     # name so the develop / main rulesets don't need editing. Passes when
     # the shards succeeded OR were skipped (client untouched); fails if any
     # shard failed. `needs.<job>.result` rolls up the matrix outcome.
-    # Stays self-hosted — it's a 5-second check, no point burning GHA mins.
     name: "🎭 Cypress E2E"
     needs: [cypress-e2e-shard]
     if: always()
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     steps:
       - name: Verify Cypress shards
         run: |
@@ -446,7 +401,7 @@ jobs:
 
   openapi-lint:
     name: "🔬 OpenAPI Lint (Spectral)"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: changes
     steps:
       - uses: actions/checkout@v4
@@ -460,32 +415,79 @@ jobs:
         if: needs.changes.outputs.api == 'true'
         run: npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml
 
-  worker-test:
-    # Vitest specs for the Cloudflare worker that fronts the SPA's
-    # static-asset binding (`worker/index.js` — see #382). The
-    # `client/` and `server/` test jobs above don't reach this code,
-    # so without a dedicated job the navigation-vs-asset routing
-    # logic ships untested. Lives at the repo root because the
-    # worker is its own deploy artefact, not part of the Angular app.
-    name: "🧪 Worker Tests (Vitest)"
-    runs-on: [self-hosted, budojo]
+  desktop-test:
+    # Vitest specs for the Electron shell's app:// routing (#1221). The rule
+    # they pin — asset misses 404, navigations fall back to index.html — is the
+    # one the retired Cloudflare Worker enforced for the hosted SPA (#382,
+    # removed in #1230), and getting it wrong blanks the dashboard with an
+    # opaque TypeError rather than an error anyone can read. Typecheck runs alongside: the main process is the one
+    # place with no runtime test coverage, so tsc is the only guard it has.
+    name: "🧪 Desktop Tests (Vitest)"
+    runs-on: ubuntu-latest
     needs: changes
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
-        if: needs.changes.outputs.worker == 'true'
+        if: needs.changes.outputs.desktop == 'true'
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: worker/package-lock.json
+          cache-dependency-path: desktop/package-lock.json
 
       - name: Install dependencies
-        if: needs.changes.outputs.worker == 'true'
+        if: needs.changes.outputs.desktop == 'true'
         run: npm ci
-        working-directory: worker
+        working-directory: desktop
 
-      - name: Run worker tests
-        if: needs.changes.outputs.worker == 'true'
+      - name: Typecheck
+        if: needs.changes.outputs.desktop == 'true'
+        run: npm run lint
+        working-directory: desktop
+
+      - name: Run desktop tests
+        if: needs.changes.outputs.desktop == 'true'
         run: npm test
-        working-directory: worker
+        working-directory: desktop
+
+  desktop-renderer-build:
+    # `ng build --configuration desktop` (#1224) plus the two assertions the
+    # desktop build exists to guarantee: no service worker is emitted (a
+    # worker caching the shell across installer upgrades would resurrect the
+    # stuck-on-old-bundle bug #548), and no hosted API host is baked into the
+    # bundle (the port is only known at launch and arrives via the preload).
+    # environment.desktop.ts is only compiled under this configuration, so
+    # without this job a type error there would first appear in an installer.
+    name: "🖥️ Desktop Renderer Build (Angular)"
+    runs-on: ubuntu-latest
+    needs: changes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.client == 'true' || needs.changes.outputs.desktop == 'true'
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        if: needs.changes.outputs.client == 'true' || needs.changes.outputs.desktop == 'true'
+        run: npm ci
+        working-directory: client
+
+      - name: Build desktop configuration
+        if: needs.changes.outputs.client == 'true' || needs.changes.outputs.desktop == 'true'
+        run: npx ng build --configuration desktop
+        working-directory: client
+
+      - name: Assert desktop build properties
+        if: needs.changes.outputs.client == 'true' || needs.changes.outputs.desktop == 'true'
+        working-directory: client/dist/client/browser
+        run: |
+          set -euo pipefail
+          test ! -e ngsw-worker.js || { echo "::error::ngsw-worker.js emitted in the desktop build"; exit 1; }
+          test ! -e ngsw.json || { echo "::error::ngsw.json emitted in the desktop build"; exit 1; }
+          if grep -rl "https://api.budojo.it" . ; then echo "::error::hosted API host baked into the desktop bundle"; exit 1; fi
+          grep -rl "__BUDOJO__" . >/dev/null || { echo "::error::preload bridge is not referenced — apiBase would never resolve"; exit 1; }
+          echo "desktop build: no service worker, no hosted API host, bridge referenced"

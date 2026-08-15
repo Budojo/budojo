@@ -11,6 +11,7 @@ import { PasswordModule } from 'primeng/password';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationOnboardingService } from '../../../core/services/notification-onboarding.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PasswordStrengthMeterComponent } from '../../../shared/components/password-strength-meter/password-strength-meter.component';
 
@@ -35,6 +36,7 @@ import { PasswordStrengthMeterComponent } from '../../../shared/components/passw
 export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  protected readonly runtime = inject(RuntimeService);
   private readonly router = inject(Router);
   private readonly notificationOnboarding = inject(NotificationOnboardingService);
 

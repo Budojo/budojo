@@ -10,6 +10,7 @@ import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/services/auth.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 
 @Component({
@@ -31,6 +32,7 @@ import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  protected readonly runtime = inject(RuntimeService);
   private readonly router = inject(Router);
 
   readonly loading = signal(false);

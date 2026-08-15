@@ -1,0 +1,5 @@
+# The fetched PHP runtime. Reproduced from php.manifest.json by scripts/fetch-php.mjs.
+php/
+php.staging/
+*.zip
+*.zip.partial

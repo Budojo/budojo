@@ -75,16 +75,16 @@
               }
             </div>
           </div>
-          <p-button
-            type="button"
-            severity="danger"
-            [text]="true"
-            size="small"
+          <app-confirm-destructive-button
             icon="pi pi-trash"
             [label]="'profile.apiTokens.revoke' | translate"
+            [ariaLabel]="'profile.apiTokens.revoke' | translate"
+            [confirmMessage]="'profile.apiTokens.confirmRevoke' | translate: { name: token.name }"
+            [acceptLabel]="'profile.apiTokens.confirmRevokeAccept' | translate"
+            [rejectLabel]="'profile.apiTokens.confirmRevokeReject' | translate"
             [loading]="revokingId() === token.id"
-            (onClick)="confirmRevoke($event, token)"
-            [attr.data-cy]="'profile-api-token-revoke-' + token.id"
+            (confirmed)="revoke(token)"
+            [dataCy]="'profile-api-token-revoke-' + token.id"
           />
         </li>
       }

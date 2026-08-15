@@ -25,18 +25,21 @@ docs/
 ├── api/
 │   ├── README.md                      # how to view the spec locally (Swagger UI, Redocly)
 │   └── v1.yaml                        # OpenAPI 3.0.3 — complete contract for /api/v1
+├── desktop/                           # the desktop build (M11, #1218) — how Budojo ships today
+│   ├── architecture.md                # process model, app:// transport, PHP supervision, data layout
+│   ├── install.md                     # install, first run, SmartScreen, upgrades
+│   └── backup-restore.md              # backup + the disaster-recovery runbook (the encryption-key caveat)
 ├── specs/                             # milestone PRDs
 │   ├── m3-documents.md                # M3 — Documents & Deadlines
 │   └── m4-attendance.md               # M4 — Attendance (with `Deltas from spec`)
 ├── infra/                             # operations / deployment
 │   ├── branch-rulesets.md             # GitHub branch protection rulesets
-│   └── production-deployment.md       # the live stack: DNS, Forge, Cloudflare, runbook, gotchas
+│   └── archive/production-deployment.md  # the decommissioned hosted stack (#1230) — record only, nothing live
 ├── adr/                               # architectural decision records
 │   └── 0001-svg-sanitizer.md
 ├── development/                       # procedural runbooks (the how-to behind CLAUDE.md rules)
 │   ├── git-flow.md                    # branch model, naming, commit format, daily/hotfix flow
 │   ├── release-flow.md                # semantic-release cadence, Auto-closes block, auto-sweep
-│   ├── reviewer-workflow.md           # Claude reviewer pipeline, reply rules, auto-poll loop
 │   └── pr-labels.md                   # type/status labels, PR checklist, PR body conventions
 └── design/                            # design system (MD3, palette, tokens, component matrix)
     ├── README.md
@@ -49,9 +52,10 @@ docs/
 
 | Audience | What to read |
 |---|---|
-| New contributor onboarding | `entities/` then `api/v1.yaml` |
+| New contributor onboarding | `entities/` then `api/v1.yaml`, then `desktop/architecture.md` for how it ships |
+| Desktop owner (install / recover data) | `desktop/install.md` and `desktop/backup-restore.md` |
 | Front-end / API consumer | `api/v1.yaml` (import into Postman, Insomnia, or Swagger UI) |
-| On-call / deployer | `infra/production-deployment.md` for the live runbook + env / DNS / TLS topology |
+| On-call / deployer | The hosted stack is decommissioned (#1230). `desktop/` is the current runtime; `infra/archive/production-deployment.md` is kept only as a record of how the old stack was wired |
 | Claude Code agent | Everything — the PR will fail review if docs are stale (see `CLAUDE.md` "Documentation discipline") |
 | Product planning | `specs/` |
 | UI / design contributor | `design/DESIGN_SYSTEM.md` and `design/preview/` |

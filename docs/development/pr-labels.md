@@ -25,7 +25,7 @@ Add `💥 breaking change` as a **second** label when the PR contains a `BREAKIN
 | All reviewer comments resolved, ready to merge | `🟢 ready to merge` |
 | Waiting on a dependency or decision          | `🔴 blocked`        |
 
-**Lifecycle:** open the PR with the type label only. Switch to `🟢 ready to merge` once all Claude-reviewer comments are addressed (see [reviewer-workflow.md](./reviewer-workflow.md)).
+**Lifecycle:** open the PR with the type label only. Switch to `🟢 ready to merge` once CI is green.
 
 ## PR Checklist for Claude — every PR must include
 

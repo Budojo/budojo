@@ -1,0 +1,66 @@
+# Packaging for Budojo Desktop (#1221). The installer CI that consumes this
+# lands in #1231; the config sits here so `electron-builder` is runnable
+# locally from the moment the scaffold exists.
+appId: it.budojo.desktop
+productName: Budojo
+copyright: Budojo
+
+directories:
+  output: release
+  buildResources: build
+
+# `dist/` is the compiled main + preload; `dist/renderer` is the Angular build
+# copied in by the build script. The PHP runtime joins them in #1222 as an
+# unpacked resource — it has to stay a real directory on disk because a child
+# process cannot be spawned from inside an asar archive.
+files:
+  - dist/**/*
+  - package.json
+
+asar: true
+
+win:
+  # NSIS for a normal install, portable so a copy can be run from a USB stick
+  # or a synced folder without administrator rights.
+  target:
+    - nsis
+    - portable
+  # No code-signing certificate: it costs money, which is the entire point of
+  # M11 (#1218). SmartScreen will warn on first install — documented in the
+  # install guide (#1232) rather than papered over.
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  # The database lives in %APPDATA% (#1223), never in the install directory,
+  # so an uninstall must not be able to take the user's data with it.
+  deleteAppDataOnUninstall: false
+
+# Real directories on disk, outside the asar: a child process cannot be spawned
+# from inside an archive, and PHP needs to require thousands of files by path.
+# desktop/src/php-runtime.ts § resolveDesktopPaths assumes exactly this layout
+# (resources/php/php.exe, resources/server/artisan). The build recipe that
+# prepares server/ for shipping — composer install --no-dev, no .env, no tests,
+# empty storage — is #1231's; the layout contract is fixed here.
+extraResources:
+  - from: runtime/php
+    to: php
+  - from: ../server
+    to: server
+    filter:
+      - "**/*"
+      - "!.env"
+      - "!.env.*"
+      - "!tests/**"
+      - "!storage/logs/**"
+      - "!storage/framework/cache/**"
+      - "!storage/framework/sessions/**"
+      - "!storage/framework/views/**"
+      - "!storage/app/**"
+      - "!database/sqlite/**"
+      - "!node_modules/**"
+      - "!.git*"
+      - "!phpunit.xml"
+      - "!phpstan.neon"
+      - "!.php-cs-fixer*"

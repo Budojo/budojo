@@ -1,5 +1,14 @@
 # Academy offboarding runbook
 
+> ⚠️ **OBSOLETO SULLA BUILD DESKTOP (M11, #1218).** Questa procedura descrive
+> lo stack **multi-utente ospitato** (droplet DigitalOcean via SSH, sub-processor
+> Cloudflare / Forge) dismesso in #1230. Sulla build desktop Budojo è un'app
+> a singolo proprietario, con i dati sul PC dell'utente: non esistono "academy
+> clienti" da offboardare, né accesso SSH, né sub-processor. Conservato come
+> riferimento per l'era ospitata e per i documenti legali che lo citano
+> (`docs/legal/`), che richiedono una revisione legale separata alla luce del
+> passaggio a locale — vedi #1232.
+
 > **STATO: BOZZA TECNICA — OPERATIVAMENTE FUNZIONALE.**
 > Questo file è il puntatore concreto referenziato dal § 12 del DPA template (`docs/legal/dpa-template.md`) e dal § 4 (Retention) della DPIA-lite (`docs/legal/dpia-medical-certificates.md`). Descrive **la procedura manuale** che il personale Budojo segue quando un'academy cliente termina il contratto. La forma "manuale" è deliberata: il volume attuale (singole accademie, terminazioni rare e mai bulk) non giustifica un'automazione, e una procedura scritta è facile da rivedere all'occorrenza.
 
@@ -158,5 +167,5 @@ Ognuno è un follow-up specifico — questo runbook IS la spec funzionale per l'
 - DPA template § 12 — Restituzione e cancellazione dei dati a fine contratto (`docs/legal/dpa-template.md`)
 - DPIA-lite § 4 — Retention (`docs/legal/dpia-medical-certificates.md`)
 - Privacy policy § 4 — Periodo di conservazione (`docs/legal/privacy-policy.md`)
-- Production deployment runbook (`docs/infra/production-deployment.md`)
+- Production deployment runbook (archived, hosted stack decommissioned in #1230 — `docs/infra/archive/production-deployment.md`)
 - GDPR Artt. 5 §1 lett. (e) (limitazione della conservazione), 17 (cancellazione), 28 (responsabili).

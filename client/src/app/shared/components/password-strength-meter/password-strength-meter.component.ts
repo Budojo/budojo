@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  InjectionToken,
   computed,
   effect,
   inject,
@@ -46,13 +47,23 @@ import { TranslatePipe } from '@ngx-translate/core';
 
 type Score = 0 | 1 | 2 | 3 | 4;
 
+/** The analyser the component needs: a value in, a `{ score }` out. */
+export type ZxcvbnFn = (value: string) => { score: number };
+
+/**
+ * How the component obtains its analyser. The production default
+ * (`ZXCVBN_LOADER`) dynamic-imports the ~700 kB library on first use;
+ * a test provides a synchronous fake so the spec never touches the
+ * real code-split chunk.
+ */
+export type ZxcvbnLoader = () => Promise<ZxcvbnFn>;
+
 /**
  * Module-level promise — once resolved, the loaded zxcvbn function
  * is cached and every subsequent caller reuses the same Promise. The
  * JS module loader does the heavy lifting; this constant just gives
  * us a type-safe handle on the result.
  */
-type ZxcvbnFn = (value: string) => { score: number };
 let zxcvbnPromise: Promise<ZxcvbnFn> | null = null;
 
 function loadZxcvbn(): Promise<ZxcvbnFn> {
@@ -77,6 +88,22 @@ function loadZxcvbn(): Promise<ZxcvbnFn> {
   return zxcvbnPromise;
 }
 
+/**
+ * The analyser loader, dependency-injected so it can be swapped in tests.
+ *
+ * Production default is the module-level `loadZxcvbn` above (a lazy,
+ * memoised dynamic import). Specs override this token with a synchronous
+ * fake: under the esbuild unit-test builder on a cold CI cache, `vi.mock`
+ * does not intercept the code-split `import('@zxcvbn-ts/core')` chunk, so a
+ * spec that relied on mocking the module timed out waiting for the real
+ * 700 kB analyser. Injecting the loader keeps every dynamic import out of
+ * the test path entirely — see `.claude/gotchas.md`.
+ */
+export const ZXCVBN_LOADER = new InjectionToken<ZxcvbnLoader>('ZXCVBN_LOADER', {
+  providedIn: 'root',
+  factory: () => loadZxcvbn,
+});
+
 @Component({
   selector: 'app-password-strength-meter',
   standalone: true,
@@ -87,6 +114,7 @@ function loadZxcvbn(): Promise<ZxcvbnFn> {
 })
 export class PasswordStrengthMeterComponent {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly loadScorer = inject(ZXCVBN_LOADER);
 
   /**
    * Plain-text password value the parent form is currently
@@ -125,7 +153,7 @@ export class PasswordStrengthMeterComponent {
         this.score.set(null);
         return;
       }
-      void loadZxcvbn()
+      void this.loadScorer()
         .then((zxcvbn) => {
           // Stale-response: another keystroke landed since we kicked off,
           // a later effect will re-score with the newer value.

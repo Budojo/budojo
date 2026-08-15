@@ -11,6 +11,11 @@ info:
     Kept in sync with code per the discipline in `CLAUDE.md` §"Documentation discipline" —
     any PR that changes a route, payload, or response shape must update this file in the
     same commit history.
+
+    Budojo ships as a desktop app (M11): the Electron shell runs this same API on a local
+    loopback port. The runtime profile is a set of capabilities — on desktop the multi-user
+    and networked surfaces (community, athlete accounts, web push, email, breach check) are
+    disabled, and a route behind an absent capability answers `404`.
   contact:
     name: Matteo Bonanno
     url: https://github.com/Budojo/budojo
@@ -18,12 +23,27 @@ info:
 servers:
   - url: http://localhost:8000/api/v1
     description: Local dev (Docker)
-  - url: https://budojo.example/api/v1
-    description: Production (placeholder)
+  - url: http://127.0.0.1:{port}/api/v1
+    description: Desktop — the Electron shell binds an ephemeral loopback port at launch and hands it to the SPA via the preload bridge.
+    variables:
+      port:
+        default: "0"
+        description: Ephemeral loopback port chosen at launch; read by the SPA from `window.__BUDOJO__.apiBase`.
 
 tags:
   - name: health
     description: Liveness probe
+  - name: runtime
+    description: |
+      Which runtime profile this API runs as and what it can offer (#1229).
+
+      The same code base serves the hosted web app and the single-user
+      desktop app (M11). Surfaces that assume a second human, an inbox or a
+      browser push service are **capabilities**; where the profile lacks one,
+      its routes answer **404** (never 403 — a surface the runtime does not
+      have does not advertise itself). Capabilities: `community`,
+      `athlete_accounts`, `web_push`, `email`, `password_breach_check`.
+      The desktop profile has none; the web profile has all.
   - name: auth
     description: Registration, login, and Sanctum token issuance
   - name: academy
@@ -104,6 +124,25 @@ paths:
                   status:
                     type: string
                     example: ok
+
+  /runtime:
+    get:
+      tags: [runtime]
+      summary: Runtime profile and capabilities
+      description: Public. The SPA reads it before login because the register and landing pages already differ by runtime.
+      operationId: runtimeShow
+      security: []
+      responses:
+        '200':
+          description: The active profile and the capabilities it offers
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Runtime'
 
   /auth/register:
     post:
@@ -302,6 +341,18 @@ paths:
                 properties:
                   data:
                     $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Sign out — revoke the current token
+      description: Deletes the personal access token that authenticated this request. Idempotent; the SPA and the desktop shell call it on sign-out before forgetting the token locally.
+      operationId: authLogout
+      responses:
+        '204':
+          description: Token revoked
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
@@ -5236,6 +5287,22 @@ components:
 
   schemas:
 
+    Runtime:
+      type: object
+      required: [profile, capabilities]
+      properties:
+        profile:
+          type: string
+          enum: [web, desktop]
+          description: The runtime profile the API is running as (BUDOJO_RUNTIME).
+        capabilities:
+          type: array
+          description: What this profile offers. Routes behind an absent capability answer 404.
+          items:
+            type: string
+            enum: [community, athlete_accounts, web_push, email, password_breach_check]
+          example: [community, athlete_accounts, web_push, email, password_breach_check]
+
     # ── Enums ─────────────────────────────────────────────────────────────
 
     Belt:
@@ -5664,7 +5731,7 @@ components:
             the SPA renders the avatar inside a fixed circular frame via
             CSS `object-fit: cover`, so the URL is safe to drop into any
             slot from a 32px chip up to the full profile-page card.
-          example: "https://app.budojo.it/storage/users/avatars/42.png"
+          example: "http://127.0.0.1:8123/storage/users/avatars/42.png"
         deletion_pending:
           nullable: true
           description: |

@@ -3,6 +3,7 @@ import { DOCUMENT, DestroyRef, Injectable, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { fromEvent, merge, timer } from 'rxjs';
 import { catchError, of, switchMap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { VERSION } from '../../../environments/version';
 import { SKIP_OFFLINE_REDIRECT } from '../http/skip-offline-redirect';
 
@@ -63,8 +64,8 @@ interface VersionManifest {
  *   - SAFE_MODE SW corruption beyond what the unrecoverable handler
  *     can recover from.
  *
- * This service polls `/version.json` (always-fresh from the Worker —
- * see `worker/index.js` § NO_CACHE_PATHS) on three triggers — boot,
+ * This service polls `/version.json` (served with no-cache headers by the
+ * web host — the retired Cloudflare Worker did this, #1230) on three triggers — boot,
  * `window.focus`, and a 20-minute interval — and on a mismatch with
  * the bundle's embedded `VERSION.sha`, runs the nuclear cache-bust:
  * `getRegistrations()` → `unregister()`, `caches.keys()` →
@@ -99,6 +100,14 @@ export class VersionCheckService {
    * shape of `AppUpdateService.start()`.
    */
   start(): void {
+    // Desktop (#1224): there is no /version.json to poll — the shell serves
+    // the bundle over app:// and a miss is a real 404 — and no service worker
+    // or cache to nuke. Electron owns updates. Guarded, not deleted: the
+    // service stays valid for the web build.
+    if (environment.runtime === 'desktop') {
+      return;
+    }
+
     // Boot-time force-update handler runs before the version-check
     // pipeline so a stuck user can hit the URL without the (broken)
     // bundle's HTTP layer needing to work — `nuke()` only depends on

@@ -1,0 +1,32 @@
+{
+  "name": "@budojo/desktop",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Electron shell for Budojo Desktop — serves the Angular build over app:// and supervises the bundled PHP runtime. See M11 (#1218).",
+  "author": "Budojo",
+  "type": "module",
+  "main": "dist/main.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "fetch:php": "node scripts/fetch-php.mjs",
+    "dev": "npm run build && cross-env ELECTRON_DEV=1 electron dist/main.js",
+    "start": "npm run build && electron dist/main.js",
+    "test": "vitest run",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "build:renderer": "node scripts/build-renderer.mjs",
+    "package": "electron-builder --config electron-builder.yml",
+    "package:dir": "electron-builder --dir --config electron-builder.yml",
+    "dist": "npm run build && npm run build:renderer && npm run fetch:php && npm run package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "cross-env": "^7.0.3",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.7"
+  }
+}

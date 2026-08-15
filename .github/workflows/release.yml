@@ -26,7 +26,7 @@ permissions:
 jobs:
   release:
     name: "🚀 Semantic Release"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     # Belt-and-suspenders ref guard — `workflow_dispatch` accepts any
     # ref from the Actions UI / CLI, but semantic-release is configured
     # to release ONLY from `main` (stable) and `develop` (beta). Without
@@ -125,7 +125,7 @@ jobs:
   # or approve pull requests". One-time admin toggle.
   sweep:
     name: "🔁 Post-release main → develop sweep"
-    runs-on: [self-hosted, budojo]
+    runs-on: ubuntu-latest
     needs: release
     if: |
       github.ref == 'refs/heads/main' &&
@@ -307,7 +307,7 @@ jobs:
         # says the sweep is alignment-only — no reviewer wait, no
         # review surface — so auto-merging the moment CI is green
         # is the documented policy (chore/sync-* is also `if:`-
-        # skipped in pr-claude-review.yml). This memory supersedes
+        # skipped when the reviewer still ran). This memory supersedes
         # the historical `feedback_release_pr_wait_for_copilot`.
         if: env.HAS_BOT_TOKEN == 'true'
         env:
@@ -328,3 +328,121 @@ jobs:
             # a maintainer can merge it by hand.
             echo "::warning::gh pr merge --auto failed for PR #${PR}. Most common cause: repo-level 'Allow auto-merge' is disabled (Settings → General → Pull Requests). Falling back to manual merge."
           fi
+
+  # Build the Windows desktop installers (NSIS + portable) and attach them
+  # to the GitHub Release that semantic-release just created for the stable
+  # tag. Lives in THIS workflow run — not a `push: tags` / `release:
+  # published` workflow — for the same reason as the sweep job above:
+  # semantic-release publishes the tag and Release via GITHUB_TOKEN, and
+  # GitHub's recursion guard means token-authored events never trigger a
+  # downstream workflow. Running as a job that `needs: release` sidesteps it.
+  #
+  # Windows-only: the shipped runtime is a Windows php.exe (fetch:php extracts
+  # with Expand-Archive), and electron-builder's win targets need a Windows
+  # host. A failure here shows red so a maintainer can re-run — the tag is
+  # already published, so it never rolls anything back.
+  desktop-installer:
+    name: "🪟 Desktop installer (Windows)"
+    runs-on: windows-latest
+    needs: release
+    if: |
+      github.ref == 'refs/heads/main' &&
+      needs.release.outputs.stable_tag != ''
+    env:
+      TAG: ${{ needs.release.outputs.stable_tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@v4
+        with:
+          # Build the exact published tag, not main HEAD — a hotfix landing
+          # while this job is queued must not slip into the installer.
+          ref: ${{ needs.release.outputs.stable_tag }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up PHP 8.4 + Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+
+      - name: Compute version from tag
+        id: ver
+        shell: bash
+        # `v2.41.0` -> `2.41.0`. electron-builder names the artifacts
+        # `Budojo <version>.exe` / `Budojo Setup <version>.exe`; the upload
+        # step below depends on this exact string.
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Install server dependencies (production)
+        shell: bash
+        working-directory: server
+        # --no-dev trims phpunit/phpstan from the shipped vendor.
+        # --no-scripts: package:discover / config caching would bake this
+        # build host's paths (and need an APP_KEY we don't have here) into
+        # bootstrap/cache and ship them; Laravel rediscovers at runtime and
+        # the first-run bootstrap (#1223) owns config on the user's machine.
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --prefer-dist
+
+      - name: Install client dependencies
+        shell: bash
+        working-directory: client
+        run: npm ci
+
+      - name: Install desktop dependencies
+        shell: bash
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build main process + Angular renderer
+        shell: bash
+        working-directory: desktop
+        # `build` compiles main + preload (tsc); `build:renderer` runs
+        # `ng build --configuration desktop` in ../client and copies the
+        # output to dist/renderer, which electron-builder packs into the asar.
+        run: |
+          npm run build
+          npm run build:renderer
+
+      - name: Fetch the pinned PHP runtime
+        shell: bash
+        working-directory: desktop
+        # Manifest-pinned + sha256-verified; refuses a tampered/truncated
+        # download rather than shipping it (scripts/fetch-php.mjs).
+        run: npm run fetch:php
+
+      - name: Package NSIS + portable installers
+        shell: bash
+        working-directory: desktop
+        # Inject the release version so the artifacts are named after the tag
+        # (package.json stays at 0.0.0 — semantic-release owns versioning).
+        run: npm run package -- -c.extraMetadata.version="${{ steps.ver.outputs.version }}"
+
+      - name: Verify both installers were produced
+        shell: bash
+        working-directory: desktop
+        # An empty/half build must fail loudly, not upload nothing silently —
+        # the same "a zero exit code doesn't prove it worked" discipline the
+        # fetch-php and stale-chunk guards apply elsewhere.
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          test -f "release/Budojo Setup ${V}.exe" || { echo "::error::NSIS installer missing"; exit 1; }
+          test -f "release/Budojo ${V}.exe" || { echo "::error::portable executable missing"; exit 1; }
+          ls -la release/*.exe
+
+      - name: Attach installers to the GitHub Release
+        shell: bash
+        working-directory: desktop
+        # semantic-release already created the Release for ${TAG}; --clobber
+        # makes a re-run idempotent (replaces assets instead of erroring).
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          gh release upload "${TAG}" \
+            "release/Budojo Setup ${V}.exe" \
+            "release/Budojo Setup ${V}.exe.blockmap" \
+            "release/Budojo ${V}.exe" \
+            --clobber

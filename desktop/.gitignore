@@ -1,0 +1,5 @@
+# Compiled main + preload, and the Angular build copied in beside them.
+dist/
+
+# electron-builder output (installers). Built in CI on tag — see #1231.
+release/

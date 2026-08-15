@@ -204,6 +204,21 @@ describe('InvitationCardComponent — pending state (#467)', () => {
     ).not.toBeNull();
   });
 
+  it('uses the shared confirm-destructive button for the revoke affordance (#1033)', () => {
+    const { fixture } = setup({
+      invitation: {
+        id: 11,
+        state: 'pending',
+        sent_at: '2026-05-06T10:00:00Z',
+        expires_at: '2026-05-13T10:00:00Z',
+        accepted_at: null,
+      },
+    });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-confirm-destructive-button')).not.toBeNull();
+    expect(el.querySelector('[data-cy="athlete-invitation-revoke"]')).not.toBeNull();
+  });
+
   it('resend: calls service.resendInvite and toasts on success', () => {
     const messageSpy = vi.fn();
     const { cmp, serviceStub } = setup({

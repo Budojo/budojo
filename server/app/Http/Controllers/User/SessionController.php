@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\User;
 
+use App\Enums\TokenKind;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -61,7 +62,7 @@ class SessionController extends Controller
         // actual browser sessions.
         /** @var \Illuminate\Database\Eloquent\Collection<int, PersonalAccessToken> $tokens */
         $tokens = $user->tokens()
-            ->where('kind', 'session')
+            ->whereIn('kind', TokenKind::sessionLike())
             ->orderByRaw('COALESCE(last_used_at, created_at) DESC')
             ->get();
 
@@ -104,7 +105,7 @@ class SessionController extends Controller
         $user = $request->user();
 
         $deleted = $user->tokens()
-            ->where('kind', 'session')
+            ->whereIn('kind', TokenKind::sessionLike())
             ->whereKey($id)
             ->delete();
 
@@ -146,7 +147,7 @@ class SessionController extends Controller
         // panel (#431). A "revoke all other sessions" sweep MUST NOT
         // wipe long-lived integration credentials silently.
         $revoked = $user->tokens()
-            ->where('kind', 'session')
+            ->whereIn('kind', TokenKind::sessionLike())
             ->where('id', '!=', $current->id)
             ->delete();
 

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Rules;
 
+use App\Enums\Capability;
 use App\Services\PwnedPasswordsClient;
+use App\Support\Capabilities;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
@@ -42,6 +44,13 @@ class PasswordNotBreached implements ValidationRule
         // in the FormRequest stack. We only check the breach dataset
         // when we've got a real string to hash.
         if (! \is_string($value) || $value === '') {
+            return;
+        }
+
+        // The range check needs outbound HTTPS. A runtime that has no business
+        // phoning out (#1229 — the offline desktop) skips it rather than
+        // logging a TLS failure on every registration.
+        if (Capabilities::lacks(Capability::PasswordBreachCheck)) {
             return;
         }
 

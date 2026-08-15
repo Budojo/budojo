@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Actions\Auth\LoginUserAction;
+use App\Actions\Auth\MintSessionTokenAction;
 use App\Actions\Auth\RecordLoginAttemptAction;
 use App\Actions\Auth\VerifyTwoFactorAction;
 use App\Http\Controllers\Controller;
@@ -19,6 +20,7 @@ class LoginController extends Controller
         private readonly LoginUserAction $action,
         private readonly RecordLoginAttemptAction $recordAttempt,
         private readonly VerifyTwoFactorAction $verifyTwoFactor,
+        private readonly MintSessionTokenAction $mintToken,
     ) {
     }
 
@@ -99,7 +101,7 @@ class LoginController extends Controller
         // unparseable. Truncated to 80 chars in the helper to stay
         // well under the column's 255 limit.
         $tokenName = UserAgentLabel::fromUserAgent($request->userAgent() ?? '');
-        $token = $user->createToken($tokenName)->plainTextToken;
+        $token = $this->mintToken->execute($user, $tokenName);
 
         // Eager-load the relations the `UserResource` projects so the
         // wire envelope reflects reality immediately on login. Without

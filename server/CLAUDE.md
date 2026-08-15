@@ -17,7 +17,7 @@ Boilerplate (`config/`, `bootstrap/`, `public/`, `storage/`, `vendor/`) is out o
 
 ## Code craftsmanship — the Uncle Bob canon
 
-This codebase is written (and reviewed) in the spirit of Robert C. Martin's "Clean" series. The four books below are the **shared vocabulary** for judging backend code — a citation by name (human reviewer or Claude reviewer) is a valid critique on its own. Push back only with a specific pragmatic reason ("Laravel's conventions override here"), never with taste.
+This codebase is written (and reviewed) in the spirit of Robert C. Martin's "Clean" series. The four books below are the **shared vocabulary** for judging backend code — a citation by name is a valid critique on its own. Push back only with a specific pragmatic reason ("Laravel's conventions override here"), never with taste.
 
 | Book | What we take from it |
 |------|----------------------|
@@ -34,7 +34,7 @@ The first two books above are distilled into two **user-level** Claude knowledge
 - **An Eloquent / Active-Record boundary question** → `/clean-architecture ch30` (The Database Is a Detail) + `/clean-code ch12` (Objects vs Data Structures) — reinforces the Active Record caveat below.
 - **Shaping a new Action / boundary / migration** → `/clean-architecture ch20` (Entities vs Use Cases) + `ch22` (the Dependency Rule), which map onto the *how this codebase maps* table below.
 
-Skip for typos, formatting, or anything this canon already settles. The skills are not shipped with the repo — the CI reviewer (no personal skills) ignores this; the canon in this file stays the source of truth.
+Skip for typos, formatting, or anything this canon already settles. The skills are user-level, not shipped with the repo, so any environment without them ignores this; the canon in this file stays the source of truth.
 
 ### SOLID — each letter, concrete
 

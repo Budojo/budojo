@@ -90,6 +90,16 @@ describe('ProfileApiTokensComponent (#588)', () => {
     expect(el.querySelector('[data-cy="profile-api-token-revoke-7"]')).not.toBeNull();
   });
 
+  it('uses the shared confirm-destructive button for the revoke affordance (#1033)', () => {
+    vi.spyOn(service, 'list').mockReturnValue(
+      of({ tokens: [makeToken({ id: 7 })], availableAbilities: ['read'] }),
+    );
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-confirm-destructive-button')).not.toBeNull();
+    expect(el.querySelector('[data-cy="profile-api-token-revoke-7"]')).not.toBeNull();
+  });
+
   it('confirms before revoking; removes the row + success toast on confirm', () => {
     vi.spyOn(service, 'list').mockReturnValue(
       of({ tokens: [makeToken({ id: 7 })], availableAbilities: ['read'] }),
