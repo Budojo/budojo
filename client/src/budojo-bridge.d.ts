@@ -13,6 +13,15 @@ interface BudojoBridge {
    * still owns routing. Returns the unsubscribe function.
    */
   onNavigate(callback: (path: string) => void): () => void;
+  /**
+   * Synchronous access to the Sanctum bearer token, held encrypted in the OS
+   * keychain by the main process (#1227). Present only inside Budojo Desktop.
+   */
+  readonly token: {
+    get(): string | null;
+    set(token: string): void;
+    clear(): void;
+  };
 }
 
 interface Window {

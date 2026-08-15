@@ -17,6 +17,9 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 const API_BASE_FLAG = '--budojo-api-base=';
 const NAVIGATE_CHANNEL = 'budojo:navigate';
+const TOKEN_GET = 'budojo:token:get';
+const TOKEN_SET = 'budojo:token:set';
+const TOKEN_CLEAR = 'budojo:token:clear';
 
 function readApiBase(): string {
   const flag = process.argv.find((argument) => argument.startsWith(API_BASE_FLAG));
@@ -43,5 +46,20 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     ipcRenderer.on(NAVIGATE_CHANNEL, listener);
 
     return () => ipcRenderer.removeListener(NAVIGATE_CHANNEL, listener);
+  },
+  // The token is held encrypted in the OS keychain by the main process
+  // (#1227). sendSync keeps token.get() synchronous — the interceptor reads
+  // it inline — and the main process caches the decrypt so it stays cheap.
+  token: {
+    get(): string | null {
+      const value: unknown = ipcRenderer.sendSync(TOKEN_GET);
+      return typeof value === 'string' ? value : null;
+    },
+    set(token: string): void {
+      ipcRenderer.sendSync(TOKEN_SET, token);
+    },
+    clear(): void {
+      ipcRenderer.sendSync(TOKEN_CLEAR);
+    },
   },
 });
