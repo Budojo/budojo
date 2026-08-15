@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { DesktopBridgeService } from '../../core/services/desktop-bridge.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
 import { LanguageSheetComponent } from '../../shared/components/language-sheet/language-sheet.component';
@@ -27,6 +28,7 @@ import { VERSION } from '../../../environments/version';
 })
 export class OwnerMoreComponent {
   private readonly authService = inject(AuthService);
+  protected readonly isDesktop = inject(DesktopBridgeService).isDesktop;
   private readonly router = inject(Router);
   private readonly languageService = inject(LanguageService);
 

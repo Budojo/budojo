@@ -42,7 +42,8 @@
       "markAttendance": "Segna presenza",
       "addAthlete": "Aggiungi atleta",
       "post": "Nuovo post"
-    }
+    },
+    "backup": "Backup"
   },
   "auth": {
     "shared": {
@@ -2188,6 +2189,27 @@
     },
     "unmarkErrorToast": {
       "summary": "Impossibile annullare la presenza"
+    }
+  },
+  "backup": {
+    "title": "Dati e backup",
+    "subtitle": "I tuoi dati sono su questo computer. Fai il backup, così un guasto al disco non significa ricominciare da capo.",
+    "lastBackup": "Ultimo backup",
+    "never": "Ancora nessun backup",
+    "backupNow": "Esegui backup",
+    "archives": "Backup",
+    "loading": "Caricamento dei backup…",
+    "empty": "Ancora nessun backup. Creane uno ora per proteggere i tuoi dati.",
+    "size": "{{mb}} MB",
+    "restore": "Ripristina",
+    "confirmRestore": "Ripristinare questo backup? I dati attuali verranno sostituiti con il contenuto di questo archivio.",
+    "confirmRestoreAccept": "Ripristina",
+    "confirmRestoreReject": "Annulla",
+    "toast": {
+      "created": "Backup creato",
+      "failed": "Backup non riuscito — controlla il log",
+      "restored": "Backup ripristinato",
+      "restoreRefused": "Impossibile ripristinare questo backup"
     }
   }
 }

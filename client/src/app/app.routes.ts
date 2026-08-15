@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { capabilityGuard } from './core/guards/capability.guard';
+import { desktopOnlyGuard } from './core/guards/desktop-only.guard';
 import { hasAcademyGuard } from './core/guards/has-academy.guard';
 import { noAcademyGuard } from './core/guards/no-academy.guard';
 import { publicGuard } from './core/guards/public.guard';
@@ -360,6 +361,13 @@ export const routes: Routes = [
         path: 'more',
         loadComponent: () =>
           import('./features/owner-more/owner-more.component').then((m) => m.OwnerMoreComponent),
+      },
+      {
+        // Data & backup (#1228). Desktop-only; the guard redirects on the web.
+        path: 'backup',
+        canActivate: [desktopOnlyGuard],
+        loadComponent: () =>
+          import('./features/backup/backup.component').then((m) => m.BackupComponent),
       },
       {
         path: 'whats-new',

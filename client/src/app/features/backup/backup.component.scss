@@ -1,0 +1,80 @@
+.backup-page {
+  max-width: var(--budojo-page-prose-max);
+  margin: 0 auto;
+  padding-block: 1rem;
+
+  &__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1.5rem;
+    border: 1px solid var(--p-surface-200);
+    border-radius: 16px;
+    background: var(--p-surface-0);
+  }
+
+  &__summary-label {
+    margin: 0 0 0.25rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+
+  &__summary-value {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+
+    &--muted {
+      font-weight: 400;
+      color: var(--p-text-muted-color);
+    }
+  }
+
+  &__heading {
+    margin: 2rem 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  &__muted {
+    color: var(--p-text-muted-color);
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--p-surface-200);
+    border-radius: 12px;
+  }
+
+  &__row-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__row-date {
+    font-weight: 500;
+  }
+
+  &__row-size {
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+}
