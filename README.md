@@ -54,7 +54,9 @@ The shipped app has **no Docker** — but local development runs the API and SPA
 
 - Docker + Docker Compose
 
-That is the whole list. There is no `.env` to copy and no key to generate — the API container's entrypoint installs Composer dependencies, seeds `server/.env` from `server/.env.example`, generates `APP_KEY`, creates the SQLite database and migrates it. Every step is idempotent, so restarts are no-ops.
+That is the whole list to *run* it. There is no `.env` to copy and no key to generate — the API container's entrypoint installs Composer dependencies, seeds `server/.env` from `server/.env.example`, generates `APP_KEY`, creates the SQLite database and migrates it. Every step is idempotent, so restarts are no-ops.
+
+If you're going to **commit**, run `npm ci` at the repo root once as well. That installs the dev tooling (husky, commitlint, lint-staged) and wires the git hooks that enforce conventional commits and refuse commits/pushes on `main` and `develop`. Check it took with `git config core.hooksPath` — it should print `.husky/_`.
 
 ```bash
 docker compose up --build

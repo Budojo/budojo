@@ -7,4 +7,30 @@
 [ "${HUSKY:-1}" = "0" ] && exit 0
 set -e
 
-npx lint-staged
+# Refuse to commit on a protected branch. This fires on `git commit`;
+# merges use `pre-merge-commit`, which is deliberately NOT guarded so
+# `git pull` on develop (the documented read-only sync) keeps working.
+. "$(dirname -- "$0")/protected-branch-guard.sh"
+
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if is_protected_branch "$current_branch"; then
+  printf '\n  ⛔ Refusing to commit directly on "%s".\n' "$current_branch"
+  protected_branch_help "$current_branch"
+  exit 1
+fi
+
+# Only run lint-staged when the root tooling is actually installed.
+#
+# Two failure modes this avoids, both observed while testing these hooks in
+# a fresh clone: bare `npx lint-staged` DOWNLOADS lint-staged from the
+# network when node_modules is missing (a surprise fetch on every commit),
+# and `npx --no-install` instead fails hard — which would make committing
+# impossible on any checkout that hasn't run `npm install` at the root yet.
+# The protected-branch guard above is pure shell on purpose: it must hold
+# even when this optional gate cannot run.
+if [ -x node_modules/.bin/lint-staged ]; then
+  npx --no-install lint-staged
+else
+  printf '  ⚠ lint-staged not installed — run `npm install` at the repo root to enable it.\n'
+fi

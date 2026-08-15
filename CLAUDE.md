@@ -67,7 +67,7 @@ No untested business logic is merged to `develop`.
 
 Full details in [`docs/development/git-flow.md`](./docs/development/git-flow.md). The non-negotiables:
 
-- **GitFlow**: `main` ← `develop` ← `feat|fix|chore|…/<issue-number>-<description>`. No direct commits to `main` or `develop`, ever.
+- **GitFlow**: `main` ← `develop` ← `feat|fix|chore|…/<issue-number>-<description>`. No direct commits to `main` or `develop`, ever — the `pre-commit` / `pre-push` hooks refuse both. They need `npm ci` **at the repo root** to be wired (`git config core.hooksPath` should print `.husky/_`); without it they silently don't run at all.
 - **Conventional commits**, lower-case subject, enforced by commitlint.
 - **Squash merge** into `develop`. **Merge commit** (no squash) from `develop` into `main`.
 - **Merge `develop` into the feature branch** when it falls behind — no rebase. Squash on merge collapses the history anyway.
