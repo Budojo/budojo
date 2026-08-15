@@ -58,6 +58,28 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "desktop": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1.25MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "12kB"
+                }
+              ],
+              "outputHashing": "all",
+              "serviceWorker": false,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.desktop.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"

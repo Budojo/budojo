@@ -1,3 +1,5 @@
+import type { ClientRuntime } from './runtime';
+
 /**
  * Default Angular environment — used by `ng serve`, Vitest, Cypress, and any
  * non-production build configuration.
@@ -11,6 +13,7 @@
  * `fileReplacements` in `angular.json`. See that file for prod values.
  */
 export const environment = {
+  runtime: 'web' as ClientRuntime,
   production: false,
   apiBase: '',
 };

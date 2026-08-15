@@ -1,3 +1,5 @@
+import type { ClientRuntime } from './runtime';
+
 /**
  * Production Angular environment — swapped in by `fileReplacements` in
  * `angular.json` when building with `--configuration=production`
@@ -18,6 +20,7 @@
  * + cross-origin-API architecture and bypasses the Pages limitation.
  */
 export const environment = {
+  runtime: 'web' as ClientRuntime,
   production: true,
   apiBase: 'https://api.budojo.it',
 };

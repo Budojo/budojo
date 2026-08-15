@@ -483,3 +483,45 @@ jobs:
         if: needs.changes.outputs.desktop == 'true'
         run: npm test
         working-directory: desktop
+
+  desktop-renderer-build:
+    # `ng build --configuration desktop` (#1224) plus the two assertions the
+    # desktop build exists to guarantee: no service worker is emitted (a
+    # worker caching the shell across installer upgrades would resurrect the
+    # stuck-on-old-bundle bug #548), and no hosted API host is baked into the
+    # bundle (the port is only known at launch and arrives via the preload).
+    # environment.desktop.ts is only compiled under this configuration, so
+    # without this job a type error there would first appear in an installer.
+    name: "🖥️ Desktop Renderer Build (Angular)"
+    runs-on: ubuntu-latest
+    needs: changes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.client == 'true' || needs.changes.outputs.desktop == 'true'
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        if: needs.changes.outputs.client == 'true' || needs.changes.outputs.desktop == 'true'
+        run: npm ci
+        working-directory: client
+
+      - name: Build desktop configuration
+        if: needs.changes.outputs.client == 'true' || needs.changes.outputs.desktop == 'true'
+        run: npx ng build --configuration desktop
+        working-directory: client
+
+      - name: Assert desktop build properties
+        if: needs.changes.outputs.client == 'true' || needs.changes.outputs.desktop == 'true'
+        working-directory: client/dist/client/browser
+        run: |
+          set -euo pipefail
+          test ! -e ngsw-worker.js || { echo "::error::ngsw-worker.js emitted in the desktop build"; exit 1; }
+          test ! -e ngsw.json || { echo "::error::ngsw.json emitted in the desktop build"; exit 1; }
+          if grep -rl "https://api.budojo.it" . ; then echo "::error::hosted API host baked into the desktop bundle"; exit 1; fi
+          grep -rl "__BUDOJO__" . >/dev/null || { echo "::error::preload bridge is not referenced — apiBase would never resolve"; exit 1; }
+          echo "desktop build: no service worker, no hosted API host, bridge referenced"
