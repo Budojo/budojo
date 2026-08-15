@@ -27,6 +27,19 @@ Add `💥 breaking change` as a **second** label when the PR contains a `BREAKIN
 
 **Lifecycle:** open the PR with the type label only. Switch to `🟢 ready to merge` once CI is green.
 
+## `🧊 frozen` — issues only, never PRs
+
+Distinct from `🔴 blocked`, which means *someone should unblock this*. **`🧊 frozen` means parked by decision**: the work is well-specified and not rejected, but it depends on something the current product deliberately does not have.
+
+Today that is almost always a **capability disabled on the desktop build** — `config/budojo.php` maps the `desktop` runtime profile to an empty capability set, so community, athlete accounts, web push, email and the breach check simply do not exist there (#1229). The code was written behind capability flags precisely so this work survives a config flip if a hosted build returns.
+
+Rules:
+
+- A frozen issue **stays open** and keeps its type label. Freezing is not closing — the audit trail and the spec are worth keeping (`#1010` is a real security requirement the moment a second account can exist).
+- Freezing carries a **comment naming the specific capability or constraint**, not a generic "parked". A future reader must be able to tell what would have to change for it to thaw.
+- **Close instead of freezing** when the work's foundation is gone rather than switched off — the mobile track (#511–#513, #531) needed a hosted origin and a Play Console pipeline, so it was closed with an explanation, not frozen.
+- Frozen issues are excluded when judging "what's actually pending" — that is the whole point of the label.
+
 ## PR Checklist for Claude — every PR must include
 
 1. **Title** — conventional commit format: `type(scope): description`.
