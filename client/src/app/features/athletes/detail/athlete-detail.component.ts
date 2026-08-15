@@ -15,6 +15,7 @@ import { ButtonModule } from 'primeng/button';
 import { TabsModule } from 'primeng/tabs';
 import { TagModule } from 'primeng/tag';
 import { Athlete, AthleteService, AthleteStatus } from '../../../core/services/athlete.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
@@ -43,6 +44,7 @@ export class AthleteDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly athleteService = inject(AthleteService);
+  protected readonly runtime = inject(RuntimeService);
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 

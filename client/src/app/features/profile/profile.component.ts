@@ -21,6 +21,7 @@ import { TabsModule } from 'primeng/tabs';
 import { TooltipModule } from 'primeng/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
+import { RuntimeService } from '../../core/services/runtime.service';
 import { EmailVerificationStatusComponent } from '../../shared/components/email-verification-status/email-verification-status.component';
 import { PasswordStrengthMeterComponent } from '../../shared/components/password-strength-meter/password-strength-meter.component';
 import { AvatarCardComponent } from './avatar-card/avatar-card.component';
@@ -87,6 +88,7 @@ type ProfileTab = 'identity' | 'security' | 'notifications' | 'account';
 })
 export class ProfileComponent {
   private readonly authService = inject(AuthService);
+  protected readonly runtime = inject(RuntimeService);
   private readonly route = inject(ActivatedRoute);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);

@@ -12,6 +12,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../core/services/academy.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
+import { RuntimeService } from '../../core/services/runtime.service';
 import { NotificationInboxService } from '../../core/services/notification-inbox.service';
 import { WebPushHandlerService } from '../../core/services/web-push-handler.service';
 import {
@@ -69,6 +70,7 @@ export class DashboardComponent implements OnInit {
   private readonly academyService = inject(AcademyService);
   private readonly authService = inject(AuthService);
   private readonly languageService = inject(LanguageService);
+  protected readonly runtime = inject(RuntimeService);
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly webPushHandler = inject(WebPushHandlerService);
@@ -127,6 +129,10 @@ export class DashboardComponent implements OnInit {
   protected readonly tabs = computed<BottomNavTab[]>(() => {
     this.languageService.currentLang();
     const t = (key: string): string => this.translate.instant(key);
+    // Community is a runtime capability (#1229): absent on the desktop, where
+    // a social feed has an audience of one. Same list feeds the desktop rail
+    // and the mobile bottom nav, so it is filtered once, here.
+    const has = this.runtime.has();
     return [
       {
         icon: 'pi pi-home',
@@ -140,12 +146,16 @@ export class DashboardComponent implements OnInit {
         routerLink: '/dashboard/athletes',
         dataCy: 'bottomnav-athletes',
       },
-      {
-        icon: 'pi pi-comments',
-        label: t('nav.community'),
-        routerLink: '/dashboard/community',
-        dataCy: 'bottomnav-community',
-      },
+      ...(has('community')
+        ? [
+            {
+              icon: 'pi pi-comments',
+              label: t('nav.community'),
+              routerLink: '/dashboard/community',
+              dataCy: 'bottomnav-community',
+            },
+          ]
+        : []),
       {
         icon: 'pi pi-ellipsis-h',
         label: t('nav.more'),
@@ -207,6 +217,7 @@ export class DashboardComponent implements OnInit {
   protected readonly createActions = computed<CreateSheetAction[]>(() => {
     this.languageService.currentLang();
     const t = (key: string): string => this.translate.instant(key);
+    const has = this.runtime.has();
     return [
       {
         icon: 'pi pi-check-circle',
@@ -220,12 +231,16 @@ export class DashboardComponent implements OnInit {
         routerLink: '/dashboard/athletes/new',
         dataCy: 'create-athlete',
       },
-      {
-        icon: 'pi pi-pencil',
-        label: t('nav.create.post'),
-        routerLink: '/dashboard/community',
-        dataCy: 'create-post',
-      },
+      ...(has('community')
+        ? [
+            {
+              icon: 'pi pi-pencil',
+              label: t('nav.create.post'),
+              routerLink: '/dashboard/community',
+              dataCy: 'create-post',
+            },
+          ]
+        : []),
     ];
   });
 

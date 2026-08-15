@@ -91,7 +91,9 @@
         destructive; the sub-component owns its three states (no
         invitation / pending / accepted) and the no-email empty-state.
       -->
-      <app-athlete-invitation-card [athlete]="a" />
+      @if (runtime.has()('athlete_accounts')) {
+        <app-athlete-invitation-card [athlete]="a" />
+      }
 
       <!--
         Email-change card (#476). Sibling to the invitation card; the

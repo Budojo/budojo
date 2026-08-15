@@ -50,4 +50,31 @@ return [
         'session.driver' => 'file',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Capabilities per runtime profile (#1229)
+    |--------------------------------------------------------------------------
+    |
+    | What each profile is able to offer — see AppEnumsCapability. The
+    | desktop is one process on one machine with no mail transport and no
+    | browser push service, so everything that assumes a second human, an
+    | inbox or a push endpoint is absent there. The code behind each stays in
+    | place and tested; flipping the profile restores it.
+    |
+    | Routes are gated with the `capability:<name>` middleware (404, never 403).
+    | Read through AppSupportCapabilities, never from this array directly.
+    |
+    */
+
+    'capabilities' => [
+        'web' => [
+            'community',
+            'athlete_accounts',
+            'web_push',
+            'email',
+            'password_breach_check',
+        ],
+        'desktop' => [],
+    ],
+
 ];

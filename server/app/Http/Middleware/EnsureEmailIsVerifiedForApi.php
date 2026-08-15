@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Enums\Capability;
+use App\Support\Capabilities;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +22,14 @@ class EnsureEmailIsVerifiedForApi
     public function handle(Request $request, \Closure $next): Response
     {
         $user = $request->user();
+
+        // No mail transport (#1229) means the verification link can never
+        // arrive, so requiring it would lock the owner out of every athlete
+        // and document write forever. On such a runtime the email is a
+        // username, not a channel.
+        if (Capabilities::lacks(Capability::Email)) {
+            return $next($request);
+        }
 
         if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
             return new JsonResponse(['message' => 'verification_required'], 403);
