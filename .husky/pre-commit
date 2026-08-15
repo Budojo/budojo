@@ -7,4 +7,17 @@
 [ "${HUSKY:-1}" = "0" ] && exit 0
 set -e
 
+# Refuse to commit on a protected branch. This fires on `git commit`;
+# merges use `pre-merge-commit`, which is deliberately NOT guarded so
+# `git pull` on develop (the documented read-only sync) keeps working.
+. "$(dirname -- "$0")/protected-branch-guard.sh"
+
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if is_protected_branch "$current_branch"; then
+  printf '\n  ⛔ Refusing to commit directly on "%s".\n' "$current_branch"
+  protected_branch_help "$current_branch"
+  exit 1
+fi
+
 npx lint-staged
