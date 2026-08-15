@@ -28,6 +28,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.42.2',
+    date: '2026-08-15',
+    headline: 'Expiry reminders actually work now.',
+    sections: [
+      {
+        heading: '🔔 The medical-certificate reminders were never firing',
+        bullets: [
+          'Budojo is meant to warn you when an athlete’s medical certificate is about to expire. On the desktop app that check ran every few minutes and failed silently every single time — it could not open your database, gave up, and left no sign of it anywhere you would look.',
+          'So since the desktop app launched you have not been getting expiry reminders — not late ones, none at all. This release fixes that, and the same fix covers the other background jobs: the unpaid-athletes digest, the attendance-streak notices and the routine clean-up tasks.',
+          'Worth doing once after updating: open the expiring-documents widget on your dashboard directly, in case something slipped past while the reminders were silent.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.42.1',
     date: '2026-08-15',
     headline: 'A security update. Nothing changes in how you use Budojo.',
