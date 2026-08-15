@@ -28,6 +28,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.42.1',
+    date: '2026-08-15',
+    headline: 'A security update. Nothing changes in how you use Budojo.',
+    sections: [
+      {
+        heading: '🔒 Security fixes in the underlying components',
+        bullets: [
+          'Budojo is built on open-source components, and security fixes were published for several of them — including one rated high severity that affected how text is displayed on screen. This release picks them all up.',
+          'There is nothing for you to do beyond installing the update: no data change, no setting to review, no visible difference. Your data stays exactly where it is.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.42.0',
     date: '2026-08-15',
     headline: 'Your documents can now follow you to a new computer.',
