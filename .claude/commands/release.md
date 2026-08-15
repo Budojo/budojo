@@ -91,6 +91,10 @@ gh release download vX.Y.Z --pattern "Budojo.X.Y.Z.exe" --dir <scratch>
 
 Then confirm, from outside the app: a window titled `Budojo` exists, a `php.exe` child is listening on `127.0.0.1:<port>`, `GET /api/v1/health` returns `{"status":"ok"}`, and the scratch userData holds `budojo.sqlite` + `secrets.bin` + `bootstrap.json` while `%APPDATA%\Budojo` stays untouched. Kill the process tree when done.
 
+**Read `<scratch>/userdata/storage/logs/laravel.log`** — not just the app's own `logs/`. That file is how the silently-failing scheduler was found: nothing in the UI or the desktop logs surfaces it, and `schedule:run` prints `... DONE` even for a command whose subprocess died. Its *absence* is the pass condition.
+
+> Timing note: the scheduled commands run **every five minutes inside a `09:00–23:59` Europe/Rome window**, while `logs/scheduler.log` timestamps are **UTC**. A late-night smoke test legitimately logs `No scheduled commands are ready to run` — that is the window being closed, not a fault. To actually observe a command fire, smoke-test inside the Rome window and look for `Running [...]` lines.
+
 ### 7. Post-release sweep
 
 Mandatory, and an empty result is a valid outcome. Branch `chore/techdebt-sweep-vX.Y.Z` off develop after the sync PR merges and walk the checklist in [`release-flow.md`](../../docs/development/release-flow.md#post-release-tech-debt--docscode-cleanup-sweep): TODO/FIXME markers, suppressions, `.only`/`.skip`, `npm outdated` + `composer outdated`, doc drift, gotchas, memory index, stale board items.
