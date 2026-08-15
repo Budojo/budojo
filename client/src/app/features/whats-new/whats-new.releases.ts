@@ -28,6 +28,38 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.41.0',
+    date: '2026-08-15',
+    headline: 'Budojo is now an app on your computer.',
+    sections: [
+      {
+        heading: '💻 Budojo runs on your computer',
+        bullets: [
+          "Budojo is now a Windows application you install and open like any other program. Your gym's data stays on your own computer — it doesn't travel to a server on the internet, and you don't need a connection to use it. Everything you already use works exactly the same.",
+        ],
+      },
+      {
+        heading: "🔒 You're signed in automatically",
+        bullets: [
+          "Because Budojo is now your own app on your own machine, it remembers you — open it and you're already signed in, with no email and password to type every time.",
+        ],
+      },
+      {
+        heading: '💾 Automatic backups, and a one-click restore',
+        bullets: [
+          "Budojo backs itself up automatically while it's open, and you can make a backup any time from the new Data & backup page. If something ever goes wrong, you can restore an earlier backup in a couple of clicks.",
+          'Keep a copy of your backups somewhere other than this computer — a USB stick or a synced folder like OneDrive — so a lost machine never means lost data. The Data & backup page has the details.',
+        ],
+      },
+      {
+        heading: '🔔 Reminders pop up on your desktop',
+        bullets: [
+          'When a medical certificate is about to expire, Budojo now tells you with a normal desktop notification. Click it and Budojo opens straight to what needs your attention.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.40.1',
     date: '2026-06-02',
     headline: 'A couple of fixes for two-factor setup and the Android app.',
