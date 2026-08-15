@@ -24,7 +24,7 @@ A pending invitation to join an academy as a team member (#427, PRD: `docs/specs
 
 ## Token shape
 
-- Server generates a 256-bit raw random (`Str::random(64)`). Email link carries the raw value: `https://budojo.it/team/invitations/accept?token={raw}`.
+- Server generates a 256-bit raw random (`Str::random(64)`). Email link carries the raw value: `https://<spa-host>/team/invitations/accept?token={raw}` (athlete invitations are a **web-only capability** — `athlete_accounts` is disabled on the desktop build, so this flow does not run there).
 - DB stores only `SHA-256(raw)` in `token_hash`. Accept endpoint re-hashes the body's `token` and looks up by `token_hash`.
 - The DB index lookup itself is not constant-time (that's just an indexed select); the timing-safe comparison happens at the application layer via `hash_equals` against the stored hash.
 

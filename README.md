@@ -2,50 +2,59 @@
 
 > BJJ gym management — replace the Excel sheets with something built for the mat.
 
-Budojo is a web application for Brazilian Jiu-Jitsu instructors. It replaces the typical mess of spreadsheets used to track students, documents, attendance and belt progressions with a clean, purpose-built tool.
+Budojo helps Brazilian Jiu-Jitsu instructors track students, documents, attendance, payments and belt progressions without the usual spreadsheet mess.
+
+It ships as a **Windows desktop application**: the same Angular SPA and Laravel API that ran as a hosted web app, packaged with Electron and a bundled PHP runtime so the whole thing runs on the instructor's own machine — no server, no account, no monthly bill. The hosted stack (DigitalOcean / Forge / Cloudflare) was decommissioned in [#1230](https://github.com/Budojo/budojo/issues/1230); its runbook is kept, archived, at [`docs/infra/archive/production-deployment.md`](docs/infra/archive/production-deployment.md).
 
 ---
 
-## Production
+## Download & install
 
-| Component | URL |
-|-----------|-----|
-| Angular SPA | <https://budojo.it> |
-| Laravel API | <https://api.budojo.it> |
-| API health | <https://api.budojo.it/api/v1/health> |
+Grab the latest **[release](https://github.com/Budojo/budojo/releases)** — each attaches two Windows builds:
 
-Architecture, deploy flow, env vars, runbook and gotchas: **[`docs/infra/archive/production-deployment.md`](docs/infra/archive/production-deployment.md)** (archived — the hosted stack was decommissioned in #1230).
+- **`Budojo Setup X.Y.Z.exe`** — installer (per-user, no admin, upgradable in place).
+- **`Budojo X.Y.Z.exe`** — portable (run from a USB stick or synced folder).
 
----
+Both are unsigned, so Windows SmartScreen warns on first run — **More info → Run anyway**. Full walkthrough (first run, upgrades, why the warning) in **[`docs/desktop/install.md`](docs/desktop/install.md)**.
 
-## What's live right now
-
-| Area | Status | Details |
-|------|--------|---------|
-| **Authentication** | ✅ Live | Register, login, logout via Sanctum Bearer tokens; password-strength meter + HaveIBeenPwned breach check on register / change-password / reset / invite-accept (#415) |
-| **Academy setup** | ✅ Live | Create your gym profile — name, structured polymorphic address, monthly fee, training-day schedule, logo upload |
-| **Athletes** | ✅ Live | Full CRUD with structured phone (libphonenumber-validated), structured polymorphic address, server-side name search, belt / status / paid filters, rank-aware sorting |
-| **Documents (M3)** | ✅ Live | Upload, list, download, soft-delete; cancelled toggle; reactive-form upload dialog; cross-athlete expiring-list dashboard widget with deep-linking |
-| **Attendance (M4)** | ✅ Live | Daily check-in (mobile-first, optimistic UI + 5s undo toast); per-athlete calendar history; monthly summary widget + full table; training-days % rate against scheduled denominator |
-| **Payments** | ✅ Live | Per-athlete monthly payment ledger; "paid" badge on athletes list; idempotent record/delete; `monthly_fee_cents` snapshotted into payment rows |
-| **Athlete login (M7)** | 🚧 In flight | Single `users.role` enum (owner / athlete), invite-only onboarding via signed link, athlete portal landing route. Owner-issued invite + invite-accept + role-aware guards live; full athlete self-service surface lands V2 |
-| **Notifications (M5)** | 📋 Planned | Email reminders before document expiry, configurable lead time |
-| **Promotions & reports (M6)** | 📋 Planned | Belt promotion history, attendance reports, exports, analytics |
-| **Document AI (M8)** | 📋 Planned | Extract every field a medical / consent document carries — driving athlete profile pre-fill |
-| **Mobile / Android TWA (M9)** | 🚧 In flight | PWA manifest TWA-ready (categories, shortcuts, `display_override`); `/.well-known/assetlinks.json` shipped as a static file under `client/public/.well-known/` and served by the SPA host (Cloudflare Pages). Bubblewrap APK + Play Store track next |
+> **Back up your data — and read how the encryption keys work.** A backup protects your athletes, attendance and payments anywhere, but the medical certificates are encrypted with a machine-bound key that a backup does not contain. This matters the day a laptop dies: **[`docs/desktop/backup-restore.md`](docs/desktop/backup-restore.md)**.
 
 ---
 
-## Running locally
+## What it does
+
+Everything runs locally against a bundled SQLite database. These surfaces ship in the desktop build:
+
+| Area | Details |
+|------|---------|
+| **Authentication** | Local owner sign-in via Sanctum tokens; auto-login, with the token held in the OS keychain ([#1227](https://github.com/Budojo/budojo/issues/1227)) |
+| **Academy setup** | Your gym profile — name, structured address, monthly fee, training-day schedule, logo |
+| **Athletes** | Full CRUD, structured phone (libphonenumber-validated) + address, name search, belt / status / paid filters, rank-aware sorting |
+| **Documents** | Upload, list, download, soft-delete; cancelled toggle; cross-athlete expiring-list widget with deep-linking. Files encrypted at rest |
+| **Attendance** | Daily check-in (optimistic UI + 5s undo); per-athlete calendar history; monthly summary + % rate against the scheduled denominator |
+| **Payments** | Per-athlete monthly ledger; "paid" badge + filter; `monthly_fee_cents` snapshotted into each row |
+| **Reminders** | Document-expiry checks raise **native OS notifications** ([#1225](https://github.com/Budojo/budojo/issues/1225)) — the desktop replacement for the hosted build's email reminders |
+| **Backup & restore** | Scheduled + on-demand local backups, validated restore ([#1228](https://github.com/Budojo/budojo/issues/1228)) — see the runbook above |
+
+**Disabled by design on desktop.** Budojo's runtime profile is a *set of capabilities*, and the desktop set is empty ([architecture § Capabilities](docs/desktop/architecture.md#runtime-profile-and-capabilities)): community feeds, athlete self-service logins, browser push, outbound email/SMTP, and the HaveIBeenPwned breach check are all off — there is no second user, mail transport or push service on a single-owner local install. The code is not deleted; the config simply doesn't enable it.
+
+---
+
+## How it's built
+
+An Electron shell serves the unmodified Angular SPA over a custom `app://bundle` origin and supervises a bundled `php.exe` running the Laravel API on a loopback port, against SQLite under `%APPDATA%\Budojo\`. The full process model, IPC surface, `app://` transport, PHP supervision and data layout are in **[`docs/desktop/architecture.md`](docs/desktop/architecture.md)**.
+
+---
+
+## Development
+
+The shipped app has **no Docker** — but local development runs the API and SPA in containers.
 
 ### Prerequisites
 
 - Docker + Docker Compose
 
-That is the whole list. There is no `.env` to copy and no key to generate — the
-API container's entrypoint installs Composer dependencies, seeds `server/.env`
-from `server/.env.example`, generates `APP_KEY`, creates the SQLite database
-and migrates it. Every step is idempotent, so restarts are no-ops.
+That is the whole list. There is no `.env` to copy and no key to generate — the API container's entrypoint installs Composer dependencies, seeds `server/.env` from `server/.env.example`, generates `APP_KEY`, creates the SQLite database and migrates it. Every step is idempotent, so restarts are no-ops.
 
 ```bash
 docker compose up --build
@@ -57,10 +66,7 @@ docker compose up --build
 | Laravel API | http://localhost:8000/api/v1 |
 | Mailpit (catches all outbound mail) | http://localhost:8025 |
 
-The database is **SQLite**, matching the desktop runtime (M11). It lives on the
-`sqlite_data` named volume rather than the bind mount, because Docker Desktop's
-host filesystem share does not implement POSIX advisory locking faithfully and
-SQLite depends on it. Inspect it with:
+The database is **SQLite**, matching the desktop runtime. It lives on the `sqlite_data` named volume rather than the bind mount, because Docker Desktop's host filesystem share does not implement POSIX advisory locking faithfully and SQLite depends on it. Inspect it with:
 
 ```bash
 docker exec -it budojo_api sqlite3 /var/www/api/database/sqlite/budojo.sqlite
@@ -68,9 +74,7 @@ docker exec -it budojo_api sqlite3 /var/www/api/database/sqlite/budojo.sqlite
 
 `docker compose down` keeps your data; `docker compose down -v` destroys it.
 
-> **The app is configured by `server/.env` only.** The compose file deliberately
-> has no `env_file` — see the comment in `docker-compose.yml` for the bug that
-> caused.
+> **The app is configured by `server/.env` only.** The compose file deliberately has no `env_file` — see the comment in `docker-compose.yml` for the bug that caused.
 
 ### Seed test data
 
@@ -78,43 +82,19 @@ docker exec -it budojo_api sqlite3 /var/www/api/database/sqlite/budojo.sqlite
 docker exec budojo_api php artisan db:seed
 ```
 
-This creates:
-- `admin@example.it` / the value of `LOCAL_ADMIN_PASSWORD` in `server/.env` (`password` by default) — admin user with a pre-configured academy (no athletes seeded for this account)
-- 5 additional users each with their own academy
-- 3 additional users without an academy (to exercise the `/setup` first-login flow)
+This creates `admin@example.it` / `LOCAL_ADMIN_PASSWORD` (`password` by default) with a pre-configured academy, 5 users each with their own academy, and 3 users without one (to exercise the `/setup` first-login flow).
 
----
+### Building the desktop app
 
-## SPA pages
+The desktop build lives under [`desktop/`](desktop/). To produce the Windows installers locally (on Windows):
 
-All pages are served at **http://localhost:4200**.
-
-| URL | Access | Description |
-|-----|--------|-------------|
-| `/auth/register` | Public | Create a new account |
-| `/auth/login` | Public | Sign in |
-| `/setup` | Auth, no academy yet | First-time academy setup — enter gym name and address |
-| `/dashboard` | Auth + academy | Redirects to `/dashboard/athletes` |
-| `/dashboard/athletes` | Auth + academy | Paginated athlete roster with belt/status filters and delete |
-
-### Navigation flow
-
-```
-/auth/register  ──► /auth/login
-                          │
-                          ▼
-                    has academy?
-                   /           \
-                 No             Yes
-                  │               │
-                  ▼               ▼
-              /setup      /dashboard/athletes
-                  │
-                  ▼
-          /dashboard/athletes
+```bash
+cd client && npm ci && cd ..
+cd desktop && npm ci
+npm run dist          # tsc + ng build --configuration desktop + fetch PHP + electron-builder (NSIS + portable)
 ```
 
-Guards enforce this automatically — no manual redirects needed.
+Output lands in `desktop/release/`. In CI the `desktop-installer` job builds and attaches them to each stable release ([#1231](https://github.com/Budojo/budojo/issues/1231)). See [`docs/desktop/`](docs/desktop/) for the full picture.
 
 ---
 
@@ -122,49 +102,29 @@ Guards enforce this automatically — no manual redirects needed.
 
 The full HTTP contract for `/api/v1` is in **[`docs/api/v1.yaml`](docs/api/v1.yaml)** (OpenAPI 3.0.3). Browse it with Swagger UI / Redocly / Stoplight, or import into Postman / Insomnia.
 
-In production: <https://api.budojo.it/api/v1>. Locally: <http://localhost:8000/api/v1>.
+On desktop the API listens on `http://127.0.0.1:<port>` (an ephemeral loopback port the shell picks and hands the SPA). In development it's `http://localhost:8000/api/v1`.
 
-A Postman collection lives at [`postman/budojo.postman_collection.json`](postman/budojo.postman_collection.json) — pre-request script auto-saves the Bearer token after login.
-
-Per-entity domain reference (schema, business rules, related endpoints) lives under [`docs/entities/`](docs/entities/) — one file per persisted entity.
+A Postman collection lives at [`postman/budojo.postman_collection.json`](postman/budojo.postman_collection.json). Per-entity domain reference (schema, business rules, endpoints) lives under [`docs/entities/`](docs/entities/) — one file per persisted entity.
 
 ---
 
 ## Roadmap
 
-### M1 — Authentication ✅ Done
-Register, login, logout via Sanctum Bearer tokens. Angular login/register pages.
+| Milestone | Status |
+|---|---|
+| **M1 — Authentication** | ✅ Done |
+| **M2 — Academy & Athletes** | ✅ Done |
+| **M3 — Documents & Deadlines** | ✅ Done ([PRD](docs/specs/m3-documents.md)) |
+| **M4 — Attendance** (+ Payments) | ✅ Done ([PRD](docs/specs/m4-attendance.md)) |
+| **M5 — Notifications** | ✅ On desktop as **native OS reminders**; hosted email reminders retired with the stack |
+| **M6 — Promotions & reports** | 📋 Planned — belt promotion history, attendance reports, exports |
+| **M7 — Athlete login** | 🌐 Web-only capability — invite-only athlete self-service. Present in code, **disabled on desktop** (single-owner install) |
+| **M8 — Document AI** | 📋 Planned — LLM parsing of medical/consent scans to pre-fill athlete profiles |
+| **M9 — Mobile / Android TWA** | 🧊 **Frozen** |
+| **M10 — Mobile (Capacitor / native)** | 🧊 **Frozen** |
+| **M11 — Desktop (Electron)** | ✅ Done ([#1218](https://github.com/Budojo/budojo/issues/1218)) — this build |
 
-### M2 — Academy & Athletes ✅ Done
-- Academy: create, retrieve, update (API + Angular setup page) with structured polymorphic address (#72), monthly fee, training-day schedule, logo upload + sanitization.
-- Athletes: full CRUD API, list UI with belt / status / paid filters, server-side name search, rank-aware sort, pagination, soft-delete. Structured phone (libphonenumber-validated) and structured polymorphic address (#72b).
-
-### M3 — Documents & Deadlines ✅ Done
-- Documents: full CRUD API (upload, list, download, soft-delete), Angular list UI with cancelled toggle, reactive-form upload dialog, cross-athlete expiring list.
-- Dashboard widget surfaces documents expiring in the next 30 days with a deep-link to the filtered list.
-- See [`docs/specs/m3-documents.md`](docs/specs/m3-documents.md) for the PRD.
-
-### M4 — Attendance ✅ Done
-- Daily check-in UI (mobile-first, optimistic UI, 5s undo toast). Per-athlete calendar history with training-days highlight. Monthly summary widget + full table. Training-days % attendance rate against the scheduled denominator.
-- See [`docs/specs/m4-attendance.md`](docs/specs/m4-attendance.md) for the PRD (status: Shipped, with the `Deltas from spec` section recording the swipe-gesture deferral).
-
-### Payments ✅ Done (folded into the M4 surface)
-- Per-athlete monthly payment ledger; "paid" badge + filter on the athletes list; idempotent record / hard-delete via `/api/v1/athletes/{id}/payments`. The academy's `monthly_fee_cents` is snapshotted into each payment row so future fee changes don't rewrite history.
-
-### M5 — Notifications 📋 Planned
-Automated email reminders before documents expire. Configurable lead time per academy.
-
-### M6 — Promotions & Reports 📋 Planned
-Belt promotion history, attendance reports, PDF/Excel export, analytics dashboard.
-
-### M7 — Athlete login 🚧 In flight
-Athlete-side login & self-service. Single `users.role` enum (owner / athlete), invite-only onboarding via signed link (no public self-register), role-aware route guards, athlete-portal landing route. PRD: [`docs/specs/m7-athlete-login.md`](docs/specs/m7-athlete-login.md). Owner → invite athlete → athlete accepts + sets password lives; full athlete-side surface (own attendance / payments / documents) ships V2.
-
-### M8 — Document AI 📋 Planned
-LLM-driven document parsing — extract every field a medical-certificate / consent / membership-form scan carries (athlete identity, dates, codice fiscale, address). Implies adding `athletes.address` + `codice_fiscale` columns BEFORE the AI work begins.
-
-### M9 — Mobile / Android TWA 🚧 In flight
-Native-feeling Android shell wrapping the existing PWA via Trusted Web Activity (TWA). Shipped: PWA manifest TWA-readiness (`categories`, `shortcuts`, `display_override`), `/.well-known/assetlinks.json` deployed as a static file under `client/public/.well-known/` and served by the SPA host on Cloudflare Pages (the original Laravel-routed implementation was retired in v2.3.1 because session middleware was breaking the Digital Asset Links fetch), end-to-end TWA runbook ([`docs/mobile/twa-runbook.md`](docs/mobile/twa-runbook.md)). In flight: signing keystore, Bubblewrap APK build, Play Console internal track, staged production rollout. Capacitor / Flutter rewrites tracked separately as M10+.
+> **M9 / M10 are frozen by decision, not oversight.** The mobile work (Android TWA, native shells) depended on a hosted origin serving `/.well-known/assetlinks.json` and a Play Console pipeline. When the hosted stack was decommissioned for cost (M11), the mobile track lost its foundation and was intentionally parked. The PWA-readiness work remains in the history ([`docs/mobile/`](docs/mobile/)); reviving it is a future decision, not pending work.
 
 ---
 
@@ -172,53 +132,32 @@ Native-feeling Android shell wrapping the existing PWA via Trusted Web Activity 
 
 ```
 budojo/
-├── server/               # Laravel 13 REST API
-│   ├── app/
-│   │   ├── Actions/          # Single-responsibility business operations (one execute() per class)
-│   │   ├── Contracts/        # Marker interfaces (HasAddress, …)
-│   │   ├── Enums/            # Belt, AthleteStatus, Country, ItalianProvince, DocumentType, …
-│   │   ├── Http/
-│   │   │   ├── Controllers/  # Thin — delegate to Actions
-│   │   │   ├── Requests/     # All input validation (FormRequest)
-│   │   │   └── Resources/    # All API response shaping
-│   │   ├── Models/           # Eloquent models — relations + casts only, no business logic
-│   │   ├── Observers/        # Eloquent event handlers (cascade cleanup, etc.)
-│   │   └── Support/          # Pure helpers (e.g. CorsAllowlist)
-│   ├── config/cors.php       # Production CORS allowlist (env-driven)
-│   ├── database/
-│   │   ├── factories/
-│   │   ├── migrations/
-│   │   └── seeders/
-│   ├── routes/api_v1.php     # All v1 routes
-│   └── tests/{Unit,Feature}/ # PEST 4 — Feature for HTTP round-trips, Unit for pure helpers
+├── server/               # Laravel 13 REST API (PHP 8.4) — shipped bundled on desktop
+│   └── app/
+│       ├── Actions/          # Single-responsibility business operations
+│       ├── Enums/            # Belt, AthleteStatus, RuntimeProfile, Capability, …
+│       ├── Http/{Controllers,Requests,Resources,Middleware}/
+│       ├── Models/  Observers/  Support/   # Runtime, Capabilities, DesktopDriverGuard, …
+│       └── Console/Schedules/  # Web vs Desktop schedule definitions
 │
-├── client/               # Angular 21 SPA
-│   ├── src/environments/     # apiBase per build configuration (dev = relative, prod = https://api.budojo.it)
-│   └── src/app/
-│       ├── core/
-│       │   ├── guards/       # authGuard, hasAcademyGuard, noAcademyGuard
-│       │   ├── interceptors/ # authInterceptor (Bearer token on every request)
-│       │   └── services/     # auth, academy, athlete, attendance, document
-│       ├── features/
-│       │   ├── auth/         # Login, Register
-│       │   ├── academy/      # Setup, Detail, Form
-│       │   ├── athletes/     # List, Form, Detail (+ attendance-history & documents-list tabs)
-│       │   ├── attendance/   # Daily check-in + Monthly summary
-│       │   ├── documents/    # Expiring list
-│       │   └── dashboard/    # Shell (sidebar + router-outlet)
-│       └── shared/
-│           ├── components/   # BeltBadge, ExpiryStatusBadge, PaidBadge, TrainingDaysPicker, MonthlySummaryWidget, …
-│           └── utils/        # attendance-rate, address-form
+├── client/               # Angular 21 SPA (PrimeNG 21, MD3)
+│   └── src/
+│       ├── environments/     # environment.ts (dev), .prod.ts (empty apiBase), .desktop.ts (apiBase from the Electron bridge)
+│       ├── budojo-bridge.d.ts# Typed window.__BUDOJO__ surface
+│       └── app/{core,features,shared}/
 │
-├── worker/               # Cloudflare Worker fronting the static-asset binding
-│   ├── index.js              # Navigation-gated SPA fallback (closes #382)
-│   ├── index.spec.js         # Vitest specs covering asset / navigation / non-navigation cases
-│   └── package.json          # Vitest dep; runs in CI via the "🧪 Worker Tests" job
-├── wrangler.jsonc        # Cloudflare config — `assets` binding + worker `main`
-├── docs/                 # Domain documentation (entities, OpenAPI spec, infra, milestone PRDs)
-├── docker/               # Dockerfiles + Nginx configs
-├── postman/              # Postman collection
-└── docker-compose.yml
+├── desktop/              # Electron shell (M11) — main + preload + protocol + PHP supervisor
+│   ├── src/                  # main.ts, preload.cts, protocol.ts, php-supervisor.ts, bootstrap.ts, backup.ts, …
+│   ├── electron-builder.yml  # NSIS + portable packaging; php runtime + server as extraResources
+│   ├── runtime/              # php.manifest.json (pinned) — php.exe fetched, not committed
+│   └── scripts/              # fetch-php.mjs, build-renderer.mjs
+│
+├── docs/                 # Domain documentation (source of truth)
+│   ├── desktop/              # architecture, install, backup-restore  ← the desktop era
+│   ├── entities/  api/v1.yaml  specs/  development/  design/  infra/
+├── docker/               # Dockerfiles + configs (dev only)
+├── postman/
+└── docker-compose.yml    # dev environment only — the desktop app bundles its own runtime
 ```
 
 ---
@@ -229,23 +168,22 @@ budojo/
 |-------|-----------|
 | API framework | Laravel 13 (PHP 8.4) |
 | Auth | Laravel Sanctum (Bearer tokens) |
-| Database | MySQL 8.4 |
+| Database | SQLite (WAL) — dev and desktop alike |
 | SPA framework | Angular 21 |
 | UI components | PrimeNG 21 (Material preset, MD3) |
 | API contract | OpenAPI 3.0.3 + Spectral lint |
-| Containerization | Docker + Compose (local dev) |
-| Production hosting — API | DigitalOcean droplet via Laravel Forge |
-| Production hosting — SPA | Cloudflare Pages |
-| Production CDN / DNS | Cloudflare |
+| Desktop shell | Electron 33 + bundled PHP 8.4 |
+| Desktop packaging | electron-builder (NSIS + portable) |
+| Dev environment | Docker + Compose |
 | PHP tests | PEST 4 |
 | PHP static analysis | PHPStan (level 9) |
 | PHP style | PHP CS Fixer (PSR-12) |
 | Angular unit tests | Vitest 4 |
 | Angular E2E tests | Cypress 13 |
-| Releases | semantic-release (automated, beta on develop, stable on main) |
+| Releases | semantic-release (beta on develop, stable on main) |
 
 ---
 
-## Development
+## Development conventions
 
 For branching model, commit conventions, PR rules and CI pipeline details see **[CLAUDE.md](./CLAUDE.md)**.
