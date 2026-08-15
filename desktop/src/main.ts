@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, Notification, protocol, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Notification, protocol, safeStorage, shell } from 'electron';
 import { createWriteStream, existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -10,6 +10,7 @@ import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js'
 import { runPhp } from './php-exec.js';
 import { PhpSupervisor } from './php-supervisor.js';
 import { RotatingLog } from './rotating-log.js';
+import { TokenVault } from './token-vault.js';
 import { PeriodicTask } from './periodic-task.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
 
@@ -340,6 +341,28 @@ function showNativeNotification(notification: PendingNotification): void {
 }
 
 /**
+ * The bearer token, encrypted in the OS keychain (#1227). The renderer reaches
+ * it synchronously over the bridge; the main process owns the file and the
+ * decrypt cache. Registered once, before any window exists.
+ */
+function registerTokenVault(): void {
+  const vault = new TokenVault(dataLayout(app.getPath('userData')).authTokenFile, safeStorage);
+  ipcMain.on('budojo:token:get', (event) => {
+    event.returnValue = vault.get();
+  });
+  ipcMain.on('budojo:token:set', (event, token: unknown) => {
+    if (typeof token === 'string' && token.length > 0) {
+      vault.set(token);
+    }
+    event.returnValue = true;
+  });
+  ipcMain.on('budojo:token:clear', (event) => {
+    vault.clear();
+    event.returnValue = true;
+  });
+}
+
+/**
  * Two copies of the app would open two connections to the same SQLite file and
  * two scheduler ticks against the same rows. Focus the existing window instead.
  */
@@ -369,6 +392,7 @@ if (!gotTheLock) {
     // the packaged code path is exercised on every dev run rather than first
     // meeting reality inside an installer.
     registerAppProtocol();
+    registerTokenVault();
 
     let apiBase: string;
 

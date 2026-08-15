@@ -335,6 +335,18 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Sign out — revoke the current token
+      description: Deletes the personal access token that authenticated this request. Idempotent; the SPA and the desktop shell call it on sign-out before forgetting the token locally.
+      operationId: authLogout
+      responses:
+        '204':
+          description: Token revoked
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
   /me:
     patch:
       tags: [auth]

@@ -1,7 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, finalize, map, tap } from 'rxjs';
 import { AcademyService } from './academy.service';
+import { TokenStorageService } from './token-storage.service';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -133,15 +134,14 @@ interface MeResponse {
   data: User;
 }
 
-const TOKEN_KEY = 'auth_token';
-
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly academyService = inject(AcademyService);
+  private readonly tokenStorage = inject(TokenStorageService);
   private readonly base = `${environment.apiBase}/api/v1/auth`;
 
-  readonly isLoggedIn = signal<boolean>(!!localStorage.getItem(TOKEN_KEY));
+  readonly isLoggedIn = signal<boolean>(this.tokenStorage.get() !== null);
 
   /**
    * Cached current user. Hydrated by `loadCurrentUser()` on bootstrap and
@@ -158,11 +158,11 @@ export class AuthService {
   });
 
   getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
+    return this.tokenStorage.get();
   }
 
   private storeToken(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
+    this.tokenStorage.set(token);
     this.isLoggedIn.set(true);
   }
 
@@ -180,7 +180,18 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(TOKEN_KEY);
+    // Revoke the token on the server (#1227) — a stored desktop credential
+    // must not stay valid after sign-out — then clear locally regardless of
+    // the result: the user asked to leave, and a network blip must not trap
+    // them signed in. finalize() runs on success and error alike.
+    this.http
+      .post(`${this.base}/logout`, {})
+      .pipe(finalize(() => this.clearSession()))
+      .subscribe({ error: () => undefined });
+  }
+
+  private clearSession(): void {
+    this.tokenStorage.clear();
     this.isLoggedIn.set(false);
     this.user.set(null);
     this.academyService.clear();

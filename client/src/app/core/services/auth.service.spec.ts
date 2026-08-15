@@ -106,14 +106,33 @@ describe('AuthService', () => {
   });
 
   describe('logout()', () => {
-    it('clears the token + isLoggedIn + user signals + delegates to academyService.clear()', () => {
-      const { svc, academyClear } = bootstrap('tk');
+    it('revokes the token server-side, then clears every signal + academyService', () => {
+      // #1227: sign-out now POSTs /auth/logout so a stored desktop credential
+      // is invalidated, then clears locally on the response.
+      const { svc, http, academyClear } = bootstrap('tk');
       svc['user'].set(baseUser());
       expect(svc.isLoggedIn()).toBe(true);
+
       svc.logout();
+      http.expectOne('/api/v1/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+
       expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
       expect(svc.isLoggedIn()).toBe(false);
       expect(svc.user()).toBeNull();
+      expect(academyClear).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears locally even when the revoke request fails — a blip must not trap the user in', () => {
+      const { svc, http, academyClear } = bootstrap('tk');
+      svc['user'].set(baseUser());
+
+      svc.logout();
+      http
+        .expectOne('/api/v1/auth/logout')
+        .flush('nope', { status: 500, statusText: 'Server Error' });
+
+      expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+      expect(svc.isLoggedIn()).toBe(false);
       expect(academyClear).toHaveBeenCalledTimes(1);
     });
   });

@@ -33,6 +33,8 @@ export interface DataLayout {
   pidFile: string;
   /** Which notification rows have already been shown as native toasts (#1225). */
   notificationsLedgerFile: string;
+  /** The safeStorage-encrypted sign-in token (#1227). */
+  authTokenFile: string;
 }
 
 /**
@@ -55,6 +57,7 @@ export function dataLayout(userDataDir: string): DataLayout {
     iniPath: path.join(root, 'php.ini'),
     pidFile: path.join(root, 'php-server.pid'),
     notificationsLedgerFile: path.join(root, 'notifications-ledger.json'),
+    authTokenFile: path.join(root, 'auth-token.bin'),
   };
 }
 

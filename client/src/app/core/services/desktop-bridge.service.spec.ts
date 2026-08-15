@@ -10,6 +10,8 @@ describe('DesktopBridgeService', () => {
   type BridgeWindow = Window & { __BUDOJO__?: unknown };
   const bridgeWindow = window as BridgeWindow;
 
+  const noToken = { get: () => null, set: () => undefined, clear: () => undefined };
+
   afterEach(() => {
     delete bridgeWindow.__BUDOJO__;
   });
@@ -39,6 +41,7 @@ describe('DesktopBridgeService', () => {
         deliver = callback;
         return unsubscribe;
       },
+      token: noToken,
     };
     const { service, navigate } = setup();
 
@@ -52,7 +55,12 @@ describe('DesktopBridgeService', () => {
 
   it('unsubscribes when the injector is destroyed', () => {
     const unsubscribe = vi.fn();
-    bridgeWindow.__BUDOJO__ = { apiBase: '', platform: 'win32', onNavigate: () => unsubscribe };
+    bridgeWindow.__BUDOJO__ = {
+      apiBase: '',
+      platform: 'win32',
+      onNavigate: () => unsubscribe,
+      token: noToken,
+    };
     const { service } = setup();
 
     service.startNavigationRelay();

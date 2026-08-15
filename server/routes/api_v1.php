@@ -130,6 +130,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Currently authenticated user. Used by the SPA on bootstrap to hydrate
     // the user state (incl. `email_verified_at`) after a page reload.
     Route::get('/auth/me', \App\Http\Controllers\Auth\MeController::class);
+    // Revokes the token that made the request (#1227). Sign-out used to be
+    // client-side only, leaving the row valid until found under Active sessions.
+    Route::post('/auth/logout', \App\Http\Controllers\Auth\LogoutController::class);
 
     // Self-edit on the authenticated user's profile (#463). Currently
     // scoped to `name` only — the email-change flow has its own
