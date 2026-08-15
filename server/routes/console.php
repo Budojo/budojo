@@ -2,12 +2,22 @@
 
 declare(strict_types=1);
 
+use App\Support\Runtime;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
 Artisan::command('inspire', function (): void {
     $this->comment(Inspiring::quote()); // @phpstan-ignore-line
 })->purpose('Display an inspiring quote');
+
+// The desktop profile (#1226) has no cron and is closed most of the day, so
+// the wall-clock schedule below would silently miss its windows. Same
+// commands, different cadence, in their own file — see the rationale there.
+if (Runtime::isDesktop()) {
+    require __DIR__ . '/console-desktop.php';
+
+    return;
+}
 
 // GDPR Art. 17 (#223) — hourly purge of pending deletions whose grace
 // window has elapsed. Hourly is the compromise: the window is 30 days,

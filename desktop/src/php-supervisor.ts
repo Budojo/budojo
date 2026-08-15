@@ -1,11 +1,12 @@
 import { type ChildProcess, spawn, spawnSync } from 'node:child_process';
-import { closeSync, createWriteStream, existsSync, openSync, readSync, statSync, type WriteStream } from 'node:fs';
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
 import path from 'node:path';
 
 import { buildServeInvocation, RestartBudget } from './php-runtime.js';
+import { RotatingLog } from './rotating-log.js';
 
 /**
  * Runs the bundled PHP built-in server as a supervised child of the Electron
@@ -74,11 +75,11 @@ export class PhpSupervisor {
   private fatal = false;
   private readonly budget: RestartBudget;
   private readonly recent: string[] = [];
-  private logStream: WriteStream | null = null;
-  private logBytes = 0;
+  private readonly file: RotatingLog;
 
   constructor(private readonly config: PhpSupervisorConfig) {
     this.budget = new RestartBudget(config.restart ?? DEFAULTS.restart);
+    this.file = new RotatingLog(path.join(config.logDir, 'php-server.log'), { maxBytes: DEFAULTS.logMaxBytes, keep: DEFAULTS.logKeep });
   }
 
   get port(): number | null {
@@ -86,13 +87,13 @@ export class PhpSupervisor {
   }
 
   get logPath(): string {
-    return path.join(this.config.logDir, 'php-server.log');
+    return this.file.filePath;
   }
 
   async start(): Promise<{ port: number }> {
     await mkdir(this.config.logDir, { recursive: true });
     await mkdir(path.dirname(this.config.iniPath), { recursive: true });
-    await this.openLog();
+    this.file.open();
     await this.reapStalePid();
     await writeFile(this.config.iniPath, this.config.iniContent, 'utf8');
 
@@ -119,7 +120,7 @@ export class PhpSupervisor {
       }
     }
 
-    await this.closeLog();
+    await this.file.close();
     throw lastError ?? new Error('PHP server failed to start');
   }
 
@@ -134,7 +135,7 @@ export class PhpSupervisor {
     this.child = null;
     this.currentPort = null;
     await rm(this.config.pidFile, { force: true });
-    await this.closeLog();
+    await this.file.close();
     this.config.onEvent?.({ type: 'stopped' });
   }
 
@@ -294,23 +295,6 @@ export class PhpSupervisor {
 
   // --- logging ---------------------------------------------------------------
 
-  private async openLog(): Promise<void> {
-    await this.rotateIfNeeded();
-    this.logStream = createWriteStream(this.logPath, { flags: 'a' });
-    this.logBytes = existsSync(this.logPath) ? (await stat(this.logPath)).size : 0;
-  }
-
-  private async closeLog(): Promise<void> {
-    const stream = this.logStream;
-    this.logStream = null;
-
-    if (stream === null) {
-      return;
-    }
-
-    await new Promise<void>((resolve) => stream.end(() => resolve()));
-  }
-
   private log(text: string): void {
     for (const line of text.split(/\r?\n/)) {
       if (line.length === 0) {
@@ -322,42 +306,7 @@ export class PhpSupervisor {
       }
     }
 
-    const stamped = text.endsWith('\n') ? text : `${text}\n`;
-    this.logStream?.write(stamped);
-    this.logBytes += Buffer.byteLength(stamped);
-
-    if (this.logBytes > DEFAULTS.logMaxBytes) {
-      this.logBytes = 0;
-      void this.closeLog()
-        .then(() => this.rotateIfNeeded(true))
-        .then(() => {
-          this.logStream = createWriteStream(this.logPath, { flags: 'a' });
-        });
-    }
-  }
-
-  private async rotateIfNeeded(force = false): Promise<void> {
-    if (!existsSync(this.logPath)) {
-      return;
-    }
-
-    const size = (await stat(this.logPath)).size;
-
-    if (!force && size < DEFAULTS.logMaxBytes) {
-      return;
-    }
-
-    for (let index = DEFAULTS.logKeep - 1; index >= 1; index--) {
-      const from = `${this.logPath}.${index}`;
-      const to = `${this.logPath}.${index + 1}`;
-
-      if (existsSync(from)) {
-        await rm(to, { force: true });
-        await rename(from, to);
-      }
-    }
-
-    await rename(this.logPath, `${this.logPath}.1`);
+    this.file.write(text);
   }
 
   private recentOutput(): string {

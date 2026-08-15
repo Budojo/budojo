@@ -1,8 +1,9 @@
-import { spawn } from 'node:child_process';
 import { randomBytes as nodeRandomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+
+import { runPhp as execPhp } from './php-exec.js';
 
 /**
  * First-run bootstrap (#1223, M11 #1218): everything Forge used to do at deploy
@@ -347,48 +348,32 @@ function artisan(
   return runPhp(options, env, ['artisan', ...args], options.serverRoot);
 }
 
-function runPhp(
+async function runPhp(
   options: BootstrapOptions,
   env: Record<string, string>,
   args: string[],
   cwd: string,
 ): Promise<{ code: number | null; output: string }> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(options.phpBinary, ['-c', options.layout.iniPath, ...args], {
-      cwd,
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      shell: false,
-      windowsHide: true,
-    });
-
-    let output = '';
-    child.stdout?.on('data', (chunk: Buffer) => {
-      output += chunk.toString('utf8');
-    });
-    child.stderr?.on('data', (chunk: Buffer) => {
-      output += chunk.toString('utf8');
-    });
-
-    // Migrations on a large database can legitimately take a while; two minutes
-    // is far beyond anything the current 54 need and still bounded.
-    const timer = setTimeout(() => {
-      child.kill();
-      reject(new Error(`php ${args[0] ?? ''} ${args[1] ?? ''} timed out after 120s`));
-    }, 120_000);
-
-    child.once('error', (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-    child.once('exit', (code) => {
-      clearTimeout(timer);
-      for (const line of output.split(/\r?\n/)) {
-        if (line.trim().length > 0) {
-          options.log(`[php] ${line}`);
-        }
-      }
-      resolve({ code, output });
-    });
+  const result = await execPhp({
+    phpBinary: options.phpBinary,
+    iniPath: options.layout.iniPath,
+    args,
+    cwd,
+    env,
+    // Migrations on a large database can legitimately take a while; two
+    // minutes is far beyond anything the current 54 need and still bounded.
+    timeoutMs: 120_000,
   });
+
+  if (result.timedOut) {
+    throw new Error(`php ${args[0] ?? ''} ${args[1] ?? ''} timed out after 120s`);
+  }
+
+  for (const line of result.output.split(/\r?\n/)) {
+    if (line.trim().length > 0) {
+      options.log(`[php] ${line}`);
+    }
+  }
+
+  return { code: result.code, output: result.output };
 }

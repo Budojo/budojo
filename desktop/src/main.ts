@@ -6,7 +6,10 @@ import { fileURLToPath } from 'node:url';
 
 import { dataLayout, runBootstrap, type Secrets } from './bootstrap.js';
 import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js';
+import { runPhp } from './php-exec.js';
 import { PhpSupervisor } from './php-supervisor.js';
+import { RotatingLog } from './rotating-log.js';
+import { SchedulerTick } from './scheduler.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
 
 /**
@@ -145,7 +148,7 @@ function createWindow(apiBase: string): BrowserWindow {
  * server (#1222); returns the API base URL. Every failure path ends in a
  * native error box with the log location — never a blank renderer.
  */
-async function startRuntime(): Promise<{ supervisor: PhpSupervisor; apiBase: string }> {
+async function startRuntime(): Promise<{ supervisor: PhpSupervisor; scheduler: SchedulerTick; apiBase: string }> {
   const paths = resolveDesktopPaths({
     isPackaged: app.isPackaged,
     resourcesPath: process.resourcesPath,
@@ -227,7 +230,26 @@ async function startRuntime(): Promise<{ supervisor: PhpSupervisor; apiBase: str
 
   const { port } = await supervisor.start();
 
-  return { supervisor, apiBase: `http://127.0.0.1:${port}` };
+  // The desktop's cron (#1226): `schedule:run` every minute while the app is
+  // open, once shortly after boot. What each run does is decided server-side
+  // by routes/console-desktop.php.
+  const schedulerLog = new RotatingLog(path.join(layout.logsDir, 'scheduler.log'));
+  schedulerLog.open();
+  const scheduler = new SchedulerTick({
+    run: () =>
+      runPhp({
+        phpBinary: paths.phpBinary,
+        iniPath: layout.iniPath,
+        args: ['artisan', 'schedule:run', '--no-ansi', '--no-interaction'],
+        cwd: paths.serverRoot,
+        env: envWith(boot.secrets, port),
+        timeoutMs: 10 * 60_000,
+      }),
+    log: (line) => schedulerLog.write(`${new Date().toISOString()} ${line}`),
+  });
+  scheduler.start();
+
+  return { supervisor, scheduler, apiBase: `http://127.0.0.1:${port}` };
 }
 
 /**
@@ -240,6 +262,7 @@ if (!gotTheLock) {
   app.quit();
 } else {
   let supervisor: PhpSupervisor | null = null;
+  let scheduler: SchedulerTick | null = null;
   let quitting = false;
 
   app.on('second-instance', () => {
@@ -264,6 +287,7 @@ if (!gotTheLock) {
     try {
       const runtime = await startRuntime();
       supervisor = runtime.supervisor;
+      scheduler = runtime.scheduler;
       apiBase = runtime.apiBase;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -300,8 +324,12 @@ if (!gotTheLock) {
     quitting = true;
     event.preventDefault();
 
-    void supervisor
-      .stop()
+    // Scheduler first: an in-flight schedule:run must not meet a server that
+    // is already going away, and it must not outlive the app.
+    const stopping = supervisor;
+    void (scheduler?.stop() ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(() => stopping.stop())
       .catch(() => undefined)
       .then(() => app.quit());
   });
