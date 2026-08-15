@@ -105,6 +105,14 @@ export interface PhpEnvOptions {
    * LARAVEL_STORAGE_PATH; the install directory is read-only.
    */
   storagePath?: string;
+  /**
+   * The generated php.ini. We pass `-c` on our own invocations, but Laravel's
+   * scheduler spawns each due command as its OWN php.exe subprocess, resolved
+   * through `PHP_BINARY` with no `-c` — so those children would load no ini,
+   * no extensions, and die on `could not find driver`. Exporting `PHPRC` makes
+   * every descendant pick the same ini up. See `buildPhpEnv`.
+   */
+  iniPath?: string;
   /** Secrets and anything else the bootstrap (#1223) resolves at launch. */
   extra?: Readonly<Record<string, string>>;
 }
@@ -154,10 +162,24 @@ export function buildPhpEnv(
     }
   }
 
-  // An empty PHP_INI_SCAN_DIR disables additional-ini scanning; PHPRC is not
-  // forwarded. Both were observed pulling a foreign php.ini into the bundled
-  // runtime on a machine with a scoop-installed PHP.
+  // An empty PHP_INI_SCAN_DIR disables additional-ini scanning. The parent's
+  // PHPRC is never forwarded — it was observed pulling a foreign php.ini into
+  // the bundled runtime on a machine with a scoop-installed PHP (it is absent
+  // from INHERITED_ENV_KEYS, so it is already dropped).
   env['PHP_INI_SCAN_DIR'] = '';
+
+  // ...but we DO set our own, pointing at the directory holding the generated
+  // php.ini. We pass `-c` on the invocations we control; Laravel's scheduler
+  // does not — `$schedule->command()` spawns each due command as a separate
+  // php.exe through `PHP_BINARY`, with no `-c`. Those children were loading no
+  // ini at all, so every scheduled command failed with `could not find driver`
+  // (sqlite) and the medical-certificate expiry reminders — the desktop's whole
+  // replacement for e-mail — never ran. It only showed up in laravel.log, which
+  // nothing surfaces. PHPRC is inherited by every descendant, so this fixes the
+  // class rather than one caller.
+  if (options.iniPath !== undefined) {
+    env['PHPRC'] = path.dirname(options.iniPath);
+  }
 
   Object.assign(env, {
     BUDOJO_RUNTIME: 'desktop',
