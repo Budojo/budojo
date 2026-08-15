@@ -5,6 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dataLayout, runBootstrap, type Secrets } from './bootstrap.js';
+import { BackupService } from './backup.js';
+import { createBackupIO } from './backup-io.js';
 import { DesktopNotifier, EMPTY_LEDGER, parseListOutput, type DeliveryLedger, type PendingNotification } from './desktop-notifier.js';
 import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js';
 import { runPhp } from './php-exec.js';
@@ -157,6 +159,8 @@ async function startRuntime(): Promise<{
   supervisor: PhpSupervisor;
   scheduler: PeriodicTask;
   notifierPoll: PeriodicTask;
+  backupService: BackupService;
+  backupPoll: PeriodicTask;
   apiBase: string;
 }> {
   const paths = resolveDesktopPaths({
@@ -296,7 +300,40 @@ async function startRuntime(): Promise<{
   });
   notifierPoll.start();
 
-  return { supervisor, scheduler, notifierPoll, apiBase: `http://127.0.0.1:${port}` };
+  // Local backup (#1228) — the single most important safety net once managed
+  // infrastructure is gone. VACUUM INTO + storage + manifest, zipped under
+  // userData/backups, seven kept. A scheduled pass every six hours means any
+  // day the app is opened produces a recent archive; each run is a quick
+  // vacuum of a single-user database.
+  const backupLog = new RotatingLog(path.join(layout.logsDir, 'backup.log'));
+  backupLog.open();
+  const backupService = new BackupService({
+    io: createBackupIO({
+      phpBinary: paths.phpBinary,
+      iniPath: layout.iniPath,
+      serverRoot: paths.serverRoot,
+      env: envWith(boot.secrets, port),
+      databasePath: layout.databasePath,
+      storageDir: layout.storageDir,
+      backupsDir: layout.backupsDir,
+    }),
+    appVersion: app.getVersion(),
+    retentionKeep: 7,
+    log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
+  });
+  const backupPoll = new PeriodicTask({
+    run: async () => {
+      await backupService.backup();
+
+      return { code: 0, output: '', timedOut: false };
+    },
+    log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
+    intervalMs: 6 * 60 * 60_000,
+    initialDelayMs: 60_000,
+  });
+  backupPoll.start();
+
+  return { supervisor, scheduler, notifierPoll, backupService, backupPoll, apiBase: `http://127.0.0.1:${port}` };
 }
 
 async function readLedger(file: string): Promise<DeliveryLedger> {
@@ -363,6 +400,52 @@ function registerTokenVault(): void {
 }
 
 /**
+ * Backup/restore bridge (#1228). The renderer asks; the main process does the
+ * work through BackupService. Restore is the delicate one — it must run with
+ * the PHP server stopped so nothing holds the SQLite file — so it stops the
+ * supervisor, swaps, restarts it, and reloads the window onto the restored
+ * data. ipcMain.handle (async) rather than sendSync: these are not hot paths.
+ */
+function registerBackupBridge(
+  supervisorOf: () => PhpSupervisor | null,
+  backupOf: () => BackupService | null,
+): void {
+  ipcMain.handle('budojo:backup:list', async () => (await backupOf()?.list()) ?? []);
+
+  ipcMain.handle('budojo:backup:run', async () => {
+    const path = await backupOf()?.backup();
+
+    return { ok: path !== undefined, path: path ?? null };
+  });
+
+  ipcMain.handle('budojo:backup:restore', async (_event, name: unknown) => {
+    const service = backupOf();
+    const supervisor = supervisorOf();
+    if (service === null || supervisor === null || typeof name !== 'string') {
+      return { ok: false, reason: 'Budojo is not ready to restore yet.' };
+    }
+
+    await supervisor.stop();
+    let check;
+    try {
+      check = await service.restore(name);
+    } finally {
+      await supervisor.start();
+    }
+
+    if (check.ok) {
+      // The renderer is holding data that no longer exists; reload it onto the
+      // restored database.
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.reload();
+      }
+    }
+
+    return check.ok ? { ok: true } : { ok: false, reason: check.reason };
+  });
+}
+
+/**
  * Two copies of the app would open two connections to the same SQLite file and
  * two scheduler ticks against the same rows. Focus the existing window instead.
  */
@@ -374,6 +457,8 @@ if (!gotTheLock) {
   let supervisor: PhpSupervisor | null = null;
   let scheduler: PeriodicTask | null = null;
   let notifierPoll: PeriodicTask | null = null;
+  let backupService: BackupService | null = null;
+  let backupPoll: PeriodicTask | null = null;
   let quitting = false;
 
   app.on('second-instance', () => {
@@ -401,6 +486,9 @@ if (!gotTheLock) {
       supervisor = runtime.supervisor;
       scheduler = runtime.scheduler;
       notifierPoll = runtime.notifierPoll;
+      backupService = runtime.backupService;
+      backupPoll = runtime.backupPoll;
+      registerBackupBridge(() => supervisor, () => backupService);
       apiBase = runtime.apiBase;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -440,7 +528,7 @@ if (!gotTheLock) {
     // Scheduler first: an in-flight schedule:run must not meet a server that
     // is already going away, and it must not outlive the app.
     const stopping = supervisor;
-    void Promise.all([scheduler?.stop(), notifierPoll?.stop()])
+    void Promise.all([scheduler?.stop(), notifierPoll?.stop(), backupPoll?.stop()])
       .catch(() => undefined)
       .then(() => stopping.stop())
       .catch(() => undefined)

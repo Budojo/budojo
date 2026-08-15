@@ -62,4 +62,10 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
       ipcRenderer.sendSync(TOKEN_CLEAR);
     },
   },
+  // Backup & restore (#1228). Async; not hot paths.
+  backup: {
+    list: () => ipcRenderer.invoke('budojo:backup:list'),
+    run: () => ipcRenderer.invoke('budojo:backup:run'),
+    restore: (name: string) => ipcRenderer.invoke('budojo:backup:restore', name),
+  },
 });

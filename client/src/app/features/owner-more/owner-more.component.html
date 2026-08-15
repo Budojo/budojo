@@ -40,6 +40,15 @@
         </a>
       </li>
     }
+    @if (isDesktop) {
+      <li>
+        <a class="owner-more__row" routerLink="/dashboard/backup" data-cy="owner-more-backup">
+          <i class="pi pi-save" aria-hidden="true"></i>
+          <span class="owner-more__label">{{ 'nav.backup' | translate }}</span>
+          <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+        </a>
+      </li>
+    }
     <li>
       <a class="owner-more__row" routerLink="/dashboard/profile" data-cy="owner-more-settings">
         <i class="pi pi-cog" aria-hidden="true"></i>

@@ -11,6 +11,11 @@ describe('DesktopBridgeService', () => {
   const bridgeWindow = window as BridgeWindow;
 
   const noToken = { get: () => null, set: () => undefined, clear: () => undefined };
+  const noBackup = {
+    list: async () => [],
+    run: async () => ({ ok: false, path: null }),
+    restore: async () => ({ ok: false }),
+  };
 
   afterEach(() => {
     delete bridgeWindow.__BUDOJO__;
@@ -42,6 +47,7 @@ describe('DesktopBridgeService', () => {
         return unsubscribe;
       },
       token: noToken,
+      backup: noBackup,
     };
     const { service, navigate } = setup();
 
@@ -60,6 +66,7 @@ describe('DesktopBridgeService', () => {
       platform: 'win32',
       onNavigate: () => unsubscribe,
       token: noToken,
+      backup: noBackup,
     };
     const { service } = setup();
 

@@ -42,7 +42,8 @@
       "markAttendance": "Mark attendance",
       "addAthlete": "Add athlete",
       "post": "New post"
-    }
+    },
+    "backup": "Backup"
   },
   "auth": {
     "shared": {
@@ -2188,6 +2189,27 @@
     },
     "unmarkErrorToast": {
       "summary": "Couldn't cancel attendance"
+    }
+  },
+  "backup": {
+    "title": "Data & backup",
+    "subtitle": "Your data lives on this computer. Back it up so a disk failure never means starting over.",
+    "lastBackup": "Last backup",
+    "never": "No backup yet",
+    "backupNow": "Back up now",
+    "archives": "Backups",
+    "loading": "Loading backups…",
+    "empty": "No backups yet. Create one now to protect your data.",
+    "size": "{{mb}} MB",
+    "restore": "Restore",
+    "confirmRestore": "Restore this backup? Your current data will be replaced with the contents of this archive.",
+    "confirmRestoreAccept": "Restore",
+    "confirmRestoreReject": "Cancel",
+    "toast": {
+      "created": "Backup created",
+      "failed": "Backup failed — see the log",
+      "restored": "Backup restored",
+      "restoreRefused": "This backup could not be restored"
     }
   }
 }

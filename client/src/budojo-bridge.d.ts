@@ -1,3 +1,10 @@
+interface BackupArchive {
+  readonly name: string;
+  readonly path: string;
+  readonly createdAt: string;
+  readonly sizeBytes: number;
+}
+
 /**
  * The renderer-side view of the Electron preload bridge (`desktop/src/preload.cts`).
  * Present only inside Budojo Desktop; every reader must tolerate `undefined`.
@@ -21,6 +28,12 @@ interface BudojoBridge {
     get(): string | null;
     set(token: string): void;
     clear(): void;
+  };
+  /** Local backup & restore (#1228). Present only inside Budojo Desktop. */
+  readonly backup: {
+    list(): Promise<BackupArchive[]>;
+    run(): Promise<{ ok: boolean; path: string | null }>;
+    restore(name: string): Promise<{ ok: boolean; reason?: string }>;
   };
 }
 

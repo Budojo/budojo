@@ -1,0 +1,65 @@
+<section class="backup-page">
+  <p-toast />
+
+  <app-page-header
+    [title]="'backup.title' | translate"
+    [subtitle]="'backup.subtitle' | translate"
+  />
+
+  <div class="backup-page__summary" data-cy="backup-summary">
+    <div>
+      <p class="backup-page__summary-label">{{ 'backup.lastBackup' | translate }}</p>
+      @if (lastBackupAt(); as at) {
+        <p class="backup-page__summary-value" data-cy="backup-last-at">
+          {{ at | date: 'medium' }}
+        </p>
+      } @else {
+        <p
+          class="backup-page__summary-value backup-page__summary-value--muted"
+          data-cy="backup-last-none"
+        >
+          {{ 'backup.never' | translate }}
+        </p>
+      }
+    </div>
+    <p-button
+      [label]="'backup.backupNow' | translate"
+      icon="pi pi-save"
+      [loading]="backingUp()"
+      (onClick)="backupNow()"
+      data-cy="backup-now"
+    />
+  </div>
+
+  <h2 class="backup-page__heading">{{ 'backup.archives' | translate }}</h2>
+
+  @if (loading()) {
+    <p class="backup-page__muted">{{ 'backup.loading' | translate }}</p>
+  } @else if (archives().length === 0) {
+    <p class="backup-page__muted" data-cy="backup-empty">{{ 'backup.empty' | translate }}</p>
+  } @else {
+    <ul class="backup-page__list" data-cy="backup-list">
+      @for (archive of archives(); track archive.name) {
+        <li class="backup-page__row">
+          <div class="backup-page__row-info">
+            <span class="backup-page__row-date">{{ archive.createdAt | date: 'medium' }}</span>
+            <span class="backup-page__row-size">{{
+              'backup.size' | translate: { mb: sizeMb(archive.sizeBytes) }
+            }}</span>
+          </div>
+          <app-confirm-destructive-button
+            icon="pi pi-history"
+            [label]="'backup.restore' | translate"
+            [ariaLabel]="'backup.restore' | translate"
+            [confirmMessage]="'backup.confirmRestore' | translate"
+            [acceptLabel]="'backup.confirmRestoreAccept' | translate"
+            [rejectLabel]="'backup.confirmRestoreReject' | translate"
+            [loading]="restoringName() === archive.name"
+            (confirmed)="restore(archive)"
+            [dataCy]="'backup-restore-' + archive.name"
+          />
+        </li>
+      }
+    </ul>
+  }
+</section>
