@@ -1,0 +1,10 @@
+{
+  "$comment": "Pinned PHP runtime bundled with Budojo Desktop (#1222). Bump version + sha256 together; sha256 comes from https://windows.php.net/downloads/releases/sha256sum.txt. Older releases move to /downloads/releases/archives/ — the fetch script tries both.",
+  "version": "8.4.24",
+  "variant": "nts-Win32-vs17-x64",
+  "sha256": "86470a30cbbaeafb259e727dfa5cd336f2f3f0a462cd6f8e3eac00fdbded13cb",
+  "urls": [
+    "https://windows.php.net/downloads/releases/php-8.4.24-nts-Win32-vs17-x64.zip",
+    "https://windows.php.net/downloads/releases/archives/php-8.4.24-nts-Win32-vs17-x64.zip"
+  ]
+}
