@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Actions\Notification\DeliverOwnerDigestAction;
 use App\Enums\AthleteStatus;
 use App\Mail\UnpaidAthletesDigestMail;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\NotificationLog;
+use App\Notifications\OwnerUnpaidAthletesDigestNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * Monthly digest emailed to every academy on the 16th, listing every
@@ -51,8 +52,11 @@ class SendUnpaidAthletesDigest extends Command
 
     protected $description = 'Monthly digest: athletes still unpaid for the current month per academy (M5 PR-E)';
 
-    public function handle(): int
+    private DeliverOwnerDigestAction $deliverOwnerDigest;
+
+    public function handle(DeliverOwnerDigestAction $deliverOwnerDigest): int
     {
+        $this->deliverOwnerDigest = $deliverOwnerDigest;
         $today = Carbon::today();
 
         // Validate --year / --month BEFORE casting to int (#404 follow-up
@@ -179,8 +183,12 @@ class SendUnpaidAthletesDigest extends Command
                                 return false;
                             }
 
-                            Mail::to($academy->owner)->queue(
+                            // Channels are the notification's decision (#1225): mail where the
+                            // runtime has a transport, a notifications row where it does not.
+                            $this->deliverOwnerDigest->execute(
+                                $academy->owner,
                                 new UnpaidAthletesDigestMail($academy, $athletes, $year, $month),
+                                new OwnerUnpaidAthletesDigestNotification($academy, $athletes, $year, $month),
                             );
 
                             return true;

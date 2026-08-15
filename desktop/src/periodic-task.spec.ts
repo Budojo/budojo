@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { SchedulerTick, type SchedulerEvent, type SchedulerRunResult } from './scheduler.js';
+import { PeriodicTask, type PeriodicTaskEvent, type PeriodicRunResult } from './periodic-task.js';
 
 /**
  * The scheduler tick (#1226): a reliable minute pulse around an injected
  * runner. What each pulse executes is the server's business.
  */
 
-function ok(): SchedulerRunResult {
+function ok(): PeriodicRunResult {
   return { code: 0, output: 'No scheduled commands are ready to run.', timedOut: false };
 }
 
-describe('SchedulerTick', () => {
-  const events: SchedulerEvent[] = [];
+describe('PeriodicTask', () => {
+  const events: PeriodicTaskEvent[] = [];
   const logs: string[] = [];
 
   beforeEach(() => {
@@ -25,8 +25,8 @@ describe('SchedulerTick', () => {
     vi.useRealTimers();
   });
 
-  function make(run: () => Promise<SchedulerRunResult>, overrides: Partial<ConstructorParameters<typeof SchedulerTick>[0]> = {}) {
-    return new SchedulerTick({
+  function make(run: () => Promise<PeriodicRunResult>, overrides: Partial<ConstructorParameters<typeof PeriodicTask>[0]> = {}) {
+    return new PeriodicTask({
       run,
       log: (line) => logs.push(line),
       onEvent: (event) => events.push(event),
@@ -62,7 +62,7 @@ describe('SchedulerTick', () => {
     let release: (() => void) | null = null;
     const run = vi.fn(
       () =>
-        new Promise<SchedulerRunResult>((resolve) => {
+        new Promise<PeriodicRunResult>((resolve) => {
           release = () => resolve(ok());
         }),
     );
@@ -93,7 +93,7 @@ describe('SchedulerTick', () => {
     tick.start();
     await vi.advanceTimersByTimeAsync(5_000);
 
-    expect(logs.some((line) => /schedule:run exit 0 in \d+ms/.test(line))).toBe(true);
+    expect(logs.some((line) => /run exit 0 in \d+ms/.test(line))).toBe(true);
     expect(logs.some((line) => line.includes('purge-expired-login-attempts'))).toBe(true);
 
     await tick.stop();
@@ -130,7 +130,7 @@ describe('SchedulerTick', () => {
     let release: (() => void) | null = null;
     const run = vi.fn(
       () =>
-        new Promise<SchedulerRunResult>((resolve) => {
+        new Promise<PeriodicRunResult>((resolve) => {
           release = () => resolve(ok());
         }),
     );
@@ -157,7 +157,7 @@ describe('SchedulerTick', () => {
   });
 
   it('gives up waiting after the grace period', async () => {
-    const tick = make(() => new Promise<SchedulerRunResult>(() => undefined), { stopGraceMs: 2_000 });
+    const tick = make(() => new Promise<PeriodicRunResult>(() => undefined), { stopGraceMs: 2_000 });
 
     tick.start();
     await vi.advanceTimersByTimeAsync(5_000);

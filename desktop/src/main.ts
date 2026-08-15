@@ -1,15 +1,16 @@
-import { app, BrowserWindow, dialog, protocol, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, Notification, protocol, safeStorage, shell } from 'electron';
 import { createWriteStream, existsSync } from 'node:fs';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dataLayout, runBootstrap, type Secrets } from './bootstrap.js';
+import { DesktopNotifier, EMPTY_LEDGER, parseListOutput, type DeliveryLedger, type PendingNotification } from './desktop-notifier.js';
 import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js';
 import { runPhp } from './php-exec.js';
 import { PhpSupervisor } from './php-supervisor.js';
 import { RotatingLog } from './rotating-log.js';
-import { SchedulerTick } from './scheduler.js';
+import { PeriodicTask } from './periodic-task.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
 
 /**
@@ -44,6 +45,9 @@ const RENDERER_ROOT = path.join(here, 'renderer');
  * before anything reads that path.
  */
 app.setName(app.isPackaged ? 'Budojo' : 'Budojo-dev');
+// Windows attributes toasts to an AppUserModelID; without one they show as
+// "electron.app.Electron". Must match electron-builder's appId.
+app.setAppUserModelId('it.budojo.desktop');
 
 /**
  * MUST run before `app.whenReady()`. Registering the scheme as `standard`
@@ -148,7 +152,12 @@ function createWindow(apiBase: string): BrowserWindow {
  * server (#1222); returns the API base URL. Every failure path ends in a
  * native error box with the log location — never a blank renderer.
  */
-async function startRuntime(): Promise<{ supervisor: PhpSupervisor; scheduler: SchedulerTick; apiBase: string }> {
+async function startRuntime(): Promise<{
+  supervisor: PhpSupervisor;
+  scheduler: PeriodicTask;
+  notifierPoll: PeriodicTask;
+  apiBase: string;
+}> {
   const paths = resolveDesktopPaths({
     isPackaged: app.isPackaged,
     resourcesPath: process.resourcesPath,
@@ -235,7 +244,7 @@ async function startRuntime(): Promise<{ supervisor: PhpSupervisor; scheduler: S
   // by routes/console-desktop.php.
   const schedulerLog = new RotatingLog(path.join(layout.logsDir, 'scheduler.log'));
   schedulerLog.open();
-  const scheduler = new SchedulerTick({
+  const scheduler = new PeriodicTask({
     run: () =>
       runPhp({
         phpBinary: paths.phpBinary,
@@ -249,7 +258,85 @@ async function startRuntime(): Promise<{ supervisor: PhpSupervisor; scheduler: S
   });
   scheduler.start();
 
-  return { supervisor, scheduler, apiBase: `http://127.0.0.1:${port}` };
+  // Native toasts (#1225): poll the owner's new in-app notifications every
+  // thirty seconds and show each once; the ledger under userData survives
+  // restarts. Delivery is the shell's state, content is the server's.
+  const notifierLog = new RotatingLog(path.join(layout.logsDir, 'notifier.log'));
+  notifierLog.open();
+  const notifier = new DesktopNotifier({
+    list: async (afterIso) => {
+      const result = await runPhp({
+        phpBinary: paths.phpBinary,
+        iniPath: layout.iniPath,
+        args: ['artisan', 'budojo:list-desktop-notifications', `--after=${afterIso}`, '--no-ansi'],
+        cwd: paths.serverRoot,
+        env: envWith(boot.secrets, port),
+        timeoutMs: 60_000,
+      });
+
+      return result.code === 0 ? parseListOutput(result.output) : [];
+    },
+    show: showNativeNotification,
+    ledger: {
+      read: async () => readLedger(layout.notificationsLedgerFile),
+      write: (ledger) => writeFile(layout.notificationsLedgerFile, JSON.stringify(ledger, null, 2), 'utf8'),
+    },
+    log: (line) => notifierLog.write(`${new Date().toISOString()} ${line}`),
+  });
+  const notifierPoll = new PeriodicTask({
+    run: async () => {
+      const shown = await notifier.poll();
+
+      return { code: 0, output: shown > 0 ? `${shown} shown` : '', timedOut: false };
+    },
+    log: (line) => notifierLog.write(`${new Date().toISOString()} ${line}`),
+    intervalMs: 30_000,
+    initialDelayMs: 8_000,
+  });
+  notifierPoll.start();
+
+  return { supervisor, scheduler, notifierPoll, apiBase: `http://127.0.0.1:${port}` };
+}
+
+async function readLedger(file: string): Promise<DeliveryLedger> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(file, 'utf8'));
+    if (typeof parsed === 'object' && parsed !== null && Array.isArray((parsed as DeliveryLedger).delivered)) {
+      return parsed as DeliveryLedger;
+    }
+  } catch {
+    // first run, or an unreadable file: start from the empty ledger
+  }
+
+  return EMPTY_LEDGER;
+}
+
+/**
+ * One Windows toast per notification. Clicking it brings the window forward
+ * and asks the renderer to navigate — the renderer still owns routing.
+ */
+function showNativeNotification(notification: PendingNotification): void {
+  if (!Notification.isSupported()) {
+    return;
+  }
+
+  const toast = new Notification({ title: notification.title, body: notification.body });
+  toast.on('click', () => {
+    const [window] = BrowserWindow.getAllWindows();
+
+    if (window === undefined) {
+      return;
+    }
+    if (window.isMinimized()) {
+      window.restore();
+    }
+    window.show();
+    window.focus();
+    if (notification.link.startsWith('/')) {
+      window.webContents.send('budojo:navigate', notification.link);
+    }
+  });
+  toast.show();
 }
 
 /**
@@ -262,7 +349,8 @@ if (!gotTheLock) {
   app.quit();
 } else {
   let supervisor: PhpSupervisor | null = null;
-  let scheduler: SchedulerTick | null = null;
+  let scheduler: PeriodicTask | null = null;
+  let notifierPoll: PeriodicTask | null = null;
   let quitting = false;
 
   app.on('second-instance', () => {
@@ -288,6 +376,7 @@ if (!gotTheLock) {
       const runtime = await startRuntime();
       supervisor = runtime.supervisor;
       scheduler = runtime.scheduler;
+      notifierPoll = runtime.notifierPoll;
       apiBase = runtime.apiBase;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -327,7 +416,7 @@ if (!gotTheLock) {
     // Scheduler first: an in-flight schedule:run must not meet a server that
     // is already going away, and it must not outlive the app.
     const stopping = supervisor;
-    void (scheduler?.stop() ?? Promise.resolve())
+    void Promise.all([scheduler?.stop(), notifierPoll?.stop()])
       .catch(() => undefined)
       .then(() => stopping.stop())
       .catch(() => undefined)

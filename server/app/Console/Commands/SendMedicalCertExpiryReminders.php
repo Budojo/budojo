@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Actions\Notification\DeliverOwnerDigestAction;
 use App\Enums\DocumentType;
 use App\Mail\MedicalCertificateExpiringMail;
 use App\Models\Academy;
 use App\Models\Document;
 use App\Models\NotificationLog;
 use App\Notifications\AthleteMedicalCertExpiringNotification;
+use App\Notifications\OwnerMedicalCertExpiringDigestNotification;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * Daily scan that emails every academy a digest of medical certificates
@@ -65,8 +66,11 @@ class SendMedicalCertExpiryReminders extends Command
 
     protected $description = 'Daily digest: medical certificates expiring at T-30, T-7, or T-0 per academy (M5 PR-D)';
 
-    public function handle(): int
+    private DeliverOwnerDigestAction $deliverOwnerDigest;
+
+    public function handle(DeliverOwnerDigestAction $deliverOwnerDigest): int
     {
+        $this->deliverOwnerDigest = $deliverOwnerDigest;
         $today = Carbon::today();
 
         $triggerDates = array_map(
@@ -153,7 +157,13 @@ class SendMedicalCertExpiryReminders extends Command
                                 return false;
                             }
 
-                            Mail::to($academy->owner)->queue(new MedicalCertificateExpiringMail($academy, $documents));
+                            // Mail where the runtime has a transport, a notifications row
+                            // where it does not (#1225) — one place decides.
+                            $this->deliverOwnerDigest->execute(
+                                $academy->owner,
+                                new MedicalCertificateExpiringMail($academy, $documents),
+                                new OwnerMedicalCertExpiringDigestNotification($academy, $documents),
+                            );
 
                             // Athlete-side direct push (#729 B1). Same
                             // T-30 / T-7 / T-0 trigger that drives the
