@@ -1,20 +1,19 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 
-// The real zxcvbn-ts ships ~700 kB of dictionaries; loading them through a
-// dynamic import on a cold CI module-cache is what made this spec flake at its
-// 50s ceiling (#1248). Mock the three modules: the component's contract is the
-// rendered meter + ARIA, not the exact score zxcvbn computes (see its docblock).
-// A password containing 'weak' scores 0, everything else scores 3 — enough to
-// exercise both the rendered and the empty branches deterministically.
-vi.mock('@zxcvbn-ts/core', () => ({
-  zxcvbnOptions: { setOptions: () => undefined },
-  zxcvbn: (value: string) => ({ score: value.includes('weak') ? 0 : 3 }),
-}));
-vi.mock('@zxcvbn-ts/language-common', () => ({ dictionary: {}, adjacencyGraphs: {} }));
-vi.mock('@zxcvbn-ts/language-en', () => ({ dictionary: {} }));
-
-import { PasswordStrengthMeterComponent } from './password-strength-meter.component';
+import { PasswordStrengthMeterComponent, ZXCVBN_LOADER } from './password-strength-meter.component';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
+
+// The real zxcvbn-ts ships ~700 kB of dictionaries behind a lazy dynamic
+// import. Under the esbuild unit-test builder on a cold CI cache, `vi.mock`
+// does NOT intercept that code-split `import('@zxcvbn-ts/core')` chunk, so
+// mocking the module left the real analyser to load and the spec timed out at
+// its 5s ceiling (#1251, after #972/#1248 band-aids). Instead we inject a
+// synchronous fake loader through ZXCVBN_LOADER — no dynamic import in the
+// test path at all, deterministic on every runner. The component's contract is
+// the rendered meter + ARIA, not the exact score: a password containing 'weak'
+// scores 0, everything else 3 — exercising both the rendered and empty branches.
+const fakeZxcvbnLoader = (): Promise<(value: string) => { score: number }> =>
+  Promise.resolve((value: string) => ({ score: value.includes('weak') ? 0 : 3 }));
 
 /**
  * The component is a thin presentation wrapper around `zxcvbn-ts` —
@@ -35,17 +34,16 @@ async function setup(password: string | null): Promise<{
 }> {
   TestBed.configureTestingModule({
     imports: [PasswordStrengthMeterComponent],
-    providers: [...provideI18nTesting()],
+    providers: [...provideI18nTesting(), { provide: ZXCVBN_LOADER, useValue: fakeZxcvbnLoader }],
   });
   const fixture = TestBed.createComponent(PasswordStrengthMeterComponent);
   fixture.componentRef.setInput('password', password);
   fixture.detectChanges();
-  // zxcvbn-ts is now lazy-imported on first non-empty input (#877
-  // follow-up). The score signal lands asynchronously after the
-  // dynamic-import promise chain resolves AND a following microtask
-  // runs the analysis + the next CD pass. `vi.waitFor` polls until
-  // the DOM reflects the analysed value OR the empty branch (for
-  // null / '' inputs that resolve synchronously and never render).
+  // The score signal lands asynchronously: the loader promise resolves
+  // (here, the injected fake) and a following microtask runs the analysis
+  // + the next CD pass. `vi.waitFor` polls until the DOM reflects the
+  // analysed value OR the empty branch (for null / '' inputs that resolve
+  // synchronously and never render).
   if (password !== null && password !== '') {
     await vi.waitFor(
       () => {
