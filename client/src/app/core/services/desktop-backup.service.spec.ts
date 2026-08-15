@@ -40,6 +40,7 @@ describe('DesktopBackupService', () => {
       apiBase: '',
       platform: 'win32',
       onNavigate: () => () => undefined,
+      token: { get: () => null, set: () => undefined, clear: () => undefined },
       backup,
     };
     const svc = service();

@@ -48,6 +48,11 @@ describe('TokenStorageService', () => {
             vault = null;
           },
         },
+        backup: {
+          list: async () => [],
+          run: async () => ({ ok: false, path: null }),
+          restore: async () => ({ ok: false }),
+        },
       };
       const store = service();
 
