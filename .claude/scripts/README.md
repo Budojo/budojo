@@ -18,9 +18,9 @@ Set the project-board status for an issue or PR in budojo's Project #2.
 
 Encapsulates the 3-step GraphQL pipeline (lookup node id, add to project, set Status field) and the hardcoded `PVT_*` IDs. The IDs live ONLY in this script — anything else referencing them is drift.
 
-### `test-client.sh` / `test-server.sh`
+### `test-client.sh` / `test-server.sh` / `test-desktop.sh`
 
-Wrap the `docker exec <container> sh -c "cd /app && <cmd>"` prefix that wraps every pre-push gate.
+One wrapper per area — the pre-push gates, without retyping the container prefix.
 
 ```bash
 ./.claude/scripts/test-client.sh           # all client gates: prettier + lint + vitest
@@ -29,9 +29,14 @@ Wrap the `docker exec <container> sh -c "cd /app && <cmd>"` prefix that wraps ev
 
 ./.claude/scripts/test-server.sh           # all server gates: cs-fixer + phpstan + pest
 ./.claude/scripts/test-server.sh quick     # phpstan + pest, no cs-fixer rewrite
+
+./.claude/scripts/test-desktop.sh          # all desktop gates: tsc --noEmit + vitest
+./.claude/scripts/test-desktop.sh build    # compile main + preload into dist/
 ```
 
-Subcommands: `all` (default), `quick` (skip the `--write` formatters), or any individual gate name.
+Subcommands: `all` (default), `quick` (skip the `--write` formatters — client/server only), or any individual gate name.
+
+`test-client.sh` and `test-server.sh` wrap `docker exec <container> sh -c "cd /app && <cmd>"`. **`test-desktop.sh` runs on the host** — electron and electron-builder ship platform binaries, `desktop/node_modules` is installed natively, and the shipped app contains no Docker at all. It deliberately excludes `build:renderer`, which needs the client's container-installed toolchain.
 
 ## Conventions for adding a new script
 
@@ -43,4 +48,6 @@ Subcommands: `all` (default), `quick` (skip the `--write` formatters), or any in
 
 ## Companion: `.claude/pr-bodies/`
 
-PR bodies live in their own directory now (instead of overwriting a single `.claude/pr-body.md` per PR). Use `.claude/pr-bodies/<branch>.md` or `.claude/pr-bodies/pr-<number>.md` so you can keep multiple PRs in flight without losing history.
+PR bodies live in their own directory (instead of overwriting a single `.claude/pr-body.md` per PR). Use `.claude/pr-bodies/<branch>.md` or `.claude/pr-bodies/pr-<number>.md` so several PRs can be in flight at once without overwriting each other.
+
+They are **scratch, not an archive** — once the PR is open GitHub holds the canonical copy, so delete yours after the merge. See [`.claude/pr-bodies/README.md`](../pr-bodies/README.md) for the prune one-liner and why the pile was cleared in #1269.

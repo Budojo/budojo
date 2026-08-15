@@ -76,12 +76,12 @@ Full details in [`docs/development/git-flow.md`](./docs/development/git-flow.md)
 
 ### Pre-push checklist
 
-The server and client gate suites run inside Docker via wrappers under `.claude/scripts/`; the desktop one runs on the host (it needs the Windows toolchain, and `desktop/node_modules` is host-installed):
+One wrapper per area, under `.claude/scripts/`. Server and client run inside Docker; desktop runs on the host (electron ships platform binaries and `desktop/node_modules` is host-installed):
 
 ```bash
 ./.claude/scripts/test-server.sh        # cs-fixer + phpstan + pest
 ./.claude/scripts/test-client.sh        # prettier --write + lint + vitest
-cd desktop && npm run lint && npm test  # tsc --noEmit + vitest
+./.claude/scripts/test-desktop.sh       # tsc --noEmit + vitest
 ```
 
 Subcommands: `all` (default), `quick` (skip `--write` formatters when re-running mid-session), or any individual gate name. Run formatters/fixers **before staging**, static analysis / lint **after staging**. Never rely on CI to catch these.
@@ -121,7 +121,7 @@ The automated post-push reviewer was retired in #1234 — it cost a paid API key
 
 ## Release flow — the essentials
 
-Full mechanics in [`docs/development/release-flow.md`](./docs/development/release-flow.md). Key rules:
+**Run [`/release`](./.claude/commands/release.md)** — it walks the whole sequence (version → changelog + whats-new → Auto-closes → merge commit → verify installers → sweep) with the traps annotated. Full mechanics in [`docs/development/release-flow.md`](./docs/development/release-flow.md). Key rules:
 
 - **semantic-release owns versioning entirely.** Do NOT create a `version` field in `package.json`.
 - Every squash merge to `develop` → beta tag `vX.Y.Z-beta.N`.
