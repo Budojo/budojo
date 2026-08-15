@@ -19,6 +19,7 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { versionInterceptor } from './core/interceptors/version.interceptor';
+import { environment } from '../environments/environment';
 
 import EN_TRANSLATIONS from '../../public/assets/i18n/en.json';
 import IT_TRANSLATIONS from '../../public/assets/i18n/it.json';
@@ -122,8 +123,13 @@ export const appConfig: ApplicationConfig = {
     // don't fight hot-reload with stale caches. Enabled after 30s in prod so
     // the first paint is never blocked on worker registration — the worker
     // then takes over for subsequent navigations + offline shell.
+    //
+    // Off on the desktop (#1224): the build emits no ngsw-worker.js, and a
+    // worker caching the app shell across installer upgrades would bring back
+    // exactly the stuck-on-old-bundle failure VersionCheckService exists to
+    // detect (#548). Electron owns the update story there; one cache layer.
     provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode(),
+      enabled: !isDevMode() && environment.runtime !== 'desktop',
       registrationStrategy: 'registerWhenStable:30000',
     }),
     // i18n (#273) — runtime locale switch with bundle-time JSON

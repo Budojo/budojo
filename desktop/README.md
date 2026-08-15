@@ -13,6 +13,13 @@ npm run fetch:php     # once: downloads + sha256-verifies PHP 8.4 into runtime/p
 npm run dev           # builds, then opens the window against ng serve on :4200
 ```
 
+To run the app the way it ships — Angular over `app://`, no dev server:
+
+```bash
+npm run build:renderer   # ng build --configuration desktop, copied to dist/renderer
+npm start                # builds main + preload, launches Electron on app://bundle
+```
+
 `npm run dev` starts the supervised PHP runtime every time — the API you get is
 the bundled one, on a free loopback port, with its data under
 `%APPDATA%\Budojo-dev` (never the real `Budojo` directory a packaged build uses).

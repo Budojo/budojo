@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { DOCUMENT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { environment } from '../../../environments/environment';
 import { VERSION } from '../../../environments/version';
 import { VersionCheckService } from './version-check.service';
 
@@ -91,6 +92,24 @@ describe('VersionCheckService', () => {
 
     httpMock.expectNone(() => true);
     expect(win.location.reload).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op on the desktop runtime (#1224) — no /version.json, no service worker', () => {
+    // The Electron shell serves the bundle over app:// where a missing
+    // /version.json is a real 404, and Electron owns updates. Guarded rather
+    // than removed so the web build keeps the poll.
+    const originalRuntime = environment.runtime;
+    (environment as { runtime: string }).runtime = 'desktop';
+    try {
+      const service = setup();
+
+      service.start();
+
+      httpMock.expectNone(() => true);
+      expect(win.location.reload).not.toHaveBeenCalled();
+    } finally {
+      (environment as { runtime: string }).runtime = originalRuntime;
+    }
   });
 
   it('is a no-op when document.defaultView is null (SSR / non-browser bootstrap)', () => {
