@@ -91,7 +91,7 @@ The post-release `main → develop` sweep PR merges immediately — it's alignme
 Separately from the semantic-release dev changelog, the SPA ships a **user-facing changelog** at `/dashboard/whats-new` in plain English for non-technical customers. Two artefacts kept in lock-step by hand:
 
 - `docs/changelog/user-facing/v{X.Y.Z}.md` — markdown source, one file per stable release, light emoji on section headings.
-- The `releases` array in `client/src/app/features/whats-new/whats-new.component.ts` — typed `Release[]` rendered via Angular template (no markdown parser dependency).
+- The `RELEASES` array in `client/src/app/features/whats-new/whats-new.releases.ts` — typed `Release[]` rendered via the sibling `whats-new.component.ts` template (no markdown parser dependency).
 
 **Discipline:** every `develop → main` release PR adds the markdown file AND prepends the array entry in the same commit history. The vitest spec pinning the version order in the array (`renders all four backfilled releases`) fails when one is missing — that's the regression-catching trip-wire, by design.
 

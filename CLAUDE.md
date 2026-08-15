@@ -116,7 +116,7 @@ Full mechanics in [`docs/development/release-flow.md`](./docs/development/releas
 - Every merge commit `develop → main` → stable tag `vX.Y.Z`.
 - Version bumps follow Angular preset: `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major. **Compute the version BEFORE writing the user-facing changelog** — scan `main..develop` commits first so the whats-new file + Release entry match what semantic-release will tag.
 - **`## Auto-closes` block is mandatory** on every `develop → main` release PR. Without it, leaf issues stay open after merge (GitHub auto-close only fires on the default branch).
-- **Every release ships the user-facing changelog** in the same commit history: `docs/changelog/user-facing/vX.Y.Z.md` + prepend to the `releases` array in `client/src/app/features/whats-new/whats-new.component.ts`.
+- **Every release ships the user-facing changelog** in the same commit history: `docs/changelog/user-facing/vX.Y.Z.md` + prepend to the `RELEASES` array in `client/src/app/features/whats-new/whats-new.releases.ts`.
 - **Post-release `main → develop` sweep is mandatory** — otherwise develop's next beta tag stays on the old train.
 - **Post-release tech-debt + docs sweep is mandatory** — see [release-flow.md § post-release sweep](./docs/development/release-flow.md#post-release-tech-debt--docscode-cleanup-sweep). Empty findings IS a valid outcome.
 
@@ -131,6 +131,7 @@ docs/
 ├── README.md              # index
 ├── entities/*.md          # one file per persisted entity (user, academy, athlete, …)
 ├── api/v1.yaml            # OpenAPI 3.0 contract for /api/v1
+├── desktop/*.md           # the desktop build (M11) — architecture, install, backup-restore
 ├── specs/*.md             # milestone PRDs
 ├── development/*.md       # procedural runbooks (git, release, labels)
 ├── design/*.md            # design system, mobile audit, brand kit
