@@ -60,6 +60,28 @@ describe('RuntimeService', () => {
     expect(service.capabilities()).toEqual(ALL_CAPABILITIES);
   });
 
+  it('keeps the web default when the response is not the runtime shape', async () => {
+    // A catch-all Cypress stub answering { data: [] }, a proxy returning the
+    // SPA shell, a half-deployed API: none of these may empty the set. This
+    // is exactly how athlete-invite.cy.ts lost its invitation card in CI.
+    const pending = service.load();
+    http.expectOne('/api/v1/runtime').flush({ data: [] });
+    await pending;
+
+    expect(service.capabilities()).toEqual(ALL_CAPABILITIES);
+    expect(service.profile()).toBe('web');
+  });
+
+  it('drops unknown capability names instead of carrying them', async () => {
+    const pending = service.load();
+    http
+      .expectOne('/api/v1/runtime')
+      .flush({ data: { profile: 'web', capabilities: ['community', 'teleport'] } });
+    await pending;
+
+    expect(service.capabilities()).toEqual(['community']);
+  });
+
   it('fetches once and shares the promise across callers', async () => {
     const first = service.load();
     const second = service.load();

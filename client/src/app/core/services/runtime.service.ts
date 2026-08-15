@@ -66,11 +66,42 @@ export class RuntimeService {
       this.http.get<RuntimeResponse>(`${environment.apiBase}/api/v1/runtime`),
     )
       .then((response) => {
-        this.profileSignal.set(response.data.profile);
-        this.capabilitiesSignal.set(response.data.capabilities);
+        // Trust the shape only when it is the shape. A catch-all test stub, a
+        // proxy answering with the SPA shell, a half-deployed API — anything
+        // that is not `{ data: { profile, capabilities[] } }` keeps the web
+        // default rather than emptying the set and hiding the whole app.
+        const parsed = parseRuntime(response);
+        if (parsed === null) {
+          return;
+        }
+        this.profileSignal.set(parsed.profile);
+        this.capabilitiesSignal.set(parsed.capabilities);
       })
       .catch(() => undefined);
 
     return this.loading;
   }
+}
+
+function parseRuntime(
+  response: unknown,
+): { profile: 'web' | 'desktop'; capabilities: Capability[] } | null {
+  if (typeof response !== 'object' || response === null) {
+    return null;
+  }
+  const data = (response as { data?: unknown }).data;
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return null;
+  }
+  const { profile, capabilities } = data as { profile?: unknown; capabilities?: unknown };
+  if ((profile !== 'web' && profile !== 'desktop') || !Array.isArray(capabilities)) {
+    return null;
+  }
+  const known = new Set<string>(ALL_CAPABILITIES);
+  return {
+    profile,
+    capabilities: capabilities.filter(
+      (c): c is Capability => typeof c === 'string' && known.has(c),
+    ),
+  };
 }
