@@ -165,14 +165,38 @@ describe('buildPhpEnv', () => {
   it('isolates php.ini loading from whatever PHP is installed on the machine', () => {
     // Verified empirically on a machine with a scoop PHP: PHP_INI_SCAN_DIR in
     // the shell made the bundled php.exe load a foreign php.ini and warn about
-    // a missing grpc DLL. An empty PHP_INI_SCAN_DIR disables scanning; PHPRC
-    // is dropped for the same reason.
+    // a missing grpc DLL. An empty PHP_INI_SCAN_DIR disables scanning; the
+    // machine's PHPRC is dropped for the same reason (it is not inheritable).
     const env = buildPhpEnv(opts, {
       PHP_INI_SCAN_DIR: 'C:\\scoop\\php\\conf.d',
       PHPRC: 'C:\\scoop\\php',
     });
 
     expect(env['PHP_INI_SCAN_DIR']).toBe('');
+    expect(env['PHPRC']).not.toBe('C:\\scoop\\php');
+  });
+
+  it('exports our own PHPRC so the scheduler subprocesses find the ini', () => {
+    // Laravel's `$schedule->command()` spawns each due command as its OWN
+    // php.exe via PHP_BINARY, with no `-c`. Those children loaded no ini, so
+    // pdo_sqlite was missing and every scheduled command died on "could not
+    // find driver" — the medical-certificate expiry reminders included, only
+    // ever visible in laravel.log. PHPRC is inherited by every descendant.
+    // Build the path the way `dataLayout()` does rather than hardcoding
+    // separators: production runs on Windows, CI runs these specs on Linux,
+    // and `path.dirname('C:\\data\\php.ini')` is '.' on POSIX. `path.join`
+    // yields the same dirname on both.
+    const env = buildPhpEnv(
+      { ...opts, iniPath: path.join('C:\\data', 'php.ini') },
+      { PHPRC: 'C:\\scoop\\php' },
+    );
+
+    expect(env['PHPRC']).toBe('C:\\data');
+  });
+
+  it('omits PHPRC when no ini path is given, rather than inheriting one', () => {
+    const env = buildPhpEnv(opts, { PHPRC: 'C:\\scoop\\php' });
+
     expect(env).not.toHaveProperty('PHPRC');
   });
 
