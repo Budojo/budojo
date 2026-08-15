@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\Auth\MintSessionTokenAction;
 use App\Actions\Auth\RegisterUserAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
@@ -13,7 +14,10 @@ use Illuminate\Http\JsonResponse;
 
 class RegisterController extends Controller
 {
-    public function __construct(private readonly RegisterUserAction $action)
+    public function __construct(
+        private readonly RegisterUserAction $action,
+        private readonly MintSessionTokenAction $mintToken,
+    )
     {
     }
 
@@ -34,7 +38,7 @@ class RegisterController extends Controller
         // "Active sessions" list (#413). See LoginController for the
         // full rationale.
         $tokenName = UserAgentLabel::fromUserAgent($request->userAgent() ?? '');
-        $token = $user->createToken($tokenName)->plainTextToken;
+        $token = $this->mintToken->execute($user, $tokenName);
 
         // Eager-load the relations the `UserResource` projects so the
         // emitted envelope is coherent (both blocks are always null

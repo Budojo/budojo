@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\User;
 
+use App\Enums\TokenKind;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\NewAccessToken;
@@ -45,7 +46,7 @@ class IssueApiTokenAction
                 abilities: $abilities,
                 expiresAt: $expiresAt,
             );
-            $minted->accessToken->forceFill(['kind' => 'api'])->save();
+            $minted->accessToken->forceFill(['kind' => TokenKind::Api->value])->save();
 
             return $minted;
         });
