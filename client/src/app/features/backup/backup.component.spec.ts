@@ -6,6 +6,7 @@ import {
   DesktopBackupService,
   type BackupArchiveView,
 } from '../../core/services/desktop-backup.service';
+import { DesktopKeysService } from '../../core/services/desktop-keys.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 /**
@@ -26,13 +27,24 @@ describe('BackupComponent', () => {
     },
   ];
 
-  function setup(overrides: Partial<DesktopBackupService> = {}) {
+  function setup(
+    overrides: Partial<DesktopBackupService> = {},
+    keysOverrides: Partial<DesktopKeysService> = {},
+  ) {
     const added: unknown[] = [];
     const backup: Partial<DesktopBackupService> = {
       list: vi.fn(async () => archives),
       backupNow: vi.fn(async () => true),
       restore: vi.fn(async () => ({ ok: true })),
       ...overrides,
+    };
+    // Default: the recovery-keys bridge is absent (like the web), so the section
+    // is hidden and the pre-existing backup tests are untouched.
+    const keys: Partial<DesktopKeysService> = {
+      available: false,
+      reveal: vi.fn(async () => ({ ok: true, code: 'BUDOJO-RECOVERY-1:abc' })),
+      importCode: vi.fn(async () => ({ ok: true })),
+      ...keysOverrides,
     };
     TestBed.configureTestingModule({
       providers: [
@@ -41,6 +53,7 @@ describe('BackupComponent', () => {
         MessageService, // real one: p-toast subscribes to its stream
         ConfirmationService, // confirm-destructive-button needs it
         { provide: DesktopBackupService, useValue: backup },
+        { provide: DesktopKeysService, useValue: keys },
       ],
     });
     // Spy on add() so the assertions read the toasts without stubbing the
@@ -48,7 +61,7 @@ describe('BackupComponent', () => {
     vi.spyOn(TestBed.inject(MessageService), 'add').mockImplementation((m) => added.push(m));
     const fixture = TestBed.createComponent(BackupComponent);
     fixture.detectChanges();
-    return { fixture, backup, added };
+    return { fixture, backup, keys, added };
   }
 
   it('shows the most recent backup time and the archive list', async () => {
@@ -95,5 +108,63 @@ describe('BackupComponent', () => {
       detail?: string;
     };
     expect(errorToast?.detail).toContain('newer version');
+  });
+
+  it('hides the recovery-keys section when the bridge is absent (web)', async () => {
+    const { fixture } = setup();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="recovery-keys"]')).toBeNull();
+  });
+
+  it('reveals the recovery code on the desktop', async () => {
+    const { fixture, keys } = setup({}, { available: true });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="recovery-keys"]')).not.toBeNull();
+
+    await fixture.componentInstance['reveal']();
+    fixture.detectChanges();
+
+    expect(keys.reveal).toHaveBeenCalled();
+    const code = fixture.nativeElement.querySelector(
+      '[data-cy="recovery-code"]',
+    ) as HTMLTextAreaElement;
+    expect(code?.value).toBe('BUDOJO-RECOVERY-1:abc');
+  });
+
+  it('imports a pasted recovery code and surfaces the restart', async () => {
+    const { fixture, keys, added } = setup({}, { available: true });
+    await fixture.whenStable();
+
+    fixture.componentInstance['setImportValue']('BUDOJO-RECOVERY-1:abc');
+    await fixture.componentInstance['importKeys']();
+
+    expect(keys.importCode).toHaveBeenCalledWith('BUDOJO-RECOVERY-1:abc');
+    expect(added.some((m) => (m as { severity: string }).severity === 'success')).toBe(true);
+  });
+
+  it('surfaces the reason when a recovery code is rejected', async () => {
+    const { fixture, added } = setup(
+      {},
+      {
+        available: true,
+        importCode: vi.fn(async () => ({
+          ok: false,
+          reason: 'The recovery code is corrupted or incomplete.',
+        })),
+      },
+    );
+    await fixture.whenStable();
+
+    fixture.componentInstance['setImportValue']('nonsense');
+    await fixture.componentInstance['importKeys']();
+
+    const errorToast = added.find((m) => (m as { severity: string }).severity === 'error') as {
+      detail?: string;
+    };
+    expect(errorToast?.detail).toContain('corrupted');
   });
 });

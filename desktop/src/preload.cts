@@ -68,4 +68,11 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     run: () => ipcRenderer.invoke('budojo:backup:run'),
     restore: (name: string) => ipcRenderer.invoke('budojo:backup:restore', name),
   },
+  // Recovery keys (#1254). Export decrypts the keychain store into a copy-
+  // pasteable code; import writes it back and the app relaunches under the new
+  // keys. Async; not hot paths.
+  keys: {
+    export: () => ipcRenderer.invoke('budojo:keys:export'),
+    import: (code: string) => ipcRenderer.invoke('budojo:keys:import', code),
+  },
 });

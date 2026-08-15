@@ -56,26 +56,43 @@ What this means for each recovery scenario:
 | Scenario | Bulk data (athletes, attendance, payments) | Encrypted documents |
 |---|:---:|:---:|
 | **Same machine, same Windows user** (app reinstalled, data restored) | ✅ recovered | ✅ recovered — `secrets.bin`/DPAPI is still there |
-| **New machine / new Windows profile** (old machine dead) | ✅ recovered | ❌ **cannot be decrypted** — the new install generated *different* keys |
+| **New machine, WITH your recovery keys imported** | ✅ recovered | ✅ recovered — importing the recovery code restores the original keys |
+| **New machine, WITHOUT the recovery keys** | ✅ recovered | ❌ **cannot be decrypted** — the new install generated *different* keys |
 
-On a fresh machine the app installs, generates its **own** new keys, and you restore your backup on top. The relational data comes back and is fully usable. The documents come back as files but were encrypted with the **old** machine's key — the new key cannot read them. The app does not crash and does not warn: athletes, attendance and payments are all there, and only document downloads fail. That silent partial failure is exactly why this section exists.
+On a fresh machine the app installs, generates its **own** new keys, and you restore your backup on top. The relational data comes back and is fully usable. The documents come back as files but were encrypted with the **old** machine's key. Unless you also import that machine's **[recovery keys](#recovery-keys)**, the new key cannot read them — and the app does not warn: athletes, attendance and payments are all there, only document downloads fail. That silent partial failure is why recovery keys exist.
 
 > A safety detail: if you ever restore a database into a profile whose `secrets.bin` is **missing** (rather than different), the app **refuses to boot** rather than generate fresh keys over existing data — new keys would make every encrypted field permanently unreadable while looking like a harmless reset. It fails loudly on purpose.
 
-### What to do about it
+### Recovery keys
 
-- **Keep the Windows user account alive.** The single most effective thing is not to lose the Windows profile that created the keys — same user, same machine. Reinstalling *Budojo* is safe; reinstalling *Windows* or moving to a new PC is what breaks document decryption.
-- **Copy `secrets.bin` off-machine alongside your backups**, understanding it only helps a **same-Windows-user** restore (e.g. you wiped just the app, not the account). For a genuinely new machine it will not decrypt — but it costs nothing to keep.
-- **Treat the bulk data as the thing a backup reliably protects.** Athletes, attendance, payments and belts restore anywhere. Medical certificates are, in the worst case, re-collectable from the athletes — the backup is not your only path to them.
-- A built-in **export/import of the plaintext keys** (record them in a password manager, restore them on any machine) is the robust fix and is tracked as a follow-up — [#1254](https://github.com/Budojo/budojo/issues/1254). Until it ships, the two scenarios above are the accurate picture.
+Budojo hands you a **recovery code** — a single line that carries both encryption keys — so a fresh-machine recovery can decrypt your documents too. This is the robust answer to the scenario above ([#1254](https://github.com/Budojo/budojo/issues/1254)).
+
+**Save it now, before you need it** — Data & backup → *Recovery keys* → **Reveal recovery code**:
+
+1. Reveal the code and **copy it into a password manager**. Anyone who has it can open your documents, so treat it like a password — never store it inside the backup zip.
+2. That's all: the code doesn't change unless the keys are re-generated, so one saved copy covers every future backup.
+
+**On a new machine**, after installing Budojo and restoring your backup — Data & backup → *Recovery keys* → **Restore keys from a recovery code**:
+
+1. Paste the code and confirm. Budojo replaces this machine's keys with the originals and **restarts** under them.
+2. Your medical certificates now decrypt.
+
+Order doesn't matter — import the keys before or after restoring the backup, as long as you do both.
+
+Also worth knowing:
+
+- **The bulk data restores anywhere without the keys.** Athletes, attendance, payments and belts are plain relational data — a backup alone recovers them on any machine. Only the encrypted documents need the keys.
+- Medical certificates are, in the worst case, re-collectable from the athletes — the backup and the recovery code are not your only path to them.
 
 ## Quick recovery checklist
 
 1. Install Budojo on the new machine and let it finish first-run setup.
 2. Copy your latest `budojo-backup-*.zip` onto the machine.
 3. **Data & backup → Restore →** pick the archive → confirm.
-4. Verify: athletes, attendance and payments are present. ✅
-5. Try downloading a medical certificate. If it fails, you are in the new-machine key scenario above — the relational data is safe; the documents were encrypted with keys that did not survive the old machine.
+4. **Data & backup → Recovery keys → Restore keys from a recovery code →** paste the code you saved → confirm. Budojo restarts under the original keys.
+5. Verify: athletes, attendance and payments are present, and a medical certificate downloads. ✅
+
+If you skipped step 4 (or never saved a recovery code), the relational data is still safe — only the encrypted documents stay unreadable, because their keys did not survive the old machine.
 
 ## See also
 

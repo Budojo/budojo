@@ -5,6 +5,19 @@ appId: it.budojo.desktop
 productName: Budojo
 copyright: Budojo
 
+# Explicit publish target so electron-builder resolves the auto-update
+# metadata (app-update.yml) from these values instead of sniffing
+# `.git/config` — which fails on a CI detached-HEAD tag checkout with
+# "Cannot detect repository by .git/config". We do NOT auto-publish here:
+# the installer CI uploads the assets itself via `gh release upload`, and
+# the package scripts pass `--publish never`. This block only makes the
+# metadata generation deterministic (and points a future auto-updater at
+# the GitHub releases).
+publish:
+  provider: github
+  owner: Budojo
+  repo: budojo
+
 directories:
   output: release
   buildResources: build

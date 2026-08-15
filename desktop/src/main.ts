@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { dataLayout, runBootstrap, type Secrets } from './bootstrap.js';
+import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
 import { BackupService } from './backup.js';
 import { createBackupIO } from './backup-io.js';
 import { DesktopNotifier, EMPTY_LEDGER, parseListOutput, type DeliveryLedger, type PendingNotification } from './desktop-notifier.js';
@@ -15,6 +15,7 @@ import { RotatingLog } from './rotating-log.js';
 import { TokenVault } from './token-vault.js';
 import { PeriodicTask } from './periodic-task.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
+import { decodeRecoveryCode, encodeRecoveryCode } from './recovery-keys.js';
 
 /**
  * Electron main process for Budojo Desktop (M11 #1218).
@@ -446,6 +447,65 @@ function registerBackupBridge(
 }
 
 /**
+ * Recovery-keys bridge (#1254). Export decrypts the keychain store and hands
+ * the renderer a single copy-pasteable recovery code; import writes a provided
+ * code's keys back into the store. A backup never carries `secrets.bin`, and
+ * the keychain (DPAPI) binds it to the Windows user that created it, so this
+ * is the only way to move the keys — and therefore decrypt the documents —
+ * onto a fresh machine (see `docs/desktop/backup-restore.md`).
+ *
+ * Import cannot pick up mid-flight: the running API already has the old
+ * `APP_KEY` in its environment. Writing the new key and then **relaunching**
+ * is the only thing that makes the bootstrap re-read `secrets.bin` and boot
+ * PHP under the new keys — a window reload would keep the old ones.
+ */
+function registerRecoveryKeysBridge(): void {
+  const secretsFile = dataLayout(app.getPath('userData')).secretsFile;
+
+  ipcMain.handle('budojo:keys:export', async () => {
+    if (!existsSync(secretsFile)) {
+      return { ok: false, reason: 'There are no keys to export yet.' };
+    }
+    if (!safeStorage.isEncryptionAvailable()) {
+      return { ok: false, reason: 'The OS keychain is unavailable, so the keys cannot be read.' };
+    }
+    try {
+      const secrets = parseSecrets(safeStorage.decryptString(await readFile(secretsFile)));
+
+      return { ok: true, code: encodeRecoveryCode(secrets) };
+    } catch {
+      return { ok: false, reason: 'The stored keys could not be read.' };
+    }
+  });
+
+  ipcMain.handle('budojo:keys:import', async (_event, code: unknown) => {
+    if (typeof code !== 'string') {
+      return { ok: false, reason: 'No recovery code was provided.' };
+    }
+
+    const decoded = decodeRecoveryCode(code);
+    if (!decoded.ok) {
+      return { ok: false, reason: decoded.reason };
+    }
+    if (!safeStorage.isEncryptionAvailable()) {
+      return { ok: false, reason: 'The OS keychain is unavailable, so the keys cannot be stored.' };
+    }
+
+    await writeFile(secretsFile, safeStorage.encryptString(serializeSecrets(decoded.secrets)), { mode: 0o600 });
+
+    // Relaunch so the bootstrap re-reads secrets.bin and the API comes back up
+    // under the imported keys. Deferred a beat so the renderer can surface the
+    // result first.
+    setTimeout(() => {
+      app.relaunch();
+      app.exit(0);
+    }, 900);
+
+    return { ok: true };
+  });
+}
+
+/**
  * Two copies of the app would open two connections to the same SQLite file and
  * two scheduler ticks against the same rows. Focus the existing window instead.
  */
@@ -478,6 +538,7 @@ if (!gotTheLock) {
     // meeting reality inside an installer.
     registerAppProtocol();
     registerTokenVault();
+    registerRecoveryKeysBridge();
 
     let apiBase: string;
 

@@ -10,6 +10,11 @@ on:
   # semantic-release by hand from the Actions tab — pick the branch
   # in the UI's "Use workflow from" dropdown.
   workflow_dispatch:
+    inputs:
+      installer_tag:
+        description: "Build + attach the Windows installers for an EXISTING tag (e.g. v2.41.0), skipping a new release. Blank = normal release run."
+        required: false
+        default: ""
 
 concurrency:
   group: release-${{ github.ref_name }}
@@ -337,6 +342,11 @@ jobs:
   # GitHub's recursion guard means token-authored events never trigger a
   # downstream workflow. Running as a job that `needs: release` sidesteps it.
   #
+  # Also (re)buildable on demand for an existing tag via the
+  # `installer_tag` workflow_dispatch input — e.g. when a first run failed
+  # after the tag was already published. That path skips semantic-release
+  # and just builds + attaches for the tag given.
+  #
   # Windows-only: the shipped runtime is a Windows php.exe (fetch:php extracts
   # with Expand-Archive), and electron-builder's win targets need a Windows
   # host. A failure here shows red so a maintainer can re-run — the tag is
@@ -346,18 +356,19 @@ jobs:
     runs-on: windows-latest
     needs: release
     if: |
-      github.ref == 'refs/heads/main' &&
-      needs.release.outputs.stable_tag != ''
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.installer_tag != '') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release.outputs.stable_tag != '')
     env:
-      TAG: ${{ needs.release.outputs.stable_tag }}
+      TAG: ${{ github.event.inputs.installer_tag || needs.release.outputs.stable_tag }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout the release tag
         uses: actions/checkout@v4
         with:
           # Build the exact published tag, not main HEAD — a hotfix landing
-          # while this job is queued must not slip into the installer.
-          ref: ${{ needs.release.outputs.stable_tag }}
+          # while this job is queued must not slip into the installer. On a
+          # manual re-run this is the `installer_tag` input.
+          ref: ${{ github.event.inputs.installer_tag || needs.release.outputs.stable_tag }}
           persist-credentials: false
 
       - uses: actions/setup-node@v4
@@ -368,6 +379,11 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
+          # fileinfo is required transitively (league/flysystem-local) and is
+          # NOT enabled by default on the Windows setup-php build — it is on
+          # Linux, which is why pr-checks never listed it. The rest mirror the
+          # PEST job so composer's platform check passes for every dependency.
+          extensions: fileinfo, pdo, pdo_sqlite, mbstring, bcmath, gd, zip, intl
           tools: composer:v2
 
       - name: Compute version from tag
@@ -420,7 +436,7 @@ jobs:
         working-directory: desktop
         # Inject the release version so the artifacts are named after the tag
         # (package.json stays at 0.0.0 — semantic-release owns versioning).
-        run: npm run package -- -c.extraMetadata.version="${{ steps.ver.outputs.version }}"
+        run: npm run package -- --publish never -c.publish.provider=github -c.publish.owner=Budojo -c.publish.repo=budojo -c.extraMetadata.version="${{ steps.ver.outputs.version }}"
 
       - name: Verify both installers were produced
         shell: bash
