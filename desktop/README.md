@@ -33,3 +33,27 @@ Logs: `%APPDATA%\Budojo-dev\logs\`.
 | `electron-builder.yml` | Packaging layout; installer CI is #1231 |
 
 Architecture, install and recovery docs land in `docs/desktop/` (#1232).
+
+## Data directory
+
+Everything that persists lives under `app.getPath('userData')` — `%APPDATA%\Budojo`
+(packaged) or `%APPDATA%\Budojo-dev` (development). Never beside the executable.
+
+```
+Budojo/
+├── budojo.sqlite          the database (WAL mode)
+├── storage/               Laravel's storage/, relocated via LARAVEL_STORAGE_PATH
+│   ├── app/private/documents/*.enc   uploaded documents, encrypted at rest
+│   └── logs/laravel.log
+├── logs/                  php-server.log (rotated), php-error.log, bootstrap.log
+├── backups/               pre-migration-*.sqlite snapshots, taken before any upgrade
+├── secrets.bin            APP_KEY + DOCUMENT_ENCRYPTION_KEY, encrypted with the OS keychain (DPAPI)
+├── bootstrap.json         first run / last migration bookkeeping
+├── php.ini                generated at every launch
+└── php-server.pid
+```
+
+`secrets.bin` is bound to the Windows user profile that created it. A backup that
+does not include it — or is restored on another profile — cannot decrypt the
+documents. This is the one recovery scenario that fails silently; #1232 writes it
+down.

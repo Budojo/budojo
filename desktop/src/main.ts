@@ -1,9 +1,10 @@
-import { app, BrowserWindow, dialog, protocol, shell } from 'electron';
-import { existsSync } from 'node:fs';
+import { app, BrowserWindow, dialog, protocol, safeStorage, shell } from 'electron';
+import { createWriteStream, existsSync } from 'node:fs';
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { dataLayout, runBootstrap, type Secrets } from './bootstrap.js';
 import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js';
 import { PhpSupervisor } from './php-supervisor.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
@@ -12,10 +13,10 @@ import { contentTypeFor, resolveAppRequest } from './protocol.js';
  * Electron main process for Budojo Desktop (M11 #1218).
  *
  * Wiring only: scheme registration, window lifecycle, single-instance lock,
- * and the order of operations at boot — start the PHP runtime (#1222), then
+ * and the order of operations at boot — bootstrap, start the PHP runtime (#1222), then
  * open a window that knows its port. The logic lives in the modules imported
- * above, each unit-tested on its own; the first-run bootstrap (#1223) slots in
- * between "runtime ready" and "window", and does not exist yet.
+ * above, each unit-tested on its own; the first-run bootstrap (#1223) runs
+ * before the server so no request ever meets a half-migrated schema.
  */
 
 const DEV = process.env['ELECTRON_DEV'] === '1';
@@ -138,7 +139,8 @@ function createWindow(apiBase: string): BrowserWindow {
 }
 
 /**
- * Boots the PHP runtime and returns its base URL. Every failure path ends in a
+ * Boots the runtime: first-run bootstrap (#1223), then the supervised PHP
+ * server (#1222); returns the API base URL. Every failure path ends in a
  * native error box with the log location — never a blank renderer.
  */
 async function startRuntime(): Promise<{ supervisor: PhpSupervisor; apiBase: string }> {
@@ -157,31 +159,61 @@ async function startRuntime(): Promise<{ supervisor: PhpSupervisor; apiBase: str
   }
 
   // Everything that persists lives under userData, never beside the
-  // executable — Program Files is read-only. The layout is the one #1223
-  // formalises; only what the runtime itself needs is created here.
-  const dataDir = app.getPath('userData');
-  const logDir = path.join(dataDir, 'logs');
-  const tempDir = path.join(dataDir, 'tmp');
-  await Promise.all([mkdir(logDir, { recursive: true }), mkdir(tempDir, { recursive: true })]);
+  // executable — Program Files is read-only.
+  const layout = dataLayout(app.getPath('userData'));
+  await mkdir(layout.logsDir, { recursive: true });
 
-  const databasePath = path.join(dataDir, 'budojo.sqlite');
+  const iniContent = buildPhpIni({
+    extensionDir: paths.phpExtensionDir,
+    errorLog: path.join(layout.logsDir, 'php-error.log'),
+    tempDir: layout.tempDir,
+  });
+
+  // One env builder for artisan runs and the server, so bootstrap and runtime
+  // can never disagree on a driver, a path or a key. The port is irrelevant to
+  // artisan and unknown until the server binds.
+  const envWith = (secrets: Secrets, port: number): Record<string, string> =>
+    buildPhpEnv(
+      {
+        port,
+        databasePath: layout.databasePath,
+        storagePath: layout.storageDir,
+        rendererOrigin: APP_ORIGIN,
+        extra: { ...secrets },
+      },
+      process.env,
+    );
+
+  // First-run bootstrap (#1223): data directory, keys in the OS keychain,
+  // migrations. Runs before the server so a half-migrated schema is never
+  // what the first request meets.
+  const bootstrapLog = createWriteStream(path.join(layout.logsDir, 'bootstrap.log'), { flags: 'a' });
+  let boot;
+
+  try {
+    boot = await runBootstrap({
+      layout,
+      secretStore: safeStorage,
+      phpBinary: paths.phpBinary,
+      serverRoot: paths.serverRoot,
+      iniContent,
+      envFor: (secrets) => envWith(secrets, 0),
+      appVersion: app.getVersion(),
+      log: (line) => bootstrapLog.write(`${new Date().toISOString()} ${line}\n`),
+    });
+  } finally {
+    bootstrapLog.end();
+  }
 
   const supervisor = new PhpSupervisor({
     phpBinary: paths.phpBinary,
     serverRoot: paths.serverRoot,
-    iniPath: path.join(dataDir, 'php.ini'),
-    iniContent: buildPhpIni({
-      extensionDir: paths.phpExtensionDir,
-      errorLog: path.join(logDir, 'php-error.log'),
-      tempDir,
-    }),
-    logDir,
-    pidFile: path.join(dataDir, 'php-server.pid'),
-    appLogPath: path.join(paths.serverRoot, 'storage', 'logs', 'laravel.log'),
-    // In development Laravel still reads server/.env for APP_KEY and friends;
-    // the values below override the ones that must differ on the desktop.
-    // Packaged builds have no .env — #1223 supplies the secrets via `extra`.
-    envForPort: (port) => buildPhpEnv({ port, databasePath, rendererOrigin: APP_ORIGIN }, process.env),
+    iniPath: layout.iniPath,
+    iniContent,
+    logDir: layout.logsDir,
+    pidFile: layout.pidFile,
+    appLogPath: path.join(layout.storageDir, 'logs', 'laravel.log'),
+    envForPort: (port) => envWith(boot.secrets, port),
     onFatal: (error, context) => {
       dialog.showErrorBox(
         'Budojo stopped working',

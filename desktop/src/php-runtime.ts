@@ -100,6 +100,11 @@ export interface PhpEnvOptions {
   port: number;
   databasePath: string;
   rendererOrigin: string;
+  /**
+   * Laravel's storage/, relocated under userData (#1223). Honoured natively via
+   * LARAVEL_STORAGE_PATH; the install directory is read-only.
+   */
+  storagePath?: string;
   /** Secrets and anything else the bootstrap (#1223) resolves at launch. */
   extra?: Readonly<Record<string, string>>;
 }
@@ -156,6 +161,11 @@ export function buildPhpEnv(
 
   Object.assign(env, {
     BUDOJO_RUNTIME: 'desktop',
+    // A desktop build is production for its user: diagnostics belong in the
+    // log the supervisor surfaces on failure, never in a response body.
+    APP_NAME: 'Budojo',
+    APP_ENV: 'production',
+    APP_DEBUG: 'false',
     APP_URL: `http://127.0.0.1:${options.port}`,
     CORS_ALLOWED_ORIGINS: options.rendererOrigin,
     DB_CONNECTION: 'sqlite',
@@ -170,6 +180,10 @@ export function buildPhpEnv(
     // dialling an SMTP host that does not exist. BYO-SMTP is a follow-up.
     MAIL_MAILER: 'log',
   });
+
+  if (options.storagePath !== undefined) {
+    env['LARAVEL_STORAGE_PATH'] = options.storagePath;
+  }
 
   Object.assign(env, options.extra ?? {});
 
