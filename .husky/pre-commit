@@ -20,4 +20,17 @@ if is_protected_branch "$current_branch"; then
   exit 1
 fi
 
-npx lint-staged
+# Only run lint-staged when the root tooling is actually installed.
+#
+# Two failure modes this avoids, both observed while testing these hooks in
+# a fresh clone: bare `npx lint-staged` DOWNLOADS lint-staged from the
+# network when node_modules is missing (a surprise fetch on every commit),
+# and `npx --no-install` instead fails hard — which would make committing
+# impossible on any checkout that hasn't run `npm install` at the root yet.
+# The protected-branch guard above is pure shell on purpose: it must hold
+# even when this optional gate cannot run.
+if [ -x node_modules/.bin/lint-staged ]; then
+  npx --no-install lint-staged
+else
+  printf '  ⚠ lint-staged not installed — run `npm install` at the repo root to enable it.\n'
+fi
