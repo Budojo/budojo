@@ -1,17 +1,21 @@
-import { app, BrowserWindow, protocol, shell } from 'electron';
-import { readFile } from 'node:fs/promises';
+import { app, BrowserWindow, dialog, protocol, shell } from 'electron';
+import { existsSync } from 'node:fs';
+import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js';
+import { PhpSupervisor } from './php-supervisor.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
 
 /**
- * Electron main process for Budojo Desktop (#1221, part of M11 #1218).
+ * Electron main process for Budojo Desktop (M11 #1218).
  *
- * Responsibilities kept here deliberately: scheme registration, window
- * lifecycle, and the single-instance lock. Supervising the bundled PHP runtime
- * (#1222) and the first-run bootstrap (#1223) land as separate modules — this
- * file stays the wiring, not the logic.
+ * Wiring only: scheme registration, window lifecycle, single-instance lock,
+ * and the order of operations at boot — start the PHP runtime (#1222), then
+ * open a window that knows its port. The logic lives in the modules imported
+ * above, each unit-tested on its own; the first-run bootstrap (#1223) slots in
+ * between "runtime ready" and "window", and does not exist yet.
  */
 
 const DEV = process.env['ELECTRON_DEV'] === '1';
@@ -28,6 +32,14 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  * and electron-builder copies the SPA in beside it.
  */
 const RENDERER_ROOT = path.join(here, 'renderer');
+
+/**
+ * Development and packaged builds must never share a data directory: a dev
+ * run against the owner's real database is one typo away from a very bad
+ * afternoon. The name also decides `app.getPath('userData')`, so it is set
+ * before anything reads that path.
+ */
+app.setName(app.isPackaged ? 'Budojo' : 'Budojo-dev');
 
 /**
  * MUST run before `app.whenReady()`. Registering the scheme as `standard`
@@ -72,7 +84,7 @@ function registerAppProtocol(): void {
   });
 }
 
-function createWindow(): BrowserWindow {
+function createWindow(apiBase: string): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -90,9 +102,9 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
-      // How the renderer learns the API port. #1222 replaces the literal with
-      // the port the supervised PHP process actually bound.
-      additionalArguments: [`--budojo-api-base=${process.env['BUDOJO_API_BASE'] ?? ''}`],
+      // How the renderer learns where the API is: the port the supervised PHP
+      // process actually bound, known only now.
+      additionalArguments: [`--budojo-api-base=${apiBase}`],
     },
   });
 
@@ -126,6 +138,65 @@ function createWindow(): BrowserWindow {
 }
 
 /**
+ * Boots the PHP runtime and returns its base URL. Every failure path ends in a
+ * native error box with the log location — never a blank renderer.
+ */
+async function startRuntime(): Promise<{ supervisor: PhpSupervisor; apiBase: string }> {
+  const paths = resolveDesktopPaths({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    devRoot: path.resolve(here, '..'),
+  });
+
+  if (!existsSync(paths.phpBinary)) {
+    throw new Error(
+      app.isPackaged
+        ? `The bundled PHP runtime is missing (${paths.phpBinary}). The installation is damaged; reinstall Budojo.`
+        : `PHP runtime not found at ${paths.phpBinary}.\nRun \`npm run fetch:php\` in desktop/ first.`,
+    );
+  }
+
+  // Everything that persists lives under userData, never beside the
+  // executable — Program Files is read-only. The layout is the one #1223
+  // formalises; only what the runtime itself needs is created here.
+  const dataDir = app.getPath('userData');
+  const logDir = path.join(dataDir, 'logs');
+  const tempDir = path.join(dataDir, 'tmp');
+  await Promise.all([mkdir(logDir, { recursive: true }), mkdir(tempDir, { recursive: true })]);
+
+  const databasePath = path.join(dataDir, 'budojo.sqlite');
+
+  const supervisor = new PhpSupervisor({
+    phpBinary: paths.phpBinary,
+    serverRoot: paths.serverRoot,
+    iniPath: path.join(dataDir, 'php.ini'),
+    iniContent: buildPhpIni({
+      extensionDir: paths.phpExtensionDir,
+      errorLog: path.join(logDir, 'php-error.log'),
+      tempDir,
+    }),
+    logDir,
+    pidFile: path.join(dataDir, 'php-server.pid'),
+    appLogPath: path.join(paths.serverRoot, 'storage', 'logs', 'laravel.log'),
+    // In development Laravel still reads server/.env for APP_KEY and friends;
+    // the values below override the ones that must differ on the desktop.
+    // Packaged builds have no .env — #1223 supplies the secrets via `extra`.
+    envForPort: (port) => buildPhpEnv({ port, databasePath, rendererOrigin: APP_ORIGIN }, process.env),
+    onFatal: (error, context) => {
+      dialog.showErrorBox(
+        'Budojo stopped working',
+        `${error.message}\n\nLog: ${context.logPath}\n\n${context.recentOutput}`,
+      );
+      app.exit(1);
+    },
+  });
+
+  const { port } = await supervisor.start();
+
+  return { supervisor, apiBase: `http://127.0.0.1:${port}` };
+}
+
+/**
  * Two copies of the app would open two connections to the same SQLite file and
  * two scheduler ticks against the same rows. Focus the existing window instead.
  */
@@ -134,6 +205,9 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
+  let supervisor: PhpSupervisor | null = null;
+  let quitting = false;
+
   app.on('second-instance', () => {
     const [existing] = BrowserWindow.getAllWindows();
 
@@ -145,18 +219,32 @@ if (!gotTheLock) {
     }
   });
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     // Registered in development too. Only the URL the window loads differs, so
     // the packaged code path is exercised on every dev run rather than first
     // meeting reality inside an installer.
     registerAppProtocol();
 
-    createWindow();
+    let apiBase: string;
+
+    try {
+      const runtime = await startRuntime();
+      supervisor = runtime.supervisor;
+      apiBase = runtime.apiBase;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      dialog.showErrorBox('Budojo could not start', message);
+      app.exit(1);
+
+      return;
+    }
+
+    createWindow(apiBase);
 
     // macOS keeps the app alive with no windows; recreate on dock click.
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
+        createWindow(apiBase);
       }
     });
   });
@@ -165,5 +253,22 @@ if (!gotTheLock) {
     if (process.platform !== 'darwin') {
       app.quit();
     }
+  });
+
+  // Stopping the runtime is asynchronous and Electron will not wait on its
+  // own: hold the quit, stop, then finish quitting. The flag makes the second
+  // pass — the one our own app.quit() triggers — fall straight through.
+  app.on('before-quit', (event) => {
+    if (quitting || supervisor === null) {
+      return;
+    }
+
+    quitting = true;
+    event.preventDefault();
+
+    void supervisor
+      .stop()
+      .catch(() => undefined)
+      .then(() => app.quit());
   });
 }

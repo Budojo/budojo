@@ -36,3 +36,31 @@ nsis:
   # The database lives in %APPDATA% (#1223), never in the install directory,
   # so an uninstall must not be able to take the user's data with it.
   deleteAppDataOnUninstall: false
+
+# Real directories on disk, outside the asar: a child process cannot be spawned
+# from inside an archive, and PHP needs to require thousands of files by path.
+# desktop/src/php-runtime.ts § resolveDesktopPaths assumes exactly this layout
+# (resources/php/php.exe, resources/server/artisan). The build recipe that
+# prepares server/ for shipping — composer install --no-dev, no .env, no tests,
+# empty storage — is #1231's; the layout contract is fixed here.
+extraResources:
+  - from: runtime/php
+    to: php
+  - from: ../server
+    to: server
+    filter:
+      - "**/*"
+      - "!.env"
+      - "!.env.*"
+      - "!tests/**"
+      - "!storage/logs/**"
+      - "!storage/framework/cache/**"
+      - "!storage/framework/sessions/**"
+      - "!storage/framework/views/**"
+      - "!storage/app/**"
+      - "!database/sqlite/**"
+      - "!node_modules/**"
+      - "!.git*"
+      - "!phpunit.xml"
+      - "!phpstan.neon"
+      - "!.php-cs-fixer*"

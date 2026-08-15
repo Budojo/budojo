@@ -142,6 +142,13 @@ Format: `→` separates the symptom from the action.
 
 ---
 
+## Desktop runtime (Electron + bundled PHP)
+
+- → The framework router (`vendor/laravel/framework/.../resources/server.php`) does `require getcwd().'/index.php'` — it assumes the process **cwd is `public/`**, because that is how `artisan serve` spawns it. Spawning `php -S` from the server root (with `-t public`) 500s every request with `Failed opening required '.../server/index.php'`, which surfaces as a 30 s readiness timeout, not a clear error. Mirror `ServeCommand` exactly: cwd = `public/`, no `-t`. Pinned by `buildServeInvocation` + its spec.
+- → A machine-wide `PHP_INI_SCAN_DIR` (scoop sets one) makes the **bundled** php.exe load a foreign php.ini and warn about extensions it does not ship — `-c ourfile` alone does NOT stop the scan. Set `PHP_INI_SCAN_DIR=` (empty) in the child env and never forward `PHPRC`; the child env is a whitelist for the same reason `env_file` was removed in #1233. Verified with `php --ini`.
+- → `npm install` can leave `node_modules/electron/dist` holding only the licence file while exiting 0 — the 115 MB zip sits complete in `%LOCALAPPDATA%\electron\Cache`, extraction silently failed. Symptom: `electron.exe` missing. Fix: `Expand-Archive` the cached zip into `dist/` and write `path.txt`. Same class of failure the fetch-php script guards against by verifying `php.exe` exists after extracting.
+- → First-ever boot of the bundled runtime took ~15 s (Defender scanning php.exe + 30 MB of DLLs + `vendor/` on first read, opcache cold); every boot after that is ~700 ms. Do not tune the readiness timeout against a warm number.
+
 ## How to use this file
 
 1. **Before every `git push`**, skim the categories relevant to your diff. A 30-second read vs. a 5-minute Copilot round-trip + fix.
