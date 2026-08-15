@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
+
+// Runtime profile + capability list (#1229). Public: the SPA reads it before
+// login, because the register / landing pages already differ by runtime.
+Route::get('/runtime', \App\Http\Controllers\Runtime\RuntimeController::class);
 Route::post('/auth/register', \App\Http\Controllers\Auth\RegisterController::class);
 
 // Login is rate-limited to 5 attempts / minute / IP via Laravel's standard
@@ -85,10 +89,10 @@ Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Auth\EmailVerific
 // brute-force the bearer-credential search space.
 Route::get('/athlete-invite/{token}/preview', [\App\Http\Controllers\Auth\AthleteInvitationAcceptController::class, 'preview'])
     ->where('token', '[A-Za-z0-9]{64}')
-    ->middleware('throttle:30,1');
+    ->middleware(['capability:athlete_accounts', 'throttle:30,1']);
 Route::post('/athlete-invite/{token}/accept', [\App\Http\Controllers\Auth\AthleteInvitationAcceptController::class, 'accept'])
     ->where('token', '[A-Za-z0-9]{64}')
-    ->middleware('throttle:5,1');
+    ->middleware(['capability:athlete_accounts', 'throttle:5,1']);
 
 // Email-change verification (#476) — public endpoint, the click in
 // the verification mail IS the auth. The 64-char token format is
@@ -329,22 +333,26 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // 3-30 chars, must start with a letter. A malformed value 404s at the
     // route layer before reaching the controller.
     Route::get('/users/{handle}/profile', [\App\Http\Controllers\User\PublicProfileController::class, 'show'])
-        ->where('handle', '[a-z][a-z0-9._]{2,29}');
+        ->where('handle', '[a-z][a-z0-9._]{2,29}')
+        ->middleware('capability:community');
 
     // Web Push subscriptions (#419). One row per device the user has
     // explicitly granted push permission on. The SPA POSTs the
     // PushSubscription envelope from `PushManager.subscribe()`;
     // server-side fanout uses minishlink/web-push to send pushes to
     // every row tied to a target user.
-    Route::get('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'index']);
-    Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store'])
-        ->middleware('throttle:30,1');
-    // Per-user cap on the self-triggered test push (#1011) — without
-    // it, a script could spam the vendor fanout at our expense.
-    Route::post('/me/push-subscriptions/test', [\App\Http\Controllers\User\PushSubscriptionController::class, 'test'])
-        ->middleware('throttle:5,1');
-    Route::delete('/me/push-subscriptions/{id}', [\App\Http\Controllers\User\PushSubscriptionController::class, 'destroy'])
-        ->where('id', '[0-9]+');
+    // Absent on a runtime with no browser push service (#1229) — 404, not 503.
+    Route::middleware('capability:web_push')->group(function (): void {
+        Route::get('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'index']);
+        Route::post('/me/push-subscriptions', [\App\Http\Controllers\User\PushSubscriptionController::class, 'store'])
+            ->middleware('throttle:30,1');
+        // Per-user cap on the self-triggered test push (#1011) — without
+        // it, a script could spam the vendor fanout at our expense.
+        Route::post('/me/push-subscriptions/test', [\App\Http\Controllers\User\PushSubscriptionController::class, 'test'])
+            ->middleware('throttle:5,1');
+        Route::delete('/me/push-subscriptions/{id}', [\App\Http\Controllers\User\PushSubscriptionController::class, 'destroy'])
+            ->where('id', '[0-9]+');
+    });
 
     // API tokens (#431). Long-lived, user-named, abilities-scoped
     // Sanctum tokens for integrations (export scripts, automation
@@ -443,11 +451,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
             // so two clicks bump last_sent_at instead of spawning two
             // tokens, but we still cap to defeat scripted spamming of the
             // mail vendor.
-            Route::post('/athletes/{athlete}/invite', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'store'])
-                ->middleware('throttle:5,1');
-            Route::post('/athletes/{athlete}/invite/resend', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'resend'])
-                ->middleware('throttle:5,1');
-            Route::delete('/athletes/{athlete}/invitations/{invitation}', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'destroy']);
+            // Athlete accounts are a runtime capability (#1229): a desktop
+            // with one user and no mail transport has nobody to invite.
+            Route::middleware('capability:athlete_accounts')->group(function (): void {
+                Route::post('/athletes/{athlete}/invite', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'store'])
+                    ->middleware('throttle:5,1');
+                Route::post('/athletes/{athlete}/invite/resend', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'resend'])
+                    ->middleware('throttle:5,1');
+                Route::delete('/athletes/{athlete}/invitations/{invitation}', [\App\Http\Controllers\Athlete\AthleteInvitationController::class, 'destroy']);
+            });
 
             // Athlete email change (#476). State-aware on the action side:
             //
@@ -552,7 +564,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // gate (e.g. DeleteCommunityPostRequest on `DELETE posts/{post}`,
     // ToggleReactionRequest on `POST posts/{post}/reactions`). Each
     // method is scoped on the comment line that introduces it.
-    Route::prefix('community')->group(function (): void {
+    // The whole social surface is a runtime capability (#1229): a single-user
+    // desktop has a feed with an audience of one. 404 on the desktop profile.
+    Route::prefix('community')->middleware('capability:community')->group(function (): void {
         // PR-B server (#612): athletes + owners read the same paginated
         // feed; DELETE is owner-only via the FormRequest authorize() gate.
         Route::get('feed', [\App\Http\Controllers\Community\CommunityFeedController::class, 'index']);

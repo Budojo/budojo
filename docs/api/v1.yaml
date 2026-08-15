@@ -24,6 +24,17 @@ servers:
 tags:
   - name: health
     description: Liveness probe
+  - name: runtime
+    description: |
+      Which runtime profile this API runs as and what it can offer (#1229).
+
+      The same code base serves the hosted web app and the single-user
+      desktop app (M11). Surfaces that assume a second human, an inbox or a
+      browser push service are **capabilities**; where the profile lacks one,
+      its routes answer **404** (never 403 — a surface the runtime does not
+      have does not advertise itself). Capabilities: `community`,
+      `athlete_accounts`, `web_push`, `email`, `password_breach_check`.
+      The desktop profile has none; the web profile has all.
   - name: auth
     description: Registration, login, and Sanctum token issuance
   - name: academy
@@ -104,6 +115,25 @@ paths:
                   status:
                     type: string
                     example: ok
+
+  /runtime:
+    get:
+      tags: [runtime]
+      summary: Runtime profile and capabilities
+      description: Public. The SPA reads it before login because the register and landing pages already differ by runtime.
+      operationId: runtimeShow
+      security: []
+      responses:
+        '200':
+          description: The active profile and the capabilities it offers
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Runtime'
 
   /auth/register:
     post:
@@ -5235,6 +5265,22 @@ components:
             $ref: '#/components/schemas/ValidationErrorBody'
 
   schemas:
+
+    Runtime:
+      type: object
+      required: [profile, capabilities]
+      properties:
+        profile:
+          type: string
+          enum: [web, desktop]
+          description: The runtime profile the API is running as (BUDOJO_RUNTIME).
+        capabilities:
+          type: array
+          description: What this profile offers. Routes behind an absent capability answer 404.
+          items:
+            type: string
+            enum: [community, athlete_accounts, web_push, email, password_breach_check]
+          example: [community, athlete_accounts, web_push, email, password_breach_check]
 
     # ── Enums ─────────────────────────────────────────────────────────────
 

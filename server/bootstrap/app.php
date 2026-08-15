@@ -26,6 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'verified.api' => \App\Http\Middleware\EnsureEmailIsVerifiedForApi::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            // capability:<name> → 404 when the runtime profile lacks it
+            // (#1229). Not 403: a surface the runtime does not have should
+            // not advertise itself.
+            'capability' => \App\Http\Middleware\RequireCapability::class,
         ]);
 
         // Defense-in-depth security headers (#1017). The production

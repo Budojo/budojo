@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Actions\Auth;
 
+use App\Enums\Capability;
 use App\Enums\UserRole;
 use App\Mail\WelcomeMail;
 use App\Models\User;
+use App\Support\Capabilities;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Mail;
@@ -42,6 +44,16 @@ class RegisterUserAction
             // `$user->role->value`). M7 hard rule (#445).
             'role' => UserRole::Owner,
         ]);
+
+        // With no mail transport (#1229) the verification link can never
+        // arrive; the address is a username, not a channel. Verified at
+        // creation — before the Registered event below, whose listener sends
+        // nothing to an already-verified user — so neither the verified.api
+        // gate nor the "check your inbox" banner ever fires. Deliberately not
+        // mass-assigned: email_verified_at stays out of #[Fillable].
+        if (Capabilities::lacks(Capability::Email)) {
+            $user->markEmailAsVerified();
+        }
 
         // The Registered event triggers Laravel's verification-email
         // notification (the User model implements MustVerifyEmail).

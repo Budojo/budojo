@@ -133,7 +133,9 @@ function createWindow(apiBase: string): BrowserWindow {
     }
   });
 
-  void window.loadURL(DEV ? DEV_URL : `${APP_ORIGIN}/index.html`);
+  // The root, not /index.html: the router owns the path, and "/index.html" is
+  // not a route it knows. The protocol handler serves the shell for "/".
+  void window.loadURL(DEV ? DEV_URL : `${APP_ORIGIN}/`);
 
   return window;
 }

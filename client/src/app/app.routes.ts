@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { capabilityGuard } from './core/guards/capability.guard';
 import { hasAcademyGuard } from './core/guards/has-academy.guard';
 import { noAcademyGuard } from './core/guards/no-academy.guard';
 import { publicGuard } from './core/guards/public.guard';
@@ -75,6 +76,8 @@ export const routes: Routes = [
     // they land here (the token in the URL is the auth) and the page
     // wants a single-task focused layout, not the owner sidebar.
     path: 'athlete-invite/:token',
+    // Athlete accounts are a runtime capability (#1229): the desktop has none.
+    canActivate: [capabilityGuard('athlete_accounts')],
     loadComponent: () =>
       import('./features/athlete-invite/athlete-invite.component').then(
         (m) => m.AthleteInviteComponent,
@@ -117,7 +120,7 @@ export const routes: Routes = [
     // block in a follow-up slice once the access logs confirm zero
     // hits over a stable beta window.
     path: 'athlete-portal',
-    canActivate: [authGuard, roleAthleteGuard],
+    canActivate: [capabilityGuard('athlete_accounts'), authGuard, roleAthleteGuard],
     children: [
       { path: '', redirectTo: '/dashboard/me/profile', pathMatch: 'full' },
       { path: 'welcome', redirectTo: '/dashboard/me/profile', pathMatch: 'full' },
@@ -131,7 +134,7 @@ export const routes: Routes = [
     // slices expand the children list (academy, attendance, payments,
     // documents).
     path: 'dashboard/me',
-    canActivate: [authGuard, roleAthleteGuard],
+    canActivate: [capabilityGuard('athlete_accounts'), authGuard, roleAthleteGuard],
     loadComponent: () =>
       import('./features/athlete-dashboard/athlete-dashboard.component').then(
         (m) => m.AthleteDashboardComponent,
@@ -214,6 +217,7 @@ export const routes: Routes = [
         // the shared sidebar stays visible. The component itself is
         // shared with the owner-side route (`/dashboard/u/:handle`).
         path: 'u/:handle',
+        canActivate: [capabilityGuard('community')],
         loadComponent: () =>
           import('./features/public-profile/public-profile.component').then(
             (m) => m.PublicProfileComponent,
@@ -344,6 +348,7 @@ export const routes: Routes = [
         // moderate posts + others' comments (#641 — trash icons with
         // confirm).
         path: 'community',
+        canActivate: [capabilityGuard('community')],
         loadComponent: () =>
           import('./features/my-feed/my-feed.component').then((m) => m.MyFeedComponent),
       },
@@ -445,6 +450,7 @@ export const routes: Routes = [
         // sidebar stays visible. Component is shared with the
         // athlete-side route (`/dashboard/me/u/:handle`).
         path: 'u/:handle',
+        canActivate: [capabilityGuard('community')],
         loadComponent: () =>
           import('./features/public-profile/public-profile.component').then(
             (m) => m.PublicProfileComponent,

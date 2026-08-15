@@ -118,9 +118,11 @@
     </form>
 
     <p class="auth-nav-link">
-      <a routerLink="/auth/forgot-password" data-cy="auth-forgot-password-link">{{
-        'auth.login.forgotPassword' | translate
-      }}</a>
+      @if (runtime.has()('email')) {
+        <a routerLink="/auth/forgot-password" data-cy="auth-forgot-password-link">{{
+          'auth.login.forgotPassword' | translate
+        }}</a>
+      }
     </p>
 
     <p class="auth-nav-link">
