@@ -12,8 +12,8 @@ It ships as a **Windows desktop application**: the same Angular SPA and Laravel 
 
 Grab the latest **[release](https://github.com/Budojo/budojo/releases)** — each attaches two Windows builds:
 
-- **`Budojo Setup X.Y.Z.exe`** — installer (per-user, no admin, upgradable in place).
-- **`Budojo X.Y.Z.exe`** — portable (run from a USB stick or synced folder).
+- **`Budojo.Setup.X.Y.Z.exe`** — installer (per-user, no admin, upgradable in place). **Use this one** — it opens in a couple of seconds.
+- **`Budojo.X.Y.Z.exe`** — portable, no installation. Be aware it re-extracts ~450 MB on *every* launch, so it takes about two minutes to open ([#1272](https://github.com/Budojo/budojo/issues/1272)).
 
 Both are unsigned, so Windows SmartScreen warns on first run — **More info → Run anyway**. Full walkthrough (first run, upgrades, why the warning) in **[`docs/desktop/install.md`](docs/desktop/install.md)**.
 

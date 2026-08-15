@@ -50,6 +50,18 @@ nsis:
   # so an uninstall must not be able to take the user's data with it.
   deleteAppDataOnUninstall: false
 
+# NOTE — do not reach for `portable.unpackDirName` to make the portable start
+# faster. It was tried and measured: the portable re-extracts its ~112 MB
+# payload (the whole Laravel vendor tree, thousands of small files, each
+# re-scanned by Defender) on EVERY launch regardless of whether the unpack
+# directory has a stable name. Times to a responding API on the same machine:
+#
+#   installed build   13.7 s first launch, 2.4 s after
+#   portable          ~130 s, every launch (195 s with a stable unpack dir)
+#
+# The fix has to shrink or stop re-extracting the payload, not rename where it
+# lands — tracked in the issue linked from docs/desktop/install.md.
+
 # Real directories on disk, outside the asar: a child process cannot be spawned
 # from inside an archive, and PHP needs to require thousands of files by path.
 # desktop/src/php-runtime.ts § resolveDesktopPaths assumes exactly this layout
