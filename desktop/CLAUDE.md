@@ -37,8 +37,9 @@ A new capability follows the same shape: engine + spec first, adapter second, on
 ## Testing
 
 ```bash
-npm run lint    # tsc -p tsconfig.json --noEmit
-npm test        # vitest run
+../.claude/scripts/test-desktop.sh   # both gates, from anywhere in the repo
+npm run lint                         # tsc -p tsconfig.json --noEmit
+npm test                             # vitest run
 ```
 
 - **Unit (Vitest)**: every engine, exhaustively — including the refusal paths (a malformed manifest, a truncated recovery code, a newer-schema archive). Refusals are the point: they are what stands between a bug and unreadable data.
