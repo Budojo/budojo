@@ -65,7 +65,7 @@ class OwnerMedicalCertExpiringDigestNotification extends Notification
     {
         $names = $this->documents
             ->map(static fn (Document $document): string => trim(
-                ($document->athlete?->first_name ?? '') . ' ' . ($document->athlete?->last_name ?? ''),
+                ($document->athlete->first_name ?? '') . ' ' . ($document->athlete->last_name ?? ''),
             ))
             ->filter()
             ->unique()
