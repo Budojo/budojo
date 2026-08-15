@@ -31,6 +31,8 @@ export interface DataLayout {
   stateFile: string;
   iniPath: string;
   pidFile: string;
+  /** Which notification rows have already been shown as native toasts (#1225). */
+  notificationsLedgerFile: string;
 }
 
 /**
@@ -52,6 +54,7 @@ export function dataLayout(userDataDir: string): DataLayout {
     stateFile: path.join(root, 'bootstrap.json'),
     iniPath: path.join(root, 'php.ini'),
     pidFile: path.join(root, 'php-server.pid'),
+    notificationsLedgerFile: path.join(root, 'notifications-ledger.json'),
   };
 }
 

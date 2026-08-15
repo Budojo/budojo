@@ -1,34 +1,32 @@
 /**
- * The desktop's cron (#1226, M11 #1218): calls `php artisan schedule:run`
- * every minute for as long as the app is open, plus once shortly after boot.
+ * A minute-scale periodic task runner (#1226, #1225): calls an injected runner
+ * on an interval for as long as the app is open, plus once shortly after boot.
+ * Never two runs at once, never a hung run blocking forever, never a failure
+ * taking the app down with it.
  *
- * What runs on each call is decided by the server — `routes/console-desktop.php`
- * replaces the web schedule's wall-clock anchors with tight cadences inside
- * time windows, so a reminder missed while the app was closed fires within
- * minutes of it opening. This module only has to tick reliably: never two
- * runs at once, never a hung run blocking forever, never a failure taking the
- * app down with it.
- *
- * The runner is injected so the tick is unit-tested with fake timers and the
- * real `schedule:run` is exercised separately against php.exe.
+ * Two instances live in main.ts: the desktop's cron (`php artisan
+ * schedule:run` every minute — what runs is the server's decision, see
+ * DesktopSchedule) and the native-notification poll (#1225). The runner is
+ * injected so the tick is unit-tested with fake timers and each real runner is
+ * exercised separately against php.exe.
  */
 
-export interface SchedulerRunResult {
+export interface PeriodicRunResult {
   code: number | null;
   output: string;
   timedOut: boolean;
 }
 
-export type SchedulerEvent =
+export type PeriodicTaskEvent =
   | { type: 'ran'; code: number | null; durationMs: number; timedOut: boolean }
   | { type: 'skipped-overlap' }
   | { type: 'failed'; error: string }
   | { type: 'stopped' };
 
-export interface SchedulerTickOptions {
-  run: () => Promise<SchedulerRunResult>;
+export interface PeriodicTaskOptions {
+  run: () => Promise<PeriodicRunResult>;
   log: (line: string) => void;
-  onEvent?: (event: SchedulerEvent) => void;
+  onEvent?: (event: PeriodicTaskEvent) => void;
   intervalMs?: number;
   initialDelayMs?: number;
   /** How long stop() waits for an in-flight run before giving up on it. */
@@ -42,14 +40,14 @@ const DEFAULTS = {
   stopGraceMs: 10_000,
 } as const;
 
-export class SchedulerTick {
+export class PeriodicTask {
   private timer: NodeJS.Timeout | null = null;
   private initial: NodeJS.Timeout | null = null;
   private inFlight: Promise<void> | null = null;
   private stopped = false;
   private readonly now: () => number;
 
-  constructor(private readonly options: SchedulerTickOptions) {
+  constructor(private readonly options: PeriodicTaskOptions) {
     this.now = options.now ?? (() => Date.now());
   }
 
@@ -97,12 +95,12 @@ export class SchedulerTick {
       .then((result) => {
         const durationMs = this.now() - startedAt;
         this.options.log(
-          `[scheduler] schedule:run exit ${result.code ?? 'null'} in ${durationMs}ms` +
+          `[task] run exit ${result.code ?? 'null'} in ${durationMs}ms` +
             (result.timedOut ? ' (TIMED OUT)' : ''),
         );
         for (const line of result.output.split(/\r?\n/)) {
           if (line.trim().length > 0) {
-            this.options.log(`[scheduler]   ${line}`);
+            this.options.log(`[task]   ${line}`);
           }
         }
         this.options.onEvent?.({ type: 'ran', code: result.code, durationMs, timedOut: result.timedOut });
@@ -112,7 +110,7 @@ export class SchedulerTick {
         // reaches the app: the scheduler is a convenience layer over jobs
         // that are all idempotent, so the worst case is "later".
         const message = error instanceof Error ? error.message : String(error);
-        this.options.log(`[scheduler] tick failed: ${message}`);
+        this.options.log(`[task] run failed: ${message}`);
         this.options.onEvent?.({ type: 'failed', error: message });
       })
       .finally(() => {

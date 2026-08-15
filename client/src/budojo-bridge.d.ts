@@ -7,6 +7,12 @@ interface BudojoBridge {
   readonly apiBase: string;
   /** Node's `process.platform` of the host. */
   readonly platform: string;
+  /**
+   * Subscribes to in-app navigation requests raised by the main process — a
+   * clicked native toast (#1225). Paths only (`/dashboard/...`); the renderer
+   * still owns routing. Returns the unsubscribe function.
+   */
+  onNavigate(callback: (path: string) => void): () => void;
 }
 
 interface Window {
