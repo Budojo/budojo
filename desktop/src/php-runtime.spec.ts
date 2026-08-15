@@ -182,8 +182,12 @@ describe('buildPhpEnv', () => {
     // pdo_sqlite was missing and every scheduled command died on "could not
     // find driver" — the medical-certificate expiry reminders included, only
     // ever visible in laravel.log. PHPRC is inherited by every descendant.
+    // Build the path the way `dataLayout()` does rather than hardcoding
+    // separators: production runs on Windows, CI runs these specs on Linux,
+    // and `path.dirname('C:\\data\\php.ini')` is '.' on POSIX. `path.join`
+    // yields the same dirname on both.
     const env = buildPhpEnv(
-      { ...opts, iniPath: 'C:\\data\\php.ini' },
+      { ...opts, iniPath: path.join('C:\\data', 'php.ini') },
       { PHPRC: 'C:\\scoop\\php' },
     );
 
