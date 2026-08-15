@@ -81,6 +81,16 @@ gh workflow run release.yml --ref develop -f installer_tag=vX.Y.Z
 
 Close any auto-close stragglers by hand with a comment saying which release delivered them.
 
+Then **smoke-test the artefact users actually download** — a green build and a correct unpacked layout are not evidence that the installer runs (that assumption held for two releases before anyone checked, and the portable turned out to need ~2 minutes to open):
+
+```bash
+gh release download vX.Y.Z --pattern "Budojo.X.Y.Z.exe" --dir <scratch>
+# --user-data-dir keeps the test off the real %APPDATA%\Budojo — the packaged app honours it
+"<scratch>/Budojo.X.Y.Z.exe" --user-data-dir="<scratch>/userdata"
+```
+
+Then confirm, from outside the app: a window titled `Budojo` exists, a `php.exe` child is listening on `127.0.0.1:<port>`, `GET /api/v1/health` returns `{"status":"ok"}`, and the scratch userData holds `budojo.sqlite` + `secrets.bin` + `bootstrap.json` while `%APPDATA%\Budojo` stays untouched. Kill the process tree when done.
+
 ### 7. Post-release sweep
 
 Mandatory, and an empty result is a valid outcome. Branch `chore/techdebt-sweep-vX.Y.Z` off develop after the sync PR merges and walk the checklist in [`release-flow.md`](../../docs/development/release-flow.md#post-release-tech-debt--docscode-cleanup-sweep): TODO/FIXME markers, suppressions, `.only`/`.skip`, `npm outdated` + `composer outdated`, doc drift, gotchas, memory index, stale board items.
