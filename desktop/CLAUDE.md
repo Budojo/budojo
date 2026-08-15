@@ -32,6 +32,7 @@ A new capability follows the same shape: engine + spec first, adapter second, on
 - **The child-process environment is a whitelist, never `...process.env`.** Laravel's `env()` reads `$_SERVER` before `$_ENV`, so an inherited variable silently overrides `.env`. Also: empty `PHP_INI_SCAN_DIR` and never forward `PHPRC` — a machine-wide scoop PHP otherwise contaminates the bundled runtime (`-c` alone does not stop the scan).
 - **`php -S` runs with cwd = `public/`.** The framework router does `require getcwd().'/index.php'`; spawning from the server root 500s every request. `buildServeInvocation` pins this and has a spec.
 - **Anything periodic goes through `PeriodicTask`** — never a bare `setInterval`. It never overlaps runs, survives a failing tick, and stops cleanly on quit.
+- **Never hardcode Windows path separators in a spec.** The app runs on Windows, but CI runs these specs on **Linux** — and `path.dirname('C:\\data\\php.ini')` is `'.'` on POSIX, so a hardcoded literal passes locally and fails in CI. Build the input with `path.join(...)` the way `dataLayout()` does; `join` + `dirname` round-trips to the same directory under both platform semantics.
 - **Nothing writes beside the executable.** All state lives under `userData` via `dataLayout()`; the install directory is read-only after install and an uninstall must not be able to take the owner's data with it.
 
 ## Testing

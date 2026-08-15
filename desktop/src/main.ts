@@ -199,6 +199,9 @@ async function startRuntime(): Promise<{
         databasePath: layout.databasePath,
         storagePath: layout.storageDir,
         rendererOrigin: APP_ORIGIN,
+        // Exported as PHPRC so the subprocesses Laravel's scheduler spawns
+        // load the same ini we pass with `-c` — without it they load none.
+        iniPath: layout.iniPath,
         extra: { ...secrets },
       },
       process.env,
