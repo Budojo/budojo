@@ -17,8 +17,7 @@ class RegisterController extends Controller
     public function __construct(
         private readonly RegisterUserAction $action,
         private readonly MintSessionTokenAction $mintToken,
-    )
-    {
+    ) {
     }
 
     public function __invoke(RegisterRequest $request): JsonResponse
