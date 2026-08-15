@@ -107,6 +107,29 @@ The backport PR is mandatory — without it `develop` lags behind `main` and the
 
 No direct commits to `main` or `develop` — ever, not even for hotfixes.
 
+### The hooks enforce this locally
+
+Two git hooks under `.husky/` make the rule mechanical instead of a thing to remember:
+
+| Hook | Refuses |
+|---|---|
+| `pre-commit` | `git commit` while `HEAD` is on `main` or `develop` |
+| `pre-push` | pushing **to** `refs/heads/main` or `refs/heads/develop` — including a delete |
+
+Both share the branch list in `.husky/protected-branch-guard.sh` (one definition; two hooks disagreeing about what's protected is how a guard loses trust) and print the recovery commands on refusal.
+
+What they deliberately do **not** touch: `git pull` on `develop`. Merges run `pre-merge-commit`, which is unguarded, so the documented read-only sync keeps working.
+
+**They only exist if the root tooling is installed.** Husky wires hooks from `prepare: husky`, which runs on `npm install` **at the repo root** — not the `client/` or `server/` installs. Verify with:
+
+```bash
+git config core.hooksPath      # expect .husky/_
+```
+
+If that prints nothing, run `npm ci` at the root. Until you do, the hooks are inert and nothing local stops a commit on `develop` (the server-side branch ruleset still rejects the push, but only after a round-trip). The optional gates — lint-staged, commitlint — skip with a warning when the tooling is missing; the protected-branch guard is pure shell and always holds.
+
+Automation that legitimately needs to bypass a hook sets `HUSKY=0` (see the release workflow).
+
 ## Keeping the feature branch up to date
 
 When `develop` moves ahead and the feature branch falls behind: **merge `develop` in, don't rebase**.
