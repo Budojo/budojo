@@ -278,3 +278,30 @@ describe('buildPhpEnv — platform details', () => {
     expect(buildPhpEnv(opts, {})['MAIL_MAILER']).toBe('log');
   });
 });
+
+describe('buildPhpEnv — desktop application profile', () => {
+  const opts = { port: 1, databasePath: 'x', rendererOrigin: 'app://bundle' };
+
+  it('runs as production with debug off', () => {
+    // A desktop build is production for its user. Diagnostics go to the log
+    // the supervisor surfaces on failure, never into a 500 body — and the
+    // dev checkout's local/true in server/.env must not leak into the app.
+    const env = buildPhpEnv(opts, {});
+
+    expect(env['APP_ENV']).toBe('production');
+    expect(env['APP_DEBUG']).toBe('false');
+    expect(env['APP_NAME']).toBe('Budojo');
+  });
+
+  it('relocates storage/ when told to', () => {
+    // Laravel honours LARAVEL_STORAGE_PATH natively (Application::storagePath).
+    // The install directory is read-only; storage lives under userData.
+    const env = buildPhpEnv({ ...opts, storagePath: 'C:\data\storage' }, {});
+
+    expect(env['LARAVEL_STORAGE_PATH']).toBe('C:\data\storage');
+  });
+
+  it('leaves storage where it is when not told', () => {
+    expect(buildPhpEnv(opts, {})).not.toHaveProperty('LARAVEL_STORAGE_PATH');
+  });
+});
