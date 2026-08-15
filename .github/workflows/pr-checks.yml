@@ -48,7 +48,6 @@ jobs:
       server: ${{ steps.filter.outputs.server }}
       client: ${{ steps.filter.outputs.client }}
       api: ${{ steps.filter.outputs.api }}
-      worker: ${{ steps.filter.outputs.worker }}
       desktop: ${{ steps.filter.outputs.desktop }}
     steps:
       - uses: dorny/paths-filter@v3
@@ -63,9 +62,6 @@ jobs:
               - '.github/workflows/pr-checks.yml'
             api:
               - 'docs/api/**'
-              - '.github/workflows/pr-checks.yml'
-            worker:
-              - 'worker/**'
               - '.github/workflows/pr-checks.yml'
             desktop:
               - 'desktop/**'
@@ -419,42 +415,12 @@ jobs:
         if: needs.changes.outputs.api == 'true'
         run: npx -y @stoplight/spectral-cli@6 lint docs/api/v1.yaml
 
-  worker-test:
-    # Vitest specs for the Cloudflare worker that fronts the SPA's
-    # static-asset binding (`worker/index.js` — see #382). The
-    # `client/` and `server/` test jobs above don't reach this code,
-    # so without a dedicated job the navigation-vs-asset routing
-    # logic ships untested. Lives at the repo root because the
-    # worker is its own deploy artefact, not part of the Angular app.
-    name: "🧪 Worker Tests (Vitest)"
-    runs-on: ubuntu-latest
-    needs: changes
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        if: needs.changes.outputs.worker == 'true'
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: worker/package-lock.json
-
-      - name: Install dependencies
-        if: needs.changes.outputs.worker == 'true'
-        run: npm ci
-        working-directory: worker
-
-      - name: Run worker tests
-        if: needs.changes.outputs.worker == 'true'
-        run: npm test
-        working-directory: worker
-
   desktop-test:
     # Vitest specs for the Electron shell's app:// routing (#1221). The rule
     # they pin — asset misses 404, navigations fall back to index.html — is the
-    # same one worker/index.js enforces in production (#382), and getting it
-    # wrong blanks the dashboard with an opaque TypeError rather than an error
-    # anyone can read. Typecheck runs alongside: the main process is the one
+    # one the retired Cloudflare Worker enforced for the hosted SPA (#382,
+    # removed in #1230), and getting it wrong blanks the dashboard with an
+    # opaque TypeError rather than an error anyone can read. Typecheck runs alongside: the main process is the one
     # place with no runtime test coverage, so tsc is the only guard it has.
     name: "🧪 Desktop Tests (Vitest)"
     runs-on: ubuntu-latest

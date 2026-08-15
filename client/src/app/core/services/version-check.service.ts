@@ -64,8 +64,8 @@ interface VersionManifest {
  *   - SAFE_MODE SW corruption beyond what the unrecoverable handler
  *     can recover from.
  *
- * This service polls `/version.json` (always-fresh from the Worker —
- * see `worker/index.js` § NO_CACHE_PATHS) on three triggers — boot,
+ * This service polls `/version.json` (served with no-cache headers by the
+ * web host — the retired Cloudflare Worker did this, #1230) on three triggers — boot,
  * `window.focus`, and a 20-minute interval — and on a mismatch with
  * the bundle's embedded `VERSION.sha`, runs the nuclear cache-bust:
  * `getRegistrations()` → `unregister()`, `caches.keys()` →

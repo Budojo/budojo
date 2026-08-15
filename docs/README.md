@@ -30,7 +30,7 @@ docs/
 │   └── m4-attendance.md               # M4 — Attendance (with `Deltas from spec`)
 ├── infra/                             # operations / deployment
 │   ├── branch-rulesets.md             # GitHub branch protection rulesets
-│   └── production-deployment.md       # the live stack: DNS, Forge, Cloudflare, runbook, gotchas
+│   └── archive/production-deployment.md  # the decommissioned hosted stack (#1230) — record only, nothing live
 ├── adr/                               # architectural decision records
 │   └── 0001-svg-sanitizer.md
 ├── development/                       # procedural runbooks (the how-to behind CLAUDE.md rules)
@@ -50,7 +50,7 @@ docs/
 |---|---|
 | New contributor onboarding | `entities/` then `api/v1.yaml` |
 | Front-end / API consumer | `api/v1.yaml` (import into Postman, Insomnia, or Swagger UI) |
-| On-call / deployer | `infra/production-deployment.md` for the live runbook + env / DNS / TLS topology |
+| On-call / deployer | `infra/archive/production-deployment.md` — the hosted stack is decommissioned (#1230); kept as a record of how it was wired |
 | Claude Code agent | Everything — the PR will fail review if docs are stale (see `CLAUDE.md` "Documentation discipline") |
 | Product planning | `specs/` |
 | UI / design contributor | `design/DESIGN_SYSTEM.md` and `design/preview/` |

@@ -1,26 +1,24 @@
 import type { ClientRuntime } from './runtime';
 
 /**
- * Production Angular environment — swapped in by `fileReplacements` in
- * `angular.json` when building with `--configuration=production`
- * (the default for `npm run build`).
+ * Production Angular environment for a *web* deployment — swapped in by
+ * `fileReplacements` in `angular.json` when building with
+ * `--configuration=production` (the default for `npm run build`).
  *
- * `apiBase` points at the API host directly, so HTTP services emit
- * absolute URLs and the browser issues real cross-origin requests.
- * CORS is enforced server-side by the Laravel allowlist
- * (`server/config/cors.php` reading `CORS_ALLOWED_ORIGINS` on Forge).
+ * The hosted deployment this file used to point at (Cloudflare Pages SPA +
+ * `api.budojo.it` on a Forge-managed droplet) was decommissioned in #1230 as
+ * part of M11 (#1218); the product now ships as a desktop app, which builds
+ * with `--configuration=desktop` and `environment.desktop.ts` instead.
  *
- * Why not a Cloudflare Pages `_redirects` proxy:
- * Pages 200-status rewrites only proxy same-origin destinations.
- * External URLs in `_redirects` are silently ignored — the rule is a
- * no-op and the request falls through to the SPA fallback. We tried
- * that path in #136 / #126 and it broke production registration
- * end-to-end (POST /api/* returned 405 because Pages can't serve HTML
- * on non-GET methods). Switching to absolute URLs is the standard SPA
- * + cross-origin-API architecture and bypasses the Pages limitation.
+ * `apiBase` is therefore empty: HTTP services emit same-origin relative URLs
+ * (`/api/v1/...`), which is what a web host that proxies `/api/*` to the API
+ * needs. A future hosted deployment that serves the API on a separate origin
+ * sets its own absolute host here — and remembers the lesson of #136 / #126:
+ * a static host's redirect rules cannot proxy cross-origin `POST`s, so the
+ * choice is a real reverse proxy or absolute URLs + a CORS allowlist.
  */
 export const environment = {
   runtime: 'web' as ClientRuntime,
   production: true,
-  apiBase: 'https://api.budojo.it',
+  apiBase: '',
 };

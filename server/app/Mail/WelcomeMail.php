@@ -29,7 +29,7 @@ use Illuminate\Queue\SerializesModels;
  * round-trip happens inside the registration request and a Resend
  * brown-out turns into a 500 on registration — exactly the failure
  * mode M5 is supposed to prevent. The Forge daemon configured in
- * docs/infra/production-deployment.md runs `queue:work --tries=3
+ * docs/infra/archive/production-deployment.md ran `queue:work --tries=3
  * --backoff=10` so a transient delivery failure retries 3x before
  * giving up.
  *

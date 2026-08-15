@@ -14,7 +14,7 @@ Budojo is a web application for Brazilian Jiu-Jitsu instructors. It replaces the
 | Laravel API | <https://api.budojo.it> |
 | API health | <https://api.budojo.it/api/v1/health> |
 
-Architecture, deploy flow, env vars, runbook and gotchas: **[`docs/infra/production-deployment.md`](docs/infra/production-deployment.md)**.
+Architecture, deploy flow, env vars, runbook and gotchas: **[`docs/infra/archive/production-deployment.md`](docs/infra/archive/production-deployment.md)** (archived — the hosted stack was decommissioned in #1230).
 
 ---
 
