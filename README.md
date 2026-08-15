@@ -12,8 +12,8 @@ It ships as a **Windows desktop application**: the same Angular SPA and Laravel 
 
 Grab the latest **[release](https://github.com/Budojo/budojo/releases)** — each attaches two Windows builds:
 
-- **`Budojo Setup X.Y.Z.exe`** — installer (per-user, no admin, upgradable in place).
-- **`Budojo X.Y.Z.exe`** — portable (run from a USB stick or synced folder).
+- **`Budojo.Setup.X.Y.Z.exe`** — installer (per-user, no admin, upgradable in place). **Use this one** — it opens in a couple of seconds.
+- **`Budojo.X.Y.Z.exe`** — portable, no installation. Be aware it re-extracts ~450 MB on *every* launch, so it takes about two minutes to open ([#1272](https://github.com/Budojo/budojo/issues/1272)).
 
 Both are unsigned, so Windows SmartScreen warns on first run — **More info → Run anyway**. Full walkthrough (first run, upgrades, why the warning) in **[`docs/desktop/install.md`](docs/desktop/install.md)**.
 
@@ -54,7 +54,9 @@ The shipped app has **no Docker** — but local development runs the API and SPA
 
 - Docker + Docker Compose
 
-That is the whole list. There is no `.env` to copy and no key to generate — the API container's entrypoint installs Composer dependencies, seeds `server/.env` from `server/.env.example`, generates `APP_KEY`, creates the SQLite database and migrates it. Every step is idempotent, so restarts are no-ops.
+That is the whole list to *run* it. There is no `.env` to copy and no key to generate — the API container's entrypoint installs Composer dependencies, seeds `server/.env` from `server/.env.example`, generates `APP_KEY`, creates the SQLite database and migrates it. Every step is idempotent, so restarts are no-ops.
+
+If you're going to **commit**, run `npm ci` at the repo root once as well. That installs the dev tooling (husky, commitlint, lint-staged) and wires the git hooks that enforce conventional commits and refuse commits/pushes on `main` and `develop`. Check it took with `git config core.hooksPath` — it should print `.husky/_`.
 
 ```bash
 docker compose up --build

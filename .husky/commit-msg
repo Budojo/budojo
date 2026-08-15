@@ -7,4 +7,12 @@
 [ "${HUSKY:-1}" = "0" ] && exit 0
 set -e
 
-npx --no-install commitlint --edit "$1"
+# Same graceful skip as `pre-commit`: on a checkout that hasn't run
+# `npm install` at the root, `npx --no-install` fails hard and makes every
+# commit impossible with an opaque npm error. Warn instead — the message
+# says exactly how to turn the gate back on.
+if [ -x node_modules/.bin/commitlint ]; then
+  npx --no-install commitlint --edit "$1"
+else
+  printf '  ⚠ commitlint not installed — run `npm install` at the repo root to enable it.\n'
+fi

@@ -69,6 +69,7 @@ db_data/
 !.claude/pr-bodies/
 .claude/pr-bodies/*
 !.claude/pr-bodies/.gitkeep
+!.claude/pr-bodies/README.md
 !.claude/commands/
 !.claude/commands/**
 !.claude/agents/

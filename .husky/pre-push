@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+# Same `HUSKY=0` kill switch as the other hooks — husky 9 does not wrap
+# user hooks, so the env var only does anything because we check it.
+# CI automation that legitimately pushes (the release sweep job) sets it.
+[ "${HUSKY:-1}" = "0" ] && exit 0
+set -e
+
+# Refuse to push to a protected branch — including a delete, which the
+# guard below catches through the same remote ref.
+#
+# This is the half that matters most: a bad local commit is private until
+# it is pushed, but a push to `develop`/`main` bypasses the PR gate that
+# every rule in CLAUDE.md and the branch rulesets assume. The server-side
+# ruleset would reject it anyway; failing here costs a second instead of a
+# round-trip, and says why.
+#
+# git feeds one line per ref on stdin:
+#     <local ref> <local sha> <remote ref> <remote sha>
+. "$(dirname -- "$0")/protected-branch-guard.sh"
+
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  case "$remote_ref" in
+    refs/heads/*) branch="${remote_ref#refs/heads/}" ;;
+    *) continue ;;  # tags and anything else are not our business
+  esac
+
+  if is_protected_branch "$branch"; then
+    printf '\n  ⛔ Refusing to push to "%s".\n' "$branch"
+    printf '  It lands through a pull request, never a direct push.\n'
+    protected_branch_help "$branch"
+    exit 1
+  fi
+done
+
+exit 0
