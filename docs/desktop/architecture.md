@@ -51,6 +51,7 @@ Everything the renderer needs beyond HTTP is on `window.__BUDOJO__` (typed in `c
 | `onNavigate(cb)` | main → renderer | A clicked native toast asks the SPA to route somewhere ([#1225](https://github.com/Budojo/budojo/issues/1225)). In-app paths only; the renderer still owns routing. |
 | `token.{get,set,clear}` | renderer ↔ main (sync) | The Sanctum bearer token, held encrypted in the OS keychain by the main process ([#1227](https://github.com/Budojo/budojo/issues/1227)). `get()` is synchronous so the HTTP interceptor can read it inline. |
 | `backup.{list,run,restore}` | renderer → main (async) | Local backup & restore ([#1228](https://github.com/Budojo/budojo/issues/1228)). See [`backup-restore.md`](./backup-restore.md). |
+| `keys.{export,import}` | renderer → main (async) | Recovery keys ([#1254](https://github.com/Budojo/budojo/issues/1254)): export decrypts the key store into a copy-pasteable code; import writes it back and relaunches under the new keys. |
 
 ## Runtime profile and capabilities
 
@@ -102,6 +103,8 @@ The install directory holds only the read-only runtime: `resources/php/php.exe` 
 On first run the bootstrap generates two 32-byte random keys — `APP_KEY` (Laravel's, `base64:`-prefixed) and `DOCUMENT_ENCRYPTION_KEY` (the medical-certificate cipher, `config/documents.php`) — and writes them to `secrets.bin`, encrypted with the OS keychain. On every later boot it decrypts `secrets.bin` and injects the keys into the PHP child's environment.
 
 If a database already exists but `secrets.bin` is gone, the bootstrap **refuses to generate new keys over existing data** and fails loudly — new keys would render every encrypted column and document permanently unreadable while looking like they'd been "reset". This behaviour is the crux of the disaster-recovery story; read [`backup-restore.md`](./backup-restore.md) before trusting a backup with a fresh machine.
+
+Because a backup never carries `secrets.bin` and the keychain binds it to one Windows user, the keys can be exported as a portable **recovery code** (#1254) and re-imported on another machine — the only way a fresh-machine restore can decrypt the documents. See [`backup-restore.md` § Recovery keys](./backup-restore.md#recovery-keys).
 
 ## Scheduling
 

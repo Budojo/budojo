@@ -11,6 +11,7 @@ import {
   DesktopBackupService,
   type BackupArchiveView,
 } from '../../core/services/desktop-backup.service';
+import { DesktopKeysService } from '../../core/services/desktop-keys.service';
 
 /**
  * Data & backup page (#1228). Desktop-only — the route guard redirects on the
@@ -37,6 +38,7 @@ import {
 })
 export class BackupComponent {
   private readonly backup = inject(DesktopBackupService);
+  private readonly keys = inject(DesktopKeysService);
   private readonly messages = inject(MessageService);
   private readonly translate = inject(TranslateService);
   private readonly router = inject(Router);
@@ -45,6 +47,13 @@ export class BackupComponent {
   protected readonly loading = signal(true);
   protected readonly backingUp = signal(false);
   protected readonly restoringName = signal<string | null>(null);
+
+  /** Recovery keys (#1254): reveal the code, and paste one to import. */
+  protected readonly keysAvailable = this.keys.available;
+  protected readonly recoveryCode = signal<string | null>(null);
+  protected readonly revealing = signal(false);
+  protected readonly importValue = signal('');
+  protected readonly importing = signal(false);
 
   protected readonly lastBackupAt = computed<string | null>(
     () => this.archives()[0]?.createdAt ?? null,
@@ -91,6 +100,80 @@ export class BackupComponent {
       this.messages.add({
         severity: 'error',
         summary: this.translate.instant('backup.toast.restoreRefused'),
+        detail: result.reason,
+        life: 8000,
+      });
+    }
+  }
+
+  protected async reveal(): Promise<void> {
+    this.revealing.set(true);
+    const result = await this.keys.reveal();
+    this.revealing.set(false);
+
+    if (result.ok && result.code) {
+      this.recoveryCode.set(result.code);
+    } else {
+      this.messages.add({
+        severity: 'error',
+        summary: this.translate.instant('backup.keys.revealFailed'),
+        detail: result.reason,
+        life: 8000,
+      });
+    }
+  }
+
+  protected hideCode(): void {
+    this.recoveryCode.set(null);
+  }
+
+  protected async copyCode(): Promise<void> {
+    const code = this.recoveryCode();
+    if (code === null) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(code);
+      this.messages.add({
+        severity: 'success',
+        summary: this.translate.instant('backup.keys.copied'),
+      });
+    } catch {
+      // Clipboard can be blocked; the code is on screen to copy by hand.
+      this.messages.add({
+        severity: 'info',
+        summary: this.translate.instant('backup.keys.copyManual'),
+      });
+    }
+  }
+
+  protected setImportValue(value: string): void {
+    this.importValue.set(value);
+  }
+
+  protected async importKeys(): Promise<void> {
+    const code = this.importValue().trim();
+    if (code.length === 0) {
+      return;
+    }
+
+    this.importing.set(true);
+    const result = await this.keys.importCode(code);
+
+    if (result.ok) {
+      // On success the main process relaunches the app under the new keys, so
+      // keep the control disabled — the restart is the confirmation.
+      this.messages.add({
+        severity: 'success',
+        summary: this.translate.instant('backup.keys.importOk'),
+        detail: this.translate.instant('backup.keys.importRelaunch'),
+      });
+    } else {
+      this.importing.set(false);
+      this.messages.add({
+        severity: 'error',
+        summary: this.translate.instant('backup.keys.importFailed'),
         detail: result.reason,
         life: 8000,
       });

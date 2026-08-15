@@ -35,6 +35,16 @@ interface BudojoBridge {
     run(): Promise<{ ok: boolean; path: string | null }>;
     restore(name: string): Promise<{ ok: boolean; reason?: string }>;
   };
+  /**
+   * Recovery-key export/import (#1254). `export` decrypts the OS-keychain key
+   * store into a single copy-pasteable code; `import` writes a provided code's
+   * keys back and relaunches the app under them. Present only inside Budojo
+   * Desktop — the one way to move the document-decryption keys to a new machine.
+   */
+  readonly keys: {
+    export(): Promise<{ ok: boolean; code?: string; reason?: string }>;
+    import(code: string): Promise<{ ok: boolean; reason?: string }>;
+  };
 }
 
 interface Window {

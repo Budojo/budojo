@@ -42,6 +42,7 @@ describe('DesktopBackupService', () => {
       onNavigate: () => () => undefined,
       token: { get: () => null, set: () => undefined, clear: () => undefined },
       backup,
+      keys: { export: async () => ({ ok: false }), import: async () => ({ ok: false }) },
     };
     const svc = service();
 
