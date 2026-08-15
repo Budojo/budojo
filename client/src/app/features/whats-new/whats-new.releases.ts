@@ -28,6 +28,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.42.0',
+    date: '2026-08-15',
+    headline: 'Your documents can now follow you to a new computer.',
+    sections: [
+      {
+        heading: '🔑 Recovery keys',
+        bullets: [
+          "Budojo encrypts your athletes' medical certificates, and the key that unlocks them was locked to this computer — so a backup restored on a new computer brought back everything except the documents. There's now a Recovery keys section at the bottom of Data & backup that fixes it.",
+          'Do this once, today: click "Reveal recovery code", copy the code, and paste it into your password manager. Treat it like a password — anyone who has it can open your documents, so never store it inside the backup itself.',
+          'If you ever move to a new computer: install Budojo, restore your backup, then paste that code into "Restore keys from a recovery code". Budojo restarts and your certificates open normally again.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.41.0',
     date: '2026-08-15',
     headline: 'Budojo is now an app on your computer.',
