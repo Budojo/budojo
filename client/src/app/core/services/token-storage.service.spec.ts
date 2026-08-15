@@ -53,6 +53,7 @@ describe('TokenStorageService', () => {
           run: async () => ({ ok: false, path: null }),
           restore: async () => ({ ok: false }),
         },
+        keys: { export: async () => ({ ok: false }), import: async () => ({ ok: false }) },
       };
       const store = service();
 

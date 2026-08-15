@@ -62,4 +62,71 @@
       }
     </ul>
   }
+
+  @if (keysAvailable) {
+    <section class="backup-page__keys" data-cy="recovery-keys">
+      <h2 class="backup-page__heading">{{ 'backup.keys.heading' | translate }}</h2>
+      <p class="backup-page__muted">{{ 'backup.keys.intro' | translate }}</p>
+
+      @if (recoveryCode(); as code) {
+        <div class="backup-page__keys-panel">
+          <p class="backup-page__keys-warning">{{ 'backup.keys.warning' | translate }}</p>
+          <textarea
+            class="backup-page__keys-code"
+            readonly
+            rows="3"
+            data-cy="recovery-code"
+            [value]="code"
+          ></textarea>
+          <div class="backup-page__keys-actions">
+            <p-button
+              [label]="'backup.keys.copy' | translate"
+              icon="pi pi-copy"
+              (onClick)="copyCode()"
+              data-cy="recovery-copy"
+            />
+            <p-button
+              [label]="'backup.keys.hide' | translate"
+              icon="pi pi-eye-slash"
+              severity="secondary"
+              [text]="true"
+              (onClick)="hideCode()"
+            />
+          </div>
+        </div>
+      } @else {
+        <p-button
+          [label]="'backup.keys.reveal' | translate"
+          icon="pi pi-key"
+          severity="secondary"
+          [loading]="revealing()"
+          (onClick)="reveal()"
+          data-cy="recovery-reveal"
+        />
+      }
+
+      <h3 class="backup-page__subheading">{{ 'backup.keys.importHeading' | translate }}</h3>
+      <p class="backup-page__muted">{{ 'backup.keys.importIntro' | translate }}</p>
+      <textarea
+        class="backup-page__keys-code"
+        rows="3"
+        [value]="importValue()"
+        (input)="setImportValue($any($event.target).value)"
+        [placeholder]="'backup.keys.importPlaceholder' | translate"
+        data-cy="recovery-import-input"
+      ></textarea>
+      <app-confirm-destructive-button
+        icon="pi pi-download"
+        [label]="'backup.keys.import' | translate"
+        [ariaLabel]="'backup.keys.import' | translate"
+        [confirmMessage]="'backup.keys.importConfirm' | translate"
+        [acceptLabel]="'backup.keys.importConfirmAccept' | translate"
+        [rejectLabel]="'backup.keys.importConfirmReject' | translate"
+        [disabled]="importValue().trim().length === 0 || importing()"
+        [loading]="importing()"
+        (confirmed)="importKeys()"
+        dataCy="recovery-import"
+      />
+    </section>
+  }
 </section>

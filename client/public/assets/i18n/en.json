@@ -2210,6 +2210,27 @@
       "failed": "Backup failed — see the log",
       "restored": "Backup restored",
       "restoreRefused": "This backup could not be restored"
+    },
+    "keys": {
+      "heading": "Recovery keys",
+      "intro": "A backup does not include your encryption keys — they stay locked to this computer. To move your data to a new machine and still open your medical certificates, save these keys somewhere safe.",
+      "warning": "Anyone with this code can open your documents. Store it in a password manager and never share it.",
+      "reveal": "Reveal recovery code",
+      "copy": "Copy",
+      "copied": "Recovery code copied",
+      "copyManual": "Select the code and copy it manually",
+      "hide": "Hide",
+      "revealFailed": "The recovery code could not be revealed",
+      "importHeading": "Restore keys from a recovery code",
+      "importIntro": "Recovering on a new machine? Paste the recovery code you saved to unlock your restored documents. Budojo will restart.",
+      "importPlaceholder": "Paste your recovery code…",
+      "import": "Import keys",
+      "importConfirm": "Import these keys? This replaces this computer's current keys and restarts Budojo. Only do this when recovering data from another machine.",
+      "importConfirmAccept": "Import and restart",
+      "importConfirmReject": "Cancel",
+      "importOk": "Recovery keys imported",
+      "importRelaunch": "Budojo will restart to apply them.",
+      "importFailed": "The recovery code could not be imported"
     }
   }
 }

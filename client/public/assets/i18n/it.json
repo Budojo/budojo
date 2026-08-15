@@ -2210,6 +2210,27 @@
       "failed": "Backup non riuscito — controlla il log",
       "restored": "Backup ripristinato",
       "restoreRefused": "Impossibile ripristinare questo backup"
+    },
+    "keys": {
+      "heading": "Chiavi di recupero",
+      "intro": "Un backup non include le tue chiavi di cifratura — restano legate a questo computer. Per spostare i dati su un nuovo PC e poter ancora aprire i certificati medici, salva queste chiavi in un posto sicuro.",
+      "warning": "Chiunque abbia questo codice può aprire i tuoi documenti. Conservalo in un gestore di password e non condividerlo mai.",
+      "reveal": "Mostra il codice di recupero",
+      "copy": "Copia",
+      "copied": "Codice di recupero copiato",
+      "copyManual": "Seleziona il codice e copialo a mano",
+      "hide": "Nascondi",
+      "revealFailed": "Impossibile mostrare il codice di recupero",
+      "importHeading": "Ripristina le chiavi da un codice di recupero",
+      "importIntro": "Stai recuperando su un nuovo PC? Incolla il codice di recupero salvato per sbloccare i documenti ripristinati. Budojo si riavvierà.",
+      "importPlaceholder": "Incolla il tuo codice di recupero…",
+      "import": "Importa le chiavi",
+      "importConfirm": "Importare queste chiavi? Sostituisce le chiavi attuali di questo computer e riavvia Budojo. Fallo solo quando recuperi i dati da un altro PC.",
+      "importConfirmAccept": "Importa e riavvia",
+      "importConfirmReject": "Annulla",
+      "importOk": "Chiavi di recupero importate",
+      "importRelaunch": "Budojo si riavvierà per applicarle.",
+      "importFailed": "Impossibile importare il codice di recupero"
     }
   }
 }
