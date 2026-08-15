@@ -158,5 +158,5 @@ Ognuno è un follow-up specifico — questo runbook IS la spec funzionale per l'
 - DPA template § 12 — Restituzione e cancellazione dei dati a fine contratto (`docs/legal/dpa-template.md`)
 - DPIA-lite § 4 — Retention (`docs/legal/dpia-medical-certificates.md`)
 - Privacy policy § 4 — Periodo di conservazione (`docs/legal/privacy-policy.md`)
-- Production deployment runbook (`docs/infra/production-deployment.md`)
+- Production deployment runbook (archived, hosted stack decommissioned in #1230 — `docs/infra/archive/production-deployment.md`)
 - GDPR Artt. 5 §1 lett. (e) (limitazione della conservazione), 17 (cancellazione), 28 (responsabili).

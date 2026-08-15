@@ -1,8 +1,12 @@
-# Production deployment
+# Production deployment (archived)
 
-Single source of truth for how Budojo runs in production. Updated when any
-piece of the stack changes — registrar, DNS, server, certificate, env var,
-deploy script.
+> ⚠️ **ARCHIVED (#1230, M11 #1218).** This describes the decommissioned
+> DigitalOcean / Forge / Cloudflare stack. It is kept as the only record of how
+> that stack was wired — nothing here is live, and no instruction below should be
+> followed. Budojo now ships as a desktop application; see `docs/desktop/`.
+
+Was the single source of truth for how Budojo ran in production, kept current
+while the stack existed. Frozen at decommissioning.
 
 > **Host addresses are redacted** (#1236). The repository is public and this
 > infrastructure is being decommissioned under M11 (#1218); publishing the

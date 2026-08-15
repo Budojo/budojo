@@ -10,8 +10,8 @@ import {
 } from './protocol.js';
 
 /**
- * The `app://` handler reimplements the routing rule the Cloudflare Worker
- * enforces today (`worker/index.js`, #382), because the failure it prevents
+ * The `app://` handler reimplements the routing rule the retired Cloudflare
+ * Worker enforced for the hosted SPA (#382, removed in #1230), because the failure it prevents
  * is identical inside Electron: serving `index.html` for a missing
  * `chunk-*.js` hands HTML to the JS engine, and the dynamic import dies with
  * an opaque `TypeError` that blanks the dashboard.

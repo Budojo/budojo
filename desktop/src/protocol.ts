@@ -13,8 +13,8 @@ import path from 'node:path';
  * renderer a genuine origin, so routing, relative assets and fetch behave the
  * way they already do on the web.
  *
- * Why the fallback is conditional: this reimplements the rule enforced in
- * production today by `worker/index.js` (#382). Serving `index.html` for a
+ * Why the fallback is conditional: this reimplements the rule the retired
+ * Cloudflare Worker enforced for the hosted SPA (#382, removed in #1230). Serving `index.html` for a
  * missing `chunk-*.js` hands HTML to the JS engine; the dynamic import rejects
  * with an opaque `TypeError` and the dashboard goes blank, with a hard refresh
  * as the only recovery. Cloudflare's asset binding did that by default, and a

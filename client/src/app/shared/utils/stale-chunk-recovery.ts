@@ -18,8 +18,8 @@
  * The proper root-cause fix lives at the Cloudflare layer (a custom
  * worker that scopes the SPA fallback to navigation requests so missing
  * asset paths surface as real 404s). That work is tracked separately
- * in issue #382 — it needs wrangler local testing infra and a preview
- * deploy. This recovery is the belt-and-braces FE side that catches
+ * in issue #382 (shipped as a Cloudflare Worker, retired with the hosted
+ * stack in #1230). This recovery is the belt-and-braces FE side that catches
  * the same class of failure (cached SW state, edge-cache lag) and
  * self-heals without requiring the user to reload manually, regardless
  * of the deploy configuration.
