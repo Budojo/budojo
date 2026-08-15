@@ -436,7 +436,7 @@ jobs:
         working-directory: desktop
         # Inject the release version so the artifacts are named after the tag
         # (package.json stays at 0.0.0 — semantic-release owns versioning).
-        run: npm run package -- -c.extraMetadata.version="${{ steps.ver.outputs.version }}"
+        run: npm run package -- --publish never -c.publish.provider=github -c.publish.owner=Budojo -c.publish.repo=budojo -c.extraMetadata.version="${{ steps.ver.outputs.version }}"
 
       - name: Verify both installers were produced
         shell: bash
