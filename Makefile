@@ -21,12 +21,21 @@
 # PowerShell and Git Bash, without hardcoding an install location. Verified
 # from both shells.
 
+#
+# Elsewhere (Linux, macOS) make defaults SHELL to `/bin/sh`, and `.SHELLFLAGS`
+# below passes the bash-only `-o pipefail`. On Fedora that happens to work
+# because /bin/sh is a symlink to bash; on Debian/Ubuntu — including the
+# ubuntu-latest CI runners — /bin/sh is dash and every target dies with
+# "Illegal option -o pipefail". Measured, not assumed. Pin bash explicitly.
+
 ifeq ($(OS),Windows_NT)
 GIT_EXEC := $(shell git --exec-path)
 ifeq ($(GIT_EXEC),)
 $(error Could not locate Git Bash via 'git --exec-path'. Install Git for Windows, or run make from a Git Bash prompt.)
 endif
 SHELL := $(GIT_EXEC)/../../../bin/bash.exe
+else
+SHELL := /bin/bash
 endif
 
 .SHELLFLAGS := -eu -o pipefail -c
@@ -83,7 +92,7 @@ db: ## Open a sqlite shell on the dev database
 	docker exec -it $(API) sqlite3 /var/www/api/database/sqlite/budojo.sqlite
 
 mail: ## Open Mailpit in the browser
-	@start http://localhost:8025 || xdg-open http://localhost:8025
+	@command -v xdg-open >/dev/null && xdg-open http://localhost:8025 || start http://localhost:8025
 
 ## -------------------------------------------------------------- gates ----
 
