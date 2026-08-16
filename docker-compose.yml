@@ -14,6 +14,15 @@ services:
     build:
       context: .
       dockerfile: docker/api/Dockerfile
+      # Aligns the container's www-data with the host developer so the
+      # ./server bind mount does not come back owned by uid 33 — see the long
+      # comment in docker/api/Dockerfile. These are BUILD args, not `env_file`:
+      # nothing is injected into the container's environment, so the trap
+      # documented below does not apply. Defaults cover the usual single-user
+      # Linux box; export HOST_UID/HOST_GID before `build` if yours differs.
+      args:
+        HOST_UID: "${HOST_UID:-1000}"
+        HOST_GID: "${HOST_GID:-1000}"
     container_name: budojo_api
     restart: unless-stopped
     ports:
@@ -46,6 +55,11 @@ services:
     build:
       context: ./client
       dockerfile: ../docker/client/Dockerfile
+      # Same reason as the api service — keeps ng serve's .angular cache
+      # writable by the developer on a Linux bind mount.
+      args:
+        HOST_UID: "${HOST_UID:-1000}"
+        HOST_GID: "${HOST_GID:-1000}"
     container_name: budojo_client
     restart: unless-stopped
     ports:

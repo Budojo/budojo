@@ -52,7 +52,29 @@ chown -R www-data:www-data "$SQLITE_DIR"
 
 # storage/ and bootstrap/cache must be writable by php-fpm. Harmless to
 # re-apply; the bind mount can come back with host ownership after a rebuild.
-chown -R www-data:www-data "$APP_DIR/storage" "$APP_DIR/bootstrap/cache" 2>/dev/null || true
+#
+# vendor/ and .env are in the list because the two steps above that create them
+# run as root, and on a Linux bind mount that means root ON THE HOST. www-data
+# is remapped to the host developer's uid in the Dockerfile, so this hands them
+# back rather than taking them away — and .env is the one file the developer
+# actually has to edit by hand.
+chown -R www-data:www-data \
+    "$APP_DIR/storage" "$APP_DIR/bootstrap/cache" "$APP_DIR/vendor" "$ENV_FILE" \
+    2>/dev/null || true
+
+# --- Public storage symlink -------------------------------------------------
+# Avatars, academy logos and community thumbnails all go through
+# `Storage::disk('public')->url(...)`, which resolves to /storage/<path>. That
+# path only exists once public/storage points at storage/app/public — without
+# it every one of those URLs is a 403, which is exactly what the dev
+# environment has been doing (measured: 403 before, 200 after).
+#
+# `--relative` matters here: the default writes an absolute /var/www/api/...
+# target, which dangles when the same bind mount is read from the host.
+# Exits 0 both when it creates the link and when one already exists, so this
+# stays a no-op on restart under `set -e`.
+php artisan storage:link --relative >/dev/null 2>&1 || true
+chown -h www-data:www-data "$APP_DIR/public/storage" 2>/dev/null || true
 
 # --- Migrations -------------------------------------------------------------
 if [ "${RUN_MIGRATIONS:-0}" = "1" ]; then
