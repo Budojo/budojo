@@ -160,12 +160,16 @@ const INHERITED_ENV_KEYS = [
  * executable, and `buildPhpEnv` is a whitelist, so a value that is not passed
  * here does not reach PHP at all.
  *
- * Empty until the maintainer runs `node .claude/scripts/license-key.mjs keygen`
- * and pastes the PUBLIC half here (the private half goes in a password manager
- * and nowhere else). While it is empty the app enforces nothing — see
+ * Generated with `node .claude/scripts/license-key.mjs keygen`; the private half
+ * lives in the maintainer's password manager and nowhere else. Replacing this
+ * value invalidates every key ever issued — a rotation is a re-issue for every
+ * customer, so treat it as permanent.
+ *
+ * Blanking it does not disable licensing safely by accident, it disables it
+ * deliberately: with no key to verify against, the app enforces nothing. See
  * GetLicenseStateAction for why that is the safe direction to fail in.
  */
-const LICENSE_PUBLIC_KEY = '';
+const LICENSE_PUBLIC_KEY = 'yT1ek5rwadl-lg9sQxj2qpJ5G8dRVnknoFaNdU28qfM';
 
 export function buildPhpEnv(
   options: PhpEnvOptions,
