@@ -30,19 +30,44 @@ return [
 
     'disks' => [
 
+        // `serve` is deliberately OFF here, and that is a fix rather than a
+        // default (#1302). Laravel's skeleton ships `'serve' => true` on this
+        // disk, and because it has no `url` the framework falls back to
+        // registering it at `/storage/{path}` — the private disk squatting on
+        // the public disk's URL space. Nothing ever used that route: private
+        // documents are downloaded through the authenticated
+        // DocumentController, and no code builds a signed storage URL.
+        //
+        // It was never a data leak — ServeFile demands a valid signature for
+        // any disk whose visibility is not `public`, so unsigned callers got
+        // 403 (dev) / 404 (production) — but it shadowed the public disk's
+        // route and left every avatar, academy logo and video thumbnail
+        // unreachable wherever the `public/storage` symlink was missing.
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
             'throw' => false,
             'report' => false,
         ],
 
+        // `serve` makes the framework register `/storage/{path}` for THIS
+        // disk. Normally redundant — nginx (`try_files $uri $uri/
+        // /index.php`) and PHP's built-in server both serve the real file
+        // through the `public/storage` symlink before reaching the router.
+        //
+        // The packaged desktop app is where it matters: the install directory
+        // is read-only by design, `storage/` is relocated to the per-user data
+        // directory (#1223), and a Windows symlink needs Developer Mode or
+        // elevation — so the link cannot exist and the route is the only way
+        // these files are reachable. `visibility: public` is what lets
+        // ServeFile answer without a signed URL, which an `<img src>` could
+        // never provide.
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
+            'serve' => true,
             'throw' => false,
             'report' => false,
         ],

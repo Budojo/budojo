@@ -86,7 +86,7 @@ Everything that persists lives under Electron's **`userData`** directory (`%APPD
 | Path (under `userData`) | What |
 |---|---|
 | `budojo.sqlite` | The database. SQLite in WAL mode (`+ -wal`, `-shm` siblings). |
-| `storage/` | Laravel's `storage/` — **the encrypted documents live here**. |
+| `storage/` | Laravel's `storage/` — **the encrypted documents live here** (`app/private/`), alongside the publicly-served images in `app/public/`. |
 | `logs/` | Runtime logs. |
 | `backups/` | Local backup archives (see [`backup-restore.md`](./backup-restore.md)). |
 | `secrets.bin` | `APP_KEY` + `DOCUMENT_ENCRYPTION_KEY`, encrypted with the OS keychain (Electron `safeStorage` → DPAPI on Windows). |
@@ -95,6 +95,14 @@ Everything that persists lives under Electron's **`userData`** directory (`%APPD
 | `php.ini`, `php-server.pid` | Generated PHP config + supervisor pid. |
 | `notifications-ledger.json` | Once-only ledger so a native reminder fires at most once. |
 | `tmp/` | Scratch (backup staging, etc.). |
+
+### How images reach the renderer
+
+Avatars, academy logos and community video thumbnails are stored on Laravel's `public` disk and referenced by the API as `Storage::disk('public')->url(...)` — i.e. `http://127.0.0.1:<port>/storage/<path>`. On a normal web deployment that path is a **static file**, reachable because `public/storage` symlinks into `storage/app/public`.
+
+**That symlink cannot exist here.** The install directory is read-only by design, `storage/` lives under `userData`, and creating a symlink on Windows needs Developer Mode or elevation. So the `public` disk is configured with `'serve' => true` (`server/config/filesystems.php`), which makes Laravel register `/storage/{path}` and serve the file through PHP instead. `visibility: public` is what lets it answer without a signed URL — an `<img src>` could never supply one.
+
+Nothing changes for the hosted/dev shape: nginx and PHP's built-in server both serve an existing file before reaching the router, so where the symlink is present the route never runs. It is a fallback, not a replacement ([#1302](https://github.com/Budojo/budojo/issues/1302)).
 
 The install directory holds only the read-only runtime: `resources/php/php.exe` (the bundled PHP), `resources/server/` (the Laravel app, `--no-dev`), and the renderer inside `app.asar`. Because nothing user-owned lives there, the NSIS uninstaller is configured with `deleteAppDataOnUninstall: false` — uninstalling removes the program and leaves every byte of the gym's data in place.
 
