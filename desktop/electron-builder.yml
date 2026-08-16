@@ -22,6 +22,24 @@ directories:
   output: release
   buildResources: build
 
+# Pointed at explicitly rather than left to the implicit `buildResources`
+# lookup (#1306). `buildResources: build` alone is silent when it is wrong:
+# the directory did not exist at all, electron-builder found no icon, fell
+# back to the bundled Electron atom, and the build SUCCEEDED — which is how
+# every release so far shipped with the default icon in the Start menu, the
+# taskbar, the shortcut, the installer and Add/Remove Programs. Naming the
+# files means a rename fails the build instead of quietly reverting.
+#
+# Both derive from client/public/icons/icon-512.png, the PWA icon — itself a
+# derivative of the locked brand geometry (docs/design/brand-kit). Do not
+# redraw them here; regenerate from upstream if the glyph ever changes.
+#
+#   icon.ico  Windows. Multi-resolution (256/128/64/48/32/24/16) because
+#             Windows picks per surface; a single-size ICO is visibly soft in
+#             the 16 px Start-menu row.
+#   icon.png  512x512, what the Linux targets want (#1300).
+icon: build/icon.png
+
 # `dist/` is the compiled main + preload; `dist/renderer` is the Angular build
 # copied in by the build script. The PHP runtime joins them in #1222 as an
 # unpacked resource — it has to stay a real directory on disk because a child
@@ -33,6 +51,10 @@ files:
 asar: true
 
 win:
+  # The multi-resolution ICO, not the PNG the root `icon` points at. Windows
+  # picks a size per surface — 16 px in the Start-menu row, 32 in the taskbar,
+  # 256 in the shortcut preview — and reads them out of the one file.
+  icon: build/icon.ico
   # NSIS for a normal install, portable so a copy can be run from a USB stick
   # or a synced folder without administrator rights.
   target:
@@ -52,6 +74,11 @@ win:
 # Those two never meet, so every download would 404 while the check itself
 # looked healthy. Hyphens on disk make all three names identical.
 nsis:
+  # The installer chrome is a separate surface from the app icon: without
+  # these the setup window and the Add/Remove Programs entry keep the Electron
+  # atom even once the installed app is branded.
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
   artifactName: ${productName}-Setup-${version}.${ext}
   oneClick: false
   perMachine: false
