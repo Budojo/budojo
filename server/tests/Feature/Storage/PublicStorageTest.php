@@ -74,7 +74,7 @@ it('404s a file that does not exist', function (): void {
     $this->get('/storage/avatars/nope.png')->assertNotFound();
 });
 
-// The other half of the fix, and the half worth a permanent guard.
+// The other half of the fix.
 //
 // Laravel's skeleton ships `'serve' => true` on the `local` disk — the one
 // rooted at storage/app/private, holding the encrypted medical certificates.
@@ -82,26 +82,40 @@ it('404s a file that does not exist', function (): void {
 // by default, where it shadowed the public disk and made every avatar
 // unreachable (#1302).
 //
-// It was never a data leak: ServeFile demands a valid signature for any disk
-// whose visibility is not `public`. But "not currently exploitable" is a thin
-// guarantee to leave resting on a config flag, and re-adding that flag would
-// silently restore the outage. This test fails if anyone does.
-it('does not serve the private disk over /storage', function (): void {
-    Storage::fake('local');
-    Storage::disk('local')->put('documents/medical.pdf', 'private-bytes');
-
-    $response = $this->get('/storage/documents/medical.pdf');
-
-    expect($response->getStatusCode())->not->toBe(200);
-    expect($response->getContent())->not->toContain('private-bytes');
-});
-
+// What actually prevents a regression is not this assertion but the framework
+// itself: re-adding `serve` to `local` makes serveFiles() throw
+// `InvalidArgumentException: The [public] disk conflicts with the [local] disk
+// at [/storage]` during boot, because both would resolve to the same URI. The
+// app does not start. Confirmed by putting the flag back and watching every
+// test in this file fail at boot.
+//
+// So this is a readable canary for the mechanism above, not the guarantee.
 it('routes /storage at the public disk, not the private one', function (): void {
-    $route = app('router')->getRoutes()->getByName('storage.public');
+    $routes = app('router')->getRoutes();
 
-    expect($route)->not->toBeNull()
-        ->and(app('router')->getRoutes()->getByName('storage.local'))->toBeNull();
+    expect($routes->getByName('storage.public'))->not->toBeNull()
+        ->and($routes->getByName('storage.local'))->toBeNull();
 });
+
+// `serve => true` registers a PUT alongside the GET — `storage.public.upload`,
+// which does `Storage::disk('public')->put($path, $request->getContent())`.
+// That is an arbitrary write over the whole public disk, and it is easy to
+// enable without realising it exists.
+//
+// It is gated: ReceiveFile requires BOTH `?upload=1` AND a valid relative
+// signature, and unlike the GET there is no `visibility: public` bypass — so a
+// caller needs the APP_KEY, and nothing in the app mints such a URL. These
+// tests pin that gate rather than trusting the reading.
+it('rejects an unsigned upload', function (string $query): void {
+    $this->put("/storage/avatars/evil.png{$query}", ['x' => 'y'])
+        ->assertForbidden();
+
+    expect(Storage::disk('public')->exists('avatars/evil.png'))->toBeFalse();
+})->with([
+    'no upload flag, no signature' => '',
+    'upload flag, no signature' => '?upload=1',
+    'upload flag, forged signature' => '?upload=1&signature=deadbeef',
+]);
 
 // The reason this route needs tests at all. Serving a caller-supplied path
 // from PHP is exactly where traversal bugs live, and the private disk holding

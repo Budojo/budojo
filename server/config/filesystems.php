@@ -55,6 +55,22 @@ return [
         // /index.php`) and PHP's built-in server both serve the real file
         // through the `public/storage` symlink before reaching the router.
         //
+        // It registers TWO routes, not one: a GET (`storage.public`) and a
+        // **PUT** (`storage.public.upload`) that writes the request body
+        // straight onto this disk. The PUT is gated harder than the GET —
+        // ReceiveFile requires `?upload=1` AND a valid relative signature,
+        // with no `visibility: public` bypass, so it needs the APP_KEY and
+        // nothing in this app ever mints such a URL. `PublicStorageTest`
+        // pins that. Worth knowing it exists before enabling `serve`
+        // anywhere else.
+        //
+        // Cost, so nobody assumes the route is free: ServeFile hard-codes
+        // `Cache-Control: no-store`, so wherever this route is the only path
+        // — the packaged desktop app — every avatar and logo is re-streamed
+        // through PHP on each render instead of being a cacheable static
+        // file. Fine at single-user desktop scale; if it ever bites,
+        // `Storage::disk('public')->serveUsing(...)` sets your own headers.
+        //
         // The packaged desktop app is where it matters: the install directory
         // is read-only by design, `storage/` is relocated to the per-user data
         // directory (#1223), and a Windows symlink needs Developer Mode or

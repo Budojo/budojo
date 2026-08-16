@@ -104,6 +104,11 @@ Avatars, academy logos and community video thumbnails are stored on Laravel's `p
 
 Nothing changes for the hosted/dev shape: nginx and PHP's built-in server both serve an existing file before reaching the router, so where the symlink is present the route never runs. It is a fallback, not a replacement ([#1302](https://github.com/Budojo/budojo/issues/1302)).
 
+Two consequences worth knowing rather than rediscovering:
+
+- **`serve` registers a PUT as well as a GET.** `storage.public.upload` writes the request body onto the disk. It requires `?upload=1` *and* a valid relative signature — no `visibility: public` bypass, unlike the GET — so it needs the `APP_KEY`, and nothing in the app mints such a URL. `PublicStorageTest` pins that gate.
+- **The route disables browser caching.** Laravel's `ServeFile` hard-codes `Cache-Control: no-store`, so on the desktop — where this route is the only path — every avatar and logo is re-streamed through PHP on each render, instead of being the cacheable static file a symlinked deployment serves. Acceptable at single-user, single-machine scale; `Storage::disk('public')->serveUsing(...)` is the escape hatch if it ever matters.
+
 The install directory holds only the read-only runtime: `resources/php/php.exe` (the bundled PHP), `resources/server/` (the Laravel app, `--no-dev`), and the renderer inside `app.asar`. Because nothing user-owned lives there, the NSIS uninstaller is configured with `deleteAppDataOnUninstall: false` — uninstalling removes the program and leaves every byte of the gym's data in place.
 
 That path comes from the `appId`/`productName`, **not** from where the executable sits, which has one consequence worth knowing while developing: a locally-built exe, the portable and the installed release all share the *same* `%APPDATA%\Budojo\`. Test builds with `--user-data-dir=<scratch>` (honoured by the packaged app) so a half-finished migration never meets real data.
