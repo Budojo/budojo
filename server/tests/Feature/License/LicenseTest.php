@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
+use App\Models\Athlete;
 use App\Models\License;
 use App\Models\User;
 use App\Rules\ValidLicenseKey;
+use App\Support\ApiTokenAbility;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Licence status, activation and enforcement end to end (#1290).
@@ -225,6 +228,69 @@ it('keeps the way back in open when everything else is shut', function (): void 
 
     // ...and the instance is working again immediately.
     $this->actingAs($owner)->postJson('/api/v1/athletes', athletePayload())->assertCreated();
+});
+
+it('lets a credential be revoked while blocked, but not minted', function (): void {
+    // Killing a leaked token is a security action; issuing a new one is using
+    // the product. The URL shape is what separates them in the exempt list, so
+    // this pins that the split actually works.
+    licensingKeypair();
+    config()->set('budojo.runtime', 'desktop');
+    $owner = userWithAcademy();
+
+    // Minted while the trial was still running...
+    $id = $this->actingAs($owner)->postJson('/api/v1/me/api-tokens', [
+        'name' => 'integration',
+        'abilities' => [ApiTokenAbility::PAYMENTS_READ],
+    ])->assertCreated()->json('data.id');
+
+    $this->travel(21)->days();
+
+    // ...and still revocable after the licence lapsed.
+    $this->actingAs($owner)->deleteJson('/api/v1/me/api-tokens/' . $id)->assertSuccessful();
+
+    $this->actingAs($owner)->postJson('/api/v1/me/api-tokens', [
+        'name' => 'another',
+        'abilities' => [ApiTokenAbility::PAYMENTS_READ],
+    ])->assertStatus(402);
+});
+
+it('still lets the owner log in after the trial has run out', function (): void {
+    // The single exemption standing between a lapsed instance and a permanent
+    // lockout: activation lives behind auth:sanctum, so an owner who signs out
+    // and cannot sign back in can never reach it — and a desktop customer has
+    // no console to rescue themselves with. Every other test here uses
+    // actingAs(), which bypasses this route entirely.
+    $secret = licensingKeypair();
+    config()->set('budojo.runtime', 'desktop');
+    $owner = userWithAcademy();
+    $owner->forceFill(['password' => Hash::make('a-real-passphrase-42')])->save();
+    $this->travel(21)->days();
+
+    $token = $this->postJson('/api/v1/auth/login', [
+        'email' => $owner->email,
+        'password' => 'a-real-passphrase-42',
+    ])->assertSuccessful()->json('token');
+
+    expect($token)->toBeString();
+
+    // ...and from that fresh session, activation works.
+    $this->withToken($token)
+        ->postJson('/api/v1/license', ['key' => licensingKey($secret, '2027-08-16')])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'active');
+});
+
+it('lets an absent capability answer 404 rather than asking for money', function (): void {
+    // Two gates disagree if this is wrong: `capability:` says a surface this
+    // runtime does not have must not advertise itself, and group middleware
+    // runs first. A 402 here would tell a prober that a route the desktop does
+    // not even serve exists and is merely unpaid.
+    licensingKeypair();
+    $owner = lapsedDesktopOwner();
+    $athlete = Athlete::factory()->for($owner->academy)->create(['email' => 'a@example.test']);
+
+    $this->actingAs($owner)->postJson("/api/v1/athletes/{$athlete->id}/invite")->assertNotFound();
 });
 
 it('keeps support reachable while blocked', function (): void {

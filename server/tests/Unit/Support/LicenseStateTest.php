@@ -89,6 +89,25 @@ it('expires when the key expires, even though the account is old', function () u
     expect($state->allowsWrites())->toBeFalse();
 });
 
+it('still works on the last day the key names, and stops the morning after', function () use ($accountCreated): void {
+    // `expires: 2026-09-01` means "valid through 1 September". A licence that
+    // died at 00:00 that morning would be a day short of what was paid for.
+    $key = stateLicense('2026-09-01');
+
+    expect(LicenseState::evaluate($accountCreated, $key, new DateTimeImmutable('2026-09-01 23:00:00'))->allowsWrites())
+        ->toBeTrue();
+    expect(LicenseState::evaluate($accountCreated, $key, new DateTimeImmutable('2026-09-02 00:00:00'))->allowsWrites())
+        ->toBeFalse();
+});
+
+it('gives a same-day key its day rather than declaring it born dead', function () use ($accountCreated): void {
+    // The support case: a key minted this morning to unblock someone today.
+    $state = LicenseState::evaluate($accountCreated, stateLicense('2026-08-20'), new DateTimeImmutable('2026-08-20 09:00:00'));
+
+    expect($state->status)->toBe(LicenseStatus::Active);
+    expect($state->daysRemaining)->toBe(1);
+});
+
 it('treats a key without an expiry as active with no countdown', function () use ($accountCreated): void {
     $state = LicenseState::evaluate($accountCreated, stateLicense(null), new DateTimeImmutable('2030-01-01'));
 

@@ -127,6 +127,13 @@ return [
             'api/v1/me/two-factor',
             'api/v1/me/two-factor/*',
 
+            // Revoking a token, but NOT minting one. The URL shape happens to
+            // separate them cleanly: `DELETE /me/api-tokens/{id}` matches the
+            // wildcard, `POST /me/api-tokens` does not. Someone who discovers a
+            // leaked token must be able to kill it whatever their billing says;
+            // issuing a new one is using the product.
+            'api/v1/me/api-tokens/*',
+
             // The right to erasure is not a paid feature.
             'api/v1/me/deletion-request',
             'api/v1/me/deletion-request/*',
@@ -135,6 +142,19 @@ return [
             // notification that told you that you are.
             'api/v1/support',
             'api/v1/me/notifications/*',
+
+            /*
+            | Deliberately NOT exempt, so nobody has to wonder later:
+            |
+            |   /me/email-change + /email-change/{token}/verify — changing
+            |   which address owns the account is identity management, not
+            |   access recovery. Nothing is lost by waiting: the owner can
+            |   still sign in, change their password and reach support, and
+            |   a pending change that lapses is simply restarted afterwards.
+            |
+            |   /me/api-tokens (POST) — minting a credential is using the
+            |   product. Revoking one is above.
+            */
         ],
 
     ],

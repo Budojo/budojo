@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ALL_CAPABILITIES, RuntimeService } from './runtime.service';
+import { DEFAULT_CAPABILITIES, RuntimeService } from './runtime.service';
 
 /**
- * Runtime capability list (#1229). The default is "everything" so the hosted
- * web app — and every existing E2E spec that never mocks the endpoint —
- * behaves exactly as before; only a successful response narrows the set.
+ * Runtime capability list (#1229). The default is the whole web set, so the
+ * hosted app — and every existing E2E spec that never mocks the endpoint —
+ * behaves exactly as before; only a successful response narrows the set. The
+ * desktop-only capabilities are deliberately out of that default (#1290).
  */
 describe('RuntimeService', () => {
   let service: RuntimeService;
@@ -22,10 +23,30 @@ describe('RuntimeService', () => {
 
   afterEach(() => http.verify());
 
-  it('assumes every capability before anything is loaded', () => {
-    expect(service.capabilities()).toEqual(ALL_CAPABILITIES);
+  it('assumes every web capability before anything is loaded', () => {
+    expect(service.capabilities()).toEqual(DEFAULT_CAPABILITIES);
     expect(service.has()('community')).toBe(true);
     expect(service.profile()).toBe('web');
+  });
+
+  it('does not assume a desktop-only capability it has not been told about', () => {
+    // The default exists so a failed /runtime call cannot hide web surfaces.
+    // Applying it to `licensing` (#1290) would do the opposite — invent a
+    // licence surface on a web app that merely could not reach its API.
+    expect(service.has()('licensing')).toBe(false);
+  });
+
+  it('accepts a desktop-only capability when the runtime reports it', async () => {
+    // The mirror: `licensing` must survive parseRuntime's known-value filter,
+    // or the desktop could never see the capability at all.
+    const pending = service.load();
+    http
+      .expectOne('/api/v1/runtime')
+      .flush({ data: { profile: 'desktop', capabilities: ['licensing'] } });
+    await pending;
+
+    expect(service.profile()).toBe('desktop');
+    expect(service.has()('licensing')).toBe(true);
   });
 
   it('narrows to what the API reports', async () => {
@@ -57,7 +78,7 @@ describe('RuntimeService', () => {
     http.expectOne('/api/v1/runtime').flush('nope', { status: 500, statusText: 'Server Error' });
     await expect(pending).resolves.toBeUndefined();
 
-    expect(service.capabilities()).toEqual(ALL_CAPABILITIES);
+    expect(service.capabilities()).toEqual(DEFAULT_CAPABILITIES);
   });
 
   it('keeps the web default when the response is not the runtime shape', async () => {
@@ -68,7 +89,7 @@ describe('RuntimeService', () => {
     http.expectOne('/api/v1/runtime').flush({ data: [] });
     await pending;
 
-    expect(service.capabilities()).toEqual(ALL_CAPABILITIES);
+    expect(service.capabilities()).toEqual(DEFAULT_CAPABILITIES);
     expect(service.profile()).toBe('web');
   });
 

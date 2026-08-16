@@ -9,6 +9,7 @@ use App\Enums\Capability;
 use App\Support\Capabilities;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -16,9 +17,9 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * This is the enforcement. Greying a button out is presentation — anyone who
  * opens devtools can click it anyway — so the API is where "you cannot do this
- * yet" has to be true. Answers 402 with the stable `license_required` code the
- * SPA's error interceptor keys on, matching `role_required` and
- * `verification_required`.
+ * yet" has to be true. Answers 402 with a stable `license_required` code in the
+ * shape of `role_required` and `verification_required`, so the SPA's error
+ * interceptor can key on it the same way once the client slice lands.
  *
  * Applied to the whole API group rather than to individual routes, so a route
  * added next month is covered without anyone remembering to cover it. What
@@ -69,7 +70,44 @@ class EnforceLicense
             return false;
         }
 
+        if ($this->routeIsAbsentHere($request)) {
+            return false;
+        }
+
         return ! $request->is(...$this->exemptPatterns());
+    }
+
+    /**
+     * True when the route is behind a `capability:` this runtime lacks.
+     *
+     * Group middleware runs before route middleware, so without this check the
+     * licence answer would reach a caller first and reply "pay to unlock" about
+     * a surface that does not exist here at all. `RequireCapability` says a
+     * runtime's missing surfaces must not advertise themselves; letting the 404
+     * win keeps that true, and keeps the two gates from contradicting each
+     * other in the docs.
+     */
+    private function routeIsAbsentHere(Request $request): bool
+    {
+        $route = $request->route();
+
+        if (! $route instanceof Route) {
+            return false;
+        }
+
+        foreach ($route->gatherMiddleware() as $middleware) {
+            if (! \is_string($middleware) || ! str_starts_with($middleware, 'capability:')) {
+                continue;
+            }
+
+            $required = Capability::tryFrom(substr($middleware, \strlen('capability:')));
+
+            if ($required !== null && Capabilities::lacks($required)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -47,6 +47,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // default; the exceptions live in `config/budojo.license.exempt` where
         // each one had to be written down on purpose. No-op on any runtime
         // without the `licensing` capability, i.e. everywhere but the desktop.
+        //
+        // Ordering, measured rather than assumed: `auth:sanctum` is hoisted
+        // above this by the framework's middleware priority list, so 401 still
+        // wins over 402. `capability:` and `role:` are NOT in that list and
+        // therefore run after — which is why EnforceLicense checks the matched
+        // route's capability gate itself instead of masking its 404.
         $middleware->api(append: [\App\Http\Middleware\EnforceLicense::class]);
 
         // Disable the framework default guest-redirect callback (#769).

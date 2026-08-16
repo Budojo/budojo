@@ -66,8 +66,19 @@ it('refuses a key signed by a different private key', function (): void {
 it('refuses a key with a flipped bit in the signature', function (): void {
     [$public, $secret] = licenseKeypair();
     $key = mintLicense(['v' => 1, 'name' => 'Budojo Roma', 'issued' => '2026-08-16'], $secret);
-    $flipped = substr($key, 0, -1) . ($key[-1] === 'A' ? 'B' : 'A');
 
+    // Flip a bit in the DECODED signature, not in the last base64 character.
+    // A 64-byte signature is not a multiple of 3, so its final character
+    // carries only 2 significant bits and 4 bits of padding that decode away —
+    // swapping that character leaves the signature byte-identical one time in
+    // four, and the "tampered" key verifies. Measured: 511/2000.
+    [$payload, $signature] = explode('.', substr($key, strlen(LicenseKey::PREFIX)), 2);
+    $raw = base64_decode(strtr($signature, '-_', '+/'), true);
+    $raw[0] = chr(ord($raw[0]) ^ 0x01);
+
+    $flipped = LicenseKey::PREFIX . $payload . '.' . rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
+
+    expect($flipped)->not->toBe($key);
     expect(LicenseKey::verify($flipped, $public))->toBeNull();
 });
 
@@ -128,6 +139,21 @@ it('reads an expiry and knows when it has passed', function (): void {
     expect($license->expiresAt->format('Y-m-d'))->toBe('2027-08-16');
     expect($license->hasExpired(new DateTimeImmutable('2027-08-15')))->toBeFalse();
     expect($license->hasExpired(new DateTimeImmutable('2027-08-17')))->toBeTrue();
+});
+
+it('stays valid for the whole of its last day', function (): void {
+    // `expires` is a calendar date meaning "valid THROUGH this day". Comparing
+    // against its midnight would kill the key for the entire day someone paid
+    // for — and make a same-day support key dead the moment it was minted.
+    [$public, $secret] = licenseKeypair();
+    $license = LicenseKey::verify(mintLicense(
+        ['v' => 1, 'name' => 'X', 'issued' => '2026-08-16', 'expires' => '2027-08-16'],
+        $secret,
+    ), $public);
+
+    expect($license->hasExpired(new DateTimeImmutable('2027-08-16 00:00:00')))->toBeFalse();
+    expect($license->hasExpired(new DateTimeImmutable('2027-08-16 23:59:59')))->toBeFalse();
+    expect($license->hasExpired(new DateTimeImmutable('2027-08-17 00:00:00')))->toBeTrue();
 });
 
 it('refuses a public key of the wrong size', function (): void {

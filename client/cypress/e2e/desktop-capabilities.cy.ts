@@ -8,7 +8,10 @@ import { VIEWPORT_PIXEL_8_PRO } from '../support/viewports';
  * endpoint unmocked and therefore the web default (everything), so this file
  * is the only place the narrowed set is exercised end to end.
  */
-const DESKTOP_RUNTIME = { statusCode: 200, body: { data: { profile: 'desktop', capabilities: [] } } };
+const DESKTOP_RUNTIME = {
+  statusCode: 200,
+  body: { data: { profile: 'desktop', capabilities: [] } },
+};
 const WEB_RUNTIME = {
   statusCode: 200,
   body: {

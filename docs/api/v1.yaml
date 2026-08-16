@@ -5275,9 +5275,10 @@ components:
         the request would have changed something. Applies to every write outside
         `config/budojo.license.exempt`; reads are never blocked.
 
-        The SPA keys on `message: 'license_required'` to route the owner to
-        Settings → Activation. Greying the control out is presentation — this
-        response is the enforcement.
+        `message: 'license_required'` is stable and shaped like `role_required`
+        so the SPA's error interceptor can key on it to route the owner to
+        Settings → Activation once the client slice lands. Greying the control
+        out is presentation — this response is the enforcement.
       content:
         application/json:
           schema:

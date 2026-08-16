@@ -66,8 +66,11 @@ The server knows which build it is running as through the **`RuntimeProfile`** e
 | `web_push` | ✅ | ❌ | Browser Web Push / VAPID notifications |
 | `email` | ✅ | ❌ | Outbound SMTP (reminders, invites) |
 | `password_breach_check` | ✅ | ❌ | HaveIBeenPwned lookups on password entry |
+| `licensing` | ❌ | ✅ | Trial countdown, activation keys, write enforcement ([#1290](https://github.com/Budojo/budojo/issues/1290)) |
 
-**Desktop enables none of them** (`'desktop' => []`). It is a single-user local tool: one owner, one machine, no second user to invite, no browser push service to reach, no mail transport, and — because the bundled PHP ships without a CA bundle — no outbound HTTPS. A route behind an absent capability answers **404**, so the multi-user surfaces are not merely hidden in the UI, they don't exist on the wire. Nothing is deleted: flipping the config back on restores the hosted behaviour.
+**Desktop enables none of the multi-user ones.** It is a single-user local tool: one owner, one machine, no second user to invite, no browser push service to reach, no mail transport, and — because the bundled PHP ships without a CA bundle — no outbound HTTPS. A route behind an absent capability answers **404**, so the multi-user surfaces are not merely hidden in the UI, they don't exist on the wire. Nothing is deleted: flipping the config back on restores the hosted behaviour.
+
+**Capabilities are not a web superset with bits knocked out**, and `licensing` is the case that proves it. Activation keys apply to the machine on someone's desk; a hosted deployment is licensed by whoever runs it, so there is nobody there to paste a key and no trial to expire. See [`../entities/license.md`](../entities/license.md) for the key format and the enforcement rules.
 
 ## Drivers
 

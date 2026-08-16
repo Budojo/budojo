@@ -46,7 +46,11 @@ final class LicenseState
 
             return new self(
                 LicenseStatus::Active,
-                self::daysUntil($license->expiresAt, $now),
+                // Counted to the END of the last valid day, not to its start —
+                // otherwise the countdown reads zero while the licence still
+                // works. `expiresAt` stays the claimed date, because that is
+                // what the owner is shown.
+                self::daysUntil($license->expiresAfter(), $now),
                 $license->licensee,
                 $license->expiresAt,
             );

@@ -82,10 +82,28 @@ final class LicenseKey
         return self::fromPayload($payload);
     }
 
-    /** True when the key carries an expiry that has already passed. */
+    /**
+     * The instant the licence stops being valid: midnight *after* the last
+     * valid day. Null for a perpetual key.
+     *
+     * `expires` is a calendar date and means "valid through this day" — that is
+     * what a customer paying "until 31 December" understands and what the
+     * mint command's `--expires` reads as. Comparing against the parsed date
+     * itself would kill the key at 00:00 on the day it is supposed to work,
+     * costing a full day of what was paid for and making a same-day support
+     * key dead on arrival.
+     */
+    public function expiresAfter(): ?\DateTimeImmutable
+    {
+        return $this->expiresAt?->modify('+1 day');
+    }
+
+    /** True when the key carries an expiry whose last valid day is over. */
     public function hasExpired(\DateTimeImmutable $now): bool
     {
-        return $this->expiresAt !== null && $this->expiresAt < $now;
+        $end = $this->expiresAfter();
+
+        return $end !== null && $end <= $now;
     }
 
     private static function fromPayload(string $payload): ?self
