@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Notification, protocol, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, protocol, safeStorage, shell } from 'electron';
 import { createWriteStream, existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -16,6 +16,14 @@ import { TokenVault } from './token-vault.js';
 import { PeriodicTask } from './periodic-task.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
 import { decodeRecoveryCode, encodeRecoveryCode } from './recovery-keys.js';
+import { planUpdateCheck, updateReadyMessage } from './update-policy.js';
+// electron-updater is CommonJS and, under ESM, exposes NOTHING as a named
+// export — `import { autoUpdater }` is silently `undefined` (same class as the
+// qrcode interop bug in `.claude/gotchas.md`). It must come through the default
+// export. It is also a lazy getter that reads `app.getVersion()`, so it is
+// resolved inside the function below rather than destructured here: touching it
+// at import time runs before Electron is ready and crashes on startup.
+import electronUpdater from 'electron-updater';
 
 /**
  * Electron main process for Budojo Desktop (M11 #1218).
@@ -103,8 +111,25 @@ function createWindow(apiBase: string): BrowserWindow {
     minWidth: 960,
     minHeight: 600,
     show: false,
-    backgroundColor: '#111827',
+    // The page surface token (`--p-surface-50`), not a colour of our own. The
+    // window paints this before the renderer draws, so any mismatch is a flash
+    // of the wrong colour at every launch. It used to be a dark navy while the
+    // app's theme is light — and because the page painted no background of its
+    // own, that navy stayed visible *underneath* the light theme, which is why
+    // the app looked like dark-text-on-dark. Fixed on both sides.
+    backgroundColor: '#fafafa',
     title: 'Budojo',
+    // Native window controls, our colours. `frame: false` would mean
+    // reimplementing minimise / maximise / close, and with them snap layouts,
+    // double-click-to-maximise and the accessibility behaviour Windows gives
+    // for free — a custom title bar gets those subtly wrong. Hiding the frame
+    // and painting the overlay keeps the real buttons and drops the chrome.
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#fafafa',
+      symbolColor: '#1c1c1e',
+      height: 40,
+    },
     webPreferences: {
       preload: path.join(here, 'preload.cjs'),
       // The renderer runs untrusted-by-default: no Node, isolated context,
@@ -509,6 +534,71 @@ function registerRecoveryKeysBridge(): void {
 }
 
 /**
+ * Automatic updates (#1287). Checks the public GitHub releases, downloads in
+ * the background and installs on quit — the owner never has to know a release
+ * page exists.
+ *
+ * Nothing is ever installed while the app is open: `autoInstallOnAppQuit` means
+ * the swap happens after the last window closes, so an instructor is never
+ * interrupted mid-check-in. Failures are logged and swallowed — a machine with
+ * no internet must still start the app.
+ *
+ * Returns the polling task so the caller can stop it on quit, or `null` when
+ * this build must not update itself (see `planUpdateCheck`).
+ */
+function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
+  const decision = planUpdateCheck({
+    packaged: app.isPackaged,
+    dev: DEV,
+    portableDir: process.env['PORTABLE_EXECUTABLE_DIR'],
+  });
+
+  if (!decision.check) {
+    log(`[update] not checking — ${decision.reason}`);
+
+    return null;
+  }
+
+  // Resolved here, not at import time: it is a getter that reads app metadata.
+  const updater = electronUpdater.autoUpdater;
+
+  updater.autoDownload = true;
+  updater.autoInstallOnAppQuit = true;
+
+  updater.on('checking-for-update', () => log('[update] checking'));
+  updater.on('update-not-available', () => log('[update] already current'));
+  updater.on('update-available', (info: { version: string }) =>
+    log(`[update] ${info.version} available, downloading`),
+  );
+  updater.on('update-downloaded', (info: { version: string }) => {
+    log(`[update] ${info.version} downloaded — installs on quit`);
+    const { title, body } = updateReadyMessage(info.version);
+    new Notification({ title, body }).show();
+  });
+  updater.on('error', (error: Error) => {
+    // Offline, rate-limited, release yanked — none of these are worth a dialog
+    // or a crash. The log is where a maintainer looks; the user sees nothing.
+    log(`[update] check failed: ${error.message}`);
+  });
+
+  const poll = new PeriodicTask({
+    run: async () => {
+      await updater.checkForUpdates();
+
+      return { code: 0, output: '', timedOut: false };
+    },
+    log,
+    intervalMs: 6 * 60 * 60_000,
+    // Not at zero: the first minute belongs to booting PHP and painting a
+    // window, not to a network round-trip.
+    initialDelayMs: 45_000,
+  });
+  poll.start();
+
+  return poll;
+}
+
+/**
  * Two copies of the app would open two connections to the same SQLite file and
  * two scheduler ticks against the same rows. Focus the existing window instead.
  */
@@ -522,6 +612,7 @@ if (!gotTheLock) {
   let notifierPoll: PeriodicTask | null = null;
   let backupService: BackupService | null = null;
   let backupPoll: PeriodicTask | null = null;
+  let updatePoll: PeriodicTask | null = null;
   let quitting = false;
 
   app.on('second-instance', () => {
@@ -539,9 +630,24 @@ if (!gotTheLock) {
     // Registered in development too. Only the URL the window loads differs, so
     // the packaged code path is exercised on every dev run rather than first
     // meeting reality inside an installer.
+    // Electron installs a default File / Edit / View / Window / Help bar. It
+    // belongs to a text editor, not to this: every entry is either irrelevant
+    // (Reload, Toggle Developer Tools) or duplicated by the app's own UI. On
+    // Windows the editing shortcuts inside inputs come from Chromium, not from
+    // the menu, so dropping it costs nothing — if copy/paste ever misbehaves,
+    // the fix is a roles-only menu that is never displayed, not the bar back.
+    Menu.setApplicationMenu(null);
+
     registerAppProtocol();
     registerTokenVault();
     registerRecoveryKeysBridge();
+
+    // Registered before the runtime starts, and independent of it: an install
+    // that cannot boot its API should still be able to update itself out of
+    // that state.
+    const updateLog = new RotatingLog(path.join(dataLayout(app.getPath('userData')).logsDir, 'update.log'));
+    updateLog.open();
+    updatePoll = registerAutoUpdate((line) => updateLog.write(`${new Date().toISOString()} ${line}`));
 
     let apiBase: string;
 
@@ -592,7 +698,7 @@ if (!gotTheLock) {
     // Scheduler first: an in-flight schedule:run must not meet a server that
     // is already going away, and it must not outlive the app.
     const stopping = supervisor;
-    void Promise.all([scheduler?.stop(), notifierPoll?.stop(), backupPoll?.stop()])
+    void Promise.all([scheduler?.stop(), notifierPoll?.stop(), backupPoll?.stop(), updatePoll?.stop()])
       .catch(() => undefined)
       .then(() => stopping.stop())
       .catch(() => undefined)

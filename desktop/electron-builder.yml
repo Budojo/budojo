@@ -42,13 +42,26 @@ win:
   # M11 (#1218). SmartScreen will warn on first install — documented in the
   # install guide (#1232) rather than papered over.
 
+# Artifact names carry NO spaces, and that is load-bearing for auto-update
+# (#1287), not cosmetic:
+#   * we upload the file under its on-disk name, and GitHub rewrites spaces to
+#     dots  ->  "Budojo.Setup.2.43.0.exe"
+#   * electron-updater builds its download URL from latest.yml and rewrites
+#     spaces to HYPHENS ("still replace space to - due to backward
+#     compatibility", GitHubProvider.resolveFiles)  ->  "Budojo-Setup-2.43.0.exe"
+# Those two never meet, so every download would 404 while the check itself
+# looked healthy. Hyphens on disk make all three names identical.
 nsis:
+  artifactName: ${productName}-Setup-${version}.${ext}
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
   # The database lives in %APPDATA% (#1223), never in the install directory,
   # so an uninstall must not be able to take the user's data with it.
   deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: ${productName}-${version}.${ext}
 
 # NOTE — do not reach for `portable.unpackDirName` to make the portable start
 # faster. It was tried and measured: the portable re-extracts its ~112 MB

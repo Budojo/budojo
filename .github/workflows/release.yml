@@ -446,9 +446,13 @@ jobs:
         # fetch-php and stale-chunk guards apply elsewhere.
         run: |
           V="${{ steps.ver.outputs.version }}"
-          test -f "release/Budojo Setup ${V}.exe" || { echo "::error::NSIS installer missing"; exit 1; }
-          test -f "release/Budojo ${V}.exe" || { echo "::error::portable executable missing"; exit 1; }
-          ls -la release/*.exe
+          test -f "release/Budojo-Setup-${V}.exe" || { echo "::error::NSIS installer missing"; exit 1; }
+          test -f "release/Budojo-${V}.exe" || { echo "::error::portable executable missing"; exit 1; }
+          # latest.yml is what electron-updater reads to discover a new version
+          # (#1287). Without it every installed copy silently stops updating,
+          # and nothing else in the pipeline would notice.
+          test -f "release/latest.yml" || { echo "::error::latest.yml missing — installed apps would never see this release"; exit 1; }
+          ls -la release/*.exe release/latest.yml
 
       - name: Attach installers to the GitHub Release
         shell: bash
@@ -458,7 +462,8 @@ jobs:
         run: |
           V="${{ steps.ver.outputs.version }}"
           gh release upload "${TAG}" \
-            "release/Budojo Setup ${V}.exe" \
-            "release/Budojo Setup ${V}.exe.blockmap" \
-            "release/Budojo ${V}.exe" \
+            "release/Budojo-Setup-${V}.exe" \
+            "release/Budojo-Setup-${V}.exe.blockmap" \
+            "release/Budojo-${V}.exe" \
+            "release/latest.yml" \
             --clobber

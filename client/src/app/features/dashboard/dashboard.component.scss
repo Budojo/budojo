@@ -127,3 +127,12 @@ $bottom-nav-height: 3.5rem;
     height: 100dvh;
   }
 }
+
+// Budojo Desktop (#1289): on wide layouts the mobile topbar is hidden, so
+// `.main` starts at the very top of the window — its first row would sit under
+// the minimise / maximise / close buttons the shell paints there. Push it clear
+// by exactly the title-bar height. Narrow layouts already clear it through
+// `--budojo-safe-top` on `.topbar`.
+:host-context(html.budojo-desktop) .main {
+  padding-top: calc(var(--budojo-page-padding-y) + var(--budojo-titlebar-height, 40px));
+}

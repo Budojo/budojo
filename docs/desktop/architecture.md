@@ -96,7 +96,9 @@ Everything that persists lives under Electron's **`userData`** directory (`%APPD
 | `notifications-ledger.json` | Once-only ledger so a native reminder fires at most once. |
 | `tmp/` | Scratch (backup staging, etc.). |
 
-The install directory holds only the read-only runtime: `resources/php/php.exe` (the bundled PHP), `resources/server/` (the Laravel app, `--no-dev`), and the renderer inside `app.asar`.
+The install directory holds only the read-only runtime: `resources/php/php.exe` (the bundled PHP), `resources/server/` (the Laravel app, `--no-dev`), and the renderer inside `app.asar`. Because nothing user-owned lives there, the NSIS uninstaller is configured with `deleteAppDataOnUninstall: false` — uninstalling removes the program and leaves every byte of the gym's data in place.
+
+That path comes from the `appId`/`productName`, **not** from where the executable sits, which has one consequence worth knowing while developing: a locally-built exe, the portable and the installed release all share the *same* `%APPDATA%\Budojo\`. Test builds with `--user-data-dir=<scratch>` (honoured by the packaged app) so a half-finished migration never meets real data.
 
 ## Secrets
 

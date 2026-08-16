@@ -28,6 +28,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.43.0',
+    date: '2026-08-16',
+    headline: 'Budojo keeps itself up to date.',
+    sections: [
+      {
+        heading: '🔄 No more checking for new versions',
+        bullets: [
+          'Until now a new version only reached you if you visited the downloads page and installed it by hand. From this release on, Budojo checks shortly after you open it, downloads quietly in the background, and installs the next time you close the app.',
+          'Nothing is installed while you are working — no dialog in the middle of a check-in. A notification tells you a version is waiting; closing the app at the end of the day applies it. This is the one version you still install by hand.',
+        ],
+      },
+      {
+        heading: '🪟 It looks like an app now, not a website in a frame',
+        bullets: [
+          'It opens on the sign-in screen. Before, it opened on the public marketing page — “start free”, “no credit card”, a picture of a phone — inside an app you had already installed.',
+          'The File / Edit / View menu bar is gone, and the window background no longer fights the app’s light theme, which had made some text hard to read.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.42.2',
     date: '2026-08-15',
     headline: 'Expiry reminders actually work now.',

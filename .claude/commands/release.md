@@ -84,12 +84,16 @@ Close any auto-close stragglers by hand with a comment saying which release deli
 Then **smoke-test the artefact users actually download** — a green build and a correct unpacked layout are not evidence that the installer runs (that assumption held for two releases before anyone checked, and the portable turned out to need ~2 minutes to open):
 
 ```bash
-gh release download vX.Y.Z --pattern "Budojo.X.Y.Z.exe" --dir <scratch>
+gh release download vX.Y.Z --pattern "Budojo-X.Y.Z.exe" --dir <scratch>
 # --user-data-dir keeps the test off the real %APPDATA%\Budojo — the packaged app honours it
-"<scratch>/Budojo.X.Y.Z.exe" --user-data-dir="<scratch>/userdata"
+"<scratch>/Budojo-X.Y.Z.exe" --user-data-dir="<scratch>/userdata"
 ```
 
 Then confirm, from outside the app: a window titled `Budojo` exists, a `php.exe` child is listening on `127.0.0.1:<port>`, `GET /api/v1/health` returns `{"status":"ok"}`, and the scratch userData holds `budojo.sqlite` + `secrets.bin` + `bootstrap.json` while `%APPDATA%\Budojo` stays untouched. Kill the process tree when done.
+
+**Read `<scratch>/userdata/storage/logs/laravel.log`** — not just the app's own `logs/`. That file is how the silently-failing scheduler was found: nothing in the UI or the desktop logs surfaces it, and `schedule:run` prints `... DONE` even for a command whose subprocess died. Its *absence* is the pass condition.
+
+> Timing note: the scheduled commands run **every five minutes inside a `09:00–23:59` Europe/Rome window**, while `logs/scheduler.log` timestamps are **UTC**. A late-night smoke test legitimately logs `No scheduled commands are ready to run` — that is the window being closed, not a fault. To actually observe a command fire, smoke-test inside the Rome window and look for `Running [...]` lines.
 
 ### 7. Post-release sweep
 

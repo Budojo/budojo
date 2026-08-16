@@ -31,6 +31,12 @@ body {
   padding: 0;
   height: 100%;
   font-family: var(--p-font-family, system-ui, sans-serif);
+  // The page must paint its OWN background. A browser defaults to white, so on
+  // the web an unset background looks fine — but inside Electron the window's
+  // colour shows through instead, and the light theme ended up rendered on a
+  // dark navy sheet (dark text on #111827, barely legible). Using the page
+  // surface token also means dark mode follows automatically if it lands.
+  background: var(--p-surface-50);
 }
 
 // Respect the user's OS / browser reduced-motion preference (#1074
@@ -46,5 +52,59 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+// ── Budojo Desktop window chrome (#1289) ────────────────────────────────
+// The Electron shell hides the native title bar and paints the window
+// controls over the page (`titleBarStyle: 'hidden'` + `titleBarOverlay`), so
+// the app has to give back two things the frame used to provide:
+//
+//   1. somewhere to grab — without a drag region the window cannot be moved;
+//   2. clearance, so content does not sit under the minimise/close buttons.
+//
+// The class is set by the root component only when the Electron bridge is
+// present, so nothing here affects the web build.
+html.budojo-desktop {
+  // Matches `titleBarOverlay.height` in desktop/src/main.ts. Changing one
+  // without the other puts the app's first row under the window buttons.
+  --budojo-titlebar-height: 40px;
+
+  // The app already has a notion of "stay clear of the top of the window" for
+  // the iOS notch. The window controls are the same problem, so this reuses
+  // that token instead of inventing a parallel one — the mobile topbars pick
+  // the clearance up for free.
+  //
+  // Deliberately NOT `body { padding-top }`: the auth pages (and the athlete
+  // shell) size themselves with `min-height: 100vh`, which is viewport- rather
+  // than parent-relative, so body padding does not shrink them — it just adds
+  // to the total and produced a scrollbar on a login page that fits perfectly.
+  --budojo-safe-top: var(--budojo-titlebar-height);
+
+  // The strip itself: invisible and drag-only. It must stay hit-testable —
+  // `pointer-events: none` would take it out of hit-testing and silently kill
+  // the drag, which is the whole point of it. Nothing is drawn underneath: the
+  // body padding above pushes app content clear, and the dashboard topbar is
+  // `sticky`, so it starts below the strip rather than under it. The low
+  // z-index keeps overlays that legitimately reach the top of the viewport
+  // (toasts, dialog masks) above it and still clickable.
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: var(--budojo-titlebar-height);
+    z-index: 1;
+    -webkit-app-region: drag;
+  }
+
+  // Anything genuinely interactive that ends up in the strip must opt out,
+  // or it becomes un-clickable the moment it overlaps the drag region.
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role='button'] {
+    -webkit-app-region: no-drag;
   }
 }
