@@ -54,6 +54,15 @@ The shipped app has **no Docker** — but local development runs the API and SPA
 
 - Docker + Docker Compose
 
+```bash
+make            # list every target
+make setup      # once per clone: dev tooling + git hooks
+make up         # start the dev environment
+make test       # all pre-push gates
+```
+
+`make` is a thin index over the scripts and npm/docker commands that already own each job — `make help` is the current list, so this README never goes stale against it. Every target works from Git Bash and PowerShell.
+
 That is the whole list to *run* it. There is no `.env` to copy and no key to generate — the API container's entrypoint installs Composer dependencies, seeds `server/.env` from `server/.env.example`, generates `APP_KEY`, creates the SQLite database and migrates it. Every step is idempotent, so restarts are no-ops.
 
 If you're going to **commit**, run `npm ci` at the repo root once as well. That installs the dev tooling (husky, commitlint, lint-staged) and wires the git hooks that enforce conventional commits and refuse commits/pushes on `main` and `develop`. Check it took with `git config core.hooksPath` — it should print `.husky/_`.

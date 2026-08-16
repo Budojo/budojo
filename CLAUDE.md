@@ -76,6 +76,8 @@ Full details in [`docs/development/git-flow.md`](./docs/development/git-flow.md)
 
 ### Pre-push checklist
 
+`make test` runs all three; `make` on its own lists every target. The Makefile is a thin index that delegates — the scripts below stay the implementation, so either entry point is correct.
+
 One wrapper per area, under `.claude/scripts/`. Server and client run inside Docker; desktop runs on the host (electron ships platform binaries and `desktop/node_modules` is host-installed):
 
 ```bash
