@@ -33,6 +33,13 @@ A new capability follows the same shape: engine + spec first, adapter second, on
 - **`php -S` runs with cwd = `public/`.** The framework router does `require getcwd().'/index.php'`; spawning from the server root 500s every request. `buildServeInvocation` pins this and has a spec.
 - **Anything periodic goes through `PeriodicTask`** — never a bare `setInterval`. It never overlaps runs, survives a failing tick, and stops cleanly on quit.
 - **Never hardcode Windows path separators in a spec.** The app runs on Windows, but CI runs these specs on **Linux** — and `path.dirname('C:\\data\\php.ini')` is `'.'` on POSIX, so a hardcoded literal passes locally and fails in CI. Build the input with `path.join(...)` the way `dataLayout()` does; `join` + `dirname` round-trips to the same directory under both platform semantics.
+- **A local build shares the real user's data directory.** `userData` is derived from the `appId`/`productName`, not from where the executable sits — so a build you just made, the portable, and the installed release all read and write the *same* `%APPDATA%\Budojo\`. A dev build carrying a half-finished migration would run it against real athletes. Always test a build with an isolated directory:
+
+  ```
+  "release/win-unpacked/Budojo.exe" --user-data-dir="C:/temp/budojo-test"
+  ```
+
+  Electron honours the flag in the packaged app — verified — and `%APPDATA%\Budojo` stays untouched.
 - **Nothing writes beside the executable.** All state lives under `userData` via `dataLayout()`; the install directory is read-only after install and an uninstall must not be able to take the owner's data with it.
 
 ## Testing
