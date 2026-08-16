@@ -22,8 +22,16 @@ WORKDIR="/var/www/api"
 # exit status comes from `tail` (always 0) and a failing cs-fixer /
 # phpstan / pest would silently report success. Copilot caught this on
 # #293.
+#
+# `-u www-data` because these three gates WRITE into the bind mount — the
+# cs-fixer cache, phpstan's temp files, and every view/session/disk PEST
+# materialises under storage/framework. As root that is a few hundred
+# root-owned files on the host after each run (Linux bind mounts are the real
+# filesystem; Docker Desktop's share hid this on Windows). www-data is
+# remapped to the host developer's uid in docker/api/Dockerfile, so the gates
+# now write files the developer owns.
 run_in_server() {
-  docker exec "$CONTAINER" sh -c "set -o pipefail; cd $WORKDIR && $1"
+  docker exec -u www-data "$CONTAINER" sh -c "set -o pipefail; cd $WORKDIR && $1"
 }
 
 cs_fix() {

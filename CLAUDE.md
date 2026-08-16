@@ -8,6 +8,8 @@
 
 The hosted stack (DigitalOcean / Forge / Cloudflare) was decommissioned in #1230; `docs/desktop/` is how it runs today. **Docker is the development environment only** — the shipped app bundles its own runtime.
 
+🐧 **Development happens on Linux** (#1299). The repo was written on Windows and both platforms are supported, but Linux is the base you should assume. The difference that matters: **a Linux bind mount is the host's real filesystem**, so anything a container creates under `server/` or `client/` lands on the host owned by whoever created it, and a `chown` inside the container really re-owns your file. Docker Desktop's 9p share fabricated ownership and swallowed `chown(2)`, which is why this was invisible for so long. The Dockerfiles remap their service user to the host's uid to keep it that way — full explanation, the not-1000 case and the SELinux verdict in [`docs/development/linux-dev.md`](./docs/development/linux-dev.md). Shipping the desktop app **for** Linux is separate and not done yet (#1300).
+
 ⚠️ **The dev containers are configured by `server/.env` alone.** `docker-compose.yml` deliberately has **no `env_file`** for the `api` service: Compose would turn it into real environment variables, and Laravel's `env()` resolves `$_SERVER` before `$_ENV`, so those silently override both `server/.env` and `phpunit.xml`. Re-adding it once blanked VAPID keys and pointed `RefreshDatabase` at the development database. Never add it back — see `.claude/gotchas.md` § Docker dev-env.
 
 Tech versions live in `server/composer.json`, `client/package.json`, `desktop/package.json`, and `docker-compose.yml` — read those for the source of truth, not this file.
@@ -25,6 +27,7 @@ The repo uses a **hierarchical `CLAUDE.md`** layout. Claude Code loads the neare
 
 **Procedural runbooks** (the _how_, not the _what_) live under [`docs/development/`](./docs/development/README.md):
 
+- [`linux-dev.md`](./docs/development/linux-dev.md) — the Linux development base: setup, bind-mount ownership, SELinux, Cypress, what is still Windows-only
 - [`git-flow.md`](./docs/development/git-flow.md) — branch model, naming, commit format, daily/hotfix flow
 - [`release-flow.md`](./docs/development/release-flow.md) — semantic-release cadence, `## Auto-closes` block, auto-sweep, post-release sweep
 - [`pr-labels.md`](./docs/development/pr-labels.md) — type/status labels, PR checklist, PR body conventions
@@ -78,7 +81,7 @@ Full details in [`docs/development/git-flow.md`](./docs/development/git-flow.md)
 
 `make test` runs all three; `make` on its own lists every target. The Makefile is a thin index that delegates — the scripts below stay the implementation, so either entry point is correct.
 
-One wrapper per area, under `.claude/scripts/`. Server and client run inside Docker; desktop runs on the host (electron ships platform binaries and `desktop/node_modules` is host-installed):
+One wrapper per area, under `.claude/scripts/`. Server and client run inside Docker; desktop runs on the host (electron ships platform binaries and `desktop/node_modules` is host-installed). The server wrapper execs as `www-data` on purpose — as root, PEST's scratch files under `storage/framework/` come back root-owned on a Linux bind mount:
 
 ```bash
 ./.claude/scripts/test-server.sh        # cs-fixer + phpstan + pest

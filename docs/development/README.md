@@ -8,6 +8,7 @@ The split exists so CLAUDE.md stays loadable in agent context (every session pay
 
 | File | Covers |
 |---|---|
+| [`linux-dev.md`](./linux-dev.md) | The Linux development base: prerequisites, one-time setup, bind-mount file ownership, the SELinux verdict, the Cypress recipe, what is still Windows-only |
 | [`git-flow.md`](./git-flow.md) | Branch model (GitFlow), branch naming, commit-message format, daily TDD cycle, hotfix flow |
 | [`release-flow.md`](./release-flow.md) | semantic-release beta/stable cadence, `## Auto-closes` block construction, auto-sweep main → develop, user-facing changelog discipline, post-release tech-debt sweep |
 | [`pr-labels.md`](./pr-labels.md) | Type label per branch prefix, status labels lifecycle, board status moves |
@@ -22,5 +23,6 @@ A runbook update is required in the same PR whenever:
 - A new branch type / commit type / label is added
 - A discipline rule (e.g. `## Auto-closes` block) changes semantics
 - The local visual-verification recipe changes (Cypress image version, dev-server / redirect quirks)
+- The dev environment gains a platform-specific behaviour (container uid mapping, bind-mount ownership, a target that only works on one OS)
 
 If you change CLAUDE.md to mention a step, check whether the runbook here is the source of truth and keep both in lock-step (CLAUDE.md links here; the link must not rot).
