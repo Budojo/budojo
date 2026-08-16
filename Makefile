@@ -39,7 +39,7 @@ CLIENT  := budojo_client
 .PHONY: help setup up down restart logs seed db mail \
         test test-server test-client test-desktop quick audit \
         desktop desktop-build desktop-package fetch-php \
-        gotchas board
+        gotchas board check-readme
 
 ## ---------------------------------------------------------------- setup ----
 
@@ -129,6 +129,12 @@ fetch-php: ## Download + verify the pinned PHP runtime (Windows only)
 
 gotchas: ## Print the gotchas routing table (read before every push)
 	@sed -n '1,25p' .claude/gotchas.md
+
+check-readme: ## Verify the README's command tables list exactly these targets
+	@diff <(grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | cut -d: -f1 | sort) \
+	      <(grep -oE '^\| `make [a-zA-Z_-]+`' README.md | sed 's/.*make //; s/`//' | sort) \
+	  && echo "README is in sync with the Makefile" \
+	  || { echo ""; echo "README and Makefile disagree (left = Makefile, right = README) - fix README.md"; exit 1; }
 
 board: ## Set a board status, e.g. make board N=1234 S=in-progress
 	@test -n "$(N)" -a -n "$(S)" || { echo "usage: make board N=<issue-or-pr> S=<todo|in-progress|done>"; exit 2; }

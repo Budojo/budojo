@@ -6,6 +6,8 @@ Budojo helps Brazilian Jiu-Jitsu instructors track students, documents, attendan
 
 It ships as a **Windows desktop application**: the same Angular SPA and Laravel API that ran as a hosted web app, packaged with Electron and a bundled PHP runtime so the whole thing runs on the instructor's own machine — no server, no account, no monthly bill. The hosted stack (DigitalOcean / Forge / Cloudflare) was decommissioned in [#1230](https://github.com/Budojo/budojo/issues/1230); its runbook is kept, archived, at [`docs/infra/archive/production-deployment.md`](docs/infra/archive/production-deployment.md).
 
+**Jump to:** [Install](#download--install) · [What it does](#what-it-does) · [How it works](#how-it-works) · [Get started developing](#get-started-developing) · [All make commands](#all-make-commands) · [Common tasks](#common-tasks) · [Structure](#project-structure) · [Roadmap](#roadmap)
+
 ---
 
 ## Download & install
@@ -17,7 +19,7 @@ Grab the latest **[release](https://github.com/Budojo/budojo/releases)** — eac
 
 Both are unsigned, so Windows SmartScreen warns on first run — **More info → Run anyway**. Full walkthrough (first run, upgrades, why the warning) in **[`docs/desktop/install.md`](docs/desktop/install.md)**.
 
-> **Back up your data — and read how the encryption keys work.** A backup protects your athletes, attendance and payments anywhere, but the medical certificates are encrypted with a machine-bound key that a backup does not contain. This matters the day a laptop dies: **[`docs/desktop/backup-restore.md`](docs/desktop/backup-restore.md)**.
+> **Back up your data — and read how the encryption keys work.** A backup protects your athletes, attendance and payments anywhere, but the medical certificates are encrypted with a machine-bound key that a backup does not contain. Since v2.42.0 you can export that key as a recovery code — do it once, today. This matters the day a laptop dies: **[`docs/desktop/backup-restore.md`](docs/desktop/backup-restore.md)**.
 
 ---
 
@@ -34,78 +36,142 @@ Everything runs locally against a bundled SQLite database. These surfaces ship i
 | **Attendance** | Daily check-in (optimistic UI + 5s undo); per-athlete calendar history; monthly summary + % rate against the scheduled denominator |
 | **Payments** | Per-athlete monthly ledger; "paid" badge + filter; `monthly_fee_cents` snapshotted into each row |
 | **Reminders** | Document-expiry checks raise **native OS notifications** ([#1225](https://github.com/Budojo/budojo/issues/1225)) — the desktop replacement for the hosted build's email reminders |
-| **Backup & restore** | Scheduled + on-demand local backups, validated restore ([#1228](https://github.com/Budojo/budojo/issues/1228)) — see the runbook above |
+| **Backup & restore** | Scheduled + on-demand local backups, validated restore ([#1228](https://github.com/Budojo/budojo/issues/1228)), plus recovery-key export for a new machine ([#1254](https://github.com/Budojo/budojo/issues/1254)) |
 
 **Disabled by design on desktop.** Budojo's runtime profile is a *set of capabilities*, and the desktop set is empty ([architecture § Capabilities](docs/desktop/architecture.md#runtime-profile-and-capabilities)): community feeds, athlete self-service logins, browser push, outbound email/SMTP, and the HaveIBeenPwned breach check are all off — there is no second user, mail transport or push service on a single-owner local install. The code is not deleted; the config simply doesn't enable it.
 
 ---
 
-## How it's built
+## How it works
 
-An Electron shell serves the unmodified Angular SPA over a custom `app://bundle` origin and supervises a bundled `php.exe` running the Laravel API on a loopback port, against SQLite under `%APPDATA%\Budojo\`. The full process model, IPC surface, `app://` transport, PHP supervision and data layout are in **[`docs/desktop/architecture.md`](docs/desktop/architecture.md)**.
+Three pieces, one process tree:
+
+```
+Electron main  ──spawns──▶  php.exe  ──▶  SQLite  (%APPDATA%\Budojo\budojo.sqlite)
+      │                    (Laravel API on 127.0.0.1:<ephemeral port>)
+      │                              ▲
+      └─ serves ──▶  Angular SPA ────┘  HTTP /api/v1
+                     over app://bundle
+```
+
+- **`server/`** — the Laravel 13 API. Identical code to the hosted build; what changes is the **runtime profile** (`web` | `desktop`) and the capability set it enables.
+- **`client/`** — the Angular 21 SPA. Also identical; it discovers the API's port through the Electron preload bridge (`window.__BUDOJO__`) instead of a hardcoded origin.
+- **`desktop/`** — the Electron shell: serves the SPA over a custom `app://bundle` origin, supervises `php.exe`, owns first-run bootstrap (keys in the OS keychain, migrations), the scheduler, native notifications, backups and recovery keys.
+
+Everything the user owns lives under `%APPDATA%\Budojo\` — never beside the executable, so an uninstall cannot take the gym with it. Full process model, IPC surface and data layout: **[`docs/desktop/architecture.md`](docs/desktop/architecture.md)**.
 
 ---
 
-## Development
+## Get started developing
 
-The shipped app has **no Docker** — but local development runs the API and SPA in containers.
-
-### Prerequisites
-
-- Docker + Docker Compose
+**Prerequisites:** Docker + Docker Compose, and Git for Windows (the Makefile resolves its shell through Git Bash). `make` itself comes from scoop/choco or Git Bash.
 
 ```bash
-make            # list every target
-make setup      # once per clone: dev tooling + git hooks
-make up         # start the dev environment
-make test       # all pre-push gates
-```
-
-`make` is a thin index over the scripts and npm/docker commands that already own each job — `make help` is the current list, so this README never goes stale against it. Every target works from Git Bash and PowerShell.
-
-That is the whole list to *run* it. There is no `.env` to copy and no key to generate — the API container's entrypoint installs Composer dependencies, seeds `server/.env` from `server/.env.example`, generates `APP_KEY`, creates the SQLite database and migrates it. Every step is idempotent, so restarts are no-ops.
-
-If you're going to **commit**, run `npm ci` at the repo root once as well. That installs the dev tooling (husky, commitlint, lint-staged) and wires the git hooks that enforce conventional commits and refuse commits/pushes on `main` and `develop`. Check it took with `git config core.hooksPath` — it should print `.husky/_`.
-
-```bash
-docker compose up --build
+git clone https://github.com/Budojo/budojo.git
+cd budojo
+make setup     # once per clone — dev tooling + git hooks
+make up        # start the API, SPA and Mailpit
+make seed      # optional: test data
 ```
 
 | Service | URL |
 |---------|-----|
-| Angular SPA | http://localhost:4200 |
-| Laravel API | http://localhost:8000/api/v1 |
-| Mailpit (catches all outbound mail) | http://localhost:8025 |
+| Angular SPA | <http://localhost:4200> |
+| Laravel API | <http://localhost:8000/api/v1> |
+| Mailpit (catches all outbound mail) | <http://localhost:8025> |
 
-The database is **SQLite**, matching the desktop runtime. It lives on the `sqlite_data` named volume rather than the bind mount, because Docker Desktop's host filesystem share does not implement POSIX advisory locking faithfully and SQLite depends on it. Inspect it with:
+There is **no `.env` to copy and no key to generate**. The API container's entrypoint installs Composer dependencies, seeds `server/.env` from `server/.env.example`, generates `APP_KEY`, creates the SQLite database and migrates it. Every step is idempotent, so restarts are no-ops.
 
-```bash
-docker exec -it budojo_api sqlite3 /var/www/api/database/sqlite/budojo.sqlite
-```
+`make seed` creates `admin@example.it` with the password in `LOCAL_ADMIN_PASSWORD` (`password` by default) plus a pre-configured academy, five more users with their own academies, and three without one (to exercise the `/setup` first-login flow).
 
-`docker compose down` keeps your data; `docker compose down -v` destroys it.
+**Why `make setup` matters:** it runs `npm ci` at the repo root, which is what installs husky/commitlint/lint-staged **and wires the git hooks**. Without it the hooks silently do not run — conventional commits go unchecked and nothing stops a commit on `main`/`develop`. Verify with `git config core.hooksPath`; it should print `.husky/_`.
 
-> **The app is configured by `server/.env` only.** The compose file deliberately has no `env_file` — see the comment in `docker-compose.yml` for the bug that caused.
+> **The app is configured by `server/.env` alone.** `docker-compose.yml` deliberately has **no `env_file`** — Compose would turn it into real environment variables, and Laravel's `env()` resolves `$_SERVER` before `$_ENV`, silently overriding both `server/.env` and `phpunit.xml`. See the comment in the compose file for the damage that caused.
 
-### Seed test data
+`make down` keeps your data; `docker compose down -v` destroys it.
 
-```bash
-docker exec budojo_api php artisan db:seed
-```
+---
 
-This creates `admin@example.it` / `LOCAL_ADMIN_PASSWORD` (`password` by default) with a pre-configured academy, 5 users each with their own academy, and 3 users without one (to exercise the `/setup` first-login flow).
+## All make commands
 
-### Building the desktop app
+`make` with no arguments prints this list from the Makefile itself. Every target works from **Git Bash and PowerShell**, and each one delegates to the script, npm command or docker command that already owns the job — the Makefile adds no logic of its own.
 
-The desktop build lives under [`desktop/`](desktop/). To produce the Windows installers locally (on Windows):
+### Setup
 
-```bash
-cd client && npm ci && cd ..
-cd desktop && npm ci
-npm run dist          # tsc + ng build --configuration desktop + fetch PHP + electron-builder (NSIS + portable)
-```
+| Command | What it does |
+|---|---|
+| `make help` | Show this list |
+| `make setup` | Install the root dev tooling and wire the git hooks (run once per clone) |
 
-Output lands in `desktop/release/`. In CI the `desktop-installer` job builds and attaches them to each stable release ([#1231](https://github.com/Budojo/budojo/issues/1231)). See [`docs/desktop/`](docs/desktop/) for the full picture.
+### Dev environment
+
+| Command | What it does |
+|---|---|
+| `make up` | Start the dev environment (API, SPA, Mailpit) |
+| `make down` | Stop the dev environment (keeps your data) |
+| `make restart` | Restart the dev environment |
+| `make logs` | Tail the API + client logs |
+| `make seed` | Seed the dev database with test data |
+| `make db` | Open a sqlite shell on the dev database |
+| `make mail` | Open Mailpit in the browser |
+
+### Gates (run before every push)
+
+| Command | What it does |
+|---|---|
+| `make test` | Run every pre-push gate |
+| `make test-server` | PHP gates: cs-fixer + phpstan + pest |
+| `make test-client` | Angular gates: prettier + eslint + vitest |
+| `make test-desktop` | Desktop gates: tsc + vitest |
+| `make quick` | Same gates, skipping the `--write` formatters (re-runs mid-session) |
+| `make audit` | Security advisories across client, server and desktop (production deps) |
+
+### Desktop build
+
+| Command | What it does |
+|---|---|
+| `make desktop` | Run the desktop app against the dev SPA (`ng serve` must be up) |
+| `make desktop-build` | Compile the main process + preload |
+| `make desktop-package` | Build the Windows installers into `desktop/release` (Windows only) |
+| `make fetch-php` | Download + verify the pinned PHP runtime (Windows only) |
+
+### Workflow
+
+| Command | What it does |
+|---|---|
+| `make gotchas` | Print the gotchas routing table (read before every push) |
+| `make board` | Set a board status, e.g. `make board N=1234 S=in-progress` |
+| `make check-readme` | Verify these tables still list exactly the Makefile's targets |
+
+> Cutting a release is **not** a make target. It is an ordered sequence with judgement in it (compute the version, write the changelog, verify the installers actually attached) and lives as the `/release` command — see [`docs/development/release-flow.md`](docs/development/release-flow.md).
+>
+> This table is generated from the Makefile; if it ever disagrees with `make help`, the Makefile wins. The post-release sweep re-checks it.
+
+---
+
+## Common tasks
+
+**Add or change an API endpoint**
+1. Write the failing PEST feature test first.
+2. Controller stays thin — business logic goes in an Action under `server/app/Actions/`, validation in a FormRequest, shaping in a Resource.
+3. **Update [`docs/api/v1.yaml`](docs/api/v1.yaml) in the same PR** — a route change without a spec change is not done, and CI's Spectral job lints the file.
+4. `make test-server`.
+
+**Add a screen or component**
+1. Standalone component, `OnPush`, state in signals; HTTP only in a service under `client/src/app/core/services/`.
+2. Every visible string goes in `client/public/assets/i18n/{en,it}.json` — **both**, in lock-step; a parity spec fails otherwise.
+3. Check [`docs/design/DESIGN_SYSTEM.md`](docs/design/DESIGN_SYSTEM.md) before inventing spacing or colour: 8dp grid, theme tokens, mobile-first.
+4. `make test-client`, then look at it in a browser at desktop **and** mobile width.
+
+**Change something in the desktop shell**
+1. Read [`desktop/CLAUDE.md`](desktop/CLAUDE.md) first — the pure-engine + injected-IO split is the rule that shapes everything there.
+2. Never import `electron` outside `main.ts` / `preload.cts`, or the module stops being unit-testable.
+3. Adding to the renderer bridge means editing three files in lock-step: `preload.cts`, `main.ts`, `client/src/budojo-bridge.d.ts`.
+4. `make test-desktop` — and for anything that spawns a process, prove it with a real-process harness, not just unit tests.
+
+**Change a migration, enum or business rule** → update the matching file under [`docs/entities/`](docs/entities/) in the same PR.
+
+**Before pushing** → `make test`, then `make gotchas` and read the groups your diff touches.
 
 ---
 
@@ -113,7 +179,7 @@ Output lands in `desktop/release/`. In CI the `desktop-installer` job builds and
 
 The full HTTP contract for `/api/v1` is in **[`docs/api/v1.yaml`](docs/api/v1.yaml)** (OpenAPI 3.0.3). Browse it with Swagger UI / Redocly / Stoplight, or import into Postman / Insomnia.
 
-On desktop the API listens on `http://127.0.0.1:<port>` (an ephemeral loopback port the shell picks and hands the SPA). In development it's `http://localhost:8000/api/v1`.
+On desktop the API listens on `http://127.0.0.1:<port>` — an ephemeral loopback port the shell picks at launch and hands to the SPA. In development it's `http://localhost:8000/api/v1`.
 
 A Postman collection lives at [`postman/budojo.postman_collection.json`](postman/budojo.postman_collection.json). Per-entity domain reference (schema, business rules, endpoints) lives under [`docs/entities/`](docs/entities/) — one file per persisted entity.
 
@@ -129,13 +195,13 @@ A Postman collection lives at [`postman/budojo.postman_collection.json`](postman
 | **M4 — Attendance** (+ Payments) | ✅ Done ([PRD](docs/specs/m4-attendance.md)) |
 | **M5 — Notifications** | ✅ On desktop as **native OS reminders**; hosted email reminders retired with the stack |
 | **M6 — Promotions & reports** | 📋 Planned — belt promotion history, attendance reports, exports |
-| **M7 — Athlete login** | 🌐 Web-only capability — invite-only athlete self-service. Present in code, **disabled on desktop** (single-owner install) |
+| **M7 — Athlete login** | 🧊 Frozen — web-only capability, disabled on a single-owner install |
 | **M8 — Document AI** | 📋 Planned — LLM parsing of medical/consent scans to pre-fill athlete profiles |
 | **M9 — Mobile / Android TWA** | 🧊 **Frozen** |
 | **M10 — Mobile (Capacitor / native)** | 🧊 **Frozen** |
 | **M11 — Desktop (Electron)** | ✅ Done ([#1218](https://github.com/Budojo/budojo/issues/1218)) — this build |
 
-> **M9 / M10 are frozen by decision, not oversight.** The mobile work (Android TWA, native shells) depended on a hosted origin serving `/.well-known/assetlinks.json` and a Play Console pipeline. When the hosted stack was decommissioned for cost (M11), the mobile track lost its foundation and was intentionally parked. The PWA-readiness work remains in the history ([`docs/mobile/`](docs/mobile/)); reviving it is a future decision, not pending work.
+> **Frozen means parked by decision, not forgotten.** The mobile work depended on a hosted origin serving `/.well-known/assetlinks.json` and a Play Console pipeline; the multi-user work depends on capabilities a single-owner install doesn't enable. Both survive a config flip if a hosted build ever returns — see [`docs/development/pr-labels.md`](docs/development/pr-labels.md) § `🧊 frozen`.
 
 ---
 
@@ -143,6 +209,8 @@ A Postman collection lives at [`postman/budojo.postman_collection.json`](postman
 
 ```
 budojo/
+├── Makefile              # one front door for every command below
+│
 ├── server/               # Laravel 13 REST API (PHP 8.4) — shipped bundled on desktop
 │   └── app/
 │       ├── Actions/          # Single-responsibility business operations
@@ -153,7 +221,7 @@ budojo/
 │
 ├── client/               # Angular 21 SPA (PrimeNG 21, MD3)
 │   └── src/
-│       ├── environments/     # environment.ts (dev), .prod.ts (empty apiBase), .desktop.ts (apiBase from the Electron bridge)
+│       ├── environments/     # environment.ts (dev), .prod.ts, .desktop.ts (apiBase from the bridge)
 │       ├── budojo-bridge.d.ts# Typed window.__BUDOJO__ surface
 │       └── app/{core,features,shared}/
 │
@@ -165,7 +233,14 @@ budojo/
 │
 ├── docs/                 # Domain documentation (source of truth)
 │   ├── desktop/              # architecture, install, backup-restore  ← the desktop era
-│   ├── entities/  api/v1.yaml  specs/  development/  design/  infra/
+│   ├── development/          # git-flow, release-flow, pr-labels, visual-verification
+│   └── entities/  api/v1.yaml  specs/  design/  infra/
+│
+├── .claude/              # Agent + workflow tooling
+│   ├── scripts/              # the gate wrappers the Makefile delegates to
+│   ├── commands/             # /release, /prereview, /feedback-digest
+│   └── gotchas.md            # mistakes we've made — read before every push
+│
 ├── docker/               # Dockerfiles + configs (dev only)
 ├── postman/
 └── docker-compose.yml    # dev environment only — the desktop app bundles its own runtime
@@ -195,6 +270,11 @@ budojo/
 
 ---
 
-## Development conventions
+## Conventions
 
-For branching model, commit conventions, PR rules and CI pipeline details see **[CLAUDE.md](./CLAUDE.md)**.
+Branch model, commit format, PR rules, release mechanics and the review discipline live in **[CLAUDE.md](./CLAUDE.md)** (behavioural rules) and **[`docs/development/`](docs/development/)** (the runbooks behind them). The short version:
+
+- GitFlow: `main` ← `develop` ← `type/<issue>-<description>`. Never commit or push to `main`/`develop` — the git hooks refuse it.
+- Conventional commits, lower-case subject, enforced by commitlint.
+- Squash merge into `develop`; merge commit into `main`.
+- Docs change in the same PR as the code that invalidates them.
