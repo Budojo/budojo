@@ -16,7 +16,7 @@ import { TokenVault } from './token-vault.js';
 import { PeriodicTask } from './periodic-task.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
 import { decodeRecoveryCode, encodeRecoveryCode } from './recovery-keys.js';
-import { planUpdateCheck, updateReadyMessage } from './update-policy.js';
+import { planUpdateCheck, updateFailureLine, updateReadyMessage } from './update-policy.js';
 // electron-updater is CommonJS and, under ESM, exposes NOTHING as a named
 // export — `import { autoUpdater }` is silently `undefined` (same class as the
 // qrcode interop bug in `.claude/gotchas.md`). It must come through the default
@@ -551,6 +551,7 @@ function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
     packaged: app.isPackaged,
     dev: DEV,
     portableDir: process.env['PORTABLE_EXECUTABLE_DIR'],
+    version: app.getVersion(),
   });
 
   if (!decision.check) {
@@ -578,12 +579,19 @@ function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
   updater.on('error', (error: Error) => {
     // Offline, rate-limited, release yanked — none of these are worth a dialog
     // or a crash. The log is where a maintainer looks; the user sees nothing.
-    log(`[update] check failed: ${error.message}`);
+    log(`[update] check failed: ${updateFailureLine(error.message)}`);
   });
 
   const poll = new PeriodicTask({
     run: async () => {
-      await updater.checkForUpdates();
+      // Swallowed on purpose: the `error` handler above has already logged a
+      // one-line reason, and letting the rejection through made the task print
+      // the same forty-line HTTP dump a second time.
+      try {
+        await updater.checkForUpdates();
+      } catch {
+        /* already reported */
+      }
 
       return { code: 0, output: '', timedOut: false };
     },

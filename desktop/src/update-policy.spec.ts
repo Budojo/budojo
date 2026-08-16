@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { planUpdateCheck, updateReadyMessage, type UpdateEnvironment } from './update-policy';
+import {
+  planUpdateCheck,
+  updateFailureLine,
+  updateReadyMessage,
+  type UpdateEnvironment,
+} from './update-policy';
 
-const installed: UpdateEnvironment = { packaged: true, dev: false, portableDir: undefined };
+const installed: UpdateEnvironment = {
+  packaged: true,
+  dev: false,
+  portableDir: undefined,
+  version: '2.43.0',
+};
 
 describe('planUpdateCheck', () => {
   it('checks for updates on a normal installed build', () => {
@@ -55,5 +65,55 @@ describe('updateReadyMessage', () => {
     const message = updateReadyMessage('2.43.0');
 
     expect(`${message.title} ${message.body}`.toLowerCase()).not.toContain('restart now');
+  });
+});
+
+describe('planUpdateCheck — local builds', () => {
+  const installed: UpdateEnvironment = {
+    packaged: true,
+    dev: false,
+    portableDir: undefined,
+    version: '2.43.0',
+  };
+
+  it('refuses to update a locally packaged build', () => {
+    // Observed for real: `make desktop-package` leaves package.json's 0.0.0
+    // placeholder (CI injects the version at release time), so the build under
+    // test considers every published release newer and would replace itself.
+    expect(planUpdateCheck({ ...installed, version: '0.0.0' })).toEqual({
+      check: false,
+      reason: 'local build (0.0.0) — not a released version',
+    });
+  });
+
+  it('updates a real released version', () => {
+    expect(planUpdateCheck({ ...installed, version: '2.43.0' })).toEqual({ check: true });
+  });
+});
+
+describe('updateFailureLine', () => {
+  it('keeps only the first line of an updater error', () => {
+    // electron-updater messages carry the whole HTTP exchange; an offline
+    // laptop wrote ~40 lines per attempt, every six hours.
+    const sprawling = [
+      'Cannot find latest.yml in the latest release artifacts (…): HttpError: 404',
+      '"method: GET url: https://github.com/…"',
+      'Headers: {',
+      '  "cache-control": "no-cache",',
+      '}',
+      '    at createHttpError (…)',
+    ].join('\n');
+
+    expect(updateFailureLine(sprawling)).toBe(
+      'Cannot find latest.yml in the latest release artifacts (…): HttpError: 404',
+    );
+  });
+
+  it('caps a single very long line', () => {
+    expect(updateFailureLine('x'.repeat(500))).toHaveLength(200);
+  });
+
+  it('survives an empty message', () => {
+    expect(updateFailureLine('')).toBe('');
   });
 });

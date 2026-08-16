@@ -18,7 +18,17 @@ export interface UpdateEnvironment {
    * presence is the documented way to know we are the self-extracting build.
    */
   portableDir: string | undefined;
+  /**
+   * `app.getVersion()`. A local `make desktop-package` leaves package.json's
+   * placeholder, because CI injects the real version at release time — and a
+   * placeholder is lower than every published release, so the build you just
+   * made to test your own changes would replace itself with the shipped one.
+   */
+  version: string;
 }
+
+/** package.json's placeholder — never a real release. */
+const UNVERSIONED = '0.0.0';
 
 export type UpdateDecision =
   | { readonly check: true }
@@ -44,7 +54,28 @@ export function planUpdateCheck(env: UpdateEnvironment): UpdateDecision {
     return { check: false, reason: 'portable build — updates are manual' };
   }
 
+  if (env.version === UNVERSIONED) {
+    // Observed for real: a locally packaged build reports 0.0.0, finds every
+    // published release "newer", and would quietly install the shipped app
+    // over the one you are testing.
+    return { check: false, reason: `local build (${UNVERSIONED}) — not a released version` };
+  }
+
   return { check: true };
+}
+
+/**
+ * Reduce an updater failure to one line worth logging.
+ *
+ * electron-updater's messages carry the whole HTTP exchange — headers, body,
+ * stack — so an offline laptop or a release without a manifest wrote ~40 lines
+ * per attempt, every six hours. The first line says what happened; the rest is
+ * noise that buries anything real.
+ */
+export function updateFailureLine(message: string): string {
+  const [first = ''] = message.split('\n');
+
+  return first.trim().slice(0, 200);
 }
 
 /**
