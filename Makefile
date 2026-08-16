@@ -86,10 +86,14 @@ logs: ## Tail the API + client logs
 	docker compose logs -f --tail=80 api client
 
 seed: ## Seed the dev database with test data
-	docker exec $(API) php artisan db:seed
+	docker exec -u www-data $(API) php artisan db:seed
 
+# `-u www-data` is load-bearing, not tidiness: the database runs in WAL mode, so
+# sqlite3 writes -wal and -shm siblings next to it. Opened as root those come
+# back root-owned in a www-data-owned directory, and php-fpm cannot write them
+# until the next `make restart` re-runs the entrypoint's chown.
 db: ## Open a sqlite shell on the dev database
-	docker exec -it $(API) sqlite3 /var/www/api/database/sqlite/budojo.sqlite
+	docker exec -u www-data -it $(API) sqlite3 /var/www/api/database/sqlite/budojo.sqlite
 
 mail: ## Open Mailpit in the browser
 	@if command -v xdg-open >/dev/null; then xdg-open http://localhost:8025; else start http://localhost:8025; fi

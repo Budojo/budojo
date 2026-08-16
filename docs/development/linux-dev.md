@@ -8,7 +8,7 @@ Verified on **Fedora 44** (kernel 7.1, SELinux enforcing, Docker 29.7 rootful, C
 
 | | |
 |---|---|
-| Docker Engine + Compose v2 | `docker compose version` |
+| Docker Engine + the `docker compose` plugin | `docker compose version` (verified on v5.4) |
 | Node 22+ / npm | for the root tooling and `desktop/` |
 | GNU make, git, curl, jq | `make --version` |
 
@@ -47,11 +47,13 @@ On Windows, `./server` and `./client` reach the container through Docker Desktop
 
 Uncorrected, a single `make up` + `make test` left **15,238 files** under `server/` unwritable by the developer — `vendor/`, everything PEST materialises under `storage/framework/`, and `server/.env`, which is the one file the whole app is configured by.
 
-The repo handles this in three places, so on a normal single-user box you should never see it:
+The repo handles this for the **api** container, which is where the damage was:
 
-- `docker/api/Dockerfile` and `docker/client/Dockerfile` remap their service user (`www-data`, `node`) to uid/gid **1000** at build time.
+- `docker/api/Dockerfile` remaps `www-data` to uid/gid **1000** at build time.
 - `docker/api/entrypoint.sh` hands `vendor/`, `.env`, `storage/` and `bootstrap/cache` back to that user on every boot.
-- `.claude/scripts/test-server.sh` runs the PHP gates with `docker exec -u www-data`, so PEST's scratch files are yours too.
+- `.claude/scripts/test-server.sh` runs the PHP gates with `docker exec -u www-data`, and `make seed` / `make db` do the same — `db` in particular, because the database is in WAL mode and sqlite3 writes `-wal`/`-shm` siblings that php-fpm then has to be able to write.
+
+**The client container still runs as root**, deliberately. It writes far less into the bind mount — `client/.angular` (the ng build cache) and `client/dist` — and neither blocks you, they just need the reclaim command below before `rm -rf`. The same remap there would need a privilege-dropping entrypoint, because `/app/node_modules` is an anonymous volume that compose carries across `up --build` rather than recreating: a volume populated by the old root container stays root-owned, `npm install` fails EACCES, and `restart: unless-stopped` turns that into a crash loop (`Restarting (243)` — measured). Not worth the machinery for a cache directory; tracked separately.
 
 **If your uid is not 1000** (`id -u`), build with it:
 
@@ -97,7 +99,7 @@ make test-client    # prettier + eslint + vitest      (in budojo_client)
 make test-desktop   # tsc --noEmit + vitest           (on the host)
 ```
 
-All three are green on Linux — 1240 PEST, 1501 client Vitest, 114 desktop Vitest.
+PEST (1240) and the desktop suite (114) are reliably green. The client suite is **1501 across 181 files, with a known order-dependent flake**: across repeated full runs, one spec fails per run maybe a quarter of the time — `event-composer` timing out at ~5.2 s, or `upload-document-dialog` throwing `el?.scrollIntoView is not a function` — and both pass in isolation. That is the class `.claude/gotchas.md` § Vitest already describes: Vitest shares a worker (and its `localStorage`/DOM stubs) across spec files, so a failure depends on which file ran before. Re-run before assuming your change caused it, and check the spec in isolation with `ng test --include`.
 
 ## Cypress
 

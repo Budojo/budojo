@@ -101,7 +101,7 @@ docker exec budojo_api php artisan db:seed --class=AcademySeeder
 
 ## All make commands
 
-`make` with no arguments prints this list from the Makefile itself. Every target works from a **Linux shell** and, on Windows, from **Git Bash and PowerShell** — each one delegates to the script, npm command or docker command that already owns the job, so the Makefile adds no logic of its own. The four targets that build or run the packaged desktop app are Windows-only until [#1300](https://github.com/Budojo/budojo/issues/1300) lands.
+`make` with no arguments prints this list from the Makefile itself. Every target works from a **Linux shell** and, on Windows, from **Git Bash and PowerShell** — each one delegates to the script, npm command or docker command that already owns the job, so the Makefile adds no logic of its own. The three targets that run or package the desktop app are Windows-only until [#1300](https://github.com/Budojo/budojo/issues/1300) lands — `make desktop-build` compiles fine anywhere.
 
 ### Setup
 

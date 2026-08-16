@@ -55,11 +55,6 @@ services:
     build:
       context: ./client
       dockerfile: ../docker/client/Dockerfile
-      # Same reason as the api service — keeps ng serve's .angular cache
-      # writable by the developer on a Linux bind mount.
-      args:
-        HOST_UID: "${HOST_UID:-1000}"
-        HOST_GID: "${HOST_GID:-1000}"
     container_name: budojo_client
     restart: unless-stopped
     ports:
