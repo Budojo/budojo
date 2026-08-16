@@ -12,7 +12,7 @@ Format: `→` separates the symptom from the action.
 | Vitest | [Tests — Vitest](#tests--vitest) |
 | PHP / Laravel | [Backend — PHP / Laravel](#backend--php--laravel) |
 | Desktop runtime (Electron + bundled PHP) | [Desktop runtime (Electron + bundled PHP)](#desktop-runtime-electron--bundled-php) |
-| Dev environment (Docker) | [Dev environment (Docker)](#dev-environment-docker) |
+| Dev environment (Docker, make) | [Dev environment (Docker, make)](#dev-environment-docker-make) |
 | CI, release & git | [CI, release & git](#ci-release--git) |
 | API & external services | [API & external services](#api--external-services) |
 
@@ -136,13 +136,17 @@ Format: `→` separates the symptom from the action.
 - → Building the desktop renderer **on the Windows host** (`npm run build:renderer`, which runs `npx ng build` in `../client`) fails with `npm error could not determine executable to run` — `client/node_modules` was installed **inside the Linux dev container** via the `./client:/app` bind mount, so `.bin/ng` is a Linux binary the Windows host can't exec. Build it inside the container (`docker compose exec client npx ng build --configuration desktop`, output lands in the mounted `client/dist`) then copy with `node scripts/build-renderer.mjs --copy-only`. A non-issue in CI (the windows runner does its own `npm ci`, getting native binaries) and in #1231's installer job (which runs `build:renderer` after a native `npm ci`).
 - → electron-builder downloads **its own** electron release zip for packaging (`electron-vX-win32-x64.zip`), independent of the `node_modules/electron/dist` binary the electron postinstall extracts — so the packaging path is immune to the empty-`dist/` silent-extraction gotcha above. It is NOT immune to the general class, so #1231's installer job has an explicit "verify both `.exe` files exist" step after packaging (a zero exit code isn't proof). Version comes from `-c.extraMetadata.version=<tag-without-v>` (package.json stays `0.0.0`; semantic-release owns versioning); the `release/` output dir and the fetched `runtime/php` binary are both gitignored.
 
-## Dev environment (Docker)
+## Dev environment (Docker, make)
 
 ### Docker dev-env
 
 - → Never give the `api` service an `env_file` in `docker-compose.yml`. Compose turns it into real environment variables, and Laravel's `env()` resolves `$_SERVER` **before** `$_ENV` — so a blank key in that file silently overrides both `server/.env` and the `<env>` values in `server/phpunit.xml`. A blank `VAPID_PUBLIC_KEY` turned 13 push tests into 503s, and `DB_DATABASE` pointed `RefreshDatabase` at the *development* database (only `--parallel`'s `_test_N` suffix saved it; a plain `vendor/bin/pest` would have dropped every table). `force="true"` on the phpunit `<env>` entries does **not** help — PHPUnit sets `putenv()` and `$_ENV`, never `$_SERVER`. The app is configured by `server/.env` alone, which is also exactly what CI does (`pr-checks.yml` runs PEST in `server/`, not in the container). If the local gate and CI ever disagree again, check env provenance first.
 
 - After pulling a branch that adds a client npm dependency, the `budojo_client` container still runs the old `node_modules` (the volume was populated at build time). Angular barfs with `TS2307 Cannot find module '<new-dep>'`. Fix: `docker exec budojo_client sh -c "cd /app && npm install"` after `git pull`. Rule of thumb: if `package.json` changed in the diff you just pulled, sync the container before running anything.
+
+### Make on Windows
+
+- → `SHELL := bash` in a Makefile is **silently ignored** by GNU Make on Windows: it falls back to `cmd.exe`, and every target that uses `grep`/`sed`/`test` dies with `'grep' is not recognized`. Worse, a bare `SHELL := bash.exe` **resolves to WSL** when make is invoked from PowerShell — the targets would run in a different machine as far as docker, npm and Windows paths are concerned, which is silent-wrong rather than loud-broken. Derive the shell from `git --exec-path` (`$(GIT_EXEC)/../../../bin/bash.exe`): it lands on Git Bash from both PowerShell and Git Bash without hardcoding an install path, and error out at parse time if it cannot be found. Also keep Makefile `@echo` output ASCII — em-dashes and box-drawing characters mojibake on the Windows console (`â€"`).
 
 ## CI, release & git
 
@@ -156,10 +160,6 @@ Format: `→` separates the symptom from the action.
 
 - → Husky wires git hooks from `prepare: husky`, which only runs on **`npm install` at the repo ROOT**. On a machine where only `client/` and `server/` deps were ever installed (the Docker-first setup makes that the normal state), `core.hooksPath` is unset, `.husky/_` doesn't exist and `.git/hooks` holds nothing but samples — so **`.husky/pre-commit` and `commit-msg` never ran at all**, silently. Commitlint and the protected-branch guard were both inert for as long as that lasted; the discovery came from a commit landing on `develop` that a hook should have refused. Check with `git config core.hooksPath` (expect `.husky/_`); fix with `npm ci` at the root. Hooks that silently don't run are worse than no hooks — nobody re-verifies a guard they believe is on.
 - → A hook that shells out to `npx <tool>` breaks a checkout whose root `node_modules` is missing: bare `npx` **downloads the package from the network** on every commit, and `npx --no-install` fails hard, making commits impossible with an opaque npm error. Guard the call — `if [ -x node_modules/.bin/<tool> ]` — and warn instead of failing. Keep anything that MUST hold (the protected-branch guard) in pure shell with no node dependency at all.
-
-### Make on Windows
-
-- → `SHELL := bash` in a Makefile is **silently ignored** by GNU Make on Windows: it falls back to `cmd.exe`, and every target that uses `grep`/`sed`/`test` dies with `'grep' is not recognized`. Worse, a bare `SHELL := bash.exe` **resolves to WSL** when make is invoked from PowerShell — the targets would run in a different machine as far as docker, npm and Windows paths are concerned, which is silent-wrong rather than loud-broken. Derive the shell from `git --exec-path` (`$(GIT_EXEC)/../../../bin/bash.exe`): it lands on Git Bash from both PowerShell and Git Bash without hardcoding an install path, and error out at parse time if it cannot be found. Also keep Makefile `@echo` output ASCII — em-dashes and box-drawing characters mojibake on the Windows console (`â€"`).
 
 ### GitHub rulesets / CI
 
