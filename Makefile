@@ -92,7 +92,7 @@ db: ## Open a sqlite shell on the dev database
 	docker exec -it $(API) sqlite3 /var/www/api/database/sqlite/budojo.sqlite
 
 mail: ## Open Mailpit in the browser
-	@command -v xdg-open >/dev/null && xdg-open http://localhost:8025 || start http://localhost:8025
+	@if command -v xdg-open >/dev/null; then xdg-open http://localhost:8025; else start http://localhost:8025; fi
 
 ## -------------------------------------------------------------- gates ----
 
