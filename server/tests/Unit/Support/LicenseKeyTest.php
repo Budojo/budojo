@@ -63,10 +63,37 @@ it('refuses a key signed by a different private key', function (): void {
     expect(LicenseKey::verify($key, $public))->toBeNull();
 });
 
+/**
+ * Flip a bit in the DECODED signature, never in the base64 text.
+ *
+ * The obvious version of this test substituted the key's last base64url
+ * character. An Ed25519 signature is 64 bytes, which encodes to 86 characters
+ * whose last one carries only the 2 leftover bits of the final byte — the
+ * other 4 are padding the decoder discards. So 16 of the 64 possible
+ * characters decode to byte-identical output, the "flip" was a no-op a quarter
+ * of the time, `verify()` correctly accepted an untouched key, and the test
+ * called that a failure: red roughly 1 run in 4, on the check that decides
+ * whether a forged activation key is refused (#1307).
+ *
+ * XOR-ing a byte cannot be a no-op, and the assertion below proves the
+ * mutation landed before anything is claimed about `verify()` — so this class
+ * of bug cannot come back silently.
+ */
 it('refuses a key with a flipped bit in the signature', function (): void {
     [$public, $secret] = licenseKeypair();
     $key = mintLicense(['v' => 1, 'name' => 'Budojo Roma', 'issued' => '2026-08-16'], $secret);
-    $flipped = substr($key, 0, -1) . ($key[-1] === 'A' ? 'B' : 'A');
+
+    [$payload, $signature] = explode('.', substr($key, strlen(LicenseKey::PREFIX)), 2);
+
+    $original = base64_decode(strtr($signature, '-_', '+/'), true);
+    expect($original)->toBeString();
+
+    $mutated = $original;
+    $mutated[0] = chr(ord($original[0]) ^ 0x01);
+    expect($mutated)->not->toBe($original);
+
+    $encode = static fn (string $raw): string => rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
+    $flipped = LicenseKey::PREFIX . $payload . '.' . $encode($mutated);
 
     expect(LicenseKey::verify($flipped, $public))->toBeNull();
 });
