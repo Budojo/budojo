@@ -91,6 +91,8 @@ Everything that persists lives under Electron's **`userData`** directory (`%APPD
 | `backups/` | Local backup archives (see [`backup-restore.md`](./backup-restore.md)). |
 | `secrets.bin` | `APP_KEY` + `DOCUMENT_ENCRYPTION_KEY`, encrypted with the OS keychain (Electron `safeStorage` → DPAPI on Windows). |
 | `auth-token.bin` | The signed-in Sanctum token, same encryption. |
+| `drive-token.bin` | The Google refresh token for backup sync (#1301), same encryption. Its own file, so disconnecting Drive cannot disturb sign-in — and so it stays **outside** `storage/`, where a backup archive would otherwise carry a credential up to the very account it grants access to. |
+| `drive-sync.json` | Drive link bookkeeping — account, folder id, last sync, last error. Holds no secret. |
 | `bootstrap.json` | First-run state marker. |
 | `php.ini`, `php-server.pid` | Generated PHP config + supervisor pid. |
 | `notifications-ledger.json` | Once-only ledger so a native reminder fires at most once. |

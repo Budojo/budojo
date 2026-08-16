@@ -43,6 +43,20 @@ A new capability follows the same shape: engine + spec first, adapter second, on
   Electron honours the flag in the packaged app — verified — and `%APPDATA%\Budojo` stays untouched.
 - **Nothing writes beside the executable.** All state lives under `userData` via `dataLayout()`; the install directory is read-only after install and an uninstall must not be able to take the owner's data with it.
 
+## Google Drive backup sync (#1301)
+
+Opt-in, off until the owner connects an account, and **off entirely in a build with no OAuth client**.
+
+- The client comes from `BUDOJO_GOOGLE_CLIENT_ID` / `BUDOJO_GOOGLE_CLIENT_SECRET` at build time, never a literal. Absent them, `driveClientConfig()` returns null, the bridge answers `configured: false`, and the page says the feature is unavailable — rather than offering a Connect button that opens a Google error page.
+- **The client secret is not a secret** for an installed app: the binary is on the user's disk. Google documents this for "Desktop app" clients, and it is exactly why the flow uses PKCE — the authorization code is useless without the verifier, which never leaves the process. Do not add ceremony to protect it; do not widen the scope to compensate.
+- **Scope stays `drive.file`.** It reaches only files this app created, and it is classed non-sensitive, which keeps the app out of Google's sensitive-scope verification review. Widening to `drive` reads the user's whole Drive and changes that. A spec pins the constant.
+- **The refresh token lives in `drive-token.bin`**, its own file at the root of `userData`. Not in `secrets.bin` (which would tie it to the encryption keys), not in `auth-token.bin` (which would tie disconnecting Drive to signing out), and never under `storage/` — a backup archive is the database plus `storage/`, so a token in there would be uploaded to the account it grants access to. A `bootstrap.spec.ts` test pins that path.
+- **The recovery code is never uploaded.** The archive excludes the keys on purpose (#1254); archive and keys in one Google account is a single compromised login away from every medical certificate. This is not a default to revisit.
+- **Failures are silent by design** — the local backup already succeeded, so nothing is at risk yet. The whole cost lands on the Backup page being honest, which is why `lastSyncAt` survives a failure instead of being overwritten by `lastErrorAt`.
+- **Upload before prune, always.** Pruning first can delete the only remote copy and then fail to upload its replacement. `DriveSyncService` has a test that fails if the order is swapped, and remote retention reuses `planRetention` from #1228 rather than reimplementing "never delete the newest".
+
+`drive-io.ts` is deliberately untested: mocking `fetch` and a loopback socket asserts the mocks were called, not that Google accepts the request. It is harness territory, like `php.exe`.
+
 ## Testing
 
 ```bash
