@@ -15,6 +15,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "clean": "node scripts/clean.mjs",
     "fetch:php": "node scripts/fetch-php.mjs",
     "dev": "npm run build && cross-env ELECTRON_DEV=1 electron dist/main.js",
     "start": "npm run build && electron dist/main.js",
@@ -23,7 +24,7 @@
     "build:renderer": "node scripts/build-renderer.mjs",
     "package": "electron-builder --config electron-builder.yml --publish never",
     "package:dir": "electron-builder --dir --config electron-builder.yml --publish never",
-    "dist": "npm run build && npm run build:renderer && npm run fetch:php && npm run package"
+    "dist": "npm run clean && npm run build && npm run build:renderer && npm run fetch:php && npm run package"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

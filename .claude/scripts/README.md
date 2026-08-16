@@ -38,6 +38,22 @@ Subcommands: `all` (default), `quick` (skip the `--write` formatters — client/
 
 `test-client.sh` and `test-server.sh` wrap `docker exec <container> sh -c "cd /app && <cmd>"`. **`test-desktop.sh` runs on the host** — electron and electron-builder ship platform binaries, `desktop/node_modules` is installed natively, and the shipped app contains no Docker at all. It deliberately excludes `build:renderer`, which needs the client's container-installed toolchain.
 
+### `clean.sh`
+
+Removes build **output** — nothing else. Wrapped by `make clean`.
+
+```bash
+./.claude/scripts/clean.sh            # desktop/dist, desktop/release, client/dist
+./.claude/scripts/clean.sh desktop    # the desktop half only
+./.claude/scripts/clean.sh client     # client/dist only
+```
+
+The desktop half delegates to `desktop/scripts/clean.mjs` rather than repeating the paths, because that same script is what `npm run dist` runs before packaging — two lists of directories to delete is how one of them goes stale.
+
+**Why the client half needs a container.** `client/dist` is written by `ng build` *inside* the client container, which runs as root. On Linux the `./client` bind mount is the host's real filesystem, so those files really are root-owned and a plain host `rm -rf` fails per-file with EACCES — half-deleting the tree and leaving something that still looks like a build. So it tries the host first and falls back to a throwaway `docker run` that is root. (On Windows the 9p share fabricates ownership and the host `rm` succeeds, which is why this is a fallback and not a hard requirement.)
+
+Deliberately **not** removed: `client/.angular` (a build cache — dropping it buys tidiness and costs a slow rebuild), `node_modules` / `server/vendor` / `desktop/runtime/php` (the "reset it" case, ~850 MB, recovery is `npm ci` + `composer install` + a verified download). Each gets its own explicitly-named target if it ever earns one — bundling them into `clean` is how a clean command becomes something nobody dares run.
+
 ## Conventions for adding a new script
 
 - One concrete pain → one script. If you find yourself writing the same multi-line bash twice in different PRs, it's a script candidate.
