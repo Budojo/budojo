@@ -68,6 +68,17 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     run: () => ipcRenderer.invoke('budojo:backup:run'),
     restore: (name: string) => ipcRenderer.invoke('budojo:backup:restore', name),
   },
+  // Google Drive backup sync (#1301). Opt-in and off by default. `state()`
+  // answers even when the build carries no OAuth client — it returns
+  // `configured: false` so the page can say the feature is unavailable instead
+  // of offering a Connect button that opens a Google error.
+  drive: {
+    state: () => ipcRenderer.invoke('budojo:drive:state'),
+    archives: () => ipcRenderer.invoke('budojo:drive:archives'),
+    link: () => ipcRenderer.invoke('budojo:drive:link'),
+    unlink: () => ipcRenderer.invoke('budojo:drive:unlink'),
+    sync: () => ipcRenderer.invoke('budojo:drive:sync'),
+  },
   // Recovery keys (#1254). Export decrypts the keychain store into a copy-
   // pasteable code; import writes it back and the app relaunches under the new
   // keys. Async; not hot paths.

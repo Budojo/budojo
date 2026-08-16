@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { DesktopBackupService } from './desktop-backup.service';
+import { stubBridge } from '../../../test-utils/bridge-test';
 
 /**
  * Renderer side of the backup bridge (#1228): passthrough on the desktop, a
@@ -36,14 +37,14 @@ describe('DesktopBackupService', () => {
       run: vi.fn(async () => ({ ok: true, path: '/b/a.zip' })),
       restore: vi.fn(async () => ({ ok: false, reason: 'newer version' })),
     };
-    bridgeWindow.__BUDOJO__ = {
+    bridgeWindow.__BUDOJO__ = stubBridge({
       apiBase: '',
       platform: 'win32',
       onNavigate: () => () => undefined,
       token: { get: () => null, set: () => undefined, clear: () => undefined },
       backup,
       keys: { export: async () => ({ ok: false }), import: async () => ({ ok: false }) },
-    };
+    });
     const svc = service();
 
     expect(svc.available).toBe(true);

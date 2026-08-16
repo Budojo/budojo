@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TokenStorageService } from './token-storage.service';
+import { stubBridge } from '../../../test-utils/bridge-test';
 
 /**
  * Where the token lives (#1227): localStorage on the web, the encrypted
@@ -35,7 +36,7 @@ describe('TokenStorageService', () => {
   describe('desktop (bridge present)', () => {
     it('goes through the bridge and never touches localStorage', () => {
       let vault: string | null = null;
-      bridgeWindow.__BUDOJO__ = {
+      bridgeWindow.__BUDOJO__ = stubBridge({
         apiBase: '',
         platform: 'win32',
         onNavigate: () => () => undefined,
@@ -54,7 +55,7 @@ describe('TokenStorageService', () => {
           restore: async () => ({ ok: false }),
         },
         keys: { export: async () => ({ ok: false }), import: async () => ({ ok: false }) },
-      };
+      });
       const store = service();
 
       store.set('1|desktop-token');

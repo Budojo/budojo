@@ -5,6 +5,35 @@ interface BackupArchive {
   readonly sizeBytes: number;
 }
 
+/** An archive and where it currently exists (#1301). */
+interface DriveArchive {
+  readonly name: string;
+  readonly sizeBytes: number;
+  /** Null for an archive that only exists in the Google account. */
+  readonly createdAt: string | null;
+  readonly local: boolean;
+  readonly remote: boolean;
+  readonly remoteId: string | null;
+}
+
+/**
+ * The Drive link as the Backup page shows it (#1301).
+ *
+ * `lastSyncAt` and `lastErrorAt` are separate on purpose: they answer different
+ * questions — "is it working now?" and "how old is the newest copy up there?" —
+ * and the second is the one that matters the day the disk dies.
+ */
+interface DriveLinkState {
+  /** False when the build ships no OAuth client, i.e. the feature is unavailable. */
+  readonly configured: boolean;
+  readonly linked: boolean;
+  readonly account?: string | null;
+  readonly lastSyncAt?: string | null;
+  readonly lastError?: string | null;
+  readonly lastErrorAt?: string | null;
+  readonly consecutiveFailures?: number;
+}
+
 /**
  * The renderer-side view of the Electron preload bridge (`desktop/src/preload.cts`).
  * Present only inside Budojo Desktop; every reader must tolerate `undefined`.
@@ -34,6 +63,33 @@ interface BudojoBridge {
     list(): Promise<BackupArchive[]>;
     run(): Promise<{ ok: boolean; path: string | null }>;
     restore(name: string): Promise<{ ok: boolean; reason?: string }>;
+  };
+  /**
+   * Google Drive backup sync (#1301). Opt-in and off by default: an on-disk
+   * backup does not survive the disk, and telling the owner to copy the archive
+   * into a synced folder by hand was never a plan they would keep.
+   *
+   * `state()` answers even when the build carries no OAuth client — it returns
+   * `configured: false` so the page can say the feature is unavailable rather
+   * than offering a Connect button that opens a Google error page.
+   *
+   * The recovery code is deliberately NOT part of this: archive and keys in the
+   * same Google account are one compromised login away from every medical
+   * certificate being readable (#1254).
+   */
+  readonly drive: {
+    state(): Promise<DriveLinkState>;
+    /** Local and remote archives merged, so a fresh machine still sees the account's. */
+    archives(): Promise<DriveArchive[]>;
+    link(): Promise<{ ok: boolean; account?: string | null; error?: string }>;
+    unlink(): Promise<{ ok: boolean }>;
+    sync(): Promise<{
+      ran: boolean;
+      uploaded?: number;
+      deleted?: number;
+      error?: string;
+      reason?: string;
+    }>;
   };
   /**
    * Recovery-key export/import (#1254). `export` decrypts the OS-keychain key
