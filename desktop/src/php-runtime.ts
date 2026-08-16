@@ -53,7 +53,18 @@ export function resolveDesktopPaths(input: {
  * DLL-load risk with no upside. pdo_mysql stays out on purpose — the desktop
  * is SQLite-only.
  */
-const EXTENSIONS = ['curl', 'fileinfo', 'mbstring', 'openssl', 'pdo_sqlite', 'sqlite3'] as const;
+const EXTENSIONS = [
+  'curl',
+  'fileinfo',
+  'mbstring',
+  'openssl',
+  'pdo_sqlite',
+  // Ed25519 for licence-key verification (#1290). The DLL already ships with
+  // the pinned runtime; it was simply never enabled. Verified in the bundled
+  // php.exe: a valid signature is accepted and a one-bit-flipped one refused.
+  'sodium',
+  'sqlite3',
+] as const;
 
 export function buildPhpIni(input: { extensionDir: string; errorLog: string; tempDir: string }): string {
   const lines = [
