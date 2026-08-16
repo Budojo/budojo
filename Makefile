@@ -121,6 +121,13 @@ desktop-build: ## Compile the main process + preload
 
 desktop-package: ## Build the Windows installers into desktop/release (Windows only)
 	cd desktop && npm run dist
+	@echo ""
+	@echo "  Built into desktop/release (version 0.0.0 - CI injects the real one at release time)."
+	@echo "  Test it WITHOUT touching your real data:"
+	@echo ""
+	@echo '      "desktop/release/win-unpacked/Budojo.exe" --user-data-dir="C:/temp/budojo-test"'
+	@echo ""
+	@echo "  Without that flag it shares %APPDATA%\\Budojo with the installed app."
 
 fetch-php: ## Download + verify the pinned PHP runtime (Windows only)
 	cd desktop && npm run fetch:php
