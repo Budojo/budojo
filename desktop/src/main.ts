@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Notification, protocol, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, protocol, safeStorage, shell } from 'electron';
 import { createWriteStream, existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -111,8 +111,25 @@ function createWindow(apiBase: string): BrowserWindow {
     minWidth: 960,
     minHeight: 600,
     show: false,
-    backgroundColor: '#111827',
+    // The page surface token (`--p-surface-50`), not a colour of our own. The
+    // window paints this before the renderer draws, so any mismatch is a flash
+    // of the wrong colour at every launch. It used to be a dark navy while the
+    // app's theme is light — and because the page painted no background of its
+    // own, that navy stayed visible *underneath* the light theme, which is why
+    // the app looked like dark-text-on-dark. Fixed on both sides.
+    backgroundColor: '#fafafa',
     title: 'Budojo',
+    // Native window controls, our colours. `frame: false` would mean
+    // reimplementing minimise / maximise / close, and with them snap layouts,
+    // double-click-to-maximise and the accessibility behaviour Windows gives
+    // for free — a custom title bar gets those subtly wrong. Hiding the frame
+    // and painting the overlay keeps the real buttons and drops the chrome.
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#fafafa',
+      symbolColor: '#1c1c1e',
+      height: 40,
+    },
     webPreferences: {
       preload: path.join(here, 'preload.cjs'),
       // The renderer runs untrusted-by-default: no Node, isolated context,
@@ -613,6 +630,14 @@ if (!gotTheLock) {
     // Registered in development too. Only the URL the window loads differs, so
     // the packaged code path is exercised on every dev run rather than first
     // meeting reality inside an installer.
+    // Electron installs a default File / Edit / View / Window / Help bar. It
+    // belongs to a text editor, not to this: every entry is either irrelevant
+    // (Reload, Toggle Developer Tools) or duplicated by the app's own UI. On
+    // Windows the editing shortcuts inside inputs come from Chromium, not from
+    // the menu, so dropping it costs nothing — if copy/paste ever misbehaves,
+    // the fix is a roles-only menu that is never displayed, not the bar back.
+    Menu.setApplicationMenu(null);
+
     registerAppProtocol();
     registerTokenVault();
     registerRecoveryKeysBridge();
