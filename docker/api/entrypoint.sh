@@ -71,9 +71,16 @@ chown -R www-data:www-data \
 #
 # `--relative` matters here: the default writes an absolute /var/www/api/...
 # target, which dangles when the same bind mount is read from the host.
-# Exits 0 both when it creates the link and when one already exists, so this
-# stays a no-op on restart under `set -e`.
-php artisan storage:link --relative >/dev/null 2>&1 || true
+#
+# `--force` matters too, and is not belt-and-braces: a plain re-run over an
+# existing link is a no-op, so a checkout that already has the ABSOLUTE symlink
+# from an older image would keep it forever. --force recreates it relative.
+# Verified: plain re-run left /var/www/api/storage/app/public untouched,
+# --force rewrote it to ../storage/app/public.
+#
+# Best-effort — a missing symlink costs images, not the API, so it must not
+# stop the container booting.
+php artisan storage:link --relative --force --silent || true
 chown -h www-data:www-data "$APP_DIR/public/storage" 2>/dev/null || true
 
 # --- Migrations -------------------------------------------------------------
