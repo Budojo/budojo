@@ -41,6 +41,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // idempotently).
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
+        // Licence enforcement (#1290) — refuses writes with 402 once the trial
+        // or the activated key has run out. Applied to the whole API group
+        // rather than route by route, so a route added later is gated by
+        // default; the exceptions live in `config/budojo.license.exempt` where
+        // each one had to be written down on purpose. No-op on any runtime
+        // without the `licensing` capability, i.e. everywhere but the desktop.
+        $middleware->api(append: [\App\Http\Middleware\EnforceLicense::class]);
+
         // Disable the framework default guest-redirect callback (#769).
         // `ApplicationBuilder` registers `redirectGuestsTo(fn () =>
         // route('login'))` by default. We have no `login` route in this

@@ -16,6 +16,16 @@ info:
     loopback port. The runtime profile is a set of capabilities — on desktop the multi-user
     and networked surfaces (community, athlete accounts, web push, email, breach check) are
     disabled, and a route behind an absent capability answers `404`.
+
+    **Licence enforcement (desktop only, #1290).** A desktop instance is in a free trial for
+    14 days from its first account, then needs an activation key. While its licence is
+    `expired`, every `POST` / `PUT` / `PATCH` / `DELETE` answers `402` with
+    `message: license_required` — see the `LicenseRequired` response component. This is not
+    listed per-operation: it applies to the whole API group by default, so a route added
+    later is covered without anyone remembering to cover it. The exceptions — auth,
+    activation, password / session / two-factor, deletion requests, support, notification
+    reads — are listed in `config/budojo.license.exempt` and in `docs/entities/license.md`.
+    Reads are never blocked.
   contact:
     name: Matteo Bonanno
     url: https://github.com/Budojo/budojo
@@ -42,8 +52,28 @@ tags:
       browser push service are **capabilities**; where the profile lacks one,
       its routes answer **404** (never 403 — a surface the runtime does not
       have does not advertise itself). Capabilities: `community`,
-      `athlete_accounts`, `web_push`, `email`, `password_breach_check`.
-      The desktop profile has none; the web profile has all.
+      `athlete_accounts`, `web_push`, `email`, `password_breach_check`,
+      `licensing`.
+
+      Capabilities are **not** a web superset with bits knocked out.
+      The first five are absent on desktop; `licensing` (#1290) runs the
+      other way — it applies to the machine on someone's desk, never to a
+      deployment whose operator is the one paying for the server.
+  - name: licensing
+    description: |
+      Activation keys for a desktop instance (#1290). Desktop-only: behind
+      `capability:licensing`, so a hosted deployment answers **404**.
+
+      Budojo Desktop runs on the owner's machine with no server of ours to
+      call, so activation is **offline** — a key carries its own claims plus
+      an Ed25519 signature, and the app ships only the public half, which
+      cannot mint anything. Verification is a local signature check.
+
+      An instance is in `trial` for 14 days from the **first account** (not
+      first launch — reinstalling must not hand out another fortnight),
+      `active` while a key verifies and has not expired, and `expired`
+      otherwise. Expired refuses writes with **402** `license_required`;
+      reads are never blocked, and neither are backups or reminders.
   - name: auth
     description: Registration, login, and Sanctum token issuance
   - name: academy
@@ -143,6 +173,97 @@ paths:
                 properties:
                   data:
                     $ref: '#/components/schemas/Runtime'
+
+  /license:
+    get:
+      tags: [licensing]
+      summary: Licence status of this instance
+      description: |
+        Where this instance stands: `trial` with a countdown, `active` with the
+        licensee and expiry from the key, or `expired`. Desktop-only — 404 on
+        the web profile.
+
+        Exempt from licence enforcement: the status has to be readable
+        precisely when everything else has stopped.
+      operationId: licenseShow
+      responses:
+        '200':
+          description: The current licence state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/License'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [licensing]
+      summary: Activate a licence key
+      description: |
+        Records an activation key after verifying its signature locally. Owner
+        only, rate-limited to 10/min. Desktop-only — 404 on the web profile.
+
+        A renewal is a new activation: the most recent one is the licence in
+        force, and earlier ones stay on record.
+
+        Exempt from licence enforcement — activating has to work when
+        everything else is blocked, or nobody could ever pay.
+      operationId: licenseActivate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key]
+              properties:
+                key:
+                  type: string
+                  maxLength: 4096
+                  description: The key exactly as issued, `BUDOJO-1-<payload>.<signature>`.
+                  example: BUDOJO-1-eyJ2IjoxLCJuYW1lIjoiQnVkb2pvIFJvbWEifQ.c2lnbmF0dXJl
+      responses:
+        '200':
+          description: Activated; the resulting state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/License'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/RoleRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: |
+            The key was refused. `errors.key[0]` discriminates:
+
+            - `license_key_invalid` — malformed, tampered, or signed by
+              another keypair. Every such failure collapses to one code:
+              telling a would-be forger which check failed is free help.
+            - `license_key_expired` — genuine, but past its `expires` date.
+              Refused rather than stored, so a dead key cannot replace a
+              working licence and lock the owner out.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorBody'
+              example:
+                message: The key field is invalid.
+                errors:
+                  key: [license_key_invalid]
+        '429':
+          $ref: '#/components/responses/Throttled'
 
   /auth/register:
     post:
@@ -5148,6 +5269,22 @@ components:
           example:
             message: role_required
 
+    LicenseRequired:
+      description: |
+        The desktop instance's trial or activation key has run out (#1290), and
+        the request would have changed something. Applies to every write outside
+        `config/budojo.license.exempt`; reads are never blocked.
+
+        The SPA keys on `message: 'license_required'` to route the owner to
+        Settings → Activation. Greying the control out is presentation — this
+        response is the enforcement.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+          example:
+            message: license_required
+
     OwnerGateForbidden:
       description: |
         Composite 403 for endpoints behind both `role:owner` (#774) and
@@ -5297,11 +5434,53 @@ components:
           description: The runtime profile the API is running as (BUDOJO_RUNTIME).
         capabilities:
           type: array
-          description: What this profile offers. Routes behind an absent capability answer 404.
+          description: |
+            What this profile offers. Routes behind an absent capability answer 404.
+            Not a web superset: `licensing` is present on desktop and absent on web.
           items:
             type: string
-            enum: [community, athlete_accounts, web_push, email, password_breach_check]
+            enum: [community, athlete_accounts, web_push, email, password_breach_check, licensing]
           example: [community, athlete_accounts, web_push, email, password_breach_check]
+
+    License:
+      type: object
+      required: [status, days_remaining, licensee, expires_at]
+      description: |
+        The licence state of a desktop instance (#1290). See
+        `docs/entities/license.md` for the key format and the business rules.
+      properties:
+        status:
+          type: string
+          enum: [trial, active, expired]
+          description: |
+            - `trial` — no key activated, and the first account is younger than 14 days.
+            - `active` — a key verifies and has not expired.
+            - `expired` — the trial elapsed, or the key's `expires` has passed. Writes are refused with 402.
+          example: trial
+        days_remaining:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: |
+            Days before writes stop, **rounded up** — with eleven hours left the
+            honest answer is one, not zero. `0` once expired. `null` means there
+            is no countdown to show: a perpetual key, or a build that does not
+            enforce licensing at all.
+          example: 14
+        licensee:
+          type: string
+          nullable: true
+          description: Who the activated key was issued to. `null` during the trial.
+          example: Budojo Roma
+        expires_at:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Last day of the current entitlement — the key's `expires` claim when
+            active, the end of the free period when in trial. `null` for a
+            perpetual key.
+          example: '2027-08-16'
 
     # ── Enums ─────────────────────────────────────────────────────────────
 

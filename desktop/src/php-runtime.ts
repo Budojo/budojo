@@ -152,6 +152,21 @@ const INHERITED_ENV_KEYS = [
   'NUMBER_OF_PROCESSORS',
 ] as const;
 
+/**
+ * The Ed25519 public half that verifies activation keys (#1290), base64url.
+ *
+ * Committed on purpose: a public key cannot mint anything, and baking it in is
+ * the only way the packaged app has it — there is no `.env` beside the
+ * executable, and `buildPhpEnv` is a whitelist, so a value that is not passed
+ * here does not reach PHP at all.
+ *
+ * Empty until the maintainer runs `node .claude/scripts/license-key.mjs keygen`
+ * and pastes the PUBLIC half here (the private half goes in a password manager
+ * and nowhere else). While it is empty the app enforces nothing — see
+ * GetLicenseStateAction for why that is the safe direction to fail in.
+ */
+const LICENSE_PUBLIC_KEY = '';
+
 export function buildPhpEnv(
   options: PhpEnvOptions,
   parentEnv: Readonly<Record<string, string | undefined>>,
@@ -212,6 +227,10 @@ export function buildPhpEnv(
     // No transport on the desktop; a Mailable must not 500 a request by
     // dialling an SMTP host that does not exist. BYO-SMTP is a follow-up.
     MAIL_MAILER: 'log',
+    // Licence verification (#1290). Always set, empty included: a variable
+    // that is present and blank is a build that deliberately enforces
+    // nothing, which is a different thing from a variable someone forgot.
+    BUDOJO_LICENSE_PUBLIC_KEY: LICENSE_PUBLIC_KEY,
   });
 
   if (options.storagePath !== undefined) {

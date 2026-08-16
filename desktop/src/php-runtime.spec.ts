@@ -200,6 +200,19 @@ describe('buildPhpEnv', () => {
     expect(env).not.toHaveProperty('PHPRC');
   });
 
+  it('always hands PHP a licence public key, even an empty one', () => {
+    // The env is a whitelist, so a value not passed here simply does not exist
+    // for Laravel — and a licence key that never arrives means an app that
+    // silently enforces nothing. Present-and-blank is a deliberate build;
+    // absent is a mistake, and this is what tells the two apart (#1290).
+    const env = buildPhpEnv(opts, { BUDOJO_LICENSE_PUBLIC_KEY: 'a-key-from-the-users-shell' });
+
+    expect(env).toHaveProperty('BUDOJO_LICENSE_PUBLIC_KEY');
+    // Never the parent's: the shipped build decides what it trusts, not
+    // whatever happens to be exported on the machine it runs on.
+    expect(env['BUDOJO_LICENSE_PUBLIC_KEY']).not.toBe('a-key-from-the-users-shell');
+  });
+
   it('lets the caller add secrets on top without changing the defaults', () => {
     const env = buildPhpEnv(
       { ...opts, extra: { APP_KEY: 'base64:real', DOCUMENT_ENCRYPTION_KEY: 'k' } },
