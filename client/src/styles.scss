@@ -70,9 +70,16 @@ html.budojo-desktop {
   // without the other puts the app's first row under the window buttons.
   --budojo-titlebar-height: 40px;
 
-  body {
-    padding-top: var(--budojo-titlebar-height);
-  }
+  // The app already has a notion of "stay clear of the top of the window" for
+  // the iOS notch. The window controls are the same problem, so this reuses
+  // that token instead of inventing a parallel one — the mobile topbars pick
+  // the clearance up for free.
+  //
+  // Deliberately NOT `body { padding-top }`: the auth pages (and the athlete
+  // shell) size themselves with `min-height: 100vh`, which is viewport- rather
+  // than parent-relative, so body padding does not shrink them — it just adds
+  // to the total and produced a scrollbar on a login page that fits perfectly.
+  --budojo-safe-top: var(--budojo-titlebar-height);
 
   // The strip itself: invisible and drag-only. It must stay hit-testable —
   // `pointer-events: none` would take it out of hit-testing and silently kill
