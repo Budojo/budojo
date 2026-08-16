@@ -31,19 +31,12 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-# Reports its own size, so a `clean` never removes something silently.
-remove() {
-  local target="$1"
-  local label="$2"
-
-  if [ ! -e "$target" ]; then
-    return 0
-  fi
-
-  local size
-  size="$(du -sh "$target" 2>/dev/null | cut -f1)"
-  rm -rf "$target"
-  echo "removed $label ($size)"
+# Size for the report only. `|| true` because this is a cosmetic string and
+# `set -o pipefail` would otherwise let an unreadable subdirectory abort the
+# whole clean BEFORE anything is deleted — the caller asked for a removal, not
+# for an accurate byte count.
+size_of() {
+  du -sh "$1" 2>/dev/null | cut -f1 || true
 }
 
 clean_desktop() {
@@ -70,24 +63,40 @@ clean_client() {
   fi
 
   local size
-  size="$(du -sh "$ROOT/client/dist" 2>/dev/null | cut -f1)"
+  size="$(size_of "$ROOT/client/dist")"
   rm -rf "$ROOT/client/dist" 2>/dev/null || true
 
   if [ -e "$ROOT/client/dist" ]; then
     echo "client/dist is not ours — removing it from a container"
-    docker run --rm -v "$ROOT/client":/mnt alpine:3 rm -rf /mnt/dist
+    # `|| true` so a missing or stopped docker falls through to the check
+    # below and gets the explanation, instead of `set -e` killing the script
+    # on the raw "docker: command not found".
+    docker run --rm -v "$ROOT/client":/mnt alpine:3 rm -rf /mnt/dist || true
   fi
 
   if [ -e "$ROOT/client/dist" ]; then
-    echo "could not remove client/dist — is docker running?" >&2
+    echo "could not remove client/dist: it is not owned by you and docker could not remove it" >&2
+    echo "  start docker, or: sudo rm -rf client/dist" >&2
     return 1
   fi
 
   echo "removed client/dist ($size)"
 }
 
+# Run every half and report the worst outcome, rather than `a && b`: bash
+# disables errexit inside the left operand of `&&`, so that form would both
+# swallow failures inside clean_desktop AND skip clean_client entirely — the
+# client tree would survive a `make clean` that never said so.
+clean_all() {
+  local rc=0
+  clean_desktop || rc=1
+  clean_client || rc=1
+
+  return "$rc"
+}
+
 case "${1:-all}" in
-  all)     clean_desktop && clean_client ;;
+  all)     clean_all ;;
   desktop) clean_desktop ;;
   client)  clean_client ;;
   *)
