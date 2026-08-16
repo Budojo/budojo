@@ -52,5 +52,13 @@ export class App implements OnInit {
     // Inside Budojo Desktop a clicked native toast asks the SPA to navigate
     // (#1225); on the web the bridge is absent and this is a no-op.
     this.desktopBridge.startNavigationRelay();
+
+    // Marks the document so CSS can reserve the strip under the window
+    // controls and make it draggable. The desktop shell hides the title bar
+    // and paints the controls over the page, so without this the window
+    // cannot be moved at all — and app content would sit under the buttons.
+    if (this.desktopBridge.isDesktop) {
+      document.documentElement.classList.add('budojo-desktop');
+    }
   }
 }
