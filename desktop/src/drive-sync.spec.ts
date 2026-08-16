@@ -96,6 +96,53 @@ describe('planSync', () => {
   });
 });
 
+// Two failure modes the first version of planSync had, both found in review.
+describe('planSync — duplicates and post-upload retention', () => {
+  // Drive allows two files with the SAME NAME in one folder, so a delete that
+  // fails after its replacement uploaded leaves two. Keyed by name alone, the
+  // second copy becomes invisible: never size-checked, never pruned, and if the
+  // survivor is the truncated one it is re-uploaded on every single sync until
+  // the account fills up and backups stop entirely.
+  it('sees every copy when the account holds duplicates of one name', () => {
+    const name = 'budojo-backup-20260816-120000.zip';
+    const plan = planSync(
+      [local(name, 5_000)],
+      [remote(name, 'good', 5_000), remote(name, 'truncated', 12)],
+      REMOTE_KEEP,
+    );
+
+    // A correct copy already exists, so nothing is re-uploaded...
+    expect(plan.toUpload).toEqual([]);
+    // ...and the stunted duplicate is cleaned up rather than left invisible.
+    expect(plan.toDelete).toEqual(['truncated']);
+  });
+
+  it('re-uploads only when NO remote copy matches the local size', () => {
+    const name = 'budojo-backup-20260816-120000.zip';
+    const plan = planSync([local(name, 5_000)], [remote(name, 'a', 12), remote(name, 'b', 99)], REMOTE_KEEP);
+
+    expect(plan.toUpload).toEqual([name]);
+    expect(plan.toDelete).toEqual(expect.arrayContaining(['a', 'b']));
+  });
+
+  // Retention must plan against what will be up there AFTER the uploads land,
+  // or the account settles one above the keep count forever.
+  it('counts the archives about to be uploaded, so the account settles at the keep count', () => {
+    const remotes = Array.from({ length: REMOTE_KEEP }, (_, i) => {
+      const name = `budojo-backup-2026080${i}-090000.zip`;
+
+      return remote(name, `id-${i}`);
+    });
+    const locals = remotes.map((r) => local(r.name)).concat(local('budojo-backup-20260816-120000.zip'));
+
+    const plan = planSync(locals, remotes, REMOTE_KEEP);
+
+    expect(plan.toUpload).toEqual(['budojo-backup-20260816-120000.zip']);
+    // 7 already there + 1 new = 8; exactly one must go to settle back at 7.
+    expect(plan.toDelete).toEqual(['id-0']);
+  });
+});
+
 describe('mergeArchiveViews', () => {
   it('marks an archive held in both places', () => {
     const name = 'budojo-backup-20260816-120000.zip';

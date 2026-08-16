@@ -298,6 +298,80 @@ describe('BackupComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-cy="backup-empty"]')).toBeNull();
     });
 
+    // Restore reads from the local backups directory. Before this was gated the
+    // button was rendered for remote-only rows too, and pressing it left the row
+    // spinning forever on a file that is not on this disk.
+    it('offers no restore for an archive that is only in the account', async () => {
+      const { fixture } = setup(
+        { list: vi.fn(async () => []) },
+        {},
+        {
+          ...linked(),
+          archives: vi.fn(async () => [
+            {
+              name: 'budojo-backup-20260816-120000.zip',
+              sizeBytes: 2_000_000,
+              createdAt: null,
+              local: false,
+              remote: true,
+              remoteId: 'id-1',
+            },
+          ]),
+        },
+      );
+      await settle(fixture);
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-cy="backup-restore-budojo-backup-20260816-120000.zip"]',
+        ),
+      ).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-cy="backup-remote-only-budojo-backup-20260816-120000.zip"]',
+        ),
+      ).not.toBeNull();
+    });
+
+    it('keeps restore available for an archive held locally', async () => {
+      const { fixture } = setup(
+        {},
+        {},
+        {
+          ...linked(),
+          archives: vi.fn(async () => [
+            {
+              name: 'budojo-backup-20260815-090000.zip',
+              sizeBytes: 2_500_000,
+              createdAt: '2026-08-15T09:00:00Z',
+              local: true,
+              remote: true,
+              remoteId: 'id-1',
+            },
+          ]),
+        },
+      );
+      await settle(fixture);
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-cy="backup-restore-budojo-backup-20260815-090000.zip"]',
+        ),
+      ).not.toBeNull();
+    });
+
+    // The page is the only surface for a silently-failing feature, so an
+    // untranslated code must never reach it as a raw key.
+    it('falls back to a readable message for an error code with no translation', async () => {
+      const { fixture } = setup({}, {}, linked({ lastError: 'http_403' }));
+      await settle(fixture);
+
+      const text =
+        fixture.nativeElement.querySelector('[data-cy="drive-error"]')?.textContent ?? '';
+      expect(text).not.toContain('backup.drive.errors');
+      expect(text).toContain('http_403');
+    });
+
     it('disconnects through the bridge', async () => {
       const { fixture, drive } = setup({}, {}, linked());
       await settle(fixture);

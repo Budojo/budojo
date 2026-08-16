@@ -2263,8 +2263,9 @@
         "consent_timeout": "L'accesso a Google è scaduto.",
         "no_refresh_token": "Google non ha restituito un permesso duraturo. Riprova a collegare.",
         "not_configured": "Questa versione non può collegarsi a Google Drive.",
-        "unknown": "La copia su Google Drive non è riuscita. I backup continuano a essere salvati su questo computer."
-      }
+        "unknown": "La copia su Google Drive non è riuscita ({{code}}). I backup continuano a essere salvati su questo computer."
+      },
+      "remoteOnlyHint": "Scaricalo da Google Drive per ripristinarlo"
     }
   }
 }

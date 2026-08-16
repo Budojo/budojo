@@ -62,7 +62,17 @@ export function planSync(
   // user's and they may have put something in it. Anything that is not one of
   // our archives is invisible to every decision below.
   const remotes = remoteArchives.filter((file) => isBackupArchive(file.name));
-  const byName = new Map(remotes.map((file) => [file.name, file]));
+
+  // Keyed to a LIST, not a single file. Drive allows two files with the same
+  // name in one folder, so a delete that failed after its replacement uploaded
+  // leaves duplicates. Keeping only one of them makes the other invisible to
+  // both the size check and retention: never pruned, and if the survivor is the
+  // truncated one it is re-uploaded on every sync until the account fills up
+  // and backups stop entirely.
+  const byName = new Map<string, RemoteArchive[]>();
+  for (const file of remotes) {
+    byName.set(file.name, [...(byName.get(file.name) ?? []), file]);
+  }
 
   const toUpload: string[] = [];
   const toDelete: string[] = [];
@@ -72,28 +82,36 @@ export function planSync(
       continue;
     }
 
-    const existing = byName.get(entry.name);
-    if (existing === undefined) {
-      toUpload.push(entry.name);
+    const copies = byName.get(entry.name) ?? [];
+    const good = copies.filter((file) => file.size === entry.sizeBytes);
+
+    // A copy of the right size already exists: nothing to upload. Any OTHER
+    // copy of that name is a truncated or interrupted upload — a backup that is
+    // the wrong size is not a backup — so it goes.
+    if (good.length > 0) {
+      for (const stale of copies.filter((file) => file.size !== entry.sizeBytes)) {
+        toDelete.push(stale.id);
+      }
+      byName.set(entry.name, good);
       continue;
     }
 
-    // Same name, different size: the remote copy is a truncated or interrupted
-    // upload. A backup that is the wrong size is not a backup, so replace it —
-    // and only then drop the stunted one.
-    if (existing.size !== entry.sizeBytes) {
-      toUpload.push(entry.name);
-      toDelete.push(existing.id);
-      byName.delete(entry.name);
+    toUpload.push(entry.name);
+    // Only after the replacement is scheduled. Every wrong-sized copy goes,
+    // not just the first one found.
+    for (const stale of copies) {
+      toDelete.push(stale.id);
     }
+    byName.delete(entry.name);
   }
 
-  // Retention runs over what will be up there once the uploads land, so a fresh
-  // upload cannot be pruned in the same pass that created it.
-  const survivingNames = [...byName.keys()];
+  // Retention plans against what will be up there once the uploads land — the
+  // names about to be uploaded included. Leaving them out settles the account
+  // one above the keep count forever, because each pass prunes exactly the one
+  // archive the previous pass added.
+  const survivingNames = [...byName.keys(), ...toUpload];
   for (const name of planRetention(survivingNames, keep)) {
-    const file = byName.get(name);
-    if (file !== undefined) {
+    for (const file of byName.get(name) ?? []) {
       toDelete.push(file.id);
     }
   }

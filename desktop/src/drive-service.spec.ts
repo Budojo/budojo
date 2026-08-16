@@ -168,6 +168,34 @@ describe('sync', () => {
 
     expect(state.current.lastError).toBe('invalid_grant');
   });
+
+  // "Never throws" has to survive the disk failing, not just the network. The
+  // 6-hourly caller is guarded, but the IPC bridge returns this promise bare —
+  // a rejection there leaves the renderer's spinner turning with no message.
+  it('does not throw when reading the state fails', async () => {
+    const { io } = fakeIO({
+      readState: vi.fn(async () => {
+        throw Object.assign(new Error('EPERM'), { code: 'EPERM' });
+      }),
+    });
+
+    await expect(new DriveSyncService(io).sync()).resolves.toMatchObject({ ran: true, error: 'EPERM' });
+  });
+
+  it('does not throw when recording the failure ALSO fails', async () => {
+    const { io } = fakeIO({
+      listRemote: vi.fn(async () => {
+        throw Object.assign(new Error('down'), { code: 'network' });
+      }),
+      writeState: vi.fn(async () => {
+        throw Object.assign(new Error('ENOSPC'), { code: 'ENOSPC' });
+      }),
+    });
+
+    // The original network error survives; the disk error on top of it does not
+    // become the thing that escapes.
+    await expect(new DriveSyncService(io).sync()).resolves.toMatchObject({ ran: true, error: 'network' });
+  });
 });
 
 describe('link', () => {

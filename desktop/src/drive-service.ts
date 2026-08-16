@@ -132,13 +132,20 @@ export class DriveSyncService {
    * unhandled rejection there is a worse outcome than a stale cloud copy.
    */
   async sync(): Promise<SyncResult> {
-    const state = await this.io.readState();
-
-    if (!state.linked || state.folderId === null) {
-      return { ran: false, reason: 'not_linked' };
-    }
+    // EVERYTHING is inside the try, including the state read and the failure
+    // write. Both touch the disk, and an ENOSPC or EPERM on drive-sync.json
+    // would otherwise escape: the 6-hourly caller is guarded, but the IPC
+    // bridge returns this promise bare, so a rejection leaves the renderer's
+    // spinner turning forever with no message.
+    let state: DriveState | null = null;
 
     try {
+      state = await this.io.readState();
+
+      if (!state.linked || state.folderId === null) {
+        return { ran: false, reason: 'not_linked' };
+      }
+
       const tokens = await this.authenticated();
       const [local, remote] = [await this.io.localArchives(), await this.io.listRemote(tokens, state.folderId)];
       const plan = planSync(local, remote, REMOTE_KEEP);
@@ -161,14 +168,21 @@ export class DriveSyncService {
         this.io.log(`sync: pruned remote ${fileId}`);
       }
 
-      await this.io.writeState(
-        recordSuccess(state, { at: this.io.now(), uploaded: plan.toUpload.length }),
-      );
+      await this.io.writeState(recordSuccess(state, { at: this.io.now(), uploaded: plan.toUpload.length }));
 
       return { ran: true, uploaded: plan.toUpload.length, deleted: plan.toDelete.length };
     } catch (error) {
       const code = errorCode(error);
-      await this.io.writeState(recordFailure(state, { at: this.io.now(), error: code }));
+
+      // Best effort: if the state read itself failed there is nothing to record
+      // against, and a second disk error here must not become the thing that
+      // throws.
+      if (state !== null) {
+        await this.io
+          .writeState(recordFailure(state, { at: this.io.now(), error: code }))
+          .catch(() => undefined);
+      }
+
       this.io.log(`sync: failed (${code})`);
 
       return { ran: true, uploaded: 0, deleted: 0, error: code };

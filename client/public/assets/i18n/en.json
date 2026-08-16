@@ -2263,8 +2263,9 @@
         "consent_timeout": "The Google sign-in timed out.",
         "no_refresh_token": "Google did not return a lasting permission. Try connecting again.",
         "not_configured": "This build cannot connect to Google Drive.",
-        "unknown": "Copying to Google Drive failed. Backups are still being saved on this computer."
-      }
+        "unknown": "Copying to Google Drive failed ({{code}}). Backups are still being saved on this computer."
+      },
+      "remoteOnlyHint": "Download it from Google Drive to restore it"
     }
   }
 }

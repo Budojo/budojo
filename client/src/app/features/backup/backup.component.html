@@ -114,17 +114,32 @@
               </span>
             }
           </div>
-          <app-confirm-destructive-button
-            icon="pi pi-history"
-            [label]="'backup.restore' | translate"
-            [ariaLabel]="'backup.restore' | translate"
-            [confirmMessage]="'backup.confirmRestore' | translate"
-            [acceptLabel]="'backup.confirmRestoreAccept' | translate"
-            [rejectLabel]="'backup.confirmRestoreReject' | translate"
-            [loading]="restoringName() === archive.name"
-            (confirmed)="restore(archive)"
-            [dataCy]="'backup-restore-' + archive.name"
-          />
+          @if (archive.local) {
+            <app-confirm-destructive-button
+              icon="pi pi-history"
+              [label]="'backup.restore' | translate"
+              [ariaLabel]="'backup.restore' | translate"
+              [confirmMessage]="'backup.confirmRestore' | translate"
+              [acceptLabel]="'backup.confirmRestoreAccept' | translate"
+              [rejectLabel]="'backup.confirmRestoreReject' | translate"
+              [loading]="restoringName() === archive.name"
+              (confirmed)="restore(archive)"
+              [dataCy]="'backup-restore-' + archive.name"
+            />
+          } @else {
+            <!--
+              Restore reads from the local backups directory, so an archive that
+              only exists in the Google account cannot be restored yet
+              (#1301 — downloading it is the next slice). Saying so beats a
+              button that spins forever on a missing file.
+            -->
+            <span
+              class="backup-page__row-note"
+              [attr.data-cy]="'backup-remote-only-' + archive.name"
+            >
+              {{ 'backup.drive.remoteOnlyHint' | translate }}
+            </span>
+          }
         </li>
       }
     </ul>

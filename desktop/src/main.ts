@@ -500,8 +500,19 @@ function registerDriveBridge(driveOf: () => DriveSyncService | null): void {
 
   ipcMain.handle('budojo:drive:sync', async () => {
     const service = driveOf();
+    if (service === null) {
+      return { ran: false, reason: 'not_linked' };
+    }
 
-    return service === null ? { ran: false, reason: 'not_linked' } : service.sync();
+    // sync() contains its own failures, but the renderer disables a button on
+    // this promise — a rejection would leave it spinning forever, so the bridge
+    // never rejects either.
+    return service.sync().catch((error: unknown) => ({
+      ran: true,
+      uploaded: 0,
+      deleted: 0,
+      error: error instanceof Error ? error.message : 'unknown',
+    }));
   });
 }
 

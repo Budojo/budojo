@@ -12,12 +12,33 @@ import {
   DesktopBackupService,
   type BackupArchiveView,
 } from '../../core/services/desktop-backup.service';
+
+/** An archive row, plus whether it is on this disk and therefore restorable. */
+interface BackupRow extends BackupArchiveView {
+  local: boolean;
+}
 import { DesktopKeysService } from '../../core/services/desktop-keys.service';
 import {
   DriveSyncService,
   type DriveArchiveView,
   type DriveLinkStateView,
 } from '../../core/services/drive-sync.service';
+
+/**
+ * The error codes with a translation of their own. Anything else falls back to
+ * `unknown`, which interpolates the raw code so the thread back to the cause is
+ * never lost. Keep in step with `backup.drive.errors` in both i18n files.
+ */
+const KNOWN_DRIVE_ERRORS = new Set([
+  'invalid_grant',
+  'unauthorized',
+  'storageQuotaExceeded',
+  'network',
+  'access_denied',
+  'consent_timeout',
+  'no_refresh_token',
+  'not_configured',
+]);
 
 /**
  * `budojo-backup-YYYYMMDD-HHMMSS.zip` -> ISO, for archives that exist only in
@@ -103,12 +124,17 @@ export class BackupComponent {
    * account has. Falling back to the local list keeps the page identical for
    * anyone who never connects Drive.
    */
-  protected readonly rows = computed<BackupArchiveView[]>(() => {
+  protected readonly rows = computed<BackupRow[]>(() => {
     if (!this.driveState().linked) {
-      return this.archives();
+      return this.archives().map((archive) => ({ ...archive, local: true }));
     }
 
     return this.driveArchives().map((archive) => ({
+      // Restore reads the archive from the LOCAL backups directory, and
+      // downloading a remote one is a later slice (#1301). Carrying `local`
+      // through is what lets the row refuse instead of spinning forever on a
+      // file that is not on this disk.
+      local: archive.local,
       name: archive.name,
       // A remote-only archive has no local mtime; its name carries the
       // timestamp, and the row falls back to it rather than showing nothing.
@@ -191,13 +217,26 @@ export class BackupComponent {
     return 'backup.drive.where.localOnly';
   }
 
-  /** Turns the stored error code into the sentence the main process wrote for it. */
+  /**
+   * Turns the stored error code into a sentence.
+   *
+   * An allow-list, not `'backup.drive.errors.' + code`: building a key from a
+   * value is a documented red flag (client/CLAUDE.md), the parity check cannot
+   * see such keys, and `drive-io.ts` emits codes well past the ones translated
+   * here — `http_403`, `no_upload_session`, `rateLimitExceeded`, anything
+   * Google's API passes through. Each of those would render the raw key on the
+   * page that is the ONLY surface for a silently-failing feature.
+   */
   protected driveErrorMessage(): string {
     const code = this.driveState().lastError;
 
-    return code === null || code === undefined
-      ? ''
-      : this.translate.instant('backup.drive.errors.' + code, { code });
+    if (code === null || code === undefined) {
+      return '';
+    }
+
+    const known = KNOWN_DRIVE_ERRORS.has(code) ? code : 'unknown';
+
+    return this.translate.instant(`backup.drive.errors.${known}`, { code });
   }
 
   /** The automatic sync already follows every backup; this is for impatience. */
