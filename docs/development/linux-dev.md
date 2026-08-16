@@ -99,7 +99,11 @@ make test-client    # prettier + eslint + vitest      (in budojo_client)
 make test-desktop   # tsc --noEmit + vitest           (on the host)
 ```
 
-PEST (1240) and the desktop suite (114) are reliably green. The client suite is **1501 across 181 files, with a known order-dependent flake**: across repeated full runs, one spec fails per run maybe a quarter of the time — `event-composer` timing out at ~5.2 s, or `upload-document-dialog` throwing `el?.scrollIntoView is not a function` — and both pass in isolation. That is the class `.claude/gotchas.md` § Vitest already describes: Vitest shares a worker (and its `localStorage`/DOM stubs) across spec files, so a failure depends on which file ran before. Re-run before assuming your change caused it, and check the spec in isolation with `ng test --include`.
+PEST (1240) and the desktop suite (114) are reliably green.
+
+The client suite is **1501 across 181 files, and intermittently reports 1–2 failures**. Measured over six consecutive full runs on this machine: four came back 1501/1501, one reported 1500, one reported 1499. It is always the same small set of specs — `event-composer` timing out at ~5.2 s, `upload-document-dialog` throwing `el?.scrollIntoView is not a function` — every one of them passes in isolation via `ng test --include`, and the runs that failed were the ones sharing the machine with another suite. So: **load- and order-sensitive, not a real failure**, and the same class `.claude/gotchas.md` § Vitest describes (Vitest shares a worker, and its `localStorage` and DOM stubs, across spec files).
+
+Re-run before assuming your change caused it, and check the spec in isolation. Do not "fix" it by raising the timeout — gotchas records three separate attempts at that, all of which only masked warm runs.
 
 ## Cypress
 
