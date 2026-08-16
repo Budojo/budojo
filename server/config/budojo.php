@@ -74,7 +74,89 @@ return [
             'email',
             'password_breach_check',
         ],
-        'desktop' => [],
+        'desktop' => [
+            'licensing',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Licensing (#1290)
+    |--------------------------------------------------------------------------
+    |
+    | Budojo Desktop runs on the owner's machine with no server of ours to call,
+    | so activation is offline: a key carries its own claims and an Ed25519
+    | signature, and the app carries only the public half — which cannot mint
+    | anything. Generate the pair with:
+    |
+    |   node .claude/scripts/license-key.mjs keygen
+    |
+    | The public half (base64url, exactly as printed) belongs here; the private
+    | half belongs in a password manager and nowhere else.
+    |
+    | Left empty, the build cannot verify anything and therefore enforces
+    | nothing — see GetLicenseStateAction for why that direction is the safe
+    | one to fail in.
+    |
+    */
+
+    'license' => [
+
+        'public_key' => env('BUDOJO_LICENSE_PUBLIC_KEY', ''),
+
+        /*
+        | What stays writable when the licence has lapsed. Everything else is
+        | refused with 402 by `EnforceLicense`, which is applied to the whole
+        | API group — so a route added later is covered by default and this list
+        | is the record of every deliberate exception.
+        |
+        | Each entry earns its place:
+        */
+        'exempt' => [
+            // Sign in, sign out, register, reset a password. You cannot paste
+            // an activation key from a login screen you are locked out of.
+            'api/v1/auth/*',
+
+            // Activation itself — the way out of the blocked state.
+            'api/v1/license',
+
+            // Security hygiene is never held hostage to a billing state.
+            'api/v1/me/password',
+            'api/v1/me/sessions',
+            'api/v1/me/sessions/*',
+            'api/v1/me/two-factor',
+            'api/v1/me/two-factor/*',
+
+            // Revoking a token, but NOT minting one. The URL shape happens to
+            // separate them cleanly: `DELETE /me/api-tokens/{id}` matches the
+            // wildcard, `POST /me/api-tokens` does not. Someone who discovers a
+            // leaked token must be able to kill it whatever their billing says;
+            // issuing a new one is using the product.
+            'api/v1/me/api-tokens/*',
+
+            // The right to erasure is not a paid feature.
+            'api/v1/me/deletion-request',
+            'api/v1/me/deletion-request/*',
+
+            // Reaching a human when you are stuck, and dismissing the
+            // notification that told you that you are.
+            'api/v1/support',
+            'api/v1/me/notifications/*',
+
+            /*
+            | Deliberately NOT exempt, so nobody has to wonder later:
+            |
+            |   /me/email-change + /email-change/{token}/verify — changing
+            |   which address owns the account is identity management, not
+            |   access recovery. Nothing is lost by waiting: the owner can
+            |   still sign in, change their password and reach support, and
+            |   a pending change that lapses is simply restarted afterwards.
+            |
+            |   /me/api-tokens (POST) — minting a credential is using the
+            |   product. Revoking one is above.
+            */
+        ],
+
     ],
 
 ];

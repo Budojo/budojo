@@ -21,7 +21,8 @@ docs/
 │   ├── post-reaction.md               # clap / pray emoji react on a post (M9)
 │   ├── post-comment.md                # flat-list comments on a post (M9)
 │   ├── post-rsvp.md                   # event-post RSVP (going / maybe, M9 PR-E)
-│   └── support-ticket.md              # support form submission (#423)
+│   ├── support-ticket.md              # support form submission (#423)
+│   └── license.md                     # offline activation keys + trial enforcement (#1290)
 ├── api/
 │   ├── README.md                      # how to view the spec locally (Swagger UI, Redocly)
 │   └── v1.yaml                        # OpenAPI 3.0.3 — complete contract for /api/v1

@@ -32,4 +32,14 @@ enum Capability: string
 
     /** The HaveIBeenPwned range check on new passwords (needs outbound HTTPS). */
     case PasswordBreachCheck = 'password_breach_check';
+
+    /**
+     * Activation keys apply here (#1290): a free trial that runs out, a key to
+     * paste, writes refused once neither is valid.
+     *
+     * The first capability the desktop has and the web has not. A hosted
+     * deployment is licensed by whoever runs it — there is nobody there to
+     * paste a key, and no trial to expire.
+     */
+    case Licensing = 'licensing';
 }

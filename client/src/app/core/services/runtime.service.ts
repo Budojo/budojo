@@ -12,15 +12,37 @@ export type Capability =
   | 'athlete_accounts'
   | 'web_push'
   | 'email'
-  | 'password_breach_check';
+  | 'password_breach_check'
+  | 'licensing';
 
+/**
+ * Every capability the server can name. Used to filter the response, so a
+ * value missing here is a value this SPA can never see — that is what makes it
+ * the *known* set rather than the default one.
+ */
 export const ALL_CAPABILITIES: readonly Capability[] = [
   'community',
   'athlete_accounts',
   'web_push',
   'email',
   'password_breach_check',
+  'licensing',
 ];
+
+/**
+ * What we assume before the runtime answers — the hosted web set, which is
+ * every capability *except* the desktop-only ones.
+ *
+ * Not `ALL_CAPABILITIES`: those two were one constant until `licensing`
+ * (#1290) made them disagree. Adding it to the known set is required for the
+ * desktop to see it at all; adding it to the default would light the licence
+ * UI up on a web app whose `/runtime` call merely failed. A default that
+ * over-reports a desktop-only surface costs a dead-end click on the wrong
+ * platform, which is exactly what this default exists to avoid.
+ */
+export const DEFAULT_CAPABILITIES: readonly Capability[] = ALL_CAPABILITIES.filter(
+  (capability) => capability !== 'licensing',
+);
 
 interface RuntimeResponse {
   data: { profile: 'web' | 'desktop'; capabilities: Capability[] };
@@ -29,11 +51,11 @@ interface RuntimeResponse {
 /**
  * The runtime capability list, loaded once at boot and exposed as signals.
  *
- * Why the default is *everything*: the hosted web app has every capability,
- * the whole existing Cypress suite runs without this endpoint mocked, and a
- * momentary failure to load must never hide surfaces on the web. Only a
- * successful response narrows the set — and on a runtime that lacks a
- * capability its routes answer 404 server-side anyway, so a stale "all"
+ * Why the default is the whole web set: the hosted app has every web
+ * capability, the whole existing Cypress suite runs without this endpoint
+ * mocked, and a momentary failure to load must never hide surfaces on the web.
+ * Only a successful response narrows the set — and on a runtime that lacks a
+ * capability its routes answer 404 server-side anyway, so a stale default
  * costs one dead-end click, never a broken action.
  *
  * Why not the build-time `environment.runtime`: that flag gates build
@@ -44,7 +66,7 @@ interface RuntimeResponse {
 export class RuntimeService {
   private readonly http = inject(HttpClient);
 
-  private readonly capabilitiesSignal = signal<readonly Capability[]>(ALL_CAPABILITIES);
+  private readonly capabilitiesSignal = signal<readonly Capability[]>(DEFAULT_CAPABILITIES);
   private readonly profileSignal = signal<'web' | 'desktop'>('web');
   private loading: Promise<void> | null = null;
 

@@ -134,6 +134,20 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // client-side only, leaving the row valid until found under Active sessions.
     Route::post('/auth/logout', \App\Http\Controllers\Auth\LogoutController::class);
 
+    // Licence status and activation (#1290). Desktop only — a hosted
+    // deployment is licensed by whoever runs it, so `capability:licensing`
+    // answers 404 there rather than advertising a surface that does not apply.
+    //
+    // Both are exempt from `EnforceLicense` (see config/budojo.license.exempt):
+    // activating has to work precisely when everything else has stopped.
+    // Activation is rate-limited because the endpoint verifies a signature on
+    // whatever it is handed.
+    Route::middleware('capability:licensing')->group(function (): void {
+        Route::get('/license', [\App\Http\Controllers\License\LicenseController::class, 'show']);
+        Route::post('/license', [\App\Http\Controllers\License\LicenseController::class, 'store'])
+            ->middleware(['role:owner', 'throttle:10,1']);
+    });
+
     // Self-edit on the authenticated user's profile (#463). Currently
     // scoped to `name` only — the email-change flow has its own
     // dedicated POST /me/email-change endpoint immediately below
