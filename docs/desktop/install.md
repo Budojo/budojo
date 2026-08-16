@@ -8,8 +8,8 @@ Every stable release attaches two Windows builds to its [GitHub Release](https:/
 
 | File | What it is | Use when |
 |---|---|---|
-| `Budojo.Setup.X.Y.Z.exe` | **NSIS installer** | **The one you want.** Installs per-user (no admin), adds a Start-menu entry, upgradable in place — and starts in seconds. |
-| `Budojo.X.Y.Z.exe` | **Portable** | Only if you genuinely cannot install — see the warning below. |
+| `Budojo-Setup-X.Y.Z.exe` | **NSIS installer** | **The one you want.** Installs per-user (no admin), adds a Start-menu entry, upgradable in place — and starts in seconds. |
+| `Budojo-X.Y.Z.exe` | **Portable** | Only if you genuinely cannot install — see the warning below. |
 
 Both are the same application. Neither is code-signed (see [SmartScreen](#the-smartscreen-warning)).
 
@@ -17,14 +17,14 @@ Both are the same application. Neither is code-signed (see [SmartScreen](#the-sm
 
 ## Install (NSIS)
 
-1. Download `Budojo.Setup.X.Y.Z.exe` from the latest release.
+1. Download `Budojo-Setup-X.Y.Z.exe` from the latest release.
 2. Run it. Because it is unsigned, Windows will show a SmartScreen warning first — see below.
 3. Choose an install location if you don't want the default (the installer allows changing it). No administrator prompt: it installs for the current user only.
 4. Launch Budojo from the Start menu.
 
 ## Portable
 
-1. Download `Budojo.X.Y.Z.exe`.
+1. Download `Budojo-X.Y.Z.exe`.
 2. Put it anywhere — a USB stick, a `OneDrive`/`Drive` folder, `Desktop`.
 3. Double-click to run. Nothing is installed.
 
@@ -58,11 +58,11 @@ Measured on the shipped v2.42.0 build, from launch to the local API answering:
 
 ## Upgrading
 
-1. Download the newer `Budojo.Setup.X.Y.Z.exe`.
+1. Download the newer `Budojo-Setup-X.Y.Z.exe`.
 2. Run it. It installs over the previous version.
 3. Your data under `%APPDATA%\Budojo\` is untouched; any new database migrations run automatically on the next launch.
 
-Portable users: download the newer `Budojo.X.Y.Z.exe` and replace the old one. Same data directory, same automatic migration on launch.
+Portable users: download the newer `Budojo-X.Y.Z.exe` and replace the old one. Same data directory, same automatic migration on launch.
 
 Versioning follows the releases: `feat` changes bump the minor version, `fix` changes the patch. The in-app **What's new** screen summarises each release.
 
@@ -74,3 +74,14 @@ Uninstall from **Windows Settings → Apps** (or delete the portable exe). By de
 
 - [`architecture.md`](./architecture.md) — how the desktop build works.
 - [`backup-restore.md`](./backup-restore.md) — protecting and recovering your data. **Read this early, not after a disaster.**
+
+## Updates
+
+From v2.43.0 the installed build **updates itself**. It checks the public releases shortly after launch and every six hours, downloads a new version in the background (only the changed blocks, thanks to the published blockmap), and installs it **when you next close Budojo** — never while you are working. A desktop notification tells you when one is waiting.
+
+Nothing to configure, and nothing to click. If the machine is offline the check simply fails and is logged; the app starts normally.
+
+Two caveats worth knowing:
+
+- **The portable build does not update itself.** It cannot rewrite its own running executable, so it deliberately does not try. Download the newer file by hand — or use the installer, which is the recommended build anyway.
+- **Copies older than v2.43.0 have no updater at all.** They will sit on their version forever with nothing telling them. Install the current release once, by hand, and it takes over from there.
