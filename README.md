@@ -134,6 +134,7 @@ There is **no `.env` to copy and no key to generate**. The API container's entry
 | `make desktop-build` | Compile the main process + preload |
 | `make desktop-package` | Build the Windows installers into `desktop/release` (Windows only) |
 | `make fetch-php` | Download + verify the pinned PHP runtime (Windows only) |
+| `make clean` | Remove build output (`desktop/dist`, `desktop/release`, `client/dist`) |
 
 ### Workflow
 

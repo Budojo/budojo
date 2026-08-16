@@ -38,7 +38,7 @@ CLIENT  := budojo_client
 
 .PHONY: help setup up down restart logs seed db mail \
         test test-server test-client test-desktop quick audit \
-        desktop desktop-build desktop-package fetch-php \
+        desktop desktop-build desktop-package fetch-php clean \
         gotchas board check-readme
 
 ## ---------------------------------------------------------------- setup ----
@@ -131,6 +131,9 @@ desktop-package: ## Build the Windows installers into desktop/release (Windows o
 
 fetch-php: ## Download + verify the pinned PHP runtime (Windows only)
 	cd desktop && npm run fetch:php
+
+clean: ## Remove build output (desktop/dist, desktop/release, client/dist)
+	$(SCRIPTS)/clean.sh
 
 ## --------------------------------------------------------------- misc ----
 
