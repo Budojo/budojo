@@ -2231,6 +2231,41 @@
       "importOk": "Recovery keys imported",
       "importRelaunch": "Budojo will restart to apply them.",
       "importFailed": "The recovery code could not be imported"
+    },
+    "drive": {
+      "title": "Google Drive backup",
+      "why": "Backups saved on this computer do not survive this computer. Connect a Google account and every backup is copied there automatically.",
+      "unavailable": "This build cannot connect to Google Drive.",
+      "connect": "Connect Google Drive",
+      "connectedTo": "Backing up to {{account}}",
+      "connected": "Google Drive connected",
+      "connectFailed": "Could not connect Google Drive",
+      "disconnect": "Disconnect",
+      "disconnected": "Google Drive disconnected",
+      "confirmDisconnect": "Stop copying backups to Google Drive? The backups already there are not deleted.",
+      "confirmDisconnectAccept": "Disconnect",
+      "lastSync": "Last copied",
+      "neverSynced": "Not copied yet — the next backup will be.",
+      "syncNow": "Copy now",
+      "synced": "Backups copied to Google Drive",
+      "syncFailed": "Could not copy to Google Drive",
+      "where": {
+        "both": "On this computer and in Google Drive",
+        "cloudOnly": "In Google Drive only",
+        "localOnly": "On this computer only"
+      },
+      "errors": {
+        "invalid_grant": "Google revoked the connection. Reconnect the account to resume backups.",
+        "unauthorized": "Google revoked the connection. Reconnect the account to resume backups.",
+        "storageQuotaExceeded": "This Google account is out of space. Free some up, or connect a different account.",
+        "network": "No connection to Google. Backups are still being saved on this computer.",
+        "access_denied": "The connection was not approved.",
+        "consent_timeout": "The Google sign-in timed out.",
+        "no_refresh_token": "Google did not return a lasting permission. Try connecting again.",
+        "not_configured": "This build cannot connect to Google Drive.",
+        "unknown": "Copying to Google Drive failed ({{code}}). Backups are still being saved on this computer."
+      },
+      "remoteOnlyHint": "Download it from Google Drive to restore it"
     }
   }
 }

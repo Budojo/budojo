@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
 import { BackupService } from './backup.js';
 import { createBackupIO } from './backup-io.js';
+import { createDriveSyncIO, driveClientConfig, DriveSyncService } from './drive-wiring.js';
 import { formatConsoleMessage, isWorthLogging, redactSecrets } from './renderer-log.js';
 import { DesktopNotifier, EMPTY_LEDGER, parseListOutput, type DeliveryLedger, type PendingNotification } from './desktop-notifier.js';
 import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js';
@@ -251,6 +252,8 @@ async function startRuntime(): Promise<{
   notifierPoll: PeriodicTask;
   backupService: BackupService;
   backupPoll: PeriodicTask;
+  /** null when the build carries no OAuth client, i.e. the feature is unavailable. */
+  driveService: DriveSyncService | null;
   apiBase: string;
 }> {
   const paths = resolveDesktopPaths({
@@ -414,9 +417,32 @@ async function startRuntime(): Promise<{
     retentionKeep: 7,
     log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
   });
+  // Drive sync (#1301). Off unless the owner connected an account, and off
+  // entirely when the build carries no OAuth client.
+  const driveConfig = driveClientConfig();
+  const driveService =
+    driveConfig === null
+      ? null
+      : new DriveSyncService(
+          createDriveSyncIO({
+            config: driveConfig,
+            layout,
+            vault: new TokenVault(layout.driveTokenFile, safeStorage),
+            backupService,
+            openExternal: (url) => shell.openExternal(url),
+            log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
+          }),
+        );
+
   const backupPoll = new PeriodicTask({
     run: async () => {
       await backupService.backup();
+
+      // Upload AFTER the local archive exists, and never let a sync failure
+      // fail the tick — the backup that matters already happened. sync()
+      // swallows its own errors into the link state; this catch is the belt to
+      // that braces.
+      await driveService?.sync().catch(() => undefined);
 
       return { code: 0, output: '', timedOut: false };
     },
@@ -426,7 +452,15 @@ async function startRuntime(): Promise<{
   });
   backupPoll.start();
 
-  return { supervisor, scheduler, notifierPoll, backupService, backupPoll, apiBase: `http://127.0.0.1:${port}` };
+  return {
+    supervisor,
+    scheduler,
+    notifierPoll,
+    backupService,
+    backupPoll,
+    driveService,
+    apiBase: `http://127.0.0.1:${port}`,
+  };
 }
 
 async function readLedger(file: string): Promise<DeliveryLedger> {
@@ -499,6 +533,53 @@ function registerTokenVault(): void {
  * supervisor, swaps, restarts it, and reloads the window onto the restored
  * data. ipcMain.handle (async) rather than sendSync: these are not hot paths.
  */
+/**
+ * The Drive link (#1301). Every handler answers even when the feature is
+ * unavailable — the renderer asks for the state on load, and a rejected
+ * invoke there would break the whole Backup page rather than hiding one card.
+ */
+function registerDriveBridge(driveOf: () => DriveSyncService | null): void {
+  ipcMain.handle('budojo:drive:state', async () => {
+    const service = driveOf();
+    if (service === null) {
+      return { configured: false, linked: false };
+    }
+
+    return { configured: true, ...(await service.state()) };
+  });
+
+  ipcMain.handle('budojo:drive:archives', async () => (await driveOf()?.archives()) ?? []);
+
+  ipcMain.handle('budojo:drive:link', async () => {
+    const service = driveOf();
+
+    return service === null ? { ok: false, error: 'not_configured' } : service.link();
+  });
+
+  ipcMain.handle('budojo:drive:unlink', async () => {
+    await driveOf()?.unlink();
+
+    return { ok: true };
+  });
+
+  ipcMain.handle('budojo:drive:sync', async () => {
+    const service = driveOf();
+    if (service === null) {
+      return { ran: false, reason: 'not_linked' };
+    }
+
+    // sync() contains its own failures, but the renderer disables a button on
+    // this promise — a rejection would leave it spinning forever, so the bridge
+    // never rejects either.
+    return service.sync().catch((error: unknown) => ({
+      ran: true,
+      uploaded: 0,
+      deleted: 0,
+      error: error instanceof Error ? error.message : 'unknown',
+    }));
+  });
+}
+
 function registerBackupBridge(
   supervisorOf: () => PhpSupervisor | null,
   backupOf: () => BackupService | null,
@@ -683,6 +764,7 @@ if (!gotTheLock) {
   let scheduler: PeriodicTask | null = null;
   let notifierPoll: PeriodicTask | null = null;
   let backupService: BackupService | null = null;
+  let driveService: DriveSyncService | null = null;
   let backupPoll: PeriodicTask | null = null;
   let updatePoll: PeriodicTask | null = null;
   let quitting = false;
@@ -730,7 +812,9 @@ if (!gotTheLock) {
       notifierPoll = runtime.notifierPoll;
       backupService = runtime.backupService;
       backupPoll = runtime.backupPoll;
+      driveService = runtime.driveService;
       registerBackupBridge(() => supervisor, () => backupService);
+      registerDriveBridge(() => driveService);
       apiBase = runtime.apiBase;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

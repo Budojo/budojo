@@ -2231,6 +2231,41 @@
       "importOk": "Chiavi di recupero importate",
       "importRelaunch": "Budojo si riavvierà per applicarle.",
       "importFailed": "Impossibile importare il codice di recupero"
+    },
+    "drive": {
+      "title": "Backup su Google Drive",
+      "why": "I backup salvati su questo computer non sopravvivono a questo computer. Collega un account Google e ogni backup viene copiato lì automaticamente.",
+      "unavailable": "Questa versione non può collegarsi a Google Drive.",
+      "connect": "Collega Google Drive",
+      "connectedTo": "Backup su {{account}}",
+      "connected": "Google Drive collegato",
+      "connectFailed": "Impossibile collegare Google Drive",
+      "disconnect": "Scollega",
+      "disconnected": "Google Drive scollegato",
+      "confirmDisconnect": "Smettere di copiare i backup su Google Drive? I backup già presenti non vengono cancellati.",
+      "confirmDisconnectAccept": "Scollega",
+      "lastSync": "Ultima copia",
+      "neverSynced": "Non ancora copiato — lo sarà al prossimo backup.",
+      "syncNow": "Copia adesso",
+      "synced": "Backup copiati su Google Drive",
+      "syncFailed": "Impossibile copiare su Google Drive",
+      "where": {
+        "both": "Su questo computer e su Google Drive",
+        "cloudOnly": "Solo su Google Drive",
+        "localOnly": "Solo su questo computer"
+      },
+      "errors": {
+        "invalid_grant": "Google ha revocato il collegamento. Ricollega l'account per riprendere i backup.",
+        "unauthorized": "Google ha revocato il collegamento. Ricollega l'account per riprendere i backup.",
+        "storageQuotaExceeded": "Questo account Google ha esaurito lo spazio. Liberane un po', oppure collega un altro account.",
+        "network": "Nessuna connessione a Google. I backup continuano a essere salvati su questo computer.",
+        "access_denied": "Il collegamento non è stato approvato.",
+        "consent_timeout": "L'accesso a Google è scaduto.",
+        "no_refresh_token": "Google non ha restituito un permesso duraturo. Riprova a collegare.",
+        "not_configured": "Questa versione non può collegarsi a Google Drive.",
+        "unknown": "La copia su Google Drive non è riuscita ({{code}}). I backup continuano a essere salvati su questo computer."
+      },
+      "remoteOnlyHint": "Scaricalo da Google Drive per ripristinarlo"
     }
   }
 }

@@ -7,6 +7,7 @@ import {
   type BackupArchiveView,
 } from '../../core/services/desktop-backup.service';
 import { DesktopKeysService } from '../../core/services/desktop-keys.service';
+import { DriveSyncService } from '../../core/services/drive-sync.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 /**
@@ -30,6 +31,7 @@ describe('BackupComponent', () => {
   function setup(
     overrides: Partial<DesktopBackupService> = {},
     keysOverrides: Partial<DesktopKeysService> = {},
+    driveOverrides: Partial<DriveSyncService> = {},
   ) {
     const added: unknown[] = [];
     const backup: Partial<DesktopBackupService> = {
@@ -46,6 +48,17 @@ describe('BackupComponent', () => {
       importCode: vi.fn(async () => ({ ok: true })),
       ...keysOverrides,
     };
+    // Default: the Drive bridge is absent (like the web), so the card is hidden
+    // and every pre-existing backup test is untouched.
+    const drive: Partial<DriveSyncService> = {
+      available: false,
+      state: vi.fn(async () => ({ configured: false, linked: false })),
+      archives: vi.fn(async () => []),
+      link: vi.fn(async () => ({ ok: true, account: 'gym@example.it' })),
+      unlink: vi.fn(async () => undefined),
+      syncNow: vi.fn(async () => ({ ran: true, uploaded: 1 })),
+      ...driveOverrides,
+    };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -54,6 +67,7 @@ describe('BackupComponent', () => {
         ConfirmationService, // confirm-destructive-button needs it
         { provide: DesktopBackupService, useValue: backup },
         { provide: DesktopKeysService, useValue: keys },
+        { provide: DriveSyncService, useValue: drive },
       ],
     });
     // Spy on add() so the assertions read the toasts without stubbing the
@@ -61,7 +75,23 @@ describe('BackupComponent', () => {
     vi.spyOn(TestBed.inject(MessageService), 'add').mockImplementation((m) => added.push(m));
     const fixture = TestBed.createComponent(BackupComponent);
     fixture.detectChanges();
-    return { fixture, backup, keys, added };
+    return { fixture, backup, keys, drive, added };
+  }
+
+  /**
+   * The Drive calls sit behind the local list on purpose (the local archives
+   * paint first), so they land a microtask later than `whenStable` alone
+   * flushes. Settling twice is honest about that rather than sprinkling extra
+   * awaits at each assertion.
+   */
+  async function settle(fixture: {
+    whenStable(): Promise<unknown>;
+    detectChanges(): void;
+  }): Promise<void> {
+    for (let i = 0; i < 3; i += 1) {
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
   }
 
   it('shows the most recent backup time and the archive list', async () => {
@@ -166,5 +196,191 @@ describe('BackupComponent', () => {
       detail?: string;
     };
     expect(errorToast?.detail).toContain('corrupted');
+  });
+
+  /**
+   * Google Drive sync (#1301). The card is desktop-only, and the failure states
+   * are what the tests are for: the sync fails silently by design, so the page
+   * IS the alarm. A link broken for three weeks must not look healthy.
+   */
+  describe('drive sync', () => {
+    const linked = (over: Record<string, unknown> = {}) => ({
+      available: true,
+      state: vi.fn(async () => ({
+        configured: true,
+        linked: true,
+        account: 'gym@example.it',
+        lastSyncAt: '2026-08-16T12:00:00Z',
+        lastError: null,
+        ...over,
+      })),
+    });
+
+    it('hides the card entirely outside the desktop app', async () => {
+      const { fixture } = setup();
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-sync"]')).toBeNull();
+    });
+
+    it('says the feature is unavailable when the build has no google client', async () => {
+      // Not the same as "not connected": offering a Connect button here would
+      // open a Google error page.
+      const { fixture } = setup({}, {}, { available: true });
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-unavailable"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-connect"]')).toBeNull();
+    });
+
+    it('offers to connect when configured but not linked', async () => {
+      const { fixture } = setup(
+        {},
+        {},
+        { available: true, state: vi.fn(async () => ({ configured: true, linked: false })) },
+      );
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-connect"]')).not.toBeNull();
+    });
+
+    it('shows the account and the last copy time once linked', async () => {
+      const { fixture } = setup({}, {}, linked());
+      await settle(fixture);
+
+      const account = fixture.nativeElement.querySelector('[data-cy="drive-account"]');
+      expect(account?.textContent).toContain('gym@example.it');
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-last-sync"]')).not.toBeNull();
+    });
+
+    // The whole point of choosing silent failures: this line is the only thing
+    // standing between a broken link and never finding out.
+    it('surfaces a sync failure on the page', async () => {
+      const { fixture } = setup({}, {}, linked({ lastError: 'storageQuotaExceeded' }));
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-error"]')).not.toBeNull();
+    });
+
+    it('still shows the last successful copy time while an error is displayed', async () => {
+      // "It is broken" and "the newest copy up there is from Tuesday" are
+      // different facts, and the second is the one that matters.
+      const { fixture } = setup({}, {}, linked({ lastError: 'network' }));
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-last-sync"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-error"]')).not.toBeNull();
+    });
+
+    // The reason the feature exists: a new machine has no local archives, and
+    // the ones worth showing are the ones only the account has.
+    it('lists an archive that exists only in the account', async () => {
+      const { fixture } = setup(
+        { list: vi.fn(async () => []) },
+        {},
+        {
+          ...linked(),
+          archives: vi.fn(async () => [
+            {
+              name: 'budojo-backup-20260816-120000.zip',
+              sizeBytes: 2_000_000,
+              createdAt: null,
+              local: false,
+              remote: true,
+              remoteId: 'id-1',
+            },
+          ]),
+        },
+      );
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelectorAll('[data-cy="backup-list"] li')).toHaveLength(1);
+      expect(fixture.nativeElement.querySelector('[data-cy="backup-empty"]')).toBeNull();
+    });
+
+    // Restore reads from the local backups directory. Before this was gated the
+    // button was rendered for remote-only rows too, and pressing it left the row
+    // spinning forever on a file that is not on this disk.
+    it('offers no restore for an archive that is only in the account', async () => {
+      const { fixture } = setup(
+        { list: vi.fn(async () => []) },
+        {},
+        {
+          ...linked(),
+          archives: vi.fn(async () => [
+            {
+              name: 'budojo-backup-20260816-120000.zip',
+              sizeBytes: 2_000_000,
+              createdAt: null,
+              local: false,
+              remote: true,
+              remoteId: 'id-1',
+            },
+          ]),
+        },
+      );
+      await settle(fixture);
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-cy="backup-restore-budojo-backup-20260816-120000.zip"]',
+        ),
+      ).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-cy="backup-remote-only-budojo-backup-20260816-120000.zip"]',
+        ),
+      ).not.toBeNull();
+    });
+
+    it('keeps restore available for an archive held locally', async () => {
+      const { fixture } = setup(
+        {},
+        {},
+        {
+          ...linked(),
+          archives: vi.fn(async () => [
+            {
+              name: 'budojo-backup-20260815-090000.zip',
+              sizeBytes: 2_500_000,
+              createdAt: '2026-08-15T09:00:00Z',
+              local: true,
+              remote: true,
+              remoteId: 'id-1',
+            },
+          ]),
+        },
+      );
+      await settle(fixture);
+
+      expect(
+        fixture.nativeElement.querySelector(
+          '[data-cy="backup-restore-budojo-backup-20260815-090000.zip"]',
+        ),
+      ).not.toBeNull();
+    });
+
+    // The page is the only surface for a silently-failing feature, so an
+    // untranslated code must never reach it as a raw key.
+    it('falls back to a readable message for an error code with no translation', async () => {
+      const { fixture } = setup({}, {}, linked({ lastError: 'http_403' }));
+      await settle(fixture);
+
+      const text =
+        fixture.nativeElement.querySelector('[data-cy="drive-error"]')?.textContent ?? '';
+      expect(text).not.toContain('backup.drive.errors');
+      expect(text).toContain('http_403');
+    });
+
+    it('disconnects through the bridge', async () => {
+      const { fixture, drive } = setup({}, {}, linked());
+      await settle(fixture);
+
+      await (
+        fixture.componentInstance as unknown as { disconnectDrive(): Promise<void> }
+      ).disconnectDrive();
+
+      expect(drive.unlink).toHaveBeenCalled();
+    });
   });
 });
