@@ -486,4 +486,67 @@ describe('BackupComponent', () => {
       expect(added).toHaveLength(0);
     });
   });
+
+  /**
+   * Loading states (#1322). The page is slow enough on a packaged build to be
+   * noticed, and a card with no loading state cannot tell "not known yet" apart
+   * from "nothing set" — which is how it ended up rendering a heading with
+   * neither a path nor a button.
+   */
+  describe('loading states', () => {
+    // A deferred promise lets the assertions run while the page is still
+    // resolving, which is the state being tested.
+    function pending<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
+      let resolve!: (v: T) => void;
+      const promise = new Promise<T>((r) => {
+        resolve = r;
+      });
+
+      return { promise, resolve };
+    }
+
+    it('shows skeletons, not the word "loading", while the archive list resolves', async () => {
+      const gate = pending<BackupArchiveView[]>();
+      const { fixture } = setup({ list: vi.fn(() => gate.promise) });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-cy="backup-loading"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="backup-list"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="backup-empty"]')).toBeNull();
+
+      gate.resolve([]);
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="backup-loading"]')).toBeNull();
+    });
+
+    // The bug this exists for: neither the path nor the choose button, so the
+    // card offered nothing and explained nothing.
+    it('never shows the folder card with no path AND no choose button', async () => {
+      const gate = pending<{
+        folder: string | null;
+        lastCopyAt: null;
+        lastError: null;
+        lastErrorAt: null;
+      }>();
+      const { fixture } = setup({}, {}, {}, { available: true, state: vi.fn(() => gate.promise) });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const el = fixture.nativeElement;
+      const showsSomething =
+        el.querySelector('[data-cy="folder-loading"]') !== null ||
+        el.querySelector('[data-cy="folder-path"]') !== null ||
+        el.querySelector('[data-cy="folder-choose"]') !== null;
+
+      expect(showsSomething).toBe(true);
+
+      gate.resolve({ folder: null, lastCopyAt: null, lastError: null, lastErrorAt: null });
+      await settle(fixture);
+
+      expect(el.querySelector('[data-cy="folder-choose"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="folder-loading"]')).toBeNull();
+    });
+  });
 });
