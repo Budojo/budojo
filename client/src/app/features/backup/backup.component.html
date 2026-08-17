@@ -35,7 +35,9 @@
     <section class="backup-page__drive" data-cy="backup-folder">
       <h2 class="backup-page__heading">{{ 'backup.folder.title' | translate }}</h2>
 
-      @if (folderState().folder; as chosen) {
+      @if (folderLoading()) {
+        <p-skeleton height="2.5rem" width="22rem" data-cy="folder-loading" />
+      } @else if (folderState().folder; as chosen) {
         <p class="backup-page__drive-account" data-cy="folder-path">{{ chosen }}</p>
         <p class="backup-page__muted" data-cy="folder-last-copy">
           @if (folderState().lastCopyAt) {
@@ -159,7 +161,17 @@
   <h2 class="backup-page__heading">{{ 'backup.archives' | translate }}</h2>
 
   @if (loading()) {
-    <p class="backup-page__muted">{{ 'backup.loading' | translate }}</p>
+    <!--
+      Skeletons, not the word "Loading" (canon § Krug/Norman, and the rule in
+      client/CLAUDE.md that anything over a second gets one). The shape of what
+      is coming is more reassuring than a label, and this list is slow enough on
+      a packaged build to need it.
+    -->
+    <div class="backup-page__skeletons" data-cy="backup-loading">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="3.5rem" styleClass="mb-2" />
+      }
+    </div>
   } @else if (rows().length === 0) {
     <p class="backup-page__muted" data-cy="backup-empty">{{ 'backup.empty' | translate }}</p>
   } @else {

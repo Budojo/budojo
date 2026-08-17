@@ -5,6 +5,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
+import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmDestructiveButtonComponent } from '../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -83,6 +84,7 @@ function timestampFromName(name: string): string {
     ButtonModule,
     ToastModule,
     TooltipModule,
+    SkeletonModule,
     ConfirmDestructiveButtonComponent,
     PageHeaderComponent,
   ],
@@ -122,6 +124,13 @@ export class BackupComponent {
     lastError: null,
     lastErrorAt: null,
   });
+  /**
+   * Distinct from `loading`, which covers the archive list. Without it the card
+   * renders straight from the signal's initial value, so "not known yet" and
+   * "no folder chosen" look identical — and one of them is a card that offers
+   * nothing and explains nothing.
+   */
+  protected readonly folderLoading = signal(true);
   protected readonly choosingFolder = signal(false);
   protected readonly copyingToFolder = signal(false);
   protected readonly syncing = signal(false);
@@ -184,6 +193,7 @@ export class BackupComponent {
     if (this.folderAvailable) {
       this.folderState.set(await this.folder.state());
     }
+    this.folderLoading.set(false);
 
     if (!this.driveAvailable) {
       return;
