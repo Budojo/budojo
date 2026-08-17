@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { MessageService } from 'primeng/api';
 import { BackupComponent } from './backup.component';
 import {
   DesktopBackupService,
@@ -14,6 +14,12 @@ import { provideI18nTesting } from '../../../test-utils/i18n-test';
 /**
  * Data & backup page (#1228): shows the last backup, backs up, restores with a
  * refusal surfaced.
+ *
+ * **ConfirmationService is deliberately NOT provided here.** It used to be, and
+ * that is precisely how #1324 hid: the component itself never provided it, so
+ * every confirm button threw NG0201 in the real app while every test passed
+ * against a TestBed that supplied it. A spec that hands the component a
+ * dependency production does not have proves the spec works, not the component.
  */
 describe('BackupComponent', () => {
   const archives: BackupArchiveView[] = [
@@ -82,7 +88,6 @@ describe('BackupComponent', () => {
         provideRouter([]),
         ...provideI18nTesting(),
         MessageService, // real one: p-toast subscribes to its stream
-        ConfirmationService, // confirm-destructive-button needs it
         { provide: DesktopBackupService, useValue: backup },
         { provide: DesktopKeysService, useValue: keys },
         { provide: DriveSyncService, useValue: drive },
