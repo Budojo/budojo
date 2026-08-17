@@ -107,13 +107,6 @@ function registerAppProtocol(): void {
 }
 
 /**
- * Opened before the first window and independent of the runtime: a build whose
- * API never starts is exactly the case where the renderer log is the only thing
- * that can say why (#1317).
- */
-let rendererLog: RotatingLog | null = null;
-
-/**
  * Records what the window does wrong (#1317).
  *
  * Nothing did, before: no console handler, no load-failure handler, and the
@@ -127,10 +120,14 @@ let rendererLog: RotatingLog | null = null;
  * bundles and screenshots.
  */
 function attachRendererLogging(window: BrowserWindow): void {
-  const log = rendererLog;
-  if (log === null) {
-    return;
-  }
+  // Opened here rather than at startup, on purpose. The first version kept a
+  // module-level `RotatingLog | null` opened in the ready handler — and the
+  // open was silently never wired, so the variable stayed null, this function
+  // returned immediately, and the whole feature was inert while type-checking
+  // and every test stayed green. Owning the log where it is used removes the
+  // half-wired state entirely: there is nothing left to forget.
+  const log = new RotatingLog(path.join(dataLayout(app.getPath('userData')).logsDir, 'renderer.log'));
+  log.open();
 
   const write = (line: string): void => log.write(`${new Date().toISOString()} ${line}`);
 
