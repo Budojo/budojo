@@ -31,15 +31,83 @@
     />
   </div>
 
-  @if (driveAvailable) {
+  @if (folderAvailable) {
+    <section class="backup-page__drive" data-cy="backup-folder">
+      <h2 class="backup-page__heading">{{ 'backup.folder.title' | translate }}</h2>
+
+      @if (folderState().folder; as chosen) {
+        <p class="backup-page__drive-account" data-cy="folder-path">{{ chosen }}</p>
+        <p class="backup-page__muted" data-cy="folder-last-copy">
+          @if (folderState().lastCopyAt) {
+            {{ 'backup.folder.lastCopy' | translate }}
+            {{ folderState().lastCopyAt | date: 'medium' }}
+          } @else {
+            {{ 'backup.folder.neverCopied' | translate }}
+          }
+        </p>
+        @if (folderState().lastError) {
+          <p class="backup-page__drive-error" data-cy="folder-error" role="status">
+            {{ folderErrorMessage() }}
+          </p>
+        }
+        <div class="backup-page__drive-actions">
+          <p-button
+            [label]="'backup.folder.open' | translate"
+            icon="pi pi-folder-open"
+            severity="secondary"
+            (onClick)="openFolder()"
+            data-cy="folder-open"
+          />
+          <p-button
+            [label]="'backup.folder.copyNow' | translate"
+            icon="pi pi-copy"
+            severity="secondary"
+            [loading]="copyingToFolder()"
+            (onClick)="copyToFolderNow()"
+            data-cy="folder-copy-now"
+          />
+          <p-button
+            [label]="'backup.folder.change' | translate"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [loading]="choosingFolder()"
+            (onClick)="chooseFolder()"
+            data-cy="folder-change"
+          />
+          <app-confirm-destructive-button
+            icon="pi pi-times"
+            [label]="'backup.folder.stop' | translate"
+            [ariaLabel]="'backup.folder.stop' | translate"
+            [confirmMessage]="'backup.folder.confirmStop' | translate"
+            [acceptLabel]="'backup.folder.stop' | translate"
+            [rejectLabel]="'backup.confirmRestoreReject' | translate"
+            (confirmed)="clearFolder()"
+            dataCy="folder-clear"
+          />
+        </div>
+      } @else {
+        <p class="backup-page__muted">{{ 'backup.folder.why' | translate }}</p>
+        <p-button
+          [label]="'backup.folder.choose' | translate"
+          icon="pi pi-folder"
+          [loading]="choosingFolder()"
+          (onClick)="chooseFolder()"
+          data-cy="folder-choose"
+        />
+      }
+    </section>
+  }
+
+  <!--
+    Hidden entirely when the build carries no OAuth client (#1320). Beside a
+    backup folder that works, an announced feature that apologises for itself is
+    worse than one that is simply absent.
+  -->
+  @if (driveAvailable && driveState().configured) {
     <section class="backup-page__drive" data-cy="drive-sync">
       <h2 class="backup-page__heading">{{ 'backup.drive.title' | translate }}</h2>
 
-      @if (!driveState().configured) {
-        <p class="backup-page__muted" data-cy="drive-unavailable">
-          {{ 'backup.drive.unavailable' | translate }}
-        </p>
-      } @else if (driveState().linked) {
+      @if (driveState().linked) {
         <p class="backup-page__drive-account" data-cy="drive-account">
           {{ 'backup.drive.connectedTo' | translate: { account: driveState().account } }}
         </p>

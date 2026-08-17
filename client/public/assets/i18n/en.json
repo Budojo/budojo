@@ -2266,6 +2266,30 @@
         "unknown": "Copying to Google Drive failed ({{code}}). Backups are still being saved on this computer."
       },
       "remoteOnlyHint": "Download it from Google Drive to restore it"
+    },
+    "folder": {
+      "title": "Backup folder",
+      "why": "Backups saved on this computer do not survive this computer. Choose a folder — one your cloud service already syncs, a network drive, or a USB stick — and every backup is copied there automatically.",
+      "choose": "Choose folder",
+      "change": "Change folder",
+      "chosen": "Backup folder set",
+      "cleared": "Backup folder cleared",
+      "stop": "Stop copying",
+      "confirmStop": "Stop copying backups to this folder? The backups already there are not deleted.",
+      "open": "Open folder",
+      "copyNow": "Copy now",
+      "copied": "Backups copied",
+      "copyFailed": "Could not copy to the backup folder",
+      "lastCopy": "Last copied",
+      "neverCopied": "Not copied yet — the next backup will be.",
+      "errors": {
+        "ENOENT": "The backup folder no longer exists. Choose it again, or pick a new one.",
+        "EACCES": "No permission to write to the backup folder. Choose a different one.",
+        "EPERM": "No permission to write to the backup folder. Choose a different one.",
+        "ENOSPC": "The backup folder is out of space. Free some up, or choose a different one.",
+        "EROFS": "The backup folder is read-only. Choose a different one.",
+        "unknown": "Could not copy to the backup folder ({{code}}). Backups are still being saved on this computer."
+      }
     }
   }
 }

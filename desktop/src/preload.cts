@@ -79,6 +79,15 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     unlink: () => ipcRenderer.invoke('budojo:drive:unlink'),
     sync: () => ipcRenderer.invoke('budojo:drive:sync'),
   },
+  // Backup folder (#1320). The owner picks any folder — a synced one, a NAS, a
+  // USB stick — and every backup is copied there. No account, no API.
+  folder: {
+    state: () => ipcRenderer.invoke('budojo:folder:state'),
+    choose: () => ipcRenderer.invoke('budojo:folder:choose'),
+    clear: () => ipcRenderer.invoke('budojo:folder:clear'),
+    copy: () => ipcRenderer.invoke('budojo:folder:copy'),
+    open: () => ipcRenderer.invoke('budojo:folder:open'),
+  },
   // Recovery keys (#1254). Export decrypts the keychain store into a copy-
   // pasteable code; import writes it back and the app relaunches under the new
   // keys. Async; not hot paths.

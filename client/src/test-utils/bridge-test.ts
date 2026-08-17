@@ -32,6 +32,7 @@ interface BridgeOverrides {
   token?: Partial<Bridge['token']>;
   backup?: Partial<Bridge['backup']>;
   drive?: Partial<Bridge['drive']>;
+  folder?: Partial<Bridge['folder']>;
   keys?: Partial<Bridge['keys']>;
 }
 
@@ -53,6 +54,13 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
       unlink: async () => ({ ok: true }),
       sync: async () => ({ ran: false, reason: 'not_available' }),
     },
+    folder: {
+      state: async () => ({ folder: null, lastCopyAt: null, lastError: null, lastErrorAt: null }),
+      choose: async () => ({ ok: false }),
+      clear: async () => ({ ok: true }),
+      copy: async () => ({ ran: false, reason: 'no_folder' }),
+      open: async () => ({ ok: false }),
+    },
     keys: {
       export: async () => ({ ok: false }),
       import: async () => ({ ok: false }),
@@ -65,6 +73,7 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
     token: { ...base.token, ...overrides.token },
     backup: { ...base.backup, ...overrides.backup },
     drive: { ...base.drive, ...overrides.drive },
+    folder: { ...base.folder, ...overrides.folder },
     keys: { ...base.keys, ...overrides.keys },
   };
 }

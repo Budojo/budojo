@@ -43,6 +43,8 @@ export interface DataLayout {
   driveTokenFile: string;
   /** Drive link bookkeeping — account, folder, last sync. Holds no secret. */
   driveStateFile: string;
+  /** Which folder backups are copied into, and how that last went (#1320). */
+  backupFolderStateFile: string;
 }
 
 /**
@@ -68,6 +70,7 @@ export function dataLayout(userDataDir: string): DataLayout {
     authTokenFile: path.join(root, 'auth-token.bin'),
     driveTokenFile: path.join(root, 'drive-token.bin'),
     driveStateFile: path.join(root, 'drive-sync.json'),
+    backupFolderStateFile: path.join(root, 'backup-folder.json'),
   };
 }
 

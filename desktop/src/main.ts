@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
 import { BackupService } from './backup.js';
 import { createBackupIO } from './backup-io.js';
+import { createFolderCopyIO } from './folder-copy-io.js';
+import { FolderCopyService } from './folder-copy-service.js';
 import { createDriveSyncIO, driveClientConfig, DriveSyncService } from './drive-wiring.js';
 import { formatConsoleMessage, isWorthLogging, redactSecrets } from './renderer-log.js';
 import { DesktopNotifier, EMPTY_LEDGER, parseListOutput, type DeliveryLedger, type PendingNotification } from './desktop-notifier.js';
@@ -249,6 +251,7 @@ async function startRuntime(): Promise<{
   notifierPoll: PeriodicTask;
   backupService: BackupService;
   backupPoll: PeriodicTask;
+  folderCopy: FolderCopyService;
   /** null when the build carries no OAuth client, i.e. the feature is unavailable. */
   driveService: DriveSyncService | null;
   apiBase: string;
@@ -431,9 +434,24 @@ async function startRuntime(): Promise<{
           }),
         );
 
+  // Copy each backup into the folder the owner picked (#1320). Off until they
+  // pick one.
+  const folderCopy = new FolderCopyService(
+    createFolderCopyIO({
+      layout,
+      backupService,
+      log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
+    }),
+    7,
+  );
+
   const backupPoll = new PeriodicTask({
     run: async () => {
       await backupService.backup();
+
+      // After the local archive exists, never before. copy() contains its own
+      // failures; the catch is the belt to that braces.
+      await folderCopy.copy().catch(() => undefined);
 
       // Upload AFTER the local archive exists, and never let a sync failure
       // fail the tick — the backup that matters already happened. sync()
@@ -455,6 +473,7 @@ async function startRuntime(): Promise<{
     notifierPoll,
     backupService,
     backupPoll,
+    folderCopy,
     driveService,
     apiBase: `http://127.0.0.1:${port}`,
   };
@@ -574,6 +593,68 @@ function registerDriveBridge(driveOf: () => DriveSyncService | null): void {
       deleted: 0,
       error: error instanceof Error ? error.message : 'unknown',
     }));
+  });
+}
+
+/**
+ * The backup folder (#1320). Every handler answers even before a folder is
+ * chosen — the renderer asks on load, and a rejected invoke would break the
+ * whole page rather than one card.
+ */
+function registerFolderBridge(folderOf: () => FolderCopyService | null): void {
+  ipcMain.handle('budojo:folder:state', async () => (await folderOf()?.state()) ?? {
+    folder: null,
+    lastCopyAt: null,
+    lastError: null,
+    lastErrorAt: null,
+  });
+
+  ipcMain.handle('budojo:folder:choose', async () => {
+    const service = folderOf();
+    if (service === null) {
+      return { ok: false };
+    }
+
+    const picked = await dialog.showOpenDialog({
+      title: 'Choose a folder for backup copies',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+
+    if (picked.canceled || picked.filePaths[0] === undefined) {
+      return { ok: false };
+    }
+
+    const state = await service.setFolder(picked.filePaths[0]);
+    // Copy straight away rather than waiting up to six hours: choosing a folder
+    // and seeing nothing appear in it reads as broken.
+    void service.copy().catch(() => undefined);
+
+    return { ok: true, state };
+  });
+
+  ipcMain.handle('budojo:folder:clear', async () => {
+    await folderOf()?.setFolder(null);
+
+    return { ok: true };
+  });
+
+  ipcMain.handle('budojo:folder:copy', async () => {
+    const service = folderOf();
+
+    return service === null
+      ? { ran: false, reason: 'no_folder' }
+      : service.copy().catch(() => ({ ran: true, copied: 0, deleted: 0, error: 'unknown' }));
+  });
+
+  ipcMain.handle('budojo:folder:open', async () => {
+    const state = await folderOf()?.state();
+    if (state?.folder === undefined || state.folder === null) {
+      return { ok: false };
+    }
+
+    await shell.openPath(state.folder);
+
+    return { ok: true };
   });
 }
 
@@ -762,6 +843,7 @@ if (!gotTheLock) {
   let notifierPoll: PeriodicTask | null = null;
   let backupService: BackupService | null = null;
   let driveService: DriveSyncService | null = null;
+  let folderCopy: FolderCopyService | null = null;
   let backupPoll: PeriodicTask | null = null;
   let updatePoll: PeriodicTask | null = null;
   let quitting = false;
@@ -810,8 +892,10 @@ if (!gotTheLock) {
       backupService = runtime.backupService;
       backupPoll = runtime.backupPoll;
       driveService = runtime.driveService;
+      folderCopy = runtime.folderCopy;
       registerBackupBridge(() => supervisor, () => backupService);
       registerDriveBridge(() => driveService);
+      registerFolderBridge(() => folderCopy);
       apiBase = runtime.apiBase;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
