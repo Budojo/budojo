@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
@@ -86,6 +86,12 @@ function timestampFromName(name: string): string {
     ConfirmDestructiveButtonComponent,
     PageHeaderComponent,
   ],
+  // ConfirmDestructiveButtonComponent injects ConfirmationService, and
+  // app.config.ts deliberately provides only MessageService app-wide — so each
+  // host provides this one. Without it every confirm button on the page threw
+  // NG0201 and rendered nothing, which meant Restore was missing from the
+  // packaged app entirely (#1324). Every other host already did this.
+  providers: [ConfirmationService],
   templateUrl: './backup.component.html',
   styleUrl: './backup.component.scss',
 })
