@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
 import { BackupService } from './backup.js';
 import { createBackupIO } from './backup-io.js';
+import { formatConsoleMessage, isWorthLogging, redactSecrets } from './renderer-log.js';
 import { DesktopNotifier, EMPTY_LEDGER, parseListOutput, type DeliveryLedger, type PendingNotification } from './desktop-notifier.js';
 import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js';
 import { runPhp } from './php-exec.js';
@@ -104,6 +105,67 @@ function registerAppProtocol(): void {
   });
 }
 
+/**
+ * Opened before the first window and independent of the runtime: a build whose
+ * API never starts is exactly the case where the renderer log is the only thing
+ * that can say why (#1317).
+ */
+let rendererLog: RotatingLog | null = null;
+
+/**
+ * Records what the window does wrong (#1317).
+ *
+ * Nothing did, before: no console handler, no load-failure handler, and the
+ * menu is nulled so there is no DevTools accelerator either. A page that failed
+ * to render was completely silent — the owner saw a blank area and the only way
+ * anyone found out was if they mentioned it. On a local-first app with no
+ * telemetry this file is the whole diagnostic story.
+ *
+ * Every line goes through `redactSecrets` first: the renderer holds the Sanctum
+ * token and can be handed a recovery code, and this log ends up in support
+ * bundles and screenshots.
+ */
+function attachRendererLogging(window: BrowserWindow): void {
+  const log = rendererLog;
+  if (log === null) {
+    return;
+  }
+
+  const write = (line: string): void => log.write(`${new Date().toISOString()} ${line}`);
+
+  window.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    // Warnings and errors only — Angular at info/debug would bury the one line
+    // that matters and rotate it out of the file.
+    if (isWorthLogging(level)) {
+      write(formatConsoleMessage({ level, message, line, sourceId }));
+    }
+  });
+
+  // The failure that matches a blank page: a chunk or asset 404ing under
+  // app://bundle. `errorCode -3` is ABORTED, which fires on ordinary navigation
+  // and is not a fault.
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    if (errorCode !== -3) {
+      write(`[load-failed] ${errorCode} ${errorDescription} ${redactSecrets(validatedURL)}`);
+    }
+  });
+
+  // A broken preload takes out sign-in and every desktop-only surface at once,
+  // and looks like an app that simply does not work.
+  window.webContents.on('preload-error', (_event, preloadPath, error) => {
+    write(`[preload-error] ${preloadPath}: ${redactSecrets(error.message)}`);
+  });
+
+  window.webContents.on('render-process-gone', (_event, details) => {
+    write(`[renderer-gone] reason=${details.reason} exitCode=${details.exitCode}`);
+  });
+
+  window.on('unresponsive', () => {
+    // Distinguishes "hung" from "slow", which look identical from the outside.
+    write('[unresponsive] the window stopped responding');
+  });
+}
+
 function createWindow(apiBase: string): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
@@ -171,6 +233,8 @@ function createWindow(apiBase: string): BrowserWindow {
 
   // The root, not /index.html: the router owns the path, and "/index.html" is
   // not a route it knows. The protocol handler serves the shell for "/".
+  attachRendererLogging(window);
+
   void window.loadURL(DEV ? DEV_URL : `${APP_ORIGIN}/`);
 
   return window;
