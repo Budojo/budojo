@@ -2266,6 +2266,30 @@
         "unknown": "La copia su Google Drive non è riuscita ({{code}}). I backup continuano a essere salvati su questo computer."
       },
       "remoteOnlyHint": "Scaricalo da Google Drive per ripristinarlo"
+    },
+    "folder": {
+      "title": "Cartella dei backup",
+      "why": "I backup salvati su questo computer non sopravvivono a questo computer. Scegli una cartella — una che il tuo servizio cloud già sincronizza, un disco di rete o una chiavetta USB — e ogni backup viene copiato lì automaticamente.",
+      "choose": "Scegli cartella",
+      "change": "Cambia cartella",
+      "chosen": "Cartella dei backup impostata",
+      "cleared": "Cartella dei backup rimossa",
+      "stop": "Smetti di copiare",
+      "confirmStop": "Smettere di copiare i backup in questa cartella? I backup già presenti non vengono cancellati.",
+      "open": "Apri cartella",
+      "copyNow": "Copia adesso",
+      "copied": "Backup copiati",
+      "copyFailed": "Impossibile copiare nella cartella dei backup",
+      "lastCopy": "Ultima copia",
+      "neverCopied": "Non ancora copiato — lo sarà al prossimo backup.",
+      "errors": {
+        "ENOENT": "La cartella dei backup non esiste più. Scegline una di nuovo.",
+        "EACCES": "Nessun permesso di scrittura sulla cartella dei backup. Scegline un'altra.",
+        "EPERM": "Nessun permesso di scrittura sulla cartella dei backup. Scegline un'altra.",
+        "ENOSPC": "La cartella dei backup ha esaurito lo spazio. Liberane un po', oppure scegline un'altra.",
+        "EROFS": "La cartella dei backup è di sola lettura. Scegline un'altra.",
+        "unknown": "Impossibile copiare nella cartella dei backup ({{code}}). I backup continuano a essere salvati su questo computer."
+      }
     }
   }
 }

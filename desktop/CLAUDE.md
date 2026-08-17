@@ -43,6 +43,16 @@ A new capability follows the same shape: engine + spec first, adapter second, on
   Electron honours the flag in the packaged app — verified — and `%APPDATA%\Budojo` stays untouched.
 - **Nothing writes beside the executable.** All state lives under `userData` via `dataLayout()`; the install directory is read-only after install and an uninstall must not be able to take the owner's data with it.
 
+## Backup folder (#1320)
+
+The default way backups leave the machine, and the one to reach for first: the owner picks a folder, every backup is copied there, and the sync client they already run does the rest. No account, no API, no token, no network code — and it covers OneDrive, Dropbox, iCloud, the Drive desktop client, a NAS and a USB stick at once.
+
+- **It is the owner's folder.** Never touch a file we did not create; only `budojo-backup-*.zip` is visible to any decision. Retention reuses `planRetention` (#1228) rather than reimplementing "never delete the newest".
+- **Copy before prune**, same as everywhere: pruning first can delete the only copy over there and then fail to write its replacement.
+- **Copy to `.partial`, then rename.** An interrupted copy under the real name looks like a backup and is not one — precisely what the size check exists to catch, and worth not creating in the first place.
+- **Failures are silent**, with the state on the page. Same reasoning as #1301, and the same consequence: the Backup page is the only alarm, so it has to show the last SUCCESS time beside the error.
+- The Drive card (#1301) is **hidden** when no OAuth client is configured. Beside a folder that works, a feature that apologises for itself is worse than one that is absent.
+
 ## Google Drive backup sync (#1301)
 
 Opt-in, off until the owner connects an account, and **off entirely in a build with no OAuth client**.

@@ -17,6 +17,21 @@ interface DriveArchive {
 }
 
 /**
+ * Where backups are copied, and how that last went (#1320).
+ *
+ * `lastCopyAt` and `lastErrorAt` are separate on purpose: "is it working now?"
+ * and "how old is the newest copy over there?" are different questions, and the
+ * second is the one that matters the day this disk dies.
+ */
+interface BackupFolderState {
+  /** Absolute path, or null when the owner has not chosen one. */
+  readonly folder: string | null;
+  readonly lastCopyAt: string | null;
+  readonly lastError: string | null;
+  readonly lastErrorAt: string | null;
+}
+
+/**
  * The Drive link as the Backup page shows it (#1301).
  *
  * `lastSyncAt` and `lastErrorAt` are separate on purpose: they answer different
@@ -63,6 +78,20 @@ interface BudojoBridge {
     list(): Promise<BackupArchive[]>;
     run(): Promise<{ ok: boolean; path: string | null }>;
     restore(name: string): Promise<{ ok: boolean; reason?: string }>;
+  };
+  /**
+   * Backup folder (#1320). The owner picks any folder — one their cloud client
+   * already syncs, a NAS, a USB stick — and every backup is copied there. No
+   * account, no API, no network code.
+   */
+  readonly folder: {
+    state(): Promise<BackupFolderState>;
+    /** Opens the native folder picker; false when the owner cancels. */
+    choose(): Promise<{ ok: boolean; state?: BackupFolderState }>;
+    clear(): Promise<{ ok: boolean }>;
+    copy(): Promise<{ ran: boolean; copied?: number; error?: string; reason?: string }>;
+    /** Reveals the chosen folder in the OS file manager. */
+    open(): Promise<{ ok: boolean }>;
   };
   /**
    * Google Drive backup sync (#1301). Opt-in and off by default: an on-disk

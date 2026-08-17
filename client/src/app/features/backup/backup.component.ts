@@ -19,6 +19,10 @@ interface BackupRow extends BackupArchiveView {
 }
 import { DesktopKeysService } from '../../core/services/desktop-keys.service';
 import {
+  BackupFolderService,
+  type BackupFolderStateView,
+} from '../../core/services/backup-folder.service';
+import {
   DriveSyncService,
   type DriveArchiveView,
   type DriveLinkStateView,
@@ -29,6 +33,9 @@ import {
  * `unknown`, which interpolates the raw code so the thread back to the cause is
  * never lost. Keep in step with `backup.drive.errors` in both i18n files.
  */
+/** Same allow-list discipline as the Drive codes: never build a key from a value. */
+const KNOWN_FOLDER_ERRORS = new Set(['ENOENT', 'EACCES', 'EPERM', 'ENOSPC', 'EROFS']);
+
 const KNOWN_DRIVE_ERRORS = new Set([
   'invalid_grant',
   'unauthorized',
@@ -86,6 +93,7 @@ export class BackupComponent {
   private readonly backup = inject(DesktopBackupService);
   private readonly keys = inject(DesktopKeysService);
   private readonly drive = inject(DriveSyncService);
+  private readonly folder = inject(BackupFolderService);
   private readonly messages = inject(MessageService);
   private readonly translate = inject(TranslateService);
   private readonly router = inject(Router);
@@ -101,6 +109,21 @@ export class BackupComponent {
   protected readonly driveState = signal<DriveLinkStateView>({ configured: false, linked: false });
   protected readonly driveArchives = signal<DriveArchiveView[]>([]);
   protected readonly linking = signal(false);
+
+  /**
+   * Backup folder (#1320). The answer to "a backup on this disk does not
+   * survive this disk" that needs no account and no API: point at a folder the
+   * owner's cloud client already syncs, or a NAS, or a USB stick.
+   */
+  protected readonly folderAvailable = this.folder.available;
+  protected readonly folderState = signal<BackupFolderStateView>({
+    folder: null,
+    lastCopyAt: null,
+    lastError: null,
+    lastErrorAt: null,
+  });
+  protected readonly choosingFolder = signal(false);
+  protected readonly copyingToFolder = signal(false);
   protected readonly syncing = signal(false);
   protected readonly loading = signal(true);
   protected readonly backingUp = signal(false);
@@ -154,6 +177,13 @@ export class BackupComponent {
     // disk and ready, and making the page wait for the network to show them
     // would be slowest exactly when the connection is worst.
     this.loading.set(false);
+
+    // The two destinations are independent: a build with no Drive client still
+    // has a backup folder, and gating one on the other is how the folder state
+    // silently stopped being read at all.
+    if (this.folderAvailable) {
+      this.folderState.set(await this.folder.state());
+    }
 
     if (!this.driveAvailable) {
       return;
@@ -237,6 +267,61 @@ export class BackupComponent {
     const known = KNOWN_DRIVE_ERRORS.has(code) ? code : 'unknown';
 
     return this.translate.instant(`backup.drive.errors.${known}`, { code });
+  }
+
+  protected async chooseFolder(): Promise<void> {
+    this.choosingFolder.set(true);
+    const result = await this.folder.choose();
+    this.choosingFolder.set(false);
+
+    // A cancelled picker is not an error and must not produce a toast.
+    if (result.ok) {
+      this.messages.add({
+        severity: 'success',
+        summary: this.translate.instant('backup.folder.chosen'),
+      });
+      await this.refresh();
+    }
+  }
+
+  protected async clearFolder(): Promise<void> {
+    await this.folder.clear();
+    this.messages.add({
+      severity: 'success',
+      summary: this.translate.instant('backup.folder.cleared'),
+    });
+    await this.refresh();
+  }
+
+  protected async copyToFolderNow(): Promise<void> {
+    this.copyingToFolder.set(true);
+    const result = await this.folder.copyNow();
+    this.copyingToFolder.set(false);
+
+    this.messages.add({
+      severity: result.error === undefined ? 'success' : 'error',
+      summary: this.translate.instant(
+        result.error === undefined ? 'backup.folder.copied' : 'backup.folder.copyFailed',
+      ),
+    });
+    await this.refresh();
+  }
+
+  protected async openFolder(): Promise<void> {
+    await this.folder.openFolder();
+  }
+
+  /** Turns the stored errno into a sentence, through an allow-list. */
+  protected folderErrorMessage(): string {
+    const code = this.folderState().lastError;
+
+    if (code === null) {
+      return '';
+    }
+
+    const known = KNOWN_FOLDER_ERRORS.has(code) ? code : 'unknown';
+
+    return this.translate.instant(`backup.folder.errors.${known}`, { code });
   }
 
   /** The automatic sync already follows every backup; this is for impatience. */

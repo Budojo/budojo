@@ -8,6 +8,7 @@ import {
 } from '../../core/services/desktop-backup.service';
 import { DesktopKeysService } from '../../core/services/desktop-keys.service';
 import { DriveSyncService } from '../../core/services/drive-sync.service';
+import { BackupFolderService } from '../../core/services/backup-folder.service';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
 /**
@@ -32,6 +33,7 @@ describe('BackupComponent', () => {
     overrides: Partial<DesktopBackupService> = {},
     keysOverrides: Partial<DesktopKeysService> = {},
     driveOverrides: Partial<DriveSyncService> = {},
+    folderOverrides: Partial<BackupFolderService> = {},
   ) {
     const added: unknown[] = [];
     const backup: Partial<DesktopBackupService> = {
@@ -59,6 +61,22 @@ describe('BackupComponent', () => {
       syncNow: vi.fn(async () => ({ ran: true, uploaded: 1 })),
       ...driveOverrides,
     };
+    // Default: no folder bridge, like the web — the card is hidden and every
+    // pre-existing test is untouched.
+    const folder: Partial<BackupFolderService> = {
+      available: false,
+      state: vi.fn(async () => ({
+        folder: null,
+        lastCopyAt: null,
+        lastError: null,
+        lastErrorAt: null,
+      })),
+      choose: vi.fn(async () => ({ ok: false })),
+      clear: vi.fn(async () => undefined),
+      copyNow: vi.fn(async () => ({ ran: true, copied: 1 })),
+      openFolder: vi.fn(async () => undefined),
+      ...folderOverrides,
+    };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -68,6 +86,7 @@ describe('BackupComponent', () => {
         { provide: DesktopBackupService, useValue: backup },
         { provide: DesktopKeysService, useValue: keys },
         { provide: DriveSyncService, useValue: drive },
+        { provide: BackupFolderService, useValue: folder },
       ],
     });
     // Spy on add() so the assertions read the toasts without stubbing the
@@ -75,7 +94,7 @@ describe('BackupComponent', () => {
     vi.spyOn(TestBed.inject(MessageService), 'add').mockImplementation((m) => added.push(m));
     const fixture = TestBed.createComponent(BackupComponent);
     fixture.detectChanges();
-    return { fixture, backup, keys, drive, added };
+    return { fixture, backup, keys, drive, folder, added };
   }
 
   /**
@@ -223,13 +242,14 @@ describe('BackupComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-cy="drive-sync"]')).toBeNull();
     });
 
-    it('says the feature is unavailable when the build has no google client', async () => {
-      // Not the same as "not connected": offering a Connect button here would
-      // open a Google error page.
+    // Changed in #1320: it used to say "this build cannot connect to Google
+    // Drive". Beside a backup folder that works, an announced feature that
+    // apologises for itself is worse than one that is simply absent.
+    it('hides the card entirely when the build has no google client', async () => {
       const { fixture } = setup({}, {}, { available: true });
       await settle(fixture);
 
-      expect(fixture.nativeElement.querySelector('[data-cy="drive-unavailable"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="drive-sync"]')).toBeNull();
       expect(fixture.nativeElement.querySelector('[data-cy="drive-connect"]')).toBeNull();
     });
 
@@ -381,6 +401,84 @@ describe('BackupComponent', () => {
       ).disconnectDrive();
 
       expect(drive.unlink).toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * Backup folder (#1320). The card carries the same weight the Drive one did:
+   * copies fail silently by design, so this page is the only alarm there is.
+   */
+  describe('backup folder', () => {
+    const chosen = (over: Record<string, unknown> = {}) => ({
+      available: true,
+      state: vi.fn(async () => ({
+        folder: 'D:/OneDrive/Budojo',
+        lastCopyAt: '2026-08-17T09:00:00Z',
+        lastError: null,
+        lastErrorAt: null,
+        ...over,
+      })),
+    });
+
+    it('hides the card outside the desktop app', async () => {
+      const { fixture } = setup();
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="backup-folder"]')).toBeNull();
+    });
+
+    it('offers to choose a folder when none is set', async () => {
+      const { fixture } = setup({}, {}, {}, { available: true });
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="folder-choose"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="folder-path"]')).toBeNull();
+    });
+
+    it('shows the chosen path and the last copy time', async () => {
+      const { fixture } = setup({}, {}, {}, chosen());
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="folder-path"]')?.textContent).toContain(
+        'D:/OneDrive/Budojo',
+      );
+      expect(fixture.nativeElement.querySelector('[data-cy="folder-last-copy"]')).not.toBeNull();
+    });
+
+    // The reason silent failures are acceptable: this line is the only thing
+    // between a folder that has been unplugged for a month and never knowing.
+    it('surfaces a copy failure, and keeps the last success beside it', async () => {
+      const { fixture } = setup({}, {}, {}, chosen({ lastError: 'ENOENT' }));
+      await settle(fixture);
+
+      expect(fixture.nativeElement.querySelector('[data-cy="folder-error"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-cy="folder-last-copy"]')).not.toBeNull();
+    });
+
+    it('never renders a raw i18n key for an unrecognised errno', async () => {
+      const { fixture } = setup({}, {}, {}, chosen({ lastError: 'EBUSY' }));
+      await settle(fixture);
+
+      const text =
+        fixture.nativeElement.querySelector('[data-cy="folder-error"]')?.textContent ?? '';
+      expect(text).not.toContain('backup.folder.errors');
+      expect(text).toContain('EBUSY');
+    });
+
+    it('does not toast when the owner cancels the picker', async () => {
+      const { fixture, added } = setup(
+        {},
+        {},
+        {},
+        { available: true, choose: vi.fn(async () => ({ ok: false })) },
+      );
+      await settle(fixture);
+
+      await (
+        fixture.componentInstance as unknown as { chooseFolder(): Promise<void> }
+      ).chooseFolder();
+
+      expect(added).toHaveLength(0);
     });
   });
 });

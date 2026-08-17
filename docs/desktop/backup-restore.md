@@ -31,25 +31,19 @@ Backups are taken **automatically every 6 hours** the app is open, and you can t
 1. Leave the app open enough that the 6-hourly automatic backup runs, and hit **Back up now** before anything risky (an upgrade, moving machines).
 2. **Get the archives off this machine.** The `backups\` folder is on the same disk that might die — an on-disk backup does not survive a dead disk.
 
-   The easy way is **Data & backup → Google Drive backup → Connect Google Drive** ([#1301](https://github.com/Budojo/budojo/issues/1301)). Every backup is then copied to a folder called `Budojo` in your Drive, automatically, and the seven most recent are kept there as well. It is off until you connect an account, and nothing leaves this computer before you do.
+   The easy way is **Data & backup → Backup folder → Choose folder** ([#1320](https://github.com/Budojo/budojo/issues/1320)): pick a folder your cloud service already syncs, or an external drive, and every backup is copied there automatically. It is off until you choose one, and nothing leaves this computer before you do.
 
-   Without it, copy the latest `budojo-backup-*.zip` into a synced folder or onto an external drive yourself — on a schedule you'll actually keep, which is the part that tends not to happen.
+   Without it, you are copying `budojo-backup-*.zip` by hand on a schedule you'll actually keep — which is the part that tends not to happen.
 
 That protects your **bulk data**. For the encrypted documents there is one more thing to understand — read on.
 
-## Backing up to Google Drive
+## Getting backups off this computer
 
-**Data & backup → Google Drive backup → Connect Google Drive** opens Google in your browser. Approve it and the app is connected; nothing else to configure.
+**Data & backup → Backup folder → Choose folder.** Pick any folder and every backup is copied there — the six-hourly ones and the ones you take by hand.
 
-After that, every backup — the six-hourly ones and the ones you take by hand — is copied to a folder named **`Budojo`** in your Drive. The seven most recent are kept there, the same as on this computer.
+The useful choice is a folder your cloud service already syncs: OneDrive, Dropbox, iCloud Drive, the Google Drive desktop app. Budojo writes the file; the sync client you already run carries it off the machine. A network drive or a USB stick works exactly the same way.
 
-The folder is a normal, visible one on purpose. If this machine stops working entirely you can open Google Drive in any browser, download the newest `budojo-backup-*.zip` and carry it to the new one — no Budojo required to get your data back.
-
-**Budojo can only see the files it created.** The permission it asks for (`drive.file`) does not let it read the rest of your Drive.
-
-### What it does not solve
-
-**The recovery code is never uploaded, and that is deliberate.** The archive already excludes your encryption keys ([see below](#the-part-that-can-silently-fail-encryption-keys)); putting them in the same Google account would mean one compromised login exposes both the archive and everything needed to read the medical certificates inside it. Save the recovery code in a password manager, by hand, once. Nothing about Drive sync changes that.
+Budojo keeps the **seven** most recent archives there, the same as on this computer, and **touches nothing else in that folder** — anything it did not create is left alone.
 
 ### If it stops working
 
@@ -57,13 +51,18 @@ Failures are quiet, because the copy on this computer has already been written a
 
 | What it says | What to do |
 |---|---|
-| Google revoked the connection | Reconnect the account. This happens if you removed Budojo's access from your Google account. |
-| This Google account is out of space | Free some up, or connect a different account. |
-| No connection to Google | Nothing — it retries at the next backup. Backups are still being saved on this computer. |
+| The folder no longer exists | Choose it again, or pick a new one. Usually an unplugged drive or a folder that was moved. |
+| No permission to write | Choose a different folder. |
+| Out of space | Free some up, or choose a different one. |
+| Read-only | Usually a write-protected USB stick. Choose a different folder. |
 
-**"Last copied" is the number to read**, not the error. It tells you how old the newest copy in your Drive is, which is what actually matters if this disk dies tonight.
+**"Last copied" is the number to read**, not the error. It tells you how old the newest copy over there is, which is what actually matters if this disk dies tonight.
 
-**Disconnecting** stops the copying and forgets the account. Archives already in your Drive are left alone — disconnecting is not a delete.
+**Stopping** the copying leaves the archives already in that folder alone — it is not a delete.
+
+### What it does not solve
+
+**The recovery code is not in the folder, and that is deliberate.** The archive already excludes your encryption keys ([see below](#the-part-that-can-silently-fail-encryption-keys)). Save the recovery code in a password manager, by hand, once — copying backups somewhere changes nothing about that.
 
 ## Restoring
 
@@ -119,7 +118,7 @@ Also worth knowing:
 ## Quick recovery checklist
 
 1. Install Budojo on the new machine and let it finish first-run setup.
-2. Get your latest `budojo-backup-*.zip` onto the machine — download it from the `Budojo` folder in your Google Drive if you connected one, otherwise copy it from wherever you keep it.
+2. Get your latest `budojo-backup-*.zip` onto the machine — from your backup folder if you set one up, otherwise from wherever you keep them.
 3. **Data & backup → Restore →** pick the archive → confirm.
 4. **Data & backup → Recovery keys → Restore keys from a recovery code →** paste the code you saved → confirm. Budojo restarts under the original keys.
 5. Verify: athletes, attendance and payments are present, and a medical certificate downloads. ✅
