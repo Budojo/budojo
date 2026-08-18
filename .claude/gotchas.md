@@ -42,6 +42,8 @@ Format: `→` separates the symptom from the action.
 
 ### SCSS / layout
 
+- Spacing between inline elements that comes from **the template's line wrapping** rather than from CSS: Angular renders an element whose text sits on its own line as ` label ` (leading + trailing space), while a sibling written inline gets none. The More footer read `Aiuto · Privacy ·v2.45.0` for that reason, and nobody noticed while the last item was a short muted `dev` (#1344). Prettier rejoining a short element removes the space again with no visible diff → lay it out with `display: flex` + `gap` so the spacing is a declared value. **And do not probe it with `textContent`**: the raw text node carries the template's own newlines, so a collapsed-whitespace assertion passes whether the gap renders or not — measure `getBoundingClientRect()` instead. Wrote exactly that useless assertion first; it passed against the unfixed build.
+
 - `cy.viewport(1440, …)` in a headless Cypress run whose browser window is 1280 wide → the screenshot is **clipped, not scaled**, and everything past 1280px is silently missing from the image. Spent a round concluding a progress bar "did not render" when the assertions said it was visible. Either match the viewport to the capture width, or trust the measured assertion (`should('be.visible')`, `getBoundingClientRect`, `scrollWidth <= clientWidth`) over the picture — the picture is the weaker evidence of the two.
 
 - A class written into the template but never given a rule renders **unstyled, not broken** — no lint, no failing spec, no visual diff in a unit test. Before pushing a component whose template you touched, diff the two sides:
