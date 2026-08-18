@@ -20,6 +20,7 @@ const NAVIGATE_CHANNEL = 'budojo:navigate';
 const TOKEN_GET = 'budojo:token:get';
 const TOKEN_SET = 'budojo:token:set';
 const TOKEN_CLEAR = 'budojo:token:clear';
+const UPDATE_STATUS_CHANNEL = 'budojo:update:status';
 
 function readApiBase(): string {
   const flag = process.argv.find((argument) => argument.startsWith(API_BASE_FLAG));
@@ -87,6 +88,18 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     clear: () => ipcRenderer.invoke('budojo:folder:clear'),
     copy: () => ipcRenderer.invoke('budojo:folder:copy'),
     open: () => ipcRenderer.invoke('budojo:folder:open'),
+  },
+  // Auto-update progress (#1339). `status()` answers the current state for the
+  // first paint; `onStatus` pushes every change after that, so a download that
+  // starts while the window is open shows up without polling.
+  update: {
+    status: () => ipcRenderer.invoke('budojo:update:status'),
+    onStatus(callback: (status: unknown) => void): () => void {
+      const listener = (_event: unknown, status: unknown): void => callback(status);
+      ipcRenderer.on(UPDATE_STATUS_CHANNEL, listener);
+
+      return () => ipcRenderer.removeListener(UPDATE_STATUS_CHANNEL, listener);
+    },
   },
   // Recovery keys (#1254). Export decrypts the keychain store into a copy-
   // pasteable code; import writes it back and the app relaunches under the new

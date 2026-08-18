@@ -20,6 +20,14 @@ import { TokenVault } from './token-vault.js';
 import { PeriodicTask } from './periodic-task.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
 import { decodeRecoveryCode, encodeRecoveryCode } from './recovery-keys.js';
+import {
+  idleUpdateStatus,
+  onDownloadProgress,
+  onUpdateAvailable,
+  onUpdateDownloaded,
+  onUpdateError,
+  type UpdateStatus,
+} from './update-status.js';
 import { planUpdateCheck, updateFailureLine, updateReadyMessage } from './update-policy.js';
 // electron-updater is CommonJS and, under ESM, exposes NOTHING as a named
 // export — `import { autoUpdater }` is silently `undefined` (same class as the
@@ -711,6 +719,17 @@ function registerBackupBridge(
  * is the only thing that makes the bootstrap re-read `secrets.bin` and boot
  * PHP under the new keys — a window reload would keep the old ones.
  */
+/**
+ * The renderer asks once on boot; every change after that is pushed (#1339).
+ *
+ * Both halves are needed. Without the pull, a window opened after a download
+ * finished shows nothing until the next six-hourly check. Without the push, a
+ * download that starts while the window is open is invisible until a reload.
+ */
+function registerUpdateBridge(): void {
+  ipcMain.handle('budojo:update:status', () => updateStatus);
+}
+
 function registerRecoveryKeysBridge(): void {
   const secretsFile = dataLayout(app.getPath('userData')).secretsFile;
 
@@ -770,6 +789,29 @@ function registerRecoveryKeysBridge(): void {
  * Returns the polling task so the caller can stop it on quit, or `null` when
  * this build must not update itself (see `planUpdateCheck`).
  */
+/**
+ * The update state the renderer paints as a bar (#1339).
+ *
+ * Module-level rather than threaded through, because it has exactly one writer
+ * (the updater's event handlers) and two readers (the `status` handler, for the
+ * first paint, and the push below). It stays `idle` forever in a build that
+ * does not self-update, which is the correct answer for one.
+ */
+let updateStatus: UpdateStatus = idleUpdateStatus();
+
+function publishUpdateStatus(next: UpdateStatus): void {
+  updateStatus = next;
+
+  // Every window, not just the focused one, and never a destroyed one — a
+  // send to a disposed webContents throws and would take the updater's event
+  // handler down with it.
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) {
+      window.webContents.send('budojo:update:status', next);
+    }
+  }
+}
+
 function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
   const decision = planUpdateCheck({
     packaged: app.isPackaged,
@@ -792,18 +834,27 @@ function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
 
   updater.on('checking-for-update', () => log('[update] checking'));
   updater.on('update-not-available', () => log('[update] already current'));
-  updater.on('update-available', (info: { version: string }) =>
-    log(`[update] ${info.version} available, downloading`),
+  updater.on('update-available', (info: { version: string }) => {
+    log(`[update] ${info.version} available, downloading`);
+    publishUpdateStatus(onUpdateAvailable(updateStatus, info.version));
+  });
+  // Not logged: this fires many times a second, and a rotating log full of
+  // percentages is a rotating log with nothing else left in it.
+  updater.on('download-progress', (progress: { percent: number }) =>
+    publishUpdateStatus(onDownloadProgress(updateStatus, progress.percent)),
   );
   updater.on('update-downloaded', (info: { version: string }) => {
     log(`[update] ${info.version} downloaded — installs on quit`);
+    publishUpdateStatus(onUpdateDownloaded(updateStatus, info.version));
     const { title, body } = updateReadyMessage(info.version);
     new Notification({ title, body }).show();
   });
   updater.on('error', (error: Error) => {
     // Offline, rate-limited, release yanked — none of these are worth a dialog
-    // or a crash. The log is where a maintainer looks; the user sees nothing.
+    // or a crash. The log is where a maintainer looks; the user sees nothing,
+    // and an already-downloaded update keeps its bar (see `onUpdateError`).
     log(`[update] check failed: ${updateFailureLine(error.message)}`);
+    publishUpdateStatus(onUpdateError(updateStatus));
   });
 
   const poll = new PeriodicTask({
@@ -875,6 +926,7 @@ if (!gotTheLock) {
     registerAppProtocol();
     registerTokenVault();
     registerRecoveryKeysBridge();
+    registerUpdateBridge();
 
     // Registered before the runtime starts, and independent of it: an install
     // that cannot boot its API should still be able to update itself out of

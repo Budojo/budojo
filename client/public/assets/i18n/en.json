@@ -2291,5 +2291,10 @@
         "unknown": "Could not copy to the backup folder ({{code}}). Backups are still being saved on this computer."
       }
     }
+  },
+  "update": {
+    "downloading": "Downloading update {{version}}…",
+    "percent": "{{percent}}%",
+    "ready": "Version {{version}} is ready — it installs when you close Budojo"
   }
 }

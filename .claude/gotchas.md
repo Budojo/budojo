@@ -42,6 +42,8 @@ Format: `→` separates the symptom from the action.
 
 ### SCSS / layout
 
+- `cy.viewport(1440, …)` in a headless Cypress run whose browser window is 1280 wide → the screenshot is **clipped, not scaled**, and everything past 1280px is silently missing from the image. Spent a round concluding a progress bar "did not render" when the assertions said it was visible. Either match the viewport to the capture width, or trust the measured assertion (`should('be.visible')`, `getBoundingClientRect`, `scrollWidth <= clientWidth`) over the picture — the picture is the weaker evidence of the two.
+
 - A class written into the template but never given a rule renders **unstyled, not broken** — no lint, no failing spec, no visual diff in a unit test. Before pushing a component whose template you touched, diff the two sides:
 
   ```bash
@@ -112,6 +114,8 @@ Format: `→` separates the symptom from the action.
 - Angular dev server returned `403 Forbidden` when Cypress (running in a sibling docker container) hit `http://client:4200/dashboard/*` — Angular 21's `@angular/build:dev-server` has a default `allowedHosts: ['localhost']` for CSRF-style safety and rejects any other `Host` header. Fix: add explicit entries to `angular.json` → `projects.client.architect.serve.options.allowedHosts` (we use `["client", "localhost", "host.docker.internal"]`). Requires a dev server restart: `docker compose restart client`.
 
 ## Tests — Vitest
+
+- A spec that assigns to a **global** (`window.__BUDOJO__`, `globalThis.*`) and clears it in `beforeEach` still leaks: `beforeEach` protects only that file's own tests, and the LAST test leaves the global set for whatever runs next in the same worker. Clear it in **`afterEach`** — every existing bridge spec already does. Caught as a 2-in-3 flake where `desktop-bridge.service.spec.ts`'s "no bridge on the web" case saw a bridge left behind by a new component spec (#1339). It only ever appears in a full-suite run, which is why the rule is to run the whole client suite when adding a spec file.
 
 ### Vitest — gate coverage
 

@@ -1,0 +1,86 @@
+/**
+ * The update bar (#1339).
+ *
+ * Deliberately quiet. This sits above every screen in the app, and an update
+ * downloading in the background is not news — it is the app doing its job. A
+ * coloured strip demanding attention for something the owner cannot act on and
+ * does not need to act on would be a worse outcome than the silence it
+ * replaces.
+ *
+ * So: surface colours, muted text, and the only accent is the progress fill.
+ */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--p-text-color-secondary);
+  background: var(--p-content-background);
+  border-bottom: 1px solid var(--p-content-border-color);
+
+  &__icon {
+    flex: 0 0 auto;
+    font-size: 0.875rem;
+  }
+
+  // Takes the slack so the percentage and the track stay put as the version
+  // string changes width between builds.
+  &__text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__percent {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    color: var(--p-text-color);
+  }
+
+  // A bar rather than a spinner: the download is long enough that "how much
+  // longer" is the actual question, and a percentage alone is harder to read at
+  // a glance than a length.
+  &__track {
+    flex: 0 0 6rem;
+    height: 0.25rem;
+    overflow: hidden;
+    background: var(--p-surface-200);
+    border-radius: 999px;
+  }
+
+  &__fill {
+    display: block;
+    height: 100%;
+    background: var(--p-primary-color);
+    border-radius: inherit;
+    transition: width 200ms linear;
+  }
+
+  &--ready &__text {
+    color: var(--p-text-color);
+  }
+
+  &--ready &__icon {
+    color: var(--p-primary-color);
+  }
+}
+
+// The fill animates on every progress event — several times a second on a fast
+// connection. Honour the preference rather than pulsing at the top of the
+// screen for someone who asked the system not to.
+@media (prefers-reduced-motion: reduce) {
+  .update-banner__fill {
+    transition: none;
+  }
+}
+
+// On a narrow window the track is the first thing to go: the sentence and the
+// percentage both still say everything the bar exists to say.
+@media (max-width: 30rem) {
+  .update-banner__track {
+    display: none;
+  }
+}
