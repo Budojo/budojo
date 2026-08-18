@@ -25,7 +25,7 @@ Format: `→` separates the symptom from the action.
 ### Angular templates & a11y
 
 - `[attr.aria-hidden]="!X && null"` evaluates wrong (`null` when closed, `false` when open) → use CSS `visibility: hidden` with a media query, or a viewport-aware signal. `transform: translateX(-100%)` alone does NOT hide from screen readers.
-- `[class.foo]="cond"` with no matching `.foo {}` rule in the SCSS → grep the SCSS for the class before committing. Dead state is a code smell Copilot flags.
+- `[class.foo]="cond"` with no matching `.foo {}` rule in the SCSS → grep the SCSS for the class before committing. Dead state is a code smell Copilot flags. The same hole swallows a **plain `class="…"`** too, and there it is worse: the element still renders, so nothing looks broken in a test or a screenshot review — it is just unstyled. `.backup-page__drive-actions` shipped that way in #1301 and #1320 and reached a packaged build with every button flush against the next (#1328). Nothing lints this; the check below is the only guard.
 - Icon-only button without `pTooltip` or `ariaLabel` → always add one. Canon § Norman.
 - Reading `route.snapshot.fragment` (or `.params` / `.queryParams`) once in `ngOnInit` to drive a scroll / highlight / data fetch → a same-route, fragment-or-param-only `navigateByUrl` (e.g. a foreground push toast deep-linking to the page the user is ALREADY on) reuses the component, so `ngOnInit` never re-runs and the one-shot snapshot read silently no-ops. Subscribe to the `route.fragment` (/`paramMap`/`queryParamMap`) observable — it emits the current value on subscribe AND on every change — and re-run the handler per emission. Caught on the #1071 release re-review.
 - Swapping inline error/empty/state markup for a shared component (a #1033-style adoption pass) leaves three orphans the reviewer WILL flag — sweep all three in the SAME PR: (1) the now-unused i18n keys (the old `errorBody` / `loadErrorDetail`), (2) the dead `&__error` SCSS the inline markup carried (the `&__empty` sibling usually stays in use — drop only the migrated selector), (3) heading level — a shared component that defaults its title to `<h2>` produces sibling `<h2>`s when dropped into a section that already has one, so pass `[headingLevel]="3"` to nest it (page-header `<h1>` hosts are fine at the default h2). All three flagged across #1079's review rounds.
@@ -41,6 +41,16 @@ Format: `→` separates the symptom from the action.
 ## Frontend — SCSS, design system & shared components
 
 ### SCSS / layout
+
+- A class written into the template but never given a rule renders **unstyled, not broken** — no lint, no failing spec, no visual diff in a unit test. Before pushing a component whose template you touched, diff the two sides:
+
+  ```bash
+  cd client/src/app/features/<feature>
+  comm -23 <(grep -oE '\b<prefix>__[a-z-]+' *.html | sort -u) \
+           <(grep -oE '^\s*&(__|--)[a-z-]+' *.scss | tr -d ' ' | sed 's/^&/<prefix>/' | sort -u)
+  ```
+
+  Anything the left-hand side prints has no rule. Nested modifiers (`&--muted` inside `&__summary-value`) show up as false positives — check those by eye, they are few.
 
 - Z-index stack forgets the drawer-open state → when adding an off-canvas drawer + backdrop + topbar, write the z-index ordering as a comment. Backdrop below topbar so the trigger stays tappable while open.
 - Inventing spacing values (`0.75rem`, `1.75rem`, `0.125rem`) → canon § MD3 8dp grid. Only `0.5rem / 1rem / 1.5rem / 2rem`.

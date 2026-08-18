@@ -44,6 +44,45 @@
     color: var(--p-text-muted-color);
   }
 
+  // Both the folder card and the Drive card use this row, and it had no rule at
+  // all: the buttons rendered as inline elements flush against each other, which
+  // by proximity alone reads as one control rather than three. Same gap as
+  // `&__keys-actions` — every actions row on this page should look identical.
+  &__drive-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  &__drive-account {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  &__drive-error {
+    color: var(--p-red-600);
+    margin-top: 0.5rem;
+  }
+
+  &__skeletons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__row-where {
+    display: inline-flex;
+    align-items: center;
+    color: var(--p-text-muted-color);
+  }
+
+  &__row-note {
+    color: var(--p-text-muted-color);
+    font-size: 0.875rem;
+  }
+
   &__list {
     list-style: none;
     margin: 0;
