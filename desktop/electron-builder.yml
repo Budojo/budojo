@@ -130,6 +130,24 @@ extraResources:
       - "!storage/framework/testing/**"
       - "!storage/app/**"
       - "!database/sqlite/**"
+      # Laravel's compiled caches. `bootstrap/cache/packages.php` and
+      # `services.php` are package discovery — safe, and worth shipping, so this
+      # is deliberately NOT a blanket `bootstrap/cache/**`.
+      #
+      # `config.php` is the dangerous sibling: its presence makes Laravel ignore
+      # every file in `config/`, freezing the shipped app's entire configuration
+      # at whatever the packaging machine had. On the desktop build two of those
+      # values are per-launch — `APP_URL` is `http://127.0.0.1:<ephemeral port>`,
+      # and `Storage::disk('public')->url()` is built from it, so a stale one
+      # breaks every avatar, logo and thumbnail with a symptom identical to
+      # #1302 and a completely unrelated cause. `DB_DATABASE` and
+      # `LARAVEL_STORAGE_PATH` point into the per-user data directory (#1223).
+      #
+      # Nothing in the repo writes these today; one `php artisan optimize` on a
+      # packaging machine is all it takes (#1315).
+      - "!bootstrap/cache/config.php"
+      - "!bootstrap/cache/routes-*.php"
+      - "!bootstrap/cache/events.php"
       - "!node_modules/**"
       - "!.git*"
       - "!phpunit.xml"
