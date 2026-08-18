@@ -98,6 +98,8 @@ npm test                             # vitest run
 - **`package.json` stays at version `0.0.0`** — semantic-release owns versioning; CI injects the real version with `-c.extraMetadata.version`.
 - The PHP runtime is **not committed**: `runtime/php.manifest.json` pins version + sha256 and `fetch:php` verifies the download before extracting. Bump the manifest, never hand-drop a binary.
 - `extraResources` layout (`resources/php`, `resources/server`) is a **contract** with `resolveDesktopPaths` — changing one means changing both.
+- **`bootstrap/cache/config.php` must never ship.** Laravel ignores every file in `config/` when it exists, so the shipped app's configuration freezes at the packaging machine's values — including `APP_URL`, which here is `http://127.0.0.1:<ephemeral port>` and different on every launch. `Storage::disk('public')->url()` is built from it, so a stale one breaks every avatar, logo and thumbnail with a symptom identical to #1302 and an unrelated cause. Excluded in `electron-builder.yml` and refused by `npm run check:package`, which `dist` runs before `electron-builder` (#1315). `packages.php` / `services.php` are package discovery — safe, and deliberately shipped, which is why the exclusion is not a blanket `bootstrap/cache/**`.
+- **The guard is narrow on purpose.** It refuses only the compiled caches, not `.env` / `database/sqlite/` / PEST scratch — those are normal in a development checkout, and a check that fails every local `npm run dist` is one everyone learns to skip.
 - A zero exit code from a packager/extractor does not mean it worked. Verify the artefact exists afterwards; both `fetch-php.mjs` and the installer CI do this explicitly.
 
 ## What Claude Should Always Do — desktop-specific
