@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
-import { BackupService } from './backup.js';
+import { BackupService, RETENTION } from './backup.js';
 import { createBackupIO } from './backup-io.js';
 import { createFolderCopyIO } from './folder-copy-io.js';
 import { FolderCopyService } from './folder-copy-service.js';
@@ -398,9 +398,10 @@ async function startRuntime(): Promise<{
 
   // Local backup (#1228) — the single most important safety net once managed
   // infrastructure is gone. VACUUM INTO + storage + manifest, zipped under
-  // userData/backups, seven kept. A scheduled pass every six hours means any
-  // day the app is opened produces a recent archive; each run is a quick
-  // vacuum of a single-user database.
+  // userData/backups, held to `RETENTION` (see backup.ts: a dense recent tier
+  // plus one archive a day behind it, #1330). A scheduled pass every six hours
+  // means any day the app is opened produces a recent archive; each run is a
+  // quick vacuum of a single-user database.
   const backupLog = new RotatingLog(path.join(layout.logsDir, 'backup.log'));
   backupLog.open();
   const backupService = new BackupService({
@@ -414,7 +415,7 @@ async function startRuntime(): Promise<{
       backupsDir: layout.backupsDir,
     }),
     appVersion: app.getVersion(),
-    retentionKeep: 7,
+    retention: RETENTION,
     log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
   });
   // Drive sync (#1301). Off unless the owner connected an account, and off
@@ -442,7 +443,7 @@ async function startRuntime(): Promise<{
       backupService,
       log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
     }),
-    7,
+    RETENTION,
   );
 
   const backupPoll = new PeriodicTask({

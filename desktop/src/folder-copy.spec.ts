@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { RETENTION } from './backup.js';
 import { describeCopyError, planFolderCopy } from './folder-copy.js';
 
 /**
@@ -24,7 +25,7 @@ const there = (name: string, sizeBytes = 100) => ({ name, sizeBytes });
 
 describe('planFolderCopy', () => {
   it('copies an archive the folder does not have', () => {
-    const plan = planFolderCopy([local('budojo-backup-20260817-090000.zip')], [], 7);
+    const plan = planFolderCopy([local('budojo-backup-20260817-090000.zip')], [], RETENTION);
 
     expect(plan.toCopy).toEqual(['budojo-backup-20260817-090000.zip']);
     expect(plan.toDelete).toEqual([]);
@@ -33,12 +34,12 @@ describe('planFolderCopy', () => {
   it('copies nothing when the folder is already up to date', () => {
     const name = 'budojo-backup-20260817-090000.zip';
 
-    expect(planFolderCopy([local(name)], [there(name)], 7).toCopy).toEqual([]);
+    expect(planFolderCopy([local(name)], [there(name)], RETENTION).toCopy).toEqual([]);
   });
 
   it('re-copies when the size differs — an interrupted copy is not a backup', () => {
     const name = 'budojo-backup-20260817-090000.zip';
-    const plan = planFolderCopy([local(name, 5_000)], [there(name, 12)], 7);
+    const plan = planFolderCopy([local(name, 5_000)], [there(name, 12)], RETENTION);
 
     expect(plan.toCopy).toEqual([name]);
   });
@@ -51,7 +52,7 @@ describe('planFolderCopy', () => {
         local('budojo-backup-20260816-090000.zip'),
       ],
       [],
-      7,
+      RETENTION,
     );
 
     expect(plan.toCopy[0]).toBe('budojo-backup-20260817-090000.zip');
@@ -63,15 +64,15 @@ describe('planFolderCopy', () => {
     const plan = planFolderCopy(
       [],
       [there('taxes-2025.pdf'), there('holiday.jpg'), there('budojo-notes.txt')],
-      1,
+      { keepRecent: 1, keepDays: 1 },
     );
 
     expect(plan.toDelete).toEqual([]);
   });
 
-  it('prunes only its own archives, once past the keep count', () => {
+  it('prunes only its own archives, once past what the policy holds', () => {
     const theirs = Array.from({ length: 9 }, (_, i) => there(`budojo-backup-2026080${i}-090000.zip`));
-    const plan = planFolderCopy([], [...theirs, there('important.docx')], 7);
+    const plan = planFolderCopy([], [...theirs, there('important.docx')], { keepRecent: 7, keepDays: 7 });
 
     expect(plan.toDelete).toEqual([
       'budojo-backup-20260800-090000.zip',
@@ -80,11 +81,11 @@ describe('planFolderCopy', () => {
     expect(plan.toDelete).not.toContain('important.docx');
   });
 
-  it('never deletes the newest archive, even asked to keep none', () => {
+  it('never deletes the newest archive, even asked to keep nothing', () => {
     const plan = planFolderCopy(
       [],
       [there('budojo-backup-20260815-090000.zip'), there('budojo-backup-20260817-090000.zip')],
-      0,
+      { keepRecent: 0, keepDays: 0 },
     );
 
     expect(plan.toDelete).toEqual(['budojo-backup-20260815-090000.zip']);
@@ -96,7 +97,7 @@ describe('planFolderCopy', () => {
     const theirs = Array.from({ length: 7 }, (_, i) => there(`budojo-backup-2026080${i}-090000.zip`));
     const locals = theirs.map((f) => local(f.name)).concat(local('budojo-backup-20260817-090000.zip'));
 
-    const plan = planFolderCopy(locals, theirs, 7);
+    const plan = planFolderCopy(locals, theirs, { keepRecent: 7, keepDays: 7 });
 
     expect(plan.toCopy).toEqual(['budojo-backup-20260817-090000.zip']);
     expect(plan.toDelete).toEqual(['budojo-backup-20260800-090000.zip']);

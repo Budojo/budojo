@@ -8,6 +8,7 @@ import {
   recordSuccess,
   serialiseState,
   unlinkedState,
+  type DriveState,
 } from './drive-state.js';
 
 /**
@@ -93,7 +94,7 @@ describe('recordFailure', () => {
   });
 
   it('counts consecutive failures', () => {
-    let state = { ...emptyState(), linked: true, account: 'a' };
+    let state: DriveState = { ...emptyState(), linked: true, account: 'a' };
     state = recordFailure(state, { at: now, error: 'network' });
     state = recordFailure(state, { at: now + 1, error: 'network' });
 

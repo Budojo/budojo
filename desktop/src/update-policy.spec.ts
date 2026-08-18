@@ -46,7 +46,7 @@ describe('planUpdateCheck', () => {
   });
 
   it('prefers the dev reason when several apply, so the log says something useful', () => {
-    const decision = planUpdateCheck({ packaged: false, dev: true, portableDir: 'C:\\x' });
+    const decision = planUpdateCheck({ packaged: false, dev: true, portableDir: 'C:\\x', version: '2.43.0' });
 
     expect(decision).toEqual({ check: false, reason: 'development run' });
   });

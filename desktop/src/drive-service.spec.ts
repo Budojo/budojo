@@ -81,8 +81,11 @@ describe('sync', () => {
   // only remote copy and then fail to upload its replacement.
   it('uploads before it deletes', async () => {
     const order: string[] = [];
+    // Nine archives from ONE day. The service owns its policy, so the way to
+    // force a prune is to give it something the policy must prune: the daily
+    // tier keeps one archive per day, and `keepRecent` cannot hold nine.
     const remotes = Array.from({ length: 9 }, (_, i) => ({
-      name: `budojo-backup-2026080${i}-090000.zip`,
+      name: `budojo-backup-20260801-0${i}0000.zip`,
       id: `id-${i}`,
       size: 100,
     }));

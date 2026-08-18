@@ -1,0 +1,17 @@
+{
+  // `tsconfig.json` excludes `*.spec.ts` because `npm run build` EMITS from it
+  // and the specs must not reach `dist/`. The side effect was that nothing
+  // typechecked them at all: a spec could pass a `number` where the module
+  // wanted an object and stay perfectly green until an assertion happened to
+  // notice. That is how #1330's policy change surfaced as eight runtime
+  // failures instead of eight compile errors.
+  //
+  // So the specs get their own project, checked by `npm run lint`, emitting
+  // nothing.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.cts"],
+  "exclude": []
+}

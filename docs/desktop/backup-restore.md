@@ -24,7 +24,22 @@ A backup archive is a zip in `%APPDATA%\Budojo\backups\`, named `budojo-backup-Y
 
 It **does not** contain `secrets.bin` — the encryption keys. That is deliberate; see [below](#the-part-that-can-silently-fail-encryption-keys).
 
-Backups are taken **automatically every 6 hours** the app is open, and you can take one any time from **Data & backup → Back up now**. The **7** most recent are kept; pruning always keeps at least the newest, so a retention bug can never delete your last good backup.
+Backups are taken **automatically every 6 hours** the app is open, and you can take one any time from **Data & backup → Back up now**.
+
+### How much history is kept
+
+Two tiers, because "I have just broken something" and "this went wrong some time last week" are different questions ([#1330](https://github.com/Budojo/budojo/issues/1330)):
+
+| Tier | Holds | Answers |
+|---|---|---|
+| Recent | the **6** newest archives, whatever day they fall on | the last ~36 hours, at six-hour resolution |
+| Daily | the **last archive of each of the 14 most recent days** the app ran | the fortnight behind it, one snapshot per day |
+
+That settles at roughly **18 archives** and about **two weeks** of history. The previous policy kept a flat seven, which at six-hour spacing was 42 hours — fine for an immediate mistake, useless for one nobody noticed until Monday.
+
+The daily tier counts **days the app actually ran**, not calendar days, so a fortnight away from the machine does not silently empty your history.
+
+Pruning always keeps at least the newest archive and never touches a file it did not create, whatever the policy says — a retention bug must not be able to delete your last good backup.
 
 ## Backing up (what you should actually do)
 
@@ -43,7 +58,7 @@ That protects your **bulk data**. For the encrypted documents there is one more 
 
 The useful choice is a folder your cloud service already syncs: OneDrive, Dropbox, iCloud Drive, the Google Drive desktop app. Budojo writes the file; the sync client you already run carries it off the machine. A network drive or a USB stick works exactly the same way.
 
-Budojo keeps the **seven** most recent archives there, the same as on this computer, and **touches nothing else in that folder** — anything it did not create is left alone.
+Budojo applies the **same retention there as on this computer** (six recent plus fourteen daily, ~18 archives), so the copy that survives a dead disk is not the shallower one. It **touches nothing else in that folder** — anything it did not create is left alone.
 
 ### If it stops working
 

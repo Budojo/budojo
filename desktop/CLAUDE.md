@@ -47,7 +47,7 @@ A new capability follows the same shape: engine + spec first, adapter second, on
 
 The default way backups leave the machine, and the one to reach for first: the owner picks a folder, every backup is copied there, and the sync client they already run does the rest. No account, no API, no token, no network code — and it covers OneDrive, Dropbox, iCloud, the Drive desktop client, a NAS and a USB stick at once.
 
-- **It is the owner's folder.** Never touch a file we did not create; only `budojo-backup-*.zip` is visible to any decision. Retention reuses `planRetention` (#1228) rather than reimplementing "never delete the newest".
+- **It is the owner's folder.** Never touch a file we did not create; only `budojo-backup-*.zip` is visible to any decision. Retention reuses `planRetention` (#1228, #1330) rather than reimplementing "never delete the newest", and uses the **same `RETENTION` as local** — a copy that survives the dead laptop is worth nothing if it is the shallower one.
 - **Copy before prune**, same as everywhere: pruning first can delete the only copy over there and then fail to write its replacement.
 - **Copy to `.partial`, then rename.** An interrupted copy under the real name looks like a backup and is not one — precisely what the size check exists to catch, and worth not creating in the first place.
 - **Failures are silent**, with the state on the page. Same reasoning as #1301, and the same consequence: the Backup page is the only alarm, so it has to show the last SUCCESS time beside the error.
@@ -67,14 +67,27 @@ Opt-in, off until the owner connects an account, and **off entirely in a build w
 
 `drive-io.ts` is deliberately untested: mocking `fetch` and a loopback socket asserts the mocks were called, not that Google accepts the request. It is harness territory, like `php.exe`.
 
+## Retention (#1228, #1330)
+
+`planRetention` is the one function here whose bugs destroy data rather than merely refusing to help, so it is written to be safe against its own caller.
+
+- **One policy, three destinations.** `RETENTION` in `backup.ts` is what local, the backup folder and Drive all use. Deliberate: a remote copy that is shallower than the local one is worth less exactly when it is needed.
+- **Two tiers, not a count.** `keepRecent` holds the newest N whatever their date; `keepDays` holds the last archive of each of the most recent N days *present*. A flat count cannot buy depth without buying density, and the archive contains every encrypted document.
+- **Counting days present, not calendar days,** is the point — the app only backs up while it runs, so a calendar window silently empties after a fortnight away.
+- **The invariants outrank the policy.** Whatever a caller passes, `planRetention` never proposes deleting the newest archive (`keepRecent` is floored at 1, never trusted) and never proposes deleting a file it did not create. Both have their own tests, under a describe block that says so.
+- **`isBackupArchive` is strict, and that is load-bearing.** It matches the full `budojo-backup-YYYYMMDD-HHMMSS.zip` shape, not prefix + suffix. The backup folder belongs to the owner and `budojo-backup-keep-1.zip` is a name a person plausibly types: recognised loosely it would be proposed for deletion, and — because a non-numeric third segment sorts *after* every `YYYYMMDD` — a handful of them would occupy the whole recent tier and push the real archives out of it. The generator is pinned to the recogniser by a test; if they drift, nothing is an archive any more.
+- Changing the numbers is a one-line change in `RETENTION`; changing the *shape* means the invariant tests must still pass untouched.
+- **`prune()` runs on the failure path too.** A run that dies before pruning leaves the directory over the policy, and if a full disk is what killed it, every later run dies identically. Best-effort and swallowed — the caller must see the real error, not one raised while tidying up after it.
+
 ## Testing
 
 ```bash
 ../.claude/scripts/test-desktop.sh   # both gates, from anywhere in the repo
-npm run lint                         # tsc -p tsconfig.json --noEmit
+npm run lint                         # tsc on BOTH projects: src, then the specs
 npm test                             # vitest run
 ```
 
+- **The specs are a second tsc project.** `tsconfig.json` excludes `*.spec.ts` because `npm run build` emits from it and specs must not reach `dist/`; `tsconfig.spec.json` checks them and emits nothing. `npm run lint` runs both. Without it the specs were unchecked entirely — a spec could pass a `number` where the module wanted an object and stay green until an assertion happened to notice (#1330).
 - **Unit (Vitest)**: every engine, exhaustively — including the refusal paths (a malformed manifest, a truncated recovery code, a newer-schema archive). Refusals are the point: they are what stands between a bug and unreadable data.
 - **Real-process harness** for anything that touches the actual runtime (PHP boot, backup/restore round-trip, document decryption). Write it as a throwaway `.mjs` against the compiled `dist/`, run it, and report the count in the PR — a green unit suite does not prove `php.exe` started. Do not commit harnesses; the PR body is their record.
 - The first boot of the bundled runtime takes ~10–15 s (Defender scans php.exe cold); every later boot is ~1 s. Never tune a readiness timeout against a warm number.

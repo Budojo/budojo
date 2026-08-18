@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { mergeArchiveViews, planSync, REMOTE_KEEP } from './drive-sync.js';
+import { mergeArchiveViews, planSync, REMOTE_RETENTION } from './drive-sync.js';
 
 /**
  * What to upload and what to delete (#1301). Pure decisions — no network, no
@@ -22,7 +22,7 @@ const remote = (name: string, id = `id-${name}`, size = 100) => ({ name, id, siz
 
 describe('planSync', () => {
   it('uploads a local archive the account has never seen', () => {
-    const plan = planSync([local('budojo-backup-20260816-120000.zip')], [], REMOTE_KEEP);
+    const plan = planSync([local('budojo-backup-20260816-120000.zip')], [], REMOTE_RETENTION);
 
     expect(plan.toUpload).toEqual(['budojo-backup-20260816-120000.zip']);
     expect(plan.toDelete).toEqual([]);
@@ -31,7 +31,7 @@ describe('planSync', () => {
   it('uploads nothing when the newest archive is already up there', () => {
     const name = 'budojo-backup-20260816-120000.zip';
 
-    expect(planSync([local(name)], [remote(name)], REMOTE_KEEP).toUpload).toEqual([]);
+    expect(planSync([local(name)], [remote(name)], REMOTE_RETENTION).toUpload).toEqual([]);
   });
 
   // Names carry a sortable timestamp, so "newest" is decidable without asking
@@ -44,7 +44,7 @@ describe('planSync', () => {
         local('budojo-backup-20260815-090000.zip'),
       ],
       [],
-      REMOTE_KEEP,
+      REMOTE_RETENTION,
     );
 
     expect(plan.toUpload[0]).toBe('budojo-backup-20260816-120000.zip');
@@ -52,45 +52,48 @@ describe('planSync', () => {
 
   it('re-uploads when the remote copy is a different size — a truncated upload is not a backup', () => {
     const name = 'budojo-backup-20260816-120000.zip';
-    const plan = planSync([local(name, 5_000)], [remote(name, 'id-1', 12)], REMOTE_KEEP);
+    const plan = planSync([local(name, 5_000)], [remote(name, 'id-1', 12)], REMOTE_RETENTION);
 
     expect(plan.toUpload).toEqual([name]);
     // The stunted copy goes, but only as part of replacing it.
     expect(plan.toDelete).toEqual(['id-1']);
   });
 
-  it('prunes the oldest once the account holds more than the keep count', () => {
-    const remotes = Array.from({ length: REMOTE_KEEP + 3 }, (_, i) =>
+  it('prunes the oldest once the account holds more than the policy keeps', () => {
+    const remotes = Array.from({ length: 10 }, (_, i) =>
       remote(`budojo-backup-2026080${i}-090000.zip`, `id-${i}`),
     );
 
-    const plan = planSync([], remotes, REMOTE_KEEP);
+    const plan = planSync([], remotes, { keepRecent: 7, keepDays: 7 });
 
     expect(plan.toDelete).toEqual(['id-0', 'id-1', 'id-2']);
   });
 
   // The retention rule #1228 established for local archives, restated for the
   // remote copy: a pruning bug must never be able to empty the account.
-  it('never deletes the newest, even asked to keep zero', () => {
+  it('never deletes the newest, even asked to keep nothing', () => {
     const remotes = [
       remote('budojo-backup-20260814-090000.zip', 'old'),
       remote('budojo-backup-20260816-120000.zip', 'newest'),
     ];
 
-    const plan = planSync([], remotes, 0);
+    const plan = planSync([], remotes, { keepRecent: 0, keepDays: 0 });
 
     expect(plan.toDelete).not.toContain('newest');
     expect(plan.toDelete).toEqual(['old']);
   });
 
   it('deletes nothing when the account is empty', () => {
-    expect(planSync([], [], REMOTE_KEEP).toDelete).toEqual([]);
+    expect(planSync([], [], REMOTE_RETENTION).toDelete).toEqual([]);
   });
 
   it('ignores remote files that are not backup archives', () => {
     // drive.file only sees files we created, but a stray one must not be
     // deleted just because it shares the folder.
-    const plan = planSync([], [remote('notes.txt', 'keep-me'), remote('photo.jpg', 'keep-me-too')], 1);
+    const plan = planSync([], [remote('notes.txt', 'keep-me'), remote('photo.jpg', 'keep-me-too')], {
+      keepRecent: 1,
+      keepDays: 1,
+    });
 
     expect(plan.toDelete).toEqual([]);
   });
@@ -108,7 +111,7 @@ describe('planSync — duplicates and post-upload retention', () => {
     const plan = planSync(
       [local(name, 5_000)],
       [remote(name, 'good', 5_000), remote(name, 'truncated', 12)],
-      REMOTE_KEEP,
+      REMOTE_RETENTION,
     );
 
     // A correct copy already exists, so nothing is re-uploaded...
@@ -119,7 +122,7 @@ describe('planSync — duplicates and post-upload retention', () => {
 
   it('re-uploads only when NO remote copy matches the local size', () => {
     const name = 'budojo-backup-20260816-120000.zip';
-    const plan = planSync([local(name, 5_000)], [remote(name, 'a', 12), remote(name, 'b', 99)], REMOTE_KEEP);
+    const plan = planSync([local(name, 5_000)], [remote(name, 'a', 12), remote(name, 'b', 99)], REMOTE_RETENTION);
 
     expect(plan.toUpload).toEqual([name]);
     expect(plan.toDelete).toEqual(expect.arrayContaining(['a', 'b']));
@@ -128,14 +131,14 @@ describe('planSync — duplicates and post-upload retention', () => {
   // Retention must plan against what will be up there AFTER the uploads land,
   // or the account settles one above the keep count forever.
   it('counts the archives about to be uploaded, so the account settles at the keep count', () => {
-    const remotes = Array.from({ length: REMOTE_KEEP }, (_, i) => {
+    const remotes = Array.from({ length: 7 }, (_, i) => {
       const name = `budojo-backup-2026080${i}-090000.zip`;
 
       return remote(name, `id-${i}`);
     });
     const locals = remotes.map((r) => local(r.name)).concat(local('budojo-backup-20260816-120000.zip'));
 
-    const plan = planSync(locals, remotes, REMOTE_KEEP);
+    const plan = planSync(locals, remotes, { keepRecent: 7, keepDays: 7 });
 
     expect(plan.toUpload).toEqual(['budojo-backup-20260816-120000.zip']);
     // 7 already there + 1 new = 8; exactly one must go to settle back at 7.
