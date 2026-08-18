@@ -96,6 +96,14 @@ describe('UpdateBannerComponent', () => {
       expect(text).toContain('47');
     });
 
+    it('offers no install action while it is still downloading', async () => {
+      // There is nothing on disk to install yet; a button here would quit the
+      // app to run an installer that does not exist.
+      const fixture = await setup();
+
+      expect(fixture.nativeElement.querySelector('[data-cy="update-banner-install"]')).toBeNull();
+    });
+
     it('exposes the progress to assistive technology, not only as a coloured width', async () => {
       const bar = (await setup()).nativeElement.querySelector('[role="progressbar"]');
 
@@ -122,6 +130,57 @@ describe('UpdateBannerComponent', () => {
 
       expect(fixture.nativeElement.querySelector('[data-cy="update-banner-ready"]')).not.toBeNull();
       expect(fixture.nativeElement.textContent).toContain('2.44.1');
+    });
+
+    // #1362 — closing the app installs silently, so someone who did that had no
+    // idea whether anything was happening. This is the second path, not a
+    // replacement for the first.
+    it('offers to run the installer now', async () => {
+      const fixture = await setup();
+
+      expect(
+        fixture.nativeElement.querySelector('[data-cy="update-banner-install"]'),
+      ).not.toBeNull();
+    });
+
+    it('asks the main process to install, and disables the button on the way in', async () => {
+      const installNow = vi.fn().mockResolvedValue({ ok: true });
+      bridgeWindow.__BUDOJO__ = stubBridge({
+        update: { status: async () => ({ phase: 'ready', version: '2.44.1' }), installNow },
+      });
+      const fixture = await setup();
+
+      const button: HTMLButtonElement = fixture.nativeElement.querySelector(
+        '[data-cy="update-banner-install"]',
+      );
+      button.click();
+      fixture.detectChanges();
+
+      expect(installNow).toHaveBeenCalled();
+      // A success never comes back — the app is quitting — so the button has to
+      // latch on the click rather than on a response.
+      expect(button.disabled).toBe(true);
+    });
+
+    it('re-enables the button when the main process refuses', async () => {
+      // The bar can outlive the download it describes. A refusal must not leave
+      // a dead control behind.
+      bridgeWindow.__BUDOJO__ = stubBridge({
+        update: {
+          status: async () => ({ phase: 'ready', version: '2.44.1' }),
+          installNow: async () => ({ ok: false }),
+        },
+      });
+      const fixture = await setup();
+
+      const button: HTMLButtonElement = fixture.nativeElement.querySelector(
+        '[data-cy="update-banner-install"]',
+      );
+      button.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(button.disabled).toBe(false);
     });
 
     it('drops the progress bar — there is no longer any progress to show', async () => {

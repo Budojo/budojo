@@ -60,6 +60,15 @@ import { TranslateModule } from '@ngx-translate/core';
             <span class="update-banner__text" data-cy="update-banner-ready">
               {{ 'update.ready' | translate: { version: current.version } }}
             </span>
+            <button
+              type="button"
+              class="update-banner__action"
+              [disabled]="installing()"
+              (click)="installNow()"
+              data-cy="update-banner-install"
+            >
+              {{ 'update.installNow' | translate }}
+            </button>
           </div>
         }
       }
@@ -72,6 +81,15 @@ export class UpdateBannerComponent {
 
   /** Null until the bridge answers, and whenever there is nothing to show. */
   protected readonly status = signal<UpdateStatus | null>(null);
+
+  /**
+   * Latched from the click, not from a response.
+   *
+   * A successful `installNow` never resolves in a way this component will see
+   * — the app is quitting. So the button disables on the way in, and only a
+   * refusal turns it back on.
+   */
+  protected readonly installing = signal(false);
 
   constructor() {
     const bridge = window.__BUDOJO__;
@@ -91,6 +109,33 @@ export class UpdateBannerComponent {
     // without polling for it.
     const unsubscribe = bridge.update.onStatus((current) => this.apply(current));
     this.destroyRef.onDestroy(unsubscribe);
+  }
+
+  /**
+   * Runs the installer now, visibly, instead of waiting for the next quit.
+   *
+   * The silent-install-on-quit path is untouched; this is the second one, for
+   * someone who would rather watch it happen than close the app and wonder.
+   */
+  protected installNow(): void {
+    const bridge = window.__BUDOJO__;
+
+    if (bridge === undefined || this.installing()) {
+      return;
+    }
+
+    this.installing.set(true);
+    void bridge.update
+      .installNow()
+      .then((result) => {
+        // Only a refusal comes back — on success the process is already going
+        // away. Re-enabling here is what stops a stale bar leaving a dead
+        // button behind.
+        if (!result.ok) {
+          this.installing.set(false);
+        }
+      })
+      .catch(() => this.installing.set(false));
   }
 
   /** `idle` is stored as null so the template's `@if` removes the bar entirely. */
