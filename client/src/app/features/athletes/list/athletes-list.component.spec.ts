@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -8,6 +9,7 @@ import type { Mock } from 'vitest';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AthletesListComponent } from './athletes-list.component';
 import { AcademyService, type Academy } from '../../../core/services/academy.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { AthleteService, type Athlete } from '../../../core/services/athlete.service';
 import { PaymentService } from '../../../core/services/payment.service';
 
@@ -811,6 +813,64 @@ describe('AthletesListComponent', () => {
       // Jakob's law — public profile uses the same `pi pi-id-card`
       // glyph as the desktop `.athletes-page__public-profile-link`.
       expect(icons).toContain('pi pi-id-card');
+    });
+
+    // #1349 — the public profile lives behind `capabilityGuard('community')`,
+    // and the desktop runtime has NO capabilities. Rendering the control there
+    // offered one the guard refuses, bouncing the click to the dashboard.
+    describe('without the community capability (the desktop build)', () => {
+      // Same shape `capability.guard.spec.ts` uses: a runtime that simply has
+      // nothing, which is literally the desktop profile — `config/budojo.php`
+      // gives it an empty capability list.
+      function withoutCommunity(): void {
+        TestBed.overrideProvider(RuntimeService, {
+          useValue: { load: vi.fn().mockResolvedValue(undefined), has: signal(() => false) },
+        });
+      }
+
+      it('offers no public-profile item in the card menu', () => {
+        withoutCommunity();
+        const fixture = TestBed.createComponent(AthletesListComponent);
+        fixture.detectChanges();
+
+        const component = fixture.componentInstance as unknown as {
+          openCardMenu: (e: Event, a: Athlete) => void;
+          cardMenuItems: () => Array<{ icon?: string }>;
+          cardMenu?: { toggle: Mock };
+        };
+        component.cardMenu = { toggle: vi.fn() };
+        component.openCardMenu(
+          { stopPropagation: vi.fn() } as unknown as Event,
+          makeAthlete({ user_handle: 'mario.rossi' }),
+        );
+
+        expect(component.cardMenuItems().map((it) => it.icon)).not.toContain('pi pi-id-card');
+      });
+
+      it('renders no public-profile link in any layout', () => {
+        withoutCommunity();
+        const fixture = TestBed.createComponent(AthletesListComponent);
+        fixture.detectChanges();
+        fixture.componentInstance.athletes.set([makeAthlete({ user_handle: 'mario.rossi' })]);
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+
+        expect(root.querySelectorAll('a[href*="/dashboard/u/"]').length).toBe(0);
+      });
+
+      // The web app must be untouched — this is a capability gate, not a
+      // removal, and the same spec file asserts the link everywhere else.
+      it('still renders it when the capability is present', () => {
+        const fixture = TestBed.createComponent(AthletesListComponent);
+        fixture.detectChanges();
+        fixture.componentInstance.athletes.set([makeAthlete({ user_handle: 'mario.rossi' })]);
+        fixture.detectChanges();
+
+        const root: HTMLElement = fixture.nativeElement;
+
+        expect(root.querySelectorAll('a[href*="/dashboard/u/"]').length).toBeGreaterThan(0);
+      });
     });
 
     it('confirmDeleteFromCardMenu routes through ConfirmationService with the mobile dialog key', () => {

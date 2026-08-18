@@ -4,6 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { DesktopBridgeService } from '../../core/services/desktop-bridge.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
+import { RuntimeService } from '../../core/services/runtime.service';
 import { LanguageSheetComponent } from '../../shared/components/language-sheet/language-sheet.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { VERSION } from '../../../environments/version';
@@ -31,6 +32,8 @@ export class OwnerMoreComponent {
   protected readonly isDesktop = inject(DesktopBridgeService).isDesktop;
   private readonly router = inject(Router);
   private readonly languageService = inject(LanguageService);
+  /** "My public profile" leads behind `capabilityGuard('community')` (#1349). */
+  protected readonly runtime = inject(RuntimeService);
 
   protected readonly user = this.authService.user;
   protected readonly currentLang = this.languageService.currentLang;
