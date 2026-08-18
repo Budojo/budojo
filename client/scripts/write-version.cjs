@@ -19,7 +19,12 @@
  * Both files share the same source-of-truth: `git describe --tags
  * --always` for the tag, `git rev-parse HEAD` for the full SHA.
  *
- * Run automatically by the `prebuild` npm script. Falls back to "dev" /
+ * Run by the `prebuild` npm script, and directly by
+ * `desktop/scripts/build-renderer.mjs` — which invokes `ng` itself and so never
+ * triggers npm's lifecycle hook (#1337).
+ *
+ * `BUDOJO_VERSION` overrides the git lookup entirely; the desktop installer job
+ * sets it, because there the version is known and git is not. Falls back to "dev" /
  * "0000000000000000000000000000000000000000" if git is unreachable
  * (no .git directory, shallow clone without tags, etc.) — doesn't fail
  * the build. Both files are committed with their `dev` defaults so a
@@ -61,7 +66,37 @@ function tryGit(cmd) {
   }
 }
 
+/**
+ * An explicit version always wins over asking git (#1337).
+ *
+ * The desktop installer job already knows exactly which version it is
+ * building — it computed it from the tag two steps before the renderer is
+ * built, and passes it to electron-builder to name the artifacts. Git, at that
+ * point, knows nothing useful: the checkout is `fetch-depth: 1` with no tags,
+ * so `git describe --tags` returns a bare SHA and this script's own `dev-`
+ * fallback. Inferring what the caller can simply state is how every installer
+ * we shipped ended up with a footer reading "dev".
+ *
+ * Accepts `2.44.0` or `v2.44.0`; emits the `v`-prefixed form the footer and
+ * every other tag consumer expect.
+ */
+function explicitTag() {
+  const raw = process.env.BUDOJO_VERSION?.trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  return raw.startsWith('v') ? raw : `v${raw}`;
+}
+
 function resolveTag() {
+  // 0. Told, rather than guessed. Skips the git work entirely.
+  const explicit = explicitTag();
+  if (explicit) {
+    return explicit;
+  }
+
   // 1. First describe attempt — local dev builds and tag-aware CI hit
   //    this branch and exit immediately. No `git fetch`, no network,
   //    no extra latency on every `npm run build`.
