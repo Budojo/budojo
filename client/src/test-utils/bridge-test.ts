@@ -34,6 +34,7 @@ interface BridgeOverrides {
   drive?: Partial<Bridge['drive']>;
   folder?: Partial<Bridge['folder']>;
   keys?: Partial<Bridge['keys']>;
+  update?: Partial<Bridge['update']>;
 }
 
 export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
@@ -65,6 +66,10 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
       export: async () => ({ ok: false }),
       import: async () => ({ ok: false }),
     },
+    update: {
+      status: async () => ({ phase: 'idle' }),
+      onStatus: () => () => undefined,
+    },
   };
 
   return {
@@ -75,5 +80,6 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
     drive: { ...base.drive, ...overrides.drive },
     folder: { ...base.folder, ...overrides.folder },
     keys: { ...base.keys, ...overrides.keys },
+    update: { ...base.update, ...overrides.update },
   };
 }

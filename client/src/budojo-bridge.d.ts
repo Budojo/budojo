@@ -50,6 +50,18 @@ interface DriveLinkState {
 }
 
 /**
+ * A pending application update, as the top bar renders it (#1339).
+ *
+ * `ready` means the installer is already on disk and applies on the next quit
+ * — it survives a later failed check, because going offline does not undo a
+ * finished download.
+ */
+type UpdateStatus =
+  | { readonly phase: 'idle' }
+  | { readonly phase: 'downloading'; readonly version: string; readonly percent: number }
+  | { readonly phase: 'ready'; readonly version: string };
+
+/**
  * The renderer-side view of the Electron preload bridge (`desktop/src/preload.cts`).
  * Present only inside Budojo Desktop; every reader must tolerate `undefined`.
  */
@@ -129,6 +141,16 @@ interface BudojoBridge {
   readonly keys: {
     export(): Promise<{ ok: boolean; code?: string; reason?: string }>;
     import(code: string): Promise<{ ok: boolean; reason?: string }>;
+  };
+  /**
+   * Auto-update progress (#1339). `status()` answers the current state for the
+   * first paint; `onStatus` pushes every change after that and returns its own
+   * unsubscribe, so a download starting while the window is open is visible
+   * without polling for it.
+   */
+  readonly update: {
+    status(): Promise<UpdateStatus>;
+    onStatus(callback: (status: UpdateStatus) => void): () => void;
   };
 }
 
