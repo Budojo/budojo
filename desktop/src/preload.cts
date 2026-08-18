@@ -68,6 +68,26 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
     run: () => ipcRenderer.invoke('budojo:backup:run'),
     restore: (name: string) => ipcRenderer.invoke('budojo:backup:restore', name),
   },
+  // Google Drive backup sync (#1301). Opt-in and off by default. `state()`
+  // answers even when the build carries no OAuth client — it returns
+  // `configured: false` so the page can say the feature is unavailable instead
+  // of offering a Connect button that opens a Google error.
+  drive: {
+    state: () => ipcRenderer.invoke('budojo:drive:state'),
+    archives: () => ipcRenderer.invoke('budojo:drive:archives'),
+    link: () => ipcRenderer.invoke('budojo:drive:link'),
+    unlink: () => ipcRenderer.invoke('budojo:drive:unlink'),
+    sync: () => ipcRenderer.invoke('budojo:drive:sync'),
+  },
+  // Backup folder (#1320). The owner picks any folder — a synced one, a NAS, a
+  // USB stick — and every backup is copied there. No account, no API.
+  folder: {
+    state: () => ipcRenderer.invoke('budojo:folder:state'),
+    choose: () => ipcRenderer.invoke('budojo:folder:choose'),
+    clear: () => ipcRenderer.invoke('budojo:folder:clear'),
+    copy: () => ipcRenderer.invoke('budojo:folder:copy'),
+    open: () => ipcRenderer.invoke('budojo:folder:open'),
+  },
   // Recovery keys (#1254). Export decrypts the keychain store into a copy-
   // pasteable code; import writes it back and the app relaunches under the new
   // keys. Async; not hot paths.

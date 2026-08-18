@@ -21,10 +21,13 @@ The `budojo_client` container is **Alpine**; Cypress's bundled Electron (glibc) 
 
 ```bash
 docker run --rm --network host \
+  --user "$(id -u):$(id -g)" \
   -v "$(pwd)/client":/e2e -w /e2e \
   cypress/included:15.15.0 \
   --spec 'cypress/e2e/_tmp-shot.cy.ts' --config video=false --browser electron
 ```
+
+`--user` is **required on Linux**, where the bind mount is the host's real filesystem: without it every screenshot and video lands in your working tree owned by root, and clearing them needs sudo. The image ships `/root` and `/root/.cache/Cypress` at mode 0777, so an unprivileged user still reaches the Cypress binary. Harmless on Windows, where Docker Desktop's share fabricates ownership anyway.
 
 Throwaway spec — delete before commit (`cypress/screenshots/` is gitignored):
 
@@ -58,7 +61,9 @@ describe('TMP visual', () => {
 
 Screenshots land in `client/cypress/screenshots/<spec>/`.
 
-## Two traps
+## Three traps
+
+0. **A running API makes existing specs fail.** The specs mock every call they use and assume nothing answers the rest — which is what CI gives them: `proxy.conf.json` targets `http://api:80`, a name that does not resolve on a GitHub runner. Locally it *does* resolve, so an unmocked background poll (`GET /api/v1/me/notifications`) gets a real `401`, the auth interceptor redirects to `/auth/login`, and every assertion after it fails. Measured on `academy.cy.ts`: **4 passing / 6 failing** with the API up, **10 passing / 0 failing** with `docker compose stop api`. Stop it first, and start it again afterwards — a spec that "suddenly broke" is usually this, not your diff.
 
 1. **Stale dev server.** `ng serve` can serve an intermediate broken build (mid-edit) or miss the last save. Before running Cypress, `touch` the changed files and confirm `docker logs budojo_client` shows `Application bundle generation complete` with no `NG…` / `TS…` errors. A login-page screenshot when you expected the feature usually means a stale build or the redirect — not necessarily your code.
 2. **Prove no-regression by baseline.** If an existing Cypress spec fails locally, `git stash` your change and rerun: an identical failure is environmental (the redirect above), not your diff.

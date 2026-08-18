@@ -34,6 +34,17 @@ describe('dataLayout', () => {
     expect(layout.storageDir).toBe(path.resolve('/data/Budojo/storage'));
     expect(layout.backupsDir).toBe(path.resolve('/data/Budojo/backups'));
   });
+
+  // The Google refresh token must not travel inside a backup archive (#1301).
+  // The archive is the database plus `storage/`, so anything at the root of
+  // userData is outside it — this pins that the token file stays there, beside
+  // secrets.bin, rather than drifting into storage/ where it would be uploaded
+  // to the very account it grants access to.
+  it('keeps the drive token outside storage/, so a backup can never carry it', () => {
+    expect(layout.driveTokenFile).toBe(path.resolve('/data/Budojo/drive-token.bin'));
+    expect(layout.driveTokenFile.startsWith(layout.storageDir)).toBe(false);
+    expect(layout.driveStateFile.startsWith(layout.storageDir)).toBe(false);
+  });
 });
 
 describe('storageSubdirs', () => {

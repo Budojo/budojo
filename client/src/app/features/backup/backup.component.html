@@ -31,33 +31,195 @@
     />
   </div>
 
+  @if (folderAvailable) {
+    <section class="backup-page__drive" data-cy="backup-folder">
+      <h2 class="backup-page__heading">{{ 'backup.folder.title' | translate }}</h2>
+
+      @if (folderLoading()) {
+        <p-skeleton height="2.5rem" width="22rem" data-cy="folder-loading" />
+      } @else if (folderState().folder; as chosen) {
+        <p class="backup-page__drive-account" data-cy="folder-path">{{ chosen }}</p>
+        <p class="backup-page__muted" data-cy="folder-last-copy">
+          @if (folderState().lastCopyAt) {
+            {{ 'backup.folder.lastCopy' | translate }}
+            {{ folderState().lastCopyAt | date: 'medium' }}
+          } @else {
+            {{ 'backup.folder.neverCopied' | translate }}
+          }
+        </p>
+        @if (folderState().lastError) {
+          <p class="backup-page__drive-error" data-cy="folder-error" role="status">
+            {{ folderErrorMessage() }}
+          </p>
+        }
+        <div class="backup-page__drive-actions">
+          <p-button
+            [label]="'backup.folder.open' | translate"
+            icon="pi pi-folder-open"
+            severity="secondary"
+            (onClick)="openFolder()"
+            data-cy="folder-open"
+          />
+          <p-button
+            [label]="'backup.folder.copyNow' | translate"
+            icon="pi pi-copy"
+            severity="secondary"
+            [loading]="copyingToFolder()"
+            (onClick)="copyToFolderNow()"
+            data-cy="folder-copy-now"
+          />
+          <p-button
+            [label]="'backup.folder.change' | translate"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [loading]="choosingFolder()"
+            (onClick)="chooseFolder()"
+            data-cy="folder-change"
+          />
+          <app-confirm-destructive-button
+            icon="pi pi-times"
+            [label]="'backup.folder.stop' | translate"
+            [ariaLabel]="'backup.folder.stop' | translate"
+            [confirmMessage]="'backup.folder.confirmStop' | translate"
+            [acceptLabel]="'backup.folder.stop' | translate"
+            [rejectLabel]="'backup.confirmRestoreReject' | translate"
+            (confirmed)="clearFolder()"
+            dataCy="folder-clear"
+          />
+        </div>
+      } @else {
+        <p class="backup-page__muted">{{ 'backup.folder.why' | translate }}</p>
+        <p-button
+          [label]="'backup.folder.choose' | translate"
+          icon="pi pi-folder"
+          [loading]="choosingFolder()"
+          (onClick)="chooseFolder()"
+          data-cy="folder-choose"
+        />
+      }
+    </section>
+  }
+
+  <!--
+    Hidden entirely when the build carries no OAuth client (#1320). Beside a
+    backup folder that works, an announced feature that apologises for itself is
+    worse than one that is simply absent.
+  -->
+  @if (driveAvailable && driveState().configured) {
+    <section class="backup-page__drive" data-cy="drive-sync">
+      <h2 class="backup-page__heading">{{ 'backup.drive.title' | translate }}</h2>
+
+      @if (driveState().linked) {
+        <p class="backup-page__drive-account" data-cy="drive-account">
+          {{ 'backup.drive.connectedTo' | translate: { account: driveState().account } }}
+        </p>
+        <p class="backup-page__muted" data-cy="drive-last-sync">
+          @if (driveState().lastSyncAt) {
+            {{ 'backup.drive.lastSync' | translate }} {{ driveState().lastSyncAt | date: 'medium' }}
+          } @else {
+            {{ 'backup.drive.neverSynced' | translate }}
+          }
+        </p>
+        @if (driveState().lastError) {
+          <p class="backup-page__drive-error" data-cy="drive-error" role="status">
+            {{ driveErrorMessage() }}
+          </p>
+        }
+        <div class="backup-page__drive-actions">
+          <p-button
+            [label]="'backup.drive.syncNow' | translate"
+            icon="pi pi-cloud-upload"
+            severity="secondary"
+            [loading]="syncing()"
+            (onClick)="syncDriveNow()"
+            data-cy="drive-sync-now"
+          />
+          <app-confirm-destructive-button
+            icon="pi pi-times"
+            [label]="'backup.drive.disconnect' | translate"
+            [ariaLabel]="'backup.drive.disconnect' | translate"
+            [confirmMessage]="'backup.drive.confirmDisconnect' | translate"
+            [acceptLabel]="'backup.drive.confirmDisconnectAccept' | translate"
+            [rejectLabel]="'backup.confirmRestoreReject' | translate"
+            (confirmed)="disconnectDrive()"
+            dataCy="drive-disconnect"
+          />
+        </div>
+      } @else {
+        <p class="backup-page__muted">{{ 'backup.drive.why' | translate }}</p>
+        <p-button
+          [label]="'backup.drive.connect' | translate"
+          icon="pi pi-google"
+          [loading]="linking()"
+          (onClick)="connectDrive()"
+          data-cy="drive-connect"
+        />
+      }
+    </section>
+  }
+
   <h2 class="backup-page__heading">{{ 'backup.archives' | translate }}</h2>
 
   @if (loading()) {
-    <p class="backup-page__muted">{{ 'backup.loading' | translate }}</p>
-  } @else if (archives().length === 0) {
+    <!--
+      Skeletons, not the word "Loading" (canon § Krug/Norman, and the rule in
+      client/CLAUDE.md that anything over a second gets one). The shape of what
+      is coming is more reassuring than a label, and this list is slow enough on
+      a packaged build to need it.
+    -->
+    <div class="backup-page__skeletons" data-cy="backup-loading">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton height="3.5rem" styleClass="mb-2" />
+      }
+    </div>
+  } @else if (rows().length === 0) {
     <p class="backup-page__muted" data-cy="backup-empty">{{ 'backup.empty' | translate }}</p>
   } @else {
     <ul class="backup-page__list" data-cy="backup-list">
-      @for (archive of archives(); track archive.name) {
+      @for (archive of rows(); track archive.name) {
         <li class="backup-page__row">
           <div class="backup-page__row-info">
             <span class="backup-page__row-date">{{ archive.createdAt | date: 'medium' }}</span>
             <span class="backup-page__row-size">{{
               'backup.size' | translate: { mb: sizeMb(archive.sizeBytes) }
             }}</span>
+            @if (driveState().linked) {
+              <span
+                class="backup-page__row-where"
+                [attr.data-cy]="'backup-where-' + archive.name"
+                [pTooltip]="whereTooltip(archive.name) | translate"
+              >
+                <i [class]="whereIcon(archive.name)" aria-hidden="true"></i>
+                <span class="sr-only">{{ whereTooltip(archive.name) | translate }}</span>
+              </span>
+            }
           </div>
-          <app-confirm-destructive-button
-            icon="pi pi-history"
-            [label]="'backup.restore' | translate"
-            [ariaLabel]="'backup.restore' | translate"
-            [confirmMessage]="'backup.confirmRestore' | translate"
-            [acceptLabel]="'backup.confirmRestoreAccept' | translate"
-            [rejectLabel]="'backup.confirmRestoreReject' | translate"
-            [loading]="restoringName() === archive.name"
-            (confirmed)="restore(archive)"
-            [dataCy]="'backup-restore-' + archive.name"
-          />
+          @if (archive.local) {
+            <app-confirm-destructive-button
+              icon="pi pi-history"
+              [label]="'backup.restore' | translate"
+              [ariaLabel]="'backup.restore' | translate"
+              [confirmMessage]="'backup.confirmRestore' | translate"
+              [acceptLabel]="'backup.confirmRestoreAccept' | translate"
+              [rejectLabel]="'backup.confirmRestoreReject' | translate"
+              [loading]="restoringName() === archive.name"
+              (confirmed)="restore(archive)"
+              [dataCy]="'backup-restore-' + archive.name"
+            />
+          } @else {
+            <!--
+              Restore reads from the local backups directory, so an archive that
+              only exists in the Google account cannot be restored yet
+              (#1301 — downloading it is the next slice). Saying so beats a
+              button that spins forever on a missing file.
+            -->
+            <span
+              class="backup-page__row-note"
+              [attr.data-cy]="'backup-remote-only-' + archive.name"
+            >
+              {{ 'backup.drive.remoteOnlyHint' | translate }}
+            </span>
+          }
         </li>
       }
     </ul>

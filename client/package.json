@@ -10,7 +10,7 @@
     "test": "ng test",
     "lint": "ng lint",
     "lint:scss": "stylelint \"src/**/*.scss\"",
-    "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" cypress",
     "cy:open": "cypress open",
     "cy:run": "cypress run",
     "design:inventory": "node scripts/design-inventory.cjs",

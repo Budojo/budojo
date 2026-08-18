@@ -5,8 +5,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
-import { BackupService } from './backup.js';
+import { BackupService, RETENTION } from './backup.js';
 import { createBackupIO } from './backup-io.js';
+import { createFolderCopyIO } from './folder-copy-io.js';
+import { FolderCopyService } from './folder-copy-service.js';
+import { createDriveSyncIO, driveClientConfig, DriveSyncService } from './drive-wiring.js';
+import { formatConsoleMessage, isWorthLogging, redactSecrets } from './renderer-log.js';
 import { DesktopNotifier, EMPTY_LEDGER, parseListOutput, type DeliveryLedger, type PendingNotification } from './desktop-notifier.js';
 import { buildPhpEnv, buildPhpIni, resolveDesktopPaths } from './php-runtime.js';
 import { runPhp } from './php-exec.js';
@@ -16,7 +20,7 @@ import { TokenVault } from './token-vault.js';
 import { PeriodicTask } from './periodic-task.js';
 import { contentTypeFor, resolveAppRequest } from './protocol.js';
 import { decodeRecoveryCode, encodeRecoveryCode } from './recovery-keys.js';
-import { planUpdateCheck, updateReadyMessage } from './update-policy.js';
+import { planUpdateCheck, updateFailureLine, updateReadyMessage } from './update-policy.js';
 // electron-updater is CommonJS and, under ESM, exposes NOTHING as a named
 // export — `import { autoUpdater }` is silently `undefined` (same class as the
 // qrcode interop bug in `.claude/gotchas.md`). It must come through the default
@@ -104,6 +108,64 @@ function registerAppProtocol(): void {
   });
 }
 
+/**
+ * Records what the window does wrong (#1317).
+ *
+ * Nothing did, before: no console handler, no load-failure handler, and the
+ * menu is nulled so there is no DevTools accelerator either. A page that failed
+ * to render was completely silent — the owner saw a blank area and the only way
+ * anyone found out was if they mentioned it. On a local-first app with no
+ * telemetry this file is the whole diagnostic story.
+ *
+ * Every line goes through `redactSecrets` first: the renderer holds the Sanctum
+ * token and can be handed a recovery code, and this log ends up in support
+ * bundles and screenshots.
+ */
+function attachRendererLogging(window: BrowserWindow): void {
+  // Opened here rather than at startup, on purpose. The first version kept a
+  // module-level `RotatingLog | null` opened in the ready handler — and the
+  // open was silently never wired, so the variable stayed null, this function
+  // returned immediately, and the whole feature was inert while type-checking
+  // and every test stayed green. Owning the log where it is used removes the
+  // half-wired state entirely: there is nothing left to forget.
+  const log = new RotatingLog(path.join(dataLayout(app.getPath('userData')).logsDir, 'renderer.log'));
+  log.open();
+
+  const write = (line: string): void => log.write(`${new Date().toISOString()} ${line}`);
+
+  window.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    // Warnings and errors only — Angular at info/debug would bury the one line
+    // that matters and rotate it out of the file.
+    if (isWorthLogging(level)) {
+      write(formatConsoleMessage({ level, message, line, sourceId }));
+    }
+  });
+
+  // The failure that matches a blank page: a chunk or asset 404ing under
+  // app://bundle. `errorCode -3` is ABORTED, which fires on ordinary navigation
+  // and is not a fault.
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    if (errorCode !== -3) {
+      write(`[load-failed] ${errorCode} ${errorDescription} ${redactSecrets(validatedURL)}`);
+    }
+  });
+
+  // A broken preload takes out sign-in and every desktop-only surface at once,
+  // and looks like an app that simply does not work.
+  window.webContents.on('preload-error', (_event, preloadPath, error) => {
+    write(`[preload-error] ${preloadPath}: ${redactSecrets(error.message)}`);
+  });
+
+  window.webContents.on('render-process-gone', (_event, details) => {
+    write(`[renderer-gone] reason=${details.reason} exitCode=${details.exitCode}`);
+  });
+
+  window.on('unresponsive', () => {
+    // Distinguishes "hung" from "slow", which look identical from the outside.
+    write('[unresponsive] the window stopped responding');
+  });
+}
+
 function createWindow(apiBase: string): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
@@ -171,6 +233,8 @@ function createWindow(apiBase: string): BrowserWindow {
 
   // The root, not /index.html: the router owns the path, and "/index.html" is
   // not a route it knows. The protocol handler serves the shell for "/".
+  attachRendererLogging(window);
+
   void window.loadURL(DEV ? DEV_URL : `${APP_ORIGIN}/`);
 
   return window;
@@ -187,6 +251,9 @@ async function startRuntime(): Promise<{
   notifierPoll: PeriodicTask;
   backupService: BackupService;
   backupPoll: PeriodicTask;
+  folderCopy: FolderCopyService;
+  /** null when the build carries no OAuth client, i.e. the feature is unavailable. */
+  driveService: DriveSyncService | null;
   apiBase: string;
 }> {
   const paths = resolveDesktopPaths({
@@ -331,9 +398,10 @@ async function startRuntime(): Promise<{
 
   // Local backup (#1228) — the single most important safety net once managed
   // infrastructure is gone. VACUUM INTO + storage + manifest, zipped under
-  // userData/backups, seven kept. A scheduled pass every six hours means any
-  // day the app is opened produces a recent archive; each run is a quick
-  // vacuum of a single-user database.
+  // userData/backups, held to `RETENTION` (see backup.ts: a dense recent tier
+  // plus one archive a day behind it, #1330). A scheduled pass every six hours
+  // means any day the app is opened produces a recent archive; each run is a
+  // quick vacuum of a single-user database.
   const backupLog = new RotatingLog(path.join(layout.logsDir, 'backup.log'));
   backupLog.open();
   const backupService = new BackupService({
@@ -347,12 +415,50 @@ async function startRuntime(): Promise<{
       backupsDir: layout.backupsDir,
     }),
     appVersion: app.getVersion(),
-    retentionKeep: 7,
+    retention: RETENTION,
     log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
   });
+  // Drive sync (#1301). Off unless the owner connected an account, and off
+  // entirely when the build carries no OAuth client.
+  const driveConfig = driveClientConfig();
+  const driveService =
+    driveConfig === null
+      ? null
+      : new DriveSyncService(
+          createDriveSyncIO({
+            config: driveConfig,
+            layout,
+            vault: new TokenVault(layout.driveTokenFile, safeStorage),
+            backupService,
+            openExternal: (url) => shell.openExternal(url),
+            log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
+          }),
+        );
+
+  // Copy each backup into the folder the owner picked (#1320). Off until they
+  // pick one.
+  const folderCopy = new FolderCopyService(
+    createFolderCopyIO({
+      layout,
+      backupService,
+      log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
+    }),
+    RETENTION,
+  );
+
   const backupPoll = new PeriodicTask({
     run: async () => {
       await backupService.backup();
+
+      // After the local archive exists, never before. copy() contains its own
+      // failures; the catch is the belt to that braces.
+      await folderCopy.copy().catch(() => undefined);
+
+      // Upload AFTER the local archive exists, and never let a sync failure
+      // fail the tick — the backup that matters already happened. sync()
+      // swallows its own errors into the link state; this catch is the belt to
+      // that braces.
+      await driveService?.sync().catch(() => undefined);
 
       return { code: 0, output: '', timedOut: false };
     },
@@ -362,7 +468,16 @@ async function startRuntime(): Promise<{
   });
   backupPoll.start();
 
-  return { supervisor, scheduler, notifierPoll, backupService, backupPoll, apiBase: `http://127.0.0.1:${port}` };
+  return {
+    supervisor,
+    scheduler,
+    notifierPoll,
+    backupService,
+    backupPoll,
+    folderCopy,
+    driveService,
+    apiBase: `http://127.0.0.1:${port}`,
+  };
 }
 
 async function readLedger(file: string): Promise<DeliveryLedger> {
@@ -435,6 +550,115 @@ function registerTokenVault(): void {
  * supervisor, swaps, restarts it, and reloads the window onto the restored
  * data. ipcMain.handle (async) rather than sendSync: these are not hot paths.
  */
+/**
+ * The Drive link (#1301). Every handler answers even when the feature is
+ * unavailable — the renderer asks for the state on load, and a rejected
+ * invoke there would break the whole Backup page rather than hiding one card.
+ */
+function registerDriveBridge(driveOf: () => DriveSyncService | null): void {
+  ipcMain.handle('budojo:drive:state', async () => {
+    const service = driveOf();
+    if (service === null) {
+      return { configured: false, linked: false };
+    }
+
+    return { configured: true, ...(await service.state()) };
+  });
+
+  ipcMain.handle('budojo:drive:archives', async () => (await driveOf()?.archives()) ?? []);
+
+  ipcMain.handle('budojo:drive:link', async () => {
+    const service = driveOf();
+
+    return service === null ? { ok: false, error: 'not_configured' } : service.link();
+  });
+
+  ipcMain.handle('budojo:drive:unlink', async () => {
+    await driveOf()?.unlink();
+
+    return { ok: true };
+  });
+
+  ipcMain.handle('budojo:drive:sync', async () => {
+    const service = driveOf();
+    if (service === null) {
+      return { ran: false, reason: 'not_linked' };
+    }
+
+    // sync() contains its own failures, but the renderer disables a button on
+    // this promise — a rejection would leave it spinning forever, so the bridge
+    // never rejects either.
+    return service.sync().catch((error: unknown) => ({
+      ran: true,
+      uploaded: 0,
+      deleted: 0,
+      error: error instanceof Error ? error.message : 'unknown',
+    }));
+  });
+}
+
+/**
+ * The backup folder (#1320). Every handler answers even before a folder is
+ * chosen — the renderer asks on load, and a rejected invoke would break the
+ * whole page rather than one card.
+ */
+function registerFolderBridge(folderOf: () => FolderCopyService | null): void {
+  ipcMain.handle('budojo:folder:state', async () => (await folderOf()?.state()) ?? {
+    folder: null,
+    lastCopyAt: null,
+    lastError: null,
+    lastErrorAt: null,
+  });
+
+  ipcMain.handle('budojo:folder:choose', async () => {
+    const service = folderOf();
+    if (service === null) {
+      return { ok: false };
+    }
+
+    const picked = await dialog.showOpenDialog({
+      title: 'Choose a folder for backup copies',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+
+    if (picked.canceled || picked.filePaths[0] === undefined) {
+      return { ok: false };
+    }
+
+    const state = await service.setFolder(picked.filePaths[0]);
+    // Copy straight away rather than waiting up to six hours: choosing a folder
+    // and seeing nothing appear in it reads as broken.
+    void service.copy().catch(() => undefined);
+
+    return { ok: true, state };
+  });
+
+  ipcMain.handle('budojo:folder:clear', async () => {
+    await folderOf()?.setFolder(null);
+
+    return { ok: true };
+  });
+
+  ipcMain.handle('budojo:folder:copy', async () => {
+    const service = folderOf();
+
+    return service === null
+      ? { ran: false, reason: 'no_folder' }
+      : service.copy().catch(() => ({ ran: true, copied: 0, deleted: 0, error: 'unknown' }));
+  });
+
+  ipcMain.handle('budojo:folder:open', async () => {
+    const state = await folderOf()?.state();
+    if (state?.folder === undefined || state.folder === null) {
+      return { ok: false };
+    }
+
+    await shell.openPath(state.folder);
+
+    return { ok: true };
+  });
+}
+
 function registerBackupBridge(
   supervisorOf: () => PhpSupervisor | null,
   backupOf: () => BackupService | null,
@@ -551,6 +775,7 @@ function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
     packaged: app.isPackaged,
     dev: DEV,
     portableDir: process.env['PORTABLE_EXECUTABLE_DIR'],
+    version: app.getVersion(),
   });
 
   if (!decision.check) {
@@ -578,12 +803,19 @@ function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
   updater.on('error', (error: Error) => {
     // Offline, rate-limited, release yanked — none of these are worth a dialog
     // or a crash. The log is where a maintainer looks; the user sees nothing.
-    log(`[update] check failed: ${error.message}`);
+    log(`[update] check failed: ${updateFailureLine(error.message)}`);
   });
 
   const poll = new PeriodicTask({
     run: async () => {
-      await updater.checkForUpdates();
+      // Swallowed on purpose: the `error` handler above has already logged a
+      // one-line reason, and letting the rejection through made the task print
+      // the same forty-line HTTP dump a second time.
+      try {
+        await updater.checkForUpdates();
+      } catch {
+        /* already reported */
+      }
 
       return { code: 0, output: '', timedOut: false };
     },
@@ -611,6 +843,8 @@ if (!gotTheLock) {
   let scheduler: PeriodicTask | null = null;
   let notifierPoll: PeriodicTask | null = null;
   let backupService: BackupService | null = null;
+  let driveService: DriveSyncService | null = null;
+  let folderCopy: FolderCopyService | null = null;
   let backupPoll: PeriodicTask | null = null;
   let updatePoll: PeriodicTask | null = null;
   let quitting = false;
@@ -658,7 +892,11 @@ if (!gotTheLock) {
       notifierPoll = runtime.notifierPoll;
       backupService = runtime.backupService;
       backupPoll = runtime.backupPoll;
+      driveService = runtime.driveService;
+      folderCopy = runtime.folderCopy;
       registerBackupBridge(() => supervisor, () => backupService);
+      registerDriveBridge(() => driveService);
+      registerFolderBridge(() => folderCopy);
       apiBase = runtime.apiBase;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

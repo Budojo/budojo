@@ -24,14 +24,60 @@ A backup archive is a zip in `%APPDATA%\Budojo\backups\`, named `budojo-backup-Y
 
 It **does not** contain `secrets.bin` — the encryption keys. That is deliberate; see [below](#the-part-that-can-silently-fail-encryption-keys).
 
-Backups are taken **automatically every 6 hours** the app is open, and you can take one any time from **Data & backup → Back up now**. The **7** most recent are kept; pruning always keeps at least the newest, so a retention bug can never delete your last good backup.
+Backups are taken **automatically every 6 hours** the app is open, and you can take one any time from **Data & backup → Back up now**.
+
+### How much history is kept
+
+Two tiers, because "I have just broken something" and "this went wrong some time last week" are different questions ([#1330](https://github.com/Budojo/budojo/issues/1330)):
+
+| Tier | Holds | Answers |
+|---|---|---|
+| Recent | the **6** newest archives, whatever day they fall on | the last ~36 hours, at six-hour resolution |
+| Daily | the **last archive of each of the 14 most recent days** the app ran | the fortnight behind it, one snapshot per day |
+
+That settles at roughly **18 archives** and about **two weeks** of history. The previous policy kept a flat seven, which at six-hour spacing was 42 hours — fine for an immediate mistake, useless for one nobody noticed until Monday.
+
+The daily tier counts **days the app actually ran**, not calendar days, so a fortnight away from the machine does not silently empty your history.
+
+Pruning always keeps at least the newest archive and never touches a file it did not create, whatever the policy says — a retention bug must not be able to delete your last good backup.
 
 ## Backing up (what you should actually do)
 
 1. Leave the app open enough that the 6-hourly automatic backup runs, and hit **Back up now** before anything risky (an upgrade, moving machines).
-2. **Copy the archives off this machine.** The `backups\` folder is on the same disk that might die — an on-disk backup does not survive a dead disk. Copy the latest `budojo-backup-*.zip` into a synced folder (OneDrive, Google Drive) or an external drive on a schedule you'll actually keep.
+2. **Get the archives off this machine.** The `backups\` folder is on the same disk that might die — an on-disk backup does not survive a dead disk.
+
+   The easy way is **Data & backup → Backup folder → Choose folder** ([#1320](https://github.com/Budojo/budojo/issues/1320)): pick a folder your cloud service already syncs, or an external drive, and every backup is copied there automatically. It is off until you choose one, and nothing leaves this computer before you do.
+
+   Without it, you are copying `budojo-backup-*.zip` by hand on a schedule you'll actually keep — which is the part that tends not to happen.
 
 That protects your **bulk data**. For the encrypted documents there is one more thing to understand — read on.
+
+## Getting backups off this computer
+
+**Data & backup → Backup folder → Choose folder.** Pick any folder and every backup is copied there — the six-hourly ones and the ones you take by hand.
+
+The useful choice is a folder your cloud service already syncs: OneDrive, Dropbox, iCloud Drive, the Google Drive desktop app. Budojo writes the file; the sync client you already run carries it off the machine. A network drive or a USB stick works exactly the same way.
+
+Budojo applies the **same retention there as on this computer** (six recent plus fourteen daily, ~18 archives), so the copy that survives a dead disk is not the shallower one. It **touches nothing else in that folder** — anything it did not create is left alone.
+
+### If it stops working
+
+Failures are quiet, because the copy on this computer has already been written and nothing is at risk yet. The Data & backup page is where you find out: it shows when the last copy succeeded, and the reason if the most recent attempt failed.
+
+| What it says | What to do |
+|---|---|
+| The folder no longer exists | Choose it again, or pick a new one. Usually an unplugged drive or a folder that was moved. |
+| No permission to write | Choose a different folder. |
+| Out of space | Free some up, or choose a different one. |
+| Read-only | Usually a write-protected USB stick. Choose a different folder. |
+
+**"Last copied" is the number to read**, not the error. It tells you how old the newest copy over there is, which is what actually matters if this disk dies tonight.
+
+**Stopping** the copying leaves the archives already in that folder alone — it is not a delete.
+
+### What it does not solve
+
+**The recovery code is not in the folder, and that is deliberate.** The archive already excludes your encryption keys ([see below](#the-part-that-can-silently-fail-encryption-keys)). Save the recovery code in a password manager, by hand, once — copying backups somewhere changes nothing about that.
 
 ## Restoring
 
@@ -87,7 +133,7 @@ Also worth knowing:
 ## Quick recovery checklist
 
 1. Install Budojo on the new machine and let it finish first-run setup.
-2. Copy your latest `budojo-backup-*.zip` onto the machine.
+2. Get your latest `budojo-backup-*.zip` onto the machine — from your backup folder if you set one up, otherwise from wherever you keep them.
 3. **Data & backup → Restore →** pick the archive → confirm.
 4. **Data & backup → Recovery keys → Restore keys from a recovery code →** paste the code you saved → confirm. Budojo restarts under the original keys.
 5. Verify: athletes, attendance and payments are present, and a medical certificate downloads. ✅

@@ -21,12 +21,21 @@
 # PowerShell and Git Bash, without hardcoding an install location. Verified
 # from both shells.
 
+#
+# Elsewhere (Linux, macOS) make defaults SHELL to `/bin/sh`, and `.SHELLFLAGS`
+# below passes the bash-only `-o pipefail`. On Fedora that happens to work
+# because /bin/sh is a symlink to bash; on Debian/Ubuntu — including the
+# ubuntu-latest CI runners — /bin/sh is dash and every target dies with
+# "Illegal option -o pipefail". Measured, not assumed. Pin bash explicitly.
+
 ifeq ($(OS),Windows_NT)
 GIT_EXEC := $(shell git --exec-path)
 ifeq ($(GIT_EXEC),)
 $(error Could not locate Git Bash via 'git --exec-path'. Install Git for Windows, or run make from a Git Bash prompt.)
 endif
 SHELL := $(GIT_EXEC)/../../../bin/bash.exe
+else
+SHELL := /bin/bash
 endif
 
 .SHELLFLAGS := -eu -o pipefail -c
@@ -38,7 +47,7 @@ CLIENT  := budojo_client
 
 .PHONY: help setup up down restart logs seed db mail \
         test test-server test-client test-desktop quick audit \
-        desktop desktop-build desktop-package fetch-php \
+        desktop desktop-build desktop-package fetch-php clean \
         gotchas board check-readme
 
 ## ---------------------------------------------------------------- setup ----
@@ -77,13 +86,17 @@ logs: ## Tail the API + client logs
 	docker compose logs -f --tail=80 api client
 
 seed: ## Seed the dev database with test data
-	docker exec $(API) php artisan db:seed
+	docker exec -u www-data $(API) php artisan db:seed
 
+# `-u www-data` is load-bearing, not tidiness: the database runs in WAL mode, so
+# sqlite3 writes -wal and -shm siblings next to it. Opened as root those come
+# back root-owned in a www-data-owned directory, and php-fpm cannot write them
+# until the next `make restart` re-runs the entrypoint's chown.
 db: ## Open a sqlite shell on the dev database
-	docker exec -it $(API) sqlite3 /var/www/api/database/sqlite/budojo.sqlite
+	docker exec -u www-data -it $(API) sqlite3 /var/www/api/database/sqlite/budojo.sqlite
 
 mail: ## Open Mailpit in the browser
-	@start http://localhost:8025 || xdg-open http://localhost:8025
+	@if command -v xdg-open >/dev/null; then xdg-open http://localhost:8025; else start http://localhost:8025; fi
 
 ## -------------------------------------------------------------- gates ----
 
@@ -120,6 +133,26 @@ desktop-build: ## Compile the main process + preload
 	cd desktop && npm run build
 
 desktop-package: ## Build the Windows installers into desktop/release (Windows only)
+	@# Refuse under WSL rather than warn. electron-builder targets the platform it
+	@# RUNS on, so from WSL this silently produces a Linux package - after a full
+	@# renderer build and a 106 MB Electron download - and no Windows installer can
+	@# come out of it. The Windows branch at the top of this file already reasons
+	@# about exactly this hazard, but that guard only fires when OS=Windows_NT, so
+	@# invoked from INSIDE WSL it never triggered (#1326).
+	@if grep -qi microsoft /proc/version 2>/dev/null || [ -n "$$WSL_DISTRO_NAME" ]; then \
+	  echo ""; \
+	  echo "  Refusing to package from WSL."; \
+	  echo ""; \
+	  echo "  electron-builder targets the platform it runs on, so this would build a"; \
+	  echo "  LINUX package rather than the Windows installers - and it would take a"; \
+	  echo "  106 MB download to find that out."; \
+	  echo ""; \
+	  echo "  Run it from PowerShell or Git Bash instead."; \
+	  echo ""; \
+	  echo "  (Shipping Budojo FOR Linux is issue #1300, and needs more than this.)"; \
+	  echo ""; \
+	  exit 2; \
+	fi
 	cd desktop && npm run dist
 	@echo ""
 	@echo "  Built into desktop/release (version 0.0.0 - CI injects the real one at release time)."
@@ -131,6 +164,9 @@ desktop-package: ## Build the Windows installers into desktop/release (Windows o
 
 fetch-php: ## Download + verify the pinned PHP runtime (Windows only)
 	cd desktop && npm run fetch:php
+
+clean: ## Remove build output (desktop/dist, desktop/release, client/dist)
+	$(SCRIPTS)/clean.sh
 
 ## --------------------------------------------------------------- misc ----
 

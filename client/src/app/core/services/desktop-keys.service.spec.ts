@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { DesktopKeysService } from './desktop-keys.service';
+import { stubBridge } from '../../../test-utils/bridge-test';
 
 /**
  * Renderer side of the recovery-key bridge (#1254): passthrough on the desktop,
@@ -37,7 +38,7 @@ describe('DesktopKeysService', () => {
       export: vi.fn(async () => ({ ok: true, code: 'BUDOJO-RECOVERY-1:abc' })),
       import: vi.fn(async () => ({ ok: true })),
     };
-    bridgeWindow.__BUDOJO__ = {
+    bridgeWindow.__BUDOJO__ = stubBridge({
       apiBase: '',
       platform: 'win32',
       onNavigate: () => () => undefined,
@@ -48,7 +49,7 @@ describe('DesktopKeysService', () => {
         restore: async () => ({ ok: false }),
       },
       keys,
-    };
+    });
     const svc = service();
 
     expect(svc.available).toBe(true);

@@ -64,7 +64,10 @@ Everything the user owns lives under `%APPDATA%\Budojo\` — never beside the ex
 
 ## Get started developing
 
-**Prerequisites:** Docker + Docker Compose, and Git for Windows (the Makefile resolves its shell through Git Bash). `make` itself comes from scoop/choco or Git Bash.
+**Prerequisites:** Docker + Docker Compose, Node 22+, and GNU make.
+
+- **Linux** — the development base. Your user needs to be in the `docker` group. Distro-specific notes (file ownership across the bind mount, SELinux, the Cypress recipe) are in [`docs/development/linux-dev.md`](docs/development/linux-dev.md); read it once before the first `make up`.
+- **Windows** — also supported. Add Git for Windows: the Makefile resolves its shell through Git Bash, and `make` itself comes from scoop/choco or Git Bash.
 
 ```bash
 git clone https://github.com/Budojo/budojo.git
@@ -82,7 +85,11 @@ make seed      # optional: test data
 
 There is **no `.env` to copy and no key to generate**. The API container's entrypoint installs Composer dependencies, seeds `server/.env` from `server/.env.example`, generates `APP_KEY`, creates the SQLite database and migrates it. Every step is idempotent, so restarts are no-ops.
 
-`make seed` creates `admin@example.it` with the password in `LOCAL_ADMIN_PASSWORD` (`password` by default) plus a pre-configured academy, five more users with their own academies, and three without one (to exercise the `/setup` first-login flow).
+`make seed` creates `admin@example.it` with the password in `LOCAL_ADMIN_PASSWORD` (`password` by default), one pre-configured academy, and ~40 athletes with attendance and payment history. To exercise the `/setup` first-login flow you need users *without* an academy. `AcademySeeder` makes eight (five with their own academy, three without) but is not in `DatabaseSeeder`'s list, so run it explicitly:
+
+```bash
+docker exec budojo_api php artisan db:seed --class=AcademySeeder
+```
 
 **Why `make setup` matters:** it runs `npm ci` at the repo root, which is what installs husky/commitlint/lint-staged **and wires the git hooks**. Without it the hooks silently do not run — conventional commits go unchecked and nothing stops a commit on `main`/`develop`. Verify with `git config core.hooksPath`; it should print `.husky/_`.
 
@@ -94,7 +101,7 @@ There is **no `.env` to copy and no key to generate**. The API container's entry
 
 ## All make commands
 
-`make` with no arguments prints this list from the Makefile itself. Every target works from **Git Bash and PowerShell**, and each one delegates to the script, npm command or docker command that already owns the job — the Makefile adds no logic of its own.
+`make` with no arguments prints this list from the Makefile itself. Every target works from a **Linux shell** and, on Windows, from **Git Bash and PowerShell** — each one delegates to the script, npm command or docker command that already owns the job, so the Makefile adds no logic of its own. The three targets that run or package the desktop app are Windows-only until [#1300](https://github.com/Budojo/budojo/issues/1300) lands — `make desktop-build` compiles fine anywhere.
 
 ### Setup
 
@@ -130,10 +137,11 @@ There is **no `.env` to copy and no key to generate**. The API container's entry
 
 | Command | What it does |
 |---|---|
-| `make desktop` | Run the desktop app against the dev SPA (`ng serve` must be up) |
+| `make desktop` | Run the desktop app against the dev SPA (`ng serve` must be up) — Windows only |
 | `make desktop-build` | Compile the main process + preload |
 | `make desktop-package` | Build the Windows installers into `desktop/release` (Windows only) |
 | `make fetch-php` | Download + verify the pinned PHP runtime (Windows only) |
+| `make clean` | Remove build output (`desktop/dist`, `desktop/release`, `client/dist`) |
 
 ### Workflow
 

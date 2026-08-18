@@ -2231,6 +2231,65 @@
       "importOk": "Chiavi di recupero importate",
       "importRelaunch": "Budojo si riavvierà per applicarle.",
       "importFailed": "Impossibile importare il codice di recupero"
+    },
+    "drive": {
+      "title": "Backup su Google Drive",
+      "why": "I backup salvati su questo computer non sopravvivono a questo computer. Collega un account Google e ogni backup viene copiato lì automaticamente.",
+      "unavailable": "Questa versione non può collegarsi a Google Drive.",
+      "connect": "Collega Google Drive",
+      "connectedTo": "Backup su {{account}}",
+      "connected": "Google Drive collegato",
+      "connectFailed": "Impossibile collegare Google Drive",
+      "disconnect": "Scollega",
+      "disconnected": "Google Drive scollegato",
+      "confirmDisconnect": "Smettere di copiare i backup su Google Drive? I backup già presenti non vengono cancellati.",
+      "confirmDisconnectAccept": "Scollega",
+      "lastSync": "Ultima copia",
+      "neverSynced": "Non ancora copiato — lo sarà al prossimo backup.",
+      "syncNow": "Copia adesso",
+      "synced": "Backup copiati su Google Drive",
+      "syncFailed": "Impossibile copiare su Google Drive",
+      "where": {
+        "both": "Su questo computer e su Google Drive",
+        "cloudOnly": "Solo su Google Drive",
+        "localOnly": "Solo su questo computer"
+      },
+      "errors": {
+        "invalid_grant": "Google ha revocato il collegamento. Ricollega l'account per riprendere i backup.",
+        "unauthorized": "Google ha revocato il collegamento. Ricollega l'account per riprendere i backup.",
+        "storageQuotaExceeded": "Questo account Google ha esaurito lo spazio. Liberane un po', oppure collega un altro account.",
+        "network": "Nessuna connessione a Google. I backup continuano a essere salvati su questo computer.",
+        "access_denied": "Il collegamento non è stato approvato.",
+        "consent_timeout": "L'accesso a Google è scaduto.",
+        "no_refresh_token": "Google non ha restituito un permesso duraturo. Riprova a collegare.",
+        "not_configured": "Questa versione non può collegarsi a Google Drive.",
+        "unknown": "La copia su Google Drive non è riuscita ({{code}}). I backup continuano a essere salvati su questo computer."
+      },
+      "remoteOnlyHint": "Scaricalo da Google Drive per ripristinarlo"
+    },
+    "folder": {
+      "title": "Cartella dei backup",
+      "why": "I backup salvati su questo computer non sopravvivono a questo computer. Scegli una cartella — una che il tuo servizio cloud già sincronizza, un disco di rete o una chiavetta USB — e ogni backup viene copiato lì automaticamente.",
+      "choose": "Scegli cartella",
+      "change": "Cambia cartella",
+      "chosen": "Cartella dei backup impostata",
+      "cleared": "Cartella dei backup rimossa",
+      "stop": "Smetti di copiare",
+      "confirmStop": "Smettere di copiare i backup in questa cartella? I backup già presenti non vengono cancellati.",
+      "open": "Apri cartella",
+      "copyNow": "Copia adesso",
+      "copied": "Backup copiati",
+      "copyFailed": "Impossibile copiare nella cartella dei backup",
+      "lastCopy": "Ultima copia",
+      "neverCopied": "Non ancora copiato — lo sarà al prossimo backup.",
+      "errors": {
+        "ENOENT": "La cartella dei backup non esiste più. Scegline una di nuovo.",
+        "EACCES": "Nessun permesso di scrittura sulla cartella dei backup. Scegline un'altra.",
+        "EPERM": "Nessun permesso di scrittura sulla cartella dei backup. Scegline un'altra.",
+        "ENOSPC": "La cartella dei backup ha esaurito lo spazio. Liberane un po', oppure scegline un'altra.",
+        "EROFS": "La cartella dei backup è di sola lettura. Scegline un'altra.",
+        "unknown": "Impossibile copiare nella cartella dei backup ({{code}}). I backup continuano a essere salvati su questo computer."
+      }
     }
   }
 }

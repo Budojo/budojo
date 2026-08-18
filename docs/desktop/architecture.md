@@ -86,15 +86,31 @@ Everything that persists lives under Electron's **`userData`** directory (`%APPD
 | Path (under `userData`) | What |
 |---|---|
 | `budojo.sqlite` | The database. SQLite in WAL mode (`+ -wal`, `-shm` siblings). |
-| `storage/` | Laravel's `storage/` — **the encrypted documents live here**. |
-| `logs/` | Runtime logs. |
+| `storage/` | Laravel's `storage/` — **the encrypted documents live here** (`app/private/`), alongside the publicly-served images in `app/public/`. |
+| `logs/` | Runtime logs — PHP, scheduler, notifier, backup, update, and `renderer.log` for faults in the window itself (#1317). Everything in `renderer.log` is passed through a redaction step first: the renderer holds the sign-in token, and this file travels inside support bundles. |
 | `backups/` | Local backup archives (see [`backup-restore.md`](./backup-restore.md)). |
 | `secrets.bin` | `APP_KEY` + `DOCUMENT_ENCRYPTION_KEY`, encrypted with the OS keychain (Electron `safeStorage` → DPAPI on Windows). |
 | `auth-token.bin` | The signed-in Sanctum token, same encryption. |
+| `drive-token.bin` | The Google refresh token for backup sync (#1301), same encryption. Its own file, so disconnecting Drive cannot disturb sign-in — and so it stays **outside** `storage/`, where a backup archive would otherwise carry a credential up to the very account it grants access to. |
+| `drive-sync.json` | Drive link bookkeeping — account, folder id, last sync, last error. Holds no secret. |
+| `backup-folder.json` | Which folder backups are copied into and how that last went (#1320). Holds no secret. |
 | `bootstrap.json` | First-run state marker. |
 | `php.ini`, `php-server.pid` | Generated PHP config + supervisor pid. |
 | `notifications-ledger.json` | Once-only ledger so a native reminder fires at most once. |
 | `tmp/` | Scratch (backup staging, etc.). |
+
+### How images reach the renderer
+
+Avatars, academy logos and community video thumbnails are stored on Laravel's `public` disk and referenced by the API as `Storage::disk('public')->url(...)` — i.e. `http://127.0.0.1:<port>/storage/<path>`. On a normal web deployment that path is a **static file**, reachable because `public/storage` symlinks into `storage/app/public`.
+
+**That symlink cannot exist here.** The install directory is read-only by design, `storage/` lives under `userData`, and creating a symlink on Windows needs Developer Mode or elevation. So the `public` disk is configured with `'serve' => true` (`server/config/filesystems.php`), which makes Laravel register `/storage/{path}` and serve the file through PHP instead. `visibility: public` is what lets it answer without a signed URL — an `<img src>` could never supply one.
+
+Nothing changes for the hosted/dev shape: nginx and PHP's built-in server both serve an existing file before reaching the router, so where the symlink is present the route never runs. It is a fallback, not a replacement ([#1302](https://github.com/Budojo/budojo/issues/1302)).
+
+Two consequences worth knowing rather than rediscovering:
+
+- **`serve` registers a PUT as well as a GET.** `storage.public.upload` writes the request body onto the disk. It requires `?upload=1` *and* a valid relative signature — no `visibility: public` bypass, unlike the GET — so it needs the `APP_KEY`, and nothing in the app mints such a URL. `PublicStorageTest` pins that gate.
+- **The route disables browser caching.** Laravel's `ServeFile` hard-codes `Cache-Control: no-store`, so on the desktop — where this route is the only path — every avatar and logo is re-streamed through PHP on each render, instead of being the cacheable static file a symlinked deployment serves. Acceptable at single-user, single-machine scale; `Storage::disk('public')->serveUsing(...)` is the escape hatch if it ever matters.
 
 The install directory holds only the read-only runtime: `resources/php/php.exe` (the bundled PHP), `resources/server/` (the Laravel app, `--no-dev`), and the renderer inside `app.asar`. Because nothing user-owned lives there, the NSIS uninstaller is configured with `deleteAppDataOnUninstall: false` — uninstalling removes the program and leaves every byte of the gym's data in place.
 

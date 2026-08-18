@@ -35,6 +35,16 @@ export interface DataLayout {
   notificationsLedgerFile: string;
   /** The safeStorage-encrypted sign-in token (#1227). */
   authTokenFile: string;
+  /**
+   * The safeStorage-encrypted Google refresh token for backup sync (#1301).
+   * Separate from authTokenFile so disconnecting Drive cannot disturb sign-in,
+   * and separate from secrets.bin so it is never inside a backup archive.
+   */
+  driveTokenFile: string;
+  /** Drive link bookkeeping — account, folder, last sync. Holds no secret. */
+  driveStateFile: string;
+  /** Which folder backups are copied into, and how that last went (#1320). */
+  backupFolderStateFile: string;
 }
 
 /**
@@ -58,6 +68,9 @@ export function dataLayout(userDataDir: string): DataLayout {
     pidFile: path.join(root, 'php-server.pid'),
     notificationsLedgerFile: path.join(root, 'notifications-ledger.json'),
     authTokenFile: path.join(root, 'auth-token.bin'),
+    driveTokenFile: path.join(root, 'drive-token.bin'),
+    driveStateFile: path.join(root, 'drive-sync.json'),
+    backupFolderStateFile: path.join(root, 'backup-folder.json'),
   };
 }
 
