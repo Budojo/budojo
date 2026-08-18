@@ -60,6 +60,69 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.46.0',
+    date: '2026-08-18',
+    headline: { en: 'Faces on the roster.', it: 'Facce sul registro.' },
+    sections: [
+      {
+        heading: { en: '📸 Athletes can have a photo', it: '📸 Gli atleti possono avere una foto' },
+        bullets: [
+          {
+            en: 'Open an athlete and you will find a Photo card: upload one, replace it, remove it. It shows on the roster too, so with sixty white belts you can find the right row by looking instead of reading. Up to 2 MB, in PNG, JPG or WebP.',
+            it: "Apri un atleta e trovi la scheda Foto: caricala, sostituiscila, rimuovila. Compare anche nel registro, così con sessanta cinture bianche trovi la riga giusta guardando invece che leggendo. Massimo 2 MB, in PNG, JPG o WebP.",
+          },
+          {
+            en: 'Why not "import from WhatsApp"? Neither WhatsApp nor Instagram lets an app read someone else\'s profile picture — Instagram closed the last interface that could in December 2024. And taking a person\'s photo from another platform into your gym\'s records is not yours to do. The photo has to be given to you.',
+            it: "Perché non «importa da WhatsApp»? Né WhatsApp né Instagram permettono a un'app di leggere la foto profilo di un'altra persona: Instagram ha chiuso a dicembre 2024 l'ultima interfaccia che lo consentiva. E prendere la foto di una persona da un'altra piattaforma per metterla nei registri della palestra non è una cosa che ti spetta. La foto te la deve dare lei.",
+          },
+        ],
+      },
+      {
+        heading: { en: '✅ Attendance is one click away', it: '✅ Le presenze a un clic' },
+        bullets: [
+          {
+            en: 'Attendance now sits in the sidebar, next to Athletes. It was only ever reachable behind the + Create button — fine for taking attendance, wrong for looking at it, since consulting who was there yesterday is not creating anything.',
+            it: 'Presenze ora sta nella barra laterale, accanto ad Atleti. Prima si raggiungeva solo dietro il bottone + Crea: giusto per segnare le presenze, sbagliato per consultarle, visto che guardare chi c\'era ieri non è creare niente.',
+          },
+        ],
+      },
+      {
+        heading: { en: '👤 Your avatar opens your profile', it: '👤 Il tuo avatar apre il tuo profilo' },
+        bullets: [
+          {
+            en: 'Clicking your name and picture at the bottom of the sidebar opened the More menu. It now opens your profile, which is what that block does in every app you already use.',
+            it: 'Cliccare il tuo nome e la tua foto in fondo alla barra apriva il menu Altro. Ora apre il tuo profilo, che è quello che fa quel blocco in ogni app che già usi.',
+          },
+        ],
+      },
+      {
+        heading: { en: '🔎 Things that were quietly wrong', it: '🔎 Cose che non andavano, in silenzio' },
+        bullets: [
+          {
+            en: 'The strip that appears while a new version downloads was almost exactly the colour of the page behind it. It now reads as a bar.',
+            it: 'La striscia che compare mentre scarica una nuova versione aveva quasi esattamente il colore della pagina dietro. Ora si legge come una barra.',
+          },
+          {
+            en: 'The monthly attendance title was lower-case, and nothing on that page was spaced apart from anything else.',
+            it: 'Il titolo del mese nelle presenze era minuscolo, e su quella pagina niente era distanziato da niente.',
+          },
+          {
+            en: "What's new was in English even with the app in Italian. The two most recent releases now read in your language; older entries stay in English for now.",
+            it: 'Le Novità erano in inglese anche con l\'app in italiano. Le due release più recenti ora si leggono nella tua lingua; quelle più vecchie restano in inglese per ora.',
+          },
+          {
+            en: 'A missing space before the version at the bottom of the More page.',
+            it: 'Mancava uno spazio prima della versione in fondo alla pagina Altro.',
+          },
+          {
+            en: 'A "view public profile" button that did nothing. Public profiles need the community features, which this edition does not include, so the button is simply gone rather than there and unresponsive.',
+            it: 'Un bottone «vedi profilo pubblico» che non faceva niente. I profili pubblici richiedono le funzioni community, che questa edizione non include: ora il bottone semplicemente non c\'è, invece di esserci e non rispondere.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.45.0',
     date: '2026-08-18',
     headline: {
