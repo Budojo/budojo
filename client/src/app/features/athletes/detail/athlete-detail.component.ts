@@ -21,6 +21,7 @@ import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-b
 import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
 import { InvitationCardComponent } from './invitation-card/invitation-card.component';
 import { EmailChangeCardComponent } from './email-change-card/email-change-card.component';
+import { AthletePhotoCardComponent } from '../photo-card/athlete-photo-card.component';
 
 @Component({
   selector: 'app-athlete-detail',
@@ -36,6 +37,7 @@ import { EmailChangeCardComponent } from './email-change-card/email-change-card.
     BeltBadgeComponent,
     InvitationCardComponent,
     EmailChangeCardComponent,
+    AthletePhotoCardComponent,
   ],
   templateUrl: './athlete-detail.component.html',
   styleUrl: './athlete-detail.component.scss',
@@ -147,6 +149,18 @@ export class AthleteDetailComponent implements OnInit {
    * swap) can ask the parent to re-pull the row so the header email
    * + invitation summary stay in lock-step with the server.
    */
+  /**
+   * Swap in a row a child already has, instead of refetching it.
+   *
+   * `reloadAthlete()` exists for children that only report *that* something
+   * changed; the photo card hands back the updated athlete, and going back to
+   * the server for a row we are holding would be a round-trip to learn what we
+   * were just told.
+   */
+  onAthleteChanged(updated: Athlete): void {
+    this.athlete.set(updated);
+  }
+
   reloadAthlete(): void {
     const a = this.athlete();
     if (a) this.loadAthlete(a.id);

@@ -104,6 +104,16 @@ export interface Athlete {
    */
   user_avatar_url?: string | null;
   /**
+   * The athlete's own photo (#1357), independent of any linked user account.
+   *
+   * That independence is the point: `athlete_accounts` is absent from the
+   * desktop runtime, so before this an athlete on the shipped build could never
+   * have a picture at all. Carries a `?v=` cache-buster, because a
+   * same-format replacement writes to the same path and the browser would
+   * otherwise keep serving the old bitmap.
+   */
+  photo_url?: string | null;
+  /**
    * Structured address (#72b). `null` means no address on file. Same
    * read/write asymmetry as Academy: writes require every field except
    * `line2`; reads may carry nulls for legacy rows backfilled from a
@@ -302,6 +312,40 @@ export class AthleteService {
    * UI flow that triggers this only ever fires from the trashed-list
    * surface.
    */
+  /**
+   * `POST /api/v1/athletes/{id}/photo` (multipart, #1357).
+   *
+   * Stores the original bytes — there is no server-side resize, because the
+   * PHP image ships GD with PNG support only. The UI frames it with CSS
+   * `object-fit: cover`, exactly as the user-avatar flow does.
+   *
+   * Returns the refreshed athlete, so the caller swaps the row in without a
+   * refetch. The `photo_url` carries a `?v=` cache-buster: a same-format
+   * replacement writes to the same path, and without it the browser would keep
+   * showing the picture that was just replaced.
+   */
+  uploadPhoto(athleteId: number, file: File): Observable<Athlete> {
+    const form = new FormData();
+    form.append('photo', file);
+
+    return this.http
+      .post<AthleteResponse>(`${this.base}/${athleteId}/photo`, form)
+      .pipe(map((res) => res.data));
+  }
+
+  /**
+   * `DELETE /api/v1/athletes/{id}/photo`.
+   *
+   * Idempotent on the server: removing a photo that is not there still answers
+   * 200 with `photo_url: null`, so the caller does not have to gate the call on
+   * knowing whether one exists.
+   */
+  removePhoto(athleteId: number): Observable<Athlete> {
+    return this.http
+      .delete<AthleteResponse>(`${this.base}/${athleteId}/photo`)
+      .pipe(map((res) => res.data));
+  }
+
   restore(id: number): Observable<Athlete> {
     return this.http
       .post<AthleteResponse>(`${this.base}/${id}/restore`, {})
