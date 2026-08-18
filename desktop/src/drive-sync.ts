@@ -1,5 +1,5 @@
 import type { BackupEntry } from './backup.js';
-import { isBackupArchive, planRetention } from './backup.js';
+import { isBackupArchive, planRetention, RETENTION, type RetentionPolicy } from './backup.js';
 
 /**
  * What to upload and what to delete on the Drive side (#1301). Pure decisions —
@@ -17,8 +17,9 @@ import { isBackupArchive, planRetention } from './backup.js';
  * refuses to delete the newest whatever it is asked.
  */
 
-/** Remote copies to keep. Matches the local retention #1228 settled on. */
-export const REMOTE_KEEP = 7;
+/** Remote retention. Deliberately the same policy as local (#1228, #1330): a
+ * copy that survives the dead laptop is worth nothing if it is the shallow one. */
+export const REMOTE_RETENTION: RetentionPolicy = RETENTION;
 
 /** A file as Drive reports it, narrowed to what a decision needs. */
 export interface RemoteArchive {
@@ -56,7 +57,7 @@ function newestFirst(names: readonly string[]): string[] {
 export function planSync(
   localArchives: readonly BackupEntry[],
   remoteArchives: readonly RemoteArchive[],
-  keep: number = REMOTE_KEEP,
+  retention: RetentionPolicy = REMOTE_RETENTION,
 ): SyncPlan {
   // drive.file only exposes files this app created, but the folder is the
   // user's and they may have put something in it. Anything that is not one of
@@ -110,7 +111,7 @@ export function planSync(
   // one above the keep count forever, because each pass prunes exactly the one
   // archive the previous pass added.
   const survivingNames = [...byName.keys(), ...toUpload];
-  for (const name of planRetention(survivingNames, keep)) {
+  for (const name of planRetention(survivingNames, retention)) {
     for (const file of byName.get(name) ?? []) {
       toDelete.push(file.id);
     }

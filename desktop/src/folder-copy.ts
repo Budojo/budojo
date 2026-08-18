@@ -1,5 +1,5 @@
 import type { BackupEntry } from './backup.js';
-import { isBackupArchive, planRetention } from './backup.js';
+import { isBackupArchive, planRetention, type RetentionPolicy } from './backup.js';
 
 /**
  * Copying backups into a folder the owner picked (#1320) — the decisions, none
@@ -18,7 +18,9 @@ import { isBackupArchive, planRetention } from './backup.js';
  *      `budojo-backup-*.zip` is invisible to every decision here — their
  *      photos, their spreadsheets, another app's exports.
  *   2. Never leave the folder with no backup in it. Retention reuses
- *      `planRetention` (#1228), which already refuses to delete the newest.
+ *      `planRetention` (#1228, generational since #1330), which already refuses
+ *      to delete the newest — and holds the same fortnight here as locally, so
+ *      the copy that survives the dead disk is not the shallower one.
  */
 
 /** A file already in the destination folder, narrowed to what a decision needs. */
@@ -42,7 +44,7 @@ function newestFirst(names: readonly string[]): string[] {
 export function planFolderCopy(
   localArchives: readonly BackupEntry[],
   folderFiles: readonly FolderFile[],
-  keep: number,
+  retention: RetentionPolicy,
 ): FolderPlan {
   const ours = folderFiles.filter((file) => isBackupArchive(file.name));
   const byName = new Map(ours.map((file) => [file.name, file]));
@@ -68,7 +70,7 @@ export function planFolderCopy(
   // because each pass prunes exactly the archive the previous pass added.
   const after = [...new Set([...byName.keys(), ...toCopy])];
 
-  return { toCopy: newestFirst(toCopy), toDelete: planRetention(after, keep) };
+  return { toCopy: newestFirst(toCopy), toDelete: planRetention(after, retention) };
 }
 
 /**

@@ -7,9 +7,11 @@ import {
   checkRestore,
   isBackupArchive,
   planRetention,
+  RETENTION,
   type BackupEntry,
   type BackupIO,
   type BackupManifest,
+  type RetentionPolicy,
 } from './backup.js';
 
 /**
@@ -28,33 +30,141 @@ describe('backupArchiveName / isBackupArchive', () => {
 });
 
 describe('planRetention', () => {
-  const names = [
-    'budojo-backup-20260810-090000.zip',
-    'budojo-backup-20260811-090000.zip',
-    'budojo-backup-20260812-090000.zip',
-    'budojo-backup-20260813-090000.zip',
-  ];
+  // Six-hourly archives across four consecutive days — what the machine
+  // actually produces, rather than one-per-day, because the whole point of the
+  // policy is that those two look different.
+  const dense = (day: string): string[] =>
+    ['000000', '060000', '120000', '180000'].map((time) => `budojo-backup-${day}-${time}.zip`);
 
-  it('deletes the oldest beyond the keep count', () => {
-    expect(planRetention(names, 2)).toEqual([
-      'budojo-backup-20260810-090000.zip',
-      'budojo-backup-20260811-090000.zip',
-    ]);
+  const fourDays = [...dense('20260810'), ...dense('20260811'), ...dense('20260812'), ...dense('20260813')];
+
+  const kept = (names: readonly string[], policy: RetentionPolicy): string[] => {
+    const doomed = new Set(planRetention(names, policy));
+
+    return names.filter((name) => !doomed.has(name)).sort();
+  };
+
+  describe('the recent tier', () => {
+    it('keeps the newest N archives whatever day they fall on', () => {
+      // 16 archives, keepRecent 6, no daily tier: the last 6 by time survive.
+      expect(kept(fourDays, { keepRecent: 6, keepDays: 0 })).toEqual([
+        'budojo-backup-20260812-120000.zip',
+        'budojo-backup-20260812-180000.zip',
+        'budojo-backup-20260813-000000.zip',
+        'budojo-backup-20260813-060000.zip',
+        'budojo-backup-20260813-120000.zip',
+        'budojo-backup-20260813-180000.zip',
+      ]);
+    });
+
+    it('deletes oldest first', () => {
+      const doomed = planRetention(fourDays, { keepRecent: 6, keepDays: 0 });
+
+      expect(doomed[0]).toBe('budojo-backup-20260810-000000.zip');
+      expect([...doomed]).toEqual([...doomed].sort());
+    });
+
+    it('keeps everything when there is less than the policy asks for', () => {
+      expect(planRetention(dense('20260810'), { keepRecent: 6, keepDays: 14 })).toEqual([]);
+    });
   });
 
-  it('keeps everything when under the cap', () => {
-    expect(planRetention(names, 7)).toEqual([]);
+  describe('the daily tier', () => {
+    // This is the whole reason #1330 exists: seven archives at six-hour spacing
+    // is 42 hours of history, so a Friday mistake noticed on Monday had nothing
+    // to roll back to. The daily tier buys depth without buying density.
+    it('keeps the last archive of each recent day beyond the recent window', () => {
+      const survivors = kept(fourDays, { keepRecent: 2, keepDays: 14 });
+
+      expect(survivors).toContain('budojo-backup-20260810-180000.zip');
+      expect(survivors).toContain('budojo-backup-20260811-180000.zip');
+      expect(survivors).toContain('budojo-backup-20260812-180000.zip');
+    });
+
+    it('keeps only the LAST archive of a day, not the whole day', () => {
+      const survivors = kept(fourDays, { keepRecent: 2, keepDays: 14 });
+
+      expect(survivors).not.toContain('budojo-backup-20260810-000000.zip');
+      expect(survivors).not.toContain('budojo-backup-20260810-060000.zip');
+      expect(survivors).not.toContain('budojo-backup-20260810-120000.zip');
+    });
+
+    it('forgets days older than the window', () => {
+      const old = [...dense('20260101'), ...dense('20260813')];
+
+      expect(kept(old, { keepRecent: 1, keepDays: 1 })).toEqual(['budojo-backup-20260813-180000.zip']);
+    });
+
+    it('counts DAYS PRESENT, not calendar days — a machine that was off does not lose history', () => {
+      // The app only backs up while it runs. Counting back over the calendar
+      // would silently shorten the window to nothing after a fortnight away.
+      const sparse = ['20260101', '20260601', '20260813'].flatMap((day) => dense(day));
+      const survivors = kept(sparse, { keepRecent: 1, keepDays: 3 });
+
+      expect(survivors).toContain('budojo-backup-20260101-180000.zip');
+      expect(survivors).toContain('budojo-backup-20260601-180000.zip');
+    });
+
+    it('does not let the daily tier resurrect an archive the recent tier already keeps', () => {
+      // Both tiers claim the newest archive of the newest day. Counting it
+      // twice would quietly hold one fewer generation than the policy states.
+      const survivors = kept(fourDays, { keepRecent: 6, keepDays: 4 });
+
+      // 6 recent + 4 daily, of which 2 are the same archives: 8, not 10.
+      expect(new Set(survivors).size).toBe(survivors.length);
+      expect(survivors).toHaveLength(8);
+    });
   });
 
-  it('never deletes the only backup, even with keep 0', () => {
-    // A retention bug must not be able to wipe the last good archive.
-    expect(planRetention(['budojo-backup-20260810-090000.zip'], 0)).toEqual([]);
+  describe('the invariants a retention bug must never break', () => {
+    // These are the tests that matter. Everything above is policy; this is the
+    // line between a bug and unrecoverable data loss.
+    it('never deletes the only backup, whatever the policy says', () => {
+      expect(planRetention(['budojo-backup-20260810-090000.zip'], { keepRecent: 0, keepDays: 0 })).toEqual([]);
+    });
+
+    it('never deletes the newest archive, whatever the policy says', () => {
+      const doomed = planRetention(fourDays, { keepRecent: 0, keepDays: 0 });
+
+      expect(doomed).not.toContain('budojo-backup-20260813-180000.zip');
+      expect(doomed).toHaveLength(fourDays.length - 1);
+    });
+
+    it('never touches a file that is not one of our archives', () => {
+      const doomed = planRetention([...fourDays, 'notes.txt', 'budojo.sqlite', 'photo.jpg'], {
+        keepRecent: 1,
+        keepDays: 0,
+      });
+
+      expect(doomed).not.toContain('notes.txt');
+      expect(doomed).not.toContain('budojo.sqlite');
+      expect(doomed).not.toContain('photo.jpg');
+    });
+
+    it('survives an archive name with no parsable day rather than throwing', () => {
+      // `isBackupArchive` only checks the prefix and the suffix, so a truncated
+      // name reaches here. Refusing to crash matters more than classifying it.
+      expect(() =>
+        planRetention(['budojo-backup-.zip', ...dense('20260813')], { keepRecent: 2, keepDays: 14 }),
+      ).not.toThrow();
+    });
+
+    it('handles an empty directory', () => {
+      expect(planRetention([], { keepRecent: 6, keepDays: 14 })).toEqual([]);
+    });
   });
 
-  it('ignores files that are not archives', () => {
-    expect(planRetention([...names, 'notes.txt', 'budojo.sqlite'], 3)).toEqual([
-      'budojo-backup-20260810-090000.zip',
-    ]);
+  describe('RETENTION — the shipped policy', () => {
+    it('holds a fortnight of history instead of the 42 hours #1330 found', () => {
+      // 6-hourly archives for 20 days: the oldest survivor must be ~14 days
+      // back, not ~2. Asserting the outcome, not the constants.
+      const days = Array.from({ length: 20 }, (_, i) => `202608${String(i + 1).padStart(2, '0')}`);
+      const survivors = kept(days.flatMap(dense), RETENTION);
+
+      expect(survivors[0]).toContain('20260807');
+      expect(survivors.length).toBeGreaterThan(15);
+      expect(survivors.length).toBeLessThan(25);
+    });
   });
 });
 
@@ -107,7 +217,14 @@ describe('BackupService', () => {
       writeManifest: vi.fn(async () => undefined),
       zipDir: vi.fn(async () => undefined),
       unzip: vi.fn(async () => undefined),
-      readManifest: vi.fn(async () => ({ format: 1, appVersion: '1', schemaVersion: '2026_01_01_0', createdAt: 'x' })),
+      readManifest: vi.fn(
+        async (): Promise<Partial<BackupManifest> | null> => ({
+          format: 1,
+          appVersion: '1',
+          schemaVersion: '2026_01_01_0',
+          createdAt: 'x',
+        }),
+      ),
       currentSchemaVersion: vi.fn(async () => '2026_05_28_100000'),
       makeTempDir: vi.fn(async (kind) => `/tmp/${kind}`),
       removeDir: vi.fn(async () => undefined),
@@ -119,8 +236,14 @@ describe('BackupService', () => {
     };
   }
 
-  function service(io: BackupIO, keep = 7) {
-    return new BackupService({ io, appVersion: '1.0.0', retentionKeep: keep, log: () => undefined, now: () => new Date(2026, 7, 15, 9, 0, 0) });
+  function service(io: BackupIO, retention: RetentionPolicy = RETENTION) {
+    return new BackupService({
+      io,
+      appVersion: '1.0.0',
+      retention,
+      log: () => undefined,
+      now: () => new Date(2026, 7, 15, 9, 0, 0),
+    });
   }
 
   it('vacuums, copies storage, writes the manifest, zips, then cleans up staging', async () => {
@@ -150,7 +273,7 @@ describe('BackupService', () => {
     ].map((s) => ({ name: `budojo-backup-${s}.zip`, path: `/backups/budojo-backup-${s}.zip`, createdAt: 'x', sizeBytes: 1 }));
     const io = fakeIO({ listArchives: vi.fn(async () => archives) });
 
-    await service(io, 2).backup();
+    await service(io, { keepRecent: 2, keepDays: 2 }).backup();
 
     expect(io.removeArchive).toHaveBeenCalledWith('budojo-backup-20260810-090000.zip');
     expect(io.removeArchive).toHaveBeenCalledTimes(1);

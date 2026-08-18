@@ -1,4 +1,4 @@
-import type { BackupEntry } from './backup.js';
+import type { BackupEntry, RetentionPolicy } from './backup.js';
 import { describeCopyError, planFolderCopy, type FolderFile } from './folder-copy.js';
 
 /**
@@ -51,7 +51,7 @@ function errorCode(error: unknown): string {
 export class FolderCopyService {
   constructor(
     private readonly io: FolderCopyIO,
-    private readonly keep: number,
+    private readonly retention: RetentionPolicy,
   ) {}
 
   async state(): Promise<FolderCopyState> {
@@ -83,7 +83,7 @@ export class FolderCopyService {
 
       const folder = state.folder;
       const [local, present] = [await this.io.localArchives(), await this.io.listFolder(folder)];
-      const plan = planFolderCopy(local, present, this.keep);
+      const plan = planFolderCopy(local, present, this.retention);
       const byName = new Map(local.map((entry) => [entry.name, entry]));
 
       // Copy FIRST, prune after. Pruning first could delete the only copy in

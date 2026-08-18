@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { dataLayout, parseSecrets, runBootstrap, serializeSecrets, type Secrets } from './bootstrap.js';
-import { BackupService } from './backup.js';
+import { BackupService, RETENTION } from './backup.js';
 import { createBackupIO } from './backup-io.js';
 import { createFolderCopyIO } from './folder-copy-io.js';
 import { FolderCopyService } from './folder-copy-service.js';
@@ -414,7 +414,7 @@ async function startRuntime(): Promise<{
       backupsDir: layout.backupsDir,
     }),
     appVersion: app.getVersion(),
-    retentionKeep: 7,
+    retention: RETENTION,
     log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
   });
   // Drive sync (#1301). Off unless the owner connected an account, and off
@@ -442,7 +442,7 @@ async function startRuntime(): Promise<{
       backupService,
       log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
     }),
-    7,
+    RETENTION,
   );
 
   const backupPoll = new PeriodicTask({

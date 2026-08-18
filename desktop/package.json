@@ -20,7 +20,7 @@
     "dev": "npm run build && cross-env ELECTRON_DEV=1 electron dist/main.js",
     "start": "npm run build && electron dist/main.js",
     "test": "vitest run",
-    "lint": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json",
     "build:renderer": "node scripts/build-renderer.mjs",
     "package": "electron-builder --config electron-builder.yml --publish never",
     "package:dir": "electron-builder --dir --config electron-builder.yml --publish never",

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { BackupEntry } from './backup.js';
+import { RETENTION, type BackupEntry } from './backup.js';
 import { emptyFolderState, FolderCopyService, type FolderCopyIO, type FolderCopyState } from './folder-copy-service.js';
 import type { FolderFile } from './folder-copy.js';
 
@@ -44,7 +44,7 @@ describe('copy', () => {
   it('does nothing at all when no folder has been chosen', async () => {
     const { io } = fakeIO({ readState: vi.fn(async () => emptyFolderState()) });
 
-    const result = await new FolderCopyService(io, 7).copy();
+    const result = await new FolderCopyService(io, RETENTION).copy();
 
     expect(result).toEqual({ ran: false, reason: 'no_folder' });
     expect(io.listFolder).not.toHaveBeenCalled();
@@ -54,7 +54,7 @@ describe('copy', () => {
   it('copies an archive the folder is missing', async () => {
     const { io } = fakeIO({ localArchives: vi.fn(async () => [archive('budojo-backup-20260817-090000.zip')]) });
 
-    const result = await new FolderCopyService(io, 7).copy();
+    const result = await new FolderCopyService(io, RETENTION).copy();
 
     expect(result).toMatchObject({ ran: true, copied: 1 });
     expect(io.copyInto).toHaveBeenCalledWith(
@@ -84,7 +84,9 @@ describe('copy', () => {
       }),
     });
 
-    await new FolderCopyService(io, 7).copy();
+    // A policy tight enough that the ten archives above force a prune — the
+    // point of the test is the ORDER of the two, not how deep retention goes.
+    await new FolderCopyService(io, { keepRecent: 7, keepDays: 7 }).copy();
 
     expect(order[0]).toBe('copy');
     expect(order).toContain('delete');
@@ -93,7 +95,7 @@ describe('copy', () => {
   it('records a success even when nothing needed copying', async () => {
     const { io, state } = fakeIO();
 
-    await new FolderCopyService(io, 7).copy();
+    await new FolderCopyService(io, RETENTION).copy();
 
     expect(state.current.lastCopyAt).toBe(new Date(1_700_000_000_000).toISOString());
     expect(state.current.lastError).toBeNull();
@@ -106,7 +108,7 @@ describe('copy', () => {
       }),
     });
 
-    const result = await new FolderCopyService(io, 7).copy();
+    const result = await new FolderCopyService(io, RETENTION).copy();
 
     expect(result).toMatchObject({ ran: true, error: 'ENOENT' });
     expect(state.current.lastError).toBe('ENOENT');
@@ -121,7 +123,7 @@ describe('copy', () => {
     });
     state.current = { ...state.current, lastCopyAt: '2026-08-16T09:00:00.000Z' };
 
-    await new FolderCopyService(io, 7).copy();
+    await new FolderCopyService(io, RETENTION).copy();
 
     expect(state.current.lastCopyAt).toBe('2026-08-16T09:00:00.000Z');
     expect(state.current.lastError).toBe('ENOSPC');
@@ -134,7 +136,7 @@ describe('copy', () => {
       }),
     });
 
-    await expect(new FolderCopyService(io, 7).copy()).resolves.toMatchObject({ ran: true, error: 'EPERM' });
+    await expect(new FolderCopyService(io, RETENTION).copy()).resolves.toMatchObject({ ran: true, error: 'EPERM' });
   });
 
   // It is the owner's folder. Deleting something we did not create would be the
@@ -147,7 +149,7 @@ describe('copy', () => {
       ]),
     });
 
-    await new FolderCopyService(io, 1).copy();
+    await new FolderCopyService(io, { keepRecent: 1, keepDays: 0 }).copy();
 
     expect(io.deleteFrom).not.toHaveBeenCalled();
   });
@@ -158,7 +160,7 @@ describe('setFolder', () => {
     const { io, state } = fakeIO();
     state.current = { ...state.current, lastError: 'ENOENT' };
 
-    const next = await new FolderCopyService(io, 7).setFolder('E:/Backups');
+    const next = await new FolderCopyService(io, RETENTION).setFolder('E:/Backups');
 
     expect(next.folder).toBe('E:/Backups');
     expect(state.current.lastError).toBeNull();
@@ -166,7 +168,7 @@ describe('setFolder', () => {
 
   it('clearing the folder stops all copying', async () => {
     const { io } = fakeIO({ localArchives: vi.fn(async () => [archive('a')]) });
-    const service = new FolderCopyService(io, 7);
+    const service = new FolderCopyService(io, RETENTION);
 
     await service.setFolder(null);
     const result = await service.copy();

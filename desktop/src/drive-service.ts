@@ -6,7 +6,7 @@ import {
   unlinkedState,
   type DriveState,
 } from './drive-state.js';
-import { mergeArchiveViews, planSync, REMOTE_KEEP, type ArchiveView, type RemoteArchive } from './drive-sync.js';
+import { mergeArchiveViews, planSync, REMOTE_RETENTION, type ArchiveView, type RemoteArchive } from './drive-sync.js';
 
 /**
  * Orchestrates the Drive backup sync (#1301): link, sync, unlink.
@@ -148,7 +148,7 @@ export class DriveSyncService {
 
       const tokens = await this.authenticated();
       const [local, remote] = [await this.io.localArchives(), await this.io.listRemote(tokens, state.folderId)];
-      const plan = planSync(local, remote, REMOTE_KEEP);
+      const plan = planSync(local, remote, REMOTE_RETENTION);
 
       const byName = new Map(local.map((entry) => [entry.name, entry]));
 
