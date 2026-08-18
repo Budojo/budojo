@@ -120,6 +120,8 @@ Format: `→` separates the symptom from the action.
 
 ## Tests — Vitest
 
+- A test that asserts on **"the newest release's copy"** (the first card, the top row, `[0]`) breaks on the very next release, for being right. Written that way in #1347 and broken one release later by #1358 → anchor content assertions to a **specific, stable** entry looked up by its identifier, and test the *mechanism* separately with an assertion that survives new data (e.g. "the two languages render differently") rather than one that pins today's words.
+
 - A spec that assigns to a **global** (`window.__BUDOJO__`, `globalThis.*`) and clears it in `beforeEach` still leaks: `beforeEach` protects only that file's own tests, and the LAST test leaves the global set for whatever runs next in the same worker. Clear it in **`afterEach`** — every existing bridge spec already does. Caught as a 2-in-3 flake where `desktop-bridge.service.spec.ts`'s "no bridge on the web" case saw a bridge left behind by a new component spec (#1339). It only ever appears in a full-suite run, which is why the rule is to run the whole client suite when adding a spec file.
 
 ### Vitest — gate coverage
