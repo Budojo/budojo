@@ -28,6 +28,42 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.44.0',
+    date: '2026-08-18',
+    headline: 'Your backups finally leave this computer.',
+    sections: [
+      {
+        heading: '💾 Pick a folder, and every backup goes there',
+        bullets: [
+          'A backup sitting on the same disk as your data does not survive that disk. Data & backup → Backup folder → Choose folder closes that gap with no account to create and nothing to configure.',
+          'Point it at a folder your cloud service already syncs — OneDrive, Dropbox, iCloud Drive, the Google Drive app — or at a network drive or a USB stick. Budojo writes the file; whatever you already run carries it off the machine.',
+          'It stays off until you choose a folder, and nothing leaves this computer before you do. Budojo only ever touches archives it created — your own files in that folder are left completely alone.',
+        ],
+      },
+      {
+        heading: '🕓 Two weeks of history, not two days',
+        bullets: [
+          'Backups run every six hours, and until now only the seven most recent were kept — barely 42 hours. Fine for a mistake you notice straight away, useless for one you notice on Monday.',
+          'Now two things are kept side by side: the six most recent archives, whatever time they were made, plus the last backup of each of the past fourteen days.',
+        ],
+      },
+      {
+        heading: '↩️ Restore works',
+        bullets: [
+          'The Restore button on each backup did nothing — it never even appeared. It does now, with a confirmation before anything is replaced.',
+        ],
+      },
+      {
+        heading: '🖼️ Fixes you will notice',
+        bullets: [
+          'Academy logos and athlete photos load again instead of showing a broken image.',
+          "Budojo's own icon in the Start menu, the taskbar and the installer, in place of the generic Electron one.",
+          'A blank Data & backup page no longer greets you while it loads — it shows placeholders, then the real thing.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.43.0',
     date: '2026-08-16',
     headline: 'Budojo keeps itself up to date.',
