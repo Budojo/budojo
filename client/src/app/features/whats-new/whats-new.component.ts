@@ -2,8 +2,9 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TranslatePipe } from '@ngx-translate/core';
+import { LanguageService } from '../../core/services/language.service';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
-import { RELEASES, type Release } from './whats-new.releases';
+import { localised, RELEASES, type Localised, type Release } from './whats-new.releases';
 
 /**
  * "What's new" page (#254). User-facing changelog for non-technical
@@ -48,8 +49,18 @@ import { RELEASES, type Release } from './whats-new.releases';
 })
 export class WhatsNewComponent {
   private readonly router = inject(Router);
+  private readonly languageService = inject(LanguageService);
 
   protected readonly releases: readonly Release[] = RELEASES;
+
+  /**
+   * Release copy is data, not template text, so it cannot go through
+   * `| translate` (#1347). Entries carry both languages where we have
+   * translated them and a bare English string where we have not.
+   */
+  protected text(value: Localised): string {
+    return localised(value, this.languageService.currentLang());
+  }
 
   goHome(): void {
     this.router.navigateByUrl('/dashboard');

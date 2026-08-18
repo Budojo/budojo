@@ -14,36 +14,89 @@
  * instead of prepends) fails CI.
  */
 
+/**
+ * A piece of release copy, in one language or two (#1347).
+ *
+ * A bare string is English — which is what all 88 historical entries already
+ * are, so nothing had to be migrated to introduce this.
+ *
+ * The content deliberately stays here rather than moving to
+ * `assets/i18n/{en,it}.json`, where the repo otherwise keeps every visible
+ * string. This file is 200 KB, larger than either i18n bundle; those are loaded
+ * synchronously at boot for **every** user, while this route is `loadComponent`
+ * and opened by almost nobody. Moving it would roughly triple the always-loaded
+ * payload to translate a page few people visit — a real performance regression
+ * traded for a translation fix.
+ */
+export type Localised = string | { readonly en: string; readonly it: string };
+
 export interface ChangelogSection {
-  readonly heading: string;
-  readonly bullets: readonly string[];
+  readonly heading: Localised;
+  readonly bullets: readonly Localised[];
 }
 
 export interface Release {
   readonly version: string;
   readonly date: string;
-  readonly headline: string;
+  readonly headline: Localised;
   readonly sections: readonly ChangelogSection[];
+}
+
+/**
+ * Resolves a `Localised` for the active language, falling back to English.
+ *
+ * English is the fallback rather than "show the key" or an empty string,
+ * because an untranslated release note is still worth reading — the failure
+ * mode of a missing translation here should be a language switch, not a blank
+ * card.
+ */
+export function localised(value: Localised, lang: string): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return lang === 'it' ? value.it : value.en;
 }
 
 export const RELEASES: readonly Release[] = [
   {
     version: 'v2.45.0',
     date: '2026-08-18',
-    headline: 'You can see the update happening.',
+    headline: {
+      en: 'You can see the update happening.',
+      it: "Ora vedi l'aggiornamento mentre succede.",
+    },
     sections: [
       {
-        heading: '⬇️ A new version no longer arrives out of nowhere',
+        heading: {
+          en: '⬇️ A new version no longer arrives out of nowhere',
+          it: '⬇️ Una nuova versione non arriva più dal nulla',
+        },
         bullets: [
-          'Budojo downloads new versions quietly in the background. Until now the only sign was a single notification once the download had already finished — easy to miss, and gone in a few seconds.',
-          'A thin line at the top of the app now tells you which version is downloading and how far along it is, then that it is ready and will install when you next close Budojo.',
-          'It appears only when there is something to say, and it never asks you to stop what you are doing. Closing the app at the end of the day is still all it takes.',
+          {
+            en: 'Budojo downloads new versions quietly in the background. Until now the only sign was a single notification once the download had already finished — easy to miss, and gone in a few seconds.',
+            it: "Budojo scarica le nuove versioni in silenzio, mentre lavori. Finora l'unico segnale era una notifica che compariva a scaricamento già finito: facile da perdere, e via dopo pochi secondi.",
+          },
+          {
+            en: 'A thin line at the top of the app now tells you which version is downloading and how far along it is, then that it is ready and will install when you next close Budojo.',
+            it: "Ora una riga sottile in cima all'app ti dice quale versione sta scaricando e a che punto è, e poi che è pronta e si installerà alla prossima chiusura di Budojo.",
+          },
+          {
+            en: 'It appears only when there is something to say, and it never asks you to stop what you are doing. Closing the app at the end of the day is still all it takes.',
+            it: "Compare solo quando c'è qualcosa da dire, e non ti chiede mai di interrompere quello che stai facendo. Chiudere l'app a fine giornata resta tutto ciò che serve.",
+          },
         ],
       },
       {
-        heading: '🔢 The app finally tells you which version it is',
+        heading: {
+          en: '🔢 The app finally tells you which version it is',
+          it: "🔢 Finalmente l'app ti dice che versione è",
+        },
         bullets: [
-          'The version at the bottom of the More page always read "dev", in every release we have ever shipped. It now shows the real one — so if you have ever tried to check whether an update actually installed, that number is finally a reliable answer.',
+          {
+            en: 'The version at the bottom of the More page always read "dev", in every release we have ever shipped. It now shows the real one — so if you have ever tried to check whether an update actually installed, that number is finally a reliable answer.',
+            it: 'La versione in fondo alla pagina Altro ha sempre mostrato "dev", in ogni release che abbiamo mai pubblicato. Ora mostra quella vera: se hai mai provato a controllare lì se un aggiornamento fosse davvero stato installato, quel numero ora è una risposta affidabile.',
+          },
         ],
       },
     ],
@@ -51,35 +104,77 @@ export const RELEASES: readonly Release[] = [
   {
     version: 'v2.44.0',
     date: '2026-08-18',
-    headline: 'Your backups finally leave this computer.',
+    headline: {
+      en: 'Your backups finally leave this computer.',
+      it: 'I tuoi backup finalmente escono da questo computer.',
+    },
     sections: [
       {
-        heading: '💾 Pick a folder, and every backup goes there',
+        heading: {
+          en: '💾 Pick a folder, and every backup goes there',
+          it: '💾 Scegli una cartella, e ogni backup finisce lì',
+        },
         bullets: [
-          'A backup sitting on the same disk as your data does not survive that disk. Data & backup → Backup folder → Choose folder closes that gap with no account to create and nothing to configure.',
-          'Point it at a folder your cloud service already syncs — OneDrive, Dropbox, iCloud Drive, the Google Drive app — or at a network drive or a USB stick. Budojo writes the file; whatever you already run carries it off the machine.',
-          'It stays off until you choose a folder, and nothing leaves this computer before you do. Budojo only ever touches archives it created — your own files in that folder are left completely alone.',
+          {
+            en: 'A backup sitting on the same disk as your data does not survive that disk. Data & backup → Backup folder → Choose folder closes that gap with no account to create and nothing to configure.',
+            it: 'Un backup che sta sullo stesso disco dei tuoi dati non sopravvive a quel disco. Dati e backup → Cartella di backup → Scegli cartella chiude questa falla, senza account da creare e senza niente da configurare.',
+          },
+          {
+            en: 'Point it at a folder your cloud service already syncs — OneDrive, Dropbox, iCloud Drive, the Google Drive app — or at a network drive or a USB stick. Budojo writes the file; whatever you already run carries it off the machine.',
+            it: "Puntala su una cartella che il tuo servizio cloud già sincronizza — OneDrive, Dropbox, iCloud Drive, l'app di Google Drive — oppure su un disco di rete o una chiavetta USB. Budojo scrive il file; quello che già usi lo porta fuori dal computer.",
+          },
+          {
+            en: 'It stays off until you choose a folder, and nothing leaves this computer before you do. Budojo only ever touches archives it created — your own files in that folder are left completely alone.',
+            it: 'Resta spento finché non scegli una cartella, e niente esce da questo computer prima che tu lo faccia. Budojo tocca solo gli archivi che ha creato lui: i tuoi file in quella cartella restano assolutamente intatti.',
+          },
         ],
       },
       {
-        heading: '🕓 Two weeks of history, not two days',
+        heading: {
+          en: '🕓 Two weeks of history, not two days',
+          it: '🕓 Due settimane di storico, non due giorni',
+        },
         bullets: [
-          'Backups run every six hours, and until now only the seven most recent were kept — barely 42 hours. Fine for a mistake you notice straight away, useless for one you notice on Monday.',
-          'Now two things are kept side by side: the six most recent archives, whatever time they were made, plus the last backup of each of the past fourteen days.',
+          {
+            en: 'Backups run every six hours, and until now only the seven most recent were kept — barely 42 hours. Fine for a mistake you notice straight away, useless for one you notice on Monday.',
+            it: 'I backup girano ogni sei ore, e finora se ne tenevano solo i sette più recenti: appena 42 ore. Vanno bene per un errore di cui ti accorgi subito, non servono a niente per uno di cui ti accorgi lunedì.',
+          },
+          {
+            en: 'Now two things are kept side by side: the six most recent archives, whatever time they were made, plus the last backup of each of the past fourteen days.',
+            it: "Ora se ne tengono due tipi affiancati: i sei archivi più recenti, a qualunque ora siano stati fatti, più l'ultimo backup di ciascuno degli ultimi quattordici giorni.",
+          },
         ],
       },
       {
-        heading: '↩️ Restore works',
+        heading: {
+          en: '↩️ Restore works',
+          it: '↩️ Il ripristino funziona',
+        },
         bullets: [
-          'The Restore button on each backup did nothing — it never even appeared. It does now, with a confirmation before anything is replaced.',
+          {
+            en: 'The Restore button on each backup did nothing — it never even appeared. It does now, with a confirmation before anything is replaced.',
+            it: "Il pulsante Ripristina su ogni backup non faceva niente: non compariva nemmeno. Ora c'è, con una conferma prima che qualcosa venga sostituito.",
+          },
         ],
       },
       {
-        heading: '🖼️ Fixes you will notice',
+        heading: {
+          en: '🖼️ Fixes you will notice',
+          it: '🖼️ Correzioni che noterai',
+        },
         bullets: [
-          'Academy logos and athlete photos load again instead of showing a broken image.',
-          "Budojo's own icon in the Start menu, the taskbar and the installer, in place of the generic Electron one.",
-          'A blank Data & backup page no longer greets you while it loads — it shows placeholders, then the real thing.',
+          {
+            en: 'Academy logos and athlete photos load again instead of showing a broken image.',
+            it: "I loghi dell'accademia e le foto degli atleti si caricano di nuovo, invece di mostrare un'immagine rotta.",
+          },
+          {
+            en: "Budojo's own icon in the Start menu, the taskbar and the installer, in place of the generic Electron one.",
+            it: "L'icona di Budojo nel menu Start, nella barra delle applicazioni e nell'installer, al posto di quella generica di Electron.",
+          },
+          {
+            en: 'A blank Data & backup page no longer greets you while it loads — it shows placeholders, then the real thing.',
+            it: 'La pagina Dati e backup non ti accoglie più vuota mentre carica: mostra dei segnaposto e poi il contenuto vero.',
+          },
         ],
       },
     ],

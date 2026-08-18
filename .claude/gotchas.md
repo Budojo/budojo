@@ -21,6 +21,7 @@ Format: `→` separates the symptom from the action.
 ---
 
 ## Frontend — Angular & PWA
+- Visible copy held as **data** (a `.ts` array, a config object) instead of template text silently escapes i18n: `| translate` never touches it, and the `en/it` parity spec cannot see it either, so the page renders translated chrome around untranslated content. The What's new page did this for 88 releases (#1347). Before assuming the string belongs in `assets/i18n/*.json`, check the size: that bundle is loaded **synchronously at boot for every user**, so moving 200 KB of lazy-route content into it is a performance regression traded for a translation fix. Localise the data in place instead.
 
 ### Angular templates & a11y
 

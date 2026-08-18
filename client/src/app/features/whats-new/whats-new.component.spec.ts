@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { WhatsNewComponent } from './whats-new.component';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
+import { LanguageService } from '../../core/services/language.service';
+import { localised } from './whats-new.releases';
 
 describe('WhatsNewComponent (#254)', () => {
   function setup() {
@@ -15,6 +17,52 @@ describe('WhatsNewComponent (#254)', () => {
     fixture.detectChanges();
     return { fixture, cmp: fixture.componentInstance };
   }
+
+  // #1347 — the page chrome went through `| translate`, but the release copy is
+  // data rather than template text and came out English for everyone. Not a
+  // regression: it had been true since the page shipped.
+  describe('release copy follows the chosen language', () => {
+    it('renders the Italian copy when the app is in Italian', () => {
+      const { fixture } = setup();
+      TestBed.inject(LanguageService).currentLang.set('it');
+      fixture.detectChanges();
+
+      const first: HTMLElement = fixture.nativeElement.querySelector('.whats-new__release');
+
+      expect(first.textContent).toContain('Ora vedi');
+      expect(first.textContent).not.toContain('You can see the update happening');
+    });
+
+    it('renders the English copy when the app is in English', () => {
+      const { fixture } = setup();
+      TestBed.inject(LanguageService).currentLang.set('en');
+      fixture.detectChanges();
+
+      const first: HTMLElement = fixture.nativeElement.querySelector('.whats-new__release');
+
+      expect(first.textContent).toContain('You can see the update happening');
+    });
+  });
+
+  describe('localised', () => {
+    // The 88 historical entries are bare strings and were not migrated. They
+    // have to keep rendering — in both languages — or introducing the type
+    // would have blanked most of the page.
+    it('passes a plain string through in any language', () => {
+      expect(localised('Plain English', 'it')).toBe('Plain English');
+      expect(localised('Plain English', 'en')).toBe('Plain English');
+    });
+
+    it('falls back to English for a language it has no copy for', () => {
+      // An untranslated note is still worth reading; the failure mode of a
+      // missing translation should be a language switch, not a blank card.
+      expect(localised({ en: 'English', it: 'Italiano' }, 'de')).toBe('English');
+    });
+
+    it('picks Italian when asked for it', () => {
+      expect(localised({ en: 'English', it: 'Italiano' }, 'it')).toBe('Italiano');
+    });
+  });
 
   it('renders the title and the latest release at the top', () => {
     const { fixture } = setup();
