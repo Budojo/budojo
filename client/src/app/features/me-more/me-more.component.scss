@@ -77,8 +77,18 @@
 }
 
 .me-more__footer {
+  // Laid out explicitly rather than left to the whitespace between the tags.
+  // What used to separate these was a side effect of the template's line
+  // wrapping — each link holds its label on its own line, so Angular collapses
+  // that to a leading and trailing space, while the version span is written
+  // inline and got none (#1344). A declared gap cannot be undone by a
+  // formatter rejoining a short element.
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.5rem;
   margin: 0;
-  text-align: center;
   color: var(--p-text-color-secondary);
   font-size: 0.8125rem;
   line-height: 1.4;
