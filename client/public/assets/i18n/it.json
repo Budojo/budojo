@@ -2291,5 +2291,10 @@
         "unknown": "Impossibile copiare nella cartella dei backup ({{code}}). I backup continuano a essere salvati su questo computer."
       }
     }
+  },
+  "update": {
+    "downloading": "Scaricamento aggiornamento {{version}}…",
+    "percent": "{{percent}}%",
+    "ready": "Versione {{version}} pronta — si installa alla chiusura di Budojo"
   }
 }

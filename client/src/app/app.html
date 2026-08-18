@@ -3,6 +3,11 @@
      "push" so only WebPushHandlerService's messages render here —
      clickable (deep-links) + dismissable, unlike the generic toast above. -->
 <app-push-toast />
+<!-- Update progress (#1339). Mounted above the outlet so it sits at the very
+     top of whatever shell is rendered, and renders NOTHING at all unless an
+     update is downloading or waiting to install — so it costs no vertical
+     space in the normal case. Absent outside Electron. -->
+<app-update-banner />
 <router-outlet />
 <!-- Cookie consent banner (#421). Mounted at the app root so it's
      visible on every public route (landing, /privacy, /cookie-policy,

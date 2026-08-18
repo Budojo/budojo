@@ -28,6 +28,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.45.0',
+    date: '2026-08-18',
+    headline: 'You can see the update happening.',
+    sections: [
+      {
+        heading: '⬇️ A new version no longer arrives out of nowhere',
+        bullets: [
+          'Budojo downloads new versions quietly in the background. Until now the only sign was a single notification once the download had already finished — easy to miss, and gone in a few seconds.',
+          'A thin line at the top of the app now tells you which version is downloading and how far along it is, then that it is ready and will install when you next close Budojo.',
+          'It appears only when there is something to say, and it never asks you to stop what you are doing. Closing the app at the end of the day is still all it takes.',
+        ],
+      },
+      {
+        heading: '🔢 The app finally tells you which version it is',
+        bullets: [
+          'The version at the bottom of the More page always read "dev", in every release we have ever shipped. It now shows the real one — so if you have ever tried to check whether an update actually installed, that number is finally a reliable answer.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.44.0',
     date: '2026-08-18',
     headline: 'Your backups finally leave this computer.',

@@ -8,6 +8,15 @@
  * stale chunk left behind from a previous build is exactly the "HTML for a
  * missing module" class of failure the protocol handler exists to prevent.
  *
+ * **The version stamp is written here, on the host, before either path runs.**
+ * `write-version.cjs` is wired as npm's `prebuild` hook, which only fires for
+ * `npm run build` — and this script calls `ng` directly, so the hook never
+ * fired and every packaged app shipped a footer reading "dev" (#1337). It has
+ * to run on the host either way: the container mounts only `./client:/app` and
+ * has neither `git` nor a `.git` directory, so it could not resolve a tag from
+ * in there. `BUDOJO_VERSION` short-circuits the git lookup, which is what the
+ * installer job sets — its checkout is shallow and tagless.
+ *
  * **Where the Angular build actually runs depends on where the toolchain is.**
  * On CI the runner does its own `npm ci` in client/, so `ng` is native and runs
  * on the host. On the Windows dev box `client/node_modules` is installed INSIDE
@@ -30,6 +39,22 @@ const skipBuild = process.argv.includes('--copy-only');
 
 const CONTAINER = 'budojo_client';
 const NG_ARGS = ['ng', 'build', '--configuration', 'desktop'];
+
+/**
+ * Stamps `client/src/environments/version.ts` before the bundle is built.
+ *
+ * Never fatal. A build that ships with the sentinel version is worse than one
+ * that ships with the right one, and much better than no build at all — so a
+ * failure here is loud and carried on from.
+ */
+function writeVersion() {
+  const script = path.join(clientDir, 'scripts', 'write-version.cjs');
+  const result = spawnSync(process.execPath, [script], { cwd: clientDir, stdio: 'inherit' });
+
+  if (result.status !== 0) {
+    console.warn('warning: could not stamp the version — the app will report "dev"');
+  }
+}
 
 /** A host toolchain is usable only if npm created a launcher for THIS platform. */
 function hostToolchainUsable() {
@@ -62,6 +87,8 @@ function buildInContainer() {
 
 if (!skipBuild) {
   let ng;
+
+  writeVersion();
 
   if (hostToolchainUsable()) {
     ng = buildOnHost();

@@ -420,6 +420,13 @@ jobs:
         # `build` compiles main + preload (tsc); `build:renderer` runs
         # `ng build --configuration desktop` in ../client and copies the
         # output to dist/renderer, which electron-builder packs into the asar.
+        #
+        # BUDOJO_VERSION is what the renderer stamps into the footer (#1337).
+        # It has to be told: this checkout is `fetch-depth: 1` at a tag with no
+        # tags fetched, so `git describe` returns a bare SHA and the app would
+        # report "dev" — which is exactly what every installer did until now.
+        env:
+          BUDOJO_VERSION: ${{ steps.ver.outputs.version }}
         run: |
           npm run build
           npm run build:renderer
