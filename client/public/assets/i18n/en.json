@@ -1984,6 +1984,31 @@
           "netherlands": "Netherlands"
         }
       }
+    },
+    "photo": {
+      "title": "Photo",
+      "hint": "PNG, JPG or WebP, up to 2 MB.",
+      "upload": "Upload photo",
+      "replace": "Replace photo",
+      "remove": "Remove",
+      "alt": "Photo of {{name}}",
+      "confirm": {
+        "removeMessage": "Remove this athlete's photo?",
+        "removeAccept": "Remove",
+        "removeReject": "Cancel"
+      },
+      "toast": {
+        "uploadSuccess": "Photo updated",
+        "uploadErrorSummary": "Upload failed",
+        "uploadErrorDetail": "Please try again in a moment.",
+        "removeSuccess": "Photo removed",
+        "removeErrorSummary": "Could not remove the photo",
+        "removeErrorDetail": "Please try again in a moment.",
+        "unsupportedSummary": "Unsupported format",
+        "unsupportedDetail": "Use a PNG, JPG or WebP file.",
+        "tooLargeSummary": "File too large",
+        "tooLargeDetail": "The photo cannot exceed 2 MB."
+      }
     }
   },
   "month": {

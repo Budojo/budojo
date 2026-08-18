@@ -485,6 +485,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         // Documents — read access stays open (browsing + downloading); writes are
         // gated. Listing per-athlete is a read; uploading is a write.
+        // Athlete photo (#1357). Academy-scoped in the controller, because the
+        // storage path is derived from the route parameter. POST is throttled
+        // like /me/avatar — multipart upload is the storage-flood vector, and a
+        // buggy client retry loop is what fills the public disk. DELETE stays
+        // unthrottled: it only frees space.
+        Route::post('/athletes/{athlete}/photo', [\App\Http\Controllers\Athlete\AthletePhotoController::class, 'upload'])
+            ->middleware('throttle:10,1');
+        Route::delete('/athletes/{athlete}/photo', [\App\Http\Controllers\Athlete\AthletePhotoController::class, 'destroy']);
+
         Route::get('/athletes/{athlete}/documents', [\App\Http\Controllers\Athlete\AthleteDocumentController::class, 'index']);
         // Promotion history — owner reads belt + stripe events for a
         // specific athlete (post-v2.9.0). Same academy-scope gate as

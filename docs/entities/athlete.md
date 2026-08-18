@@ -24,6 +24,7 @@ An `Athlete` represents a student enrolled at an `Academy`. This is the core ros
 | `stripes` | tinyint unsigned | not null, default `0` | Range 0–6 on `black` (graus 1°–6°); 0–4 on every other belt. Enforced cross-field at the request layer via `Belt::maxStripes()` |
 | `status` | string | not null | Cast to `App\Enums\AthleteStatus` backed enum (`active` / `suspended` / `inactive`) |
 | `joined_at` | date | not null | When the athlete first enrolled |
+| `photo_path` | string(255) | nullable | Relative path on the `public` disk of the athlete's photo (#1357). Null until the first `POST /athletes/{id}/photo`. The wire layer emits `photo_url` (full URL, with a cache-buster) via `AthleteResource`, never the raw path. Independent of `user_id`: an athlete needs no account to have a face, which matters because `athlete_accounts` is absent from the desktop runtime. |
 | `created_at` | timestamp | nullable | |
 | `updated_at` | timestamp | nullable | |
 | `deleted_at` | timestamp | nullable, **SoftDeletes** | Set when the athlete is "removed" via the API; the row remains in the DB |
@@ -80,6 +81,8 @@ Covers the full **IBJJF rank scale** on a single linear axis:
 | `Inactive` | `inactive` | No longer attending but not deleted — kept for history and belt tracking |
 
 ## Business rules
+
+- **Photo lifecycle** (#1357). Uploaded via `POST /api/v1/athletes/{athlete}/photo` (multipart, field `photo`, `image` + `mimes:jpeg,jpg,png,webp`, max 2 MB, throttled 10/min). `UploadAthletePhotoAction` stores the original bytes at `athletes/photos/{athlete-id}.{ext}` on the `public` disk — no server-side resize, because GD in the API image ships with PNG support only; the SPA frames it with CSS `object-fit: cover`. `jpeg` is normalised to `jpg` so the path does not depend on which browser uploaded it. Same-extension replacements overwrite in place; a different extension unlinks the orphan. `DELETE /api/v1/athletes/{athlete}/photo` unlinks and clears the column, and is idempotent — removing a photo that is not there still answers 200 with `photo_url: null`. **Both endpoints re-check academy ownership and answer 403 otherwise**: the storage path is derived from the route parameter, so that check is what stops one academy writing into another's namespace. SVG is rejected here as it is for user avatars — it is a script vector, and making it safe needed a hand-rolled sanitiser on the academy-logo path that a head-shot does not justify. `photo_url` carries a `?v={updated_at}` cache-buster, without which a same-format replacement would leave the browser showing the picture that was just replaced.
 
 - **Academy scoping.** Every athlete query on every endpoint is filtered by `academy_id = auth()->user()->academy->id`. The controller, not a global scope, enforces this — matching the rest of the codebase.
 - **Soft-delete semantics.** `DELETE /api/v1/athletes/{id}` sets `deleted_at` but never removes the row. Future reports (attendance history, belt promotions) can still reference historic athletes. The list endpoint never returns soft-deleted rows.

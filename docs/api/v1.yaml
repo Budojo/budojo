@@ -3842,6 +3842,105 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorMessage' }
 
+  /athletes/{athlete}/photo:
+    post:
+      tags: [athletes]
+      summary: Upload or replace an athlete's photo (owner-only)
+      description: |
+        Multipart `photo` upload (#1357). The server stores the original bytes
+        under `athletes/photos/{athlete-id}.{ext}` on the public disk, with the
+        extension tracking the upload; `jpeg` is normalised to `jpg` so the path
+        does not depend on which browser sent it.
+
+        No server-side resize: GD in the API image ships with PNG support only,
+        so the SPA frames the image with CSS `object-fit: cover` instead — the
+        same choice `/me/avatar` documents. Replacing with the same extension
+        overwrites in place; a different extension unlinks the orphan.
+
+        Accepts `image/jpeg`, `image/png`, `image/webp`, max 2 MB. SVG is
+        rejected on this surface for the same reason as user avatars: it is a
+        script vector, and the sanitiser the academy-logo flow needed is far
+        more surface than a head-shot justifies.
+
+        Academy-scoped, and here that is load-bearing rather than routine — the
+        storage path is derived from the path parameter, so the check is what
+        stops one academy writing files into another's namespace.
+
+        The response is the full athlete envelope, so the SPA swaps the row in
+        without a follow-up `GET`. Its `photo_url` carries a `?v={updated_at}`
+        cache-buster; without it a same-format replacement would leave the
+        browser showing the picture that was just replaced.
+      operationId: athleteUploadPhoto
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Photo uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Athlete'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: The athlete belongs to another academy.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          description: |
+            Rate-limited (10/min per user). Caps the multipart-upload
+            storage-flood vector, as `/me/avatar` does. Carries `Retry-After`.
+
+    delete:
+      tags: [athletes]
+      summary: Remove an athlete's photo (owner-only)
+      description: |
+        Deletes the stored file and clears `photo_path`, returning the athlete
+        envelope with `photo_url: null`.
+
+        Idempotent: removing a photo that is not there is still a 200. Deleting
+        nothing leaves the caller in the state it asked for, and a 404 would
+        only make the SPA special-case a success.
+      operationId: athleteDeletePhoto
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Photo removed (or no-op when none was set)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Athlete'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: The athlete belongs to another academy.
+
   /athletes/{athlete}/promotions:
     get:
       tags: [athletes]
@@ -6348,6 +6447,22 @@ components:
             The SPA falls back to an initials placeholder in that case.
             Absolute URL — `Storage::disk('public')->url(...)` resolves
             against `APP_URL`, not `/storage/...`.
+        photo_url:
+          type: string
+          format: uri
+          nullable: true
+          description: |
+            The athlete's own photo (#1357), independent of any linked user
+            account — which is the point: `athlete_accounts` is absent from the
+            desktop runtime, so before this an athlete on a shipped build could
+            never have a picture at all. Null until the first upload.
+
+            The SPA prefers this over `user_avatar_url` and falls back to the
+            initials placeholder when both are null.
+
+            Carries a `?v={updated_at}` cache-buster: a same-format replacement
+            writes to the same path, so without it the browser would keep
+            serving the picture that was just replaced.
         invitation:
           nullable: true
           description: |

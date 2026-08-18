@@ -800,6 +800,19 @@ export class AthletesListComponent implements OnInit {
    * One method rather than the condition repeated at each of the three layouts
    * plus the action sheet, because the fourth site is the one that gets missed.
    */
+  /**
+   * The picture to show for a row: the athlete's own photo first, the linked
+   * account's avatar second, nothing third (the initials circle).
+   *
+   * That order is the point of #1357. `athlete_accounts` is absent from the
+   * desktop runtime, so `user_avatar_url` is always null there — before the
+   * athlete had a photo of its own, every row on the shipped build fell back
+   * to initials with no way to change it.
+   */
+  protected avatarFor(athlete: Athlete): string | null {
+    return athlete.photo_url ?? athlete.user_avatar_url ?? null;
+  }
+
   protected publicProfileHandle(athlete: Athlete): string | null {
     if (!this.runtime.has()('community')) {
       return null;

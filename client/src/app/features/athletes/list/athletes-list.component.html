@@ -254,7 +254,7 @@
                       [attr.data-cy]="'athlete-avatar-link-' + athlete.id"
                     >
                       <app-user-avatar
-                        [url]="athlete.user_avatar_url"
+                        [url]="avatarFor(athlete)"
                         [name]="athlete.first_name + ' ' + athlete.last_name"
                         size="chip"
                       />
@@ -266,7 +266,7 @@
                       [attr.data-cy]="'athlete-avatar-inert-' + athlete.id"
                     >
                       <app-user-avatar
-                        [url]="athlete.user_avatar_url"
+                        [url]="avatarFor(athlete)"
                         [name]="athlete.first_name + ' ' + athlete.last_name"
                         size="chip"
                       />
@@ -567,7 +567,7 @@
                     [attr.data-cy]="'athlete-card-avatar-link-' + athlete.id"
                   >
                     <app-user-avatar
-                      [url]="athlete.user_avatar_url"
+                      [url]="avatarFor(athlete)"
                       [name]="athlete.first_name + ' ' + athlete.last_name"
                       size="chip"
                     />
@@ -579,7 +579,7 @@
                     [attr.data-cy]="'athlete-card-avatar-inert-' + athlete.id"
                   >
                     <app-user-avatar
-                      [url]="athlete.user_avatar_url"
+                      [url]="avatarFor(athlete)"
                       [name]="athlete.first_name + ' ' + athlete.last_name"
                       size="chip"
                     />
