@@ -74,12 +74,15 @@ describe('Owner desktop social rail (#1112)', () => {
     cy.get('[role="dialog"]').should('not.exist');
   });
 
-  it('points the brand at the academy home + pins a profile chip linking to the More hub', () => {
+  // The chip linked to the More hub until #1351. It shows your avatar, your
+  // name and your handle, and every app that shows a user that block opens
+  // THAT USER'S profile from it — a settings menu is a signifier that lies.
+  it('points the brand at the academy home + pins a profile chip linking to your profile', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait('@academy');
     cy.get('a.rail__brand').should('have.attr', 'href', '/dashboard/academy');
     cy.get('[data-cy="rail-profile"]')
       .should('be.visible')
-      .and('have.attr', 'href', '/dashboard/more');
+      .and('have.attr', 'href', '/dashboard/profile');
   });
 });
