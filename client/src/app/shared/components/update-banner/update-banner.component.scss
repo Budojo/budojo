@@ -1,13 +1,19 @@
 /**
- * The update bar (#1339).
+ * The update bar (#1339, restyled in #1353).
  *
- * Deliberately quiet. This sits above every screen in the app, and an update
- * downloading in the background is not news — it is the app doing its job. A
- * coloured strip demanding attention for something the owner cannot act on and
- * does not need to act on would be a worse outcome than the silence it
- * replaces.
+ * The first version used `--p-content-background` against a page painted in
+ * almost the same colour, on the theory that an update downloading in the
+ * background is not news and should not shout. It did not shout, and it did
+ * not read as a bar either — it dissolved into the body, which is a worse
+ * failure than being too loud: a strip you cannot separate from the page is
+ * one you do not read at all.
  *
- * So: surface colours, muted text, and the only accent is the progress fill.
+ * Raised, without a shadow. That is Material 3's own elevation model, where
+ * height is expressed as a **tint of the primary colour** rather than a drop
+ * shadow — so a low-alpha primary wash plus a hairline is both what was asked
+ * for and what the design system already says. It stays a status line: no
+ * shadow lifting it off the page, no filled accent bar, no colour that reads as
+ * an error.
  */
 .update-banner {
   display: flex;
@@ -15,13 +21,17 @@
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  color: var(--p-text-color-secondary);
-  background: var(--p-content-background);
-  border-bottom: 1px solid var(--p-content-border-color);
+  color: var(--p-text-color);
+  // The tint IS the elevation. `color-mix` keeps it a derivative of the theme
+  // token rather than a hardcoded tint that would drift from the palette and
+  // break in dark mode.
+  background: color-mix(in srgb, var(--p-primary-color) 8%, var(--p-content-background));
+  border-bottom: 1px solid color-mix(in srgb, var(--p-primary-color) 24%, transparent);
 
   &__icon {
     flex: 0 0 auto;
     font-size: 0.875rem;
+    color: var(--p-primary-color);
   }
 
   // Takes the slack so the percentage and the track stay put as the version
@@ -59,12 +69,10 @@
     transition: width 200ms linear;
   }
 
-  &--ready &__text {
-    color: var(--p-text-color);
-  }
-
-  &--ready &__icon {
-    color: var(--p-primary-color);
+  // Ready is the state worth a shade more presence: it is the one the owner can
+  // act on, by closing the app when they are done.
+  &--ready {
+    background: color-mix(in srgb, var(--p-primary-color) 14%, var(--p-content-background));
   }
 }
 

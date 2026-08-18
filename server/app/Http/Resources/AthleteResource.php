@@ -80,6 +80,12 @@ class AthleteResource extends JsonResource
             // linked user yet OR the user hasn't uploaded an avatar.
             // The SPA falls back to a `pi pi-user` placeholder circle.
             'user_avatar_url' => $athlete->user?->avatar_url,
+            // The athlete's OWN photo (#1357), independent of any linked user
+            // account — which is the point: `athlete_accounts` is absent from
+            // the desktop runtime, so before this an athlete on the shipped
+            // build could never have a picture at all. The SPA prefers this
+            // over `user_avatar_url` and falls back to the initials circle.
+            'photo_url' => $athlete->photo_url,
             'joined_at' => $athlete->joined_at->toDateString(),
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'created_at' => $athlete->created_at?->toIso8601String(),

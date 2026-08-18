@@ -42,6 +42,7 @@ import {
   AthleteService,
 } from '../../../core/services/athlete.service';
 import { PaymentService } from '../../../core/services/payment.service';
+import { RuntimeService } from '../../../core/services/runtime.service';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { UserAvatarComponent } from '../../../shared/components/user-avatar/user-avatar.component';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
@@ -112,6 +113,13 @@ export class AthletesListComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  /**
+   * The public profile lives behind `capabilityGuard('community')`, and the
+   * desktop runtime has no capabilities at all — so every affordance leading
+   * there has to ask first, or it offers a control the guard will refuse
+   * (#1349).
+   */
+  protected readonly runtime = inject(RuntimeService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
   private readonly onboardingService = inject(OnboardingService);
@@ -747,7 +755,7 @@ export class AthletesListComponent implements OnInit {
       command: () => this.goToTab(athlete, 'promotions'),
     });
 
-    if (athlete.user_handle) {
+    if (this.publicProfileHandle(athlete) !== null) {
       items.push({
         label: this.translate.instant('athletes.list.tooltip.publicProfile'),
         icon: 'pi pi-id-card',
@@ -778,6 +786,39 @@ export class AthletesListComponent implements OnInit {
     tab: 'attendance' | 'documents' | 'payments' | 'promotions',
   ): void {
     void this.router.navigate(['/dashboard/athletes', athlete.id, tab]);
+  }
+
+  /**
+   * The handle to link to, or null when there is nothing to link to.
+   *
+   * Two reasons produce null and they are deliberately one answer: the athlete
+   * has no user account, or this runtime has no `community` capability. The
+   * public profile lives behind `capabilityGuard('community')`, and the desktop
+   * build has no capabilities at all — so offering the control there shows one
+   * the guard will refuse, bouncing the click to the dashboard (#1349).
+   *
+   * One method rather than the condition repeated at each of the three layouts
+   * plus the action sheet, because the fourth site is the one that gets missed.
+   */
+  /**
+   * The picture to show for a row: the athlete's own photo first, the linked
+   * account's avatar second, nothing third (the initials circle).
+   *
+   * That order is the point of #1357. `athlete_accounts` is absent from the
+   * desktop runtime, so `user_avatar_url` is always null there — before the
+   * athlete had a photo of its own, every row on the shipped build fell back
+   * to initials with no way to change it.
+   */
+  protected avatarFor(athlete: Athlete): string | null {
+    return athlete.photo_url ?? athlete.user_avatar_url ?? null;
+  }
+
+  protected publicProfileHandle(athlete: Athlete): string | null {
+    if (!this.runtime.has()('community')) {
+      return null;
+    }
+
+    return athlete.user_handle ?? null;
   }
 
   private goToPublicProfile(athlete: Athlete): void {

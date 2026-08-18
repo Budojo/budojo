@@ -21,98 +21,104 @@
     </div>
   </app-page-header>
 
-  <div class="summary-page__filter">
-    <input
-      pInputText
-      type="search"
-      [placeholder]="'attendance.summary.filterPlaceholder' | translate"
-      [ngModel]="nameFilter()"
-      (ngModelChange)="onFilterChange($event)"
-      data-cy="monthly-summary-filter"
-      [attr.aria-label]="'attendance.summary.filterAria' | translate"
-    />
-  </div>
-
-  @if (loading()) {
-    <div class="summary-page__skeleton" data-cy="monthly-summary-skeleton">
-      @for (_ of [0, 0, 0, 0, 0]; track $index) {
-        <p-skeleton width="100%" height="2.5rem" />
-      }
+  <!-- The page's vertical rhythm. The rule existed with its gap and its
+       comment since #1126; nothing ever carried the class, so the filter,
+       the skeleton, the empty state and the table all rendered flush
+       against each other (#1355). -->
+  <div class="summary-page__body">
+    <div class="summary-page__filter">
+      <input
+        pInputText
+        type="search"
+        [placeholder]="'attendance.summary.filterPlaceholder' | translate"
+        [ngModel]="nameFilter()"
+        (ngModelChange)="onFilterChange($event)"
+        data-cy="monthly-summary-filter"
+        [attr.aria-label]="'attendance.summary.filterAria' | translate"
+      />
     </div>
-  } @else if (errored()) {
-    <app-error-state
-      [title]="'attendance.summary.error' | translate"
-      dataCy="monthly-summary-error"
-    />
-  } @else if (displayRows().length === 0) {
-    <div class="summary-page__empty" data-cy="monthly-summary-empty-page">
-      <i class="pi pi-users" aria-hidden="true"></i>
-      <p>
-        @if (nameFilter().trim()) {
-          {{ 'attendance.summary.empty.filtered' | translate }}
-        } @else {
-          {{ 'attendance.summary.empty.none' | translate }}
+
+    @if (loading()) {
+      <div class="summary-page__skeleton" data-cy="monthly-summary-skeleton">
+        @for (_ of [0, 0, 0, 0, 0]; track $index) {
+          <p-skeleton width="100%" height="2.5rem" />
         }
-      </p>
-    </div>
-  } @else {
-    <!-- Mobile card list (audit row 6). Below 768px the desktop table
-         is display:none and this <ul> renders instead. Each row carries
-         the same name + count/percent payload, optimised for thumb-
-         scrolling rather than horizontal column inspection.
+      </div>
+    } @else if (errored()) {
+      <app-error-state
+        [title]="'attendance.summary.error' | translate"
+        dataCy="monthly-summary-error"
+      />
+    } @else if (displayRows().length === 0) {
+      <div class="summary-page__empty" data-cy="monthly-summary-empty-page">
+        <i class="pi pi-users" aria-hidden="true"></i>
+        <p>
+          @if (nameFilter().trim()) {
+            {{ 'attendance.summary.empty.filtered' | translate }}
+          } @else {
+            {{ 'attendance.summary.empty.none' | translate }}
+          }
+        </p>
+      </div>
+    } @else {
+      <!-- Mobile card list (audit row 6). Below 768px the desktop table
+           is display:none and this <ul> renders instead. Each row carries
+           the same name + count/percent payload, optimised for thumb-
+           scrolling rather than horizontal column inspection.
 
-         `scheduledCount()` is invariant across rows for the current
-         month so it's hoisted outside the @for — one signal read per
-         render instead of N (Copilot review on #678). -->
-    @let mobileScheduled = scheduledCount();
-    <ul class="summary-page__mobile-list" data-cy="monthly-summary-mobile-list">
-      @for (row of displayRows(); track row.athlete_id) {
-        @let mobilePercent = ratePercent(row.count);
-        <li class="summary-card" [attr.data-cy]="'monthly-summary-mobile-row-' + row.athlete_id">
-          <span class="summary-card__name">{{ row.first_name }} {{ row.last_name }}</span>
-          <span class="summary-card__count">
-            @if (mobileScheduled !== null && mobilePercent !== null) {
-              {{ row.count }} / {{ mobileScheduled }}
-              <span class="summary-card__pct">· {{ mobilePercent }}%</span>
-            } @else {
-              {{ row.count }}
-            }
-          </span>
-        </li>
-      }
-    </ul>
-
-    <div class="summary-page__table-wrapper">
-      <p-table
-        [value]="displayRows()"
-        [rowTrackBy]="trackByAthlete"
-        styleClass="summary-page__table"
-        data-cy="monthly-summary-table"
-      >
-        <ng-template pTemplate="header">
-          <tr>
-            <th scope="col">{{ 'attendance.summary.table.athlete' | translate }}</th>
-            <th scope="col" class="summary-page__count-col">
-              {{ 'attendance.summary.table.days' | translate }}
-            </th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-row>
-          @let scheduled = scheduledCount();
-          @let percent = ratePercent(row.count);
-          <tr [attr.data-cy]="'monthly-summary-table-row-' + row.athlete_id">
-            <td>{{ row.first_name }} {{ row.last_name }}</td>
-            <td class="summary-page__count-col">
-              @if (scheduled !== null && percent !== null) {
-                {{ row.count }} / {{ scheduled }}
-                <span class="summary-page__count-pct">· {{ percent }}%</span>
+           `scheduledCount()` is invariant across rows for the current
+           month so it's hoisted outside the @for — one signal read per
+           render instead of N (Copilot review on #678). -->
+      @let mobileScheduled = scheduledCount();
+      <ul class="summary-page__mobile-list" data-cy="monthly-summary-mobile-list">
+        @for (row of displayRows(); track row.athlete_id) {
+          @let mobilePercent = ratePercent(row.count);
+          <li class="summary-card" [attr.data-cy]="'monthly-summary-mobile-row-' + row.athlete_id">
+            <span class="summary-card__name">{{ row.first_name }} {{ row.last_name }}</span>
+            <span class="summary-card__count">
+              @if (mobileScheduled !== null && mobilePercent !== null) {
+                {{ row.count }} / {{ mobileScheduled }}
+                <span class="summary-card__pct">· {{ mobilePercent }}%</span>
               } @else {
                 {{ row.count }}
               }
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </div>
-  }
+            </span>
+          </li>
+        }
+      </ul>
+
+      <div class="summary-page__table-wrapper">
+        <p-table
+          [value]="displayRows()"
+          [rowTrackBy]="trackByAthlete"
+          styleClass="summary-page__table"
+          data-cy="monthly-summary-table"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col">{{ 'attendance.summary.table.athlete' | translate }}</th>
+              <th scope="col" class="summary-page__count-col">
+                {{ 'attendance.summary.table.days' | translate }}
+              </th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            @let scheduled = scheduledCount();
+            @let percent = ratePercent(row.count);
+            <tr [attr.data-cy]="'monthly-summary-table-row-' + row.athlete_id">
+              <td>{{ row.first_name }} {{ row.last_name }}</td>
+              <td class="summary-page__count-col">
+                @if (scheduled !== null && percent !== null) {
+                  {{ row.count }} / {{ scheduled }}
+                  <span class="summary-page__count-pct">· {{ percent }}%</span>
+                } @else {
+                  {{ row.count }}
+                }
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    }
+  </div>
 </section>

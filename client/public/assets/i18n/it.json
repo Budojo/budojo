@@ -1984,6 +1984,31 @@
           "netherlands": "Paesi Bassi"
         }
       }
+    },
+    "photo": {
+      "title": "Foto",
+      "hint": "PNG, JPG o WebP, massimo 2 MB.",
+      "upload": "Carica foto",
+      "replace": "Sostituisci foto",
+      "remove": "Rimuovi",
+      "alt": "Foto di {{name}}",
+      "confirm": {
+        "removeMessage": "Rimuovere la foto di questo atleta?",
+        "removeAccept": "Rimuovi",
+        "removeReject": "Annulla"
+      },
+      "toast": {
+        "uploadSuccess": "Foto aggiornata",
+        "uploadErrorSummary": "Caricamento non riuscito",
+        "uploadErrorDetail": "Riprova fra qualche istante.",
+        "removeSuccess": "Foto rimossa",
+        "removeErrorSummary": "Rimozione non riuscita",
+        "removeErrorDetail": "Riprova fra qualche istante.",
+        "unsupportedSummary": "Formato non supportato",
+        "unsupportedDetail": "Usa un file PNG, JPG o WebP.",
+        "tooLargeSummary": "File troppo grande",
+        "tooLargeDetail": "La foto non può superare 2 MB."
+      }
     }
   },
   "month": {

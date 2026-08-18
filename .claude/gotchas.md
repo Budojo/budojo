@@ -21,6 +21,7 @@ Format: `→` separates the symptom from the action.
 ---
 
 ## Frontend — Angular & PWA
+- Visible copy held as **data** (a `.ts` array, a config object) instead of template text silently escapes i18n: `| translate` never touches it, and the `en/it` parity spec cannot see it either, so the page renders translated chrome around untranslated content. The What's new page did this for 88 releases (#1347). Before assuming the string belongs in `assets/i18n/*.json`, check the size: that bundle is loaded **synchronously at boot for every user**, so moving 200 KB of lazy-route content into it is a performance regression traded for a translation fix. Localise the data in place instead.
 
 ### Angular templates & a11y
 
@@ -41,6 +42,10 @@ Format: `→` separates the symptom from the action.
 ## Frontend — SCSS, design system & shared components
 
 ### SCSS / layout
+
+- The mirror of the class-with-no-rule trap: a **rule with no element**. `.summary-page__body` carried the attendance page's entire vertical rhythm — gap, desktop bump, and a comment saying so — and nothing ever wore the class, so every block on that page rendered flush against the next (#1355). Run the diff in **both** directions when touching a component: the second `comm` column (defined but unused) is the one nobody looks at.
+
+- Spacing between inline elements that comes from **the template's line wrapping** rather than from CSS: Angular renders an element whose text sits on its own line as ` label ` (leading + trailing space), while a sibling written inline gets none. The More footer read `Aiuto · Privacy ·v2.45.0` for that reason, and nobody noticed while the last item was a short muted `dev` (#1344). Prettier rejoining a short element removes the space again with no visible diff → lay it out with `display: flex` + `gap` so the spacing is a declared value. **And do not probe it with `textContent`**: the raw text node carries the template's own newlines, so a collapsed-whitespace assertion passes whether the gap renders or not — measure `getBoundingClientRect()` instead. Wrote exactly that useless assertion first; it passed against the unfixed build.
 
 - `cy.viewport(1440, …)` in a headless Cypress run whose browser window is 1280 wide → the screenshot is **clipped, not scaled**, and everything past 1280px is silently missing from the image. Spent a round concluding a progress bar "did not render" when the assertions said it was visible. Either match the viewport to the capture width, or trust the measured assertion (`should('be.visible')`, `getBoundingClientRect`, `scrollWidth <= clientWidth`) over the picture — the picture is the weaker evidence of the two.
 
@@ -114,6 +119,8 @@ Format: `→` separates the symptom from the action.
 - Angular dev server returned `403 Forbidden` when Cypress (running in a sibling docker container) hit `http://client:4200/dashboard/*` — Angular 21's `@angular/build:dev-server` has a default `allowedHosts: ['localhost']` for CSRF-style safety and rejects any other `Host` header. Fix: add explicit entries to `angular.json` → `projects.client.architect.serve.options.allowedHosts` (we use `["client", "localhost", "host.docker.internal"]`). Requires a dev server restart: `docker compose restart client`.
 
 ## Tests — Vitest
+
+- A test that asserts on **"the newest release's copy"** (the first card, the top row, `[0]`) breaks on the very next release, for being right. Written that way in #1347 and broken one release later by #1358 → anchor content assertions to a **specific, stable** entry looked up by its identifier, and test the *mechanism* separately with an assertion that survives new data (e.g. "the two languages render differently") rather than one that pins today's words.
 
 - A spec that assigns to a **global** (`window.__BUDOJO__`, `globalThis.*`) and clears it in `beforeEach` still leaks: `beforeEach` protects only that file's own tests, and the LAST test leaves the global set for whatever runs next in the same worker. Clear it in **`afterEach`** — every existing bridge spec already does. Caught as a 2-in-3 flake where `desktop-bridge.service.spec.ts`'s "no bridge on the web" case saw a bridge left behind by a new component spec (#1339). It only ever appears in a full-suite run, which is why the rule is to run the whole client suite when adding a spec file.
 

@@ -1,0 +1,49 @@
+<div class="athlete-photo-card" data-cy="athlete-photo-card">
+  <div class="athlete-photo-card__preview">
+    <app-user-avatar
+      [url]="photoUrl()"
+      [name]="fullName()"
+      size="card"
+      [alt]="'athletes.photo.alt' | translate: { name: fullName() }"
+    />
+  </div>
+  <div class="athlete-photo-card__body">
+    <p class="athlete-photo-card__title">{{ 'athletes.photo.title' | translate }}</p>
+    <p class="athlete-photo-card__hint">{{ 'athletes.photo.hint' | translate }}</p>
+    <div class="athlete-photo-card__actions">
+      <p-button
+        [label]="(photoUrl() ? 'athletes.photo.replace' : 'athletes.photo.upload') | translate"
+        icon="pi pi-upload"
+        [loading]="uploading()"
+        (onClick)="browse()"
+        data-cy="athlete-photo-upload"
+      />
+      @if (photoUrl()) {
+        <p-button
+          [label]="'athletes.photo.remove' | translate"
+          icon="pi pi-trash"
+          severity="secondary"
+          [text]="true"
+          (onClick)="confirmRemove($event)"
+          data-cy="athlete-photo-remove"
+        />
+      }
+    </div>
+  </div>
+  <!--
+    Synthetic file input. Visually hidden — the visible affordance is the
+    Upload/Replace button, which calls .click() on this. Out of tab order and
+    aria-hidden so screen-reader users are not offered an unlabelled control.
+  -->
+  <input
+    #photoInput
+    type="file"
+    class="athlete-photo-card__file"
+    accept="image/png,image/jpeg,image/webp"
+    (change)="onSelected($event)"
+    tabindex="-1"
+    aria-hidden="true"
+    data-cy="athlete-photo-input"
+  />
+</div>
+<p-confirmpopup />

@@ -356,7 +356,12 @@ describe('DashboardComponent', () => {
       expect(el.querySelector('[data-cy="create-post"]')).not.toBeNull();
     });
 
-    it('pins a profile chip linking to the More hub, showing the handle', () => {
+    // #1351 — it linked to the More hub until now. The chip shows your avatar,
+    // your name and your handle, and every app that shows a user that block
+    // opens THAT USER'S profile from it. Pointing it at a settings menu was a
+    // signifier that lied, and it disagreed with our own topbar avatar, which
+    // already routed to /dashboard/profile.
+    it('pins a profile chip linking to your profile, showing the handle', () => {
       authService.user.set(OWNER as never);
       const fixture = TestBed.createComponent(DashboardComponent);
       fixture.detectChanges();
@@ -365,8 +370,24 @@ describe('DashboardComponent', () => {
         '[data-cy="rail-profile"]',
       ) as HTMLAnchorElement | null;
       expect(chip).not.toBeNull();
-      expect(chip!.getAttribute('href')).toBe('/dashboard/more');
+      expect(chip!.getAttribute('href')).toBe('/dashboard/profile');
       expect(chip!.textContent).toContain('@senseimario');
+    });
+
+    // Attendance is the daily task, and its only shortcut used to sit behind
+    // "+ Create" — a button that promises to make something, which is wrong
+    // for half of why people open the page (#1351).
+    it('carries attendance as a destination, not only a create action', () => {
+      authService.user.set(OWNER as never);
+      const fixture = TestBed.createComponent(DashboardComponent);
+      fixture.detectChanges();
+
+      const tab = fixture.nativeElement.querySelector(
+        '[data-cy="bottomnav-attendance"]',
+      ) as HTMLAnchorElement | null;
+
+      expect(tab).not.toBeNull();
+      expect(tab!.getAttribute('href')).toBe('/dashboard/attendance');
     });
 
     it('demotes stats / settings off the rail (they live on the More hub)', () => {

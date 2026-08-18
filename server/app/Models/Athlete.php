@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property int                     $id
@@ -162,6 +163,31 @@ class Athlete extends Model implements HasAddress
     public function address(): MorphOne
     {
         return $this->morphOne(Address::class, 'addressable');
+    }
+
+    /**
+     * Public URL of the athlete's photo — null when none is set (#1357).
+     *
+     * Same shape as `User::avatar_url` and `AcademyResource::logo_url`: the
+     * wire always carries a URL, never the raw on-disk path.
+     *
+     * **The cache-buster is not decoration.** A replacement in the same format
+     * writes to the same key, so the URL string would be byte-identical and the
+     * browser would keep serving the old bitmap from cache — the owner would
+     * upload a new photo and see the previous one. `?v={updated_at}` changes the
+     * moment the row is touched, and any `forceFill()->save()` bumps that.
+     */
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if ($this->photo_path === null) {
+            return null;
+        }
+
+        $url = Storage::disk('public')->url($this->photo_path);
+
+        // `photo_path` is only ever set through `forceFill()->save()`, so
+        // `updated_at` is populated by the time we are here.
+        return $url . '?v=' . ($this->updated_at?->getTimestamp() ?? 0);
     }
 
     /**

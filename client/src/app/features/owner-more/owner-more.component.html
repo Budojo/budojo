@@ -27,7 +27,7 @@
         <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
       </a>
     </li>
-    @if (user()?.handle; as handle) {
+    @if (runtime.has()('community') && user()?.handle; as handle) {
       <li>
         <a
           class="owner-more__row"

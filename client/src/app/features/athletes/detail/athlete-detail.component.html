@@ -106,6 +106,18 @@
       <app-athlete-email-change-card [athlete]="a" (athleteChanged)="reloadAthlete()" />
     }
 
+    <!--
+      Athlete photo (#1357). Outside the account block above on purpose: that
+      block is hidden for the owner's own row and gated on athlete accounts,
+      and a photo has nothing to do with either. With sixty white belts, a face
+      is how you tell rows apart.
+
+      The card emits the refreshed row rather than asking the parent to refetch,
+      so the header and the list update from the object the server just
+      returned.
+    -->
+    <app-athlete-photo-card [athlete]="a" (changed)="onAthleteChanged($event)" />
+
     <p-tabs [value]="activeTab()" class="athlete-detail-page__tabs" data-cy="athlete-tabs">
       <p-tablist>
         <!-- Edit comes first in the tab strip (post-v2.1.0 reorder).

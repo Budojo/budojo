@@ -93,6 +93,8 @@ Separately from the semantic-release dev changelog, the SPA ships a **user-facin
 - `docs/changelog/user-facing/v{X.Y.Z}.md` — markdown source, one file per stable release, light emoji on section headings.
 - The `RELEASES` array in `client/src/app/features/whats-new/whats-new.releases.ts` — typed `Release[]` rendered via the sibling `whats-new.component.ts` template (no markdown parser dependency).
 
+**New entries ship both languages** (#1347). `headline`, every `heading` and every `bullet` accept either a bare string (English) or `{ en, it }`. The 86 historical entries are bare strings and stay that way; anything added from v2.44.0 onwards carries both, because an Italian-speaking owner otherwise reads Italian chrome around English notes. The markdown source under `docs/changelog/user-facing/` stays English — it is a repo record, not a rendered surface.
+
 **Discipline:** every `develop → main` release PR adds the markdown file AND prepends the array entry in the same commit history. The vitest spec pinning the version order in the array (`renders all four backfilled releases`) fails when one is missing — that's the regression-catching trip-wire, by design.
 
 **Compute the version BEFORE writing the file.** Angular preset rules:

@@ -146,6 +146,16 @@ export class DashboardComponent implements OnInit {
         routerLink: '/dashboard/athletes',
         dataCy: 'bottomnav-athletes',
       },
+      // A destination, not a creation (#1351). Attendance is the daily task
+      // here, and until now the only shortcut to it sat behind "+ Create" — a
+      // button that promises to make something, which is wrong for half of why
+      // people open this page.
+      {
+        icon: 'pi pi-check-square',
+        label: t('nav.attendance'),
+        routerLink: '/dashboard/attendance',
+        dataCy: 'bottomnav-attendance',
+      },
       ...(has('community')
         ? [
             {
@@ -208,7 +218,11 @@ export class DashboardComponent implements OnInit {
           name: this.userName(),
           avatarUrl: this.userAvatarUrl(),
           handle: u.handle,
-          routerLink: '/dashboard/more',
+          // Your avatar, your name, your handle — every app that shows a user
+          // that block opens THAT USER'S profile when it is tapped (#1351).
+          // Opening a settings menu instead is a signifier that lies, and it
+          // disagreed with our own topbar avatar, which already routes here.
+          routerLink: '/dashboard/profile',
         }
       : null;
   });

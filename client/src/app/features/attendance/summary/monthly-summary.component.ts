@@ -98,10 +98,16 @@ export class MonthlySummaryComponent implements OnInit {
   protected readonly monthLabel = computed(() => {
     const ym = this.visible();
     const locale = localeFor(this.languageService.currentLang());
-    return new Date(ym.year, ym.month - 1, 1).toLocaleDateString(locale, {
+    const label = new Date(ym.year, ym.month - 1, 1).toLocaleDateString(locale, {
       month: 'long',
       year: 'numeric',
     });
+
+    // Italian writes month names lower-case in running text, so the formatter
+    // hands back "agosto 2026" — correct as prose, wrong as a page title, which
+    // the design canon says is sentence case. English already arrives
+    // capitalised, so this is a no-op there rather than a second code path.
+    return label.charAt(0).toLocaleUpperCase(locale) + label.slice(1);
   });
 
   protected readonly canGoNext = computed(
