@@ -75,7 +75,9 @@ Opt-in, off until the owner connects an account, and **off entirely in a build w
 - **Two tiers, not a count.** `keepRecent` holds the newest N whatever their date; `keepDays` holds the last archive of each of the most recent N days *present*. A flat count cannot buy depth without buying density, and the archive contains every encrypted document.
 - **Counting days present, not calendar days,** is the point — the app only backs up while it runs, so a calendar window silently empties after a fortnight away.
 - **The invariants outrank the policy.** Whatever a caller passes, `planRetention` never proposes deleting the newest archive (`keepRecent` is floored at 1, never trusted) and never proposes deleting a file it did not create. Both have their own tests, under a describe block that says so.
+- **`isBackupArchive` is strict, and that is load-bearing.** It matches the full `budojo-backup-YYYYMMDD-HHMMSS.zip` shape, not prefix + suffix. The backup folder belongs to the owner and `budojo-backup-keep-1.zip` is a name a person plausibly types: recognised loosely it would be proposed for deletion, and — because a non-numeric third segment sorts *after* every `YYYYMMDD` — a handful of them would occupy the whole recent tier and push the real archives out of it. The generator is pinned to the recogniser by a test; if they drift, nothing is an archive any more.
 - Changing the numbers is a one-line change in `RETENTION`; changing the *shape* means the invariant tests must still pass untouched.
+- **`prune()` runs on the failure path too.** A run that dies before pruning leaves the directory over the policy, and if a full disk is what killed it, every later run dies identically. Best-effort and swallowed — the caller must see the real error, not one raised while tidying up after it.
 
 ## Testing
 

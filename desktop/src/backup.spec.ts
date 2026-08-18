@@ -27,6 +27,38 @@ describe('backupArchiveName / isBackupArchive', () => {
     expect(isBackupArchive('random.zip')).toBe(false);
     expect(isBackupArchive('budojo-backup-x.txt')).toBe(false);
   });
+
+  // The generator and the recogniser are two halves of one contract. If they
+  // ever drift, every archive stops being recognised as one — and retention
+  // silently has nothing to keep.
+  it('recognises every name the generator can produce', () => {
+    const moments = [
+      new Date(2026, 0, 1, 0, 0, 0),
+      new Date(2026, 11, 31, 23, 59, 59),
+      new Date(2026, 7, 15, 9, 5, 3),
+    ];
+
+    for (const moment of moments) {
+      expect(isBackupArchive(backupArchiveName(moment))).toBe(true);
+    }
+  });
+
+  // This is the load-bearing half (#1330). The backup folder belongs to the
+  // owner, and `budojo-backup-keep-1.zip` is a name a person plausibly types.
+  // Recognised by prefix and suffix alone it would be treated as ours — and
+  // because a non-numeric third segment sorts AFTER every `YYYYMMDD`, a few of
+  // them would occupy the whole recent tier and push the real archives out.
+  it.each([
+    'budojo-backup-keep-1.zip',
+    'budojo-backup-before-upgrade.zip',
+    'budojo-backup-.zip',
+    'budojo-backup-2026081-090000.zip',
+    'budojo-backup-20260815-09000.zip',
+    'budojo-backup-20260815-090000.zip.bak',
+    'my-budojo-backup-20260815-090000.zip',
+  ])('does not claim %s as ours', (name) => {
+    expect(isBackupArchive(name)).toBe(false);
+  });
 });
 
 describe('planRetention', () => {
@@ -141,9 +173,24 @@ describe('planRetention', () => {
       expect(doomed).not.toContain('photo.jpg');
     });
 
+    // The reason `isBackupArchive` is strict. These are files the owner named
+    // themselves in their own folder; the only correct behaviour is to be
+    // completely blind to them — neither deleting them nor letting them
+    // displace a real archive from the tier that guards against loss.
+    it('is blind to a file the owner named to look like ours', () => {
+      const theirs = Array.from({ length: 8 }, (_, i) => `budojo-backup-keep-${i}.zip`);
+      const real = [...dense('20260810'), ...dense('20260811'), ...dense('20260812'), ...dense('20260813')];
+
+      const doomed = planRetention([...real, ...theirs], RETENTION);
+      const survivors = kept([...real, ...theirs], RETENTION);
+
+      // Not one of theirs is proposed for deletion...
+      expect(doomed.filter((name) => name.includes('keep-'))).toEqual([]);
+      // ...and not one of them cost a real archive its place.
+      expect(survivors.filter((name) => !name.includes('keep-'))).toEqual(kept(real, RETENTION));
+    });
+
     it('survives an archive name with no parsable day rather than throwing', () => {
-      // `isBackupArchive` only checks the prefix and the suffix, so a truncated
-      // name reaches here. Refusing to crash matters more than classifying it.
       expect(() =>
         planRetention(['budojo-backup-.zip', ...dense('20260813')], { keepRecent: 2, keepDays: 14 }),
       ).not.toThrow();
@@ -255,6 +302,41 @@ describe('BackupService', () => {
     expect(io.copyStorage).toHaveBeenCalledWith('/tmp/backup');
     expect(io.zipDir).toHaveBeenCalledWith('/tmp/backup', path);
     expect(io.removeDir).toHaveBeenCalledWith('/tmp/backup'); // finally, always
+  });
+
+  // A full disk is the failure this has to survive: the run dies at `zipDir`,
+  // and if retention never runs the directory stays over the policy and every
+  // later run dies the same way. Frees nothing at steady state — retention is
+  // idempotent — but reclaims what a half-finished previous run left behind.
+  it('still applies retention when the backup fails, so a full disk can recover', async () => {
+    const archives: BackupEntry[] = Array.from({ length: 9 }, (_, i) => {
+      const stamp = `2026080${i}-090000`;
+
+      return { name: `budojo-backup-${stamp}.zip`, path: `/backups/x`, createdAt: 'x', sizeBytes: 1 };
+    });
+    const io = fakeIO({
+      listArchives: vi.fn(async () => archives),
+      zipDir: vi.fn(async () => {
+        throw Object.assign(new Error('no space left on device'), { code: 'ENOSPC' });
+      }),
+    });
+
+    await expect(service(io, { keepRecent: 7, keepDays: 7 }).backup()).rejects.toThrow('no space left');
+    expect(io.removeArchive).toHaveBeenCalledWith('budojo-backup-20260800-090000.zip');
+  });
+
+  it('reports the original failure, not one raised while pruning after it', async () => {
+    // Tidying up must never replace the error the caller has to act on.
+    const io = fakeIO({
+      zipDir: vi.fn(async () => {
+        throw new Error('disk full');
+      }),
+      listArchives: vi.fn(async () => {
+        throw new Error('directory unreadable');
+      }),
+    });
+
+    await expect(service(io).backup()).rejects.toThrow('disk full');
   });
 
   it('cleans up staging even if the vacuum fails', async () => {

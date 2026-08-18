@@ -47,8 +47,25 @@ export function backupArchiveName(now: Date): string {
   return `${ARCHIVE_PREFIX}${stamp}${ARCHIVE_SUFFIX}`;
 }
 
+/**
+ * The exact shape `backupArchiveName` produces — and the only thing this module
+ * will ever act on.
+ *
+ * Recognising by prefix and suffix alone, as this did until #1330, is not a
+ * loose check but a wrong one. The backup folder belongs to the owner, and
+ * `budojo-backup-keep-1.zip` is a name a person plausibly types: it would be
+ * treated as ours and proposed for deletion. Worse, any non-numeric third
+ * segment sorts *after* every `YYYYMMDD`, so a handful of such files occupy the
+ * whole recent tier and push the real archives out of it — silently restoring
+ * the shallow history #1330 exists to fix, and with `keepDays: 0` deleting the
+ * genuinely newest archive.
+ *
+ * So the recogniser is strict, and the generator is pinned to it by a test.
+ */
+const ARCHIVE_PATTERN = /^budojo-backup-(\d{8})-\d{6}\.zip$/;
+
 export function isBackupArchive(name: string): boolean {
-  return name.startsWith(ARCHIVE_PREFIX) && name.endsWith(ARCHIVE_SUFFIX);
+  return ARCHIVE_PATTERN.test(name);
 }
 
 /**
@@ -81,9 +98,10 @@ export interface RetentionPolicy {
  */
 export const RETENTION: RetentionPolicy = { keepRecent: 6, keepDays: 14 };
 
-/** `budojo-backup-YYYYMMDD-HHMMSS.zip` → `YYYYMMDD`, or null if unparsable. */
+/** `budojo-backup-YYYYMMDD-HHMMSS.zip` → `YYYYMMDD`. Never null for a name that
+ * passed `isBackupArchive`, which is the only way one reaches here. */
 function archiveDay(name: string): string | null {
-  return /^budojo-backup-(\d{8})-\d{6}\.zip$/.exec(name)?.[1] ?? null;
+  return ARCHIVE_PATTERN.exec(name)?.[1] ?? null;
 }
 
 /**
@@ -235,6 +253,19 @@ export class BackupService {
       await this.prune();
 
       return archivePath;
+    } catch (error) {
+      // A run that dies before `prune()` leaves the directory one over the
+      // policy, and the next run cannot get there either if what killed it was
+      // a full disk. Pruning on the way out breaks that loop: it frees nothing
+      // at steady state — retention is idempotent, there is nothing to reclaim
+      // — but it does reclaim the excess a previous half-finished run left, and
+      // that can be exactly the room the next attempt needs.
+      //
+      // Best-effort on purpose. The caller has to see the real failure, not a
+      // second one raised while tidying up after it.
+      await this.prune().catch(() => undefined);
+
+      throw error;
     } finally {
       await io.removeDir(stagingDir);
     }

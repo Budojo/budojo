@@ -398,9 +398,10 @@ async function startRuntime(): Promise<{
 
   // Local backup (#1228) — the single most important safety net once managed
   // infrastructure is gone. VACUUM INTO + storage + manifest, zipped under
-  // userData/backups, seven kept. A scheduled pass every six hours means any
-  // day the app is opened produces a recent archive; each run is a quick
-  // vacuum of a single-user database.
+  // userData/backups, held to `RETENTION` (see backup.ts: a dense recent tier
+  // plus one archive a day behind it, #1330). A scheduled pass every six hours
+  // means any day the app is opened produces a recent archive; each run is a
+  // quick vacuum of a single-user database.
   const backupLog = new RotatingLog(path.join(layout.logsDir, 'backup.log'));
   backupLog.open();
   const backupService = new BackupService({
