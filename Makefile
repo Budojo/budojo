@@ -133,6 +133,26 @@ desktop-build: ## Compile the main process + preload
 	cd desktop && npm run build
 
 desktop-package: ## Build the Windows installers into desktop/release (Windows only)
+	@# Refuse under WSL rather than warn. electron-builder targets the platform it
+	@# RUNS on, so from WSL this silently produces a Linux package - after a full
+	@# renderer build and a 106 MB Electron download - and no Windows installer can
+	@# come out of it. The Windows branch at the top of this file already reasons
+	@# about exactly this hazard, but that guard only fires when OS=Windows_NT, so
+	@# invoked from INSIDE WSL it never triggered (#1326).
+	@if grep -qi microsoft /proc/version 2>/dev/null || [ -n "$$WSL_DISTRO_NAME" ]; then \
+	  echo ""; \
+	  echo "  Refusing to package from WSL."; \
+	  echo ""; \
+	  echo "  electron-builder targets the platform it runs on, so this would build a"; \
+	  echo "  LINUX package rather than the Windows installers - and it would take a"; \
+	  echo "  106 MB download to find that out."; \
+	  echo ""; \
+	  echo "  Run it from PowerShell or Git Bash instead."; \
+	  echo ""; \
+	  echo "  (Shipping Budojo FOR Linux is issue #1300, and needs more than this.)"; \
+	  echo ""; \
+	  exit 2; \
+	fi
 	cd desktop && npm run dist
 	@echo ""
 	@echo "  Built into desktop/release (version 0.0.0 - CI injects the real one at release time)."

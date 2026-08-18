@@ -122,6 +122,12 @@ extraResources:
       - "!storage/framework/cache/**"
       - "!storage/framework/sessions/**"
       - "!storage/framework/views/**"
+      # PEST's faked disks and their fixtures. Missing from this list until
+      # #1326, which meant two things: packaging DIED with EACCES whenever the
+      # directory was owned by the API container's user — the normal state on a
+      # Linux or WSL checkout — and when it did succeed it copied test scratch
+      # into the shipped app.
+      - "!storage/framework/testing/**"
       - "!storage/app/**"
       - "!database/sqlite/**"
       - "!node_modules/**"
