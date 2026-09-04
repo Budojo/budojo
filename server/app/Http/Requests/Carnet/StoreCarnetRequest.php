@@ -43,7 +43,13 @@ class StoreCarnetRequest extends FormRequest
             // Back-dating is the point — the owner transcribes a sale from the
             // paper register. A carnet that starts in the future is not a
             // thing: validity runs from the purchase date.
-            'purchased_at' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
+            //
+            // `date_format` rather than `date`: the bare rule accepts anything
+            // strtotime can chew, so `03/04/2026` would be silently parsed as
+            // one of two different days and a zoned datetime could land on the
+            // neighbouring date. The OpenAPI declares `format: date`; this is
+            // the rule that actually holds us to it.
+            'purchased_at' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
         ];
     }
 

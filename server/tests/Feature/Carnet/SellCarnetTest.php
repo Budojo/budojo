@@ -113,6 +113,21 @@ it('accepts a back-dated purchase so the paper register can be transcribed', fun
         ->assertJsonPath('data.purchased_at', $backDated);
 });
 
+it('rejects an ambiguous or non-ISO purchase date', function (): void {
+    // `03/04/2026` is 3 April or 4 March depending on who reads it — a business
+    // date must not be guessed at.
+    foreach (['03/04/2026', 'yesterday', '2026-3-1'] as $ambiguous) {
+        $this->actingAs($this->user)
+            ->postJson("/api/v1/athletes/{$this->athlete->id}/carnets", [
+                'purchased_at' => $ambiguous,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['purchased_at']);
+    }
+
+    expect(Carnet::count())->toBe(0);
+});
+
 it('rejects a purchase dated in the future', function (): void {
     $this->actingAs($this->user)
         ->postJson("/api/v1/athletes/{$this->athlete->id}/carnets", [
