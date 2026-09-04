@@ -392,6 +392,28 @@
                     tooltipPosition="top"
                   />
                 }
+                <!--
+                  Carnet balance chip (#1364). Rendered beside the paid badge
+                  rather than in a column of its own — most academies sell no
+                  carnets at all, and an always-empty column would cost every
+                  row horizontal space on the phone. Warning tone at two
+                  entries or fewer: the moment the owner needs to say "vuoi
+                  rinnovare?" before the athlete walks out.
+                -->
+                @if (athlete.active_carnet; as carnet) {
+                  <p-tag
+                    [severity]="carnet.remaining_entries <= 2 ? 'warn' : 'secondary'"
+                    icon="pi pi-ticket"
+                    [value]="carnet.remaining_entries.toString()"
+                    [pTooltip]="
+                      'athletes.list.tooltip.carnet'
+                        | translate: { code: carnet.code, count: carnet.remaining_entries }
+                    "
+                    tooltipPosition="top"
+                    styleClass="athletes-list__carnet-chip"
+                    data-cy="athlete-carnet-chip"
+                  />
+                }
               </td>
             }
             <td class="athlete-actions">

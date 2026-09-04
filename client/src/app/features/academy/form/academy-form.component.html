@@ -376,6 +376,63 @@
       />
     </app-budojo-form-field>
 
+    <!--
+      Entry carnets (#1364) — the pre-paid alternative to the monthly fee, for
+      athletes who train occasionally. Both halves must be set before a carnet
+      can be sold; leaving either empty means "this academy doesn't offer
+      carnets" and the carnet UI disappears everywhere. Price is euros here,
+      cents on the wire, same as the monthly fee above.
+    -->
+    <app-budojo-form-field
+      [label]="'academy.form.carnetPrice.label' | translate"
+      [optionalLabel]="'academy.form.optional' | translate"
+      controlId="academy-carnet-price"
+      [error]="carnetPriceError() ? (carnetPriceError()! | translate) : null"
+      [hint]="'academy.form.carnetPrice.hint' | translate"
+    >
+      <p-inputnumber
+        inputId="academy-carnet-price"
+        formControlName="carnet_price"
+        mode="currency"
+        currency="EUR"
+        [locale]="currentLocale()"
+        [min]="0"
+        [maxFractionDigits]="2"
+        [showButtons]="false"
+        placeholder="—"
+        data-cy="academy-form-carnet-price"
+        [ariaDescribedBy]="
+          carnetPriceError() ? 'academy-carnet-price-error' : 'academy-carnet-price-hint'
+        "
+        [class.ng-invalid]="carnetPrice.invalid && carnetPrice.touched"
+        [class.ng-dirty]="carnetPrice.touched"
+      />
+    </app-budojo-form-field>
+
+    <app-budojo-form-field
+      [label]="'academy.form.carnetEntries.label' | translate"
+      [optionalLabel]="'academy.form.optional' | translate"
+      controlId="academy-carnet-entries"
+      [error]="carnetEntriesError() ? (carnetEntriesError()! | translate) : null"
+      [hint]="'academy.form.carnetEntries.hint' | translate"
+    >
+      <p-inputnumber
+        inputId="academy-carnet-entries"
+        formControlName="carnet_entries"
+        [min]="1"
+        [max]="255"
+        [maxFractionDigits]="0"
+        [showButtons]="false"
+        placeholder="—"
+        data-cy="academy-form-carnet-entries"
+        [ariaDescribedBy]="
+          carnetEntriesError() ? 'academy-carnet-entries-error' : 'academy-carnet-entries-hint'
+        "
+        [class.ng-invalid]="carnetEntries.invalid && carnetEntries.touched"
+        [class.ng-dirty]="carnetEntries.touched"
+      />
+    </app-budojo-form-field>
+
     <div class="field">
       <span class="field__label">
         {{ 'academy.form.trainingDays.label' | translate }}

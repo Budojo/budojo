@@ -130,6 +130,19 @@ export interface Athlete {
    */
   paid_current_month?: boolean;
   /**
+   * The athlete's spendable carnet today (#1364), or `null` when they hold
+   * none — the roster renders its balance chip from this without a per-row
+   * call. When more than one is spendable this is the one expiring soonest,
+   * i.e. the one the next session will be charged against. Optional for the
+   * same fixture-compat reason as `paid_current_month`.
+   */
+  active_carnet?: {
+    readonly id: number;
+    readonly code: string;
+    readonly remaining_entries: number;
+    readonly expires_at: string;
+  } | null;
+  /**
    * Owner-as-athlete flag (#748). True iff the row was created via the
    * caller's own `POST /api/v1/me/athlete` enrollment — i.e. this
    * athlete *is* an academy staff member training in their own academy.

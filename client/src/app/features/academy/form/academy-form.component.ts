@@ -213,6 +213,10 @@ export class AcademyFormComponent implements OnInit {
     // Server validator: `sometimes|nullable|integer|min:0` on
     // `monthly_fee_cents`.
     monthly_fee: this.fb.control<number | null>(null, [Validators.min(0)]),
+    // Entry carnets (#1364). Both optional and independently nullable; the
+    // server treats either being null as "this academy doesn't sell carnets".
+    carnet_price: this.fb.control<number | null>(null, [Validators.min(0)]),
+    carnet_entries: this.fb.control<number | null>(null, [Validators.min(1), Validators.max(255)]),
     training_days: this.fb.nonNullable.control<number[]>([]),
   });
 
@@ -257,6 +261,8 @@ export class AcademyFormComponent implements OnInit {
       // Cents → euros at the form boundary. `null` round-trips so an
       // unset fee stays unset.
       monthly_fee: academy.monthly_fee_cents == null ? null : academy.monthly_fee_cents / 100,
+      carnet_price: academy.carnet_price_cents == null ? null : academy.carnet_price_cents / 100,
+      carnet_entries: academy.carnet_entries ?? null,
       training_days: academy.training_days ?? [],
     });
   }
@@ -317,6 +323,12 @@ export class AcademyFormComponent implements OnInit {
   private readonly monthlyFeeEvents = toSignal(this.form.controls.monthly_fee.events, {
     initialValue: null,
   });
+  private readonly carnetPriceEvents = toSignal(this.form.controls.carnet_price.events, {
+    initialValue: null,
+  });
+  private readonly carnetEntriesEvents = toSignal(this.form.controls.carnet_entries.events, {
+    initialValue: null,
+  });
 
   readonly nameError = computed<string | null>(() => {
     void this.nameEvents();
@@ -370,6 +382,20 @@ export class AcademyFormComponent implements OnInit {
     if (c.errors?.['min']) return 'academy.form.monthlyFee.errorMin';
     return null;
   });
+  readonly carnetPriceError = computed<string | null>(() => {
+    void this.carnetPriceEvents();
+    const c = this.form.controls.carnet_price;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['min']) return 'academy.form.carnetPrice.errorMin';
+    return null;
+  });
+  readonly carnetEntriesError = computed<string | null>(() => {
+    void this.carnetEntriesEvents();
+    const c = this.form.controls.carnet_entries;
+    if (!c.touched || c.valid) return null;
+    if (c.errors?.['min'] || c.errors?.['max']) return 'academy.form.carnetEntries.errorRange';
+    return null;
+  });
 
   get name() {
     return this.form.controls.name;
@@ -399,6 +425,14 @@ export class AcademyFormComponent implements OnInit {
 
   get monthlyFee() {
     return this.form.controls.monthly_fee;
+  }
+
+  get carnetPrice() {
+    return this.form.controls.carnet_price;
+  }
+
+  get carnetEntries() {
+    return this.form.controls.carnet_entries;
   }
 
   get addressLine1() {
@@ -489,6 +523,10 @@ export class AcademyFormComponent implements OnInit {
       instagram: instagram === '' ? null : instagram,
       address,
       monthly_fee_cents: monthlyFeeCents,
+      // Same euros → cents boundary as the fee. Clearing either half turns
+      // the carnet offering off server-side.
+      carnet_price_cents: v.carnet_price == null ? null : Math.round(v.carnet_price * 100),
+      carnet_entries: v.carnet_entries ?? null,
       training_days: v.training_days.length === 0 ? null : v.training_days,
     };
   }

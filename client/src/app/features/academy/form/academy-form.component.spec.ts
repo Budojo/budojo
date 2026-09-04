@@ -168,6 +168,8 @@ describe('AcademyFormComponent', () => {
       // no fee set, so the form-level control hydrates to null and
       // serializes to null on the wire.
       monthly_fee_cents: null,
+      carnet_price_cents: null,
+      carnet_entries: null,
       training_days: null,
     });
     req.flush({
@@ -213,6 +215,8 @@ describe('AcademyFormComponent', () => {
       instagram: null,
       address: null,
       monthly_fee_cents: null,
+      carnet_price_cents: null,
+      carnet_entries: null,
       training_days: null,
     });
     req.flush({ data: makeAcademy({ address: null }) });
