@@ -3657,6 +3657,47 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /athletes/{athlete}/carnets/{carnet}/entries:
+    get:
+      tags: [athletes]
+      summary: List the sessions a carnet paid for
+      description: |
+        The consumption register for one carnet, most recent session first —
+        the answer to "where did my ten entries go".
+
+        Returns 403 when the carnet does not belong to the athlete in the
+        path, as well as on cross-academy access: pairing someone else's
+        carnet id with an athlete you can reach must not expose it.
+      operationId: athleteCarnetEntryList
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: carnet
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Consumed entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CarnetEntry'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /attendance:
     get:
       tags: [attendance]
@@ -5227,6 +5268,38 @@ paths:
         '404':
           description: User has no linked athlete row.
 
+  /me/carnets:
+    get:
+      tags: [auth]
+      summary: Athlete's own entry carnets
+      description: |
+        The calling athlete's carnets, newest purchase first, with the
+        residual balance and expiry — so "quanti ingressi mi restano" does not
+        have to be asked at the desk. Owners get 404: they have no personal
+        ledger, and `/athletes/{id}/carnets` is their entry point.
+      operationId: meCarnetsIndex
+      responses:
+        '200':
+          description: The athlete's carnets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Carnet'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: The authenticated user has no athlete profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: No athlete profile found. }
+
   /me/payments:
     get:
       tags: [auth]
@@ -6477,6 +6550,7 @@ components:
         - address
         - created_at
         - paid_current_month
+        - active_carnet
       properties:
         id:
           type: integer
@@ -6551,6 +6625,30 @@ components:
             athlete with `(year, month) = (NOW()->year, NOW()->month)`. The
             `/athletes` index endpoint eager-loads only the current-month
             payments slice to keep this derivation O(1) per row (no N+1).
+        active_carnet:
+          type: object
+          nullable: true
+          description: |
+            The athlete's spendable carnet today — inside its validity window
+            with entries left — or `null` when they hold none. Lets the roster
+            render a balance chip without a per-row call; the index endpoint
+            eager-loads the window slice the same way it does for
+            `paid_current_month`. When more than one is spendable this is the
+            one that expires soonest, i.e. the one that will be charged next.
+          required: [id, code, remaining_entries, expires_at]
+          properties:
+            id:
+              type: integer
+              format: int64
+            code:
+              type: string
+              example: A7K2
+            remaining_entries:
+              type: integer
+              minimum: 1
+            expires_at:
+              type: string
+              format: date
         user_handle:
           type: string
           nullable: true
@@ -6703,6 +6801,34 @@ components:
           type: string
           format: date
           description: '`purchased_at` + 12 months, computed once at sale and stored'
+        is_active:
+          type: boolean
+          description: |
+            Spendable **today**: inside the validity window and with entries
+            left. Consumption asks the same question of the attended date
+            instead, so a back-filled session is judged by the coverage that
+            was in force when it happened.
+
+    CarnetEntry:
+      type: object
+      required: [id, carnet_id, attendance_record_id, used_on]
+      properties:
+        id:
+          type: integer
+          format: int64
+        carnet_id:
+          type: integer
+          format: int64
+        attendance_record_id:
+          type: integer
+          format: int64
+          description: |
+            The presence that consumed this entry. Unique across the table —
+            one attendance can never consume two entries.
+        used_on:
+          type: string
+          format: date
+          description: Copy of the attendance record's `attended_on`
 
     CarnetCreateRequest:
       type: object

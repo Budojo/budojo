@@ -48,8 +48,8 @@ One `AttendanceRecord` is one athlete-was-present-on-one-date row. This is M4's 
 
 | Event | Side-effects |
 |---|---|
-| `created` (any source) | None at the model layer. The `SendAthleteTrainingTodayPushes` cron uses the created row as the "already present, skip the push" signal. |
-| `deleted` (soft) | Default SoftDeletes — the row stays in the DB with `deleted_at` set. The owner-side widget's `?trashed=1` view surfaces tombstones for audit / correction. |
+| `created` (any source) | None at the model layer. The `SendAthleteTrainingTodayPushes` cron uses the created row as the "already present, skip the push" signal. `AttendanceObserver` fires the achievement evaluator. Separately, `MarkAttendanceAction` charges a carnet entry for the row when the athlete's month is not covered by the monthly fee (#1364) — see [`carnet-entry.md`](./carnet-entry.md). |
+| `deleted` (soft) | Default SoftDeletes — the row stays in the DB with `deleted_at` set. The owner-side widget's `?trashed=1` view surfaces tombstones for audit / correction. Any carnet entry the row consumed is **hard**-deleted in the same transaction, so a refunded entry is spendable again (#1364). |
 | Athlete hard-deleted | Cascade — `athletes.id` deletion cascades to `attendance_records.athlete_id`, dropping the rows entirely (NOT soft-delete). Consistent with the GDPR Art. 17 erasure flow. |
 
 ## Related actions

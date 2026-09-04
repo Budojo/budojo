@@ -6,9 +6,11 @@ namespace App\Models;
 
 use App\Observers\Audit\CarnetAuditObserver;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Database\Factories\CarnetFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,6 +50,27 @@ class Carnet extends Model
     public function entries(): HasMany
     {
         return $this->hasMany(CarnetEntry::class);
+    }
+
+    /**
+     * Inside the validity window on `$date`, earliest expiry first so the
+     * first row is the one to spend — the athlete loses the fewest entries.
+     *
+     * The window only; whether a carnet still has entries left is
+     * `CarnetAvailability::isActiveOn`, which is the whole rule. Expressing
+     * the balance here as well would be the same rule written twice, in two
+     * languages.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeValidOn(Builder $query, CarbonInterface $date): Builder
+    {
+        return $query
+            ->whereDate('purchased_at', '<=', $date->toDateString())
+            ->whereDate('expires_at', '>=', $date->toDateString())
+            ->orderBy('expires_at')
+            ->orderBy('id');
     }
 
     /**

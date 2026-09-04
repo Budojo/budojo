@@ -6,6 +6,9 @@ namespace App\Http\Resources;
 
 use App\Models\Athlete;
 use App\Models\AthleteInvitation;
+use App\Models\Carnet;
+use App\Support\CarnetAvailability;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -39,6 +42,17 @@ class AthleteResource extends JsonResource
                 ->where('year', $year)
                 ->where('month', $month)
                 ->exists();
+
+        // Carnet balance chip (#1364) — same two-path shape as
+        // `paid_current_month` right above: the index endpoint pre-loads the
+        // validity-window slice, single-row endpoints query on demand. Either
+        // way the balance half of "is it spendable" is applied in memory by
+        // `CarnetAvailability`, which is the one place that rule lives.
+        $today = CarbonImmutable::today();
+        $activeCarnet = ($athlete->relationLoaded('carnets')
+            ? $athlete->carnets
+            : $athlete->carnets()->validOn($today)->withCount('entries')->get())
+            ->first(static fn (Carnet $c): bool => CarnetAvailability::isActiveOn($c, $today));
 
         // Address (#72b) — same lazy-access pattern as AcademyResource.
         // The list endpoint at AthleteController::index eager-loads
@@ -90,6 +104,15 @@ class AthleteResource extends JsonResource
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'created_at' => $athlete->created_at?->toIso8601String(),
             'paid_current_month' => $paidCurrentMonth,
+            // Null when the athlete holds no spendable carnet — the roster
+            // chip and the athlete-detail header render from this without a
+            // per-row call.
+            'active_carnet' => $activeCarnet === null ? null : [
+                'id' => $activeCarnet->id,
+                'code' => $activeCarnet->code,
+                'remaining_entries' => CarnetAvailability::remainingEntries($activeCarnet),
+                'expires_at' => $activeCarnet->expires_at->toDateString(),
+            ],
             // M7 PR-B-UI (#467) — the single invitation block the SPA's
             // athlete-detail card renders. Read-side projection only;
             // the raw token + sha-256 hash never leave the database.

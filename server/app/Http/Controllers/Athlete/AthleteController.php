@@ -16,6 +16,7 @@ use App\Http\Resources\AthleteResource;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
@@ -93,6 +94,11 @@ class AthleteController extends Controller
             // out into N+1 queries on a 20-row page (#104). One extra query
             // total — payments for all visible athletes in this month.
             ->with(['payments' => $currentMonthScope])
+            // Same reasoning for the carnet chip (#1364): pre-load only the
+            // carnets inside today's validity window, counted, so
+            // `active_carnet` resolves in one extra query for the page
+            // instead of two per row.
+            ->with(['carnets' => static fn ($q) => $q->validOn(CarbonImmutable::today())->withCount('entries')])
             // Eager-load the morph address (#72b) so AthleteResource's
             // `$athlete->address` access on each row is one batched query
             // instead of 20.
