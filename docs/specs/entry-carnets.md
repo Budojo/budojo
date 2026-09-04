@@ -245,15 +245,17 @@ Every new string lands in both `client/public/assets/i18n/it.json` and `en.json`
 - `Carnet` + `CarnetEntry` models, `Athlete::carnets()`, `Carnet::entries()`, `Carnet::remainingEntries()` / `isActiveOn(date)`.
 - `SellCarnetAction` (code generation + snapshot + `expires_at` computation), `ListAthleteCarnetsAction`.
 - `CarnetCode` support class: the alphabet, the draw, the bounded retry-on-collision.
-- `CarnetController` (index / store / entries) + FormRequests with the cross-academy `authorize()` guard.
+- `CarnetController` (index / store) + FormRequests with the cross-academy `authorize()` guard. The `entries` register endpoint moves to PR 2: until consumption exists it could only ever return `[]`.
 - `AcademyController` accepts the two new config fields on `PATCH`.
+- Entity docs + OpenAPI **in this PR**, not deferred — root `CLAUDE.md` requires a migration and its docs to ship in the same commit history.
 - PEST: snapshotting, 422-on-unconfigured, cross-academy 403, expiry computation, balance derivation, back-dated purchase, code shape (4 chars, alphabet excludes the ambiguous glyphs), code uniqueness under a forced collision, client-supplied `code` in the payload is ignored.
 
 ### PR 2 — BE consumption + refund
 
 - `ConsumeCarnetEntriesAction` + the batched hook in `MarkAttendanceAction`.
 - Refund in `DeleteAttendanceAction` + `UnmarkTodayAttendanceAction`.
-- `AthleteResource.active_carnet` + the eager-load on the list endpoint.
+- `GET /athletes/{athlete}/carnets/{carnet}/entries` — the consumed-entry register, now that something fills it.
+- `AthleteResource.active_carnet` + the eager-load on the list endpoint. `is_active` (validity window **and** balance) is introduced here as one shared predicate used by both the consumption query and the resource — PR 1 deliberately ships neither, to avoid expressing the rule twice before there is a second caller.
 - `/me/carnets`.
 - PEST: monthly-first freeze, FIFO selection, backfilled-date coverage lookup, refund-on-delete, correct-a-mistake costs one entry, idempotent re-mark consumes nothing, over-draw refused, bulk-mark query count (no N+1).
 
@@ -268,8 +270,7 @@ Every new string lands in both `client/public/assets/i18n/it.json` and `en.json`
 
 - `my-payments` carnet card.
 - Cypress: owner sells a carnet → marks presence on an unpaid month → balance drops → deletes the presence → balance restored.
-- `docs/entities/carnet.md` + `docs/entities/carnet-entry.md` (new); update `academy.md` (two config fields), `athlete-payment.md` (cross-link the coexistence rule), `attendance-record.md` (the consumption side-effect).
-- `docs/api/v1.yaml`: the four endpoints + `AthleteResource.active_carnet`.
+- Docs catch-up for whatever PR 2 and PR 3 changed — `attendance-record.md` (the consumption side-effect), `athlete-payment.md` (cross-link the coexistence rule), `AthleteResource.active_carnet` in the OpenAPI. The carnet entity docs and the sell/list endpoints already shipped in PR 1.
 
 ---
 

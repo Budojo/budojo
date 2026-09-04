@@ -130,6 +130,12 @@ class Athlete extends Model implements HasAddress
         return $this->hasMany(AthletePayment::class);
     }
 
+    /** @return HasMany<Carnet, $this> */
+    public function carnets(): HasMany
+    {
+        return $this->hasMany(Carnet::class);
+    }
+
     /**
      * Owner-facing log of every belt + stripe promotion this athlete
      * has received. Written by the AthleteObserver in lock-step with

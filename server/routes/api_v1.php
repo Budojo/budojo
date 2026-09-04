@@ -523,6 +523,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::delete('/athletes/{athlete}/payments/{year}/{month}', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'destroy'])
             ->whereNumber(['year', 'month']);
 
+        // Entry carnets — #1364. The pre-paid alternative to the monthly fee:
+        // price + pack size are configured per academy via PATCH /academy and
+        // snapshotted onto each carnet at sale. Consumption (one entry per
+        // attended day) lands with the attendance hook in PR 2.
+        Route::get('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'index']);
+        Route::post('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'store']);
+
         // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
         // or Laravel binds "summary" as an attendance-record id and returns 404.
         Route::get('/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'summary']);

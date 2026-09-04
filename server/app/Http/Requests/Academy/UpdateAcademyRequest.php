@@ -81,6 +81,11 @@ class UpdateAcademyRequest extends FormRequest
             // negatives (refunds/discounts would be a different concept).
             // No upper bound — let the academy own the absurdity check.
             'monthly_fee_cents' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            // The carnet offering. Null on either half means "this academy
+            // doesn't sell carnets" — selling one is refused until both are
+            // set. A pack of zero entries would be sellable but unusable.
+            'carnet_price_cents' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'carnet_entries' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:255'],
             // Carbon dayOfWeek convention (0=Sun..6=Sat). See StoreAcademyRequest
             // for the same shape — kept in sync because both endpoints feed
             // the same column on the model. `min:1` keeps "not configured"
