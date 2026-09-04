@@ -21,6 +21,8 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 | `facebook` | string(255) | nullable | Facebook page URL (#162). Same shape as `website`. |
 | `instagram` | string(255) | nullable | Instagram profile URL (#162). Same shape as `website`. |
 | `monthly_fee_cents` | unsigned int | nullable | Academy-wide membership fee, **stored in cents** to avoid float pitfalls (€95.00 = `9500`). `null` means "fee not configured" — the payments endpoints reject `POST` with 422 until the owner sets it. Settable via `PATCH /api/v1/academy` |
+| `carnet_price_cents` | unsigned int | nullable | Price of one entry carnet, **in cents** (€70.00 = `7000`). `null` on either this or `carnet_entries` means "this academy does not sell carnets" — `POST /athletes/{id}/carnets` rejects with 422 until both are set. Snapshotted onto each carnet at sale (#1364); see [`carnet.md`](./carnet.md). Settable via `PATCH /api/v1/academy` |
+| `carnet_entries` | unsigned tinyint | nullable | How many entries one carnet holds (default offering: `10`). Snapshotted at sale, so changing it never resizes carnets already sold. Settable via `PATCH /api/v1/academy` |
 | `training_days` | json (list&lt;int&gt;) | nullable | Weekdays the academy trains on, Carbon `dayOfWeek` ints (0=Sun…6=Sat). Cast to `array` on the model. `null` means "schedule not configured" — the daily check-in UI falls back to all-weekdays in that state. Kept alive as a **denormalised cache of the current schedule** — the source of truth for historical reads is the `academy_schedules` table (#1094); see [`academy-schedule.md`](./academy-schedule.md). Settable on create + update |
 | `created_at` | timestamp | nullable | |
 | `updated_at` | timestamp | nullable | |
@@ -41,10 +43,11 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 ## Business rules
 
 - **Creation is one-shot.** `POST /api/v1/academy` fails with 409 if the owner already has one — only one academy per user, ever.
-- **`name`, `address`, `logo_path`, `monthly_fee_cents`, and `training_days` are mutable** via `PATCH /api/v1/academy` (and the dedicated `/academy/logo` endpoints for the logo file). `slug` is intentionally immutable — renames keep the original permalink stable.
+- **`name`, `address`, `logo_path`, `monthly_fee_cents`, `carnet_price_cents`, `carnet_entries`, and `training_days` are mutable** via `PATCH /api/v1/academy` (and the dedicated `/academy/logo` endpoints for the logo file). `slug` is intentionally immutable — renames keep the original permalink stable.
 - **Address (#72) is a separate polymorphic entity.** `addresses` lives in its own table (`addressable_type` + `addressable_id`); the academy exposes it via `morphOne`. The 1:1 invariant is NOT carried by `morphOne` alone (Eloquent's morph relation just returns the first match) — it's enforced by the UNIQUE index on `(addressable_type, addressable_id)` in the `addresses` table, plus `SyncAcademyAddressAction` going through the relation's `updateOrCreate(...)` so concurrent inserts hit the constraint instead of producing duplicates. PATCH semantics: send `address: { line1, line2, city, postal_code, province, country }` to upsert in place, `address: null` to clear (delete the row), or omit the key to leave untouched. See [`address.md`](./address.md).
 - **Slug is server-generated, not user-supplied.** The shape is `slugified(name) + '-' + 8 lowercase random chars`, e.g. `gracie-barra-lisboa-a3f9kx2b`. This guarantees uniqueness without exposing collision logic to the user.
 - **`monthly_fee_cents` snapshots into payment rows.** When `RecordAthletePaymentAction` records a payment, it copies the academy's *current* `monthly_fee_cents` into `athlete_payments.amount_cents`. Future fee changes therefore do NOT rewrite past payment history.
+- **The carnet offering snapshots the same way.** `SellCarnetAction` copies `carnet_price_cents` and `carnet_entries` onto the `carnets` row at sale. Repricing or resizing the offering therefore never rewrites carnets already sold — see [`carnet.md`](./carnet.md).
 - **`training_days` changes are historized, not overwritten (#1094).** Every `PATCH /api/v1/academy` that touches `training_days` inserts a row into `academy_schedules` with `effective_from = today` (idempotent on a same-day re-PATCH — the lookup is `(academy_id, effective_from)`). The `academies.training_days` column is updated in lockstep so existing readers that just want the "current" schedule keep working; the schedule-history table is the source of truth for historical reads. See [`academy-schedule.md`](./academy-schedule.md) for the read API.
 - **The SPA's `/dashboard` routes are guarded by `hasAcademyGuard`.** A logged-in user without an academy is redirected to `/setup`. A user with an academy trying to visit `/setup` is redirected to `/dashboard`.
 - **Academy-scoping on every authenticated request** is handled in the controllers, not in a policy or model scope — we match the Athlete pattern. `StoreAthleteRequest::authorize()` and similar check `$user->academy !== null`; the controller then uses `$user->academy->id` to filter queries.
@@ -54,7 +57,7 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 
 - `POST /api/v1/academy` — create (one-shot, 409 if the user already has one)
 - `GET /api/v1/academy` — fetch the authenticated user's academy; returns 404 if none (SPA uses this to detect first-login state)
-- `PATCH /api/v1/academy` — partial update of `name`, `address`, `monthly_fee_cents`, `training_days`
+- `PATCH /api/v1/academy` — partial update of `name`, `address`, `monthly_fee_cents`, `carnet_price_cents`, `carnet_entries`, `training_days`
 - `POST /api/v1/academy/logo` — upload/replace logo
 - `DELETE /api/v1/academy/logo` — remove logo
 

@@ -6,6 +6,7 @@ use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Models\AuditEntry;
+use App\Models\Carnet;
 use App\Models\Document;
 use Laravel\Sanctum\Sanctum;
 
@@ -67,6 +68,43 @@ it('writes payment.deleted with the pre-deletion snapshot', function (): void {
     expect($entry)->not->toBeNull();
     expect($entry->action)->toBe('payment.deleted');
     expect($entry->before)->toBeArray();
+});
+
+// ─── CarnetAuditObserver ────────────────────────────────────────────
+
+it('writes carnet.created with the "Mario Rossi — A7K2" label', function (): void {
+    $user = userWithAcademy();
+    Sanctum::actingAs($user);
+    $mario = Athlete::factory()->for($user->academy)->create([
+        'first_name' => 'Mario',
+        'last_name' => 'Rossi',
+    ]);
+
+    Carnet::factory()->for($mario)->create(['code' => 'A7K2', 'price_cents' => 7000]);
+
+    $entry = AuditEntry::query()->where('action', 'carnet.created')->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->subject_type)->toBe(Carnet::class);
+    expect($entry->subject_label)->toBe('Mario Rossi — A7K2');
+    expect($entry->academy_id)->toBe($user->academy->id);
+    expect($entry->after['price_cents'])->toBe(7000);
+});
+
+it('falls back to the athlete id in the label when the athlete relation is gone', function (): void {
+    $user = userWithAcademy();
+    Sanctum::actingAs($user);
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $carnet = Carnet::factory()->for($athlete)->make(['code' => 'B3M9']);
+
+    // Simulate the relation resolving to null — the observer's defensive
+    // branch, which the happy path never exercises.
+    $carnet->setRelation('athlete', null);
+    $carnet->save();
+
+    $entry = AuditEntry::query()->where('action', 'carnet.created')->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->subject_label)->toBe('Athlete #' . $athlete->id . ' — B3M9');
+    expect($entry->academy_id)->toBeNull();
 });
 
 // ─── DocumentAuditObserver ──────────────────────────────────────────

@@ -45,6 +45,8 @@ class AcademyResource extends JsonResource
                 ? Storage::disk('public')->url($academy->logo_path)
                 : null,
             'monthly_fee_cents' => $academy->monthly_fee_cents,
+            'carnet_price_cents' => $academy->carnet_price_cents,
+            'carnet_entries' => $academy->carnet_entries,
             'training_days' => $academy->training_days,
             // Schedule history (#1094). Pull the full history once,
             // then derive current/next from the in-memory collection —
