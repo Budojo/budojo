@@ -94,6 +94,10 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
   // starts while the window is open shows up without polling.
   update: {
     status: () => ipcRenderer.invoke('budojo:update:status'),
+    // Runs the installer NOW, visibly, and relaunches (#1362). Closing the app
+    // normally still installs silently on quit — this is the opt-in path for
+    // someone who would rather watch it happen than wonder.
+    installNow: () => ipcRenderer.invoke('budojo:update:install'),
     onStatus(callback: (status: unknown) => void): () => void {
       const listener = (_event: unknown, status: unknown): void => callback(status);
       ipcRenderer.on(UPDATE_STATUS_CHANNEL, listener);

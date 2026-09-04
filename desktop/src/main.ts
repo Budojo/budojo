@@ -726,8 +726,33 @@ function registerBackupBridge(
  * finished shows nothing until the next six-hourly check. Without the push, a
  * download that starts while the window is open is invisible until a reload.
  */
+/**
+ * Held so the renderer can ask for the install now (#1362).
+ *
+ * Null in a build that does not self-update, and null until the poll is wired —
+ * both of which are the same answer to `installNow`: there is nothing to
+ * install.
+ */
+let updaterRef: { quitAndInstall: (isSilent: boolean, isForceRunAfter: boolean) => void } | null = null;
+
 function registerUpdateBridge(): void {
   ipcMain.handle('budojo:update:status', () => updateStatus);
+
+  ipcMain.handle('budojo:update:install', () => {
+    // Guarded on the state, not on the caller's word. A stale click — the bar
+    // rendered before an error cleared it, a renderer kept alive across a
+    // failed download — must not quit the app to install nothing.
+    if (updateStatus.phase !== 'ready' || updaterRef === null) {
+      return { ok: false };
+    }
+
+    // `isSilent: false` is the whole point: NSIS shows its progress window, so
+    // the owner watches it happen instead of closing the app and wondering.
+    // `isForceRunAfter: true` brings Budojo back on its own afterwards.
+    updaterRef.quitAndInstall(false, true);
+
+    return { ok: true };
+  });
 }
 
 function registerRecoveryKeysBridge(): void {
@@ -830,7 +855,11 @@ function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
   const updater = electronUpdater.autoUpdater;
 
   updater.autoDownload = true;
+  // Unchanged, and deliberately: closing the app still installs silently, so
+  // nothing regresses for someone who would rather not think about it. The
+  // button #1362 adds is a second path, not a replacement.
   updater.autoInstallOnAppQuit = true;
+  updaterRef = updater;
 
   updater.on('checking-for-update', () => log('[update] checking'));
   updater.on('update-not-available', () => log('[update] already current'));

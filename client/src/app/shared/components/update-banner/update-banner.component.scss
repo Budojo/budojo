@@ -69,6 +69,31 @@
     transition: width 200ms linear;
   }
 
+  // The one thing on this bar you can act on, so it is the one thing that
+  // looks actionable. Still not a filled button: a status line that grows a
+  // primary CTA stops reading as a status line.
+  &__action {
+    flex: 0 0 auto;
+    padding: 0.25rem 0.5rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--p-primary-color);
+    background: none;
+    border: 1px solid color-mix(in srgb, var(--p-primary-color) 40%, transparent);
+    border-radius: 999px;
+    cursor: pointer;
+
+    &:hover:not(:disabled),
+    &:focus-visible {
+      background: color-mix(in srgb, var(--p-primary-color) 12%, transparent);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
   // Ready is the state worth a shade more presence: it is the one the owner can
   // act on, by closing the app when they are done.
   &--ready {

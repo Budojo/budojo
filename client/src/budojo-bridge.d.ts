@@ -151,6 +151,14 @@ interface BudojoBridge {
   readonly update: {
     status(): Promise<UpdateStatus>;
     onStatus(callback: (status: UpdateStatus) => void): () => void;
+    /**
+     * Quit, run the installer visibly, and come back (#1362).
+     *
+     * Only meaningful while the status is `ready`. Resolves `{ ok: false }`
+     * when there is nothing downloaded to install, rather than quitting the
+     * app on a stale click.
+     */
+    installNow(): Promise<{ ok: boolean }>;
   };
 }
 

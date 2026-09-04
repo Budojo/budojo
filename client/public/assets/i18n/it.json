@@ -2320,6 +2320,7 @@
   "update": {
     "downloading": "Scaricamento aggiornamento {{version}}…",
     "percent": "{{percent}}%",
-    "ready": "Versione {{version}} pronta — si installa alla chiusura di Budojo"
+    "ready": "Versione {{version}} pronta — si installa alla chiusura di Budojo",
+    "installNow": "Riavvia e aggiorna"
   }
 }

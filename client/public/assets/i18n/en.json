@@ -2320,6 +2320,7 @@
   "update": {
     "downloading": "Downloading update {{version}}…",
     "percent": "{{percent}}%",
-    "ready": "Version {{version}} is ready — it installs when you close Budojo"
+    "ready": "Version {{version}} is ready — it installs when you close Budojo",
+    "installNow": "Restart and update"
   }
 }
