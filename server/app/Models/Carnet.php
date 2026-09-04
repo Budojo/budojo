@@ -6,9 +6,11 @@ namespace App\Models;
 
 use App\Observers\Audit\CarnetAuditObserver;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Database\Factories\CarnetFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,6 +50,31 @@ class Carnet extends Model
     public function entries(): HasMany
     {
         return $this->hasMany(CarnetEntry::class);
+    }
+
+    /**
+     * Carnets that could pay for a session on `$date`: inside the validity
+     * window, earliest expiry first so the first row is the FIFO pick, with
+     * the ledger count loaded.
+     *
+     * The count comes along deliberately. Whether a carnet still has entries
+     * left is `CarnetAvailability::isActiveOn`, which every caller asks next
+     * and which throws without `entries_count` — so loading it here makes the
+     * half-configured query (window but no count, or count but no ordering)
+     * impossible to write by accident. The balance test itself stays in the
+     * helper rather than being duplicated into SQL.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeValidOn(Builder $query, CarbonInterface $date): Builder
+    {
+        return $query
+            ->whereDate('purchased_at', '<=', $date->toDateString())
+            ->whereDate('expires_at', '>=', $date->toDateString())
+            ->withCount('entries')
+            ->orderBy('expires_at')
+            ->orderBy('id');
     }
 
     /**

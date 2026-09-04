@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Athlete;
 
 use App\Actions\Payment\ListAthleteCarnetsAction;
+use App\Actions\Payment\ListCarnetEntriesAction;
 use App\Actions\Payment\SellCarnetAction;
 use App\Authorization\Capability;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Carnet\StoreCarnetRequest;
+use App\Http\Resources\CarnetEntryResource;
 use App\Http\Resources\CarnetResource;
 use App\Models\Academy;
 use App\Models\Athlete;
+use App\Models\Carnet;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +26,7 @@ class CarnetController extends Controller
     public function __construct(
         private readonly SellCarnetAction $sellAction,
         private readonly ListAthleteCarnetsAction $listAction,
+        private readonly ListCarnetEntriesAction $listEntriesAction,
     ) {
     }
 
@@ -36,6 +40,23 @@ class CarnetController extends Controller
         }
 
         return CarnetResource::collection($this->listAction->execute($athlete));
+    }
+
+    public function entries(Request $request, Athlete $athlete, Carnet $carnet): AnonymousResourceCollection|JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        // Two gates, not one: the capability in the athlete's academy, and the
+        // carnet actually belonging to the athlete in the path. Without the
+        // second, a caller could read any carnet's register by pairing its id
+        // with an athlete they happen to have access to.
+        if (! $user->canInAcademy($athlete->academy_id, Capability::PaymentsRead)
+            || $carnet->athlete_id !== $athlete->id) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        return CarnetEntryResource::collection($this->listEntriesAction->execute($carnet));
     }
 
     public function store(StoreCarnetRequest $request, Athlete $athlete): JsonResponse

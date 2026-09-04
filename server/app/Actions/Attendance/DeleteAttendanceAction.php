@@ -4,19 +4,29 @@ declare(strict_types=1);
 
 namespace App\Actions\Attendance;
 
+use App\Actions\Payment\ReleaseCarnetEntryAction;
 use App\Models\AttendanceRecord;
+use Illuminate\Support\Facades\DB;
 
 class DeleteAttendanceAction
 {
+    public function __construct(
+        private readonly ReleaseCarnetEntryAction $releaseCarnetEntry,
+    ) {
+    }
+
     /**
-     * Soft-delete an attendance record. No file cleanup (attendance records
-     * carry no disk artifact — unlike documents), so this is a one-line
-     * action. It still lives as a class for symmetry with the rest of
-     * server/app/Actions, and to give future audit-trail logic (e.g.
-     * recording who un-marked whom) a single home to land.
+     * Soft-delete an attendance record, giving back the carnet entry it
+     * consumed (#1364). Both in one transaction: a presence removed without
+     * its entry released would silently cost the athlete a session they paid
+     * for, and the correct-a-mistake flow (delete the wrong row, insert the
+     * right one) would charge twice for one session.
      */
     public function execute(AttendanceRecord $record): void
     {
-        $record->delete();
+        DB::transaction(function () use ($record): void {
+            $this->releaseCarnetEntry->execute($record);
+            $record->delete();
+        });
     }
 }

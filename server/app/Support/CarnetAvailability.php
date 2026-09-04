@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Support;
+
+use App\Models\Carnet;
+use Carbon\CarbonInterface;
+
+/**
+ * The single expression of "can this carnet pay for a session on date D".
+ *
+ * It exists as a dependency-free helper rather than as model methods because
+ * `server/CLAUDE.md` keeps business logic out of models, and rather than being
+ * inlined at each call site because there are two of them with opposite
+ * shapes: `ConsumeCarnetEntriesAction` asks it of candidate rows while
+ * deciding what to charge, and the API resources ask it of rows on the way
+ * out. Written twice, the two would drift.
+ *
+ * Static for the same reason as `RoleCapabilities`: no state, no dependency,
+ * nothing to swap in a test — and a readable call site.
+ */
+final class CarnetAvailability
+{
+    /**
+     * Balance is derived, never stored: the ledger row count IS the number of
+     * entries spent.
+     */
+    public static function remainingEntries(Carnet $carnet): int
+    {
+        // A caller that skipped `withCount('entries')` would otherwise read a
+        // silently-full balance. On a number that decides whether an athlete
+        // gets charged, failing loudly beats being quietly wrong.
+        $spent = $carnet->entries_count ?? throw new \LogicException(
+            'Carnet balance read without withCount(\'entries\') — the count is the balance.',
+        );
+
+        return $carnet->total_entries - $spent;
+    }
+
+    /**
+     * Spendable on `$date`: inside the validity window AND with entries left.
+     *
+     * The window is checked against the date being *attended*, never against
+     * today — the owner back-fills past sessions routinely, and a session from
+     * March must be judged by whether the carnet was valid in March.
+     */
+    public static function isActiveOn(Carnet $carnet, CarbonInterface $date): bool
+    {
+        return self::remainingEntries($carnet) > 0
+            && $carnet->purchased_at->startOfDay()->lessThanOrEqualTo($date->copy()->startOfDay())
+            && $carnet->expires_at->startOfDay()->greaterThanOrEqualTo($date->copy()->startOfDay());
+    }
+}

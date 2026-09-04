@@ -57,10 +57,16 @@ class SellCarnetAction
 
         for ($attempt = 1; $attempt <= self::MAX_CODE_ATTEMPTS; $attempt++) {
             try {
-                return Carnet::create([
+                $carnet = Carnet::create([
                     'code' => $this->codeGenerator->generate(),
                     ...$attributes,
                 ]);
+
+                // The balance readers require `entries_count` and throw when
+                // it is missing, rather than reporting a silently-full
+                // carnet. Load it here so a freshly sold carnet is as
+                // complete as one that came back from a list query.
+                return $carnet->loadCount('entries');
             } catch (UniqueConstraintViolationException) {
                 // `code` is the only unique index on the table, so this can
                 // only be a code collision. Redraw.

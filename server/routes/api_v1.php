@@ -211,6 +211,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // have a personal payment ledger.
     Route::get('/me/payments', [\App\Http\Controllers\Me\MyPaymentsController::class, 'index']);
 
+    // Athlete-portal carnet balance (#1364). Same persona split as
+    // /me/payments — the athlete reads their own residual entries without
+    // asking the instructor.
+    Route::get('/me/carnets', [\App\Http\Controllers\Me\MyCarnetsController::class, 'index']);
+
     // Athlete-portal documents (M7 PR-D slice 5). Read-only — owners
     // remain the only upload entry point in V1 (athlete-side upload
     // policy is a V2 question). 50/page, descending-created-at.
@@ -529,6 +534,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // attended day) lands with the attendance hook in PR 2.
         Route::get('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'index']);
         Route::post('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'store']);
+        Route::get('/athletes/{athlete}/carnets/{carnet}/entries', [\App\Http\Controllers\Athlete\CarnetController::class, 'entries']);
 
         // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
         // or Laravel binds "summary" as an attendance-record id and returns 404.
