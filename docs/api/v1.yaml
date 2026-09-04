@@ -6761,7 +6761,7 @@ components:
     Carnet:
       type: object
       required:
-        [id, code, athlete_id, total_entries, remaining_entries, price_cents, purchased_at, expires_at]
+        [id, code, athlete_id, total_entries, remaining_entries, price_cents, purchased_at, expires_at, is_active]
       properties:
         id:
           type: integer

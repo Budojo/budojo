@@ -78,6 +78,13 @@ class ConsumeCarnetEntriesAction
                 'attendance_record_id' => $record->id,
                 'used_on' => $record->attended_on->toDateString(),
             ]);
+
+            // The candidates were counted once before the loop, so without
+            // this the balance test would read a stale snapshot for every
+            // iteration after the first. Today's only caller marks one date
+            // and cannot hand two records for the same athlete, but relying on
+            // that would make this action correct by luck rather than by rule.
+            $carnet->setAttribute('entries_count', ($carnet->entries_count ?? 0) + 1);
         }
     }
 
@@ -115,7 +122,6 @@ class ConsumeCarnetEntriesAction
         $candidates = Carnet::query()
             ->whereIn('athlete_id', $athleteIds)
             ->validOn($date)
-            ->withCount('entries')
             ->get();
 
         $byAthlete = [];

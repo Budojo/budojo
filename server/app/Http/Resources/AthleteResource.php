@@ -51,7 +51,7 @@ class AthleteResource extends JsonResource
         $today = CarbonImmutable::today();
         $activeCarnet = ($athlete->relationLoaded('carnets')
             ? $athlete->carnets
-            : $athlete->carnets()->validOn($today)->withCount('entries')->get())
+            : $athlete->carnets()->validOn($today)->get())
             ->first(static fn (Carnet $c): bool => CarnetAvailability::isActiveOn($c, $today));
 
         // Address (#72b) — same lazy-access pattern as AcademyResource.

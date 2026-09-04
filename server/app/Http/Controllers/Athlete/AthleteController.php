@@ -98,7 +98,7 @@ class AthleteController extends Controller
             // carnets inside today's validity window, counted, so
             // `active_carnet` resolves in one extra query for the page
             // instead of two per row.
-            ->with(['carnets' => static fn ($q) => $q->validOn(CarbonImmutable::today())->withCount('entries')])
+            ->with(['carnets' => static fn ($q) => $q->validOn(CarbonImmutable::today())])
             // Eager-load the morph address (#72b) so AthleteResource's
             // `$athlete->address` access on each row is one batched query
             // instead of 20.

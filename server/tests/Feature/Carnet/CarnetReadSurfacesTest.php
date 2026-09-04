@@ -99,6 +99,56 @@ it('exposes the active carnet on the single-athlete endpoint too', function (): 
         ->assertJsonPath('data.active_carnet.remaining_entries', 10);
 });
 
+it('picks the carnet expiring soonest as the active one on the list', function (): void {
+    // The one that will be charged next, so the chip and the charge agree.
+    $expiringLater = Carnet::factory()->for($this->athlete)->purchasedOn(now()->subMonth()->toDateString())->create();
+    $expiringSooner = Carnet::factory()->for($this->athlete)->purchasedOn(now()->subMonths(4)->toDateString())->create();
+
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/athletes')
+        ->assertOk()
+        ->assertJsonPath('data.0.active_carnet.code', $expiringSooner->code);
+
+    expect($expiringLater->expires_at->greaterThan($expiringSooner->expires_at))->toBeTrue();
+});
+
+it('picks the same carnet on the single-athlete endpoint, which queries instead of eager-loading', function (): void {
+    Carnet::factory()->for($this->athlete)->purchasedOn(now()->subMonth()->toDateString())->create();
+    $expiringSooner = Carnet::factory()->for($this->athlete)->purchasedOn(now()->subMonths(4)->toDateString())->create();
+
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/athletes/{$this->athlete->id}")
+        ->assertOk()
+        ->assertJsonPath('data.active_carnet.code', $expiringSooner->code);
+});
+
+it('serves the carnet chip on search results without a per-row query', function (): void {
+    // Search renders AthleteResource too and keeps its own eager-load list, so
+    // it can silently regress into a per-row carnet query on the one endpoint
+    // that runs on every keystroke. Asserting the field is present would not
+    // catch that — the lazy branch fills it in too, just slowly. So measure.
+    $searchCost = function (int $athleteCount): int {
+        Athlete::query()->delete();
+        foreach (range(1, $athleteCount) as $ignored) {
+            $athlete = Athlete::factory()->for($this->user->academy)->create(['last_name' => 'Bonaventura']);
+            Carnet::factory()->for($athlete)->create();
+        }
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $response = $this->actingAs($this->user)->getJson('/api/v1/search?q=Bonaventura');
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $response->assertOk()->assertJsonPath('data.0.active_carnet.remaining_entries', 10);
+
+        return $count;
+    };
+
+    // Eager-loaded means constant: six athletes cost exactly what two do.
+    expect($searchCost(6))->toBe($searchCost(2));
+});
+
 it('reports a null active carnet when the athlete holds none that is spendable', function (): void {
     Carnet::factory()->for($this->athlete)->purchasedOn(now()->subMonths(18)->toDateString())->create();
 
