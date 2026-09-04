@@ -73,6 +73,7 @@ Both settable via the existing `PATCH /api/v1/academy`. Selling a carnet while e
 | Column | Type | Notes |
 |---|---|---|
 | `id` | bigint pk | |
+| `code` | char(4), not null, **UNIQUE** | Human-facing handle for the carnet — see § Carnet code below. Generated server-side, never accepted from the client. |
 | `athlete_id` | bigint fk → `athletes.id`, cascade delete, indexed | Tenant scoping rides the athlete, as everywhere else. |
 | `total_entries` | unsigned tinyint, not null | **Snapshot** of `academies.carnet_entries` at purchase. |
 | `price_cents` | unsigned int, not null | **Snapshot** of `academies.carnet_price_cents` at purchase. Raising the price later never rewrites sold carnets. |
@@ -100,6 +101,19 @@ No soft-deletes: a sold carnet is a fact, and there is no un-sell flow in scope.
 Deleting a `carnet_entries` row is the refund path (§ Refund below) — the table is append-only in the happy path but rows are removed when the presence that created them is retracted. That is a deletion of a *derived* fact whose source disappeared, not a mutation of history.
 
 ---
+
+## Carnet code
+
+Every carnet carries a **unique 4-character alphanumeric code** (`A7K2`, `9XQF`). It is the handle a human uses: the owner reads it off the athlete's card to pull up the right carnet, and it disambiguates "quale carnet?" when someone holds two.
+
+Design constraints, in order of importance:
+
+- **Unambiguous when read aloud or handwritten.** The alphabet excludes the glyph pairs that get mistaken for each other: no `0`/`O`, no `1`/`I`/`L`. What remains is `ABCDEFGHJKMNPQRSTUVWXYZ23456789` — 31 symbols, `31^4 ≈ 923k` combinations. A code that has to be re-read twice is worse than a longer code.
+- **Random, not sequential.** A counter would leak how many carnets the academy has ever sold and would make the next code guessable. Random draw from the alphabet, uppercase, stored uppercase.
+- **Uniqueness is the database's job.** `UNIQUE(code)` on the table; generation draws a code and inserts, retrying on constraint violation. Same philosophy as everywhere else in this doc — the index is the guarantee, the application logic is the convenience. At realistic volume (hundreds of carnets over the life of an academy against ~923k codes) a retry is a once-in-a-career event, but the loop is three lines and removes the question entirely. Bounded at a handful of attempts, then fail loudly rather than spin.
+- **Lookup is case-insensitive.** Nobody types the shift key for a code on a card.
+
+Scope of uniqueness is the whole table, not per-academy. A Budojo install is one SQLite file for one academy in the normal case; making the code globally unique within the file costs nothing and means a code is never ambiguous even in the multi-academy install.
 
 ## Business rules
 
@@ -166,7 +180,7 @@ Owner-side, under the existing academy-scoped namespace, mirroring `AthletePayme
 | Method | Path | Body | Returns | Notes |
 |---|---|---|---|---|
 | `GET` | `/api/v1/athletes/{athlete}/carnets` | — | `{ data: Carnet[] }` ordered `purchased_at DESC` | Each row carries `remaining_entries` + `is_active` derived fields. |
-| `POST` | `/api/v1/athletes/{athlete}/carnets` | `{ purchased_at?: 'YYYY-MM-DD' }` | `201` + the created row | `purchased_at` defaults to today. `total_entries` / `price_cents` are snapshotted server-side from the academy config — **never** accepted from the client. `422` if either academy field is null. |
+| `POST` | `/api/v1/athletes/{athlete}/carnets` | `{ purchased_at?: 'YYYY-MM-DD' }` | `201` + the created row | `purchased_at` defaults to today. `code`, `total_entries` and `price_cents` are all generated / snapshotted server-side — **never** accepted from the client. `422` if either academy config field is null. |
 | `GET` | `/api/v1/athletes/{athlete}/carnets/{carnet}/entries` | — | `{ data: CarnetEntry[] }` ordered `used_on DESC` | The "which sessions did this carnet pay for" register. |
 
 Athlete-portal, mirroring `/me/payments`:
@@ -187,7 +201,7 @@ No `DELETE` on carnets in this milestone (see non-goals).
 
 The athlete-detail page already has a `payments-list` sub-tab (`client/src/app/features/athletes/detail/payments-list/`). Carnets land as a sibling section on that same tab rather than a new tab: the owner's mental model is "this athlete's money", not two separate ledgers, and a fourth tab would push the tab bar toward overflow on the desktop window width.
 
-- **Balance card** at the top of the section: "7 / 10 ingressi · scade il 12/03/2027". Empty state when no carnet: a single `[Vendi carnet]` button with the configured price inline ("Vendi carnet — 70 € / 10 ingressi"), so the owner confirms the price without opening settings.
+- **Balance card** at the top of the section: the **code** as the card's title in a monospaced face (`A7K2` — it is the thing the owner reads off a card and matches by eye), then "7 / 10 ingressi · scade il 12/03/2027". Empty state when no carnet: a single `[Vendi carnet]` button with the configured price inline ("Vendi carnet — 70 € / 10 ingressi"), so the owner confirms the price without opening settings.
 - **Sell dialog**: date picker (`purchased_at`, defaults today, back-dateable), read-only price/entries summary, confirm. PrimeNG `p-dialog` + `p-datepicker`, consistent with the existing payment-marking dialog.
 - **Entry register**: collapsed `p-accordion` listing consumed entries by date, so "where did my ten entries go" is answerable without leaving the page.
 
@@ -219,6 +233,7 @@ Every new string lands in both `client/public/assets/i18n/it.json` and `en.json`
 - **`total_entries` changed in academy settings after sales.** Snapshot per carnet; sold carnets keep their size.
 - **Athlete has a monthly payment for the attended month and zero carnets.** Normal path, nothing consumed, nothing to show.
 - **Carnet with 0 remaining, still inside its validity window.** Not active for consumption (balance gate), still listed in history with "esaurito".
+- **Code collision at generation.** The `UNIQUE(code)` insert fails, the action redraws. Bounded retries, then a `500` rather than an infinite loop — a genuinely exhausted keyspace is a bug worth seeing, not worth papering over.
 
 ---
 
@@ -228,10 +243,11 @@ Every new string lands in both `client/public/assets/i18n/it.json` and `en.json`
 
 - Migrations: `academies.carnet_price_cents` + `carnet_entries` columns; `create_carnets_table`; `create_carnet_entries_table` (incl. the `UNIQUE(attendance_record_id)` index).
 - `Carnet` + `CarnetEntry` models, `Athlete::carnets()`, `Carnet::entries()`, `Carnet::remainingEntries()` / `isActiveOn(date)`.
-- `SellCarnetAction` (snapshot + `expires_at` computation), `ListAthleteCarnetsAction`.
+- `SellCarnetAction` (code generation + snapshot + `expires_at` computation), `ListAthleteCarnetsAction`.
+- `CarnetCode` support class: the alphabet, the draw, the bounded retry-on-collision.
 - `CarnetController` (index / store / entries) + FormRequests with the cross-academy `authorize()` guard.
 - `AcademyController` accepts the two new config fields on `PATCH`.
-- PEST: snapshotting, 422-on-unconfigured, cross-academy 403, expiry computation, balance derivation, back-dated purchase.
+- PEST: snapshotting, 422-on-unconfigured, cross-academy 403, expiry computation, balance derivation, back-dated purchase, code shape (4 chars, alphabet excludes the ambiguous glyphs), code uniqueness under a forced collision, client-supplied `code` in the payload is ignored.
 
 ### PR 2 — BE consumption + refund
 
@@ -260,5 +276,6 @@ Every new string lands in both `client/public/assets/i18n/it.json` and `en.json`
 ## Open items (raise before / during PR 1)
 
 - **Is 12 months fixed, or academy-configurable?** This PRD hardcodes 12 (stored per carnet at purchase, so making it configurable later is additive and doesn't touch sold rows). Confirm before the migration lands.
+- **Is the code searchable?** The repo has a global search surface (`app/Actions/Search`). Typing `A7K2` there and landing on the athlete holding it is the obvious affordance, but it is additive and not required for the code to do its job. Decide in PR 3 when the UI exists.
 - **Notification on low balance.** The notification infrastructure exists (`AthletePaymentMarkedPaidNotification` is the template) and "2 ingressi rimasti" is an obvious candidate. Deliberately out of this PRD's slices — its own ticket once the balance data exists.
 - **Stats.** `GET /stats/payments/monthly` buckets revenue by the business month of `athlete_payments`. A carnet sale is revenue on `purchased_at` that covers 12 months of unknown usage, so it does **not** belong in that series without a decision on how to attribute it. Left out of scope; the trend endpoint keeps meaning "monthly-fee revenue" until that decision is made.
