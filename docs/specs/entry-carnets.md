@@ -242,7 +242,7 @@ Every new string lands in both `client/public/assets/i18n/it.json` and `en.json`
 ### PR 1 — BE data model + purchase
 
 - Migrations: `academies.carnet_price_cents` + `carnet_entries` columns; `create_carnets_table`; `create_carnet_entries_table` (incl. the `UNIQUE(attendance_record_id)` index).
-- `Carnet` + `CarnetEntry` models, `Athlete::carnets()`, `Carnet::entries()`, `Carnet::remainingEntries()` / `isActiveOn(date)`.
+- `Carnet` + `CarnetEntry` models, `Athlete::carnets()`, `Carnet::entries()`. The balance is derived on the query side with `withCount('entries')` — **not** as model methods: `server/CLAUDE.md` keeps business logic out of models, and the "is it active" predicate waits for PR 2 (see below) rather than being written twice.
 - `SellCarnetAction` (code generation + snapshot + `expires_at` computation), `ListAthleteCarnetsAction`.
 - `CarnetCode` support class: the alphabet, the draw, the bounded retry-on-collision.
 - `CarnetController` (index / store) + FormRequests with the cross-academy `authorize()` guard. The `entries` register endpoint moves to PR 2: until consumption exists it could only ever return `[]`.

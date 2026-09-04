@@ -65,6 +65,36 @@ it('expires twelve months after the purchase date', function (): void {
         ->assertJsonPath('data.expires_at', '2027-03-15');
 });
 
+it('expires on the last day of February for a leap-day purchase', function (): void {
+    // Carbon's default addMonths() would spill to March 1 here.
+    $this->actingAs($this->user)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/carnets", [
+            'purchased_at' => '2024-02-29',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.expires_at', '2025-02-28');
+});
+
+it('ignores a code, price or size supplied by the client', function (): void {
+    // The model is fillable on all three, so the only thing standing between a
+    // forged payload and the database is that the controller never forwards
+    // request data to the Action. This pins that invariant down.
+    $this->actingAs($this->user)
+        ->postJson("/api/v1/athletes/{$this->athlete->id}/carnets", [
+            'code' => 'ZZZZ',
+            'price_cents' => 1,
+            'total_entries' => 250,
+            'expires_at' => '2099-01-01',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.price_cents', 7000)
+        ->assertJsonPath('data.total_entries', 10);
+
+    $carnet = Carnet::firstOrFail();
+    expect($carnet->code)->not->toBe('ZZZZ')
+        ->and($carnet->expires_at->toDateString())->not->toBe('2099-01-01');
+});
+
 it('defaults the purchase date to today', function (): void {
     $this->actingAs($this->user)
         ->postJson("/api/v1/athletes/{$this->athlete->id}/carnets")

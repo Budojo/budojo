@@ -49,7 +49,10 @@ class SellCarnetAction
             'total_entries' => $totalEntries,
             'price_cents' => $priceCents,
             'purchased_at' => $purchasedAt->toDateString(),
-            'expires_at' => $purchasedAt->addMonths(self::VALIDITY_MONTHS)->toDateString(),
+            // NoOverflow so a leap-day sale expires on Feb 28 rather than
+            // spilling into March 1 — `purchased_at + 12 months` is what the
+            // entity doc promises, and Carbon's default overflows.
+            'expires_at' => $purchasedAt->addMonthsNoOverflow(self::VALIDITY_MONTHS)->toDateString(),
         ];
 
         for ($attempt = 1; $attempt <= self::MAX_CODE_ATTEMPTS; $attempt++) {
