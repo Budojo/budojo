@@ -72,9 +72,7 @@ describe('Entry carnets — owner', () => {
     cy.intercept('GET', '/api/v1/athletes/1/carnets', { statusCode: 200, body: { data: [] } });
 
     cy.visitAuthenticated('/dashboard/athletes/1/payments');
-    cy.get('[data-cy="payments-list"], [data-cy="my-payments-grid"], table', {
-      timeout: 15000,
-    }).should('exist');
+    cy.get('[data-cy="payments-list"]', { timeout: 15000 }).should('exist');
     cy.get('[data-cy="carnet-panel"]').should('not.exist');
   });
 
@@ -127,16 +125,18 @@ describe('Entry carnets — owner', () => {
     showPanel();
     cy.get('[data-cy="carnet-sell-button"]').click();
     cy.get('#carnet-purchased-at').click();
-    // First selectable day of the month the picker opens on.
-    cy.get('.p-datepicker-panel td span:not(.p-disabled)')
-      .not('.p-datepicker-other-month')
-      .first()
-      .click();
+    // PrimeNG marks other-month days unselectable, so the first enabled cell
+    // is the 1st of the month the picker opened on — a known date, which is
+    // what makes the assertion below able to fail.
+    cy.get('.p-datepicker-panel td span:not(.p-disabled)').first().click();
     cy.get('[data-cy="carnet-sell-confirm"]').click();
 
-    cy.wait('@sell')
-      .its('request.body.purchased_at')
-      .should('match', /^\d{4}-\d{2}-\d{2}$/);
+    // Asserting the exact day matters: a shape-only regex would stay green if
+    // the ISO conversion switched to UTC and silently back-dated every sale by
+    // a day for users east of Greenwich.
+    const now = new Date();
+    const expected = `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}-01`;
+    cy.wait('@sell').its('request.body.purchased_at').should('equal', expected);
   });
 
   it('surfaces the running-low warning and shows the soonest-expiring carnet', () => {
@@ -187,5 +187,69 @@ describe('Entry carnets — owner', () => {
     cy.get('[data-cy="carnet-register-toggle"]').click();
     cy.wait('@entries');
     cy.get('[data-cy="carnet-register-list"] li').should('have.length', 2);
+  });
+});
+
+/**
+ * Athlete portal — the surface this slice adds. Read-only: the athlete can
+ * see the balance they paid for, and nothing else.
+ */
+describe('Entry carnets — athlete portal', () => {
+  const ATHLETE_ME = {
+    statusCode: 200,
+    body: {
+      data: {
+        id: 2,
+        first_name: 'Alice',
+        last_name: 'User',
+        full_name: 'Alice User',
+        handle: 'alicebjj',
+        email: 'alice@example.com',
+        email_verified_at: '2026-01-01T00:00:00Z',
+        avatar_url: null,
+        role: 'athlete',
+      },
+    },
+  };
+
+  beforeEach(() => {
+    cy.clearLocalStorage();
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/academy*', { statusCode: 200, body: { data: ACADEMY } });
+    cy.intercept('GET', '/api/v1/auth/me*', ATHLETE_ME);
+    cy.intercept('GET', '/api/v1/me/payments*', { statusCode: 200, body: { data: [] } });
+  });
+
+  it('shows the athlete their own remaining entries', () => {
+    cy.intercept('GET', '/api/v1/me/carnets', {
+      statusCode: 200,
+      body: { data: [carnet({ athlete_id: 2, remaining_entries: 6 })] },
+    });
+
+    cy.visitAuthenticated('/dashboard/me/payments');
+    cy.get('[data-cy="my-carnet-card"]', { timeout: 15000 }).should('be.visible');
+    cy.get('[data-cy="my-carnet-code"]').should('have.text', 'A7K2');
+    cy.get('[data-cy="my-carnet-remaining"]').should('have.text', '6');
+    cy.get('[data-cy="my-carnet-low-balance"]').should('not.exist');
+  });
+
+  it('warns the athlete when the carnet is nearly spent', () => {
+    cy.intercept('GET', '/api/v1/me/carnets', {
+      statusCode: 200,
+      body: { data: [carnet({ athlete_id: 2, remaining_entries: 2 })] },
+    });
+
+    cy.visitAuthenticated('/dashboard/me/payments');
+    cy.get('[data-cy="my-carnet-low-balance"]', { timeout: 15000 }).should('be.visible');
+  });
+
+  it('keeps the payments grid when the carnet request fails', () => {
+    cy.intercept('GET', '/api/v1/me/carnets', { statusCode: 500, body: {} });
+
+    cy.visitAuthenticated('/dashboard/me/payments');
+    cy.get('[data-cy="my-payments-grid"]', { timeout: 15000 }).should('be.visible');
+    // The monthly ledger is what the page is for; a carnet failure hides the
+    // card without taking the page down.
+    cy.get('[data-cy="my-carnet-card"]').should('not.exist');
   });
 });

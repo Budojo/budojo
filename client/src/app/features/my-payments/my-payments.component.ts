@@ -11,9 +11,11 @@ import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TagModule } from 'primeng/tag';
 import { AthletePayment, PaymentService } from '../../core/services/payment.service';
 import { Carnet, CarnetService } from '../../core/services/carnet.service';
 import { LanguageService } from '../../core/services/language.service';
+import { activeCarnetOf } from '../../shared/utils/active-carnet';
 import { localeFor } from '../../shared/utils/locale';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
@@ -29,7 +31,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 @Component({
   selector: 'app-my-payments',
   standalone: true,
-  imports: [PageHeaderComponent, TranslatePipe, DatePipe, SkeletonModule],
+  imports: [PageHeaderComponent, TranslatePipe, DatePipe, SkeletonModule, TagModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-payments.component.html',
   styleUrl: './my-payments.component.scss',
@@ -58,14 +60,8 @@ export class MyPaymentsComponent implements OnInit {
    */
   protected readonly carnets = signal<readonly Carnet[]>([]);
 
-  /** Same rule as everywhere else: the one the next session will spend. */
-  protected readonly activeCarnet = computed<Carnet | null>(() => {
-    const spendable = this.carnets().filter((c) => c.is_active);
-    return (
-      [...spendable].sort((a, b) => a.expires_at.localeCompare(b.expires_at) || a.id - b.id)[0] ??
-      null
-    );
-  });
+  /** Same rule as the owner panel and the server — see `activeCarnetOf`. */
+  protected readonly activeCarnet = computed<Carnet | null>(() => activeCarnetOf(this.carnets()));
 
   /**
    * One row per month, 1..12. `payment` is the matched row (or null

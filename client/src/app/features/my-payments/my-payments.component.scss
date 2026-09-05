@@ -91,6 +91,17 @@
   background: var(--p-content-background);
 }
 
+.my-payments__carnet-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--p-text-color);
+}
+
+.my-payments__carnet p-tag {
+  align-self: flex-start;
+}
+
 .my-payments__carnet-code {
   margin: 0;
   font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;

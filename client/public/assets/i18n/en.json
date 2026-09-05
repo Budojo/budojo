@@ -396,8 +396,10 @@
       "expired": "Expired"
     },
     "carnet": {
+      "title": "Your entry carnet",
       "entriesWord": "entries",
-      "expiresOn": "Expires on {{date}}"
+      "expiresOn": "Expires on {{date}}",
+      "lowBalance": "Running low"
     }
   },
   "notifications": {

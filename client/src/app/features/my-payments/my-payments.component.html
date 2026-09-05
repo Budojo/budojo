@@ -12,6 +12,9 @@
     -->
     @if (activeCarnet(); as carnet) {
       <article class="my-payments__carnet" data-cy="my-carnet-card">
+        <h2 class="my-payments__carnet-title">
+          {{ 'athletePortal.carnet.title' | translate }}
+        </h2>
         <p class="my-payments__carnet-code" data-cy="my-carnet-code">{{ carnet.code }}</p>
         <p class="my-payments__carnet-balance">
           <span class="my-payments__carnet-remaining" data-cy="my-carnet-remaining">{{
@@ -27,6 +30,15 @@
             'athletePortal.carnet.expiresOn' | translate: { date: formatDate(carnet.expires_at) }
           }}
         </p>
+        <!-- The athlete is the one who has to act on a near-empty carnet, so
+             they get the same nudge the owner does rather than less. -->
+        @if (carnet.remaining_entries <= 2) {
+          <p-tag
+            severity="warn"
+            [value]="'athletePortal.carnet.lowBalance' | translate"
+            data-cy="my-carnet-low-balance"
+          />
+        }
       </article>
     }
 

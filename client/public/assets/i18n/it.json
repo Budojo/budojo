@@ -396,8 +396,10 @@
       "expired": "Scaduto"
     },
     "carnet": {
+      "title": "Il tuo carnet ingressi",
       "entriesWord": "ingressi",
-      "expiresOn": "Scade il {{date}}"
+      "expiresOn": "Scade il {{date}}",
+      "lowBalance": "In esaurimento"
     }
   },
   "notifications": {
