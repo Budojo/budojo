@@ -23,6 +23,9 @@ class AthletePaymentResource extends JsonResource
             'athlete_id' => $payment->athlete_id,
             'year' => $payment->year,
             'month' => $payment->month,
+            // How many months this payment covers, counting from (year, month)
+            // (#1382). Always present; `1` is a plain monthly payment.
+            'period_months' => $payment->period_months->value,
             'amount_cents' => $payment->amount_cents,
             'paid_at' => $payment->paid_at->toIso8601String(),
         ];

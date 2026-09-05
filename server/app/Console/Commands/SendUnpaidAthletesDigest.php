@@ -241,6 +241,12 @@ class SendUnpaidAthletesDigest extends Command
      */
     private function unpaidActiveAthletesFor(Academy $academy, int $year, int $month): \Illuminate\Database\Eloquent\Collection
     {
+        // Bound to a variable rather than written inline: `whereDoesntHave`
+        // declares its callback over the base `Builder`, so an inline closure
+        // hides `AthletePayment`'s scopes from static analysis. Same shape
+        // `AthleteController::index` uses for the `?paid` filter.
+        $covering = fn ($q) => $q->covering($year, $month);
+
         return Athlete::query()
             ->where('academy_id', $academy->id)
             ->where('status', AthleteStatus::Active)
@@ -249,9 +255,11 @@ class SendUnpaidAthletesDigest extends Command
             // every month would be noise. The `(academy_id, is_self)`
             // composite index keeps the scan tight.
             ->where('is_self', false)
-            ->whereDoesntHave('payments', function ($q) use ($year, $month): void {
-                $q->where('year', $year)->where('month', $month);
-            })
+            // Covered by any payment whose period contains the month, not
+            // just one that starts in it (#1382) — otherwise the owner gets
+            // chased about every athlete on a quarterly for two months in
+            // three.
+            ->whereDoesntHave('payments', $covering)
             ->orderBy('last_name', 'asc')
             ->orderBy('first_name', 'asc')
             ->get();

@@ -67,13 +67,15 @@ class AthleteController extends Controller
         $currentYear = (int) now()->year;
         $currentMonth = (int) now()->month;
 
-        // Re-used twice: once as the eager-load scope (so the resource sees
-        // only this month's slice), once as the filter scope below for
-        // ?paid=yes|no. Pulling it into a closure means a future month
-        // boundary tweak only happens in one place.
-        $currentMonthScope = fn ($q) => $q
-            ->where('year', $currentYear)
-            ->where('month', $currentMonth);
+        // Re-used three times: as the eager-load scope (so the resource sees
+        // only the payments that could cover this month), and as the filter
+        // scope below for ?paid=yes|no. Pulling it into a closure means the
+        // rule is applied identically in all three.
+        //
+        // "Covering", not "starting in" (#1382): a quarterly bought in
+        // February pays for April, and asking for a row whose `month` is 4
+        // would report that athlete unpaid all quarter.
+        $currentMonthScope = fn ($q) => $q->covering($currentYear, $currentMonth);
 
         $paid = $request->input('paid');
 

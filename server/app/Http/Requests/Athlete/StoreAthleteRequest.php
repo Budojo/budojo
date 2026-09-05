@@ -7,6 +7,7 @@ namespace App\Http\Requests\Athlete;
 use App\Authorization\Capability;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Enums\BillingPeriod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
@@ -85,6 +86,9 @@ class StoreAthleteRequest extends FormRequest
             // Which price tier the athlete starts on (#1381). Optional: an
             // athlete on none pays the academy's flat fee, which is every
             // athlete an academy has today.
+            // How often this athlete is expected to pay (#1382). Monthly for
+            // everyone until someone changes it.
+            'billing_period_months' => ['sometimes', 'integer', Rule::enum(BillingPeriod::class)],
             'fee_tier_id' => [
                 'sometimes', 'nullable', 'integer',
                 Rule::exists('academy_fee_tiers', 'id')->where('academy_id', $academyId),

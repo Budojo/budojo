@@ -88,10 +88,12 @@ class SendAthletePaymentOverduePushes extends Command
             return;
         }
 
+        // Covered, not "paid in this month" (#1382): an athlete on a quarterly
+        // bought in February is square for April, and chasing them for it
+        // would be exactly the false alarm this command exists to avoid.
         $paidAthleteIds = AthletePayment::query()
             ->whereIn('athlete_id', $athletes->pluck('id'))
-            ->where('year', $year)
-            ->where('month', $month)
+            ->covering($year, $month)
             ->pluck('athlete_id');
         /** @var array<int, true> $paidSet */
         $paidSet = [];

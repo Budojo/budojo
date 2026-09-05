@@ -349,6 +349,28 @@
         }
 
         <!--
+          How often this athlete pays (#1382). Always offered, unlike the fee
+          tier above: an academy needs no configuration to put someone on a
+          quarterly, so there is nothing to hide behind.
+        -->
+        <app-budojo-form-field
+          [label]="'athletes.form.billingPeriod.label' | translate"
+          controlId="billing_period_months"
+          [hint]="'athletes.form.billingPeriod.hint' | translate"
+        >
+          <p-select
+            inputId="billing_period_months"
+            [options]="billingPeriodOptions()"
+            formControlName="billing_period_months"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            styleClass="w-full"
+            data-cy="athlete-form-billing-period"
+          />
+        </app-budojo-form-field>
+
+        <!--
         The address block stays on its bespoke <fieldset>/<legend>
         markup rather than the BudojoFormField wrapper (#1050): it's a
         nested form GROUP (not a single label+control+error), its

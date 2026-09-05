@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Payment;
 
+use App\Enums\BillingPeriod;
 use App\Models\Athlete;
 use App\Models\AthletePayment;
 use App\Notifications\AthletePaymentMarkedPaidNotification;
@@ -11,6 +12,7 @@ use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class RecordAthletePaymentAction
 {
@@ -45,12 +47,19 @@ class RecordAthletePaymentAction
      * which branch of `createOrFirst` returned — same shape used in
      * other observers.
      */
-    public function execute(Athlete $athlete, int $year, int $month, int $amountCents): AthletePayment
-    {
+    public function execute(
+        Athlete $athlete,
+        int $year,
+        int $month,
+        int $amountCents,
+        BillingPeriod $period = BillingPeriod::Monthly,
+    ): AthletePayment {
         // The insert and the rebuild share a transaction: a payment recorded
         // without the ledger catching up leaves exactly the stale balance the
         // derived design exists to prevent.
-        $payment = DB::transaction(function () use ($athlete, $year, $month, $amountCents): AthletePayment {
+        $payment = DB::transaction(function () use ($athlete, $year, $month, $amountCents, $period): AthletePayment {
+            $this->rejectOverlap($athlete, $year, $month, $period);
+
             $payment = AthletePayment::query()->createOrFirst(
                 [
                     'athlete_id' => $athlete->id,
@@ -58,6 +67,7 @@ class RecordAthletePaymentAction
                     'month' => $month,
                 ],
                 [
+                    'period_months' => $period,
                     'amount_cents' => $amountCents,
                     'paid_at' => now(),
                 ],
@@ -80,6 +90,46 @@ class RecordAthletePaymentAction
         }
 
         return $payment;
+    }
+
+    /**
+     * Refuses a period that shares a month with one already recorded (#1382).
+     *
+     * `UNIQUE(athlete_id, year, month)` used to carry this invariant on its
+     * own, because a row was a month. It cannot any more: a March monthly and
+     * a February quarterly start in different months and both cover March, so
+     * the index waves them through. Losing a structural guarantee to an
+     * application check is a real cost — hence the transaction around it, so
+     * the read and the insert cannot be interleaved.
+     *
+     * Re-posting the *same* period is not an overlap: that is the double-click
+     * case, and `createOrFirst` below returns the existing row. Re-posting the
+     * same start month with a different length is refused, though — the caller
+     * is asking for something else, and silently handing back the quarterly
+     * would claim the athlete paid for a year.
+     */
+    private function rejectOverlap(Athlete $athlete, int $year, int $month, BillingPeriod $period): void
+    {
+        $clash = AthletePayment::query()
+            ->where('athlete_id', $athlete->id)
+            ->overlapping($year, $month, $period->value)
+            ->first();
+
+        if ($clash === null) {
+            return;
+        }
+
+        if ($clash->year === $year && $clash->month === $month && $clash->period_months === $period) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'period_months' => [\sprintf(
+                'A payment already covers %04d-%02d.',
+                $clash->year,
+                $clash->month,
+            )],
+        ]);
     }
 
     private function notifyAthlete(Athlete $athlete, AthletePayment $payment): void

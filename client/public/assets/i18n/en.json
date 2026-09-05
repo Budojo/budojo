@@ -1805,7 +1805,9 @@
         "fallbackName": "this athlete",
         "confirm": {
           "markPaidMessage": "Mark {{name}} paid for {{month}} {{year}}?",
-          "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?"
+          "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?",
+          "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
+          "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?"
         },
         "toast": {
           "markedPaidSummary": "Marked paid",
@@ -1830,7 +1832,8 @@
           "unmarkPaid": "Unmark paid"
         },
         "feeTierHintOne": "{{label}} tier · {{amount}} a month for {{count}} lesson a week.",
-        "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week."
+        "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week.",
+        "periodRange": "{{from}} to {{to}} {{year}}"
       },
       "documents": {
         "confirm": {
@@ -2088,7 +2091,15 @@
           "netherlands": "Netherlands"
         }
       },
-      "feeTierPlaceholder": "Academy standard fee"
+      "feeTierPlaceholder": "Academy standard fee",
+      "billingPeriod": {
+        "label": "Billing period",
+        "hint": "How often they pay. A quarterly payment is one row covering three months.",
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "halfYearly": "Half-yearly",
+        "annual": "Annual"
+      }
     },
     "photo": {
       "title": "Photo",

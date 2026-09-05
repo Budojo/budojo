@@ -141,7 +141,9 @@ class ReconcileCarnetEntriesAction
     }
 
     /**
-     * `Y-m` keys of the months the monthly fee already paid for, per athlete.
+     * `Y-m` keys of every month the monthly fee already paid for, per athlete
+     * — one key per month a payment's period covers, so a quarterly bought in
+     * February contributes February, March and April.
      * One query for the batch: an athlete's payment count is bounded by how
      * long they have been a member, and re-querying per session would turn a
      * reconciliation into an N+1.
@@ -155,10 +157,23 @@ class ReconcileCarnetEntriesAction
 
         $payments = AthletePayment::query()
             ->whereIn('athlete_id', $athleteIds)
-            ->get(['athlete_id', 'year', 'month']);
+            ->get(['athlete_id', 'year', 'month', 'period_months']);
 
         foreach ($payments as $payment) {
-            $byAthlete[$payment->athlete_id][\sprintf('%04d-%02d', $payment->year, $payment->month)] = true;
+            // A payment covers a period, not a month (#1382). Expanding it
+            // here rather than testing containment per session keeps the
+            // lookup below a hash hit — the whole point of building this map.
+            $year = $payment->year;
+            $month = $payment->month;
+
+            for ($i = 0; $i < $payment->period_months->value; $i++) {
+                $byAthlete[$payment->athlete_id][\sprintf('%04d-%02d', $year, $month)] = true;
+
+                if (++$month > 12) {
+                    $month = 1;
+                    $year++;
+                }
+            }
         }
 
         return $byAthlete;

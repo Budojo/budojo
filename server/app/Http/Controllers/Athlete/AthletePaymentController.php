@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Athlete;
 use App\Actions\Payment\DeleteAthletePaymentAction;
 use App\Actions\Payment\ListAthletePaymentsAction;
 use App\Actions\Payment\RecordAthletePaymentAction;
+use App\Enums\BillingPeriod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payment\StoreAthletePaymentRequest;
 use App\Http\Resources\AthletePaymentResource;
@@ -65,11 +66,20 @@ class AthletePaymentController extends Controller
             ], 422);
         }
 
+        // The period the caller asked for, or the athlete's own expectation
+        // when they didn't (#1382). The amount is the monthly fee times the
+        // months covered: Budojo has nowhere to record a discounted annual, so
+        // it does not pretend to — see docs/entities/athlete-payment.md.
+        $period = $request->has('period_months')
+            ? BillingPeriod::from($request->integer('period_months'))
+            : BillingPeriod::from($athlete->billing_period_months);
+
         $payment = $this->recordAction->execute(
             athlete: $athlete,
             year: $request->integer('year'),
             month: $request->integer('month'),
-            amountCents: $amountCents,
+            amountCents: $amountCents * $period->value,
+            period: $period,
         );
 
         return response()->json(['data' => new AthletePaymentResource($payment)], 201);

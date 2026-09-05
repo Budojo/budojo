@@ -134,6 +134,7 @@ describe('AthleteFormComponent', () => {
         status: 'active',
         joined_at: new Date(2026, 3, 23), // April 23 2026 local
         fee_tier_id: null,
+        billing_period_months: 1,
         address: { line1: '', line2: '', city: '', postal_code: '', province: '', country: 'IT' },
       });
 
@@ -143,6 +144,7 @@ describe('AthleteFormComponent', () => {
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({
         fee_tier_id: null,
+        billing_period_months: 1,
         first_name: 'Mario',
         last_name: 'Rossi',
         email: null,
@@ -262,6 +264,7 @@ describe('AthleteFormComponent', () => {
         status: 'active',
         joined_at: new Date(2026, 3, 23),
         fee_tier_id: null,
+        billing_period_months: 1,
         address: { line1: '', line2: '', city: '', postal_code: '', province: '', country: 'IT' },
       });
       cmp.submit();

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Requests\Payment;
 
 use App\Authorization\Capability;
+use App\Enums\BillingPeriod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Models\Athlete;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class StoreAthletePaymentRequest extends FormRequest
 {
@@ -44,6 +46,10 @@ class StoreAthletePaymentRequest extends FormRequest
             // recording a payment from before this app existed).
             'year' => ['required', 'integer', 'min:2020', 'max:2100'],
             'month' => ['required', 'integer', 'between:1,12'],
+            // How many months this one payment covers (#1382). Optional: left
+            // out, the athlete's own `billing_period_months` applies, which is
+            // monthly for everybody until someone changes it.
+            'period_months' => ['sometimes', 'integer', Rule::enum(BillingPeriod::class)],
         ];
     }
 
