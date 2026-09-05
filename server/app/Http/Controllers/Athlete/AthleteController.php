@@ -212,7 +212,10 @@ class AthleteController extends Controller
         // lazy follow-up query. Returns null when there's no active
         // (pending or accepted) row — terminal history stays in
         // `invitations()` but isn't surfaced to the wire.
-        $athlete->load('latestActiveInvitation');
+        // Plus both halves of the fee rule (#1381) — the resource resolves
+        // what this athlete pays, and a lazy load would issue them one at a
+        // time from inside the serializer.
+        $athlete->load(['latestActiveInvitation', 'feeTier', 'academy']);
 
         return response()->json(['data' => new AthleteResource($athlete)]);
     }
