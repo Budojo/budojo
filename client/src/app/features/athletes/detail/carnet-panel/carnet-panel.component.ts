@@ -364,6 +364,16 @@ export class CarnetPanelComponent {
     return (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
   }
 
+  /**
+   * The carnet's price, snapshotted at sale (#1383). Same locale-aware shape
+   * as every other amount in the app — the owner reads "70,00 €" here and on
+   * the payments table, not two spellings of the same money.
+   */
+  protected formatAmount(cents: number): string {
+    const locale = localeFor(this.languageService.currentLang());
+    return (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
+  }
+
   protected formatDate(iso: string): string {
     const locale = localeFor(this.languageService.currentLang());
     // Parsed as UTC to avoid a timezone shift moving a date-only value to the

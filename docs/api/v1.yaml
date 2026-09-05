@@ -4608,6 +4608,11 @@ paths:
         month it pays for: a €165 quarterly contributes €55 to each of three
         buckets. The split is integer with the remainder on the first month,
         so buckets always add back up to what was paid.
+
+        **Carnet sales are included on the same terms** (#1383): a pack's
+        `price_cents` is spread across the months of its validity window, so
+        €70 valid twelve months contributes about €5.83 a month. The expiry
+        month itself gets nothing.
         Buckets with no payments are included (amount_cents = 0) so the
         frontend can render a continuous chart without gap-filling.
         Currency is always EUR (single-currency-per-academy invariant).

@@ -28,6 +28,12 @@ use Illuminate\Support\Facades\DB;
  * three buckets without a calendar table, and the volume here is one
  * academy's payments over at most 24 months.
  *
+ * Carnets join the same axis under the same rule (#1383): a pack is collected
+ * in one go but bought for its whole validity window, so €70 valid twelve
+ * months contributes about €5.83 a month. The alternative — booking it into
+ * the sale month — would put two different rules on one chart, and the sum of
+ * every bucket would stop being what the academy actually took.
+ *
  * `currency` is currently hardcoded to EUR — single-currency-per-academy
  * is the model invariant and the academies table doesn't carry a
  * `currency` column yet. The day it does, swap the constant for
@@ -56,10 +62,13 @@ class MonthlyPaymentsStatsAction
         $firstBucket = AthletePayment::monthIndex($startYear, $startMonth);
         $lastBucket = AthletePayment::monthIndex($nowYear, $nowMonth);
 
+        /** @var array<string, int> $byKey */
+        $byKey = [];
+
         // Every payment whose period OVERLAPS the window, not just one that
         // starts inside it: a quarterly bought the month before the window
         // still pays for its first months.
-        $rows = DB::table('athlete_payments')
+        $payments = DB::table('athlete_payments')
             ->join('athletes', 'athletes.id', '=', 'athlete_payments.athlete_id')
             ->where('athletes.academy_id', $academy->id)
             ->whereRaw('(athlete_payments.year * 12 + athlete_payments.month - 1) <= ?', [$lastBucket])
@@ -75,28 +84,49 @@ class MonthlyPaymentsStatsAction
             ])
             ->get();
 
-        /** @var array<string, int> $byKey */
-        $byKey = [];
-        foreach ($rows as $row) {
-            $periodStart = AthletePayment::monthIndex((int) $row->year, (int) $row->month);
-            $span = max(1, (int) $row->period_months);
-            $total = (int) $row->amount_cents;
+        foreach ($payments as $row) {
+            $this->spread(
+                $byKey,
+                AthletePayment::monthIndex((int) $row->year, (int) $row->month),
+                max(1, (int) $row->period_months),
+                (int) $row->amount_cents,
+                $firstBucket,
+                $lastBucket,
+            );
+        }
 
-            // Integer split whose parts sum back to the total: the remainder
-            // goes on the first month rather than evaporating, so twelve
-            // buckets of a €100.01 annual still add up to €100.01.
-            $share = intdiv($total, $span);
-            $remainder = $total - ($share * $span);
+        // Carnets (#1383). A pack is collected in one go but bought for the
+        // whole of its validity window, so it lands on this axis the same way
+        // an annual fee does — spread across the months it covers. Booking it
+        // whole into the sale month would leave the chart running two rules
+        // at once: fees spread, carnets not.
+        $carnets = DB::table('carnets')
+            ->join('athletes', 'athletes.id', '=', 'carnets.athlete_id')
+            ->where('athletes.academy_id', $academy->id)
+            // Only the windows that reach the chart. Expressed as plain date
+            // comparisons rather than the month arithmetic used above: the
+            // columns are dates, and `expires_at` already carries the far end
+            // of the window, so this needs no substring surgery on a
+            // `YYYY-MM-DD` string to stay portable.
+            ->where('carnets.valid_from', '<=', $now->endOfMonth()->toDateString())
+            ->where('carnets.expires_at', '>', $start->toDateString())
+            ->select(['carnets.valid_from', 'carnets.expires_at', 'carnets.price_cents'])
+            ->get();
 
-            for ($i = 0; $i < $span; $i++) {
-                $bucket = $periodStart + $i;
-                if ($bucket < $firstBucket || $bucket > $lastBucket) {
-                    continue;
-                }
+        foreach ($carnets as $carnet) {
+            $validFrom = CarbonImmutable::parse((string) $carnet->valid_from);
+            $expiresAt = CarbonImmutable::parse((string) $carnet->expires_at);
 
-                $key = \sprintf('%04d-%02d', intdiv($bucket, 12), ($bucket % 12) + 1);
-                $byKey[$key] = ($byKey[$key] ?? 0) + $share + ($i === 0 ? $remainder : 0);
-            }
+            $windowStart = AthletePayment::monthIndex((int) $validFrom->year, (int) $validFrom->month);
+            // The expiry month itself gets nothing: a carnet valid from 1 Sep
+            // 2026 to 1 Sep 2027 covers the twelve months Sep-Aug, and the
+            // difference of the two indices is exactly that count.
+            $span = max(
+                1,
+                AthletePayment::monthIndex((int) $expiresAt->year, (int) $expiresAt->month) - $windowStart,
+            );
+
+            $this->spread($byKey, $windowStart, $span, (int) $carnet->price_cents, $firstBucket, $lastBucket);
         }
 
         $out = [];
@@ -112,5 +142,39 @@ class MonthlyPaymentsStatsAction
         }
 
         return $out;
+    }
+
+    /**
+     * Adds one amount to the buckets it belongs to, split evenly across
+     * `$span` months from `$periodStart`.
+     *
+     * Integer division with the remainder on the first month, so the parts
+     * always sum back to the whole: twelve buckets of a €100.01 annual still
+     * add up to €100.01. Buckets outside the requested window are skipped
+     * rather than clamped — a period that starts before the chart still
+     * contributes only the months the chart shows.
+     *
+     * @param  array<string, int>  $byKey
+     */
+    private function spread(
+        array &$byKey,
+        int $periodStart,
+        int $span,
+        int $total,
+        int $firstBucket,
+        int $lastBucket,
+    ): void {
+        $share = intdiv($total, $span);
+        $remainder = $total - ($share * $span);
+
+        for ($i = 0; $i < $span; $i++) {
+            $bucket = $periodStart + $i;
+            if ($bucket < $firstBucket || $bucket > $lastBucket) {
+                continue;
+            }
+
+            $key = \sprintf('%04d-%02d', intdiv($bucket, 12), ($bucket % 12) + 1);
+            $byKey[$key] = ($byKey[$key] ?? 0) + $share + ($i === 0 ? $remainder : 0);
+        }
     }
 }

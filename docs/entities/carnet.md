@@ -55,6 +55,9 @@ Scope of uniqueness is the whole table, not per academy: a Budojo install is nor
 
 ## Business rules
 
+- **Selling a carnet *is* the payment (#1383).** There is no paid / unpaid state on the row and no list of who owes for one: a pack is never handed over before it is collected. The card names `purchased_at` and `price_cents` together so the owner can see the money was taken; that is the whole of "how do I record a carnet payment".
+- **Its revenue is spread across the validity window, not the sale month (#1383).** `GET /stats/payments/monthly` divides `price_cents` evenly over the months from `valid_from` up to (not including) the month of `expires_at` — €70 valid twelve months is about €5.83 a month, integer split with the remainder on the first. This is the same rule a twelve-month fee payment follows since #1382, so one chart runs one rule. Attributing the money to the months entries are actually *consumed* is the truer reading and was rejected: it rewrites past months every time a back-dated presence is marked, and never books an entry nobody used. See [`athlete-payment.md`](./athlete-payment.md) § Stats aggregation.
+
 - **Price and size are snapshotted, not derived.** Both are copied from the academy config at sale. This is the same rule as `athlete_payments.amount_cents`.
 - **Cannot sell without a configured offering.** If either `academies.carnet_price_cents` or `academies.carnet_entries` is `null`, `POST` returns `422` naming whichever field is missing. The owner sets them via `PATCH /api/v1/academy`.
 - **The balance is never stored.** `remaining_entries` = `total_entries` − the number of `carnet_entries` rows. A stored counter would be a derived value pretending to be a fact, and every path that failed to update it would corrupt the balance undetectably.

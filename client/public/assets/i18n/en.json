@@ -1962,7 +1962,6 @@
           "deletedDetail": "The sessions stay on the attendance register."
         },
         "sellWithPrice": "Sell carnet — {{price}} / {{entries}} entries",
-        "soldOn": "Sold on {{date}}",
         "window": "Valid {{from}} → {{to}}",
         "editValidity": "Change validity",
         "delete": "Delete",
@@ -1973,7 +1972,8 @@
           "hint": "Sessions already on the register inside the new window will be counted.",
           "confirm": "Save",
           "newExpiry": "New expiry: {{date}}"
-        }
+        },
+        "soldOnFor": "Sold on {{date}} for {{amount}}"
       }
     },
     "form": {

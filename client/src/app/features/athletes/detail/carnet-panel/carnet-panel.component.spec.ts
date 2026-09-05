@@ -280,3 +280,18 @@ describe('CarnetPanelComponent', () => {
     expect(service.entries).toHaveBeenCalledWith(42, 1);
   });
 });
+
+describe('CarnetPanelComponent — what the carnet cost (#1383)', () => {
+  it('names the amount next to the sale date', () => {
+    // The alpha tester asked how a carnet payment gets recorded. The answer
+    // is that selling one IS the payment — so the card has to say how much,
+    // or "did they pay me?" stays unanswered on a page about money.
+    const { fixture } = setup({
+      carnets: [carnet({ purchased_at: '2026-09-01', price_cents: 7000 })],
+    });
+
+    const soldOn = fixture.nativeElement.querySelector('[data-cy="carnet-sold-on"]');
+    expect(soldOn).not.toBeNull();
+    expect(soldOn.textContent).toContain('70');
+  });
+});

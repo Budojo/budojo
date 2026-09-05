@@ -34,8 +34,19 @@
         </p>
 
         <p class="carnets__dates">
+          <!--
+            What was paid, next to when (#1383). The alpha tester asked how a
+            carnet payment gets recorded; the answer is that selling one IS
+            the payment — so the card has to say the amount, or "did they pay
+            me?" stays an unanswered question on a page about money.
+          -->
           <span data-cy="carnet-sold-on">{{
-            'athletes.detail.carnets.soldOn' | translate: { date: formatDate(active.purchased_at) }
+            'athletes.detail.carnets.soldOnFor'
+              | translate
+                : {
+                    date: formatDate(active.purchased_at),
+                    amount: formatAmount(active.price_cents),
+                  }
           }}</span>
           <span data-cy="carnet-window">{{
             'athletes.detail.carnets.window'
@@ -127,6 +138,9 @@
                   <span class="carnets__history-dates">
                     {{ formatDate(carnet.valid_from) }} — {{ formatDate(carnet.expires_at) }}
                   </span>
+                  <span class="carnets__history-amount">{{
+                    formatAmount(carnet.price_cents)
+                  }}</span>
                   <!-- The same two actions as the card above. A carnet
                        mis-dated far enough to spend every entry, or dated more
                        than a year back so it is born expired, lands here — and

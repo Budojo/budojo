@@ -1962,7 +1962,6 @@
           "deletedDetail": "Gli allenamenti restano nel registro presenze."
         },
         "sellWithPrice": "Vendi carnet — {{price}} / {{entries}} ingressi",
-        "soldOn": "Venduto il {{date}}",
         "window": "Valido {{from}} → {{to}}",
         "editValidity": "Modifica validità",
         "delete": "Elimina",
@@ -1973,7 +1972,8 @@
           "hint": "Gli allenamenti già registrati dentro la nuova finestra verranno conteggiati.",
           "confirm": "Salva",
           "newExpiry": "Nuova scadenza: {{date}}"
-        }
+        },
+        "soldOnFor": "Venduto il {{date}} per {{amount}}"
       }
     },
     "form": {
