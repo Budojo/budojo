@@ -1518,7 +1518,17 @@
         "successSummary": "Academy updated"
       },
       "errorValidation": "Validation failed.",
-      "errorGeneric": "Something went wrong. Please try again."
+      "errorGeneric": "Something went wrong. Please try again.",
+      "carnetPrice": {
+        "label": "Carnet price",
+        "hint": "Price of one entry carnet. Leave empty if you don't sell carnets.",
+        "errorMin": "The price can't be negative."
+      },
+      "carnetEntries": {
+        "label": "Entries per carnet",
+        "hint": "How many sessions one carnet covers. Leave empty if you don't sell carnets.",
+        "errorRange": "Enter a number between 1 and 255."
+      }
     },
     "schedule": {
       "title": "Plan a future schedule change",
@@ -1673,7 +1683,8 @@
         "attendance": "Attendance",
         "documents": "Documents",
         "payments": "Payments",
-        "promotions": "Belt history"
+        "promotions": "Belt history",
+        "carnet": "Carnet {{code}} — {{count}} entries left"
       },
       "social": {
         "facebookLabel": "Open Facebook profile",
@@ -1866,6 +1877,36 @@
           "monthLabel": "{{month}} attendance",
           "empty": "No sessions recorded this month."
         }
+      },
+      "carnets": {
+        "title": "Entry carnets",
+        "sell": "Sell carnet",
+        "entriesWord": "entries",
+        "none": "No active carnet.",
+        "expiresOn": "Expires on {{date}}",
+        "lowBalance": "Running low",
+        "expiringSoon": "Expiring soon",
+        "register": "Entry register",
+        "registerEmpty": "No entries used yet.",
+        "history": "Past carnets",
+        "dialog": {
+          "title": "Sell an entry carnet",
+          "summary": "{{price}} for {{entries}} entries, valid 12 months from the purchase date.",
+          "purchasedAt": "Purchase date",
+          "purchasedAtHint": "Defaults to today. Back-date it if you are transcribing a paper register.",
+          "confirm": "Sell carnet",
+          "cancel": "Cancel"
+        },
+        "toast": {
+          "soldSummary": "Carnet sold",
+          "soldDetail": "The athlete can start using it right away.",
+          "errorSummary": "Something went wrong",
+          "errorNotConfigured": "Set a carnet price and size in your academy settings first.",
+          "errorGeneric": "Couldn't sell the carnet. Try again.",
+          "errorEntries": "Couldn't load the entry register.",
+          "loadError": "Couldn't load the carnets."
+        },
+        "sellWithPrice": "Sell carnet — {{price}} / {{entries}} entries"
       }
     },
     "form": {

@@ -24,6 +24,7 @@ import { AthleteService } from '../../../../core/services/athlete.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
 import { localeFor } from '../../../../shared/utils/locale';
+import { CarnetPanelComponent } from '../carnet-panel/carnet-panel.component';
 
 /**
  * Per-athlete payments tab on the detail page (#182 Surface 2).
@@ -59,6 +60,7 @@ interface MonthRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TranslatePipe,
+    CarnetPanelComponent,
     ButtonModule,
     ConfirmPopup,
     SkeletonModule,

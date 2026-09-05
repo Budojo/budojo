@@ -195,6 +195,15 @@ export interface Academy {
    */
   monthly_fee_cents?: number | null;
   /**
+   * Entry-carnet offering (#1364): price of one carnet in cents, and how
+   * many entries it holds. `null` on either means "this academy doesn't sell
+   * carnets" — selling is rejected until both are set, and the carnet UI
+   * hides entirely. Optional on the interface for the same fixture-compat
+   * reason as the fee above.
+   */
+  carnet_price_cents?: number | null;
+  carnet_entries?: number | null;
+  /**
    * Weekdays the academy trains on, as Carbon `dayOfWeek` ints (0=Sun..6=Sat).
    * `null` = "schedule not configured" — daily check-in falls back to
    * all-weekdays. Optional for the same fixture-compat reason as the fee.
@@ -298,6 +307,8 @@ export interface UpdateAcademyPayload {
   instagram?: string | null;
   address?: Address | null;
   monthly_fee_cents?: number | null;
+  carnet_price_cents?: number | null;
+  carnet_entries?: number | null;
   training_days?: number[] | null;
 }
 
