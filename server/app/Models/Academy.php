@@ -10,6 +10,7 @@ use App\Observers\Audit\AcademyAuditObserver;
 use Database\Factories\AcademyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -44,6 +45,57 @@ class Academy extends Model implements HasAddress
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * The academy's price list (#1381). Empty on an academy that charges one
+     * flat fee, which is what `monthly_fee_cents` is for.
+     *
+     * @return HasMany<AcademyFeeTier, $this>
+     */
+    public function feeTiers(): HasMany
+    {
+        return $this->hasMany(AcademyFeeTier::class);
+    }
+
+    /**
+     * Academies that manage payments in Budojo at all (#1381).
+     *
+     * Before the price list existed this was simply `monthly_fee_cents IS NOT
+     * NULL`, and the two statements were the same thing. They no longer are:
+     * an academy that prices only by tier leaves the flat fee empty and would
+     * drop out of every fee-gated query while plainly charging its athletes.
+     *
+     * Zero counts as configured on purpose — an academy that has deliberately
+     * set the fee to nothing is still managing payments here, and its unpaid
+     * list is still meaningful.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeChargingAFee(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->whereNotNull('monthly_fee_cents')
+            ->orHas('feeTiers'));
+    }
+
+    /**
+     * Academies where somebody actually owes money (#1381).
+     *
+     * Narrower than `chargingAFee` and deliberately kept apart from it: a fee
+     * of zero means nothing is owed, so chasing an athlete for it would be
+     * noise. The two predicates answer different questions and collapsing
+     * them would silently change one of the two callers.
+     *
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeChargingMoreThanNothing(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->where('monthly_fee_cents', '>', 0)
+            ->orWhereHas('feeTiers', fn (Builder $tiers) => $tiers->where('amount_cents', '>', 0)));
     }
 
     /** @return HasMany<Athlete, $this> */

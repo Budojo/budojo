@@ -2849,6 +2849,131 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
 
+  /academy/fee-tiers:
+    get:
+      tags: [academy]
+      summary: The academy's monthly price list (#1381)
+      description: |
+        Returns every fee tier the academy has configured, ordered by
+        `lessons_per_week` then `id`. An academy that charges one flat fee
+        has none — the empty list is the normal state, not an error, and
+        `academies.monthly_fee_cents` is what applies to everyone.
+
+        Each row carries `athletes_count`: how many athletes are on that
+        tier. Deleting a tier hands all of them back to the academy's flat
+        fee, so the count is what turns that into a decision rather than a
+        guess.
+
+        Requires `academy_settings_read`, which every membership role holds.
+      operationId: academyFeeTierIndex
+      responses:
+        '200':
+          description: The price list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AcademyFeeTier'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [academy]
+      summary: Add a fee tier (#1381)
+      description: |
+        Creates one line of the price list. `label` must be unique within the
+        academy — two tiers with the same name at different prices is a
+        mistake, not a use case — and the owner reads the label to pick one,
+        so it has to identify.
+
+        Requires `academy_settings_update`: the price list is academy
+        configuration, gated by the same capability as the flat fee it
+        generalises.
+      operationId: academyFeeTierStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyFeeTierRequest'
+      responses:
+        '201':
+          description: Tier created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyFeeTierEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy/fee-tiers/{tier}:
+    patch:
+      tags: [academy]
+      summary: Re-price or rename a fee tier (#1381)
+      description: |
+        Partial update — send only the fields you want to change.
+
+        Re-pricing does **not** rewrite history: `athlete_payments.amount_cents`
+        is snapshotted when a payment is recorded, so what athletes already
+        handed over stays correct. It changes what the next payment will cost
+        for everyone on the tier.
+
+        Requires `academy_settings_update` **in the tier's own academy** —
+        the check is against the row, not the caller's active academy, so a
+        user with settings rights in academy A cannot re-price academy B.
+      operationId: academyFeeTierUpdate
+      parameters:
+        - $ref: '#/components/parameters/FeeTierId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyFeeTierUpdateRequest'
+      responses:
+        '200':
+          description: Tier updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyFeeTierEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [academy]
+      summary: Remove a fee tier (#1381)
+      description: |
+        Deletes the tier. Athletes on it are **not** deleted with it — the FK
+        is `nullOnDelete`, so they fall back to the academy's own
+        `monthly_fee_cents`. Removing a price must never remove the people who
+        were paying it.
+
+        Requires `academy_settings_update` in the tier's own academy.
+      operationId: academyFeeTierDestroy
+      parameters:
+        - $ref: '#/components/parameters/FeeTierId'
+      responses:
+        '204':
+          description: Tier deleted; athletes on it fall back to the academy fee
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /search:
     get:
       tags: [auth]
@@ -3503,11 +3628,16 @@ paths:
         Marks the athlete as paid for the given month. **Idempotent** —
         POSTing the same `(year, month)` twice returns the existing row
         instead of creating a duplicate. `amount_cents` on the resulting
-        row is snapshotted from the academy's current `monthly_fee_cents`;
-        future fee changes do NOT rewrite past records.
+        row is snapshotted from **the fee that applies to this athlete** —
+        their price tier's amount if they are on one, the academy's flat
+        `monthly_fee_cents` otherwise (#1381). Future fee, tier, or
+        tier-membership changes do NOT rewrite past records.
 
-        Returns 422 if the academy has not configured a monthly fee
-        (`academy.monthly_fee_cents === null`). Cross-academy returns 403.
+        Returns 422 when no fee applies at all: the athlete is on no tier
+        **and** `academy.monthly_fee_cents` is null. An athlete on a tier is
+        payable even when the academy has no flat fee. The athlete resource's
+        `monthly_fee_cents` is the resolved amount, so a client can tell
+        upfront. Cross-academy returns 403.
       operationId: athletePaymentRecord
       parameters:
         - name: athlete
@@ -5426,6 +5556,16 @@ components:
         format: int64
         minimum: 1
 
+    FeeTierId:
+      name: tier
+      in: path
+      required: true
+      description: Fee tier primary key
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
     DocumentId:
       name: id
       in: path
@@ -6351,10 +6491,25 @@ components:
           minimum: 0
           nullable: true
           description: |
-            Academy-wide membership fee in cents. `null` means "fee not
-            configured" — the payments endpoints reject `POST` with 422
-            until the owner sets this via `PATCH /api/v1/academy`.
+            Academy-wide membership fee in cents. Since #1381 this is the
+            **default for athletes on no price tier** rather than the only
+            fee. `null` means "fee not configured" — the payments endpoints
+            reject `POST` with 422 for any athlete no tier covers either.
+            Set via `PATCH /api/v1/academy`.
           example: 9500
+        fee_tier_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many monthly price tiers the academy has configured (#1381),
+            from `GET /academy/fee-tiers`. Zero on an academy that charges one
+            flat fee, which is every academy until the owner adds a tier.
+
+            The SPA gates the paid badge, the paid filter and the unpaid
+            widget on "does this academy manage payments at all" — a question
+            neither this nor `monthly_fee_cents` answers alone, since an
+            academy priced only by tier leaves the flat fee null.
+          example: 0
         carnet_price_cents:
           type: integer
           minimum: 0
@@ -6521,6 +6676,17 @@ components:
         joined_at:
           type: string
           format: date
+        fee_tier_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            Which line of the academy's monthly price list to put the athlete
+            on (#1381). Omit or send `null` to leave them on the academy's flat
+            `monthly_fee_cents`, which is where every athlete starts. Must be a
+            tier belonging to the athlete's own academy — anything else is a
+            422 on `fee_tier_id`.
+          example: 3
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -6598,6 +6764,17 @@ components:
         joined_at:
           type: string
           format: date
+        fee_tier_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            Which line of the academy's monthly price list to put the athlete
+            on (#1381). Omit or send `null` to leave them on the academy's flat
+            `monthly_fee_cents`, which is where every athlete starts. Must be a
+            tier belonging to the athlete's own academy — anything else is a
+            422 on `fee_tier_id`.
+          example: 3
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -6607,6 +6784,89 @@ components:
               - omit the key → no change
               - `null` → delete the existing address row
               - `{ ... }` → upsert (create or replace in place)
+
+    AcademyFeeTier:
+      type: object
+      description: |
+        One line of an academy's monthly price list (#1381) — a label, an
+        amount, and how many lessons a week it buys.
+      required: [id, label, amount_cents, lessons_per_week, athletes_count]
+      properties:
+        id:
+          type: integer
+          format: int64
+        label:
+          type: string
+          maxLength: 60
+          description: |
+            Whatever the owner calls it — "2 lezioni", "Ragazzi". Free text,
+            because an academy's own vocabulary is the useful label. Unique
+            within the academy.
+          example: 2 lezioni
+        amount_cents:
+          type: integer
+          minimum: 0
+          description: |
+            Monthly fee for this tier, in cents (€55.00 = `5500`). Zero is
+            allowed — an academy may well list a free tier.
+          example: 5500
+        lessons_per_week:
+          type: integer
+          minimum: 1
+          maximum: 14
+          description: |
+            How often this tier trains. Structured rather than buried in the
+            label so the app can eventually ask questions of it; the 14 ceiling
+            catches a fat finger, it does not model a rule.
+          example: 2
+        athletes_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many athletes are on this tier. Deleting it hands all of them
+            back to the academy's flat fee, so this is what makes the deletion
+            a decision rather than a guess.
+          example: 7
+
+    AcademyFeeTierRequest:
+      type: object
+      required: [label, amount_cents, lessons_per_week]
+      properties:
+        label:
+          type: string
+          maxLength: 60
+          example: 2 lezioni
+        amount_cents:
+          type: integer
+          minimum: 0
+          example: 5500
+        lessons_per_week:
+          type: integer
+          minimum: 1
+          maximum: 14
+          example: 2
+
+    AcademyFeeTierUpdateRequest:
+      type: object
+      description: All properties are optional — send only the fields you want to change.
+      properties:
+        label:
+          type: string
+          maxLength: 60
+        amount_cents:
+          type: integer
+          minimum: 0
+        lessons_per_week:
+          type: integer
+          minimum: 1
+          maximum: 14
+
+    AcademyFeeTierEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AcademyFeeTier'
 
     Athlete:
       type: object
@@ -6727,6 +6987,44 @@ components:
             expires_at:
               type: string
               format: date
+        fee_tier:
+          type: object
+          nullable: true
+          description: |
+            The line of the academy's monthly price list this athlete is on
+            (#1381), or `null` when they are on none — the case for every
+            athlete until someone moves them, and the one where the academy's
+            own `monthly_fee_cents` applies.
+          required: [id, label, amount_cents, lessons_per_week]
+          properties:
+            id:
+              type: integer
+              format: int64
+            label:
+              type: string
+              example: 2 lezioni
+            amount_cents:
+              type: integer
+              minimum: 0
+              example: 5500
+            lessons_per_week:
+              type: integer
+              minimum: 1
+              maximum: 14
+              example: 2
+        monthly_fee_cents:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: |
+            What this athlete actually pays each month, in cents (#1381) —
+            their tier's amount if they are on one, the academy's flat
+            `monthly_fee_cents` otherwise. Resolved server-side so the client
+            never re-derives the fallback and the two cannot disagree.
+
+            `null` means neither exists and `POST /athletes/{id}/payments`
+            will refuse with 422.
+          example: 5500
         user_handle:
           type: string
           nullable: true
@@ -6818,7 +7116,10 @@ components:
         amount_cents:
           type: integer
           minimum: 0
-          description: Snapshot of `academy.monthly_fee_cents` at recording time
+          description: |
+            Snapshot of the fee that applied to this athlete at recording
+            time — their tier's amount if they were on one, the academy's
+            flat `monthly_fee_cents` otherwise (#1381).
         paid_at:
           type: string
           format: date-time

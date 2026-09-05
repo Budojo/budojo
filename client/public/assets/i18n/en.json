@@ -1536,6 +1536,41 @@
         "errorRange": "Enter a number between 1 and 255."
       }
     },
+    "feeTiers": {
+      "title": "Monthly price list",
+      "hint": "If the academy charges more than one fee — say 2 lessons a week at €55 and 3 at €65 — list them here and pick each athlete's from their detail page. Anyone on no tier pays the monthly fee above.",
+      "empty": "No tiers. Every athlete pays the monthly fee above.",
+      "add": "Add a tier",
+      "editAria": "Edit the {{label}} tier",
+      "removeAria": "Delete the {{label}} tier",
+      "form": {
+        "label": "Tier name",
+        "labelPlaceholder": "2 lessons",
+        "labelHint": "Whatever you call it — this is the name you'll see when picking an athlete's tier.",
+        "amount": "Monthly fee",
+        "lessons": "Lessons a week",
+        "cancel": "Cancel",
+        "create": "Add",
+        "save": "Save"
+      },
+      "confirm": {
+        "remove": "Delete the “{{label}}” tier?",
+        "removeWithAthletesOne": "Delete the “{{label}}” tier? {{count}} athlete is on it and will fall back to the academy’s monthly fee.",
+        "removeWithAthletesOther": "Delete the “{{label}}” tier? {{count}} athletes are on it and will fall back to the academy’s monthly fee."
+      },
+      "toast": {
+        "savedSummary": "Price list updated",
+        "removedSummary": "Tier deleted",
+        "errorSummary": "That didn't work",
+        "errorDetail": "Try again in a moment.",
+        "duplicateDetail": "A tier with this name already exists. Check the amount and lesson count too.",
+        "loadErrorDetail": "The price list could not be loaded."
+      },
+      "lessonsPerWeekOne": "{{count}} lesson a week",
+      "lessonsPerWeekOther": "{{count}} lessons a week",
+      "athletesOnOne": "{{count}} athlete",
+      "athletesOnOther": "{{count}} athletes"
+    },
     "schedule": {
       "title": "Plan a future schedule change",
       "hint": "Use this when the academy's weekly schedule will change starting on a specific date — past months keep the schedule that was actually in effect.",
@@ -1793,7 +1828,9 @@
         "button": {
           "markPaid": "Mark paid",
           "unmarkPaid": "Unmark paid"
-        }
+        },
+        "feeTierHintOne": "{{label}} tier · {{amount}} a month for {{count}} lesson a week.",
+        "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week."
       },
       "documents": {
         "confirm": {
@@ -1966,7 +2003,8 @@
         "addressLine2": "Apt / floor / unit",
         "addressZip": "ZIP",
         "addressCity": "City",
-        "addressProvince": "Province"
+        "addressProvince": "Province",
+        "feeTier": "Fee tier"
       },
       "placeholder": {
         "phoneCountryCode": "Code",
@@ -2022,7 +2060,8 @@
         }
       },
       "hint": {
-        "address": "Leave every field empty to keep the athlete without an address on file."
+        "address": "Leave every field empty to keep the athlete without an address on file.",
+        "feeTier": "Which monthly fee they pay. Leave empty for the academy's standard fee."
       },
       "button": {
         "cancel": "Cancel",
@@ -2048,7 +2087,8 @@
           "portugal": "Portugal",
           "netherlands": "Netherlands"
         }
-      }
+      },
+      "feeTierPlaceholder": "Academy standard fee"
     },
     "photo": {
       "title": "Photo",

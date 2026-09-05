@@ -45,6 +45,14 @@ class AcademyResource extends JsonResource
                 ? Storage::disk('public')->url($academy->logo_path)
                 : null,
             'monthly_fee_cents' => $academy->monthly_fee_cents,
+            // How many price tiers the academy has (#1381). The SPA gates the
+            // paid badge and the unpaid widget on "does this academy manage
+            // payments at all", which used to be the same question as
+            // `monthly_fee_cents !== null` and is not any more: an academy
+            // priced only by tier leaves the flat fee empty. Counted rather
+            // than embedded — the list itself has its own endpoint, and the
+            // callers here only need to know whether it is empty.
+            'fee_tier_count' => $academy->feeTiers()->count(),
             'carnet_price_cents' => $academy->carnet_price_cents,
             'carnet_entries' => $academy->carnet_entries,
             'training_days' => $academy->training_days,

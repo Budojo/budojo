@@ -30,6 +30,18 @@ function makeAthlete(overrides: Partial<Athlete> = {}): Athlete {
   };
 }
 
+/**
+ * The form loads the academy's price list on init (#1381). Every spec that
+ * renders the component therefore has one extra pending request, and
+ * `httpMock.verify()` would fail on it. Flush it here rather than teaching
+ * each test about a field it isn't testing.
+ */
+function flushFeeTiers(httpMock: HttpTestingController, tiers: unknown[] = []): void {
+  for (const req of httpMock.match('/api/v1/academy/fee-tiers')) {
+    req.flush({ data: tiers });
+  }
+}
+
 function setupTestBed(routeId: string | null = null): void {
   const paramMap = convertToParamMap(routeId ? { id: routeId } : {});
   TestBed.configureTestingModule({
@@ -121,6 +133,7 @@ describe('AthleteFormComponent', () => {
         stripes: '0',
         status: 'active',
         joined_at: new Date(2026, 3, 23), // April 23 2026 local
+        fee_tier_id: null,
         address: { line1: '', line2: '', city: '', postal_code: '', province: '', country: 'IT' },
       });
 
@@ -129,6 +142,7 @@ describe('AthleteFormComponent', () => {
       const req = httpMock.expectOne('/api/v1/athletes');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({
+        fee_tier_id: null,
         first_name: 'Mario',
         last_name: 'Rossi',
         email: null,
@@ -152,6 +166,7 @@ describe('AthleteFormComponent', () => {
       // After #281, on create we land directly on the new athlete's
       // detail (id taken from the response) instead of the list.
       expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 99]);
+      flushFeeTiers(httpMock);
       httpMock.verify();
     });
 
@@ -246,6 +261,7 @@ describe('AthleteFormComponent', () => {
         stripes: '0',
         status: 'active',
         joined_at: new Date(2026, 3, 23),
+        fee_tier_id: null,
         address: { line1: '', line2: '', city: '', postal_code: '', province: '', country: 'IT' },
       });
       cmp.submit();
@@ -256,6 +272,7 @@ describe('AthleteFormComponent', () => {
       req.flush({
         data: makeAthlete({ phone_country_code: '+39', phone_national_number: '3331234567' }),
       });
+      flushFeeTiers(httpMock);
       httpMock.verify();
     });
 
@@ -279,6 +296,7 @@ describe('AthleteFormComponent', () => {
       );
 
       expect(cmp.error()).toBe('The email has already been taken.');
+      flushFeeTiers(httpMock);
       httpMock.verify();
     });
   });
@@ -303,6 +321,7 @@ describe('AthleteFormComponent', () => {
       expect(cmp.form.controls.belt.value).toBe('purple');
       expect(cmp.form.controls.stripes.value).toBe('3');
       expect(cmp.form.controls.email.value).toBe('mario@example.com');
+      flushFeeTiers(httpMock);
       httpMock.verify();
     });
 
@@ -326,6 +345,7 @@ describe('AthleteFormComponent', () => {
       expect(fixture.nativeElement.querySelector('input#email')).toBeNull();
       // Control still on the form so the PUT body shape doesn't shift.
       expect(fixture.componentInstance.form.controls.email).toBeDefined();
+      flushFeeTiers(httpMock);
       httpMock.verify();
     });
 
@@ -358,6 +378,7 @@ describe('AthleteFormComponent', () => {
       // child tab Documents) instead of bouncing to the list — the
       // user stays in the page they were editing.
       expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 42]);
+      flushFeeTiers(httpMock);
       httpMock.verify();
     });
 
@@ -379,6 +400,7 @@ describe('AthleteFormComponent', () => {
       expect(cmp.website.value).toBe('https://example.com');
       expect(cmp.facebook.value).toBe('https://facebook.com/mario');
       expect(cmp.instagram.value).toBe('https://instagram.com/mario');
+      flushFeeTiers(httpMock);
       httpMock.verify();
     });
   });
@@ -409,6 +431,7 @@ describe('AthleteFormComponent', () => {
       expect(req.request.body.facebook).toBeNull();
       expect(req.request.body.instagram).toBe('https://instagram.com/mario');
       req.flush({ data: makeAthlete() });
+      flushFeeTiers(httpMock);
       httpMock.verify();
     });
 
@@ -482,6 +505,7 @@ describe('AthleteFormComponent', () => {
         // returns to the parent so the header + tab strip remain
         // visible, instead of dumping the user out to the list.
         expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes', 42]);
+        flushFeeTiers(httpMock);
         httpMock.verify();
       });
     });
@@ -501,6 +525,7 @@ describe('AthleteFormComponent', () => {
 
       const router = TestBed.inject(Router);
       expect(router.navigate).toHaveBeenCalledWith(['/dashboard/athletes']);
+      flushFeeTiers(httpMock);
       httpMock.verify();
     });
   });

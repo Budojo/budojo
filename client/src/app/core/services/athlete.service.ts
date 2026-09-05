@@ -6,6 +6,7 @@ import { Observable, map } from 'rxjs';
 // to a dedicated `address.types.ts` and both services should import from
 // there — Rule of Three for the extraction trigger.
 import { Address } from './academy.service';
+import { FeeTier } from './fee-tier.service';
 import { environment } from '../../../environments/environment';
 
 export type Belt =
@@ -160,6 +161,19 @@ export interface Athlete {
    * Optional to keep pre-#467 fixtures and Cypress mocks compiling.
    */
   invitation?: AthleteInvitationSummary | null;
+  /**
+   * Which line of the academy's price list this athlete is on (#1381), or
+   * `null` when they are on none — the case for every athlete until someone
+   * is moved onto a tier.
+   */
+  fee_tier?: FeeTier | null;
+  /**
+   * What this athlete actually pays each month: their tier's amount if they
+   * are on one, the academy's flat fee otherwise. Resolved server-side so the
+   * SPA never re-derives the fallback and the two can't disagree. `null` means
+   * no fee applies and a payment cannot be recorded.
+   */
+  monthly_fee_cents?: number | null;
 }
 
 export interface AthleteMeta {
@@ -237,6 +251,11 @@ export interface AthletePayload {
    *   - `Address` object → upsert (create or replace in place)
    */
   address?: Address | null;
+  /**
+   * Which price tier the athlete is on (#1381). `null` puts them back on the
+   * academy's flat fee; omitting the key leaves the tier untouched.
+   */
+  fee_tier_id?: number | null;
 }
 
 export type AthleteUpdatePayload = Partial<AthletePayload>;

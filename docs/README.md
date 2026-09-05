@@ -11,6 +11,7 @@ docs/
 │   ├── user.md
 │   ├── personal-access-token.md
 │   ├── academy.md
+│   ├── academy-fee-tier.md            # the academy's monthly price list (#1381)
 │   ├── athlete.md
 │   ├── athlete-payment.md
 │   ├── athlete-promotion.md           # belt + stripe history audit log (v2.10.0, #654)

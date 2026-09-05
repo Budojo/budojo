@@ -130,8 +130,13 @@ class SendUnpaidAthletesDigest extends Command
             // academy treats payments as off-platform / cash, and a
             // monthly chase email there is noise. Mirror of the
             // dashboard's `unpaid-this-month-widget` which hides
-            // entirely when monthly_fee_cents is null.
-            ->whereNotNull('monthly_fee_cents')
+            // entirely when no fee applies.
+            //
+            // "Has a fee" means a flat fee OR a price list since #1381:
+            // an academy that prices only by tier leaves
+            // `monthly_fee_cents` null and would otherwise silently
+            // stop getting its digest.
+            ->chargingAFee()
             ->chunkById(50, function ($chunk) use ($year, $month, $sentForDate, $force, &$sent, &$skipped, &$failed): void {
                 foreach ($chunk as $academy) {
                     try {

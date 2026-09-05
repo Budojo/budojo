@@ -195,6 +195,15 @@ export interface Academy {
    */
   monthly_fee_cents?: number | null;
   /**
+   * How many monthly price tiers the academy has configured (#1381). Zero on
+   * an academy that charges one flat fee, which is every academy until the
+   * owner adds a tier. Read it through `academyChargesAFee()` rather than
+   * directly — the question worth asking is whether the academy manages
+   * payments at all, and neither column answers that alone. Optional for the
+   * same fixture-compat reason as the fee above.
+   */
+  fee_tier_count?: number;
+  /**
    * Entry-carnet offering (#1364): price of one carnet in cents, and how
    * many entries it holds. `null` on either means "this academy doesn't sell
    * carnets" — selling is rejected until both are set, and the carnet UI

@@ -82,6 +82,13 @@ class StoreAthleteRequest extends FormRequest
             'stripes' => ['integer', 'min:0', 'max:6'],
             'status' => ['required', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['required', 'date'],
+            // Which price tier the athlete starts on (#1381). Optional: an
+            // athlete on none pays the academy's flat fee, which is every
+            // athlete an academy has today.
+            'fee_tier_id' => [
+                'sometimes', 'nullable', 'integer',
+                Rule::exists('academy_fee_tiers', 'id')->where('academy_id', $academyId),
+            ],
             ...$this->addressRules(),
         ];
     }

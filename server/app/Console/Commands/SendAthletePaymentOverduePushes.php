@@ -23,8 +23,9 @@ use Illuminate\Support\Facades\Log;
  * the owner about every athlete; this tells each athlete personally.
  *
  * Eligibility:
- *   - Academy has `monthly_fee_cents` > 0 (zero / null skips the
- *     academy wholesale — no fee = no reminder).
+ *   - Academy charges something — a flat `monthly_fee_cents` > 0 or a
+ *     price tier above zero (#1381). Zero everywhere skips the academy
+ *     wholesale: no fee = nothing owed = no reminder.
  *   - Athlete is `active` (other statuses are out of scope —
  *     suspended athletes aren't expected to pay).
  *   - Athlete has a linked user_id (invite-pending rows skipped).
@@ -55,8 +56,7 @@ class SendAthletePaymentOverduePushes extends Command
         $hasFailures = false;
 
         Academy::query()
-            ->whereNotNull('monthly_fee_cents')
-            ->where('monthly_fee_cents', '>', 0)
+            ->chargingMoreThanNothing()
             ->each(function (Academy $academy) use ($year, $month, &$hasFailures): void {
                 try {
                     $this->processAcademy($academy, $year, $month);

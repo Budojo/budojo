@@ -58,6 +58,7 @@ import { IconButtonComponent } from '../../../shared/components/icon-button/icon
 import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
+import { academyChargesAFee } from '../../../shared/utils/academy-fee';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -158,14 +159,34 @@ export class AthletesListComponent implements OnInit {
   readonly sortOrder = signal<AthleteSortOrder>('desc');
 
   /**
-   * The paid badge + filter only make sense when the academy has configured
-   * a monthly fee — otherwise there's no expectation of payment to assert
-   * against. Reads from the cached `AcademyService.academy()` signal so we
-   * never block rendering on an additional fetch (#105).
+   * The paid badge + filter only make sense when the academy charges
+   * something — a flat fee or a price tier (#1381); otherwise there's no
+   * expectation of payment to assert against. Reads from the cached
+   * `AcademyService.academy()` signal so we never block rendering on an
+   * additional fetch (#105).
    */
-  readonly hasMonthlyFee = computed(
-    () => (this.academyService.academy()?.monthly_fee_cents ?? null) !== null,
-  );
+  readonly hasMonthlyFee = computed(() => academyChargesAFee(this.academyService.academy()));
+
+  /**
+   * Rows where a current-month payment is not expected, and the Paid cell
+   * shows an em-dash instead of a toggle:
+   *
+   *   - the owner training in their own academy (#750) — no payment ledger;
+   *   - a suspended or inactive athlete (#805) — surfacing "Unpaid" there
+   *     conflated "no payment recorded" with "owes";
+   *   - nobody resolved a fee for them (#1381) — on an academy priced only
+   *     by tier, an athlete on no tier owes nothing, and offering the toggle
+   *     would send the owner into a 422.
+   *
+   * `monthly_fee_cents` is absent on pre-#1381 payloads, and `undefined` is
+   * read as "a fee applies" so old fixtures and cached responses keep the
+   * toggle they have always had.
+   */
+  paymentNotExpected(athlete: Athlete): boolean {
+    return (
+      athlete.is_self === true || athlete.status !== 'active' || athlete.monthly_fee_cents === null
+    );
+  }
 
   /**
    * Current-month labels for the "Paid" column (#282). BOTH labels are

@@ -26,12 +26,19 @@ class FakePaymentService {
   readonly unmarkPaid = vi.fn(() => of(void 0));
 }
 
+/**
+ * `monthly_fee_cents` and `fee_tier` come from the athlete since #1381 — the
+ * component asks "what does THIS athlete pay", not "what does the academy
+ * charge", because an academy that prices only by tier has no flat fee.
+ */
 class FakeAthleteService {
   readonly get = vi.fn(() =>
     of({
       id: 42,
       first_name: 'Mario',
       last_name: 'Rossi',
+      monthly_fee_cents: 9500,
+      fee_tier: null,
     }),
   );
 }
@@ -44,7 +51,13 @@ const ACADEMY_BASE = {
   logo_url: null,
 } as const;
 
-function setup(opts: { fee?: number | null; payments?: AthletePayment[] } = {}) {
+function setup(
+  opts: {
+    fee?: number | null;
+    feeTier?: { id: number; label: string; amount_cents: number; lessons_per_week: number } | null;
+    payments?: AthletePayment[];
+  } = {},
+) {
   TestBed.configureTestingModule({
     imports: [PaymentsListComponent],
     providers: [
@@ -64,10 +77,19 @@ function setup(opts: { fee?: number | null; payments?: AthletePayment[] } = {}) 
     ],
   });
 
-  TestBed.inject(AcademyService).academy.set({
-    ...ACADEMY_BASE,
-    monthly_fee_cents: opts.fee === undefined ? 9500 : opts.fee,
-  });
+  const fee = opts.fee === undefined ? 9500 : opts.fee;
+  TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: fee });
+
+  const athleteSvc = TestBed.inject(AthleteService) as unknown as { get: Mock };
+  athleteSvc.get = vi.fn(() =>
+    of({
+      id: 42,
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      monthly_fee_cents: opts.feeTier ? opts.feeTier.amount_cents : fee,
+      fee_tier: opts.feeTier ?? null,
+    }),
+  );
 
   if (opts.payments) {
     const svc = TestBed.inject(PaymentService) as unknown as { list: Mock };
@@ -138,6 +160,58 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     // The "no fee" hint is visible so the user understands why the
     // table is read-only.
     expect(fixture.nativeElement.querySelector('[data-cy="payments-no-fee-hint"]')).not.toBeNull();
+  });
+
+  it('stays editable on a tier athlete even when the academy has no flat fee (#1381)', () => {
+    const { fixture } = setup({
+      fee: null,
+      feeTier: { id: 7, label: '2 lezioni', amount_cents: 5500, lessons_per_week: 2 },
+    });
+
+    // The academy prices only by tier, so the old academy-level gate would
+    // have locked this athlete out of being marked paid.
+    expect(fixture.nativeElement.querySelector('[data-cy="payments-no-fee-hint"]')).toBeNull();
+    const tierHint = fixture.nativeElement.querySelector('[data-cy="payments-fee-tier"]');
+    expect(tierHint).not.toBeNull();
+    expect(tierHint.textContent).toContain('2 lezioni');
+    expect(tierHint.textContent).toContain('55');
+  });
+
+  it('keeps the table usable when the athlete request fails (#1381)', () => {
+    TestBed.configureTestingModule({
+      imports: [PaymentsListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PaymentService, useClass: FakePaymentService },
+        {
+          provide: AthleteService,
+          useValue: { get: vi.fn(() => throwError(() => ({ status: 500 }))) },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { parent: { paramMap: of(convertToParamMap({ id: '42' })) } },
+        },
+        ...provideI18nTesting(),
+      ],
+    });
+    TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+
+    const fixture = TestBed.createComponent(PaymentsListComponent);
+    fixture.detectChanges();
+
+    // The fee stays unknown, not absent: claiming "no fee configured" on a
+    // network blip would lock every button, which is what the silent-failure
+    // comment on the load handler exists to prevent.
+    expect(fixture.nativeElement.querySelector('[data-cy="payments-no-fee-hint"]')).toBeNull();
+    const marks = fixture.nativeElement.querySelectorAll('[data-cy^="payment-mark-"]');
+    expect(marks.length).toBeGreaterThan(0);
+  });
+
+  it('names no tier when the athlete is on the academy flat fee', () => {
+    const { fixture } = setup();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="payments-fee-tier"]')).toBeNull();
   });
 
   it('confirmToggleRow → on accept (mark paid) calls PaymentService.markPaid + reloads + toasts', () => {

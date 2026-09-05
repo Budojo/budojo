@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Storage;
 /**
  * @property int                     $id
  * @property int                     $academy_id
+ * @property int|null                $fee_tier_id
  * @property int|null                $user_id                M7 athlete-login link (#445). Null until the athlete accepts the invite; non-null afterwards.
  * @property bool                    $is_self                Owner-as-athlete row marker (#748) — see class doc.
  * @property string                  $first_name
@@ -43,7 +44,7 @@ use Illuminate\Support\Facades\Storage;
  * @property \Carbon\Carbon|null     $updated_at
  * @property \Carbon\Carbon|null     $deleted_at
  */
-#[Fillable(['academy_id', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
+#[Fillable(['academy_id', 'fee_tier_id', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class])]
 class Athlete extends Model implements HasAddress
 {
@@ -128,6 +129,18 @@ class Athlete extends Model implements HasAddress
     public function payments(): HasMany
     {
         return $this->hasMany(AthletePayment::class);
+    }
+
+    /**
+     * Which line of the academy's price list this athlete is on (#1381).
+     * Null — the case for every athlete until someone is moved — means the
+     * academy's own `monthly_fee_cents`.
+     *
+     * @return BelongsTo<AcademyFeeTier, $this>
+     */
+    public function feeTier(): BelongsTo
+    {
+        return $this->belongsTo(AcademyFeeTier::class, 'fee_tier_id');
     }
 
     /** @return HasMany<Carnet, $this> */
