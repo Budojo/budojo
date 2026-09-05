@@ -1760,7 +1760,9 @@
         "markPaidAccept": "Mark paid",
         "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?",
         "markUnpaidAccept": "Mark unpaid",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
+        "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?"
       },
       "restoreConfirm": {
         "message": "Restore {{name}}?",
@@ -1805,7 +1807,9 @@
         "fallbackName": "this athlete",
         "confirm": {
           "markPaidMessage": "Mark {{name}} paid for {{month}} {{year}}?",
-          "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?"
+          "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?",
+          "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
+          "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?"
         },
         "toast": {
           "markedPaidSummary": "Marked paid",
@@ -1814,7 +1818,8 @@
           "errorSummary": "Error",
           "errorMissingFee": "Set a monthly fee on the academy first to record payments.",
           "errorGeneric": "Couldn't update the payment. Please try again.",
-          "loadErrorDetail": "Couldn't load payments."
+          "loadErrorDetail": "Couldn't load payments.",
+          "errorOverlap": "That month is already covered by another payment."
         },
         "title": "Payments — {{year}}",
         "noFeeHint": "Set a monthly fee on the academy to start recording payments. Until then this page stays read-only.",
@@ -1830,7 +1835,8 @@
           "unmarkPaid": "Unmark paid"
         },
         "feeTierHintOne": "{{label}} tier · {{amount}} a month for {{count}} lesson a week.",
-        "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week."
+        "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week.",
+        "periodRange": "{{from}} to {{to}} {{year}}"
       },
       "documents": {
         "confirm": {
@@ -2088,7 +2094,15 @@
           "netherlands": "Netherlands"
         }
       },
-      "feeTierPlaceholder": "Academy standard fee"
+      "feeTierPlaceholder": "Academy standard fee",
+      "billingPeriod": {
+        "label": "Billing period",
+        "hint": "How often they pay. A quarterly payment is one row covering three months.",
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "halfYearly": "Half-yearly",
+        "annual": "Annual"
+      }
     },
     "photo": {
       "title": "Photo",

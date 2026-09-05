@@ -26,8 +26,19 @@ import { environment } from '../../../environments/environment';
 export interface AthletePayment {
   readonly id: number;
   readonly athlete_id: number;
+  /** First year of the covered period. */
   readonly year: number;
+  /** First month of the covered period, 1-12. */
   readonly month: number;
+  /**
+   * How many months this one payment covers, counting from (`year`, `month`)
+   * (#1382). `1` is a plain monthly payment — which is what every payment
+   * recorded before billing periods existed is. Optional on the interface so
+   * pre-#1382 fixtures and Cypress mocks keep compiling; readers treat a
+   * missing value as `1`.
+   */
+  readonly period_months?: number;
+  /** What was actually handed over — the fee times the months covered. */
   readonly amount_cents: number;
   readonly paid_at: string;
 }
@@ -83,9 +94,21 @@ export class PaymentService {
    * Record (or re-confirm) a payment for the given (athlete, year, month).
    * Idempotent on the server — calling twice does not duplicate rows.
    */
-  markPaid(athleteId: number, year: number, month: number): Observable<AthletePayment> {
+  /**
+   * `periodMonths` left out means "whatever this athlete is on" — the server
+   * reads their `billing_period_months` (#1382). Passing it is for the case
+   * where the owner is recording a one-off different from the usual.
+   */
+  markPaid(
+    athleteId: number,
+    year: number,
+    month: number,
+    periodMonths?: number,
+  ): Observable<AthletePayment> {
+    const body =
+      periodMonths === undefined ? { year, month } : { year, month, period_months: periodMonths };
     return this.http
-      .post<AthletePaymentResponse>(`${this.base}/${athleteId}/payments`, { year, month })
+      .post<AthletePaymentResponse>(`${this.base}/${athleteId}/payments`, body)
       .pipe(map((res) => res.data));
   }
 

@@ -903,12 +903,26 @@ export class AthletesListComponent implements OnInit {
 
     const fullName = `${athlete.first_name} ${athlete.last_name}`;
     const willMarkPaid = !athlete.paid_current_month;
-    const message = this.translate.instant(
-      willMarkPaid
-        ? 'athletes.list.confirm.markPaidMessage'
-        : 'athletes.list.confirm.markUnpaidMessage',
-      { name: fullName, month: monthLabel },
-    );
+
+    // Say what the click actually does (#1382). On a quarterly athlete this
+    // records — or removes — three months at three times the fee, and
+    // "April 2026" alone would be a quietly false description of a €165
+    // receipt. Norman: show the consequence before the act.
+    const period = this.periodCaptionFor(year, month, athlete.billing_period_months ?? 1);
+    const message =
+      period !== null
+        ? this.translate.instant(
+            willMarkPaid
+              ? 'athletes.list.confirm.markPaidPeriodMessage'
+              : 'athletes.list.confirm.markUnpaidPeriodMessage',
+            { name: fullName, period },
+          )
+        : this.translate.instant(
+            willMarkPaid
+              ? 'athletes.list.confirm.markPaidMessage'
+              : 'athletes.list.confirm.markUnpaidMessage',
+            { name: fullName, month: monthLabel },
+          );
 
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
@@ -921,6 +935,29 @@ export class AthletesListComponent implements OnInit {
       rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
       accept: () => this.applyPaidToggle(athlete, year, month, willMarkPaid),
     });
+  }
+
+  /**
+   * "February – April 2026" for a period longer than a month, `null` for the
+   * monthly case where the month name alone already says it.
+   *
+   * Undoing is not symmetric with marking: the server removes whichever
+   * period *covers* the current month, which may have started earlier than
+   * this caption suggests. The athlete's configured period is the closest
+   * honest description available from the roster, which carries no payment
+   * rows — the per-athlete payments tab, which does, names the real range.
+   */
+  private periodCaptionFor(year: number, month: number, periodMonths: number): string | null {
+    if (periodMonths <= 1) return null;
+
+    const name = (offset: number): string =>
+      new Date(Date.UTC(year, month - 1 + offset, 1)).toLocaleString(this.locale(), {
+        month: 'long',
+        timeZone: 'UTC',
+      });
+    const endYear = new Date(Date.UTC(year, month - 1 + periodMonths - 1, 1)).getUTCFullYear();
+
+    return `${name(0)} – ${name(periodMonths - 1)} ${endYear}`;
   }
 
   private applyPaidToggle(athlete: Athlete, year: number, month: number, markPaid: boolean): void {

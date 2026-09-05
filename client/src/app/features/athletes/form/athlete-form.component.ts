@@ -238,6 +238,22 @@ export class AthleteFormComponent implements OnInit {
     }));
   });
 
+  /**
+   * The four billing periods (#1382), mirroring `App\Enums\BillingPeriod`.
+   * Four named choices rather than a free number: "somebody paid for seven
+   * months" is not a case anyone has, and a short list is one Hick's law says
+   * to keep short.
+   */
+  readonly billingPeriodOptions = computed<SelectOption<number>[]>(() => {
+    this.languageService.currentLang();
+    return [
+      { label: this.translate.instant('athletes.form.billingPeriod.monthly'), value: 1 },
+      { label: this.translate.instant('athletes.form.billingPeriod.quarterly'), value: 3 },
+      { label: this.translate.instant('athletes.form.billingPeriod.halfYearly'), value: 6 },
+      { label: this.translate.instant('athletes.form.billingPeriod.annual'), value: 12 },
+    ];
+  });
+
   readonly statusOptions = computed<SelectOption<AthleteStatus>[]>(() => {
     this.languageService.currentLang();
     return STATUS_ORDER.map((value) => ({
@@ -297,6 +313,9 @@ export class AthleteFormComponent implements OnInit {
     // value an academy with no price list can hold — means the academy's own
     // monthly fee applies.
     fee_tier_id: this.fb.control<number | null>(null),
+    // How often they pay (#1382). Monthly for everybody until changed, which
+    // is exactly what the app did before periods existed.
+    billing_period_months: this.fb.nonNullable.control<number>(1, Validators.required),
     joined_at: this.fb.nonNullable.control<Date>(new Date(), Validators.required),
     // Structured address (#72b) — same shape as the academy form.
     // The HTML fieldset is duplicated between the two forms; the validators,
@@ -670,6 +689,7 @@ export class AthleteFormComponent implements OnInit {
             stripes: String(athlete.stripes),
             status: athlete.status,
             fee_tier_id: athlete.fee_tier?.id ?? null,
+            billing_period_months: athlete.billing_period_months ?? 1,
             ...(joinedAt ? { joined_at: joinedAt } : {}),
             address: {
               line1: athlete.address?.line1 ?? '',
@@ -722,6 +742,7 @@ export class AthleteFormComponent implements OnInit {
       status: v.status,
       joined_at: joinedAt,
       fee_tier_id: v.fee_tier_id,
+      billing_period_months: v.billing_period_months,
       address: this.buildAddressPayload(v.address),
     };
   }

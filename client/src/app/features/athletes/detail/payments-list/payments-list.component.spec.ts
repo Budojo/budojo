@@ -285,3 +285,161 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     );
   });
 });
+
+describe('PaymentsListComponent — billing periods (#1382)', () => {
+  const YEAR = new Date().getUTCFullYear();
+
+  function quarterlyFrom(month: number): AthletePayment {
+    return {
+      id: 7,
+      athlete_id: 42,
+      year: YEAR,
+      month,
+      period_months: 3,
+      amount_cents: 16500,
+      paid_at: `${YEAR}-0${month}-05T10:00:00Z`,
+    };
+  }
+
+  it('marks every month of the period paid, not only the one it started in', () => {
+    const { fixture } = setup({ payments: [quarterlyFrom(2)] });
+
+    for (const month of [2, 3, 4]) {
+      const row = fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`);
+      expect(row.textContent, `month ${month}`).toContain('Paid');
+    }
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-5"]').textContent).toContain(
+      'Unpaid',
+    );
+  });
+
+  it('shows the amount once, on the month the period started', () => {
+    const { fixture } = setup({ payments: [quarterlyFrom(2)] });
+
+    // Repeating €165 on all three rows would treble the year's takings on a
+    // table people read as a ledger.
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-2"]').textContent).toContain(
+      '165',
+    );
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="payment-row-3"]').textContent,
+    ).not.toContain('165');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="payment-row-4"]').textContent,
+    ).not.toContain('165');
+  });
+
+  it('captions every covered month with the range the payment buys', () => {
+    const { fixture } = setup({ payments: [quarterlyFrom(2)] });
+
+    for (const month of [2, 3, 4]) {
+      const caption = fixture.nativeElement.querySelector(`[data-cy="payment-period-${month}"]`);
+      expect(caption, `month ${month}`).not.toBeNull();
+      expect(caption.textContent).toContain('February');
+      expect(caption.textContent).toContain('April');
+    }
+  });
+
+  it('leaves a plain monthly payment reading exactly as it always did', () => {
+    const payment: AthletePayment = {
+      id: 1,
+      athlete_id: 42,
+      year: YEAR,
+      month: 3,
+      period_months: 1,
+      amount_cents: 9500,
+      paid_at: `${YEAR}-03-05T10:00:00Z`,
+    };
+    const { fixture } = setup({ payments: [payment] });
+
+    const row = fixture.nativeElement.querySelector('[data-cy="payment-row-3"]');
+    expect(row.textContent).toContain('95');
+    expect(row.textContent).toContain(`${YEAR}-03-05`);
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-period-3"]')).toBeNull();
+  });
+
+  it('spreads a period that started last year into this one', () => {
+    const payment: AthletePayment = {
+      id: 9,
+      athlete_id: 42,
+      year: YEAR - 1,
+      month: 12,
+      period_months: 3,
+      amount_cents: 16500,
+      paid_at: `${YEAR - 1}-12-05T10:00:00Z`,
+    };
+    const { fixture } = setup({ payments: [payment] });
+
+    // December's own row belongs to last year's table; January and February
+    // are what this year sees of it.
+    for (const month of [1, 2]) {
+      expect(
+        fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`).textContent,
+        `month ${month}`,
+      ).toContain('Paid');
+    }
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-3"]').textContent).toContain(
+      'Unpaid',
+    );
+    // The amount stays on December, which is not in this table at all.
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="payment-row-1"]').textContent,
+    ).not.toContain('165');
+  });
+
+  it('treats a payload with no period_months as monthly', () => {
+    // Pre-#1382 rows, and every Cypress mock written before it.
+    const payment = {
+      id: 1,
+      athlete_id: 42,
+      year: YEAR,
+      month: 3,
+      amount_cents: 9500,
+      paid_at: `${YEAR}-03-05T10:00:00Z`,
+    } as AthletePayment;
+    const { fixture } = setup({ payments: [payment] });
+
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-3"]').textContent).toContain(
+      'Paid',
+    );
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-4"]').textContent).toContain(
+      'Unpaid',
+    );
+  });
+});
+
+describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', () => {
+  function toastDetailFor(errors: Record<string, string[]>): string {
+    const { fixture, component } = setup({ payments: [] });
+
+    const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+    confirmService.confirm = vi.fn((cfg: { accept: () => void }) => {
+      cfg.accept();
+      return confirmService;
+    }) as never;
+
+    const paymentSvc = TestBed.inject(PaymentService);
+    (paymentSvc as unknown as { markPaid: Mock }).markPaid = vi.fn(() =>
+      throwError(() => ({ status: 422, error: { errors } })),
+    );
+
+    const messageSpy = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+
+    const januaryRow = component['monthRows']()[0];
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+    component.confirmToggleRow(event, januaryRow);
+
+    return String(messageSpy.mock.calls.at(-1)?.[0]?.detail ?? '');
+  }
+
+  it('says the month is already covered, not that no fee is configured', () => {
+    // "The academy has not configured a monthly fee" is flatly untrue here —
+    // the fee is fine, the month is taken by another period.
+    expect(toastDetailFor({ period_months: ['clash'] })).toContain('already covered');
+  });
+
+  it('still says what a missing-fee 422 means', () => {
+    expect(toastDetailFor({ monthly_fee_cents: ['missing'] })).toContain('monthly fee');
+  });
+});

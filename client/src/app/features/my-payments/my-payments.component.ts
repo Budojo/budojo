@@ -64,20 +64,58 @@ export class MyPaymentsComponent implements OnInit {
   protected readonly activeCarnet = computed<Carnet | null>(() => activeCarnetOf(this.carnets()));
 
   /**
-   * One row per month, 1..12. `payment` is the matched row (or null
-   * — unpaid). Keeps the template a clean grid render without any
-   * "find this month in the array" logic per cell.
+   * One row per month, 1..12. `payment` is the payment **covering** that
+   * month (or null — unpaid), which since #1382 is not the same as the one
+   * whose `month` matches: a quarterly bought in February pays for March and
+   * April too, and the year listing returns periods that merely touch the
+   * year, so a December-2025 quarterly arrives with `month: 12` and would
+   * otherwise mark December 2026 paid.
+   *
+   * Mirrors the owner-side table in `payments-list.component.ts`. `coveredBy
+   * EarlierPeriod` is what keeps the amount on one row: repeating €165 down
+   * three months would treble what the athlete thinks they paid.
    */
   protected readonly months = computed(() => {
+    const year = this.year();
     const byMonth = new Map<number, AthletePayment>();
     for (const p of this.payments()) {
-      byMonth.set(p.month, p);
+      for (let i = 0; i < (p.period_months ?? 1); i++) {
+        const absolute = p.year * 12 + (p.month - 1) + i;
+        if (Math.floor(absolute / 12) !== year) continue;
+        byMonth.set((absolute % 12) + 1, p);
+      }
     }
     return Array.from({ length: 12 }, (_, i) => {
       const m = i + 1;
-      return { month: m, payment: byMonth.get(m) ?? null };
+      const payment = byMonth.get(m) ?? null;
+      return {
+        month: m,
+        payment,
+        coveredByEarlierPeriod: payment !== null && !(payment.year === year && payment.month === m),
+        periodCaption: payment === null ? null : this.captionFor(payment),
+      };
     });
   });
+
+  /**
+   * "January – March 2026" for a period longer than a month, `null` for a
+   * plain monthly where the row's own label already says everything.
+   *
+   * Built from `Intl` rather than translation keys because this page names
+   * its months through Angular's date pipe, and two sources for the same
+   * word is how "gennaio" ends up next to "January".
+   */
+  private captionFor(payment: AthletePayment): string | null {
+    const span = payment.period_months ?? 1;
+    if (span <= 1) return null;
+
+    const locale = localeFor(this.languageService.currentLang());
+    const startDate = new Date(payment.year, payment.month - 1, 1);
+    const endDate = new Date(payment.year, payment.month - 1 + span - 1, 1);
+    const name = (d: Date): string => d.toLocaleDateString(locale, { month: 'long' });
+
+    return `${name(startDate)} – ${name(endDate)} ${endDate.getFullYear()}`;
+  }
 
   ngOnInit(): void {
     this.carnetService

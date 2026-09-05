@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Stats;
 
 use App\Models\Academy;
+use App\Models\AthletePayment;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -13,10 +14,19 @@ use Illuminate\Support\Facades\DB;
  * for the academy over the trailing N months ending with the current
  * month, INCLUSIVE.
  *
- * Bucketing field: `(year, month)` (the business month the fee covers),
- * NOT `paid_at` (the wall-clock recording time). The two are typically
- * equal today — the API doesn't accept a custom `paid_at` — but the
- * business month is the user-facing definition of "this month's revenue".
+ * Bucketing field: the business month(s) the fee covers, NOT `paid_at`
+ * (the wall-clock recording time). The two are typically equal today — the
+ * API doesn't accept a custom `paid_at` — but the business month is the
+ * user-facing definition of "this month's revenue".
+ *
+ * Since #1382 a payment covers a **period**, so its amount is spread evenly
+ * across every month that period pays for: a €165 quarterly contributes €55
+ * to each of three buckets rather than €165 to one. Booking it whole would
+ * make an academy that bills quarterly read €0 for two months in three,
+ * which is exactly the "revenue *for* this month" promise this endpoint has
+ * always made. The split is done in PHP — SQL cannot expand one row into
+ * three buckets without a calendar table, and the volume here is one
+ * academy's payments over at most 24 months.
  *
  * `currency` is currently hardcoded to EUR — single-currency-per-academy
  * is the model invariant and the academies table doesn't carry a
@@ -43,39 +53,50 @@ class MonthlyPaymentsStatsAction
         $nowYear = (int) $now->format('Y');
         $nowMonth = (int) $now->format('m');
 
+        $firstBucket = AthletePayment::monthIndex($startYear, $startMonth);
+        $lastBucket = AthletePayment::monthIndex($nowYear, $nowMonth);
+
+        // Every payment whose period OVERLAPS the window, not just one that
+        // starts inside it: a quarterly bought the month before the window
+        // still pays for its first months.
         $rows = DB::table('athlete_payments')
             ->join('athletes', 'athletes.id', '=', 'athlete_payments.athlete_id')
             ->where('athletes.academy_id', $academy->id)
-            // (year, month) >= (startYear, startMonth) AND (year, month) <= (nowYear, nowMonth)
-            ->where(function ($q) use ($startYear, $startMonth, $nowYear, $nowMonth): void {
-                $q->where(function ($lowerBound) use ($startYear, $startMonth): void {
-                    $lowerBound->where('athlete_payments.year', '>', $startYear)
-                               ->orWhere(function ($year) use ($startYear, $startMonth): void {
-                                   $year->where('athlete_payments.year', $startYear)
-                                        ->where('athlete_payments.month', '>=', $startMonth);
-                               });
-                })->where(function ($upperBound) use ($nowYear, $nowMonth): void {
-                    $upperBound->where('athlete_payments.year', '<', $nowYear)
-                               ->orWhere(function ($year) use ($nowYear, $nowMonth): void {
-                                   $year->where('athlete_payments.year', $nowYear)
-                                        ->where('athlete_payments.month', '<=', $nowMonth);
-                               });
-                });
-            })
-            ->groupBy('athlete_payments.year', 'athlete_payments.month')
-            ->orderBy('athlete_payments.year')
-            ->orderBy('athlete_payments.month')
+            ->whereRaw('(athlete_payments.year * 12 + athlete_payments.month - 1) <= ?', [$lastBucket])
+            ->whereRaw(
+                '(athlete_payments.year * 12 + athlete_payments.month - 1 + athlete_payments.period_months) > ?',
+                [$firstBucket],
+            )
             ->select([
                 'athlete_payments.year',
                 'athlete_payments.month',
-                DB::raw('SUM(athlete_payments.amount_cents) as amount_cents'),
+                'athlete_payments.period_months',
+                'athlete_payments.amount_cents',
             ])
             ->get();
 
+        /** @var array<string, int> $byKey */
         $byKey = [];
         foreach ($rows as $row) {
-            $key = \sprintf('%04d-%02d', (int) $row->year, (int) $row->month);
-            $byKey[$key] = (int) $row->amount_cents;
+            $periodStart = AthletePayment::monthIndex((int) $row->year, (int) $row->month);
+            $span = max(1, (int) $row->period_months);
+            $total = (int) $row->amount_cents;
+
+            // Integer split whose parts sum back to the total: the remainder
+            // goes on the first month rather than evaporating, so twelve
+            // buckets of a €100.01 annual still add up to €100.01.
+            $share = intdiv($total, $span);
+            $remainder = $total - ($share * $span);
+
+            for ($i = 0; $i < $span; $i++) {
+                $bucket = $periodStart + $i;
+                if ($bucket < $firstBucket || $bucket > $lastBucket) {
+                    continue;
+                }
+
+                $key = \sprintf('%04d-%02d', intdiv($bucket, 12), ($bucket % 12) + 1);
+                $byKey[$key] = ($byKey[$key] ?? 0) + $share + ($i === 0 ? $remainder : 0);
+            }
         }
 
         $out = [];

@@ -162,3 +162,85 @@ describe('MyPaymentsComponent (M7 PR-D slice 4)', () => {
     expect(el.querySelector('[data-cy="my-payments-grid"]')).not.toBeNull();
   });
 });
+
+describe('MyPaymentsComponent — billing periods (#1382)', () => {
+  function loadWith(payments: AthletePayment[]) {
+    const { fixture, el, http, year } = setup();
+    http.expectOne(`${environment.apiBase}/api/v1/me/payments?year=${year}`).flush({
+      data: payments,
+    });
+    fixture.detectChanges();
+    return { el, year };
+  }
+
+  function cell(el: HTMLElement, month: number): HTMLElement {
+    return el.querySelector(`[data-cy="month-${month}"]`) as HTMLElement;
+  }
+
+  it('marks every month a quarterly covers, not only its first', () => {
+    const year = new Date().getFullYear();
+    const { el } = loadWith([
+      payment({
+        month: 2,
+        period_months: 3,
+        amount_cents: 16500,
+        paid_at: `${year}-02-05T08:00:00Z`,
+      }),
+    ]);
+
+    for (const month of [2, 3, 4]) {
+      expect(cell(el, month).className, `month ${month}`).toContain('my-payments__row--paid');
+    }
+    expect(cell(el, 5).className).not.toContain('my-payments__row--paid');
+  });
+
+  it('shows the amount once, so the athlete does not read triple', () => {
+    const year = new Date().getFullYear();
+    const { el } = loadWith([
+      payment({
+        month: 2,
+        period_months: 3,
+        amount_cents: 16500,
+        paid_at: `${year}-02-05T08:00:00Z`,
+      }),
+    ]);
+
+    expect(cell(el, 2).textContent).toContain('165');
+    expect(cell(el, 3).textContent).not.toContain('165');
+    expect(cell(el, 4).textContent).not.toContain('165');
+    // The caption is what makes the amount-less March row read as covered
+    // rather than as a gap.
+    expect(el.querySelector('[data-cy="month-period-3"]')).not.toBeNull();
+  });
+
+  it('does not let a period listed for last December mark this December', () => {
+    const year = new Date().getFullYear();
+    // The year listing returns periods that merely touch the year, so a
+    // December-2025 quarterly arrives with `month: 12` — keying the grid on
+    // that alone would light up December of the year being viewed.
+    const { el } = loadWith([
+      payment({
+        year: year - 1,
+        month: 12,
+        period_months: 3,
+        amount_cents: 16500,
+        paid_at: `${year - 1}-12-05T08:00:00Z`,
+      }),
+    ]);
+
+    expect(cell(el, 1).className).toContain('my-payments__row--paid');
+    expect(cell(el, 2).className).toContain('my-payments__row--paid');
+    expect(cell(el, 12).className).not.toContain('my-payments__row--paid');
+  });
+
+  it('leaves a plain monthly payment reading as it always did', () => {
+    const year = new Date().getFullYear();
+    const { el } = loadWith([
+      payment({ month: 3, amount_cents: 5000, paid_at: `${year}-03-05T08:00:00Z` }),
+    ]);
+
+    expect(cell(el, 3).textContent).toContain('50');
+    expect(el.querySelector('[data-cy="month-period-3"]')).toBeNull();
+    expect(cell(el, 4).className).not.toContain('my-payments__row--paid');
+  });
+});

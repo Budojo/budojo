@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Storage;
  * @property int                     $id
  * @property int                     $academy_id
  * @property int|null                $fee_tier_id
+ * @property int                     $billing_period_months
  * @property int|null                $user_id                M7 athlete-login link (#445). Null until the athlete accepts the invite; non-null afterwards.
  * @property bool                    $is_self                Owner-as-athlete row marker (#748) — see class doc.
  * @property string                  $first_name
@@ -44,7 +45,7 @@ use Illuminate\Support\Facades\Storage;
  * @property \Carbon\Carbon|null     $updated_at
  * @property \Carbon\Carbon|null     $deleted_at
  */
-#[Fillable(['academy_id', 'fee_tier_id', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
+#[Fillable(['academy_id', 'fee_tier_id', 'billing_period_months', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class])]
 class Athlete extends Model implements HasAddress
 {

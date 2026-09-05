@@ -43,7 +43,12 @@
       @for (row of monthRows(); track row.month) {
         <li class="payment-card" [attr.data-cy]="'payment-card-' + row.month">
           <header class="payment-card__header">
-            <span class="payment-card__month">{{ row.labelKey | translate }}</span>
+            <span class="payment-card__month">
+              {{ row.labelKey | translate }}
+              @if (periodCaption(row); as caption) {
+                <span class="payment-card__period">{{ caption }}</span>
+              }
+            </span>
             @if (row.payment) {
               <p-tag
                 [value]="'shared.paidBadge.paid' | translate"
@@ -60,7 +65,13 @@
           </header>
           <div class="payment-card__meta">
             @if (row.payment) {
-              <span class="payment-card__amount">{{ formatAmount(row.payment.amount_cents) }}</span>
+              @if (row.coveredByEarlierPeriod) {
+                <span class="payment-card__dash" aria-hidden="true">—</span>
+              } @else {
+                <span class="payment-card__amount">{{
+                  formatAmount(row.payment.amount_cents)
+                }}</span>
+              }
               <span class="payment-card__sep" aria-hidden="true">·</span>
               <time class="payment-card__paid-at" [attr.datetime]="row.payment.paid_at">
                 {{ formatPaidAt(row.payment.paid_at) }}
@@ -136,7 +147,20 @@
         </ng-template>
         <ng-template #body let-row>
           <tr [attr.data-cy]="'payment-row-' + row.month">
-            <td>{{ row.labelKey | translate }}</td>
+            <td>
+              {{ row.labelKey | translate }}
+              <!--
+                The range that ties this row to the payment behind it (#1382).
+                It sits under the month rather than in "Paid on", which holds
+                a date: March's dash in the amount column only makes sense
+                once you can see it belongs to January's €165.
+              -->
+              @if (periodCaption(row); as caption) {
+                <span class="payments-list__period" [attr.data-cy]="'payment-period-' + row.month">
+                  {{ caption }}
+                </span>
+              }
+            </td>
             <td>
               @if (row.payment) {
                 <p-tag
@@ -153,13 +177,21 @@
               }
             </td>
             <td>
-              @if (row.payment) {
+              <!--
+                The amount sits on the month the period started, not on every
+                month it covers (#1382): repeating €165 across a quarterly's
+                three rows would treble the year's takings on a table people
+                read as a ledger.
+              -->
+              @if (row.payment && !row.coveredByEarlierPeriod) {
                 {{ formatAmount(row.payment.amount_cents) }}
               } @else {
                 <span class="payments-list__dash">—</span>
               }
             </td>
             <td>
+              <!-- When the money actually changed hands. Every month a period
+                   covers shares the one date, because there was one payment. -->
               @if (row.payment) {
                 <time [attr.datetime]="row.payment.paid_at">{{
                   formatPaidAt(row.payment.paid_at)

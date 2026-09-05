@@ -174,6 +174,12 @@ export interface Athlete {
    * no fee applies and a payment cannot be recorded.
    */
   monthly_fee_cents?: number | null;
+  /**
+   * How many months this athlete's payments cover (#1382): 1 monthly, 3
+   * quarterly, 6 half-yearly, 12 annual. Optional for fixture-compat; readers
+   * treat a missing value as monthly, which is what every athlete is.
+   */
+  billing_period_months?: number;
 }
 
 export interface AthleteMeta {
@@ -256,6 +262,8 @@ export interface AthletePayload {
    * academy's flat fee; omitting the key leaves the tier untouched.
    */
   fee_tier_id?: number | null;
+  /** How many months each payment covers (#1382): 1, 3, 6 or 12. */
+  billing_period_months?: number;
 }
 
 export type AthleteUpdatePayload = Partial<AthletePayload>;

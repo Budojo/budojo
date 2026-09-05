@@ -1760,7 +1760,9 @@
         "markPaidAccept": "Segna pagato",
         "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
         "markUnpaidAccept": "Segna non pagato",
-        "cancel": "Annulla"
+        "cancel": "Annulla",
+        "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
+        "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?"
       },
       "restoreConfirm": {
         "message": "Ripristinare {{name}}?",
@@ -1805,7 +1807,9 @@
         "fallbackName": "questo atleta",
         "confirm": {
           "markPaidMessage": "Segnare {{name}} come pagato per {{month}} {{year}}?",
-          "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}} {{year}}?"
+          "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}} {{year}}?",
+          "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
+          "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?"
         },
         "toast": {
           "markedPaidSummary": "Pagato",
@@ -1814,7 +1818,8 @@
           "errorSummary": "Errore",
           "errorMissingFee": "Imposta una quota mensile sull'accademia prima di registrare i pagamenti.",
           "errorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
-          "loadErrorDetail": "Impossibile caricare i pagamenti."
+          "loadErrorDetail": "Impossibile caricare i pagamenti.",
+          "errorOverlap": "Quel mese è già coperto da un altro pagamento."
         },
         "title": "Pagamenti — {{year}}",
         "noFeeHint": "Imposta una quota mensile sull'accademia per iniziare a registrare i pagamenti. Fino ad allora questa pagina rimane di sola lettura.",
@@ -1830,7 +1835,8 @@
           "unmarkPaid": "Annulla pagato"
         },
         "feeTierHintOne": "Fascia {{label}} · {{amount}} al mese per {{count}} lezione a settimana.",
-        "feeTierHintOther": "Fascia {{label}} · {{amount}} al mese per {{count}} lezioni a settimana."
+        "feeTierHintOther": "Fascia {{label}} · {{amount}} al mese per {{count}} lezioni a settimana.",
+        "periodRange": "Da {{from}} a {{to}} {{year}}"
       },
       "documents": {
         "confirm": {
@@ -2088,7 +2094,15 @@
           "netherlands": "Paesi Bassi"
         }
       },
-      "feeTierPlaceholder": "Quota standard dell'academy"
+      "feeTierPlaceholder": "Quota standard dell'academy",
+      "billingPeriod": {
+        "label": "Periodicità",
+        "hint": "Ogni quanto paga. Un pagamento trimestrale è una riga sola che copre tre mesi.",
+        "monthly": "Mensile",
+        "quarterly": "Trimestrale",
+        "halfYearly": "Semestrale",
+        "annual": "Annuale"
+      }
     },
     "photo": {
       "title": "Foto",
