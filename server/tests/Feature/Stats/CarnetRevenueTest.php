@@ -132,3 +132,22 @@ it('takes a deleted carnet back out of the figures', function (): void {
 
     expect(revenueByMonth($this, 1)['2026-09'])->toBe(0);
 });
+
+it('follows the window when a carnet is re-dated', function (): void {
+    $this->travelTo('2026-12-15');
+    sellCarnet($this, $this->athlete, '2026-11-01');
+    $carnetId = $this->athlete->carnets()->value('id');
+
+    expect(revenueByMonth($this, 4)['2026-09'])->toBe(0);
+
+    // Re-dating moves both ends of the window (#1380), so the revenue has to
+    // move with it — the money was always for the period the carnet covers.
+    $this->actingAs($this->user)
+        ->patchJson("/api/v1/athletes/{$this->athlete->id}/carnets/{$carnetId}", [
+            'valid_from' => '2026-09-01',
+        ])
+        ->assertOk();
+
+    expect(revenueByMonth($this, 4)['2026-09'])->toBe(587)
+        ->and(revenueByMonth($this, 4)['2026-11'])->toBe(583);
+});
