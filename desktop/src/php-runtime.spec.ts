@@ -22,6 +22,7 @@ describe('resolveDesktopPaths', () => {
       isPackaged: false,
       resourcesPath: '/ignored',
       devRoot: '/repo/desktop',
+      platform: 'win32',
     });
 
     expect(paths.phpBinary).toBe(path.resolve('/repo/desktop/runtime/php/php.exe'));
@@ -36,9 +37,25 @@ describe('resolveDesktopPaths', () => {
       isPackaged: true,
       resourcesPath: '/install/resources',
       devRoot: '/ignored',
+      platform: 'win32',
     });
 
     expect(paths.phpBinary).toBe(path.resolve('/install/resources/php/php.exe'));
+    expect(paths.serverRoot).toBe(path.resolve('/install/resources/server'));
+  });
+
+  it('drops the .exe suffix off Windows (#1300)', () => {
+    // The binary name is the only part of the layout that differs; everything
+    // else — extraResources, the sibling server/ in development — is the same
+    // shape on both platforms.
+    const paths = resolveDesktopPaths({
+      isPackaged: true,
+      resourcesPath: '/install/resources',
+      devRoot: '/ignored',
+      platform: 'linux',
+    });
+
+    expect(paths.phpBinary).toBe(path.resolve('/install/resources/php/php'));
     expect(paths.serverRoot).toBe(path.resolve('/install/resources/server'));
   });
 });
@@ -54,7 +71,10 @@ describe('buildPhpIni', () => {
     // From `composer check-platform-reqs`: curl, fileinfo, mbstring, openssl
     // are the only required extensions that ship as DLLs on Windows. pdo_sqlite
     // + sqlite3 are the database; opcache is the CLI-server speedup.
-    for (const ext of ['curl', 'fileinfo', 'mbstring', 'openssl', 'pdo_sqlite', 'sqlite3']) {
+    // `zip` (#1300) is load-bearing rather than nice-to-have: BackupIO's
+    // zipDir/unzip go through ZipArchive, so dropping it here would leave the
+    // unit suite green while every backup and restore failed at runtime.
+    for (const ext of ['curl', 'fileinfo', 'mbstring', 'openssl', 'pdo_sqlite', 'sqlite3', 'zip']) {
       expect(ini).toContain(`extension=${ext}`);
     }
     expect(ini).toContain('zend_extension=opcache');

@@ -268,6 +268,7 @@ async function startRuntime(): Promise<{
     isPackaged: app.isPackaged,
     resourcesPath: process.resourcesPath,
     devRoot: path.resolve(here, '..'),
+    platform: process.platform,
   });
 
   if (!existsSync(paths.phpBinary)) {

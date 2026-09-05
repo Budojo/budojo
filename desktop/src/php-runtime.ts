@@ -9,9 +9,9 @@ import path from 'node:path';
  */
 
 export interface DesktopPaths {
-  /** php.exe of the bundled runtime. */
+  /** The bundled runtime's PHP executable — `php.exe` on Windows, `php` elsewhere. */
   phpBinary: string;
-  /** Directory holding the runtime's ext/*.dll files. */
+  /** Directory holding the runtime's loadable extensions (`ext/*.dll` on Windows). */
   phpExtensionDir: string;
   /** Root of the Laravel application (contains artisan, public/, vendor/). */
   serverRoot: string;
@@ -27,6 +27,12 @@ export function resolveDesktopPaths(input: {
   isPackaged: boolean;
   resourcesPath: string;
   devRoot: string;
+  /**
+   * `process.platform` of the host, passed in rather than read here so this
+   * file stays pure and the spec can assert both platforms without stubbing a
+   * global — the same reason every other input is a parameter.
+   */
+  platform: NodeJS.Platform;
 }): DesktopPaths {
   const runtimeDir = input.isPackaged
     ? path.resolve(input.resourcesPath, 'php')
@@ -37,7 +43,7 @@ export function resolveDesktopPaths(input: {
     : path.resolve(input.devRoot, '..', 'server');
 
   return {
-    phpBinary: path.join(runtimeDir, 'php.exe'),
+    phpBinary: path.join(runtimeDir, input.platform === 'win32' ? 'php.exe' : 'php'),
     phpExtensionDir: path.join(runtimeDir, 'ext'),
     serverRoot,
   };
@@ -64,6 +70,12 @@ const EXTENSIONS = [
   // php.exe: a valid signature is accepted and a one-bit-flipped one refused.
   'sodium',
   'sqlite3',
+  // Backup archives (#1300). `BackupIO.zipDir` / `unzip` used to shell out to
+  // PowerShell, which is why this was never needed; going through the bundled
+  // runtime instead keeps the desktop package at its single production
+  // dependency. `php_zip.dll` already ships in the pinned Windows runtime —
+  // verified against the manifest's sha256, nothing new to download.
+  'zip',
 ] as const;
 
 export function buildPhpIni(input: { extensionDir: string; errorLog: string; tempDir: string }): string {

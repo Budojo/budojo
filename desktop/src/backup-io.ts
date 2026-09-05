@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,11 +9,16 @@ import { runPhp } from './php-exec.js';
 /**
  * The real filesystem + subprocess backing for BackupService (#1228).
  *
- * VACUUM INTO goes through the bundled php.exe (SQLite's online backup, correct
- * under WAL where a file copy is not). Zip/unzip use PowerShell's
- * Compress-Archive / Expand-Archive — the same Windows-only toolchain as the
- * PHP-runtime fetch, no zip dependency added. The database and storage swap on
- * restore is a plain move, done while the caller holds the PHP server stopped.
+ * VACUUM INTO goes through the bundled PHP (SQLite's online backup, correct
+ * under WAL where a file copy is not), and so do zip/unzip via `ZipArchive`
+ * (#1300) — they used to shell out to PowerShell's Compress-Archive /
+ * Expand-Archive, which is one of the four things that stopped the app from
+ * running anywhere but Windows. Going back through the runtime rather than
+ * adding a JS zip library keeps the desktop package at its single production
+ * dependency, and matches how `vacuumInto` already works.
+ *
+ * The database and storage swap on restore is a plain move, done while the
+ * caller holds the PHP server stopped.
  */
 export interface BackupIOConfig {
   phpBinary: string;
@@ -68,16 +72,19 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
     },
 
     zipDir: async (srcDir, archivePath) => {
-      // Zip the *contents* of srcDir (the trailing \* ) so the archive has
-      // budojo.sqlite / storage / manifest.json at its root, not a wrapper dir.
-      run(`Compress-Archive -Path '${srcDir}\\*' -DestinationPath '${archivePath}' -Force`);
-      if (!existsSync(archivePath)) {
-        throw new Error(`Compress-Archive produced no file at ${archivePath}`);
+      const result = await php(['-r', ZIP_DIR, '--', srcDir, archivePath]);
+
+      if (result.code !== 0 || !existsSync(archivePath)) {
+        throw new Error(`zip failed (exit ${result.code ?? 'null'}): ${result.output.trim()}`);
       }
     },
 
     unzip: async (archivePath, destDir) => {
-      run(`Expand-Archive -LiteralPath '${archivePath}' -DestinationPath '${destDir}' -Force`);
+      const result = await php(['-r', UNZIP, '--', archivePath, destDir]);
+
+      if (result.code !== 0) {
+        throw new Error(`unzip failed (exit ${result.code ?? 'null'}): ${result.output.trim()}`);
+      }
     },
 
     currentSchemaVersion: async () => {
@@ -139,13 +146,57 @@ export function createBackupIO(config: BackupIOConfig): BackupIO {
   };
 }
 
-function run(command: string): void {
-  const result = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', command], {
-    windowsHide: true,
-    encoding: 'utf8',
-  });
-
-  if (result.status !== 0) {
-    throw new Error(`powershell failed (${result.status ?? 'null'}): ${result.stderr?.trim() ?? ''}`);
+/**
+ * Zips the *contents* of a directory, so the archive carries budojo.sqlite /
+ * storage / manifest.json at its root rather than a wrapper directory.
+ *
+ * Entry names are forced to forward slashes. That is the whole reason an
+ * archive taken on one machine restores on the other: the zip format specifies
+ * `/` as the separator, and building names from `DIRECTORY_SEPARATOR` would
+ * write backslashes on Windows that Linux then reads as part of the filename.
+ */
+const ZIP_DIR = `
+$src = rtrim($argv[1], '/\\\\');
+$zip = new ZipArchive();
+if ($zip->open($argv[2], ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+  fwrite(STDERR, 'could not open archive for writing');
+  exit(1);
+}
+$items = new RecursiveIteratorIterator(
+  new RecursiveDirectoryIterator($src, FilesystemIterator::SKIP_DOTS),
+  RecursiveIteratorIterator::SELF_FIRST
+);
+foreach ($items as $item) {
+  $rel = str_replace('\\\\', '/', substr($item->getPathname(), strlen($src) + 1));
+  $ok = $item->isDir() ? $zip->addEmptyDir($rel) : $zip->addFile($item->getPathname(), $rel);
+  if ($ok !== true) {
+    fwrite(STDERR, 'could not add ' . $rel);
+    exit(1);
   }
 }
+if ($zip->close() !== true) {
+  fwrite(STDERR, 'could not finalise archive');
+  exit(1);
+}
+`.trim();
+
+/**
+ * Extracts an archive over a destination directory.
+ *
+ * `extractTo` refuses entries that escape the destination, which matters here
+ * because the archive is a file the user hands us — it may be corrupt, or from
+ * somewhere else entirely. The harness asserts that refusal rather than taking
+ * the documentation's word for it.
+ */
+const UNZIP = `
+$zip = new ZipArchive();
+if ($zip->open($argv[1]) !== true) {
+  fwrite(STDERR, 'could not open archive for reading');
+  exit(1);
+}
+if ($zip->extractTo($argv[2]) !== true) {
+  fwrite(STDERR, 'could not extract archive');
+  exit(1);
+}
+$zip->close();
+`.trim();
