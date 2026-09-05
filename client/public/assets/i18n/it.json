@@ -1928,7 +1928,8 @@
           "title": "Modifica l'inizio della validità",
           "body": "Il carnet copre gli allenamenti compresi fra l'inizio della validità e la scadenza. Spostare l'inizio sposta anche la scadenza — la finestra dura sempre 12 mesi, quindi anticiparla consuma validità invece di aggiungerne.",
           "hint": "Gli allenamenti già registrati dentro la nuova finestra verranno conteggiati.",
-          "confirm": "Salva"
+          "confirm": "Salva",
+          "newExpiry": "Nuova scadenza: {{date}}"
         }
       }
     },

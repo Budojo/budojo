@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 class DeleteCarnetAction
 {
+    public function __construct(
+        private readonly ReconcileCarnetEntriesAction $reconcileCarnets,
+    ) {
+    }
+
     /**
      * Removes a carnet sold by mistake (#1380).
      *
@@ -30,7 +35,7 @@ class DeleteCarnetAction
             $athleteId = $carnet->athlete_id;
             $carnet->delete();
 
-            app(ReconcileCarnetEntriesAction::class)->execute([$athleteId]);
+            $this->reconcileCarnets->execute([$athleteId]);
         });
     }
 }

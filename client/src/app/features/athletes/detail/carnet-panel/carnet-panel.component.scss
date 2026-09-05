@@ -160,3 +160,16 @@
   font-size: 0.75rem;
   color: var(--p-text-muted-color);
 }
+
+.carnets__history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.carnets__dialog-preview {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-text-color);
+}

@@ -1928,7 +1928,8 @@
           "title": "Change the validity start",
           "body": "The carnet covers the sessions between its validity start and its expiry. Moving the start moves the expiry with it — the window is always 12 months, so pulling it back spends validity rather than adding it.",
           "hint": "Sessions already on the register inside the new window will be counted.",
-          "confirm": "Save"
+          "confirm": "Save",
+          "newExpiry": "New expiry: {{date}}"
         }
       }
     },

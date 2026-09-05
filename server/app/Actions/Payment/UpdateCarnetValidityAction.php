@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\DB;
 
 class UpdateCarnetValidityAction
 {
+    public function __construct(
+        private readonly ReconcileCarnetEntriesAction $reconcileCarnets,
+    ) {
+    }
+
     /**
      * Moves when a carnet starts covering sessions (#1380).
      *
@@ -32,7 +37,7 @@ class UpdateCarnetValidityAction
                 'expires_at' => $validFrom->addMonthsNoOverflow(SellCarnetAction::VALIDITY_MONTHS)->toDateString(),
             ]);
 
-            app(ReconcileCarnetEntriesAction::class)->execute([$carnet->athlete_id]);
+            $this->reconcileCarnets->execute([$carnet->athlete_id]);
 
             $refreshed = $carnet->fresh();
             // The row was updated two statements ago inside this transaction;

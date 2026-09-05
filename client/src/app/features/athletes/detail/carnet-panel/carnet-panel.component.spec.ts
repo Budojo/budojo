@@ -217,10 +217,38 @@ describe('CarnetPanelComponent', () => {
     expect(service.sell).toHaveBeenCalledWith(42, undefined, '2026-06-01');
   });
 
-  it('counts what the active carnet is paying for, so a delete can say what it costs', () => {
-    const { component } = setup({ carnets: [carnet({ total_entries: 10, remaining_entries: 4 })] });
+  it('previews the expiry the chosen validity start would produce', () => {
+    // The window is always twelve months, so pulling the start back spends
+    // validity. The owner has to see where the far end lands before saving.
+    const { component, fixture } = setup();
 
-    expect((component as unknown as { consumedByActive: () => number }).consumedByActive()).toBe(6);
+    (component as unknown as { openValidityDialog: (c: Carnet) => void }).openValidityDialog(
+      carnet({ valid_from: '2026-09-01' }),
+    );
+    (
+      component as unknown as {
+        validityForm: { patchValue: (v: { valid_from: Date }) => void };
+      }
+    ).validityForm.patchValue({ valid_from: new Date(2026, 2, 1) });
+    fixture.detectChanges();
+
+    expect(
+      (component as unknown as { previewExpiry: () => string | null }).previewExpiry(),
+    ).toContain('2027');
+  });
+
+  it('offers the same actions on a spent carnet, which is where a mis-sale lands', () => {
+    // A carnet dated far enough back to consume every entry is not active, so
+    // it drops into the history list — and that is precisely the mistake worth
+    // undoing, so the history rows carry the actions too.
+    const { fixture } = setup({
+      carnets: [carnet({ id: 3, is_active: false, remaining_entries: 0 })],
+    });
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="carnet-history-delete-3"]'),
+    ).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="carnet-history-edit-3"]')).not.toBeNull();
   });
 
   it('explains a 422 as a missing academy configuration', () => {

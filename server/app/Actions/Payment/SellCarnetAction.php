@@ -9,6 +9,7 @@ use App\Models\Carnet;
 use App\Support\CarnetCode;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 class SellCarnetAction
 {
@@ -63,26 +64,42 @@ class SellCarnetAction
             'expires_at' => $validFrom->addMonthsNoOverflow(self::VALIDITY_MONTHS)->toDateString(),
         ];
 
+        return DB::transaction(function () use ($athlete, $attributes): Carnet {
+            $carnet = $this->insertWithFreshCode($attributes);
+
+            // A carnet dated into the past may be owed sessions the register
+            // already holds, so the ledger is rebuilt before the row goes back
+            // to the caller — otherwise the response would claim a full balance
+            // the next read would contradict.
+            //
+            // Deliberately outside the retry below: it writes to
+            // `carnet_entries`, which has a unique index of its own, and a
+            // violation raised there must not be mistaken for a code collision
+            // and silently retried into a second carnet.
+            $this->reconcileCarnets->execute([$athlete->id]);
+
+            // The balance readers require `entries_count` and throw when it is
+            // missing, rather than reporting a silently-full carnet.
+            return $carnet->loadCount('entries');
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     *
+     * @throws \RuntimeException when no free code was found in the attempt budget
+     */
+    private function insertWithFreshCode(array $attributes): Carnet
+    {
         for ($attempt = 1; $attempt <= self::MAX_CODE_ATTEMPTS; $attempt++) {
             try {
-                $carnet = Carnet::create([
+                return Carnet::create([
                     'code' => $this->codeGenerator->generate(),
                     ...$attributes,
                 ]);
-
-                // A carnet dated into the past may be owed sessions the
-                // register already holds, so the ledger is rebuilt before the
-                // row goes back to the caller — otherwise the response would
-                // claim a full balance the next read would contradict.
-                $this->reconcileCarnets->execute([$athlete->id]);
-
-                // The balance readers require `entries_count` and throw when
-                // it is missing, rather than reporting a silently-full
-                // carnet.
-                return $carnet->loadCount('entries');
             } catch (UniqueConstraintViolationException) {
-                // `code` is the only unique index on the table, so this can
-                // only be a code collision. Redraw.
+                // `code` is the only unique index on `carnets`, so a violation
+                // here can only be a collision. Redraw.
             }
         }
 

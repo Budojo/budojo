@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\DB;
 
 class DeleteAthletePaymentAction
 {
+    public function __construct(
+        private readonly ReconcileCarnetEntriesAction $reconcileCarnets,
+    ) {
+    }
+
     /**
      * Deletes the payment row for (athlete, year, month). Returns true if
      * a row was deleted, false if no row existed — the controller maps
@@ -33,7 +38,7 @@ class DeleteAthletePaymentAction
                 ->delete() > 0;
 
             if ($deleted) {
-                app(ReconcileCarnetEntriesAction::class)->execute([$athlete->id]);
+                $this->reconcileCarnets->execute([$athlete->id]);
             }
 
             return $deleted;

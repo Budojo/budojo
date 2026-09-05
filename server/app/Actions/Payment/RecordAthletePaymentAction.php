@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Log;
 
 class RecordAthletePaymentAction
 {
+    public function __construct(
+        private readonly ReconcileCarnetEntriesAction $reconcileCarnets,
+    ) {
+    }
+
     /**
      * Records a payment for the given (athlete, year, month). Idempotent:
      * if a row already exists, returns it instead of creating a duplicate.
@@ -40,26 +45,35 @@ class RecordAthletePaymentAction
      */
     public function execute(Athlete $athlete, int $year, int $month, int $amountCents): AthletePayment
     {
-        $payment = AthletePayment::query()->createOrFirst(
-            [
-                'athlete_id' => $athlete->id,
-                'year' => $year,
-                'month' => $month,
-            ],
-            [
-                'amount_cents' => $amountCents,
-                'paid_at' => now(),
-            ],
-        );
+        // The insert and the rebuild share a transaction: a payment recorded
+        // without the ledger catching up leaves exactly the stale balance the
+        // derived design exists to prevent.
+        $payment = DB::transaction(function () use ($athlete, $year, $month, $amountCents): AthletePayment {
+            $payment = AthletePayment::query()->createOrFirst(
+                [
+                    'athlete_id' => $athlete->id,
+                    'year' => $year,
+                    'month' => $month,
+                ],
+                [
+                    'amount_cents' => $amountCents,
+                    'paid_at' => now(),
+                ],
+            );
+
+            if ($payment->wasRecentlyCreated) {
+                // Paying a month releases whatever that month had taken off a
+                // carnet (#1380). Under the old event-driven consumption this
+                // discrepancy was accepted on purpose — the rule was evaluated
+                // at marking time and never revisited — but once the balance is
+                // a function of its inputs, leaving it frozen is the anomaly.
+                $this->reconcileCarnets->execute([$athlete->id]);
+            }
+
+            return $payment;
+        });
 
         if ($payment->wasRecentlyCreated) {
-            // Paying a month releases whatever that month had taken off a
-            // carnet (#1380). Under the old event-driven consumption this
-            // discrepancy was accepted on purpose — the rule was evaluated at
-            // marking time and never revisited — but once the balance is a
-            // function of its inputs, leaving it frozen would be the anomaly.
-            app(ReconcileCarnetEntriesAction::class)->execute([$athlete->id]);
-
             $this->notifyAthlete($athlete, $payment);
         }
 

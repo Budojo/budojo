@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
@@ -104,16 +105,30 @@ export class CarnetPanelComponent {
     valid_from: this.fb.control<Date | null>(null),
   });
 
-  /**
-   * How many sessions the carnet is paying for right now — what the owner
-   * loses cover on if they delete it. Some may be picked up by another carnet
-   * whose window also holds them, which is why the copy says "sta pagando"
-   * rather than promising they all become uncovered.
-   */
-  protected readonly consumedByActive = computed<number>(() => {
-    const active = this.activeCarnet();
-    return active === null ? 0 : active.total_entries - active.remaining_entries;
+  private readonly validityValue = toSignal(this.validityForm.controls.valid_from.valueChanges, {
+    initialValue: null,
   });
+
+  /**
+   * The expiry the chosen start would produce, shown live under the picker.
+   *
+   * Not decoration: the window is always twelve months, so pulling the start
+   * back six months silently burns six months of validity. The owner has to
+   * see where the far end lands *before* confirming — the code and the entity
+   * doc both promised this and neither delivered it until now.
+   */
+  protected readonly previewExpiry = computed<string | null>(() => {
+    const start = this.validityValue() ?? this.validityForm.controls.valid_from.value;
+    if (start === null) return null;
+
+    const expiry = new Date(start);
+    expiry.setMonth(expiry.getMonth() + CARNET_VALIDITY_MONTHS);
+
+    return this.formatDate(toIsoDate(expiry));
+  });
+
+  /** The carnet the dialogs act on: the spendable one, or the one being fixed. */
+  protected readonly editing = signal<Carnet | null>(null);
 
   /** Today, so the sell dialog cannot offer a future purchase date. */
   protected readonly maxPurchaseDate = new Date();
@@ -221,25 +236,23 @@ export class CarnetPanelComponent {
       });
   }
 
-  protected openValidityDialog(): void {
-    const active = this.activeCarnet();
-    if (active === null) return;
-
+  protected openValidityDialog(carnet: Carnet): void {
+    this.editing.set(carnet);
     // Seeded from the current value so the picker opens on the month the owner
     // is correcting, not on today.
-    this.validityForm.reset({ valid_from: new Date(`${active.valid_from}T00:00:00`) });
+    this.validityForm.reset({ valid_from: new Date(`${carnet.valid_from}T00:00:00`) });
     this.validityDialogOpen.set(true);
   }
 
   protected confirmValidity(): void {
     const id = this.athleteId();
-    const active = this.activeCarnet();
+    const target = this.editing();
     const validFrom = this.validityForm.controls.valid_from.value;
-    if (id === null || active === null || validFrom === null || this.savingValidity()) return;
+    if (id === null || target === null || validFrom === null || this.savingValidity()) return;
 
     this.savingValidity.set(true);
     this.carnetService
-      .updateValidity(id, active.id, toIsoDate(validFrom))
+      .updateValidity(id, target.id, toIsoDate(validFrom))
       .pipe(finalize(() => this.savingValidity.set(false)))
       .subscribe({
         next: () => {
@@ -256,20 +269,19 @@ export class CarnetPanelComponent {
       });
   }
 
-  protected confirmDelete(event: MouseEvent): void {
+  protected confirmDelete(event: MouseEvent, carnet: Carnet): void {
     const id = this.athleteId();
-    const active = this.activeCarnet();
-    if (id === null || active === null) return;
+    if (id === null) return;
 
     // The owner sees what the deletion costs before it happens, not after: a
     // carnet halfway through its entries is paying for training already done.
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
       message: this.translate.instant('athletes.detail.carnets.confirmDelete', {
-        code: active.code,
-        count: this.consumedByActive(),
+        code: carnet.code,
+        count: carnet.total_entries - carnet.remaining_entries,
       }),
-      accept: () => this.applyDelete(id, active.id),
+      accept: () => this.applyDelete(id, carnet.id),
     });
   }
 
@@ -365,6 +377,7 @@ export class CarnetPanelComponent {
   }
 }
 
+const CARNET_VALIDITY_MONTHS = 12;
 const LOW_BALANCE_THRESHOLD = 2;
 const EXPIRY_WARNING_DAYS = 30;
 const MS_PER_DAY = 86_400_000;

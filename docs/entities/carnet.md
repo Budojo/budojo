@@ -66,7 +66,7 @@ Scope of uniqueness is the whole table, not per academy: a Budojo install is nor
 
 ## Audit
 
-`CarnetAuditObserver` writes a `carnet.created` audit entry on sale, labelled `"Mario Rossi — A7K2"`. Only `created` is wired, because the entity has no update or delete path.
+`CarnetAuditObserver` logs all three mutations, labelled `"Mario Rossi — A7K2"`: `carnet.created` on sale, `carnet.updated` when the validity window moves — which changes what the athlete has already paid for — and `carnet.deleted` on `deleting`, so the row is still readable when the entry is written.
 
 ## Related endpoints
 
