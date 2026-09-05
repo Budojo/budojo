@@ -42,7 +42,9 @@ for p in $prs; do gh pr view "$p" --json body -q .body \
   | grep -oiE '(clos|fix|resolv)[a-z]* #[0-9]+' | grep -oE '#[0-9]+'; done | sort -t'#' -k2 -un
 ```
 
-Every issue that list yields goes into a `## Auto-closes` block at the end of the release PR body: `Closes #N1, #N2, …`.
+Every issue that list yields goes into a `## Auto-closes` block at the end of the release PR body, **with the keyword repeated before each one**: `Closes #N1, closes #N2, …`.
+
+> **Trap:** `Closes #N1, #N2` closes only `#N1`. GitHub takes one issue per closing keyword and ignores the rest of the comma list. v2.47.0 shipped this way and left its epic open.
 
 > **Trap:** GitHub only auto-closes from a PR merged into the **default branch**. Feature PRs target `develop`, so their own `Closes #N` never fires. Without this block the leaf issues stay open forever. Verify afterwards (step 6) — a long list occasionally drops one.
 
