@@ -160,14 +160,16 @@ Cypress E2E specs need `ng serve` running and are validated in CI. Run `npm run 
 
 The board lives at the [`org-level project number 2`](https://github.com/orgs/Budojo/projects/2). Issues are the primary items; PRs are added alongside them so the connection is visible directly on the board.
 
-Status lifecycle:
+Status lifecycle. The board's `Status` field has **exactly three options** — `Todo`, `In Progress`, `Done` — and `board-set.sh` accepts exactly those three. There is no `Merged`; a fourth row lived in this table for a while and cost a real merge (#1363) the time it takes to try `board-set.sh <N> merged`, get `error: unknown status`, and then guess.
 
-| Status        | When                                                                              |
-| ------------- | --------------------------------------------------------------------------------- |
-| `Todo`        | Issue created                                                                     |
-| `In Progress` | PR opened (set on both the issue item AND the PR item)                            |
-| `Merged`      | PR merged to `develop` — the PR item moves; the issue item stays in `In Progress` |
-| `Done`        | The next `develop → main` release PR is merged — GitHub auto-closes the issue     |
+| Status        | When                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------- |
+| `Todo`        | Issue created                                                                          |
+| `In Progress` | PR opened — set on both the issue item AND the PR item                                 |
+| `Done`        | **PR item:** the moment the PR merges into `develop` — as a unit of work it is finished |
+|               | **Issue item:** the next `develop → main` release PR merges, which is when GitHub auto-closes the issue and the feature actually reaches a user |
+
+The two items therefore sit in different columns for the length of a release train, and that is the intended reading: the PR is done, the feature is not shipped. Keeping a separate `Merged` column would say the same thing with one more option to maintain on a shared board — worth revisiting only if someone wants "merged but unreleased" visible as its own column rather than inferred from the issue beside it.
 
 Use `./.claude/scripts/board-set.sh <N> <status>` to set the status — it encapsulates the 3-step GraphQL pipeline (lookup node id, add to project, set field). Acceptable status values: `todo`, `in-progress`, `done`.
 
