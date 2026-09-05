@@ -20,6 +20,7 @@ import { TagModule } from 'primeng/tag';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { Carnet, CarnetEntry, CarnetService } from '../../../../core/services/carnet.service';
 import { LanguageService } from '../../../../core/services/language.service';
+import { activeCarnetOf } from '../../../../shared/utils/active-carnet';
 import { localeFor } from '../../../../shared/utils/locale';
 
 /**
@@ -99,22 +100,8 @@ export class CarnetPanelComponent {
     return priceCents !== null && entries !== null ? { priceCents, entries } : null;
   });
 
-  /**
-   * The carnet the next session will actually be charged against.
-   *
-   * The list arrives newest-purchase-first, but the server spends the one
-   * expiring soonest (`Carnet::scopeValidOn` orders by `expires_at`), so
-   * taking the first active row would show one balance while sessions burned
-   * another — and disagree with the roster chip, which the server computes.
-   * Mirror the server's order instead.
-   */
-  protected readonly activeCarnet = computed<Carnet | null>(() => {
-    const spendable = this.carnets().filter((c) => c.is_active);
-    return (
-      [...spendable].sort((a, b) => a.expires_at.localeCompare(b.expires_at) || a.id - b.id)[0] ??
-      null
-    );
-  });
+  /** The carnet the next session will be charged against — see `activeCarnetOf`. */
+  protected readonly activeCarnet = computed<Carnet | null>(() => activeCarnetOf(this.carnets()));
 
   /**
    * Every carnet except the one on the card — expired, exhausted, and any

@@ -394,6 +394,12 @@
       "errorBody": "Non siamo riusciti a caricare i tuoi documenti. Aggiorna la pagina e riprova.",
       "expiresAt": "Scade il",
       "expired": "Scaduto"
+    },
+    "carnet": {
+      "title": "Il tuo carnet ingressi",
+      "entriesWord": "ingressi",
+      "expiresOn": "Scade il {{date}}",
+      "lowBalance": "In esaurimento"
     }
   },
   "notifications": {
