@@ -42,6 +42,7 @@ function carnet(over: Record<string, unknown> = {}) {
     remaining_entries: 10,
     price_cents: 7000,
     purchased_at: '2026-01-10',
+    valid_from: '2026-01-10',
     expires_at: '2027-01-10',
     is_active: true,
     ...over,
@@ -160,6 +161,73 @@ describe('Entry carnets — owner', () => {
     // The other one is still valid, so it must not vanish from the page.
     cy.get('[data-cy="carnet-history-toggle"]').click();
     cy.get('[data-cy="carnet-history-list"]').should('contain.text', 'NEWER');
+  });
+
+  it('shows both dates on the card — sold on, and what it covers', () => {
+    stubCommon();
+    cy.intercept('GET', '/api/v1/athletes/1/carnets', {
+      statusCode: 200,
+      body: { data: [carnet({ purchased_at: '2026-09-04', valid_from: '2026-06-01' })] },
+    });
+
+    cy.visitAuthenticated('/dashboard/athletes/1/payments');
+    showPanel();
+    // The sale date was missing entirely before #1380, and the two dates
+    // differing is the whole point of the change.
+    cy.get('[data-cy="carnet-sold-on"]').should('contain.text', '04/09/2026');
+    cy.get('[data-cy="carnet-window"]').should('contain.text', '01/06/2026');
+  });
+
+  it('re-dates a carnet and takes the recomputed balance from the server', () => {
+    stubCommon();
+    cy.intercept('GET', '/api/v1/athletes/1/carnets', {
+      statusCode: 200,
+      body: { data: [carnet({ remaining_entries: 10 })] },
+    });
+    cy.intercept('PATCH', '/api/v1/athletes/1/carnets/7', {
+      statusCode: 200,
+      body: { data: carnet({ valid_from: '2026-05-01', remaining_entries: 7 }) },
+    }).as('patch');
+    cy.intercept('GET', '/api/v1/athletes/1/carnets', {
+      statusCode: 200,
+      body: { data: [carnet({ valid_from: '2026-05-01', remaining_entries: 7 })] },
+    }).as('after');
+
+    cy.visitAuthenticated('/dashboard/athletes/1/payments');
+    showPanel();
+    cy.get('[data-cy="carnet-edit-validity"]').click();
+    cy.get('[data-cy="carnet-validity-dialog"]').should('be.visible');
+    cy.get('[data-cy="carnet-validity-confirm"]').click();
+
+    cy.wait('@patch')
+      .its('request.body.valid_from')
+      .should('match', /^\d{4}-\d{2}-\d{2}$/);
+    cy.wait('@after');
+    // Pulling the window back claimed sessions already on the register: the
+    // balance comes from the server, never recomputed here.
+    showPanel();
+    cy.get('[data-cy="carnet-remaining"]').should('have.text', '7');
+  });
+
+  it('says what a deletion costs before doing it', () => {
+    stubCommon();
+    cy.intercept('GET', '/api/v1/athletes/1/carnets', {
+      statusCode: 200,
+      body: { data: [carnet({ total_entries: 10, remaining_entries: 6 })] },
+    });
+    cy.intercept('DELETE', '/api/v1/athletes/1/carnets/7', { statusCode: 204 }).as('remove');
+
+    cy.visitAuthenticated('/dashboard/athletes/1/payments');
+    showPanel();
+    cy.get('[data-cy="carnet-delete"]').click();
+
+    // Four entries spent, so four sessions lose their cover — shown before the
+    // owner commits, not after.
+    cy.get('.p-confirmpopup').should('contain.text', '(4)');
+    // The label span sits on top of its own button, so targeting the button
+    // resolves an element Cypress then refuses to click as covered.
+    cy.get('[data-pc-name="pcacceptbutton"] .p-button-label').click();
+    cy.wait('@remove');
   });
 
   it('fetches the entry register only when it is opened', () => {

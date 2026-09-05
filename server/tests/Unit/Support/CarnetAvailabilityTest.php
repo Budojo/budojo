@@ -6,11 +6,14 @@ use App\Models\Carnet;
 use App\Support\CarnetAvailability;
 use Carbon\CarbonImmutable;
 
-function carnetWith(int $total, int $spent, string $purchased, string $expires): Carnet
+function carnetWith(int $total, int $spent, string $validFrom, string $expires): Carnet
 {
+    // The window is `valid_from`..`expires_at` since #1380 — the purchase date
+    // records when money changed hands and no longer decides what is covered.
     $carnet = new Carnet([
         'total_entries' => $total,
-        'purchased_at' => $purchased,
+        'purchased_at' => $validFrom,
+        'valid_from' => $validFrom,
         'expires_at' => $expires,
     ]);
     $carnet->setAttribute('entries_count', $spent);
@@ -44,7 +47,7 @@ it('is spendable on the first and last day of the window', function (): void {
         ->and(CarnetAvailability::isActiveOn($carnet, CarbonImmutable::parse('2027-01-01')))->toBeTrue();
 });
 
-it('is not spendable the day before it was bought or the day after it expired', function (): void {
+it('is not spendable the day before validity starts or the day after it expires', function (): void {
     $carnet = carnetWith(10, 0, '2026-01-01', '2027-01-01');
 
     expect(CarnetAvailability::isActiveOn($carnet, CarbonImmutable::parse('2025-12-31')))->toBeFalse()

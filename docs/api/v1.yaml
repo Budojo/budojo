@@ -3698,6 +3698,84 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /athletes/{athlete}/carnets/{carnet}:
+    patch:
+      tags: [athletes]
+      summary: Move a carnet's validity start
+      description: |
+        The only editable field on a carnet: code, price and pack size are
+        snapshots of the sale, and the expiry is derived. Moving `valid_from`
+        drags `expires_at` twelve months behind it and recomputes which
+        sessions the carnet pays for — in either direction, so pushing the
+        start forward releases sessions as surely as pulling it back claims
+        them.
+
+        403 when the carnet does not belong to the athlete in the path.
+      operationId: athleteCarnetUpdateValidity
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: carnet
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarnetValidityUpdateRequest'
+      responses:
+        '200':
+          description: The updated carnet, with the recomputed balance
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Carnet'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [athletes]
+      summary: Undo a carnet sold by mistake
+      description: |
+        Removes the carnet. The sessions it paid for **stay on the attendance
+        register** — they are a record of what happened, not a payment — and
+        become uncovered, unless another carnet's window can take them.
+
+        403 when the carnet does not belong to the athlete in the path.
+      operationId: athleteCarnetDelete
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: carnet
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204':
+          description: Carnet deleted
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /attendance:
     get:
       tags: [attendance]
@@ -6761,7 +6839,7 @@ components:
     Carnet:
       type: object
       required:
-        [id, code, athlete_id, total_entries, remaining_entries, price_cents, purchased_at, expires_at, is_active]
+        [id, code, athlete_id, total_entries, remaining_entries, price_cents, purchased_at, valid_from, expires_at, is_active]
       properties:
         id:
           type: integer
@@ -6797,10 +6875,21 @@ components:
         purchased_at:
           type: string
           format: date
+          description: When money changed hands.
+        valid_from:
+          type: string
+          format: date
+          description: |
+            When the carnet starts covering sessions. Defaults to the sale and
+            may precede it: a carnet dated to cover March pays for training
+            already on the register for March. Editable via `PATCH`.
         expires_at:
           type: string
           format: date
-          description: '`purchased_at` + 12 months, computed once at sale and stored'
+          description: |
+            `valid_from` + 12 months, recomputed whenever `valid_from` moves.
+            The window is always twelve months, so pulling the start back
+            spends validity rather than adding it.
         is_active:
           type: boolean
           description: |
@@ -6840,6 +6929,25 @@ components:
           description: |
             Business date of the sale. Defaults to today when omitted or null.
             May be back-dated; a future date is rejected with 422.
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Where the carnet starts covering sessions. Defaults to the sale.
+            Set it earlier to count training already on the register — those
+            sessions are charged immediately. A future date is rejected.
+
+    CarnetValidityUpdateRequest:
+      type: object
+      required: [valid_from]
+      properties:
+        valid_from:
+          type: string
+          format: date
+          description: |
+            The new validity start. The expiry moves with it and the ledger is
+            rebuilt: sessions are claimed or released at either end.
 
     AthleteEnvelope:
       type: object

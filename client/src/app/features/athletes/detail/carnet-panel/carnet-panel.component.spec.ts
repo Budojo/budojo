@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { Carnet, CarnetEntry, CarnetService } from '../../../../core/services/carnet.service';
@@ -17,6 +17,7 @@ function carnet(overrides: Partial<Carnet> = {}): Carnet {
     remaining_entries: 7,
     price_cents: 7000,
     purchased_at: '2026-01-10',
+    valid_from: '2026-01-10',
     expires_at: '2027-01-10',
     is_active: true,
     ...overrides,
@@ -51,6 +52,7 @@ function setup(
       provideHttpClient(),
       provideHttpClientTesting(),
       MessageService,
+      ConfirmationService,
       { provide: CarnetService, useClass: FakeCarnetService },
       ...provideI18nTesting(),
     ],
@@ -174,7 +176,7 @@ describe('CarnetPanelComponent', () => {
     ).sellForm.patchValue({ purchased_at: new Date(2026, 2, 5) });
     (component as unknown as { confirmSell: () => void }).confirmSell();
 
-    expect(service.sell).toHaveBeenCalledWith(42, '2026-03-05');
+    expect(service.sell).toHaveBeenCalledWith(42, '2026-03-05', undefined);
     expect(service.list).toHaveBeenCalledTimes(1);
   });
 
@@ -197,7 +199,56 @@ describe('CarnetPanelComponent', () => {
 
     (component as unknown as { confirmSell: () => void }).confirmSell();
 
-    expect(service.sell).toHaveBeenCalledWith(42, undefined);
+    expect(service.sell).toHaveBeenCalledWith(42, undefined, undefined);
+  });
+
+  it('sends a back-dated validity when the owner sets one', () => {
+    // The point of #1380: a carnet dated to cover a period already on the
+    // register. The server counts those sessions immediately.
+    const { component, service } = setup();
+
+    (
+      component as unknown as {
+        sellForm: { patchValue: (v: { valid_from: Date }) => void };
+      }
+    ).sellForm.patchValue({ valid_from: new Date(2026, 5, 1) });
+    (component as unknown as { confirmSell: () => void }).confirmSell();
+
+    expect(service.sell).toHaveBeenCalledWith(42, undefined, '2026-06-01');
+  });
+
+  it('previews the expiry the chosen validity start would produce', () => {
+    // The window is always twelve months, so pulling the start back spends
+    // validity. The owner has to see where the far end lands before saving.
+    const { component, fixture } = setup();
+
+    (component as unknown as { openValidityDialog: (c: Carnet) => void }).openValidityDialog(
+      carnet({ valid_from: '2026-09-01' }),
+    );
+    (
+      component as unknown as {
+        validityForm: { patchValue: (v: { valid_from: Date }) => void };
+      }
+    ).validityForm.patchValue({ valid_from: new Date(2026, 2, 1) });
+    fixture.detectChanges();
+
+    expect(
+      (component as unknown as { previewExpiry: () => string | null }).previewExpiry(),
+    ).toContain('2027');
+  });
+
+  it('offers the same actions on a spent carnet, which is where a mis-sale lands', () => {
+    // A carnet dated far enough back to consume every entry is not active, so
+    // it drops into the history list — and that is precisely the mistake worth
+    // undoing, so the history rows carry the actions too.
+    const { fixture } = setup({
+      carnets: [carnet({ id: 3, is_active: false, remaining_entries: 0 })],
+    });
+
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="carnet-history-delete-3"]'),
+    ).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="carnet-history-edit-3"]')).not.toBeNull();
   });
 
   it('explains a 422 as a missing academy configuration', () => {

@@ -41,14 +41,16 @@ final class CarnetAvailability
     /**
      * Spendable on `$date`: inside the validity window AND with entries left.
      *
-     * The window is checked against the date being *attended*, never against
-     * today — the owner back-fills past sessions routinely, and a session from
-     * March must be judged by whether the carnet was valid in March.
+     * The window is `valid_from`..`expires_at`, not the purchase date (#1380):
+     * a carnet sold today can be set to cover March, and the sessions already
+     * recorded in March then count against it.
+     *
+     * Checked against the date being *attended*, never against today.
      */
     public static function isActiveOn(Carnet $carnet, CarbonInterface $date): bool
     {
         return self::remainingEntries($carnet) > 0
-            && $carnet->purchased_at->startOfDay()->lessThanOrEqualTo($date->copy()->startOfDay())
+            && $carnet->valid_from->startOfDay()->lessThanOrEqualTo($date->copy()->startOfDay())
             && $carnet->expires_at->startOfDay()->greaterThanOrEqualTo($date->copy()->startOfDay());
     }
 }

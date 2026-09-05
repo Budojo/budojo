@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Athlete;
 
+use App\Actions\Payment\DeleteCarnetAction;
 use App\Actions\Payment\ListAthleteCarnetsAction;
 use App\Actions\Payment\ListCarnetEntriesAction;
 use App\Actions\Payment\SellCarnetAction;
+use App\Actions\Payment\UpdateCarnetValidityAction;
 use App\Authorization\Capability;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Carnet\StoreCarnetRequest;
+use App\Http\Requests\Carnet\UpdateCarnetRequest;
 use App\Http\Resources\CarnetEntryResource;
 use App\Http\Resources\CarnetResource;
 use App\Models\Academy;
@@ -27,6 +30,8 @@ class CarnetController extends Controller
         private readonly SellCarnetAction $sellAction,
         private readonly ListAthleteCarnetsAction $listAction,
         private readonly ListCarnetEntriesAction $listEntriesAction,
+        private readonly UpdateCarnetValidityAction $updateValidityAction,
+        private readonly DeleteCarnetAction $deleteAction,
     ) {
     }
 
@@ -78,9 +83,41 @@ class CarnetController extends Controller
             totalEntries: $academy->carnet_entries,
             priceCents: $academy->carnet_price_cents,
             purchasedAt: CarbonImmutable::make($request->date('purchased_at')) ?? CarbonImmutable::today(),
+            validFrom: CarbonImmutable::make($request->date('valid_from')),
         );
 
         return response()->json(['data' => new CarnetResource($carnet)], 201);
+    }
+
+    public function update(UpdateCarnetRequest $request, Athlete $athlete, Carnet $carnet): JsonResponse
+    {
+        if ($carnet->athlete_id !== $athlete->id) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $validFrom = CarbonImmutable::make($request->date('valid_from'));
+        \assert($validFrom instanceof CarbonImmutable); // `required` in the request
+
+        return response()->json([
+            'data' => new CarnetResource($this->updateValidityAction->execute($carnet, $validFrom)),
+        ]);
+    }
+
+    public function destroy(Request $request, Athlete $athlete, Carnet $carnet): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        // Deleting a carnet is undoing a sale, so it is gated like one — the
+        // read capability is not enough.
+        if (! $user->canInAcademy($athlete->academy_id, Capability::PaymentsMarkPaid)
+            || $carnet->athlete_id !== $athlete->id) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $this->deleteAction->execute($carnet);
+
+        return response()->json(null, 204);
     }
 
     /**

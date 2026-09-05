@@ -15,20 +15,28 @@ A carnet row is the **fact of a sale**. It is never edited and never deleted thr
 | `athlete_id` | bigint unsigned | FK `athletes.id`, cascade on delete | Owner of the carnet. Tenant scoping rides the athlete, as everywhere else |
 | `total_entries` | unsigned tinyint | not null | Snapshot of `academies.carnet_entries` at sale. Resizing the offering later does NOT resize carnets already sold |
 | `price_cents` | unsigned int | not null | Snapshot of `academies.carnet_price_cents` at sale. Raising the price later does NOT rewrite sold carnets |
-| `purchased_at` | date | not null | Business date of the sale. Back-dateable (the owner transcribes a paper register); never post-dated |
-| `expires_at` | date | not null | `purchased_at` + 12 months, computed once at insert and stored |
+| `purchased_at` | date | not null | Business date of the **sale** — when money changed hands. Back-dateable; never post-dated |
+| `valid_from` | date | not null | When the carnet starts **covering sessions** (#1380). Defaults to the sale, editable afterwards, and may precede it: a carnet dated to cover March pays for training already on the register for March |
+| `expires_at` | date | not null | `valid_from` + 12 months, recomputed whenever `valid_from` moves |
 | `created_at` | timestamp | nullable | Standard Eloquent timestamp |
 | `updated_at` | timestamp | nullable | Standard Eloquent timestamp |
 
 ### Why `expires_at` is stored rather than derived
 
-Two reasons. It keeps "which carnets are valid on date D" a plain indexed `WHERE` instead of a computed expression, and it means a future change to the validity period cannot retroactively expire carnets already sold — the same principle behind snapshotting price and size.
+It keeps "which carnets are valid on date D" a plain indexed `WHERE` instead of a computed expression, and a future change to the validity period cannot retroactively expire carnets already sold — the same principle behind snapshotting price and size.
+
+### Why the window hangs off `valid_from`, not the sale
+
+The two dates answer different questions, and conflating them is what made the owner's first real carnet wrong: sold on 4 September, it ignored the session recorded on the 2nd. What a carnet pays for has to be a property of its **window**, not of when someone clicked sell.
+
+The expiry follows the validity start rather than the sale, so the window is always exactly twelve months. Pulling the start back therefore *spends* validity rather than adding it — a consequence the UI has to show before the owner confirms, not after.
 
 ## Indexes
 
 - `PRIMARY KEY(id)`
 - `UNIQUE(code)` — the authority on code uniqueness. `SellCarnetAction` draws a random code and redraws when the index rejects it, so no application-side "is this taken?" query is needed
 - `INDEX(athlete_id, expires_at)` — the "active carnets for this athlete on this date" lookup, which every read path performs
+- `INDEX(athlete_id, valid_from)` — the other end of the same window check, which moved off `purchased_at` in #1380
 - Implicit index on `athlete_id` from the foreign key
 
 ## The code
@@ -50,18 +58,22 @@ Scope of uniqueness is the whole table, not per academy: a Budojo install is nor
 - **Price and size are snapshotted, not derived.** Both are copied from the academy config at sale. This is the same rule as `athlete_payments.amount_cents`.
 - **Cannot sell without a configured offering.** If either `academies.carnet_price_cents` or `academies.carnet_entries` is `null`, `POST` returns `422` naming whichever field is missing. The owner sets them via `PATCH /api/v1/academy`.
 - **The balance is never stored.** `remaining_entries` = `total_entries` − the number of `carnet_entries` rows. A stored counter would be a derived value pretending to be a fact, and every path that failed to update it would corrupt the balance undetectably.
-- **Back-dating is allowed, post-dating is not.** `purchased_at` defaults to today and may be set to any past date; a future date is rejected at the request layer (`before_or_equal:today`). Validity runs from the purchase date, so a carnet that "starts later" is not a concept.
+- **Back-dating is allowed, post-dating is not.** Both `purchased_at` and `valid_from` default to today, may be set to any past date, and are rejected in the future (`before_or_equal:today`). A carnet that "starts later" is not a concept: validity runs from a day that has happened.
+- **Re-dating recomputes what the carnet paid for.** `PATCH` on the carnet moves `valid_from`, drags `expires_at` with it, and rebuilds the ledger — sessions can be claimed or released in either direction. See [`carnet-entry.md`](./carnet-entry.md).
 - **Authorisation reuses the payments capability.** Selling a carnet is gated by `PaymentsMarkPaid` in the athlete's academy — it is the same act of trust as marking a month paid, and the capability matrix is deliberately coarse-grained. Listing is gated by `PaymentsRead`.
-- **No edit, no delete.** The API exposes neither. Correcting a mis-sale is out of scope (see [`docs/specs/entry-carnets.md`](../specs/entry-carnets.md) § Non-goals).
+- **`valid_from` is the only editable field.** Code, price and size are snapshots of the sale; the expiry is derived. Nothing else can be changed after the fact.
+- **A carnet can be deleted (#1380).** Originally ruled out — "a sold carnet is a fact" — but mistyping a sale is far likelier than wanting to rewrite history, and there was no way back. The sessions it paid for **stay on the attendance register** and become uncovered, unless another carnet's window can take them. How many lose cover is shown to the owner before the deletion, not after.
 
 ## Audit
 
-`CarnetAuditObserver` writes a `carnet.created` audit entry on sale, labelled `"Mario Rossi — A7K2"`. Only `created` is wired, because the entity has no update or delete path.
+`CarnetAuditObserver` logs all three mutations, labelled `"Mario Rossi — A7K2"`: `carnet.created` on sale, `carnet.updated` when the validity window moves — which changes what the athlete has already paid for — and `carnet.deleted` on `deleting`, so the row is still readable when the entry is written.
 
 ## Related endpoints
 
 - `GET /api/v1/athletes/{athlete}/carnets` — list the athlete's carnets, newest purchase first, each with `remaining_entries`
-- `POST /api/v1/athletes/{athlete}/carnets` — sell one (body: optional `{purchased_at}`); returns 201
+- `POST /api/v1/athletes/{athlete}/carnets` — sell one (body: optional `{purchased_at, valid_from}`); returns 201
+- `PATCH /api/v1/athletes/{athlete}/carnets/{carnet}` — move `valid_from` (and with it the expiry and the ledger)
+- `DELETE /api/v1/athletes/{athlete}/carnets/{carnet}` — undo a mis-sale; 204
 
 ## Related tables
 

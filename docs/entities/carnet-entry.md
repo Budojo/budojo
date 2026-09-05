@@ -4,7 +4,9 @@
 
 One consumed entry from a [`Carnet`](./carnet.md), pinned to the `AttendanceRecord` that consumed it. This table is the **ledger** the residual balance is counted from — a carnet's remaining entries are `carnets.total_entries` minus the number of rows here.
 
-Storing consumption as an append-only ledger rather than decrementing a counter is the central design decision of the carnet feature: a counter is a derived value pretending to be a fact, and any path that fails to update it corrupts the balance with no way to detect the drift. Counting rows cannot drift, because there is nothing to keep in sync.
+Storing consumption as a ledger rather than decrementing a counter is the central design decision of the carnet feature: a counter is a derived value pretending to be a fact, and any path that fails to update it corrupts the balance with no way to detect the drift.
+
+**Since #1380 the table is a projection, not a log.** It shipped as an append-only record written when a presence was marked, which meant sessions predating the sale were never looked at again — the defect that made a carnet sold on 4 September ignore the session on the 2nd. What a carnet pays for is now a function of its window, so the ledger is *rebuilt from the facts* by `ReconcileCarnetEntriesAction` rather than accumulated by events.
 
 ## Schema — `carnet_entries`
 
@@ -17,9 +19,9 @@ Storing consumption as an append-only ledger rather than decrementing a counter 
 | `created_at` | timestamp | nullable | Standard Eloquent timestamp |
 | `updated_at` | timestamp | nullable | Standard Eloquent timestamp |
 
-### Why `UNIQUE(attendance_record_id)` matters
+### Why `UNIQUE(attendance_record_id)` still matters
 
-It makes "one attendance consumes at most one entry" a property of the schema rather than of the code. That is what removes the need for pessimistic locking around consumption: a duplicate consumption attempt fails on the constraint instead of racing for a lock. It is the same technique as the `UNIQUE(athlete_id, year, month)` index that makes `RecordAthletePaymentAction` safe.
+It makes "one attendance consumes at most one entry" a property of the schema rather than of the code — now doubly useful, since a reconciliation that computed two assignments for one session would fail loudly instead of silently double-charging. Same technique as the `UNIQUE(athlete_id, year, month)` index behind `RecordAthletePaymentAction`.
 
 (Budojo also ships as a local-first single-tenant desktop app on SQLite, so there is no concurrent-terminal scenario to defend against in the first place — but the constraint is the guarantee regardless of deployment shape.)
 
@@ -37,8 +39,8 @@ It makes "one attendance consumes at most one entry" a property of the schema ra
 
 ## Business rules
 
-- **Monthly-first, carnet frozen.** A presence falling in a month covered by an `athlete_payments` row consumes nothing. The carnet is a fallback, never a parallel charge.
-- **The attended date is the date that matters.** Both the monthly-coverage lookup and the carnet validity window are evaluated against `attendance_records.attended_on`, not against today — the owner back-fills past sessions routinely. A session from March is judged by the coverage that was in force in March.
+- **Monthly-first, carnet frozen.** A session in a month covered by an `athlete_payments` row consumes nothing. The carnet is a fallback, never a parallel charge — and since #1380 this is evaluated from the facts, so *paying a month afterwards releases the entries it had taken*. Under the event model that discrepancy was accepted on purpose; once the balance is a function of its inputs, freezing it would be the anomaly.
+- **The attended date is the date that matters.** Both the monthly-coverage lookup and the carnet window are evaluated against `attendance_records.attended_on`, never against today.
 - **FIFO across carnets.** When an athlete holds more than one valid carnet, the entry comes off the one expiring soonest, so they lose the fewest entries to expiry. Ties break on `id`.
 - **Never overdrawn.** A carnet with no entries left is not spendable, even inside its validity window. `CarnetAvailability::isActiveOn` is the single expression of that rule; the `UNIQUE(attendance_record_id)` index is the structural backstop against one presence consuming twice.
 - **Re-marking is free.** `MarkAttendanceAction` hands the consumer only the rows it just created, so marking an already-present athlete again charges nothing.
@@ -47,11 +49,16 @@ It makes "one attendance consumes at most one entry" a property of the schema ra
 
 ## Where the writes happen
 
-| Path | Action |
+Every input that can move the result runs `ReconcileCarnetEntriesAction` afterwards, in the same transaction as the change. A wider blast radius than the old event model, and the price of the balance being correct rather than merely consistent with the order things happened in.
+
+| Path | Why it moves the result |
 |---|---|
-| `MarkAttendanceAction` | `ConsumeCarnetEntriesAction` charges the freshly created rows, in the same transaction as the inserts. Coverage and candidate carnets are each fetched once for the whole batch, so the owner's daily bulk mark does not fan out per athlete. |
-| `DeleteAttendanceAction` | `ReleaseCarnetEntryAction` gives the entry back, in the same transaction as the soft-delete. |
-| `UnmarkTodayAttendanceAction` | Same release, for the athlete-portal self-revert. |
+| `MarkAttendanceAction` | A new session may fall in a carnet's window. Batched: carnets, sessions, payments and the existing ledger are one query each for the whole bulk mark, so twenty athletes cost what one does plus the writes. |
+| `DeleteAttendanceAction` / `UnmarkTodayAttendanceAction` | The session leaves the set the ledger derives from. There is no explicit refund any more — and another carnet may pick up a different session as a result, which is why the whole athlete is recomputed. |
+| `SellCarnetAction` | A carnet dated into the past is owed sessions the register already holds. |
+| `UpdateCarnetValidityAction` | Moving the window claims or releases sessions at either end. |
+| `DeleteCarnetAction` | Its sessions fall back to another carnet, or to uncovered. |
+| `RecordAthletePaymentAction` / `DeleteAthletePaymentAction` | The monthly fee's precedence is derived, so adding or undoing a payment changes what the carnet owes. |
 
 ## Related tables
 

@@ -1901,7 +1901,9 @@
           "purchasedAt": "Data di acquisto",
           "purchasedAtHint": "Predefinita a oggi. Retrodatala se stai trascrivendo un registro cartaceo.",
           "confirm": "Vendi carnet",
-          "cancel": "Annulla"
+          "cancel": "Annulla",
+          "validFrom": "Copre gli allenamenti da",
+          "validFromHint": "Lascia vuoto per partire dalla data di acquisto. Anticipala per conteggiare allenamenti già registrati."
         },
         "toast": {
           "soldSummary": "Carnet venduto",
@@ -1910,9 +1912,25 @@
           "errorNotConfigured": "Imposta prima prezzo e taglia del carnet nelle impostazioni dell'academy.",
           "errorGeneric": "Non è stato possibile vendere il carnet. Riprova.",
           "errorEntries": "Non è stato possibile caricare il registro ingressi.",
-          "loadError": "Non è stato possibile caricare i carnet."
+          "loadError": "Non è stato possibile caricare i carnet.",
+          "validitySummary": "Validità aggiornata",
+          "validityDetail": "Il saldo è stato ricalcolato.",
+          "deletedSummary": "Carnet eliminato",
+          "deletedDetail": "Gli allenamenti restano nel registro presenze."
         },
-        "sellWithPrice": "Vendi carnet — {{price}} / {{entries}} ingressi"
+        "sellWithPrice": "Vendi carnet — {{price}} / {{entries}} ingressi",
+        "soldOn": "Venduto il {{date}}",
+        "window": "Valido {{from}} → {{to}}",
+        "editValidity": "Modifica validità",
+        "delete": "Elimina",
+        "confirmDelete": "Eliminare il carnet {{code}}? Gli allenamenti che sta pagando ({{count}}) restano nel registro presenze ma perdono la copertura, a meno che un altro carnet li copra.",
+        "validityDialog": {
+          "title": "Modifica l'inizio della validità",
+          "body": "Il carnet copre gli allenamenti compresi fra l'inizio della validità e la scadenza. Spostare l'inizio sposta anche la scadenza — la finestra dura sempre 12 mesi, quindi anticiparla consuma validità invece di aggiungerne.",
+          "hint": "Gli allenamenti già registrati dentro la nuova finestra verranno conteggiati.",
+          "confirm": "Salva",
+          "newExpiry": "Nuova scadenza: {{date}}"
+        }
       }
     },
     "form": {

@@ -10,6 +10,7 @@ function carnet(over: Partial<Carnet> = {}): Carnet {
     remaining_entries: 6,
     price_cents: 7000,
     purchased_at: '2026-01-10',
+    valid_from: '2026-01-10',
     expires_at: '2027-01-10',
     is_active: true,
     ...over,
