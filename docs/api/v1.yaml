@@ -3628,11 +3628,16 @@ paths:
         Marks the athlete as paid for the given month. **Idempotent** —
         POSTing the same `(year, month)` twice returns the existing row
         instead of creating a duplicate. `amount_cents` on the resulting
-        row is snapshotted from the academy's current `monthly_fee_cents`;
-        future fee changes do NOT rewrite past records.
+        row is snapshotted from **the fee that applies to this athlete** —
+        their price tier's amount if they are on one, the academy's flat
+        `monthly_fee_cents` otherwise (#1381). Future fee, tier, or
+        tier-membership changes do NOT rewrite past records.
 
-        Returns 422 if the academy has not configured a monthly fee
-        (`academy.monthly_fee_cents === null`). Cross-academy returns 403.
+        Returns 422 when no fee applies at all: the athlete is on no tier
+        **and** `academy.monthly_fee_cents` is null. An athlete on a tier is
+        payable even when the academy has no flat fee. The athlete resource's
+        `monthly_fee_cents` is the resolved amount, so a client can tell
+        upfront. Cross-academy returns 403.
       operationId: athletePaymentRecord
       parameters:
         - name: athlete
@@ -7111,7 +7116,10 @@ components:
         amount_cents:
           type: integer
           minimum: 0
-          description: Snapshot of `academy.monthly_fee_cents` at recording time
+          description: |
+            Snapshot of the fee that applied to this athlete at recording
+            time — their tier's amount if they were on one, the academy's
+            flat `monthly_fee_cents` otherwise (#1381).
         paid_at:
           type: string
           format: date-time

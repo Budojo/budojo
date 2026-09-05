@@ -3,7 +3,7 @@
     <h2 class="payments-list__title">
       {{ 'athletes.detail.payments.title' | translate: { year } }}
     </h2>
-    @if (!hasMonthlyFee()) {
+    @if (feeKnown() && !hasMonthlyFee()) {
       <p class="payments-list__hint" data-cy="payments-no-fee-hint">
         {{ 'athletes.detail.payments.noFeeHint' | translate }}
       </p>

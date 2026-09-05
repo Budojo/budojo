@@ -98,10 +98,16 @@ export class PaymentsListComponent implements OnInit {
 
   /**
    * What this athlete pays each month, resolved server-side (#1381): their
-   * price tier if they are on one, the academy's flat fee otherwise. Null
-   * until the athlete loads, and after that null only when neither exists.
+   * price tier if they are on one, the academy's flat fee otherwise.
+   *
+   * Three states, and the third one matters: `undefined` means the athlete
+   * request has not answered yet, `null` means no fee applies, a number is
+   * the amount. Collapsing "not known yet" into "no fee" would paint "this
+   * academy has not configured a monthly fee" for the fraction of a second
+   * before the athlete lands — a claim, not a loading state — and would
+   * leave the table permanently read-only when that request fails.
    */
-  protected readonly athleteFeeCents = signal<number | null>(null);
+  protected readonly athleteFeeCents = signal<number | null | undefined>(undefined);
 
   /** The tier they are on, or null when they are on the academy's flat fee. */
   protected readonly feeTier = signal<FeeTier | null>(null);
@@ -115,6 +121,9 @@ export class PaymentsListComponent implements OnInit {
    * would lock the buttons for athletes who plainly do have a fee.
    */
   protected readonly hasMonthlyFee = computed(() => this.athleteFeeCents() !== null);
+
+  /** False until the athlete request answers — see `athleteFeeCents`. */
+  protected readonly feeKnown = computed(() => this.athleteFeeCents() !== undefined);
 
   /**
    * Pre-built 12-row view-model — joins the loaded payments with
@@ -130,7 +139,11 @@ export class PaymentsListComponent implements OnInit {
       const month = i + 1;
       // Future months can't be paid (the month hasn't happened); past
       // and current months can. Read-only when no monthly fee is
-      // configured at all — there's nothing to record.
+      // configured at all — there's nothing to record. While the fee is
+      // still unknown the buttons stay live: a click that really has no
+      // fee behind it gets the server's 422 and its toast, which is a
+      // better trade than flickering the whole table read-only on
+      // every visit.
       const canEdit = fee && month <= this.currentMonth;
       return {
         month,
@@ -268,7 +281,10 @@ export class PaymentsListComponent implements OnInit {
         this.feeTier.set(athlete.fee_tier ?? null);
       },
       // Silent failure here — the confirm popup falls back to "this
-      // athlete" rather than blocking the table.
+      // athlete" rather than blocking the table, and `athleteFeeCents`
+      // deliberately stays `undefined` so the fee is treated as unknown
+      // rather than absent. Setting it to null here would lock every
+      // button on a transient network blip.
       error: () => undefined,
     });
   }

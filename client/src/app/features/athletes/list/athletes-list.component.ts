@@ -168,6 +168,27 @@ export class AthletesListComponent implements OnInit {
   readonly hasMonthlyFee = computed(() => academyChargesAFee(this.academyService.academy()));
 
   /**
+   * Rows where a current-month payment is not expected, and the Paid cell
+   * shows an em-dash instead of a toggle:
+   *
+   *   - the owner training in their own academy (#750) — no payment ledger;
+   *   - a suspended or inactive athlete (#805) — surfacing "Unpaid" there
+   *     conflated "no payment recorded" with "owes";
+   *   - nobody resolved a fee for them (#1381) — on an academy priced only
+   *     by tier, an athlete on no tier owes nothing, and offering the toggle
+   *     would send the owner into a 422.
+   *
+   * `monthly_fee_cents` is absent on pre-#1381 payloads, and `undefined` is
+   * read as "a fee applies" so old fixtures and cached responses keep the
+   * toggle they have always had.
+   */
+  paymentNotExpected(athlete: Athlete): boolean {
+    return (
+      athlete.is_self === true || athlete.status !== 'active' || athlete.monthly_fee_cents === null
+    );
+  }
+
+  /**
    * Current-month labels for the "Paid" column (#282). BOTH labels are
    * derived from a single `Date` instance (`_now`) so they can never
    * disagree across a UTC month boundary — Copilot caught this on #289:

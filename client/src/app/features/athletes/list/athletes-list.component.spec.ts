@@ -1074,3 +1074,58 @@ describe('AthletesListComponent', () => {
     });
   });
 });
+
+describe('AthletesListComponent — who is expected to pay (#1381)', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AthletesListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
+      ],
+    });
+  });
+
+  function athlete(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 1,
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      status: 'active',
+      is_self: false,
+      monthly_fee_cents: 6500,
+      ...overrides,
+    } as never;
+  }
+
+  function predicate() {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    return fixture.componentInstance.paymentNotExpected.bind(fixture.componentInstance);
+  }
+
+  it('expects payment from an ordinary active athlete on a fee', () => {
+    expect(predicate()(athlete())).toBe(false);
+  });
+
+  it('does not expect payment from the owner training in their own academy', () => {
+    expect(predicate()(athlete({ is_self: true }))).toBe(true);
+  });
+
+  it('does not expect payment from a suspended athlete', () => {
+    expect(predicate()(athlete({ status: 'suspended' }))).toBe(true);
+  });
+
+  it('does not expect payment when no fee resolves for them', () => {
+    // A tier-only academy where nobody put this athlete on a tier: they owe
+    // nothing, and the server would 422 the toggle.
+    expect(predicate()(athlete({ monthly_fee_cents: null }))).toBe(true);
+  });
+
+  it('still expects payment on a pre-#1381 payload with no fee field', () => {
+    expect(predicate()(athlete({ monthly_fee_cents: undefined }))).toBe(false);
+  });
+});

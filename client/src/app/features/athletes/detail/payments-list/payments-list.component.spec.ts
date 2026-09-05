@@ -177,6 +177,37 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     expect(tierHint.textContent).toContain('55');
   });
 
+  it('keeps the table usable when the athlete request fails (#1381)', () => {
+    TestBed.configureTestingModule({
+      imports: [PaymentsListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PaymentService, useClass: FakePaymentService },
+        {
+          provide: AthleteService,
+          useValue: { get: vi.fn(() => throwError(() => ({ status: 500 }))) },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { parent: { paramMap: of(convertToParamMap({ id: '42' })) } },
+        },
+        ...provideI18nTesting(),
+      ],
+    });
+    TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+
+    const fixture = TestBed.createComponent(PaymentsListComponent);
+    fixture.detectChanges();
+
+    // The fee stays unknown, not absent: claiming "no fee configured" on a
+    // network blip would lock every button, which is what the silent-failure
+    // comment on the load handler exists to prevent.
+    expect(fixture.nativeElement.querySelector('[data-cy="payments-no-fee-hint"]')).toBeNull();
+    const marks = fixture.nativeElement.querySelectorAll('[data-cy^="payment-mark-"]');
+    expect(marks.length).toBeGreaterThan(0);
+  });
+
   it('names no tier when the athlete is on the academy flat fee', () => {
     const { fixture } = setup();
 
