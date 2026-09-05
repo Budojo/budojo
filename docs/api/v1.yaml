@@ -3573,6 +3573,131 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /athletes/{athlete}/carnets:
+    get:
+      tags: [athletes]
+      summary: List an athlete's entry carnets
+      description: |
+        Returns every carnet the athlete has ever held, newest purchase
+        first. `remaining_entries` is derived by counting the consumption
+        ledger — it is never stored — so it cannot drift from the entries
+        actually used. Cross-academy access returns 403.
+      operationId: athleteCarnetList
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: List of carnets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Carnet'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [athletes]
+      summary: Sell an entry carnet to an athlete
+      description: |
+        Sells one carnet. `code`, `total_entries` and `price_cents` are all
+        generated or snapshotted server-side and are never accepted from the
+        client: the pack size and price come from the academy's
+        `carnet_entries` / `carnet_price_cents` settings at the moment of
+        sale, so a later price change does NOT rewrite carnets already sold.
+
+        `expires_at` is computed as `purchased_at` + 12 months and stored.
+        `purchased_at` defaults to today and may be back-dated (transcribing
+        a paper register) but never post-dated.
+
+        Returns 422 when either half of the academy's carnet offering is
+        unconfigured — the `errors` object names whichever field is missing.
+        Cross-academy returns 403.
+      operationId: athleteCarnetSell
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarnetCreateRequest'
+      responses:
+        '201':
+          description: Carnet sold
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Carnet'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /athletes/{athlete}/carnets/{carnet}/entries:
+    get:
+      tags: [athletes]
+      summary: List the sessions a carnet paid for
+      description: |
+        The consumption register for one carnet, most recent session first —
+        the answer to "where did my ten entries go".
+
+        Returns 403 when the carnet does not belong to the athlete in the
+        path, as well as on cross-academy access: pairing someone else's
+        carnet id with an athlete you can reach must not expose it.
+      operationId: athleteCarnetEntryList
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: carnet
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Consumed entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CarnetEntry'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /attendance:
     get:
       tags: [attendance]
@@ -5143,6 +5268,38 @@ paths:
         '404':
           description: User has no linked athlete row.
 
+  /me/carnets:
+    get:
+      tags: [auth]
+      summary: Athlete's own entry carnets
+      description: |
+        The calling athlete's carnets, newest purchase first, with the
+        residual balance and expiry — so "quanti ingressi mi restano" does not
+        have to be asked at the desk. Owners get 404: they have no personal
+        ledger, and `/athletes/{id}/carnets` is their entry point.
+      operationId: meCarnetsIndex
+      responses:
+        '200':
+          description: The athlete's carnets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Carnet'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: The authenticated user has no athlete profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
+              example: { message: No athlete profile found. }
+
   /me/payments:
     get:
       tags: [auth]
@@ -5939,6 +6096,24 @@ components:
             Set to `null` to clear. Required to be non-null before any
             `POST /athletes/{id}/payments` request will succeed.
           example: 9500
+        carnet_price_cents:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: |
+            Price of one entry carnet, in cents (€70.00 = 7000). Set to
+            `null` to stop offering carnets. Both this and `carnet_entries`
+            must be non-null before `POST /athletes/{id}/carnets` succeeds.
+          example: 7000
+        carnet_entries:
+          type: integer
+          minimum: 1
+          maximum: 255
+          nullable: true
+          description: |
+            How many entries one carnet holds. Snapshotted onto each carnet
+            at sale, so changing it never resizes carnets already sold.
+          example: 10
         training_days:
           $ref: '#/components/schemas/TrainingDays'
 
@@ -6020,6 +6195,8 @@ components:
           address,
           logo_url,
           monthly_fee_cents,
+          carnet_price_cents,
+          carnet_entries,
           training_days,
           phone_country_code,
           phone_national_number,
@@ -6100,6 +6277,24 @@ components:
             configured" — the payments endpoints reject `POST` with 422
             until the owner sets this via `PATCH /api/v1/academy`.
           example: 9500
+        carnet_price_cents:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: |
+            Price of one entry carnet in cents. `null` on either this or
+            `carnet_entries` means "this academy does not sell carnets" —
+            `POST /athletes/{id}/carnets` rejects with 422 until both are set.
+          example: 7000
+        carnet_entries:
+          type: integer
+          minimum: 1
+          maximum: 255
+          nullable: true
+          description: |
+            How many entries one carnet holds. Snapshotted onto each carnet
+            at sale.
+          example: 10
         training_days:
           $ref: '#/components/schemas/TrainingDays'
         current_schedule:
@@ -6355,6 +6550,7 @@ components:
         - address
         - created_at
         - paid_current_month
+        - active_carnet
       properties:
         id:
           type: integer
@@ -6429,6 +6625,30 @@ components:
             athlete with `(year, month) = (NOW()->year, NOW()->month)`. The
             `/athletes` index endpoint eager-loads only the current-month
             payments slice to keep this derivation O(1) per row (no N+1).
+        active_carnet:
+          type: object
+          nullable: true
+          description: |
+            The athlete's spendable carnet today — inside its validity window
+            with entries left — or `null` when they hold none. Lets the roster
+            render a balance chip without a per-row call; the index endpoint
+            eager-loads the window slice the same way it does for
+            `paid_current_month`. When more than one is spendable this is the
+            one that expires soonest, i.e. the one that will be charged next.
+          required: [id, code, remaining_entries, expires_at]
+          properties:
+            id:
+              type: integer
+              format: int64
+            code:
+              type: string
+              example: A7K2
+            remaining_entries:
+              type: integer
+              minimum: 1
+            expires_at:
+              type: string
+              format: date
         user_handle:
           type: string
           nullable: true
@@ -6537,6 +6757,89 @@ components:
           type: integer
           minimum: 1
           maximum: 12
+
+    Carnet:
+      type: object
+      required:
+        [id, code, athlete_id, total_entries, remaining_entries, price_cents, purchased_at, expires_at, is_active]
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+          minLength: 4
+          maxLength: 4
+          pattern: '^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{4}$'
+          description: |
+            Human-facing handle, unique across all carnets. Generated
+            server-side from an alphabet that omits the glyphs misread on a
+            handwritten card (no `0`/`O`, no `1`/`I`/`L`).
+          example: A7K2
+        athlete_id:
+          type: integer
+          format: int64
+        total_entries:
+          type: integer
+          minimum: 1
+          maximum: 255
+          description: Snapshot of `academy.carnet_entries` at sale time
+        remaining_entries:
+          type: integer
+          minimum: 0
+          description: |
+            Derived as `total_entries` minus the number of consumed entries in
+            the ledger. Never stored, so it cannot drift.
+        price_cents:
+          type: integer
+          minimum: 0
+          description: Snapshot of `academy.carnet_price_cents` at sale time
+        purchased_at:
+          type: string
+          format: date
+        expires_at:
+          type: string
+          format: date
+          description: '`purchased_at` + 12 months, computed once at sale and stored'
+        is_active:
+          type: boolean
+          description: |
+            Spendable **today**: inside the validity window and with entries
+            left. Consumption asks the same question of the attended date
+            instead, so a back-filled session is judged by the coverage that
+            was in force when it happened.
+
+    CarnetEntry:
+      type: object
+      required: [id, carnet_id, attendance_record_id, used_on]
+      properties:
+        id:
+          type: integer
+          format: int64
+        carnet_id:
+          type: integer
+          format: int64
+        attendance_record_id:
+          type: integer
+          format: int64
+          description: |
+            The presence that consumed this entry. Unique across the table —
+            one attendance can never consume two entries.
+        used_on:
+          type: string
+          format: date
+          description: Copy of the attendance record's `attended_on`
+
+    CarnetCreateRequest:
+      type: object
+      properties:
+        purchased_at:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Business date of the sale. Defaults to today when omitted or null.
+            May be back-dated; a future date is rejected with 422.
 
     AthleteEnvelope:
       type: object

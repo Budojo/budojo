@@ -69,6 +69,7 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
     update: {
       status: async () => ({ phase: 'idle' }),
       onStatus: () => () => undefined,
+      installNow: async () => ({ ok: false }),
     },
   };
 

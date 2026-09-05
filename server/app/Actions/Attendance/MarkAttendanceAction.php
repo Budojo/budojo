@@ -4,14 +4,21 @@ declare(strict_types=1);
 
 namespace App\Actions\Attendance;
 
+use App\Actions\Payment\ConsumeCarnetEntriesAction;
 use App\Enums\AttendanceSource;
 use App\Models\Academy;
 use App\Models\AttendanceRecord;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class MarkAttendanceAction
 {
+    public function __construct(
+        private readonly ConsumeCarnetEntriesAction $consumeCarnetEntries,
+    ) {
+    }
+
     /**
      * Bulk-mark a set of athletes present on a given date for an academy.
      *
@@ -72,19 +79,28 @@ class MarkAttendanceAction
 
         $newRecords = collect();
 
-        foreach ($validIds as $athleteId) {
-            if ($alreadyPresent->has($athleteId)) {
-                // Idempotent path — surface the existing record so the
-                // caller gets a uniform "here's who is now present" list.
-                continue;
+        // One transaction over the inserts and the carnet charge: a presence
+        // that got recorded without charging its entry (or vice versa) is
+        // exactly the drift the derived-balance design exists to prevent.
+        DB::transaction(function () use ($validIds, $alreadyPresent, $date, $source, $newRecords): void {
+            foreach ($validIds as $athleteId) {
+                if ($alreadyPresent->has($athleteId)) {
+                    // Idempotent path — surface the existing record so the
+                    // caller gets a uniform "here's who is now present" list.
+                    // Re-marking must not charge a second entry, which is why
+                    // only `$newRecords` is handed to the consumer below.
+                    continue;
+                }
+
+                $newRecords->push(AttendanceRecord::create([
+                    'athlete_id' => $athleteId,
+                    'attended_on' => $date->toDateString(),
+                    'source' => $source,
+                ]));
             }
 
-            $newRecords->push(AttendanceRecord::create([
-                'athlete_id' => $athleteId,
-                'attended_on' => $date->toDateString(),
-                'source' => $source,
-            ]));
-        }
+            $this->consumeCarnetEntries->execute($newRecords, $date);
+        });
 
         // Return the full set of "now present" records — new + already
         // existing — so the API response shape is consistent regardless

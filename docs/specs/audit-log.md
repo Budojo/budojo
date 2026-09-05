@@ -56,6 +56,7 @@ Indexes:
 | `payment.created` | New payment row |
 | `payment.updated` | Edit on an existing payment |
 | `payment.deleted` | Soft-delete (or hard) |
+| `carnet.created` | An entry carnet was sold (#1364). No `updated` / `deleted` sibling — a sold carnet is a fact and the API exposes no edit or delete path |
 | `document.uploaded` | New document |
 | `document.deleted` | Soft-delete |
 | `attendance.marked` | Bulk-mark (1 entry per athlete) |

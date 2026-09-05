@@ -1,0 +1,162 @@
+@if (offering(); as offer) {
+  <section class="carnets" data-cy="carnet-panel">
+    <header class="carnets__header">
+      <h3 class="carnets__title">{{ 'athletes.detail.carnets.title' | translate }}</h3>
+      <p-button
+        [label]="
+          'athletes.detail.carnets.sellWithPrice'
+            | translate: { price: formatPrice(offer.priceCents), entries: offer.entries }
+        "
+        icon="pi pi-plus"
+        size="small"
+        [disabled]="athleteId() === null"
+        (onClick)="openSellDialog()"
+        data-cy="carnet-sell-button"
+      />
+    </header>
+
+    @if (loading()) {
+      <p-skeleton height="6rem" styleClass="carnets__skeleton" />
+    } @else if (activeCarnet(); as active) {
+      <article
+        class="carnets__card"
+        [class.carnets__card--warn]="lowBalance() || expiringSoon()"
+        data-cy="carnet-balance-card"
+      >
+        <p class="carnets__code" data-cy="carnet-code">{{ active.code }}</p>
+
+        <p class="carnets__balance">
+          <span class="carnets__remaining" data-cy="carnet-remaining">{{
+            active.remaining_entries
+          }}</span>
+          <span class="carnets__total">/ {{ active.total_entries }}</span>
+          <span class="carnets__unit">{{ 'athletes.detail.carnets.entriesWord' | translate }}</span>
+        </p>
+
+        <p class="carnets__expiry">
+          {{
+            'athletes.detail.carnets.expiresOn' | translate: { date: formatDate(active.expires_at) }
+          }}
+        </p>
+
+        @if (lowBalance()) {
+          <p-tag
+            severity="warn"
+            [value]="'athletes.detail.carnets.lowBalance' | translate"
+            data-cy="carnet-low-balance"
+          />
+        } @else if (expiringSoon()) {
+          <p-tag
+            severity="warn"
+            [value]="'athletes.detail.carnets.expiringSoon' | translate"
+            data-cy="carnet-expiring-soon"
+          />
+        }
+      </article>
+
+      <p-accordion (onOpen)="loadEntries()">
+        <p-accordion-panel value="register">
+          <p-accordion-header data-cy="carnet-register-toggle">
+            {{ 'athletes.detail.carnets.register' | translate }}
+          </p-accordion-header>
+          <p-accordion-content>
+            @if (entriesLoading()) {
+              <p-skeleton height="3rem" />
+            } @else if (entries().length === 0) {
+              <p class="carnets__empty">
+                {{ 'athletes.detail.carnets.registerEmpty' | translate }}
+              </p>
+            } @else {
+              <ul class="carnets__register" data-cy="carnet-register-list">
+                @for (entry of entries(); track entry.id) {
+                  <li class="carnets__register-row">{{ formatDate(entry.used_on) }}</li>
+                }
+              </ul>
+            }
+          </p-accordion-content>
+        </p-accordion-panel>
+      </p-accordion>
+    } @else {
+      <p class="carnets__empty" data-cy="carnet-empty">
+        {{ 'athletes.detail.carnets.none' | translate }}
+      </p>
+    }
+
+    @if (!loading() && otherCarnets().length > 0) {
+      <p-accordion>
+        <p-accordion-panel value="history">
+          <p-accordion-header data-cy="carnet-history-toggle">
+            {{ 'athletes.detail.carnets.history' | translate }}
+          </p-accordion-header>
+          <p-accordion-content>
+            <ul class="carnets__history" data-cy="carnet-history-list">
+              @for (carnet of otherCarnets(); track carnet.id) {
+                <li class="carnets__history-row">
+                  <span class="carnets__history-code">{{ carnet.code }}</span>
+                  <span class="carnets__history-usage">
+                    {{ carnet.total_entries - carnet.remaining_entries }} /
+                    {{ carnet.total_entries }}
+                  </span>
+                  <span class="carnets__history-dates">
+                    {{ formatDate(carnet.purchased_at) }} — {{ formatDate(carnet.expires_at) }}
+                  </span>
+                </li>
+              }
+            </ul>
+          </p-accordion-content>
+        </p-accordion-panel>
+      </p-accordion>
+    }
+  </section>
+
+  <p-dialog
+    [(visible)]="sellDialogOpen"
+    [modal]="true"
+    [draggable]="false"
+    [breakpoints]="{ '768px': '92vw' }"
+    [style]="{ width: '28rem' }"
+    [header]="'athletes.detail.carnets.dialog.title' | translate"
+    data-cy="carnet-sell-dialog"
+  >
+    <p class="carnets__dialog-summary">
+      {{
+        'athletes.detail.carnets.dialog.summary'
+          | translate: { price: formatPrice(offer.priceCents), entries: offer.entries }
+      }}
+    </p>
+
+    <label class="carnets__dialog-label" for="carnet-purchased-at">
+      {{ 'athletes.detail.carnets.dialog.purchasedAt' | translate }}
+    </label>
+    <form [formGroup]="sellForm">
+      <p-datepicker
+        inputId="carnet-purchased-at"
+        formControlName="purchased_at"
+        [maxDate]="maxPurchaseDate"
+        [showIcon]="true"
+        dateFormat="dd/mm/yy"
+        appendTo="body"
+        styleClass="carnets__dialog-picker"
+        data-cy="carnet-purchased-at"
+      />
+    </form>
+    <small class="carnets__dialog-hint">
+      {{ 'athletes.detail.carnets.dialog.purchasedAtHint' | translate }}
+    </small>
+
+    <ng-template pTemplate="footer">
+      <p-button
+        [label]="'athletes.detail.carnets.dialog.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        (onClick)="sellDialogOpen.set(false)"
+      />
+      <p-button
+        [label]="'athletes.detail.carnets.dialog.confirm' | translate"
+        [loading]="selling()"
+        (onClick)="confirmSell()"
+        data-cy="carnet-sell-confirm"
+      />
+    </ng-template>
+  </p-dialog>
+}

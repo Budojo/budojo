@@ -6,6 +6,7 @@ namespace App\Actions\Search;
 
 use App\Models\Academy;
 use App\Models\Athlete;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -84,6 +85,10 @@ class SearchAcademyAction
             'payments' => fn ($query) => $query
                 ->where('year', $year)
                 ->where('month', $month),
+            // Same reason, for the `active_carnet` block (#1364): without this
+            // the resource falls back to a per-row carnet query and the
+            // palette pays 20 extra round-trips per keystroke.
+            'carnets' => fn ($query) => $query->validOn(CarbonImmutable::today()),
         ]);
 
         // Stable ordering for deterministic results. last_name asc + id asc

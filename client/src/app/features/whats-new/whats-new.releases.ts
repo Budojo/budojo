@@ -60,6 +60,76 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.47.0',
+    date: '2026-09-05',
+    headline: {
+      en: 'Carnets, for the ones who come and go.',
+      it: 'Carnet, per chi va e viene.',
+    },
+    sections: [
+      {
+        heading: { en: '🎟️ Entry carnets', it: '🎟️ Carnet ingressi' },
+        bullets: [
+          {
+            en: "Some athletes train six or seven times a year, and charging them a month at a time is either unfair to them or lossy for you. Set a price and a size once in your academy settings — say €70 for 10 entries — and a Carnet ingressi section appears on every athlete's Payments tab.",
+            it: "Certi atleti si allenano sei o sette volte l'anno, e farli pagare a mese o è ingiusto per loro o è una perdita per te. Imposta una volta prezzo e taglia nelle impostazioni dell'academy — per esempio 70 € per 10 ingressi — e su ogni atleta compare la sezione Carnet ingressi nella scheda Pagamenti.",
+          },
+          {
+            en: "Each carnet carries a four-character code (A7K2): read it off the athlete's card and you know which one you are looking at. The characters that get misread by hand — 0 and O, 1 and I and L — are simply not in the alphabet.",
+            it: "Ogni carnet ha un codice di quattro caratteri (A7K2): lo leggi dalla tessera dell'atleta e sai qual è. I caratteri che a mano si confondono — 0 e O, 1 e I e L — non fanno proprio parte dell'alfabeto.",
+          },
+          {
+            en: 'A carnet is valid 12 months from the day it was bought, and you can back-date the sale — which is the point if you are transcribing a paper register. If you leave the price or the size empty, you will never see any of this.',
+            it: 'Un carnet vale 12 mesi dal giorno in cui è stato comprato, e la vendita si può retrodatare — che è il punto se stai trascrivendo un registro cartaceo. Se lasci vuoti prezzo o taglia, di tutto questo non vedi niente.',
+          },
+        ],
+      },
+      {
+        heading: { en: '🔢 The count takes care of itself', it: '🔢 Il conteggio si fa da solo' },
+        bullets: [
+          {
+            en: 'Mark someone present and, if that month is not already covered by their monthly fee, one entry comes off their carnet. The monthly fee wins: if they have paid for that month, the carnet is not touched. It is a fallback, never a second charge.',
+            it: 'Segni una presenza e, se quel mese non è già coperto dalla quota mensile, un ingresso scala dal carnet. La quota mensile ha la precedenza: se quel mese è pagato, il carnet non si tocca. È un ripiego, mai un secondo addebito.',
+          },
+          {
+            en: "The date on the session is the date that counts. Filling in last month's sessions is normal, and each one is judged against the coverage in force back then — not today's.",
+            it: "Conta la data della sessione, non quella di oggi. Inserire le presenze del mese scorso è normale, e ognuna viene valutata sulla copertura che c'era allora.",
+          },
+          {
+            en: 'Fixing a mistake costs one entry, not two: delete a presence and its entry comes straight back. Holding two carnets spends the one expiring first, so you lose the fewest entries to expiry.',
+            it: "Correggere un errore costa un ingresso, non due: cancelli la presenza e l'ingresso torna subito indietro. Con due carnet si consuma quello che scade prima, così ne perdi il meno possibile per scadenza.",
+          },
+          {
+            en: 'Presence is never blocked. An athlete with no monthly fee and no carnet is still marked present — the register records what happened, and sorting out the money is a separate conversation.',
+            it: "La presenza non viene mai bloccata. Un atleta senza mensile e senza carnet si segna comunque presente: il registro annota cos'è successo, e sistemare i soldi è un discorso a parte.",
+          },
+        ],
+      },
+      {
+        heading: { en: '👀 The balance where you need it', it: '👀 Il saldo dove ti serve' },
+        bullets: [
+          {
+            en: 'On the roster, next to the paid badge, a small ticket chip with the entries left. It turns amber at two or fewer — the moment to ask "vuoi rinnovare?" before they walk out.',
+            it: 'Nel registro, accanto al badge dei pagamenti, una piccola targhetta con gli ingressi rimasti. Diventa ambra a due o meno: il momento giusto per chiedere «vuoi rinnovare?» prima che se ne vada.',
+          },
+          {
+            en: "On the athlete's Payments tab, a card with the code, the balance and the expiry, plus a Registro ingressi listing exactly which sessions the carnet paid for. Past and spent carnets stay there too. And in the athlete's own app, so they stop having to ask you.",
+            it: "Nella scheda Pagamenti dell'atleta, una card con codice, saldo e scadenza, più il Registro ingressi con esattamente quali sessioni ha pagato il carnet. Restano lì anche i carnet passati ed esauriti. E nell'app dell'atleta, così smette di doverlo chiedere a te.",
+          },
+        ],
+      },
+      {
+        heading: { en: '⬇️ Update when you want to', it: '⬇️ Aggiorna quando vuoi tu' },
+        bullets: [
+          {
+            en: 'The update bar used to tell you a new version was coming and leave it at that. It now has a button: run the update now, and watch it happen rather than wondering whether it did.',
+            it: "La barra di aggiornamento ti diceva che stava arrivando una nuova versione e finiva lì. Ora ha un bottone: lancia l'aggiornamento adesso, e lo guardi succedere invece di chiederti se è successo.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.46.0',
     date: '2026-08-18',
     headline: { en: 'Faces on the roster.', it: 'Facce sul registro.' },

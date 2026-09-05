@@ -173,7 +173,10 @@ describe('Academy edit form', () => {
     cy.get('[data-cy="academy-form-address-city"]').clear();
     cy.get('[data-cy="academy-form-save"]').click();
 
-    cy.get('[data-cy="academy-form-address-error"]').should('be.visible');
+    // Scroll to it first: the assertion is that the error renders with the
+    // right message, not that it happens to sit in the viewport — the form is
+    // long enough that clicking Save at the bottom leaves it above the fold.
+    cy.get('[data-cy="academy-form-address-error"]').scrollIntoView().should('be.visible');
     cy.get('@patchSpy').should('not.have.been.called');
     cy.url().should('include', '/dashboard/academy/edit');
   });

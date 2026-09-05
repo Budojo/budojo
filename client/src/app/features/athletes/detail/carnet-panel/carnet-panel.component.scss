@@ -1,0 +1,142 @@
+.carnets {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.carnets__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+
+  // The sell CTA sits beside the title once there is room for both; below
+  // 768px it stacks so the button keeps a full-width tap target.
+  @media (min-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.carnets__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--p-text-color);
+}
+
+.carnets__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: var(--p-content-background);
+}
+
+.carnets__card--warn {
+  border-color: var(--p-orange-400);
+}
+
+// The card is a flex column, which stretches children to full width by
+// default — a status tag has to hug its own text instead.
+.carnets__card p-tag {
+  align-self: flex-start;
+}
+
+.carnets__code {
+  margin: 0;
+  font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--p-text-color);
+}
+
+.carnets__balance {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.carnets__remaining {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--p-primary-color);
+}
+
+.carnets__total {
+  font-size: 1rem;
+  color: var(--p-text-muted-color);
+}
+
+.carnets__unit {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.carnets__expiry,
+.carnets__empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.carnets__register,
+.carnets__history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carnets__register-row,
+.carnets__history-row {
+  font-size: 0.875rem;
+  color: var(--p-text-color);
+}
+
+.carnets__history-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.carnets__history-code {
+  font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+  letter-spacing: 0.08em;
+}
+
+.carnets__history-usage,
+.carnets__history-dates {
+  color: var(--p-text-muted-color);
+}
+
+.carnets__dialog-summary {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.carnets__dialog-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-text-color);
+}
+
+.carnets__dialog-hint {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}

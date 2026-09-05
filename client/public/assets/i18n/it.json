@@ -394,6 +394,12 @@
       "errorBody": "Non siamo riusciti a caricare i tuoi documenti. Aggiorna la pagina e riprova.",
       "expiresAt": "Scade il",
       "expired": "Scaduto"
+    },
+    "carnet": {
+      "title": "Il tuo carnet ingressi",
+      "entriesWord": "ingressi",
+      "expiresOn": "Scade il {{date}}",
+      "lowBalance": "In esaurimento"
     }
   },
   "notifications": {
@@ -1518,7 +1524,17 @@
         "successSummary": "Academy aggiornata"
       },
       "errorValidation": "Validazione non riuscita.",
-      "errorGeneric": "Qualcosa è andato storto. Riprova."
+      "errorGeneric": "Qualcosa è andato storto. Riprova.",
+      "carnetPrice": {
+        "label": "Prezzo carnet",
+        "hint": "Prezzo di un carnet ingressi. Lascia vuoto se non vendi carnet.",
+        "errorMin": "Il prezzo non può essere negativo."
+      },
+      "carnetEntries": {
+        "label": "Ingressi per carnet",
+        "hint": "Quante sessioni copre un carnet. Lascia vuoto se non vendi carnet.",
+        "errorRange": "Inserisci un numero tra 1 e 255."
+      }
     },
     "schedule": {
       "title": "Pianifica un cambio calendario futuro",
@@ -1673,7 +1689,8 @@
         "attendance": "Presenze",
         "documents": "Documenti",
         "payments": "Pagamenti",
-        "promotions": "Storico cinture"
+        "promotions": "Storico cinture",
+        "carnet": "Carnet {{code}} — {{count}} ingressi rimasti"
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",
@@ -1866,6 +1883,36 @@
           "monthLabel": "Presenze di {{month}}",
           "empty": "Nessuna sessione registrata questo mese."
         }
+      },
+      "carnets": {
+        "title": "Carnet ingressi",
+        "sell": "Vendi carnet",
+        "entriesWord": "ingressi",
+        "none": "Nessun carnet attivo.",
+        "expiresOn": "Scade il {{date}}",
+        "lowBalance": "In esaurimento",
+        "expiringSoon": "In scadenza",
+        "register": "Registro ingressi",
+        "registerEmpty": "Nessun ingresso ancora utilizzato.",
+        "history": "Carnet passati",
+        "dialog": {
+          "title": "Vendi un carnet ingressi",
+          "summary": "{{price}} per {{entries}} ingressi, validi 12 mesi dalla data di acquisto.",
+          "purchasedAt": "Data di acquisto",
+          "purchasedAtHint": "Predefinita a oggi. Retrodatala se stai trascrivendo un registro cartaceo.",
+          "confirm": "Vendi carnet",
+          "cancel": "Annulla"
+        },
+        "toast": {
+          "soldSummary": "Carnet venduto",
+          "soldDetail": "L'atleta può iniziare a usarlo subito.",
+          "errorSummary": "Qualcosa è andato storto",
+          "errorNotConfigured": "Imposta prima prezzo e taglia del carnet nelle impostazioni dell'academy.",
+          "errorGeneric": "Non è stato possibile vendere il carnet. Riprova.",
+          "errorEntries": "Non è stato possibile caricare il registro ingressi.",
+          "loadError": "Non è stato possibile caricare i carnet."
+        },
+        "sellWithPrice": "Vendi carnet — {{price}} / {{entries}} ingressi"
       }
     },
     "form": {
@@ -2320,6 +2367,7 @@
   "update": {
     "downloading": "Scaricamento aggiornamento {{version}}…",
     "percent": "{{percent}}%",
-    "ready": "Versione {{version}} pronta — si installa alla chiusura di Budojo"
+    "ready": "Versione {{version}} pronta — si installa alla chiusura di Budojo",
+    "installNow": "Riavvia e aggiorna"
   }
 }

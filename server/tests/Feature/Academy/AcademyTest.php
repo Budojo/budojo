@@ -322,6 +322,46 @@ it('updates monthly_fee_cents — the academy-wide membership fee in cents (#104
     ]);
 });
 
+it('updates the carnet price and size — the entry-pack offering (#1364)', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id, 'carnet_price_cents' => null, 'carnet_entries' => null]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['carnet_price_cents' => 7000, 'carnet_entries' => 10])
+        ->assertOk()
+        ->assertJsonPath('data.carnet_price_cents', 7000)
+        ->assertJsonPath('data.carnet_entries', 10);
+
+    $this->assertDatabaseHas('academies', [
+        'user_id' => $user->id,
+        'carnet_price_cents' => 7000,
+        'carnet_entries' => 10,
+    ]);
+});
+
+it('clears the carnet offering when the fields are set to null', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create([
+        'user_id' => $user->id, 'carnet_price_cents' => 7000, 'carnet_entries' => 10,
+    ]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['carnet_price_cents' => null, 'carnet_entries' => null])
+        ->assertOk()
+        ->assertJsonPath('data.carnet_price_cents', null)
+        ->assertJsonPath('data.carnet_entries', null);
+});
+
+it('rejects a carnet with zero entries', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['carnet_entries' => 0])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['carnet_entries']);
+});
+
 it('clears monthly_fee_cents when explicitly set to null', function (): void {
     $user = User::factory()->create();
     Academy::factory()->create(['user_id' => $user->id, 'monthly_fee_cents' => 9500]);
