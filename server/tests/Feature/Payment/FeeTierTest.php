@@ -318,3 +318,49 @@ it('serves the roster without one fee query per athlete', function (): void {
 
     expect($rosterCost(6))->toBe($rosterCost(2));
 });
+
+// ─── The fee-gated scheduled commands ────────────────────────────────────────
+
+it('still chases an academy that prices only by tier', function (): void {
+    // The flat fee is what both scheduled commands used to gate on. An academy
+    // that moved entirely onto a price list leaves it empty, and before #1381
+    // that silently removed it from the digest and the overdue pushes.
+    $this->user->academy->update(['monthly_fee_cents' => null]);
+    AcademyFeeTier::factory()->for($this->user->academy)->create(['amount_cents' => 5500]);
+
+    expect(Academy::query()->chargingAFee()->pluck('id'))
+        ->toContain($this->user->academy->id)
+        ->and(Academy::query()->chargingMoreThanNothing()->pluck('id'))
+        ->toContain($this->user->academy->id);
+});
+
+it('leaves an academy that charges nothing at all out of both', function (): void {
+    $this->user->academy->update(['monthly_fee_cents' => null]);
+
+    expect(Academy::query()->chargingAFee()->pluck('id'))
+        ->not->toContain($this->user->academy->id)
+        ->and(Academy::query()->chargingMoreThanNothing()->pluck('id'))
+        ->not->toContain($this->user->academy->id);
+});
+
+it('counts a deliberate zero as managing payments but not as money owed', function (): void {
+    // Two different questions, kept apart on purpose: an academy that set the
+    // fee to zero still wants its unpaid list, but nobody owes anything, so
+    // chasing an athlete for it would be noise.
+    $this->user->academy->update(['monthly_fee_cents' => 0]);
+
+    expect(Academy::query()->chargingAFee()->pluck('id'))
+        ->toContain($this->user->academy->id)
+        ->and(Academy::query()->chargingMoreThanNothing()->pluck('id'))
+        ->not->toContain($this->user->academy->id);
+});
+
+it('does not chase an academy whose only tier is free', function (): void {
+    $this->user->academy->update(['monthly_fee_cents' => null]);
+    AcademyFeeTier::factory()->for($this->user->academy)->create(['amount_cents' => 0]);
+
+    expect(Academy::query()->chargingAFee()->pluck('id'))
+        ->toContain($this->user->academy->id)
+        ->and(Academy::query()->chargingMoreThanNothing()->pluck('id'))
+        ->not->toContain($this->user->academy->id);
+});

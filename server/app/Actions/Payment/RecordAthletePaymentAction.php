@@ -31,10 +31,12 @@ class RecordAthletePaymentAction
      * existing row. The DB unique index is the safety net that makes this
      * work — see `create_athlete_payments_table` migration.
      *
-     * `amountCents` is supplied by the caller — typically the controller
-     * passes the academy's current `monthly_fee_cents` after verifying it
-     * is non-null. Snapshotting at the call site means future fee changes
-     * do NOT rewrite past records.
+     * `amountCents` is supplied by the caller — the controller passes what
+     * `App\Support\MonthlyFee::forAthlete()` resolves (the athlete's price
+     * tier if they are on one, the academy's flat `monthly_fee_cents`
+     * otherwise, #1381) after verifying it is non-null. Snapshotting at the
+     * call site means future fee or tier changes do NOT rewrite past
+     * records.
      *
      * Side effect: if the row was just CREATED (not idempotent re-read),
      * the linked athlete user receives the

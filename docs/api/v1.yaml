@@ -6486,10 +6486,25 @@ components:
           minimum: 0
           nullable: true
           description: |
-            Academy-wide membership fee in cents. `null` means "fee not
-            configured" — the payments endpoints reject `POST` with 422
-            until the owner sets this via `PATCH /api/v1/academy`.
+            Academy-wide membership fee in cents. Since #1381 this is the
+            **default for athletes on no price tier** rather than the only
+            fee. `null` means "fee not configured" — the payments endpoints
+            reject `POST` with 422 for any athlete no tier covers either.
+            Set via `PATCH /api/v1/academy`.
           example: 9500
+        fee_tier_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many monthly price tiers the academy has configured (#1381),
+            from `GET /academy/fee-tiers`. Zero on an academy that charges one
+            flat fee, which is every academy until the owner adds a tier.
+
+            The SPA gates the paid badge, the paid filter and the unpaid
+            widget on "does this academy manage payments at all" — a question
+            neither this nor `monthly_fee_cents` answers alone, since an
+            academy priced only by tier leaves the flat fee null.
+          example: 0
         carnet_price_cents:
           type: integer
           minimum: 0

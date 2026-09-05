@@ -58,6 +58,7 @@ import { IconButtonComponent } from '../../../shared/components/icon-button/icon
 import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
+import { academyChargesAFee } from '../../../shared/utils/academy-fee';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -158,14 +159,13 @@ export class AthletesListComponent implements OnInit {
   readonly sortOrder = signal<AthleteSortOrder>('desc');
 
   /**
-   * The paid badge + filter only make sense when the academy has configured
-   * a monthly fee — otherwise there's no expectation of payment to assert
-   * against. Reads from the cached `AcademyService.academy()` signal so we
-   * never block rendering on an additional fetch (#105).
+   * The paid badge + filter only make sense when the academy charges
+   * something — a flat fee or a price tier (#1381); otherwise there's no
+   * expectation of payment to assert against. Reads from the cached
+   * `AcademyService.academy()` signal so we never block rendering on an
+   * additional fetch (#105).
    */
-  readonly hasMonthlyFee = computed(
-    () => (this.academyService.academy()?.monthly_fee_cents ?? null) !== null,
-  );
+  readonly hasMonthlyFee = computed(() => academyChargesAFee(this.academyService.academy()));
 
   /**
    * Current-month labels for the "Paid" column (#282). BOTH labels are
