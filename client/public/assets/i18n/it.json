@@ -2210,10 +2210,10 @@
     },
     "payments": {
       "monthlyTitle": "Incassi mensili",
-      "monthlyHint": "Ultimi 12 mesi · somma pagamenti registrati per mese di competenza",
+      "monthlyHint": "Ultimi 12 mesi · quote e carnet, ripartiti sui mesi che coprono",
       "loading": "Caricamento incassi…",
       "errored": "Impossibile caricare il trend.",
-      "empty": "Nessun pagamento registrato negli ultimi 12 mesi."
+      "empty": "Nessun incasso negli ultimi 12 mesi."
     },
     "athletes": {
       "ageBandsTitle": "Atleti per divisione IBJJF",

@@ -148,6 +148,10 @@ it('follows the window when a carnet is re-dated', function (): void {
         ])
         ->assertOk();
 
-    expect(revenueByMonth($this, 4)['2026-09'])->toBe(587)
-        ->and(revenueByMonth($this, 4)['2026-11'])->toBe(583);
+    $after = revenueByMonth($this, 4);
+    expect($after['2026-09'])->toBe(587)
+        // November is the month that proves it moved rather than doubled: it
+        // sits inside both the old window (Nov-Oct) and the new one (Sep-Aug),
+        // so a second window left behind would show 1166 here.
+        ->and($after['2026-11'])->toBe(583);
 });

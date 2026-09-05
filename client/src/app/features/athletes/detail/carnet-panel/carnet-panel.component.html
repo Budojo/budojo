@@ -45,7 +45,7 @@
               | translate
                 : {
                     date: formatDate(active.purchased_at),
-                    amount: formatAmount(active.price_cents),
+                    amount: formatPrice(active.price_cents),
                   }
           }}</span>
           <span data-cy="carnet-window">{{
@@ -138,9 +138,7 @@
                   <span class="carnets__history-dates">
                     {{ formatDate(carnet.valid_from) }} — {{ formatDate(carnet.expires_at) }}
                   </span>
-                  <span class="carnets__history-amount">{{
-                    formatAmount(carnet.price_cents)
-                  }}</span>
+                  <span class="carnets__history-amount">{{ formatPrice(carnet.price_cents) }}</span>
                   <!-- The same two actions as the card above. A carnet
                        mis-dated far enough to spend every entry, or dated more
                        than a year back so it is born expired, lands here — and
