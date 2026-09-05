@@ -71,7 +71,9 @@ Naming four cases rather than accepting any integer keeps the picker short and k
 
 ## Stats aggregation — monthly revenue trend
 
-`GET /api/v1/stats/payments/monthly` (defined in the `Stats` group of `routes/api_v1.php`, served by `MonthlyPaymentsStatsAction`) buckets revenue by the **business month** stored on `(year, month)` — the month the fee covers — NOT by `paid_at` (the wall-clock recording time).
+`GET /api/v1/stats/payments/monthly` (defined in the `Stats` group of `routes/api_v1.php`, served by `MonthlyPaymentsStatsAction`) buckets revenue by the **business month(s)** the fee covers — NOT by `paid_at` (the wall-clock recording time).
+
+Since #1382 a payment covers a period, so its `amount_cents` is **spread evenly across every month that period pays for**: a €165 quarterly contributes €55 to each of three buckets rather than €165 to one. Booking it whole would make an academy that bills quarterly read €0 for two months in three, against the "revenue *for* this month" promise below. The split is integer with the remainder on the first month, so the buckets always add back up to what was actually paid. It is done in PHP — SQL cannot expand one row into three buckets without a calendar table — and the query pulls every payment whose period *overlaps* the window, not just those starting inside it.
 
 The two values are typically equal today because the API does not accept a custom `paid_at`. They can diverge the day a "back-date a payment" feature ships. The chart label "Monthly revenue" always means *revenue **for** this month*, not *revenue **received in** this month*. Consumers building UI on top of this endpoint should respect that semantic.
 

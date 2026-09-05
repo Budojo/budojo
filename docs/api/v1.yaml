@@ -4600,9 +4600,14 @@ paths:
         Returns N consecutive calendar-month buckets ending with the current
         month (default 12, max 24). Each bucket contains the total
         `amount_cents` collected across all athletes of the academy for that
-        business month. Bucketing uses the `(year, month)` columns on
+        business month. Bucketing uses the business months on
         `athlete_payments` — NOT `paid_at` — so the figures reflect the
         fee period the payment covers, not the wall-clock recording time.
+
+        A payment covering a period (#1382) is **spread evenly** across every
+        month it pays for: a €165 quarterly contributes €55 to each of three
+        buckets. The split is integer with the remainder on the first month,
+        so buckets always add back up to what was paid.
         Buckets with no payments are included (amount_cents = 0) so the
         frontend can render a continuous chart without gap-filling.
         Currency is always EUR (single-currency-per-academy invariant).

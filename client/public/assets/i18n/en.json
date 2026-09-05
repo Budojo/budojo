@@ -1760,7 +1760,9 @@
         "markPaidAccept": "Mark paid",
         "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?",
         "markUnpaidAccept": "Mark unpaid",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
+        "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?"
       },
       "restoreConfirm": {
         "message": "Restore {{name}}?",
@@ -1816,7 +1818,8 @@
           "errorSummary": "Error",
           "errorMissingFee": "Set a monthly fee on the academy first to record payments.",
           "errorGeneric": "Couldn't update the payment. Please try again.",
-          "loadErrorDetail": "Couldn't load payments."
+          "loadErrorDetail": "Couldn't load payments.",
+          "errorOverlap": "That month is already covered by another payment."
         },
         "title": "Payments — {{year}}",
         "noFeeHint": "Set a monthly fee on the academy to start recording payments. Until then this page stays read-only.",

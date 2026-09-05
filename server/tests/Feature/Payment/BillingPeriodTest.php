@@ -335,3 +335,75 @@ it('does not chase an athlete whose period still covers this month', function ()
 
     Notification::assertNothingSent();
 });
+
+it('shows the athlete as paid in search for every month the period covers', function (): void {
+    $this->travelTo('2026-04-15');
+    recordPayment($this, $this->athlete, ['year' => 2026, 'month' => 2, 'period_months' => 3]);
+
+    // The palette reads a pre-filtered payments collection, so the eager-load
+    // scope has to carry the same rule the query does.
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/search?q=' . urlencode($this->athlete->first_name))
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $this->athlete->id)
+        ->assertJsonPath('data.0.paid_current_month', true);
+});
+
+// ─── Revenue, spread across what it paid for ─────────────────────────────────
+
+it('splits a quarterly across the three months it pays for', function (): void {
+    $this->travelTo('2026-04-15');
+    recordPayment($this, $this->athlete, ['year' => 2026, 'month' => 2, 'period_months' => 3]);
+
+    $buckets = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/stats/payments/monthly?months=6')
+        ->assertOk()
+        ->json('data'))
+        ->keyBy('month');
+
+    // Booking €165 whole onto February would read €0 for March and April,
+    // against this endpoint's standing promise of "revenue *for* this month".
+    expect($buckets['2026-02']['amount_cents'])->toBe(5500)
+        ->and($buckets['2026-03']['amount_cents'])->toBe(5500)
+        ->and($buckets['2026-04']['amount_cents'])->toBe(5500)
+        ->and($buckets['2026-01']['amount_cents'])->toBe(0);
+});
+
+it('counts a period that began before the window, for the months inside it', function (): void {
+    $this->travelTo('2026-04-15');
+    AthletePayment::factory()->for($this->athlete)->create([
+        'year' => 2026, 'month' => 1, 'period_months' => BillingPeriod::Quarterly,
+        'amount_cents' => 16500,
+    ]);
+
+    $buckets = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/stats/payments/monthly?months=3')
+        ->assertOk()
+        ->json('data'))
+        ->keyBy('month');
+
+    // The window is Feb-Apr; January's payment still pays for February and
+    // March, and a query that only looked for periods starting in the window
+    // would miss it entirely.
+    expect($buckets['2026-02']['amount_cents'])->toBe(5500)
+        ->and($buckets['2026-03']['amount_cents'])->toBe(5500)
+        ->and($buckets['2026-04']['amount_cents'])->toBe(0);
+});
+
+it('keeps the split adding back up to what was actually paid', function (): void {
+    $this->travelTo('2026-03-15');
+    AthletePayment::factory()->for($this->athlete)->create([
+        'year' => 2026, 'month' => 1, 'period_months' => BillingPeriod::Quarterly,
+        // Not divisible by three: the remainder has to land somewhere rather
+        // than evaporate.
+        'amount_cents' => 10000,
+    ]);
+
+    $total = collect($this->actingAs($this->user)
+        ->getJson('/api/v1/stats/payments/monthly?months=3')
+        ->assertOk()
+        ->json('data'))
+        ->sum('amount_cents');
+
+    expect($total)->toBe(10000);
+});

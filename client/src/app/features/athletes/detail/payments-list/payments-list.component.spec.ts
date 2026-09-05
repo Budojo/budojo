@@ -407,3 +407,39 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
     );
   });
 });
+
+describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', () => {
+  function toastDetailFor(errors: Record<string, string[]>): string {
+    const { fixture, component } = setup({ payments: [] });
+
+    const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+    confirmService.confirm = vi.fn((cfg: { accept: () => void }) => {
+      cfg.accept();
+      return confirmService;
+    }) as never;
+
+    const paymentSvc = TestBed.inject(PaymentService);
+    (paymentSvc as unknown as { markPaid: Mock }).markPaid = vi.fn(() =>
+      throwError(() => ({ status: 422, error: { errors } })),
+    );
+
+    const messageSpy = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+
+    const januaryRow = component['monthRows']()[0];
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+    component.confirmToggleRow(event, januaryRow);
+
+    return String(messageSpy.mock.calls.at(-1)?.[0]?.detail ?? '');
+  }
+
+  it('says the month is already covered, not that no fee is configured', () => {
+    // "The academy has not configured a monthly fee" is flatly untrue here —
+    // the fee is fine, the month is taken by another period.
+    expect(toastDetailFor({ period_months: ['clash'] })).toContain('already covered');
+  });
+
+  it('still says what a missing-fee 422 means', () => {
+    expect(toastDetailFor({ monthly_fee_cents: ['missing'] })).toContain('monthly fee');
+  });
+});

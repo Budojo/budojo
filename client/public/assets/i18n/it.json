@@ -1760,7 +1760,9 @@
         "markPaidAccept": "Segna pagato",
         "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
         "markUnpaidAccept": "Segna non pagato",
-        "cancel": "Annulla"
+        "cancel": "Annulla",
+        "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
+        "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?"
       },
       "restoreConfirm": {
         "message": "Ripristinare {{name}}?",
@@ -1816,7 +1818,8 @@
           "errorSummary": "Errore",
           "errorMissingFee": "Imposta una quota mensile sull'accademia prima di registrare i pagamenti.",
           "errorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
-          "loadErrorDetail": "Impossibile caricare i pagamenti."
+          "loadErrorDetail": "Impossibile caricare i pagamenti.",
+          "errorOverlap": "Quel mese è già coperto da un altro pagamento."
         },
         "title": "Pagamenti — {{year}}",
         "noFeeHint": "Imposta una quota mensile sull'accademia per iniziare a registrare i pagamenti. Fino ad allora questa pagina rimane di sola lettura.",

@@ -274,11 +274,18 @@ export class PaymentsListComponent implements OnInit {
           life: 3000,
         });
       },
-      error: (err: { status?: number }) => {
+      error: (err: { status?: number; error?: { errors?: Record<string, unknown> } }) => {
+        // A 422 has meant one thing for a long time — "no fee configured" —
+        // and since #1382 it can also mean "a period already covers that
+        // month". Read which field the server complained about rather than
+        // showing a message that is flatly untrue half the time.
+        const fields = err.error?.errors ?? {};
         const detail = this.translate.instant(
-          err.status === 422
-            ? 'athletes.detail.payments.toast.errorMissingFee'
-            : 'athletes.detail.payments.toast.errorGeneric',
+          err.status !== 422
+            ? 'athletes.detail.payments.toast.errorGeneric'
+            : 'period_months' in fields
+              ? 'athletes.detail.payments.toast.errorOverlap'
+              : 'athletes.detail.payments.toast.errorMissingFee',
         );
         this.messageService.add({
           severity: 'error',
