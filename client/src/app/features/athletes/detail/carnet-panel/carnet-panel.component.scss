@@ -173,3 +173,10 @@
   font-weight: 500;
   color: var(--p-text-color);
 }
+
+// The price on a history row (#1383), aligned with the dates beside it.
+.carnets__history-amount {
+  font-variant-numeric: tabular-nums;
+  color: var(--p-text-color);
+  white-space: nowrap;
+}

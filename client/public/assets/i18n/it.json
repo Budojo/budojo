@@ -1962,7 +1962,6 @@
           "deletedDetail": "Gli allenamenti restano nel registro presenze."
         },
         "sellWithPrice": "Vendi carnet — {{price}} / {{entries}} ingressi",
-        "soldOn": "Venduto il {{date}}",
         "window": "Valido {{from}} → {{to}}",
         "editValidity": "Modifica validità",
         "delete": "Elimina",
@@ -1973,7 +1972,8 @@
           "hint": "Gli allenamenti già registrati dentro la nuova finestra verranno conteggiati.",
           "confirm": "Salva",
           "newExpiry": "Nuova scadenza: {{date}}"
-        }
+        },
+        "soldOnFor": "Venduto il {{date}} per {{amount}}"
       }
     },
     "form": {
@@ -2210,10 +2210,10 @@
     },
     "payments": {
       "monthlyTitle": "Incassi mensili",
-      "monthlyHint": "Ultimi 12 mesi · somma pagamenti registrati per mese di competenza",
+      "monthlyHint": "Ultimi 12 mesi · quote e carnet, ripartiti sui mesi che coprono",
       "loading": "Caricamento incassi…",
       "errored": "Impossibile caricare il trend.",
-      "empty": "Nessun pagamento registrato negli ultimi 12 mesi."
+      "empty": "Nessun incasso negli ultimi 12 mesi."
     },
     "athletes": {
       "ageBandsTitle": "Atleti per divisione IBJJF",

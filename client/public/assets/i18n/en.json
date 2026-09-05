@@ -1962,7 +1962,6 @@
           "deletedDetail": "The sessions stay on the attendance register."
         },
         "sellWithPrice": "Sell carnet — {{price}} / {{entries}} entries",
-        "soldOn": "Sold on {{date}}",
         "window": "Valid {{from}} → {{to}}",
         "editValidity": "Change validity",
         "delete": "Delete",
@@ -1973,7 +1972,8 @@
           "hint": "Sessions already on the register inside the new window will be counted.",
           "confirm": "Save",
           "newExpiry": "New expiry: {{date}}"
-        }
+        },
+        "soldOnFor": "Sold on {{date}} for {{amount}}"
       }
     },
     "form": {
@@ -2210,10 +2210,10 @@
     },
     "payments": {
       "monthlyTitle": "Monthly revenue",
-      "monthlyHint": "Last 12 months · sum of recorded payments per business month",
+      "monthlyHint": "Last 12 months · fees and carnets, spread across the months they cover",
       "loading": "Loading revenue trend…",
       "errored": "Couldn't load revenue trend.",
-      "empty": "No payments recorded in the last 12 months."
+      "empty": "Nothing collected in the last 12 months."
     },
     "athletes": {
       "ageBandsTitle": "Athletes by IBJJF age division",

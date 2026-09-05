@@ -359,6 +359,12 @@ export class CarnetPanelComponent {
       });
   }
 
+  /**
+   * Any amount on this panel: the offer's price in the sell prompt, and since
+   * #1383 the price snapshotted on a sold carnet. Same locale-aware shape as
+   * every other amount in the app — the owner reads "70,00 €" here and on the
+   * payments table, not two spellings of the same money.
+   */
   protected formatPrice(cents: number): string {
     const locale = localeFor(this.languageService.currentLang());
     return (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
