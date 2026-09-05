@@ -33,7 +33,7 @@
   gap: 0.5rem;
   padding: 1rem;
   border: 1px solid var(--p-content-border-color);
-  border-radius: var(--budojo-radius-md, 1rem);
+  border-radius: var(--p-border-radius-md);
   background: var(--p-content-background);
 }
 
@@ -41,9 +41,15 @@
   border-color: var(--p-orange-400);
 }
 
+// The card is a flex column, which stretches children to full width by
+// default — a status tag has to hug its own text instead.
+.carnets__card p-tag {
+  align-self: flex-start;
+}
+
 .carnets__code {
   margin: 0;
-  font-family: var(--budojo-font-mono, ui-monospace, monospace);
+  font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
   font-size: 1.5rem;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -105,7 +111,7 @@
 }
 
 .carnets__history-code {
-  font-family: var(--budojo-font-mono, ui-monospace, monospace);
+  font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
   letter-spacing: 0.08em;
 }
 

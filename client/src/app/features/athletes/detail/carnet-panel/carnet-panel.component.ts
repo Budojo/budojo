@@ -99,15 +99,32 @@ export class CarnetPanelComponent {
     return priceCents !== null && entries !== null ? { priceCents, entries } : null;
   });
 
-  /** The carnet the next session will be charged against, if any. */
-  protected readonly activeCarnet = computed<Carnet | null>(
-    () => this.carnets().find((c) => c.is_active) ?? null,
-  );
+  /**
+   * The carnet the next session will actually be charged against.
+   *
+   * The list arrives newest-purchase-first, but the server spends the one
+   * expiring soonest (`Carnet::scopeValidOn` orders by `expires_at`), so
+   * taking the first active row would show one balance while sessions burned
+   * another — and disagree with the roster chip, which the server computes.
+   * Mirror the server's order instead.
+   */
+  protected readonly activeCarnet = computed<Carnet | null>(() => {
+    const spendable = this.carnets().filter((c) => c.is_active);
+    return (
+      [...spendable].sort((a, b) => a.expires_at.localeCompare(b.expires_at) || a.id - b.id)[0] ??
+      null
+    );
+  });
 
-  /** Everything else — expired or exhausted — kept for history. */
-  protected readonly pastCarnets = computed<readonly Carnet[]>(() =>
-    this.carnets().filter((c) => !c.is_active),
-  );
+  /**
+   * Every carnet except the one on the card — expired, exhausted, and any
+   * second still-valid carnet bought before the first ran out. Filtering on
+   * `!is_active` would make that second one vanish from the UI entirely.
+   */
+  protected readonly otherCarnets = computed<readonly Carnet[]>(() => {
+    const active = this.activeCarnet();
+    return this.carnets().filter((c) => c.id !== active?.id);
+  });
 
   /**
    * Two or fewer entries left, so the owner can say "vuoi rinnovare?" before

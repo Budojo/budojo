@@ -4,13 +4,8 @@
       <h3 class="carnets__title">{{ 'athletes.detail.carnets.title' | translate }}</h3>
       <p-button
         [label]="
-          ('athletes.detail.carnets.sell' | translate) +
-          ' — ' +
-          formatPrice(offer.priceCents) +
-          ' / ' +
-          offer.entries +
-          ' ' +
-          ('athletes.detail.carnets.entriesWord' | translate)
+          'athletes.detail.carnets.sellWithPrice'
+            | translate: { price: formatPrice(offer.priceCents), entries: offer.entries }
         "
         icon="pi pi-plus"
         size="small"
@@ -87,7 +82,7 @@
       </p>
     }
 
-    @if (!loading() && pastCarnets().length > 0) {
+    @if (!loading() && otherCarnets().length > 0) {
       <p-accordion>
         <p-accordion-panel value="history">
           <p-accordion-header data-cy="carnet-history-toggle">
@@ -95,7 +90,7 @@
           </p-accordion-header>
           <p-accordion-content>
             <ul class="carnets__history" data-cy="carnet-history-list">
-              @for (carnet of pastCarnets(); track carnet.id) {
+              @for (carnet of otherCarnets(); track carnet.id) {
                 <li class="carnets__history-row">
                   <span class="carnets__history-code">{{ carnet.code }}</span>
                   <span class="carnets__history-usage">

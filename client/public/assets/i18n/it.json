@@ -1905,7 +1905,8 @@
           "errorGeneric": "Non è stato possibile vendere il carnet. Riprova.",
           "errorEntries": "Non è stato possibile caricare il registro ingressi.",
           "loadError": "Non è stato possibile caricare i carnet."
-        }
+        },
+        "sellWithPrice": "Vendi carnet — {{price}} / {{entries}} ingressi"
       }
     },
     "form": {

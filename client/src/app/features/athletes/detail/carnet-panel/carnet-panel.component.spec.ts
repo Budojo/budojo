@@ -127,6 +127,36 @@ describe('CarnetPanelComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="carnet-expiring-soon"]')).not.toBeNull();
   });
 
+  it('puts the carnet expiring soonest on the card, not the newest bought', () => {
+    // The server spends the earliest-expiring one. A card showing a different
+    // carnet would disagree with both the roster chip and the actual charge.
+    const { fixture } = setup({
+      carnets: [
+        carnet({ id: 9, code: 'NEWER', expires_at: '2027-06-01', remaining_entries: 10 }),
+        carnet({ id: 4, code: 'SOONER', expires_at: '2026-11-01', remaining_entries: 4 }),
+      ],
+    });
+
+    expect(text(fixture)).toContain('SOONER');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="carnet-remaining"]').textContent.trim(),
+    ).toBe('4');
+  });
+
+  it('keeps a second still-valid carnet visible instead of dropping it', () => {
+    const { fixture } = setup({
+      carnets: [
+        carnet({ id: 9, code: 'NEWER', expires_at: '2027-06-01' }),
+        carnet({ id: 4, code: 'SOONER', expires_at: '2026-11-01' }),
+      ],
+    });
+
+    // It is not on the card, so it must be in the secondary list — filtering
+    // the list on `!is_active` would make it vanish from the UI entirely.
+    expect(fixture.nativeElement.querySelector('[data-cy="carnet-history-list"]')).not.toBeNull();
+    expect(text(fixture)).toContain('NEWER');
+  });
+
   it('lists past carnets separately from the active one', () => {
     const { fixture } = setup({
       carnets: [carnet(), carnet({ id: 2, code: 'B3M9', is_active: false })],
@@ -158,6 +188,35 @@ describe('CarnetPanelComponent', () => {
     // Blanking the list would claim the athlete has no carnet — a worse lie
     // than stale data.
     expect(fixture.nativeElement.querySelector('[data-cy="carnet-balance-card"]')).not.toBeNull();
+  });
+
+  it('omits the purchase date entirely when the owner does not set one', () => {
+    // Empty means "today" server-side. Sending a formatted null would be a
+    // 422 instead.
+    const { component, service } = setup();
+
+    (component as unknown as { confirmSell: () => void }).confirmSell();
+
+    expect(service.sell).toHaveBeenCalledWith(42, undefined);
+  });
+
+  it('explains a 422 as a missing academy configuration', () => {
+    const { component, service } = setup();
+    service.sell = vi.fn(() => throwError(() => ({ status: 422 })));
+    const messages = TestBed.inject(MessageService);
+    const add = vi.spyOn(messages, 'add');
+
+    (component as unknown as { confirmSell: () => void }).confirmSell();
+
+    // The resolved English string, not the key: asserting the key would pass
+    // even if the key were missing from the bundle, which is exactly the
+    // failure mode that ships green and renders raw keys in production.
+    expect(add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        detail: 'Set a carnet price and size in your academy settings first.',
+      }),
+    );
   });
 
   it('fetches the entry register only when it is opened', () => {

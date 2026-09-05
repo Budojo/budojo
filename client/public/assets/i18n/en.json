@@ -1905,7 +1905,8 @@
           "errorGeneric": "Couldn't sell the carnet. Try again.",
           "errorEntries": "Couldn't load the entry register.",
           "loadError": "Couldn't load the carnets."
-        }
+        },
+        "sellWithPrice": "Sell carnet — {{price}} / {{entries}} entries"
       }
     },
     "form": {

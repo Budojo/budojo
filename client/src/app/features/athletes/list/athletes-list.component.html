@@ -644,6 +644,24 @@
                     (paidToggle)="confirmTogglePaid($event, athlete)"
                   />
                 }
+                <!-- Carnet balance chip (#1364), mirroring the desktop table
+                     cell. The phone is the primary form factor here, so the
+                     chip has to live in both layouts or it doesn't exist for
+                     the instructor on the mat. -->
+                @if (athlete.active_carnet; as carnet) {
+                  <p-tag
+                    [severity]="carnet.remaining_entries <= 2 ? 'warn' : 'secondary'"
+                    icon="pi pi-ticket"
+                    [rounded]="true"
+                    [value]="carnet.remaining_entries.toString()"
+                    [pTooltip]="
+                      'athletes.list.tooltip.carnet'
+                        | translate: { code: carnet.code, count: carnet.remaining_entries }
+                    "
+                    tooltipPosition="top"
+                    data-cy="athlete-carnet-chip-mobile"
+                  />
+                }
               </div>
               @if (athlete.facebook || athlete.instagram) {
                 <div class="athlete-card__socials">
