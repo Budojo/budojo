@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Attendance;
 
-use App\Actions\Payment\ReleaseCarnetEntryAction;
+use App\Actions\Payment\ReconcileCarnetEntriesAction;
 use App\Enums\AttendanceSource;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
 class UnmarkTodayAttendanceAction
 {
     public function __construct(
-        private readonly ReleaseCarnetEntryAction $releaseCarnetEntry,
+        private readonly ReconcileCarnetEntriesAction $reconcileCarnets,
     ) {
     }
 
@@ -39,11 +39,11 @@ class UnmarkTodayAttendanceAction
             return UnmarkTodayResult::InstructorLocked;
         }
 
-        // Same contract as the owner-side delete: the entry the presence
-        // consumed goes back to the athlete, atomically with the removal.
-        DB::transaction(function () use ($record): void {
-            $this->releaseCarnetEntry->execute($record);
+        // Same contract as the owner-side delete: the session leaves the set
+        // the carnet ledger is derived from, atomically with the removal.
+        DB::transaction(function () use ($record, $athlete): void {
             $record->delete();
+            $this->reconcileCarnets->execute([$athlete->id]);
         });
 
         return UnmarkTodayResult::Deleted;

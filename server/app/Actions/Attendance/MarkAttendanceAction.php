@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Attendance;
 
-use App\Actions\Payment\ConsumeCarnetEntriesAction;
+use App\Actions\Payment\ReconcileCarnetEntriesAction;
 use App\Enums\AttendanceSource;
 use App\Models\Academy;
 use App\Models\AttendanceRecord;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 class MarkAttendanceAction
 {
     public function __construct(
-        private readonly ConsumeCarnetEntriesAction $consumeCarnetEntries,
+        private readonly ReconcileCarnetEntriesAction $reconcileCarnets,
     ) {
     }
 
@@ -79,16 +79,17 @@ class MarkAttendanceAction
 
         $newRecords = collect();
 
-        // One transaction over the inserts and the carnet charge: a presence
-        // that got recorded without charging its entry (or vice versa) is
-        // exactly the drift the derived-balance design exists to prevent.
+        // One transaction over the inserts and the reconciliation: a presence
+        // recorded without its ledger catching up is exactly the drift the
+        // derived-balance design exists to prevent.
         DB::transaction(function () use ($validIds, $alreadyPresent, $date, $source, $newRecords): void {
             foreach ($validIds as $athleteId) {
                 if ($alreadyPresent->has($athleteId)) {
                     // Idempotent path — surface the existing record so the
                     // caller gets a uniform "here's who is now present" list.
-                    // Re-marking must not charge a second entry, which is why
-                    // only `$newRecords` is handed to the consumer below.
+                    // Re-marking cannot double-charge: the reconciliation below
+                    // derives the ledger from the sessions that exist, and this
+                    // branch adds none.
                     continue;
                 }
 
@@ -99,7 +100,10 @@ class MarkAttendanceAction
                 ]));
             }
 
-            $this->consumeCarnetEntries->execute($newRecords, $date);
+            // Reconciled rather than charged (#1380): what a carnet pays for is
+            // a function of its window, so the whole athlete is recomputed rather
+            // than this one presence being debited.
+            $this->reconcileCarnets->execute(array_values($validIds));
         });
 
         // Return the full set of "now present" records — new + already

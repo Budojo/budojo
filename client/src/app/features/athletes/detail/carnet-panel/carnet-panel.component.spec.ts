@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { provideI18nTesting } from '../../../../../test-utils/i18n-test';
 import { AcademyService } from '../../../../core/services/academy.service';
 import { Carnet, CarnetEntry, CarnetService } from '../../../../core/services/carnet.service';
@@ -17,6 +17,7 @@ function carnet(overrides: Partial<Carnet> = {}): Carnet {
     remaining_entries: 7,
     price_cents: 7000,
     purchased_at: '2026-01-10',
+    valid_from: '2026-01-10',
     expires_at: '2027-01-10',
     is_active: true,
     ...overrides,
@@ -51,6 +52,7 @@ function setup(
       provideHttpClient(),
       provideHttpClientTesting(),
       MessageService,
+      ConfirmationService,
       { provide: CarnetService, useClass: FakeCarnetService },
       ...provideI18nTesting(),
     ],
@@ -174,7 +176,7 @@ describe('CarnetPanelComponent', () => {
     ).sellForm.patchValue({ purchased_at: new Date(2026, 2, 5) });
     (component as unknown as { confirmSell: () => void }).confirmSell();
 
-    expect(service.sell).toHaveBeenCalledWith(42, '2026-03-05');
+    expect(service.sell).toHaveBeenCalledWith(42, '2026-03-05', undefined);
     expect(service.list).toHaveBeenCalledTimes(1);
   });
 
@@ -197,7 +199,28 @@ describe('CarnetPanelComponent', () => {
 
     (component as unknown as { confirmSell: () => void }).confirmSell();
 
-    expect(service.sell).toHaveBeenCalledWith(42, undefined);
+    expect(service.sell).toHaveBeenCalledWith(42, undefined, undefined);
+  });
+
+  it('sends a back-dated validity when the owner sets one', () => {
+    // The point of #1380: a carnet dated to cover a period already on the
+    // register. The server counts those sessions immediately.
+    const { component, service } = setup();
+
+    (
+      component as unknown as {
+        sellForm: { patchValue: (v: { valid_from: Date }) => void };
+      }
+    ).sellForm.patchValue({ valid_from: new Date(2026, 5, 1) });
+    (component as unknown as { confirmSell: () => void }).confirmSell();
+
+    expect(service.sell).toHaveBeenCalledWith(42, undefined, '2026-06-01');
+  });
+
+  it('counts what the active carnet is paying for, so a delete can say what it costs', () => {
+    const { component } = setup({ carnets: [carnet({ total_entries: 10, remaining_entries: 4 })] });
+
+    expect((component as unknown as { consumedByActive: () => number }).consumedByActive()).toBe(6);
   });
 
   it('explains a 422 as a missing academy configuration', () => {

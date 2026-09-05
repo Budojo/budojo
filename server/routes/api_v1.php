@@ -535,6 +535,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'index']);
         Route::post('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'store']);
         Route::get('/athletes/{athlete}/carnets/{carnet}/entries', [\App\Http\Controllers\Athlete\CarnetController::class, 'entries']);
+        // Re-dating the validity window (#1380) and undoing a mis-sale. The
+        // expiry follows `valid_from`, so a PATCH here moves both ends.
+        Route::patch('/athletes/{athlete}/carnets/{carnet}', [\App\Http\Controllers\Athlete\CarnetController::class, 'update']);
+        Route::delete('/athletes/{athlete}/carnets/{carnet}', [\App\Http\Controllers\Athlete\CarnetController::class, 'destroy']);
 
         // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
         // or Laravel binds "summary" as an attendance-record id and returns 404.

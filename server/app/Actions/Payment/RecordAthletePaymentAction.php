@@ -53,6 +53,13 @@ class RecordAthletePaymentAction
         );
 
         if ($payment->wasRecentlyCreated) {
+            // Paying a month releases whatever that month had taken off a
+            // carnet (#1380). Under the old event-driven consumption this
+            // discrepancy was accepted on purpose — the rule was evaluated at
+            // marking time and never revisited — but once the balance is a
+            // function of its inputs, leaving it frozen would be the anomaly.
+            app(ReconcileCarnetEntriesAction::class)->execute([$athlete->id]);
+
             $this->notifyAthlete($athlete, $payment);
         }
 

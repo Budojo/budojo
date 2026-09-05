@@ -80,7 +80,27 @@
   color: var(--p-text-muted-color);
 }
 
-.carnets__expiry,
+.carnets__dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+
+  // Side by side once there is room; stacked on the phone, where two dates on
+  // one line would wrap mid-value.
+  @media (min-width: 768px) {
+    flex-direction: row;
+    gap: 1rem;
+  }
+}
+
+.carnets__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.carnets__dates,
 .carnets__empty {
   margin: 0;
   font-size: 0.875rem;

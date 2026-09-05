@@ -26,6 +26,12 @@ export interface Carnet {
   readonly remaining_entries: number;
   readonly price_cents: number;
   readonly purchased_at: string;
+  /**
+   * When the carnet starts covering sessions (#1380). Distinct from the sale:
+   * back-dating it makes the carnet pay for training already on the register,
+   * and the expiry moves with it — the window is always twelve months.
+   */
+  readonly valid_from: string;
   readonly expires_at: string;
   readonly is_active: boolean;
 }
@@ -66,11 +72,36 @@ export class CarnetService {
    * owner is transcribing a paper register; omitted means today. The server
    * rejects a future date.
    */
-  sell(athleteId: number, purchasedAt?: string): Observable<Carnet> {
-    const body = purchasedAt ? { purchased_at: purchasedAt } : {};
+  sell(athleteId: number, purchasedAt?: string, validFrom?: string): Observable<Carnet> {
+    const body: Record<string, string> = {};
+    if (purchasedAt) body['purchased_at'] = purchasedAt;
+    if (validFrom) body['valid_from'] = validFrom;
+
     return this.http
       .post<CarnetResponse>(`${this.base}/${athleteId}/carnets`, body)
       .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Moves the validity start. The server recomputes both the expiry and which
+   * sessions the carnet pays for, so the response is the source of truth for
+   * the new balance — never patch it locally.
+   */
+  updateValidity(athleteId: number, carnetId: number, validFrom: string): Observable<Carnet> {
+    return this.http
+      .patch<CarnetResponse>(`${this.base}/${athleteId}/carnets/${carnetId}`, {
+        valid_from: validFrom,
+      })
+      .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Undoes a mis-sale. The sessions it paid for stay on the attendance
+   * register — they become uncovered, or move to another carnet whose window
+   * also holds them.
+   */
+  remove(athleteId: number, carnetId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${athleteId}/carnets/${carnetId}`);
   }
 
   /** The sessions one carnet paid for, most recent first. */

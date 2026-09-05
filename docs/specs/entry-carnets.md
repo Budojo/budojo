@@ -1,6 +1,28 @@
 # PRD — Entry carnets (#1364)
 
-**Status**: drafted 2026-09-04, awaiting PR-1 implementation.
+**Status**: shipped in v2.47.0. **Amended by #1380** — see the box below before
+trusting the consumption model described here.
+
+> ### Amendment: the consumption model changed (#1380)
+>
+> This PRD describes consumption as **event-driven**: an entry is charged when a
+> presence is marked, and sessions predating the sale are never revisited. That
+> shipped, and it was wrong for the first real carnet an owner sold — dated
+> 4 September, it ignored the session recorded on the 2nd.
+>
+> A carnet now carries a **`valid_from`** date, editable after the sale and
+> allowed to precede it, and what it pays for is a **function of its window**
+> rather than of when someone clicked. `carnet_entries` became a projection
+> rebuilt from the facts by `ReconcileCarnetEntriesAction`.
+>
+> What survived unchanged: monthly-first, the balance stopping at zero, FIFO by
+> earliest expiry, and attendance never being blocked. What changed besides the
+> model: the expiry now hangs off `valid_from` rather than the sale, paying a
+> month afterwards *releases* the entries it had taken (this PRD's "Edge cases"
+> section says the opposite), and a carnet can be **deleted**, which the
+> Non-goals below rule out.
+>
+> `docs/entities/carnet.md` and `carnet-entry.md` describe the current model.
 
 ## Why
 

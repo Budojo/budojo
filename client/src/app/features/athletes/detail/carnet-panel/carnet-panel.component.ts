@@ -14,7 +14,7 @@ import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { AcademyService } from '../../../../core/services/academy.service';
@@ -59,6 +59,9 @@ export class CarnetPanelComponent {
   private readonly academyService = inject(AcademyService);
   private readonly languageService = inject(LanguageService);
   private readonly messageService = inject(MessageService);
+  // The popup element itself is the parent tab's — rendering a second one
+  // here would put two on the page reacting to the same service, and show two.
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly translate = inject(TranslateService);
 
   /** Set by the parent tab once the route param resolves. */
@@ -70,19 +73,46 @@ export class CarnetPanelComponent {
   protected readonly entriesLoading = signal<boolean>(false);
   protected readonly sellDialogOpen = signal<boolean>(false);
   protected readonly selling = signal<boolean>(false);
+  protected readonly validityDialogOpen = signal<boolean>(false);
+  protected readonly savingValidity = signal<boolean>(false);
+  protected readonly deleting = signal<boolean>(false);
   /**
    * Reactive rather than template-driven, matching every other date field in
    * the SPA and `client/CLAUDE.md`.
    *
-   * Starts **empty**, not pre-filled with today: the picker does not render a
-   * programmatically-set initial value (verified in a browser — selecting a
-   * date works, seeding one does not display), so a control initialised to
-   * `new Date()` would claim in the source a default the owner never sees.
-   * Empty is also exactly the server contract — omit `purchased_at` and the
-   * sale is dated today — and the field hint says so.
+   * Both dates start **empty**, which is also exactly the server contract:
+   * omit `purchased_at` and the sale is dated today, omit `valid_from` and it
+   * follows the sale. The hints say so.
+   *
+   * Pre-filling the purchase date with today was tried and abandoned. The
+   * value does reach the control — the open calendar highlights the right day
+   * — but PrimeNG never writes it into the input's text, so the field reads
+   * empty while holding a value, which is worse than empty. Seeding at
+   * construction, on open, and on the dialog's `onShow` all behave the same.
+   * Curiously the re-dating dialog below seeds fine; the difference has not
+   * been isolated, and chasing it further was not worth the cosmetics.
    */
   protected readonly sellForm = this.fb.group({
     purchased_at: this.fb.control<Date | null>(null),
+    // Where the carnet starts covering sessions (#1380). Left empty it follows
+    // the sale; set earlier, the carnet pays for training already recorded.
+    valid_from: this.fb.control<Date | null>(null),
+  });
+
+  /** Re-dating an existing carnet. Separate form, separate dialog. */
+  protected readonly validityForm = this.fb.group({
+    valid_from: this.fb.control<Date | null>(null),
+  });
+
+  /**
+   * How many sessions the carnet is paying for right now — what the owner
+   * loses cover on if they delete it. Some may be picked up by another carnet
+   * whose window also holds them, which is why the copy says "sta pagando"
+   * rather than promising they all become uncovered.
+   */
+  protected readonly consumedByActive = computed<number>(() => {
+    const active = this.activeCarnet();
+    return active === null ? 0 : active.total_entries - active.remaining_entries;
   });
 
   /** Today, so the sell dialog cannot offer a future purchase date. */
@@ -144,7 +174,7 @@ export class CarnetPanelComponent {
   }
 
   protected openSellDialog(): void {
-    this.sellForm.reset({ purchased_at: null });
+    this.sellForm.reset({ purchased_at: null, valid_from: null });
     this.sellDialogOpen.set(true);
   }
 
@@ -155,10 +185,15 @@ export class CarnetPanelComponent {
     // Empty is the normal case: the server dates the sale today. A value is
     // present only when the owner deliberately back-dated it.
     const purchasedAt = this.sellForm.controls.purchased_at.value;
+    const validFrom = this.sellForm.controls.valid_from.value;
 
     this.selling.set(true);
     this.carnetService
-      .sell(id, purchasedAt === null ? undefined : toIsoDate(purchasedAt))
+      .sell(
+        id,
+        purchasedAt === null ? undefined : toIsoDate(purchasedAt),
+        validFrom === null ? undefined : toIsoDate(validFrom),
+      )
       .pipe(finalize(() => this.selling.set(false)))
       .subscribe({
         next: () => {
@@ -184,6 +219,87 @@ export class CarnetPanelComponent {
           });
         },
       });
+  }
+
+  protected openValidityDialog(): void {
+    const active = this.activeCarnet();
+    if (active === null) return;
+
+    // Seeded from the current value so the picker opens on the month the owner
+    // is correcting, not on today.
+    this.validityForm.reset({ valid_from: new Date(`${active.valid_from}T00:00:00`) });
+    this.validityDialogOpen.set(true);
+  }
+
+  protected confirmValidity(): void {
+    const id = this.athleteId();
+    const active = this.activeCarnet();
+    const validFrom = this.validityForm.controls.valid_from.value;
+    if (id === null || active === null || validFrom === null || this.savingValidity()) return;
+
+    this.savingValidity.set(true);
+    this.carnetService
+      .updateValidity(id, active.id, toIsoDate(validFrom))
+      .pipe(finalize(() => this.savingValidity.set(false)))
+      .subscribe({
+        next: () => {
+          this.validityDialogOpen.set(false);
+          this.load(id);
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translate.instant('athletes.detail.carnets.toast.validitySummary'),
+            detail: this.translate.instant('athletes.detail.carnets.toast.validityDetail'),
+            life: 3000,
+          });
+        },
+        error: () => this.reportError('athletes.detail.carnets.toast.errorGeneric'),
+      });
+  }
+
+  protected confirmDelete(event: MouseEvent): void {
+    const id = this.athleteId();
+    const active = this.activeCarnet();
+    if (id === null || active === null) return;
+
+    // The owner sees what the deletion costs before it happens, not after: a
+    // carnet halfway through its entries is paying for training already done.
+    this.confirmationService.confirm({
+      target: event.currentTarget as EventTarget,
+      message: this.translate.instant('athletes.detail.carnets.confirmDelete', {
+        code: active.code,
+        count: this.consumedByActive(),
+      }),
+      accept: () => this.applyDelete(id, active.id),
+    });
+  }
+
+  private applyDelete(athleteId: number, carnetId: number): void {
+    this.deleting.set(true);
+    this.carnetService
+      .remove(athleteId, carnetId)
+      .pipe(finalize(() => this.deleting.set(false)))
+      .subscribe({
+        next: () => {
+          this.entries.set([]);
+          this.load(athleteId);
+          this.messageService.add({
+            severity: 'success',
+            summary: this.translate.instant('athletes.detail.carnets.toast.deletedSummary'),
+            detail: this.translate.instant('athletes.detail.carnets.toast.deletedDetail'),
+            life: 3000,
+          });
+        },
+        error: () => this.reportError('athletes.detail.carnets.toast.errorGeneric'),
+      });
+  }
+
+  private reportError(detailKey: string): void {
+    this.messageService.add({
+      severity: 'error',
+      summary: this.translate.instant('athletes.detail.carnets.toast.errorSummary'),
+      detail: this.translate.instant(detailKey),
+      life: 4000,
+    });
   }
 
   /**

@@ -1901,7 +1901,9 @@
           "purchasedAt": "Purchase date",
           "purchasedAtHint": "Defaults to today. Back-date it if you are transcribing a paper register.",
           "confirm": "Sell carnet",
-          "cancel": "Cancel"
+          "cancel": "Cancel",
+          "validFrom": "Covers sessions from",
+          "validFromHint": "Leave empty to start from the purchase date. Set it earlier to count training already recorded."
         },
         "toast": {
           "soldSummary": "Carnet sold",
@@ -1910,9 +1912,24 @@
           "errorNotConfigured": "Set a carnet price and size in your academy settings first.",
           "errorGeneric": "Couldn't sell the carnet. Try again.",
           "errorEntries": "Couldn't load the entry register.",
-          "loadError": "Couldn't load the carnets."
+          "loadError": "Couldn't load the carnets.",
+          "validitySummary": "Validity updated",
+          "validityDetail": "The balance has been recalculated.",
+          "deletedSummary": "Carnet deleted",
+          "deletedDetail": "The sessions stay on the attendance register."
         },
-        "sellWithPrice": "Sell carnet — {{price}} / {{entries}} entries"
+        "sellWithPrice": "Sell carnet — {{price}} / {{entries}} entries",
+        "soldOn": "Sold on {{date}}",
+        "window": "Valid {{from}} → {{to}}",
+        "editValidity": "Change validity",
+        "delete": "Delete",
+        "confirmDelete": "Delete carnet {{code}}? The sessions it is paying for ({{count}}) stay on the attendance register but lose their cover, unless another carnet covers them.",
+        "validityDialog": {
+          "title": "Change the validity start",
+          "body": "The carnet covers the sessions between its validity start and its expiry. Moving the start moves the expiry with it — the window is always 12 months, so pulling it back spends validity rather than adding it.",
+          "hint": "Sessions already on the register inside the new window will be counted.",
+          "confirm": "Save"
+        }
       }
     },
     "form": {

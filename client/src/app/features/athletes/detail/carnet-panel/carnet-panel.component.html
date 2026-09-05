@@ -33,11 +33,38 @@
           <span class="carnets__unit">{{ 'athletes.detail.carnets.entriesWord' | translate }}</span>
         </p>
 
-        <p class="carnets__expiry">
-          {{
-            'athletes.detail.carnets.expiresOn' | translate: { date: formatDate(active.expires_at) }
-          }}
+        <p class="carnets__dates">
+          <span data-cy="carnet-sold-on">{{
+            'athletes.detail.carnets.soldOn' | translate: { date: formatDate(active.purchased_at) }
+          }}</span>
+          <span data-cy="carnet-window">{{
+            'athletes.detail.carnets.window'
+              | translate
+                : { from: formatDate(active.valid_from), to: formatDate(active.expires_at) }
+          }}</span>
         </p>
+
+        <div class="carnets__actions">
+          <p-button
+            [label]="'athletes.detail.carnets.editValidity' | translate"
+            icon="pi pi-calendar"
+            severity="secondary"
+            [text]="true"
+            size="small"
+            (onClick)="openValidityDialog()"
+            data-cy="carnet-edit-validity"
+          />
+          <p-button
+            [label]="'athletes.detail.carnets.delete' | translate"
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            size="small"
+            [loading]="deleting()"
+            (onClick)="confirmDelete($event)"
+            data-cy="carnet-delete"
+          />
+        </div>
 
         @if (lowBalance()) {
           <p-tag
@@ -125,10 +152,13 @@
       }}
     </p>
 
-    <label class="carnets__dialog-label" for="carnet-purchased-at">
-      {{ 'athletes.detail.carnets.dialog.purchasedAt' | translate }}
-    </label>
+    <!-- One form for both dates. Two <form> elements bound to the same
+         FormGroup is not a layout detail: the second directive re-claims the
+         group and the first field silently stops being written to. -->
     <form [formGroup]="sellForm">
+      <label class="carnets__dialog-label" for="carnet-purchased-at">
+        {{ 'athletes.detail.carnets.dialog.purchasedAt' | translate }}
+      </label>
       <p-datepicker
         inputId="carnet-purchased-at"
         formControlName="purchased_at"
@@ -139,10 +169,26 @@
         styleClass="carnets__dialog-picker"
         data-cy="carnet-purchased-at"
       />
+      <small class="carnets__dialog-hint">
+        {{ 'athletes.detail.carnets.dialog.purchasedAtHint' | translate }}
+      </small>
+
+      <label class="carnets__dialog-label" for="carnet-valid-from">
+        {{ 'athletes.detail.carnets.dialog.validFrom' | translate }}
+      </label>
+      <p-datepicker
+        inputId="carnet-valid-from"
+        formControlName="valid_from"
+        [maxDate]="maxPurchaseDate"
+        [showIcon]="true"
+        dateFormat="dd/mm/yy"
+        appendTo="body"
+        data-cy="carnet-valid-from"
+      />
+      <small class="carnets__dialog-hint">
+        {{ 'athletes.detail.carnets.dialog.validFromHint' | translate }}
+      </small>
     </form>
-    <small class="carnets__dialog-hint">
-      {{ 'athletes.detail.carnets.dialog.purchasedAtHint' | translate }}
-    </small>
 
     <ng-template pTemplate="footer">
       <p-button
@@ -156,6 +202,53 @@
         [loading]="selling()"
         (onClick)="confirmSell()"
         data-cy="carnet-sell-confirm"
+      />
+    </ng-template>
+  </p-dialog>
+
+  <p-dialog
+    [(visible)]="validityDialogOpen"
+    [modal]="true"
+    [draggable]="false"
+    [breakpoints]="{ '768px': '92vw' }"
+    [style]="{ width: '28rem' }"
+    [header]="'athletes.detail.carnets.validityDialog.title' | translate"
+    data-cy="carnet-validity-dialog"
+  >
+    <p class="carnets__dialog-summary">
+      {{ 'athletes.detail.carnets.validityDialog.body' | translate }}
+    </p>
+
+    <label class="carnets__dialog-label" for="carnet-new-valid-from">
+      {{ 'athletes.detail.carnets.dialog.validFrom' | translate }}
+    </label>
+    <form [formGroup]="validityForm">
+      <p-datepicker
+        inputId="carnet-new-valid-from"
+        formControlName="valid_from"
+        [maxDate]="maxPurchaseDate"
+        [showIcon]="true"
+        dateFormat="dd/mm/yy"
+        appendTo="body"
+        data-cy="carnet-new-valid-from"
+      />
+    </form>
+    <small class="carnets__dialog-hint">
+      {{ 'athletes.detail.carnets.validityDialog.hint' | translate }}
+    </small>
+
+    <ng-template pTemplate="footer">
+      <p-button
+        [label]="'athletes.detail.carnets.dialog.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        (onClick)="validityDialogOpen.set(false)"
+      />
+      <p-button
+        [label]="'athletes.detail.carnets.validityDialog.confirm' | translate"
+        [loading]="savingValidity()"
+        (onClick)="confirmValidity()"
+        data-cy="carnet-validity-confirm"
       />
     </ng-template>
   </p-dialog>
