@@ -12,6 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AthletePayment, PaymentService } from '../../core/services/payment.service';
+import { Carnet, CarnetService } from '../../core/services/carnet.service';
 import { LanguageService } from '../../core/services/language.service';
 import { localeFor } from '../../shared/utils/locale';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -35,6 +36,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 })
 export class MyPaymentsComponent implements OnInit {
   private readonly paymentService = inject(PaymentService);
+  private readonly carnetService = inject(CarnetService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly languageService = inject(LanguageService);
 
@@ -43,6 +45,27 @@ export class MyPaymentsComponent implements OnInit {
   protected readonly loadError = signal(false);
   protected readonly noProfile = signal(false);
   protected readonly year = signal(new Date().getFullYear());
+
+  /**
+   * The athlete's own carnet balance (#1364) — the answer to "quanti ingressi
+   * mi restano", which today they have to ask the instructor.
+   *
+   * Read-only and balance-only: the consumed-session register lives behind
+   * the owner's `payments_read` capability, so the portal shows what
+   * `/me/carnets` can answer and nothing it can't. A failure here leaves the
+   * card off rather than blocking the payments grid — the monthly ledger is
+   * the page's main job.
+   */
+  protected readonly carnets = signal<readonly Carnet[]>([]);
+
+  /** Same rule as everywhere else: the one the next session will spend. */
+  protected readonly activeCarnet = computed<Carnet | null>(() => {
+    const spendable = this.carnets().filter((c) => c.is_active);
+    return (
+      [...spendable].sort((a, b) => a.expires_at.localeCompare(b.expires_at) || a.id - b.id)[0] ??
+      null
+    );
+  });
 
   /**
    * One row per month, 1..12. `payment` is the matched row (or null
@@ -61,6 +84,14 @@ export class MyPaymentsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.carnetService
+      .listMine()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (carnets) => this.carnets.set(carnets ?? []),
+        error: () => this.carnets.set([]),
+      });
+
     this.paymentService
       .listMine(this.year())
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -99,6 +130,21 @@ export class MyPaymentsComponent implements OnInit {
   protected formatAmount(cents: number): string {
     const locale = localeFor(this.languageService.currentLang());
     return (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
+  }
+
+  /**
+   * Date-only display for the carnet expiry. Parsed as UTC so a date-only
+   * value doesn't slide to the previous day for users west of Greenwich —
+   * same treatment as the owner-side panel.
+   */
+  protected formatDate(iso: string): string {
+    const locale = localeFor(this.languageService.currentLang());
+    return new Date(`${iso}T00:00:00Z`).toLocaleDateString(locale, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
   }
 
   /**

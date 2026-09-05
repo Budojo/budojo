@@ -394,6 +394,10 @@
       "errorBody": "We couldn't load your documents. Refresh the page and try again.",
       "expiresAt": "Expires",
       "expired": "Expired"
+    },
+    "carnet": {
+      "entriesWord": "entries",
+      "expiresOn": "Expires on {{date}}"
     }
   },
   "notifications": {

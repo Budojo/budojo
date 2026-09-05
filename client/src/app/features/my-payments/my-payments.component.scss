@@ -79,3 +79,48 @@
     padding: 2rem 1rem;
   }
 }
+
+.my-payments__carnet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: var(--p-content-background);
+}
+
+.my-payments__carnet-code {
+  margin: 0;
+  font-family: ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--p-text-color);
+}
+
+.my-payments__carnet-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.my-payments__carnet-remaining {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--p-primary-color);
+}
+
+.my-payments__carnet-total,
+.my-payments__carnet-unit,
+.my-payments__carnet-expiry {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.my-payments__carnet-expiry {
+  margin: 0;
+}

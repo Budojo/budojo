@@ -5,6 +5,31 @@
   />
 
   <div class="my-payments__body">
+    <!--
+      Carnet balance (#1364). Above the monthly grid because it is the number
+      the athlete came to check; absent entirely when they hold none, so an
+      academy that doesn't sell carnets shows no trace of the concept.
+    -->
+    @if (activeCarnet(); as carnet) {
+      <article class="my-payments__carnet" data-cy="my-carnet-card">
+        <p class="my-payments__carnet-code" data-cy="my-carnet-code">{{ carnet.code }}</p>
+        <p class="my-payments__carnet-balance">
+          <span class="my-payments__carnet-remaining" data-cy="my-carnet-remaining">{{
+            carnet.remaining_entries
+          }}</span>
+          <span class="my-payments__carnet-total">/ {{ carnet.total_entries }}</span>
+          <span class="my-payments__carnet-unit">{{
+            'athletePortal.carnet.entriesWord' | translate
+          }}</span>
+        </p>
+        <p class="my-payments__carnet-expiry">
+          {{
+            'athletePortal.carnet.expiresOn' | translate: { date: formatDate(carnet.expires_at) }
+          }}
+        </p>
+      </article>
+    }
+
     @if (loading()) {
       <div class="my-payments__card" data-cy="my-payments-loading">
         <p-skeleton width="40%" height="1.25rem" />

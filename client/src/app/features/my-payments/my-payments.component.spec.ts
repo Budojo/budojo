@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { MyPaymentsComponent } from './my-payments.component';
 import type { AthletePayment } from '../../core/services/payment.service';
+import type { Carnet } from '../../core/services/carnet.service';
 import { environment } from '../../../environments/environment';
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 
@@ -86,5 +87,77 @@ describe('MyPaymentsComponent (M7 PR-D slice 4)', () => {
       .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
     expect(el.querySelector('[data-cy="my-payments-error"]')).not.toBeNull();
+  });
+
+  // ─── Carnet balance card (#1364) ───────────────────────────────────────────
+
+  function carnet(over: Partial<Carnet> = {}): Carnet {
+    return {
+      id: 1,
+      code: 'A7K2',
+      athlete_id: 1,
+      total_entries: 10,
+      remaining_entries: 6,
+      price_cents: 7000,
+      purchased_at: '2026-01-10',
+      expires_at: '2027-01-10',
+      is_active: true,
+      ...over,
+    };
+  }
+
+  function flushCarnets(http: HttpTestingController, body: Carnet[]): void {
+    http.expectOne(`${environment.apiBase}/api/v1/me/carnets`).flush({ data: body });
+  }
+
+  it('shows the athlete their own remaining entries', () => {
+    const { fixture, el, http } = setup();
+    flushCarnets(http, [carnet()]);
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="my-carnet-code"]')?.textContent?.trim()).toBe('A7K2');
+    expect(el.querySelector('[data-cy="my-carnet-remaining"]')?.textContent?.trim()).toBe('6');
+  });
+
+  it('shows no carnet card when the athlete holds none', () => {
+    const { fixture, el, http } = setup();
+    flushCarnets(http, []);
+    fixture.detectChanges();
+
+    // An academy that doesn't sell carnets should show no trace of the concept.
+    expect(el.querySelector('[data-cy="my-carnet-card"]')).toBeNull();
+  });
+
+  it('shows no carnet card when every carnet is spent or expired', () => {
+    const { fixture, el, http } = setup();
+    flushCarnets(http, [carnet({ is_active: false, remaining_entries: 0 })]);
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="my-carnet-card"]')).toBeNull();
+  });
+
+  it('picks the carnet expiring soonest, matching what the next session spends', () => {
+    const { fixture, el, http } = setup();
+    flushCarnets(http, [
+      carnet({ id: 9, code: 'NEWER', expires_at: '2027-06-01' }),
+      carnet({ id: 4, code: 'SOONER', expires_at: '2026-11-01' }),
+    ]);
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="my-carnet-code"]')?.textContent?.trim()).toBe('SOONER');
+  });
+
+  it('still renders the payments grid when the carnet request fails', () => {
+    const { fixture, el, http, year } = setup();
+    http
+      .expectOne(`${environment.apiBase}/api/v1/me/carnets`)
+      .error(new ProgressEvent('error'), { status: 500, statusText: 'Server Error' });
+    http.expectOne(`${environment.apiBase}/api/v1/me/payments?year=${year}`).flush({ data: [] });
+    fixture.detectChanges();
+
+    // The monthly ledger is the page's main job; a carnet failure hides the
+    // card, it does not take the page down with it.
+    expect(el.querySelector('[data-cy="my-carnet-card"]')).toBeNull();
+    expect(el.querySelector('[data-cy="my-payments-grid"]')).not.toBeNull();
   });
 });
