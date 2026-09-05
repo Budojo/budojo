@@ -94,6 +94,11 @@ class AthleteController extends Controller
             // out into N+1 queries on a 20-row page (#104). One extra query
             // total — payments for all visible athletes in this month.
             ->with(['payments' => $currentMonthScope])
+            // The price tier the resource reads for every row (#1381), and the
+            // academy behind it — an athlete on no tier falls back to the
+            // academy fee, so resolving the amount touches both. Two extra
+            // queries for the page instead of two per athlete.
+            ->with(['feeTier', 'academy'])
             // Same reasoning for the carnet chip (#1364): pre-load only the
             // carnets inside today's validity window, counted, so
             // `active_carnet` resolves in one extra query for the page

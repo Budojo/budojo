@@ -8,6 +8,7 @@ use App\Models\Athlete;
 use App\Models\AthleteInvitation;
 use App\Models\Carnet;
 use App\Support\CarnetAvailability;
+use App\Support\MonthlyFee;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -104,6 +105,16 @@ class AthleteResource extends JsonResource
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'created_at' => $athlete->created_at?->toIso8601String(),
             'paid_current_month' => $paidCurrentMonth,
+            // Which line of the price list this athlete is on (#1381), and the
+            // amount that actually applies to them — resolved server-side so
+            // the SPA never has to re-derive "tier, or academy fallback".
+            'fee_tier' => $athlete->feeTier === null ? null : [
+                'id' => $athlete->feeTier->id,
+                'label' => $athlete->feeTier->label,
+                'amount_cents' => $athlete->feeTier->amount_cents,
+                'lessons_per_week' => $athlete->feeTier->lessons_per_week,
+            ],
+            'monthly_fee_cents' => MonthlyFee::forAthlete($athlete),
             // Null when the athlete holds no spendable carnet — the roster
             // chip and the athlete-detail header render from this without a
             // per-row call.

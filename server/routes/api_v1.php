@@ -528,6 +528,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::delete('/athletes/{athlete}/payments/{year}/{month}', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'destroy'])
             ->whereNumber(['year', 'month']);
 
+        // Monthly price list (#1381). An academy that charges one flat fee
+        // keeps using `academies.monthly_fee_cents` and never touches these.
+        Route::get('/academy/fee-tiers', [\App\Http\Controllers\Academy\FeeTierController::class, 'index']);
+        Route::post('/academy/fee-tiers', [\App\Http\Controllers\Academy\FeeTierController::class, 'store']);
+        Route::patch('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'update']);
+        Route::delete('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'destroy']);
+
         // Entry carnets — #1364. The pre-paid alternative to the monthly fee:
         // price + pack size are configured per academy via PATCH /academy and
         // snapshotted onto each carnet at sale. Consumption (one entry per

@@ -1,0 +1,144 @@
+<p-confirmpopup />
+
+<section class="fee-tiers" data-cy="fee-tier-list">
+  <header class="fee-tiers__header">
+    <h2 class="fee-tiers__title">{{ 'academy.feeTiers.title' | translate }}</h2>
+    <p class="fee-tiers__hint">{{ 'academy.feeTiers.hint' | translate }}</p>
+  </header>
+
+  @if (loading()) {
+    <div class="fee-tiers__list" aria-hidden="true">
+      @for (row of [1, 2]; track row) {
+        <p-skeleton height="3.5rem" borderRadius="0.5rem" />
+      }
+    </div>
+  } @else if (tiers().length === 0) {
+    <p class="fee-tiers__empty" data-cy="fee-tier-empty">
+      {{ 'academy.feeTiers.empty' | translate }}
+    </p>
+  } @else {
+    <ul class="fee-tiers__list" data-cy="fee-tier-rows">
+      @for (tier of tiers(); track tier.id) {
+        <li class="tier" [attr.data-cy]="'fee-tier-row-' + tier.id">
+          <div class="tier__text">
+            <span class="tier__label">{{ tier.label }}</span>
+            <span class="tier__meta">{{ metaFor(tier) }}</span>
+          </div>
+          <span class="tier__amount" [attr.data-cy]="'fee-tier-amount-' + tier.id">
+            {{ formatAmount(tier.amount_cents) }}
+          </span>
+          <div class="tier__actions">
+            <p-button
+              icon="pi pi-pencil"
+              severity="secondary"
+              [text]="true"
+              [rounded]="true"
+              [attr.aria-label]="'academy.feeTiers.editAria' | translate: { label: tier.label }"
+              (onClick)="startEditing(tier)"
+              [attr.data-cy]="'fee-tier-edit-' + tier.id"
+            />
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              [rounded]="true"
+              [attr.aria-label]="'academy.feeTiers.removeAria' | translate: { label: tier.label }"
+              (onClick)="confirmRemove($event, tier)"
+              [attr.data-cy]="'fee-tier-remove-' + tier.id"
+            />
+          </div>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (editingId() === null) {
+    <div class="fee-tiers__idle">
+      <p-button
+        type="button"
+        [label]="'academy.feeTiers.add' | translate"
+        icon="pi pi-plus"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="startAdding()"
+        data-cy="fee-tier-add"
+      />
+    </div>
+  } @else {
+    <!--
+      One form for both add and edit. A second, near-identical form would be
+      two places to change the day a field moves — and the user sees the same
+      three inputs either way, so a second one would also be a second thing to
+      learn.
+    -->
+    <form class="fee-tiers__form" [formGroup]="form" (ngSubmit)="submit()" data-cy="fee-tier-form">
+      <div class="field">
+        <label for="fee-tier-label" class="field__label">
+          {{ 'academy.feeTiers.form.label' | translate }}
+        </label>
+        <input
+          id="fee-tier-label"
+          type="text"
+          pInputText
+          formControlName="label"
+          maxlength="60"
+          [placeholder]="'academy.feeTiers.form.labelPlaceholder' | translate"
+          data-cy="fee-tier-form-label"
+        />
+        <small class="field__hint">{{ 'academy.feeTiers.form.labelHint' | translate }}</small>
+      </div>
+
+      <div class="fee-tiers__form-row">
+        <div class="field">
+          <label for="fee-tier-amount" class="field__label">
+            {{ 'academy.feeTiers.form.amount' | translate }}
+          </label>
+          <p-inputnumber
+            inputId="fee-tier-amount"
+            formControlName="amount"
+            mode="currency"
+            currency="EUR"
+            [locale]="currentLocale()"
+            [min]="0"
+            [maxFractionDigits]="2"
+            data-cy="fee-tier-form-amount"
+          />
+        </div>
+
+        <div class="field">
+          <label for="fee-tier-lessons" class="field__label">
+            {{ 'academy.feeTiers.form.lessons' | translate }}
+          </label>
+          <p-inputnumber
+            inputId="fee-tier-lessons"
+            formControlName="lessons_per_week"
+            [min]="1"
+            [max]="14"
+            [showButtons]="true"
+            data-cy="fee-tier-form-lessons"
+          />
+        </div>
+      </div>
+
+      <div class="fee-tiers__actions">
+        <p-button
+          type="button"
+          [label]="'academy.feeTiers.form.cancel' | translate"
+          severity="secondary"
+          [text]="true"
+          (onClick)="cancelEditing()"
+          data-cy="fee-tier-form-cancel"
+        />
+        <p-button
+          type="submit"
+          [label]="
+            (isAdding() ? 'academy.feeTiers.form.create' : 'academy.feeTiers.form.save') | translate
+          "
+          [loading]="saving()"
+          [disabled]="form.invalid || saving()"
+          data-cy="fee-tier-form-save"
+        />
+      </div>
+    </form>
+  }
+</section>

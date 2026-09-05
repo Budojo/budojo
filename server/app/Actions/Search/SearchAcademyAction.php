@@ -82,6 +82,10 @@ class SearchAcademyAction
         $month = (int) now()->month;
         $builder->with([
             'address',
+            // Both halves of the fee rule (#1381): the tier, and the academy
+            // an athlete on no tier falls back to.
+            'feeTier',
+            'academy',
             'payments' => fn ($query) => $query
                 ->where('year', $year)
                 ->where('month', $month),

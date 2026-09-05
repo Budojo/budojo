@@ -46,6 +46,17 @@ class Academy extends Model implements HasAddress
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    /**
+     * The academy's price list (#1381). Empty on an academy that charges one
+     * flat fee, which is what `monthly_fee_cents` is for.
+     *
+     * @return HasMany<AcademyFeeTier, $this>
+     */
+    public function feeTiers(): HasMany
+    {
+        return $this->hasMany(AcademyFeeTier::class);
+    }
+
     /** @return HasMany<Athlete, $this> */
     public function athletes(): HasMany
     {

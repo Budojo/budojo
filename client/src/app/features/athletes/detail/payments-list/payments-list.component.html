@@ -7,6 +7,13 @@
       <p class="payments-list__hint" data-cy="payments-no-fee-hint">
         {{ 'athletes.detail.payments.noFeeHint' | translate }}
       </p>
+    } @else if (feeTier(); as tier) {
+      <!--
+        Which price tier this athlete is on (#1381). Shown only when they are
+        on one: for everyone else the academy fee is the only fee there is,
+        and naming it here would be noise on every athlete of every academy.
+      -->
+      <p class="payments-list__hint" data-cy="payments-fee-tier">{{ feeTierHint(tier) }}</p>
     }
   </header>
 
