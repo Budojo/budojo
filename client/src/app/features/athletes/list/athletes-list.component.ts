@@ -153,7 +153,14 @@ export class AthletesListComponent implements OnInit {
   readonly loadError = signal(false);
 
   selectedBelt = signal<Belt | ''>('');
-  selectedStatus = signal<AthleteListStatus | ''>('');
+  /**
+   * Which statuses the list is showing (#1403).
+   *
+   * `'active'` rather than `''` is the default now: the roster answers "who
+   * trains here", and someone who left is not part of that answer. `''` still
+   * means all, and is what the eye toggle switches to.
+   */
+  selectedStatus = signal<AthleteListStatus | ''>('active');
   selectedPaid = signal<AthletePaidFilter | ''>('');
   readonly sortField = signal<AthleteSortField | null>(null);
   readonly sortOrder = signal<AthleteSortOrder>('desc');
@@ -349,6 +356,23 @@ export class AthletesListComponent implements OnInit {
   readonly isTrashedMode = computed<boolean>(() => this.selectedStatus() === 'trashed');
 
   /**
+   * Whether the list is showing anyone who is not active (#1403).
+   *
+   * Derived from the filter rather than held beside it, which is what stops
+   * the eye and the dropdown from being able to disagree: picking "Suspended"
+   * from the menu opens the eye, and closing the eye goes back to active. Two
+   * controls, one piece of state.
+   */
+  readonly showingInactive = computed<boolean>(() => this.selectedStatus() !== 'active');
+
+  /**
+   * The eye is hidden in the restore picker (#700). That is a mode, not a
+   * status, and offering "also show the non-active" inside a list of deleted
+   * athletes is a question with no meaning.
+   */
+  readonly canToggleInactive = computed<boolean>(() => !this.isTrashedMode());
+
+  /**
    * Count of currently-active filters for the mobile filter-sheet
    * badge (#704). Excludes the free-text search — that one is
    * keyboard-driven and not collapsed into the sheet.
@@ -356,7 +380,8 @@ export class AthletesListComponent implements OnInit {
   readonly activeFilterCount = computed<number>(() => {
     let count = 0;
     if (this.selectedBelt() !== '') count += 1;
-    if (this.selectedStatus() !== '') count += 1;
+    // The default is `active`, so that is what counts as "no filter" now.
+    if (this.selectedStatus() !== 'active') count += 1;
     if (this.selectedPaid() !== '') count += 1;
     return count;
   });
@@ -404,6 +429,21 @@ export class AthletesListComponent implements OnInit {
     this.selectedStatus.set(status);
     this.resetPage();
     this.load();
+  }
+
+  /**
+   * The eye (#1403): show everyone, or only the actives.
+   *
+   * It writes the same signal the dropdown does — it is a shortcut for two of
+   * its values, not a second switch layered on top.
+   */
+  toggleInactive(): void {
+    this.onStatusChange(this.showingInactive() ? 'active' : '');
+  }
+
+  /** True for a row the eye revealed: rendered muted, with its status named. */
+  protected isNotActive(athlete: Athlete): boolean {
+    return athlete.status !== 'active';
   }
 
   /**
@@ -495,7 +535,9 @@ export class AthletesListComponent implements OnInit {
    */
   resetFilters(): void {
     this.selectedBelt.set('');
-    this.selectedStatus.set('');
+    // Back to the default, not to "everyone" (#1403): reset means "the list I
+    // started from", and that list is the actives.
+    this.selectedStatus.set('active');
     this.selectedPaid.set('');
     this.resetPage();
     this.load();
