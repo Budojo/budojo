@@ -1,0 +1,85 @@
+// Sits inside the 40px drag strip drawn by `html.budojo-desktop &::before`
+// (#1379). Fixed rather than in flow: the strip is a pseudo-element and has no
+// box for a child to live in, and the app's own layout starts below it.
+:host {
+  position: fixed;
+  top: 0;
+  left: 0;
+  // Above the strip itself (1050), below PrimeNG's overlays for the same
+  // reason the strip is: a dialog mask is deliberate and transient.
+  z-index: 1051;
+  height: var(--budojo-titlebar-height, 40px);
+  display: flex;
+  align-items: center;
+  padding-left: 0.75rem;
+}
+
+.titlebar {
+  // A button that does not look like one until you reach it. The bar should
+  // read as empty chrome; the version is information first and an affordance
+  // second, which is what makes it acceptable to put a control in a surface
+  // whose job is to be ignored.
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 1.75rem;
+  padding: 0 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--budojo-radius-small, 0.5rem);
+  background: transparent;
+  color: var(--p-text-muted-color);
+  font: inherit;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out),
+    color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out);
+
+  &:hover:not(:disabled) {
+    background: var(--p-content-hover-background);
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // An update waiting to install is the one state worth colour: it is the only
+  // one that asks for something.
+  &--ready {
+    color: var(--p-primary-color);
+    font-weight: 500;
+  }
+
+  &--busy {
+    cursor: progress;
+  }
+}
+
+.titlebar__icon {
+  font-size: 0.75rem;
+}
+
+// The dot that says "there is something here", the same signifier the
+// notification bell uses.
+.titlebar__dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--p-primary-color);
+  flex-shrink: 0;
+}
+
+.titlebar__action {
+  color: var(--p-primary-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

@@ -2441,5 +2441,15 @@
     "percent": "{{percent}}%",
     "ready": "Version {{version}} is ready — it installs when you close Budojo",
     "installNow": "Restart and update"
+  },
+  "desktopTitlebar": {
+    "checking": "Checking…",
+    "upToDate": "You're up to date",
+    "downloading": "Downloading…",
+    "updateReady": "v{{version}}",
+    "install": "Install",
+    "tooltipCheck": "Check for updates",
+    "tooltipInstall": "Install the update and restart",
+    "tooltipUnavailable": "This build does not update itself"
   }
 }

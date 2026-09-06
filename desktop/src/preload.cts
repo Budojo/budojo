@@ -34,6 +34,12 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
   apiBase: readApiBase(),
   platform: process.platform,
   /**
+   * The running app version, for the title bar (#1401). A promise rather than
+   * a constant because `app.getVersion()` lives in the main process, and the
+   * preload has no business reading packaged metadata itself.
+   */
+  version: () => ipcRenderer.invoke('budojo:app:version'),
+  /**
    * Subscribes to navigation requests from the main process (a clicked toast).
    * Only in-app paths are forwarded; the renderer still owns the routing.
    * Returns the unsubscribe function.
@@ -94,6 +100,10 @@ contextBridge.exposeInMainWorld('__BUDOJO__', {
   // starts while the window is open shows up without polling.
   update: {
     status: () => ipcRenderer.invoke('budojo:update:status'),
+    // Ask now rather than waiting for the six-hourly poll (#1401). What it
+    // found comes back through `onStatus`, not from here — this only reports
+    // whether the check could be started at all.
+    check: () => ipcRenderer.invoke('budojo:update:check'),
     // Runs the installer NOW, visibly, and relaunches (#1362). Closing the app
     // normally still installs silently on quit — this is the opt-in path for
     // someone who would rather watch it happen than wonder.

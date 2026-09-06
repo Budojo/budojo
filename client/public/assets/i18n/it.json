@@ -2441,5 +2441,15 @@
     "percent": "{{percent}}%",
     "ready": "Versione {{version}} pronta — si installa alla chiusura di Budojo",
     "installNow": "Riavvia e aggiorna"
+  },
+  "desktopTitlebar": {
+    "checking": "Controllo…",
+    "upToDate": "Sei aggiornato",
+    "downloading": "Scaricamento…",
+    "updateReady": "v{{version}}",
+    "install": "Installa",
+    "tooltipCheck": "Controlla se ci sono aggiornamenti",
+    "tooltipInstall": "Installa l'aggiornamento e riavvia",
+    "tooltipUnavailable": "Questa versione non si aggiorna da sola"
   }
 }

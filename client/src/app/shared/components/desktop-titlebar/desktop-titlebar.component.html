@@ -1,0 +1,29 @@
+@if (isDesktop() && label() !== '') {
+  <!--
+    `no-drag` is load-bearing: the strip around it is `-webkit-app-region: drag`,
+    and anything interactive inside a drag region is un-clickable — the press
+    moves the window instead. The global rule in styles.scss already opts every
+    `button` out; this is the one that would break silently if that rule moved.
+  -->
+  <button
+    type="button"
+    class="titlebar"
+    [class.titlebar--ready]="isReady()"
+    [class.titlebar--busy]="busy()"
+    [disabled]="unavailable() && !isReady()"
+    [attr.title]="tooltip()"
+    [attr.aria-label]="tooltip()"
+    (click)="press()"
+    data-cy="desktop-titlebar"
+  >
+    @if (busy()) {
+      <i class="pi pi-spin pi-spinner titlebar__icon" aria-hidden="true"></i>
+    } @else if (isReady()) {
+      <span class="titlebar__dot" aria-hidden="true"></span>
+    }
+    <span class="titlebar__label">{{ label() }}</span>
+    @if (isReady()) {
+      <span class="titlebar__action">{{ 'desktopTitlebar.install' | translate }}</span>
+    }
+  </button>
+}
