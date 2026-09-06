@@ -16,9 +16,7 @@ import { Belt } from '../../core/services/athlete.service';
 import { BELT_KEYS } from '../../shared/utils/i18n-enum-keys';
 
 type ViewState =
-  | { kind: 'loading' }
-  | { kind: 'ready'; profile: PublicProfile }
-  | { kind: 'not-found' };
+  { kind: 'loading' } | { kind: 'ready'; profile: PublicProfile } | { kind: 'not-found' };
 
 /**
  * Athlete public profile page (#862, M9 social-profile epic slice A).
