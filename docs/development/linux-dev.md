@@ -114,7 +114,7 @@ cd client
 docker run --rm --network host \
   --user "$(id -u):$(id -g)" \
   -v "$(pwd)":/e2e -w /e2e \
-  cypress/included:15.15.0 \
+  cypress/included:15.21.1 \
   --spec 'cypress/e2e/academy.cy.ts' --config video=false --browser electron
 ```
 

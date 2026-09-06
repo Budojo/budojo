@@ -1699,7 +1699,8 @@
         "fullName": "Full name",
         "belt": "Belt",
         "status": "Status",
-        "paidPrefix": "Paid"
+        "paidPrefix": "Paid",
+        "payment": "Payment"
       },
       "tooltip": {
         "fullNameSortInitial": "Click to sort by first name (A → Z)",
@@ -1751,7 +1752,10 @@
         "paidErrorGeneric": "Couldn't update the payment. Please try again.",
         "deleteErrorDetail": "Could not delete athlete. Please try again.",
         "markedPaidDetail": "{{name}} — {{month}}/{{year}}",
-        "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}"
+        "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}",
+        "carnetSoldSummary": "Carnet sold",
+        "carnetSoldDetail": "{{name}}'s carnet starts today.",
+        "carnetSoldError": "The carnet could not be sold."
       },
       "confirm": {
         "deleteMessage": "Delete {{name}}? Their documents will be permanently deleted and cannot be restored — only the athlete row itself can be undone.",
@@ -1762,7 +1766,9 @@
         "markUnpaidAccept": "Mark unpaid",
         "cancel": "Cancel",
         "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
-        "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?"
+        "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?",
+        "sellCarnetMessage": "Sell {{name}} a carnet — {{price}} for {{entries}} entries?",
+        "sellCarnetAccept": "Sell"
       },
       "restoreConfirm": {
         "message": "Restore {{name}}?",
@@ -1773,6 +1779,23 @@
         "successSummary": "Athlete restored",
         "errorSummary": "Could not restore",
         "errorDetail": "Something went wrong. Try again in a moment."
+      },
+      "showInactive": "Also show the non-active",
+      "hideInactive": "Show only the active",
+      "coverage": {
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "half_yearly": "Half-yearly",
+        "annual": "Annual",
+        "carnet": "Carnet · {{count}}",
+        "none": "Unpaid",
+        "aria": "{{name}}'s payment: {{coverage}}. Open the actions."
+      },
+      "payMenu": {
+        "markPaid": "Mark paid",
+        "undoPaid": "Undo the payment",
+        "sellCarnet": "Sell a carnet",
+        "openPayments": "Open payments"
       }
     },
     "invitation": {
@@ -2441,5 +2464,15 @@
     "percent": "{{percent}}%",
     "ready": "Version {{version}} is ready — it installs when you close Budojo",
     "installNow": "Restart and update"
+  },
+  "desktopTitlebar": {
+    "checking": "Checking…",
+    "upToDate": "You're up to date",
+    "downloading": "Downloading…",
+    "updateReady": "v{{version}}",
+    "install": "Install",
+    "tooltipCheck": "Check for updates",
+    "tooltipInstall": "Install the update and restart",
+    "tooltipUnavailable": "This build does not update itself"
   }
 }

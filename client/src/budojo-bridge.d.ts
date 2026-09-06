@@ -58,6 +58,10 @@ interface DriveLinkState {
  */
 type UpdateStatus =
   | { readonly phase: 'idle' }
+  /** A check is in flight — published so a "check now" press can say so (#1401). */
+  | { readonly phase: 'checking' }
+  /** The check finished and found nothing. Transient: the renderer decides how long it shows. */
+  | { readonly phase: 'up-to-date' }
   | { readonly phase: 'downloading'; readonly version: string; readonly percent: number }
   | { readonly phase: 'ready'; readonly version: string };
 
@@ -70,6 +74,12 @@ interface BudojoBridge {
   readonly apiBase: string;
   /** Node's `process.platform` of the host. */
   readonly platform: string;
+  /**
+   * The running app version, painted in the desktop title bar (#1401).
+   * A development run reports `0.0.0`, which is shown as-is: it says "not a
+   * release" more clearly than a blank would.
+   */
+  version(): Promise<string>;
   /**
    * Subscribes to in-app navigation requests raised by the main process — a
    * clicked native toast (#1225). Paths only (`/dashboard/...`); the renderer
@@ -150,6 +160,16 @@ interface BudojoBridge {
    */
   readonly update: {
     status(): Promise<UpdateStatus>;
+    /**
+     * Check now instead of waiting for the six-hourly poll (#1401).
+     *
+     * The **outcome** arrives through `onStatus`, exactly as it does for the
+     * automatic check — this resolves only with whether a check could be
+     * started. `{ ok: false, reason: 'unavailable' }` means there is no updater
+     * at all (development, unpackaged, portable, or version `0.0.0`), which is
+     * a permanent condition worth saying out loud rather than spinning against.
+     */
+    check(): Promise<{ ok: boolean; reason?: 'unavailable' | 'failed' }>;
     onStatus(callback: (status: UpdateStatus) => void): () => void;
     /**
      * Quit, run the installer visibly, and come back (#1362).

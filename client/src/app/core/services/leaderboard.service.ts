@@ -27,9 +27,7 @@ export interface LeaderboardPage {
 
 /** Discriminated outcomes of `getLeaderboard()`. */
 export type LeaderboardResult =
-  | { status: 'ok'; page: LeaderboardPage }
-  | { status: 'no-academy' }
-  | { status: 'bad-month' };
+  { status: 'ok'; page: LeaderboardPage } | { status: 'no-academy' } | { status: 'bad-month' };
 
 @Injectable({ providedIn: 'root' })
 export class LeaderboardService {

@@ -9,6 +9,7 @@ use App\Models\AthleteInvitation;
 use App\Models\AthletePayment;
 use App\Models\Carnet;
 use App\Support\CarnetAvailability;
+use App\Support\MonthCoverage;
 use App\Support\MonthlyFee;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -36,15 +37,20 @@ class AthleteResource extends JsonResource
         //   * SHOW / STORE / UPDATE: relationship is NOT pre-loaded — we
         //     issue a constrained `exists()` query that returns a single
         //     bool without hydrating models.
-        $paidCurrentMonth = $athlete->relationLoaded('payments')
+        // The covering payment itself, not merely whether one exists (#1402):
+        // the roster now says *how* the month is paid for, and "quarterly"
+        // cannot be read off a boolean.
+        $coveringPayment = $athlete->relationLoaded('payments')
             // In memory the containment test is the same arithmetic the scope
             // does in SQL — one rule, two dialects, and `monthIndex` is what
             // stops them drifting.
-            ? $athlete->payments->contains(
+            ? $athlete->payments->first(
                 static fn (AthletePayment $p): bool => AthletePayment::monthIndex($p->year, $p->month) <= $target
                     && AthletePayment::monthIndex($p->year, $p->month) + $p->period_months->value > $target,
             )
-            : $athlete->payments()->covering($year, $month)->exists();
+            : $athlete->payments()->covering($year, $month)->first();
+
+        $paidCurrentMonth = $coveringPayment !== null;
 
         // Carnet balance chip (#1364) — same two-path shape as
         // `paid_current_month` right above: the index endpoint pre-loads the
@@ -107,6 +113,13 @@ class AthleteResource extends JsonResource
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'created_at' => $athlete->created_at?->toIso8601String(),
             'paid_current_month' => $paidCurrentMonth,
+            // What is actually paying for this month (#1402): the fee's period
+            // if one covers it, otherwise a spendable carnet, otherwise
+            // nothing. `paid_current_month` stays beside it — it still answers
+            // the narrower question the unpaid widget and the `?paid` filter
+            // ask, and the two must not drift, which is why both are derived
+            // from the same lookup right above.
+            'payment_coverage' => MonthCoverage::resolve($coveringPayment, $activeCarnet)->value,
             // Which line of the price list this athlete is on (#1381), and the
             // amount that actually applies to them — resolved server-side so
             // the SPA never has to re-derive "tier, or academy fallback".

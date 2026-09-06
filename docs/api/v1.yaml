@@ -7058,6 +7058,25 @@ components:
               minimum: 1
               maximum: 14
               example: 2
+        payment_coverage:
+          type: string
+          enum: [monthly, quarterly, half_yearly, annual, carnet, none]
+          description: |
+            What is paying for this athlete's **current** month (#1402): the
+            fee's period when one covers it, otherwise a spendable carnet,
+            otherwise nothing.
+
+            Resolved server-side by `App\Support\MonthCoverage`. **The monthly
+            fee wins over a carnet**, which is not a decision this field takes
+            — it is the rule the carnet ledger has applied since #1380, where a
+            month covered by a fee charges no entry. A client that ranked them
+            the other way would contradict the ledger it is summarising.
+
+            `paid_current_month` sits beside it and keeps its narrower meaning:
+            a carnet is `payment_coverage: carnet` and `paid_current_month:
+            false`, because it is not a paid month and the unpaid widget, the
+            `?paid` filter and both reminders still read that.
+          example: monthly
         billing_period_months:
           type: integer
           enum: [1, 3, 6, 12]

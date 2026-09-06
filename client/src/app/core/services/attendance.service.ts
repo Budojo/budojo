@@ -78,9 +78,7 @@ export type MarkTodayResult =
 
 /** Discriminated outcomes of `unmarkToday()` — see method docstring. */
 export type UnmarkTodayResult =
-  | { status: 'unmarked' }
-  | { status: 'instructor-locked' }
-  | { status: 'no-athlete' };
+  { status: 'unmarked' } | { status: 'instructor-locked' } | { status: 'no-athlete' };
 
 /**
  * Client wrapper for the M4.1 attendance API. Five endpoints, all

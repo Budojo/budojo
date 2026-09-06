@@ -22,10 +22,12 @@ import { contentTypeFor, resolveAppRequest } from './protocol.js';
 import { decodeRecoveryCode, encodeRecoveryCode } from './recovery-keys.js';
 import {
   idleUpdateStatus,
+  onCheckStarted,
   onDownloadProgress,
   onUpdateAvailable,
   onUpdateDownloaded,
   onUpdateError,
+  onUpdateNotAvailable,
   type UpdateStatus,
 } from './update-status.js';
 import { planUpdateCheck, updateFailureLine, updateReadyMessage } from './update-policy.js';
@@ -734,10 +736,42 @@ function registerBackupBridge(
  * both of which are the same answer to `installNow`: there is nothing to
  * install.
  */
-let updaterRef: { quitAndInstall: (isSilent: boolean, isForceRunAfter: boolean) => void } | null = null;
+let updaterRef: {
+  quitAndInstall: (isSilent: boolean, isForceRunAfter: boolean) => void;
+  checkForUpdates: () => Promise<unknown>;
+} | null = null;
 
 function registerUpdateBridge(): void {
   ipcMain.handle('budojo:update:status', () => updateStatus);
+
+  // The version the renderer paints in the title bar (#1401). `app.getVersion()`
+  // reads packaged metadata, which CI injects with `-c.extraMetadata.version`;
+  // a development run reports `0.0.0`, and that is worth showing as-is rather
+  // than hiding — it says "this is not a release" more clearly than a blank.
+  ipcMain.handle('budojo:app:version', () => app.getVersion());
+
+  // "Check now" (#1401). Answers what it did, not what it found: the outcome
+  // arrives through the status channel like every other update event, so a
+  // check started here and one started by the six-hourly poll are
+  // indistinguishable downstream — which is the point.
+  ipcMain.handle('budojo:update:check', async () => {
+    if (updaterRef === null) {
+      // No updater at all: development, unpackaged, portable, or version
+      // 0.0.0. `planUpdateCheck` has already logged which. Saying so lets the
+      // button explain itself instead of spinning against nothing.
+      return { ok: false, reason: 'unavailable' };
+    }
+
+    try {
+      await updaterRef.checkForUpdates();
+
+      return { ok: true };
+    } catch {
+      // The `error` handler has already logged the reason and reset the
+      // status; repeating it here would double every failure in the log.
+      return { ok: false, reason: 'failed' };
+    }
+  });
 
   ipcMain.handle('budojo:update:install', () => {
     // Guarded on the state, not on the caller's word. A stale click — the bar
@@ -862,8 +896,17 @@ function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
   updater.autoInstallOnAppQuit = true;
   updaterRef = updater;
 
-  updater.on('checking-for-update', () => log('[update] checking'));
-  updater.on('update-not-available', () => log('[update] already current'));
+  updater.on('checking-for-update', () => {
+    log('[update] checking');
+    publishUpdateStatus(onCheckStarted(updateStatus));
+  });
+  updater.on('update-not-available', () => {
+    log('[update] already current');
+    // Published rather than only logged (#1401). "Nothing to get" was the one
+    // outcome the renderer never heard about, which made a check and a
+    // check-that-never-ran look identical from the outside.
+    publishUpdateStatus(onUpdateNotAvailable(updateStatus));
+  });
   updater.on('update-available', (info: { version: string }) => {
     log(`[update] ${info.version} available, downloading`);
     publishUpdateStatus(onUpdateAvailable(updateStatus, info.version));

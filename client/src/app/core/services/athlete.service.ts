@@ -180,7 +180,22 @@ export interface Athlete {
    * treat a missing value as monthly, which is what every athlete is.
    */
   billing_period_months?: number;
+  /**
+   * What is paying for this athlete's current month (#1402), resolved
+   * server-side by `App\Support\MonthCoverage` — the fee's period if one
+   * covers it, otherwise a spendable carnet, otherwise nothing.
+   *
+   * Read this rather than re-deriving it: which cover wins when both apply is
+   * a domain rule (the fee, since #1380), and a second implementation on the
+   * client is how the roster and the ledger come to disagree. Optional for
+   * fixture-compat; readers fall back to `paid_current_month`.
+   */
+  payment_coverage?: PaymentCoverage;
 }
+
+/** The shapes `payment_coverage` takes. Mirrors `App\Enums\PaymentCoverage`. */
+export type PaymentCoverage =
+  'monthly' | 'quarterly' | 'half_yearly' | 'annual' | 'carnet' | 'none';
 
 export interface AthleteMeta {
   current_page: number;

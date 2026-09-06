@@ -52,6 +52,14 @@ Everything the renderer needs beyond HTTP is on `window.__BUDOJO__` (typed in `c
 | `token.{get,set,clear}` | renderer ↔ main (sync) | The Sanctum bearer token, held encrypted in the OS keychain by the main process ([#1227](https://github.com/Budojo/budojo/issues/1227)). `get()` is synchronous so the HTTP interceptor can read it inline. |
 | `backup.{list,run,restore}` | renderer → main (async) | Local backup & restore ([#1228](https://github.com/Budojo/budojo/issues/1228)). See [`backup-restore.md`](./backup-restore.md). |
 | `keys.{export,import}` | renderer → main (async) | Recovery keys ([#1254](https://github.com/Budojo/budojo/issues/1254)): export decrypts the key store into a copy-pasteable code; import writes it back and relaunches under the new keys. |
+| `drive.{state,archives,link,unlink,sync}` | renderer → main (async) | Google Drive backup sync ([#1301](https://github.com/Budojo/budojo/issues/1301)). Answers `configured: false` when the build carries no OAuth client, and the page hides the card rather than offering a button that cannot work. |
+| `folder.{state,choose,clear,copy,open}` | renderer → main (async) | The backup folder ([#1320](https://github.com/Budojo/budojo/issues/1320)) — the owner picks a directory their own sync client already watches. |
+| `version()` | renderer → main (async) | The running app version, painted in the title bar ([#1401](https://github.com/Budojo/budojo/issues/1401)). A development run reports `0.0.0`, shown as-is. |
+| `update.{status,onStatus}` | renderer ↔ main | The update state ([#1339](https://github.com/Budojo/budojo/issues/1339)): `idle`, `checking`, `up-to-date`, `downloading`, `ready`. `status()` for the first paint, `onStatus` for every change after. |
+| `update.check()` | renderer → main (async) | Check now instead of waiting for the six-hourly poll ([#1401](https://github.com/Budojo/budojo/issues/1401)). Resolves only with whether a check could be **started**; what it found arrives through `onStatus`, exactly as the automatic check's result does. |
+| `update.installNow()` | renderer → main (async) | Quit, run the installer visibly, relaunch ([#1362](https://github.com/Budojo/budojo/issues/1362)). Guarded on the state, so a stale click cannot quit the app to install nothing. |
+
+**The update states are not symmetric with the events.** `checking` and `up-to-date` exist for one reason: before them, a check that found nothing was completely silent, and "nothing to get" was indistinguishable from "never looked". The renderer decides who deserves to hear about them — a press does, the six-hourly poll does not — because the state stream cannot tell the two apart and should not try.
 
 ## Runtime profile and capabilities
 

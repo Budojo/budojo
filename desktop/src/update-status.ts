@@ -21,6 +21,8 @@
 
 export type UpdateStatus =
   | { readonly phase: 'idle' }
+  | { readonly phase: 'checking' }
+  | { readonly phase: 'up-to-date' }
   | { readonly phase: 'downloading'; readonly version: string; readonly percent: number }
   | { readonly phase: 'ready'; readonly version: string };
 
@@ -43,6 +45,36 @@ function displayPercent(percent: number): number {
   }
 
   return Math.min(100, Math.max(0, Math.floor(percent)));
+}
+
+/**
+ * A check has started (#1401).
+ *
+ * Published so the renderer can say so — before this, a check was completely
+ * silent unless it found something, which is exactly why someone pressing a
+ * "check now" button could not tell whether anything had happened.
+ *
+ * `ready` still wins: a version sitting on disk is a fact, and a fresh poll
+ * looking for another one must not paint over it.
+ */
+export function onCheckStarted(current: UpdateStatus): UpdateStatus {
+  return current.phase === 'ready' ? current : { phase: 'checking' };
+}
+
+/**
+ * The check finished and there was nothing to get.
+ *
+ * This is the one piece of news the app never delivered. "No update" and
+ * "never looked" are indistinguishable when both produce silence, and the
+ * whole reason to add a button was that the automatic check at launch was
+ * invisible.
+ *
+ * It is a **transient** state: how long "you're up to date" stays on screen
+ * before falling back to the version is a presentation decision and lives in
+ * the renderer, not in this engine, which would otherwise need a clock.
+ */
+export function onUpdateNotAvailable(current: UpdateStatus): UpdateStatus {
+  return current.phase === 'ready' ? current : { phase: 'up-to-date' };
 }
 
 export function onUpdateAvailable(current: UpdateStatus, version: string): UpdateStatus {
@@ -78,6 +110,9 @@ export function onUpdateDownloaded(_current: UpdateStatus, version: string): Upd
  * owner about, which is why this returns to silence rather than to an error
  * state. But a downloaded update is a fact about the disk, not about the
  * network, and it survives.
+ *
+ * It also clears `checking` and `up-to-date`, which is what stops a failed
+ * check from leaving a spinner turning forever.
  */
 export function onUpdateError(current: UpdateStatus): UpdateStatus {
   return current.phase === 'ready' ? current : idleUpdateStatus();
