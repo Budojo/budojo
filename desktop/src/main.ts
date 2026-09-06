@@ -439,7 +439,9 @@ async function startRuntime(): Promise<{
           createDriveSyncIO({
             config: driveConfig,
             layout,
-            vault: new TokenVault(layout.driveTokenFile, safeStorage),
+            vault: new TokenVault(layout.driveTokenFile, safeStorage, (line) =>
+              backupLog.write(`${new Date().toISOString()} drive ${line}`),
+            ),
             backupService,
             openExternal: (url) => shell.openExternal(url),
             log: (line) => backupLog.write(`${new Date().toISOString()} ${line}`),
@@ -538,7 +540,18 @@ function showNativeNotification(notification: PendingNotification): void {
  * decrypt cache. Registered once, before any window exists.
  */
 function registerTokenVault(): void {
-  const vault = new TokenVault(dataLayout(app.getPath('userData')).authTokenFile, safeStorage);
+  const layout = dataLayout(app.getPath('userData'));
+  // Opened here rather than beside the other logs, because this is the
+  // function that needs it — a `RotatingLog | null` assigned from somewhere
+  // else is how `renderer.log` shipped inert (#1317). Its own file, and named
+  // for what someone would be looking for: the vault's only failure modes both
+  // surface as "it asks me to log in every time" (#1298).
+  const authLog = new RotatingLog(path.join(layout.logsDir, 'auth.log'));
+  authLog.open();
+
+  const vault = new TokenVault(layout.authTokenFile, safeStorage, (line) =>
+    authLog.write(`${new Date().toISOString()} ${line}`),
+  );
   ipcMain.on('budojo:token:get', (event) => {
     event.returnValue = vault.get();
   });

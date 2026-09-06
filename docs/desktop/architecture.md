@@ -95,7 +95,7 @@ Everything that persists lives under Electron's **`userData`** directory (`%APPD
 |---|---|
 | `budojo.sqlite` | The database. SQLite in WAL mode (`+ -wal`, `-shm` siblings). |
 | `storage/` | Laravel's `storage/` — **the encrypted documents live here** (`app/private/`), alongside the publicly-served images in `app/public/`. |
-| `logs/` | Runtime logs — PHP, scheduler, notifier, backup, update, and `renderer.log` for faults in the window itself (#1317). Everything in `renderer.log` is passed through a redaction step first: the renderer holds the sign-in token, and this file travels inside support bundles. |
+| `logs/` | Runtime logs — PHP, scheduler, notifier, backup, update, `auth.log` for the sign-in vault, and `renderer.log` for faults in the window itself (#1317). Everything in `renderer.log` is passed through a redaction step first: the renderer holds the sign-in token, and this file travels inside support bundles. `auth.log` needs no redaction because it never carries the token — it is written on the paths where the token could *not* be stored, and naming it there would hand over the plaintext copy the vault exists to avoid (#1298). |
 | `backups/` | Local backup archives (see [`backup-restore.md`](./backup-restore.md)). |
 | `secrets.bin` | `APP_KEY` + `DOCUMENT_ENCRYPTION_KEY`, encrypted with the OS keychain (Electron `safeStorage` → DPAPI on Windows). |
 | `auth-token.bin` | The signed-in Sanctum token, same encryption. |
