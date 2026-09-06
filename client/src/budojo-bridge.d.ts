@@ -166,7 +166,7 @@ interface BudojoBridge {
      * The **outcome** arrives through `onStatus`, exactly as it does for the
      * automatic check — this resolves only with whether a check could be
      * started. `{ ok: false, reason: 'unavailable' }` means there is no updater
-     * at all (development, unpackaged, portable, or version `0.0.0`), which is
+     * at all (development, unpackaged, or version `0.0.0`), which is
      * a permanent condition worth saying out loud rather than spinning against.
      */
     check(): Promise<{ ok: boolean; reason?: 'unavailable' | 'failed' }>;

@@ -4,31 +4,28 @@ Installing Budojo on Windows, what the first launch does, how to upgrade, and wh
 
 ## What you download
 
-Every stable release attaches two Windows builds to its [GitHub Release](https://github.com/Budojo/budojo/releases) (built by the `desktop-installer` job, [#1231](https://github.com/Budojo/budojo/issues/1231)):
+Every stable release attaches the Windows installer to its [GitHub Release](https://github.com/Budojo/budojo/releases) (built by the `desktop-installer` job, [#1231](https://github.com/Budojo/budojo/issues/1231)):
 
-| File | What it is | Use when |
-|---|---|---|
-| `Budojo-Setup-X.Y.Z.exe` | **NSIS installer** | **The one you want.** Installs per-user (no admin), adds a Start-menu entry, upgradable in place — and starts in seconds. |
-| `Budojo-X.Y.Z.exe` | **Portable** | Only if you genuinely cannot install — see the warning below. |
+| File | What it is |
+|---|---|
+| `Budojo-Setup-X.Y.Z.exe` | **The installer.** Installs per-user (no administrator prompt), adds a Start-menu entry, upgrades in place, updates itself, and starts in seconds. |
 
-Both are the same application. Neither is code-signed (see [SmartScreen](#the-smartscreen-warning)).
+The other two files beside it are for the app, not for you: `latest.yml` and the `.blockmap` are how an installed copy finds and downloads updates.
 
-> ⚠️ **The portable build is slow to start — about two minutes, every time you open it.** It is a self-extracting bundle that unpacks ~450 MB (the PHP runtime and the whole server) to a temporary folder on each launch, and Windows Defender scans it all each time. There is no window and no progress bar while that happens, so it looks like nothing is happening. The installed build starts in a couple of seconds and is the same app — prefer it unless you have a reason not to. Tracked in [#1272](https://github.com/Budojo/budojo/issues/1272).
+It is not code-signed — see [SmartScreen](#the-smartscreen-warning).
 
-## Install (NSIS)
+> **There used to be a second file, `Budojo-X.Y.Z.exe` — a portable build that needed no installation.** It was removed in [#1272](https://github.com/Budojo/budojo/issues/1272). It re-extracted ~450 MB to a temporary folder on *every* launch, which took about **two minutes each time**, with no window and no progress bar while it happened — so it mostly looked broken. The installer needs no administrator rights either, which was the main thing the portable was there for.
+>
+> **If you are running a portable copy:** install `Budojo-Setup-X.Y.Z.exe` and delete the old exe afterwards. Your data is not inside it (see below), so nothing is lost — the installed app finds the same `%APPDATA%\Budojo\` and carries straight on.
+
+## Install
 
 1. Download `Budojo-Setup-X.Y.Z.exe` from the latest release.
 2. Run it. Because it is unsigned, Windows will show a SmartScreen warning first — see below.
 3. Choose an install location if you don't want the default (the installer allows changing it). No administrator prompt: it installs for the current user only.
 4. Launch Budojo from the Start menu.
 
-## Portable
-
-1. Download `Budojo-X.Y.Z.exe`.
-2. Put it anywhere — a USB stick, a `OneDrive`/`Drive` folder, `Desktop`.
-3. Double-click to run. Nothing is installed.
-
-> **Your data is *not* inside the portable exe.** Whether you run the installer or the portable build, all data lives under `%APPDATA%\Budojo\` on the machine you run it on (database, documents, backups — see [architecture § Data layout](./architecture.md#data-layout)). Running the portable exe from a USB stick on a *different* PC starts a fresh, empty Budojo on that PC — it does not carry your gym's data with it. To move your data, use a [backup](./backup-restore.md).
+> **Your data is *not* inside the application.** It all lives under `%APPDATA%\Budojo\` on the machine you run it on — database, documents, backups (see [architecture § Data layout](./architecture.md#data-layout)). So installing Budojo on a *second* PC gives you a fresh, empty Budojo there; it does not follow you. To move your gym to another machine, use a [backup](./backup-restore.md).
 
 ## The SmartScreen warning
 
@@ -54,7 +51,6 @@ Measured on the shipped v2.42.0 build, from launch to the local API answering:
 | | First launch | Later launches |
 |---|---|---|
 | Installed | 13.7 s | 2.4 s |
-| Portable | ~130 s | ~130 s (see the warning above) |
 
 ## Upgrading
 
@@ -62,13 +58,13 @@ Measured on the shipped v2.42.0 build, from launch to the local API answering:
 2. Run it. It installs over the previous version.
 3. Your data under `%APPDATA%\Budojo\` is untouched; any new database migrations run automatically on the next launch.
 
-Portable users: download the newer `Budojo-X.Y.Z.exe` and replace the old one. Same data directory, same automatic migration on launch.
+In practice you rarely do this by hand — the installed build updates itself, see [Updates](#updates).
 
 Versioning follows the releases: `feat` changes bump the minor version, `fix` changes the patch. The in-app **What's new** screen summarises each release.
 
 ## Uninstalling
 
-Uninstall from **Windows Settings → Apps** (or delete the portable exe). By design the uninstaller **does not delete your data** — the database, documents and backups under `%APPDATA%\Budojo\` are left in place, so an accidental uninstall or a reinstall can't wipe the gym. To remove everything, delete `%APPDATA%\Budojo\` by hand after uninstalling — but **make a [backup](./backup-restore.md) first**, and read the note there about the encryption keys, because that folder is the only copy.
+Uninstall from **Windows Settings → Apps**. By design the uninstaller **does not delete your data** — the database, documents and backups under `%APPDATA%\Budojo\` are left in place, so an accidental uninstall or a reinstall can't wipe the gym. To remove everything, delete `%APPDATA%\Budojo\` by hand after uninstalling — but **make a [backup](./backup-restore.md) first**, and read the note there about the encryption keys, because that folder is the only copy.
 
 ## See also
 
@@ -83,5 +79,5 @@ Nothing to configure, and nothing to click. If the machine is offline the check 
 
 Two caveats worth knowing:
 
-- **The portable build does not update itself.** It cannot rewrite its own running executable, so it deliberately does not try. Download the newer file by hand — or use the installer, which is the recommended build anyway.
 - **Copies older than v2.43.0 have no updater at all.** They will sit on their version forever with nothing telling them. Install the current release once, by hand, and it takes over from there.
+- **A portable copy never updated itself either** — it could not rewrite its own running executable, so it deliberately did not try. The portable is gone ([#1272](https://github.com/Budojo/budojo/issues/1272)); install the current release once and it takes over from there.

@@ -9,26 +9,12 @@ import {
 const installed: UpdateEnvironment = {
   packaged: true,
   dev: false,
-  portableDir: undefined,
   version: '2.43.0',
 };
 
 describe('planUpdateCheck', () => {
   it('checks for updates on a normal installed build', () => {
     expect(planUpdateCheck(installed)).toEqual({ check: true });
-  });
-
-  it('refuses on the portable build, which cannot rewrite its own exe', () => {
-    // The whole reason this module exists: without the refusal, every portable
-    // launch would fail an update attempt it can never complete.
-    const decision = planUpdateCheck({ ...installed, portableDir: 'C:\\Users\\x\\Desktop' });
-
-    expect(decision).toEqual({ check: false, reason: 'portable build — updates are manual' });
-  });
-
-  it('treats an empty PORTABLE_EXECUTABLE_DIR as not portable', () => {
-    // Windows can hand us an empty string rather than an absent variable.
-    expect(planUpdateCheck({ ...installed, portableDir: '' })).toEqual({ check: true });
   });
 
   it('refuses in development, so a working tree is never "updated"', () => {
@@ -46,7 +32,7 @@ describe('planUpdateCheck', () => {
   });
 
   it('prefers the dev reason when several apply, so the log says something useful', () => {
-    const decision = planUpdateCheck({ packaged: false, dev: true, portableDir: 'C:\\x', version: '2.43.0' });
+    const decision = planUpdateCheck({ packaged: false, dev: true, version: '0.0.0' });
 
     expect(decision).toEqual({ check: false, reason: 'development run' });
   });
@@ -72,7 +58,6 @@ describe('planUpdateCheck — local builds', () => {
   const installed: UpdateEnvironment = {
     packaged: true,
     dev: false,
-    portableDir: undefined,
     version: '2.43.0',
   };
 

@@ -3,9 +3,15 @@
  *
  * Pure decisions, no IO, so every refusal is unit-tested: the main process only
  * wires the answer to `electron-updater`. Getting this wrong is not cosmetic —
- * asking the updater to replace a self-extracting portable executable fails on
- * every single launch, and a dev build pointed at the public releases would try
- * to "update" a working tree.
+ * a dev build pointed at the public releases would try to "update" a working
+ * tree, and a locally packaged one would replace itself with the shipped app.
+ *
+ * There was a third refusal here until #1272, for the self-extracting portable
+ * build that electron-updater cannot rewrite while it runs. That target is no
+ * longer produced, so the check could not fire; it went with it rather than
+ * staying as a branch no artefact can reach. Bringing the portable back means
+ * bringing the refusal back in the same change — the reason it existed has not
+ * stopped being true, only stopped being reachable.
  */
 
 export interface UpdateEnvironment {
@@ -13,11 +19,6 @@ export interface UpdateEnvironment {
   packaged: boolean;
   /** Our own dev flag (`ELECTRON_DEV=1`). */
   dev: boolean;
-  /**
-   * `PORTABLE_EXECUTABLE_DIR`, set by electron-builder's portable stub. Its
-   * presence is the documented way to know we are the self-extracting build.
-   */
-  portableDir: string | undefined;
   /**
    * `app.getVersion()`. A local `make desktop-package` leaves package.json's
    * placeholder, because CI injects the real version at release time — and a
@@ -46,12 +47,6 @@ export function planUpdateCheck(env: UpdateEnvironment): UpdateDecision {
 
   if (!env.packaged) {
     return { check: false, reason: 'not a packaged build' };
-  }
-
-  if (env.portableDir !== undefined && env.portableDir !== '') {
-    // electron-updater cannot rewrite a running self-extracting exe. The
-    // portable build is documented as manual-download-only.
-    return { check: false, reason: 'portable build — updates are manual' };
   }
 
   if (env.version === UNVERSIONED) {

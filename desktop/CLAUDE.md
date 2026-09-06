@@ -35,7 +35,7 @@ A new capability follows the same shape: engine + spec first, adapter second, on
 - **Anything periodic goes through `PeriodicTask`** — never a bare `setInterval`. It never overlaps runs, survives a failing tick, and stops cleanly on quit.
 - **Never hardcode Windows path separators in a spec.** The app runs on Windows, but CI **and the development machines** run these specs on Linux — and `path.dirname('C:\\data\\php.ini')` is `'.'` on POSIX, so a hardcoded literal passes on a Windows box and fails everywhere else. Build the input with `path.join(...)` the way `dataLayout()` does; `join` + `dirname` round-trips to the same directory under both platform semantics.
 - **The shell only *ships* for Windows; you develop it on Linux.** `npm run lint`, `npm test` and `npm run build` all work here and the suite is green on Linux. `npm run dev`, `npm run fetch:php` and `npm run dist` do **not**. Porting that is #1300, and two of its four parts have landed: `resolveDesktopPaths` now derives the binary name from the platform, and `backup-io.ts` zips through the bundled PHP's `ZipArchive` instead of PowerShell. What still blocks a Linux build is the **runtime itself** — the pinned PHP is a Win32 zip, `fetch-php.mjs` hard-exits off Windows — and `electron-builder.yml` declaring no `linux` target. Until those land, anything that has to *run* the packaged app needs a Windows machine. Say so in the PR rather than claiming a runtime you could not exercise.
-- **A local build shares the real user's data directory.** `userData` is derived from the `appId`/`productName`, not from where the executable sits — so a build you just made, the portable, and the installed release all read and write the *same* `%APPDATA%\Budojo\`. A dev build carrying a half-finished migration would run it against real athletes. Always test a build with an isolated directory:
+- **A local build shares the real user's data directory.** `userData` is derived from the `appId`/`productName`, not from where the executable sits — so a build you just made and the installed release read and write the *same* `%APPDATA%\Budojo\`. A dev build carrying a half-finished migration would run it against real athletes. Always test a build with an isolated directory:
 
   ```
   "release/win-unpacked/Budojo.exe" --user-data-dir="C:/temp/budojo-test"
@@ -95,7 +95,7 @@ npm test                             # vitest run
 
 ## Packaging
 
-- `npm run dist` = build main + renderer + fetch PHP + electron-builder (NSIS + portable).
+- `npm run dist` = build main + renderer + fetch PHP + electron-builder (NSIS). The portable target was removed in #1272 — it re-extracted the whole ~450 MB payload to `%TEMP%` on every launch (~130 s, vs 2.4 s installed) and `unpackDirName` measured slower still. Shrinking the payload is the prerequisite for ever reinstating it, not choosing a different target option.
 - **`package.json` stays at version `0.0.0`** — semantic-release owns versioning; CI injects the real version with `-c.extraMetadata.version`.
 - The PHP runtime is **not committed**: `runtime/php.manifest.json` pins version + sha256 and `fetch:php` verifies the download before extracting. Bump the manifest, never hand-drop a binary.
 - `extraResources` layout (`resources/php`, `resources/server`) is a **contract** with `resolveDesktopPaths` — changing one means changing both.

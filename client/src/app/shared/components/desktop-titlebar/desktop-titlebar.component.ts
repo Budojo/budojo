@@ -59,8 +59,8 @@ export class DesktopTitlebarComponent {
   private readonly asked = signal<boolean>(false);
 
   /**
-   * No updater at all — a development run, an unpackaged build, the portable,
-   * or version `0.0.0`. Permanent for the session, so the bar stops offering.
+   * No updater at all — a development run, an unpackaged build, or version
+   * `0.0.0`. Permanent for the session, so the bar stops offering.
    */
   protected readonly unavailable = signal<boolean>(false);
 

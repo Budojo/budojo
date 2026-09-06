@@ -86,10 +86,14 @@ Close any auto-close stragglers by hand with a comment saying which release deli
 Then **smoke-test the artefact users actually download** — a green build and a correct unpacked layout are not evidence that the installer runs (that assumption held for two releases before anyone checked, and the portable turned out to need ~2 minutes to open):
 
 ```bash
-gh release download vX.Y.Z --pattern "Budojo-X.Y.Z.exe" --dir <scratch>
+gh release download vX.Y.Z --pattern "Budojo-Setup-X.Y.Z.exe" --dir <scratch>
+"<scratch>/Budojo-Setup-X.Y.Z.exe"          # assisted installer (oneClick: false) — click through it
+# Then launch the INSTALLED exe, not the installer. Per-user install, so:
 # --user-data-dir keeps the test off the real %APPDATA%\Budojo — the packaged app honours it
-"<scratch>/Budojo-X.Y.Z.exe" --user-data-dir="<scratch>/userdata"
+"%LOCALAPPDATA%/Programs/Budojo/Budojo.exe" --user-data-dir="<scratch>/userdata"
 ```
+
+> **Trap:** this used to download `Budojo-X.Y.Z.exe` — the *portable* — so the step that exists to test "what users actually download" was testing the one build the install guide told them to avoid. The portable was removed in #1272; `Budojo-Setup-X.Y.Z.exe` is now the only executable on the Release.
 
 Then confirm, from outside the app: a window titled `Budojo` exists, a `php.exe` child is listening on `127.0.0.1:<port>`, `GET /api/v1/health` returns `{"status":"ok"}`, and the scratch userData holds `budojo.sqlite` + `secrets.bin` + `bootstrap.json` while `%APPDATA%\Budojo` stays untouched. Kill the process tree when done.
 

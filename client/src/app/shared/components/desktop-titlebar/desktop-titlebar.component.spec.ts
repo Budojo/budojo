@@ -158,7 +158,7 @@ describe('DesktopTitlebarComponent', () => {
   });
 
   it('gives up quietly on a build that cannot update itself', async () => {
-    // The portable, a development run, an unpackaged build, version 0.0.0.
+    // A development run, an unpackaged build, version 0.0.0.
     bridgeWindow.__BUDOJO__ = stubBridge({
       version: async () => '2.48.0',
       update: { check: async () => ({ ok: false, reason: 'unavailable' as const }) },
