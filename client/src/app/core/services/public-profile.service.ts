@@ -35,11 +35,7 @@ export interface PublicProfilePromotion {
  * type on the bag.
  */
 export type PublicProfileAchievementKind =
-  | 'first_class'
-  | '30_day_streak'
-  | '100_sessions'
-  | '1_year_at_academy'
-  | 'belt_promotion';
+  'first_class' | '30_day_streak' | '100_sessions' | '1_year_at_academy' | 'belt_promotion';
 
 export interface PublicProfileAchievement {
   kind: PublicProfileAchievementKind;

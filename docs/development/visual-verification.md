@@ -23,7 +23,7 @@ The `budojo_client` container is **Alpine**; Cypress's bundled Electron (glibc) 
 docker run --rm --network host \
   --user "$(id -u):$(id -g)" \
   -v "$(pwd)/client":/e2e -w /e2e \
-  cypress/included:15.15.0 \
+  cypress/included:15.21.1 \
   --spec 'cypress/e2e/_tmp-shot.cy.ts' --config video=false --browser electron
 ```
 

@@ -30,13 +30,7 @@ import { WebPushError, WebPushService } from './web-push.service';
  *    required APIs (Safari < 16.4 outside the home-screen PWA, etc.).
  */
 export type NotificationOnboardingState =
-  | 'idle'
-  | 'visible'
-  | 'subscribing'
-  | 'succeeded'
-  | 'dismissed'
-  | 'denied'
-  | 'failed';
+  'idle' | 'visible' | 'subscribing' | 'succeeded' | 'dismissed' | 'denied' | 'failed';
 
 @Injectable({ providedIn: 'root' })
 export class NotificationOnboardingService {

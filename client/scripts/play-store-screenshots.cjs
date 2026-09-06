@@ -49,7 +49,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const CYPRESS_IMAGE = 'cypress/included:15.14.2';
+const CYPRESS_IMAGE = 'cypress/included:15.21.1';
 const CLIENT_CONTAINER = 'budojo_client';
 const SPEC = 'cypress/marketing/play-store-screenshots.cy.ts';
 

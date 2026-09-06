@@ -22,11 +22,7 @@ import type { Belt } from './athlete.service';
  * carry a belt); the SPA's flair component switches variant on that.
  */
 export type CommunityPostType =
-  | 'belt_promotion'
-  | 'stripe_promotion'
-  | 'event'
-  | 'owner_announcement'
-  | 'shared_video';
+  'belt_promotion' | 'stripe_promotion' | 'event' | 'owner_announcement' | 'shared_video';
 export type CommunityPostVisibility = 'academy' | 'public';
 export type ReactionEmoji = 'clap' | 'pray';
 export type RsvpResponse = 'going' | 'maybe';

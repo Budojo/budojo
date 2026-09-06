@@ -23,9 +23,7 @@ export interface WeeklyRecapPartner {
 
 /** Discriminated outcomes of `getRecap()`. */
 export type GetRecapResult =
-  | { status: 'ok'; recap: WeeklyRecap }
-  | { status: 'no-athlete' }
-  | { status: 'bad-week' };
+  { status: 'ok'; recap: WeeklyRecap } | { status: 'no-athlete' } | { status: 'bad-week' };
 
 @Injectable({ providedIn: 'root' })
 export class WeeklyRecapService {
