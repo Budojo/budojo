@@ -1796,7 +1796,8 @@
         "undoPaid": "Undo the payment",
         "sellCarnet": "Sell a carnet",
         "openPayments": "Open payments"
-      }
+      },
+      "importButton": "Import"
     },
     "invitation": {
       "title": "Account & invitation",
@@ -2151,6 +2152,68 @@
         "tooLargeSummary": "File too large",
         "tooLargeDetail": "The photo cannot exceed 2 MB."
       }
+    },
+    "import": {
+      "title": "Import athletes",
+      "subtitle": "Bring your roster in from a spreadsheet, once, instead of typing it in.",
+      "back": "Back to athletes",
+      "pick": {
+        "title": "Choose a CSV file",
+        "hint": "It needs a header row, and a column for the first name, the surname and the belt.",
+        "button": "Choose a file",
+        "excelNote": "Exporting from Excel? File → Save as → CSV. Semicolons, accents and Italian dates are all handled."
+      },
+      "mapping": {
+        "title": "Columns",
+        "hint": "This is how your columns were read. Change anything that is wrong before importing.",
+        "missing": "No column was matched for:",
+        "none": "— not imported —"
+      },
+      "fields": {
+        "first_name": "First name",
+        "last_name": "Surname",
+        "belt": "Belt",
+        "stripes": "Stripes",
+        "status": "Status",
+        "joined_at": "Joined on",
+        "email": "Email",
+        "phone": "Phone",
+        "date_of_birth": "Date of birth"
+      },
+      "table": {
+        "row": "Row",
+        "name": "Name",
+        "outcome": "Outcome"
+      },
+      "status": {
+        "ok": "Will be imported",
+        "invalid": "Skipped",
+        "duplicate": "Already on the roster"
+      },
+      "reason": {
+        "duplicate": "Someone with this name is already here."
+      },
+      "summary": {
+        "willOne": "1 athlete will be imported.",
+        "willOther": "{{count}} athletes will be imported.",
+        "doneOne": "1 athlete imported.",
+        "doneOther": "{{count}} athletes imported.",
+        "skippedOne": "1 row was skipped.",
+        "skippedOther": "{{count}} rows were skipped."
+      },
+      "confirmOne": "Import 1 athlete",
+      "confirmOther": "Import {{count}} athletes",
+      "seeRoster": "See the roster",
+      "error": {
+        "title": "The file could not be read",
+        "generic": "Check that it is a CSV and try again."
+      },
+      "toast": {
+        "title": "Import complete",
+        "bodyOne": "1 athlete added to the roster.",
+        "bodyOther": "{{count}} athletes added to the roster."
+      },
+      "another": "Choose another file"
     }
   },
   "month": {

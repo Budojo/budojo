@@ -1,0 +1,206 @@
+<p-toast position="top-right" />
+
+<div class="import-page">
+  <app-page-header
+    [title]="'athletes.import.title' | translate"
+    [subtitle]="'athletes.import.subtitle' | translate"
+  >
+    <p-button
+      pageHeaderCta
+      [label]="'athletes.import.back' | translate"
+      icon="pi pi-arrow-left"
+      severity="secondary"
+      [text]="true"
+      size="small"
+      (onClick)="goToRoster()"
+      data-cy="import-back"
+    />
+  </app-page-header>
+
+  <!-- Step 1. Nothing else on screen until there is a file: a mapping panel
+       and an empty table would be furniture for a decision not yet made. -->
+  @if (file() === null) {
+    <section class="import-card import-card--pick" data-cy="import-pick">
+      <i class="pi pi-file-import import-card__icon" aria-hidden="true"></i>
+      <h2 class="import-card__heading">{{ 'athletes.import.pick.title' | translate }}</h2>
+      <p class="import-card__hint">{{ 'athletes.import.pick.hint' | translate }}</p>
+
+      <label class="import-file" data-cy="import-file-label">
+        <input
+          type="file"
+          accept=".csv,text/csv,text/plain"
+          class="import-file__input"
+          (change)="onFile($event)"
+          data-cy="import-file"
+        />
+        <span class="import-file__button">
+          <i class="pi pi-upload" aria-hidden="true"></i>
+          {{ 'athletes.import.pick.button' | translate }}
+        </span>
+      </label>
+
+      <p class="import-card__note">{{ 'athletes.import.pick.excelNote' | translate }}</p>
+    </section>
+  } @else {
+    <!-- The mapping is shown even when every guess was right. A guess nobody
+         saw is one nobody can correct, and being wrong here writes surnames
+         into the first-name column of every record. -->
+    <section class="import-card" data-cy="import-mapping">
+      <header class="import-card__header">
+        <h2 class="import-card__heading">{{ 'athletes.import.mapping.title' | translate }}</h2>
+        <div class="import-card__file">
+          <span class="import-card__filename" data-cy="import-filename">{{ file()!.name }}</span>
+          <!-- The way back out. Without it, picking the wrong file means
+               leaving the page and coming back, because the picker above is
+               gone the moment there IS a file. -->
+          <label class="import-file import-file--inline">
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              class="import-file__input"
+              (change)="onFile($event)"
+              data-cy="import-file-swap"
+            />
+            <span class="import-file__link">{{ 'athletes.import.another' | translate }}</span>
+          </label>
+        </div>
+      </header>
+      <p class="import-card__hint">{{ 'athletes.import.mapping.hint' | translate }}</p>
+
+      @if (missing().length > 0) {
+        <div class="import-alert" role="alert" data-cy="import-missing">
+          <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+          <span>
+            {{ 'athletes.import.mapping.missing' | translate }}
+            @for (field of missing(); track field) {
+              <strong>{{ 'athletes.import.fields.' + field | translate }}</strong>
+              @if (!$last) {
+                <span>, </span>
+              }
+            }
+          </span>
+        </div>
+      }
+
+      <div class="import-mapping">
+        <!-- The server names the fields it can fill, so a new one appears here
+             without a client change. Falls back to the required three, which
+             is what a refused mapping leaves us holding. -->
+        @for (field of report()?.fields ?? requiredFields; track field) {
+          <div class="import-mapping__row">
+            <label class="import-mapping__label" [attr.for]="'map-' + field">
+              {{ 'athletes.import.fields.' + field | translate }}
+              @if (requiredFields.includes(field)) {
+                <span class="import-mapping__required" aria-hidden="true">*</span>
+              }
+            </label>
+            <p-select
+              [inputId]="'map-' + field"
+              [options]="columnOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="mapping()[field] ?? ''"
+              (ngModelChange)="onMappingChange(field, $event)"
+              [disabled]="busy()"
+              appendTo="body"
+              styleClass="import-mapping__select"
+              [attr.data-cy]="'map-' + field"
+            />
+          </div>
+        }
+      </div>
+    </section>
+
+    @if (report(); as result) {
+      <section class="import-card" data-cy="import-preview">
+        <div class="import-summary">
+          <p class="import-summary__line" data-cy="import-summary">
+            @if (imported() !== null) {
+              {{
+                (result.imported === 1
+                  ? 'athletes.import.summary.doneOne'
+                  : 'athletes.import.summary.doneOther'
+                ) | translate: { count: result.imported }
+              }}
+            } @else {
+              {{
+                (result.imported === 1
+                  ? 'athletes.import.summary.willOne'
+                  : 'athletes.import.summary.willOther'
+                ) | translate: { count: result.imported }
+              }}
+            }
+            @if (result.skipped > 0) {
+              <span class="import-summary__skipped">
+                {{
+                  (result.skipped === 1
+                    ? 'athletes.import.summary.skippedOne'
+                    : 'athletes.import.summary.skippedOther'
+                  ) | translate: { count: result.skipped }
+                }}
+              </span>
+            }
+          </p>
+        </div>
+
+        <!-- Horizontal scroll rather than a squeeze: the parsed values are the
+             evidence, and a truncated date is worth nothing to check. -->
+        <div class="import-table">
+          <p-table [value]="result.rows" [scrollable]="true" scrollHeight="26rem" dataKey="row">
+            <ng-template #header>
+              <tr>
+                <th class="import-table__num">{{ 'athletes.import.table.row' | translate }}</th>
+                <th>{{ 'athletes.import.table.name' | translate }}</th>
+                <th>{{ 'athletes.import.fields.belt' | translate }}</th>
+                <th>{{ 'athletes.import.fields.date_of_birth' | translate }}</th>
+                <th>{{ 'athletes.import.fields.joined_at' | translate }}</th>
+                <th>{{ 'athletes.import.table.outcome' | translate }}</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr [class.import-table__row--skipped]="row.status !== 'ok'">
+                <td class="import-table__num">{{ row.row }}</td>
+                <td>{{ nameOf(row) }}</td>
+                <td>{{ beltLabel(row) }}</td>
+                <td>{{ dateLabel(row, 'date_of_birth') }}</td>
+                <td>{{ dateLabel(row, 'joined_at') }}</td>
+                <td>
+                  <p-tag
+                    [severity]="severityFor(row)"
+                    [value]="'athletes.import.status.' + row.status | translate"
+                  />
+                  @if (reasonFor(row); as reason) {
+                    <span class="import-table__reason">{{ reason }}</span>
+                  }
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+
+        <footer class="import-actions">
+          @if (imported() === null) {
+            <p-button
+              [label]="
+                (okCount() === 1 ? 'athletes.import.confirmOne' : 'athletes.import.confirmOther')
+                  | translate: { count: okCount() }
+              "
+              icon="pi pi-check"
+              [disabled]="!canImport()"
+              [loading]="busy()"
+              (onClick)="confirm()"
+              data-cy="import-confirm"
+            />
+          } @else {
+            <p-button
+              [label]="'athletes.import.seeRoster' | translate"
+              icon="pi pi-users"
+              (onClick)="goToRoster()"
+              data-cy="import-see-roster"
+            />
+          }
+        </footer>
+      </section>
+    }
+  }
+</div>
