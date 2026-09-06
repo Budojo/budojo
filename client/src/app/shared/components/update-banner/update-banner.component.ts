@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * A slim bar at the top of the app while an update is downloading, and until it
@@ -30,7 +30,7 @@ import { TranslateModule } from '@ngx-translate/core';
   selector: 'app-update-banner',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslateModule],
+  imports: [TranslatePipe],
   template: `
     @if (status(); as current) {
       @switch (current.phase) {

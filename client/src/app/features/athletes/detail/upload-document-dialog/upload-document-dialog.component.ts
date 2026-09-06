@@ -183,8 +183,13 @@ export class UploadDocumentDialogComponent {
    * `onSelect` / `onClear` events into the reactive FormControl so the rest
    * of the form validation pipeline (required, size, mime) stays uniform.
    */
-  onFileSelect(files: File[]): void {
-    this.fileCtrl.setValue(files[0] ?? null);
+  /**
+   * PrimeNG 22 widened `onSelect`'s payload to `File[] | FileList`, so the
+   * handler takes both and normalises. Only the first file matters — the
+   * uploader is `[multiple]="false"`.
+   */
+  onFileSelect(files: File[] | FileList): void {
+    this.fileCtrl.setValue(Array.from(files)[0] ?? null);
     this.fileCtrl.markAsTouched();
   }
 

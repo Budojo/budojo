@@ -7,7 +7,7 @@
 <p-menu #cardMenu [popup]="true" [model]="cardMenuItems()" appendTo="body" />
 <!-- Mobile delete confirmation. Routed by key from confirmDeleteFromCardMenu()
      so it doesn't compete with the desktop's anchored <p-confirmpopup>. -->
-<p-confirmDialog
+<p-confirm-dialog
   key="athlete-delete-mobile"
   [breakpoints]="{ '768px': '92vw' }"
   [style]="{ width: '28rem' }"
@@ -171,7 +171,7 @@
         responsiveLayout="scroll"
         styleClass="p-datatable-sm"
       >
-        <ng-template pTemplate="header">
+        <ng-template #header>
           <tr>
             <th class="full-name-th" [attr.aria-sort]="fullNameAriaSort()">
               <button
@@ -206,7 +206,7 @@
                 {{ 'athletes.list.table.belt' | translate }}
                 <!--
                 Custom signifier (#210, follow-up to #205): drops PrimeNG's
-                `<p-sortIcon>` so the active state reads from OUR signals
+                `<p-sort-icon>` so the active state reads from OUR signals
                 instead of PrimeNG's internal table state. When the sort
                 moves to first/last_name (Full-name cycle), this column's
                 arrow goes back to neutral instead of staying highlighted.
@@ -234,7 +234,7 @@
           </tr>
         </ng-template>
 
-        <ng-template pTemplate="body" let-athlete>
+        <ng-template #body let-athlete>
           <tr>
             <td>
               <!-- Name is the canonical affordance to open the athlete
@@ -493,7 +493,7 @@
           </tr>
         </ng-template>
 
-        <ng-template pTemplate="emptymessage">
+        <ng-template #emptymessage>
           <tr>
             <td [attr.colspan]="hasMonthlyFee() ? 5 : 4" class="empty-message">
               @if (loading()) {

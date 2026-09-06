@@ -22,6 +22,11 @@ import { UpdateBannerComponent } from './shared/components/update-banner/update-
     UpdateBannerComponent,
   ],
   templateUrl: './app.html',
+  // Angular 22 makes OnPush the default, and the upgrade migration offered to
+  // pin the old eager behaviour here. Declined: this template has no bindings
+  // at all — a toast, four self-managing components and the router outlet —
+  // so there is nothing for eager checking to find, and OnPush is what
+  // `client/CLAUDE.md` asks of every component anyway.
   styleUrl: './app.scss',
 })
 export class App implements OnInit {

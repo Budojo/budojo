@@ -224,9 +224,11 @@ describe('Entry carnets — owner', () => {
     // Four entries spent, so four sessions lose their cover — shown before the
     // owner commits, not after.
     cy.get('.p-confirmpopup').should('contain.text', '(4)');
-    // The label span sits on top of its own button, so targeting the button
-    // resolves an element Cypress then refuses to click as covered.
-    cy.get('[data-pc-name="pcacceptbutton"] .p-button-label').click();
+    // PrimeNG 22 renamed the popup's internals: `data-pc-name` is now the
+    // camelCased `pcAcceptButton`, and the label is no longer a `.p-button-label`
+    // span. The stable handle across both versions is the component's own
+    // class, which is what the fee-tier spec already targets.
+    cy.get('.p-confirmpopup-accept-button').click();
     cy.wait('@remove');
   });
 

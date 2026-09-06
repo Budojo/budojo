@@ -192,7 +192,7 @@ describe('AthletesListComponent', () => {
 
   describe('Belt 2-state sort cycle (#210)', () => {
     // The Belt header has its own custom click handler (replacing the
-    // dropped pSortableColumn + p-sortIcon pair, see #205 / #210). The
+    // dropped pSortableColumn + p-sort-icon pair, see #205 / #210). The
     // cycle is simpler than Full-name's 4-state — just asc / desc on
     // the belt rank, since there's no first-vs-last lead to choose.
 
@@ -740,7 +740,7 @@ describe('AthletesListComponent', () => {
   // The mobile card layout collapses Edit + Delete into a single 3-dot
   // menu. The menu's model is rebuilt per-athlete each time the button
   // is tapped — these specs cover that build + the dedicated delete flow
-  // that routes through <p-confirmDialog key="athlete-delete-mobile">
+  // that routes through <p-confirm-dialog key="athlete-delete-mobile">
   // instead of the desktop anchored popup.
 
   describe('mobile card 3-dot menu (#670)', () => {

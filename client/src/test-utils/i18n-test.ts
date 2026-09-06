@@ -43,7 +43,6 @@ export function provideI18nTesting(): Provider[] {
   return [
     provideTranslateService({
       loader: { provide: TranslateLoader, useClass: SyncJsonLoader },
-      defaultLanguage: 'en',
       fallbackLang: 'en',
     }),
   ];

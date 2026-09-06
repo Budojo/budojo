@@ -4,12 +4,9 @@
   <app-page-header [title]="'academy.form.title' | translate" />
 
   @if (error()) {
-    <p-message
-      severity="error"
-      [text]="error()!"
-      styleClass="form__alert"
-      data-cy="academy-form-error"
-    />
+    <p-message severity="error" styleClass="form__alert" data-cy="academy-form-error">{{
+      error()!
+    }}</p-message>
   }
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form__fields">
@@ -64,7 +61,7 @@
           [class.ng-invalid]="phoneCountryCode.invalid && phoneCountryCode.touched"
           data-cy="academy-form-phone-country-code"
         >
-          <ng-template pTemplate="selectedItem" let-selected>
+          <ng-template #selectedItem let-selected>
             {{ selected?.value }}
           </ng-template>
         </p-select>

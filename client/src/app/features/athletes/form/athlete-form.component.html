@@ -17,7 +17,7 @@
 
   <div class="athlete-form-page__body">
     @if (error()) {
-      <p-message severity="error" [text]="error()!" styleClass="w-full" />
+      <p-message severity="error" styleClass="w-full">{{ error()! }}</p-message>
     }
 
     @if (loading()) {
@@ -142,7 +142,7 @@
                 So we read `selected?.value` (the prefix string) off the option
                 here, with the full "+39 Italy" label only on the open panel.
               -->
-                <ng-template pTemplate="selectedItem" let-selected>
+                <ng-template #selectedItem let-selected>
                   {{ selected?.value }}
                 </ng-template>
               </p-select>

@@ -15,7 +15,7 @@
 >
   <form [formGroup]="form" class="upload-form" (ngSubmit)="submit(fileUpload)">
     @if (error(); as msg) {
-      <p-message severity="error" [text]="msg" styleClass="upload-form__banner" />
+      <p-message severity="error" styleClass="upload-form__banner">{{ msg }}</p-message>
     }
 
     <div class="upload-form__row">

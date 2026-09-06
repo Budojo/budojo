@@ -148,7 +148,7 @@
       styleClass="p-datatable-sm documents-list__table"
       data-cy="documents-table"
     >
-      <ng-template pTemplate="header">
+      <ng-template #header>
         <tr>
           <th>{{ 'athletes.detail.documents.columns.type' | translate }}</th>
           <th>{{ 'athletes.detail.documents.columns.file' | translate }}</th>
@@ -159,7 +159,7 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="body" let-doc>
+      <ng-template #body let-doc>
         <tr [class.documents-list__row--cancelled]="!!doc.deleted_at">
           <td>{{ labelKeyFor(doc) | translate }}</td>
           <td class="documents-list__filename">
@@ -218,7 +218,7 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="emptymessage">
+      <ng-template #emptymessage>
         <tr>
           <td colspan="6" class="documents-list__empty">
             @if (loading()) {

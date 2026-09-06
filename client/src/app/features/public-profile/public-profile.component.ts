@@ -16,9 +16,7 @@ import { Belt } from '../../core/services/athlete.service';
 import { BELT_KEYS } from '../../shared/utils/i18n-enum-keys';
 
 type ViewState =
-  | { kind: 'loading' }
-  | { kind: 'ready'; profile: PublicProfile }
-  | { kind: 'not-found' };
+  { kind: 'loading' } | { kind: 'ready'; profile: PublicProfile } | { kind: 'not-found' };
 
 /**
  * Athlete public profile page (#862, M9 social-profile epic slice A).
@@ -82,7 +80,8 @@ export class PublicProfileComponent {
     if (Number.isNaN(date.getTime())) {
       return null;
     }
-    const locale = this.translateService.currentLang ?? this.translateService.defaultLang ?? 'en';
+    const locale =
+      this.translateService.currentLang() ?? this.translateService.fallbackLang() ?? 'en';
     return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date);
   });
 

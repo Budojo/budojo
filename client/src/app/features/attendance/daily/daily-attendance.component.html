@@ -4,7 +4,7 @@
   surround (severity color, dismiss icon); we just inject the action.
 -->
 <p-toast position="bottom-center">
-  <ng-template let-message pTemplate="message">
+  <ng-template let-message #message>
     <div class="attendance-toast">
       <span class="attendance-toast__summary">{{ message.summary }}</span>
       @if (message.data?.undo) {
@@ -125,13 +125,13 @@
       styleClass="p-datatable-sm"
       data-cy="attendance-list"
     >
-      <ng-template pTemplate="header">
+      <ng-template #header>
         <tr>
           <th pSortableColumn="last_name" data-cy="attendance-th-name">
-            {{ 'attendance.daily.table.fullName' | translate }} <p-sortIcon field="last_name" />
+            {{ 'attendance.daily.table.fullName' | translate }} <p-sort-icon field="last_name" />
           </th>
           <th pSortableColumn="belt" data-cy="attendance-th-belt">
-            {{ 'attendance.daily.table.belt' | translate }} <p-sortIcon field="belt" />
+            {{ 'attendance.daily.table.belt' | translate }} <p-sort-icon field="belt" />
           </th>
           <th
             class="attendance-cell-indicator"
@@ -140,7 +140,7 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="body" let-athlete>
+      <ng-template #body let-athlete>
         <!--
           Whole-row click toggles "present today". Keyboard-equivalent on
           the focused row through Enter / Space (keydown handlers below).
@@ -185,7 +185,7 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="emptymessage">
+      <ng-template #emptymessage>
         <tr>
           <td colspan="3" class="attendance__empty-cell">
             @if (loading()) {

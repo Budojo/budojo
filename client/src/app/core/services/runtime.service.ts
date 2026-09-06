@@ -8,11 +8,7 @@ import { environment } from '../../../environments/environment';
  * server's `Capability` enum; the list arrives from `GET /api/v1/runtime`.
  */
 export type Capability =
-  | 'community'
-  | 'athlete_accounts'
-  | 'web_push'
-  | 'email'
-  | 'password_breach_check';
+  'community' | 'athlete_accounts' | 'web_push' | 'email' | 'password_breach_check';
 
 export const ALL_CAPABILITIES: readonly Capability[] = [
   'community',

@@ -93,7 +93,7 @@ export class MyAttendanceTodayComponent {
   /** Today's date, formatted with the active locale's full date — the
    *  big "Tonight, Friday 22 May" headline on the page. */
   protected readonly todayLabel = computed(() => {
-    return new Date().toLocaleDateString(this.translate.currentLang || 'en', {
+    return new Date().toLocaleDateString(this.translate.currentLang() || 'en', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',

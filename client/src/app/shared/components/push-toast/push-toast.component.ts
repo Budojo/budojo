@@ -37,7 +37,7 @@ interface PushToastMessage {
   imports: [ToastModule, TranslatePipe],
   template: `
     <p-toast [key]="key" position="top-right" styleClass="push-toast">
-      <ng-template let-message pTemplate="message">
+      <ng-template let-message #message>
         <!-- Clickable card. role/tabindex + keyboard handlers because a
              div-as-button needs explicit a11y; the close control is a
              real button nested inside, with stopPropagation. -->

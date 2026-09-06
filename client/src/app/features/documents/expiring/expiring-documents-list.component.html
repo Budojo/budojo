@@ -121,7 +121,7 @@
               styleClass="p-datatable-sm expiring-page__table"
               data-cy="expiring-table"
             >
-              <ng-template pTemplate="header">
+              <ng-template #header>
                 <tr>
                   <th>{{ 'documents.expiringList.table.athlete' | translate }}</th>
                   <th>{{ 'documents.expiringList.table.type' | translate }}</th>
@@ -131,7 +131,7 @@
                 </tr>
               </ng-template>
 
-              <ng-template pTemplate="body" let-doc>
+              <ng-template #body let-doc>
                 <tr>
                   <td>
                     <a

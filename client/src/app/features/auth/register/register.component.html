@@ -32,7 +32,7 @@
     }
 
     @if (error()) {
-      <p-message severity="error" [text]="error()!" styleClass="w-full" />
+      <p-message severity="error" styleClass="w-full">{{ error()! }}</p-message>
     }
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>

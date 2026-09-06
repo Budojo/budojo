@@ -32,12 +32,9 @@
         </div>
 
         @if (errorMessage()) {
-          <p-message
-            severity="error"
-            [text]="'athleteInvite.errors.' + errorMessage() | translate"
-            styleClass="w-full"
-            data-cy="invite-error"
-          />
+          <p-message severity="error" styleClass="w-full" data-cy="invite-error">{{
+            'athleteInvite.errors.' + errorMessage() | translate
+          }}</p-message>
         }
 
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate>

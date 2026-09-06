@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import type { ChartData, ChartOptions } from 'chart.js';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { mergeMap, range, toArray } from 'rxjs';
 import { ChartModule } from 'primeng/chart';
@@ -47,14 +48,14 @@ const BELT_COLORS: Readonly<Record<Belt, string>> = {
   red: '#b91c1c',
 };
 
-interface DoughnutData {
-  readonly labels: readonly string[];
-  readonly datasets: readonly {
-    data: readonly number[];
-    backgroundColor: readonly string[];
-    borderWidth: number;
-  }[];
-}
+/**
+ * PrimeNG 22 types `<p-chart>`'s `data` and `options` against chart.js's own
+ * types, so the hand-rolled shape this file used to declare is no longer
+ * structurally assignable — the `readonly` arrays in particular. Aliasing the
+ * library's type is both shorter and the honest description of what the
+ * component accepts.
+ */
+type DoughnutData = ChartData<'doughnut', number[], string>;
 
 /**
  * Stats overview child component (`/dashboard/stats/overview`). Surfaces
@@ -145,7 +146,7 @@ export class StatsOverviewComponent implements OnInit {
     };
   });
 
-  protected readonly chartOptions = {
+  protected readonly chartOptions: ChartOptions<'doughnut'> = {
     plugins: {
       legend: {
         position: 'bottom',

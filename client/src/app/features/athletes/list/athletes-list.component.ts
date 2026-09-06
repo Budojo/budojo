@@ -654,7 +654,7 @@ export class AthletesListComponent implements OnInit {
    * with stripes desc + last_name asc as stable tiebreakers. Direction
    * here is the rank direction.
    *
-   * Replaces the old `pSortableColumn="belt"` + `<p-sortIcon>` pair so
+   * Replaces the old `pSortableColumn="belt"` + `<p-sort-icon>` pair so
    * the active visual reads from OUR signals — when the sort moves to
    * first/last_name, this column's arrow goes back to neutral instead
    * of staying highlighted via PrimeNG's stale internal state.
@@ -721,7 +721,7 @@ export class AthletesListComponent implements OnInit {
   // The mobile card layout collapses the inline pencil + trash buttons into
   // a single 3-dot menu trigger (Apple-minimalist pattern). Tapping the
   // trigger opens a popup `<p-menu>` whose model is built per-athlete each
-  // time. Delete from the menu routes to a centered `<p-confirmDialog>`
+  // time. Delete from the menu routes to a centered `<p-confirm-dialog>`
   // instead of the desktop confirm-popup (no good anchor on mobile).
   @ViewChild('cardMenu') protected cardMenu?: Menu;
   protected readonly cardMenuItems = signal<MenuItem[]>([]);
@@ -851,7 +851,7 @@ export class AthletesListComponent implements OnInit {
   /**
    * Mobile-card delete confirmation. Routes through the same
    * `delete(athlete)` handler as the desktop popup-anchored flow, but
-   * uses a centered `<p-confirmDialog>` (keyed `athlete-delete-mobile`)
+   * uses a centered `<p-confirm-dialog>` (keyed `athlete-delete-mobile`)
    * instead of `<p-confirmpopup>` because the menu item that triggers
    * this has no good anchor on a phone — the popup would render
    * offscreen or clipped.

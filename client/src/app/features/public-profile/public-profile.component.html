@@ -11,13 +11,13 @@
     <section class="public-profile-empty" role="status">
       <h1>{{ 'publicProfile.notFound.title' | translate }}</h1>
       <p>{{ 'publicProfile.notFound.body' | translate }}</p>
-      <a
-        pButton
-        [routerLink]="['/dashboard/athletes']"
-        [label]="'publicProfile.notFound.back' | translate"
-        severity="secondary"
-        size="small"
-      >
+      <!--
+        PrimeNG 22 dropped `label` from the `pButton` DIRECTIVE — it only
+        exists on the `<p-button>` component. On a host element the text is
+        projected, which it always could have been.
+      -->
+      <a pButton [routerLink]="['/dashboard/athletes']" severity="secondary" size="small">
+        {{ 'publicProfile.notFound.back' | translate }}
       </a>
     </section>
   } @else {

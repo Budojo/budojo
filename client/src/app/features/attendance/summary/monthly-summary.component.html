@@ -94,7 +94,7 @@
           styleClass="summary-page__table"
           data-cy="monthly-summary-table"
         >
-          <ng-template pTemplate="header">
+          <ng-template #header>
             <tr>
               <th scope="col">{{ 'attendance.summary.table.athlete' | translate }}</th>
               <th scope="col" class="summary-page__count-col">
@@ -102,7 +102,7 @@
               </th>
             </tr>
           </ng-template>
-          <ng-template pTemplate="body" let-row>
+          <ng-template #body let-row>
             @let scheduled = scheduledCount();
             @let percent = ratePercent(row.count);
             <tr [attr.data-cy]="'monthly-summary-table-row-' + row.athlete_id">

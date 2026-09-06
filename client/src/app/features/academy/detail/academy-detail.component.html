@@ -132,7 +132,7 @@
       </dd>
     </div>
 
-    @let addr = a?.address;
+    @let addr = $safeNavigationMigration(a?.address);
     <div class="row">
       <dt class="row__label">{{ 'academy.detail.row.address' | translate }}</dt>
       <dd class="row__value" data-cy="academy-row-address">

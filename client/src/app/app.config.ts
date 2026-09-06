@@ -1,5 +1,5 @@
 import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
 import {
   PreloadAllModules,
   provideRouter,
@@ -84,7 +84,10 @@ export const appConfig: ApplicationConfig = {
     // so it must sit downstream of any request mutation. Order matters:
     // if a 5xx ever bounces us via an auth refresh in the future, that
     // retry must run before the global error redirect.
-    provideHttpClient(withInterceptors([versionInterceptor, authInterceptor, errorInterceptor])),
+    provideHttpClient(
+      withXhr(),
+      withInterceptors([versionInterceptor, authInterceptor, errorInterceptor]),
+    ),
     provideAnimationsAsync(),
     // App-level MessageService so shared components (the email verification
     // pillola, the verify-error landing) fire toasts into the single
@@ -141,7 +144,6 @@ export const appConfig: ApplicationConfig = {
     // `en` fallback.
     provideTranslateService({
       loader: { provide: TranslateLoader, useClass: BundledJsonLoader },
-      defaultLanguage: 'en',
       fallbackLang: 'en',
     }),
   ],

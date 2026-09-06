@@ -49,12 +49,12 @@
         appendTo="body"
         data-cy="support-category"
       >
-        <ng-template pTemplate="selectedItem" let-selected>
+        <ng-template #selectedItem let-selected>
           @if (selected) {
             {{ selected.labelKey | translate }}
           }
         </ng-template>
-        <ng-template pTemplate="item" let-option>
+        <ng-template #item let-option>
           {{ option.labelKey | translate }}
         </ng-template>
       </p-select>

@@ -64,7 +64,7 @@ export class MyRecapComponent {
     const startDate = new Date(start + 'T00:00:00');
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 6);
-    const lang = this.translate.currentLang || 'en';
+    const lang = this.translate.currentLang() || 'en';
     const fmt = (d: Date): string => d.toLocaleDateString(lang, { day: 'numeric', month: 'short' });
     return `${fmt(startDate)} → ${fmt(endDate)}`;
   });
