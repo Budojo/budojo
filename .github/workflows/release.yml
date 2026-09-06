@@ -334,7 +334,7 @@ jobs:
             echo "::warning::gh pr merge --auto failed for PR #${PR}. Most common cause: repo-level 'Allow auto-merge' is disabled (Settings → General → Pull Requests). Falling back to manual merge."
           fi
 
-  # Build the Windows desktop installers (NSIS + portable) and attach them
+  # Build the Windows desktop installer (NSIS) and attach it
   # to the GitHub Release that semantic-release just created for the stable
   # tag. Lives in THIS workflow run — not a `push: tags` / `release:
   # published` workflow — for the same reason as the sweep job above:
@@ -438,14 +438,14 @@ jobs:
         # download rather than shipping it (scripts/fetch-php.mjs).
         run: npm run fetch:php
 
-      - name: Package NSIS + portable installers
+      - name: Package the NSIS installer
         shell: bash
         working-directory: desktop
         # Inject the release version so the artifacts are named after the tag
         # (package.json stays at 0.0.0 — semantic-release owns versioning).
         run: npm run package -- --publish never -c.publish.provider=github -c.publish.owner=Budojo -c.publish.repo=budojo -c.extraMetadata.version="${{ steps.ver.outputs.version }}"
 
-      - name: Verify both installers were produced
+      - name: Verify the installer was produced
         shell: bash
         working-directory: desktop
         # An empty/half build must fail loudly, not upload nothing silently —
@@ -454,14 +454,13 @@ jobs:
         run: |
           V="${{ steps.ver.outputs.version }}"
           test -f "release/Budojo-Setup-${V}.exe" || { echo "::error::NSIS installer missing"; exit 1; }
-          test -f "release/Budojo-${V}.exe" || { echo "::error::portable executable missing"; exit 1; }
           # latest.yml is what electron-updater reads to discover a new version
           # (#1287). Without it every installed copy silently stops updating,
           # and nothing else in the pipeline would notice.
           test -f "release/latest.yml" || { echo "::error::latest.yml missing — installed apps would never see this release"; exit 1; }
           ls -la release/*.exe release/latest.yml
 
-      - name: Attach installers to the GitHub Release
+      - name: Attach the installer to the GitHub Release
         shell: bash
         working-directory: desktop
         # semantic-release already created the Release for ${TAG}; --clobber
@@ -471,6 +470,5 @@ jobs:
           gh release upload "${TAG}" \
             "release/Budojo-Setup-${V}.exe" \
             "release/Budojo-Setup-${V}.exe.blockmap" \
-            "release/Budojo-${V}.exe" \
             "release/latest.yml" \
             --clobber

@@ -756,7 +756,7 @@ function registerUpdateBridge(): void {
   // indistinguishable downstream — which is the point.
   ipcMain.handle('budojo:update:check', async () => {
     if (updaterRef === null) {
-      // No updater at all: development, unpackaged, portable, or version
+      // No updater at all: development, unpackaged, or version
       // 0.0.0. `planUpdateCheck` has already logged which. Saying so lets the
       // button explain itself instead of spinning against nothing.
       return { ok: false, reason: 'unavailable' };
@@ -876,7 +876,6 @@ function registerAutoUpdate(log: (line: string) => void): PeriodicTask | null {
   const decision = planUpdateCheck({
     packaged: app.isPackaged,
     dev: DEV,
-    portableDir: process.env['PORTABLE_EXECUTABLE_DIR'],
     version: app.getVersion(),
   });
 

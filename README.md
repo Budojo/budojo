@@ -12,12 +12,11 @@ It ships as a **Windows desktop application**: the same Angular SPA and Laravel 
 
 ## Download & install
 
-Grab the latest **[release](https://github.com/Budojo/budojo/releases)** — each attaches two Windows builds:
+Grab the latest **[release](https://github.com/Budojo/budojo/releases)** and run **`Budojo-Setup-X.Y.Z.exe`** — per-user, no administrator prompt, upgrades in place, updates itself, and opens in a couple of seconds. (The `latest.yml` and `.blockmap` beside it are how an installed copy finds updates; you don't download those.)
 
-- **`Budojo-Setup-X.Y.Z.exe`** — installer (per-user, no admin, upgradable in place). **Use this one** — it opens in a couple of seconds.
-- **`Budojo-X.Y.Z.exe`** — portable, no installation. Be aware it re-extracts ~450 MB on *every* launch, so it takes about two minutes to open ([#1272](https://github.com/Budojo/budojo/issues/1272)).
+There was also a portable build until [#1272](https://github.com/Budojo/budojo/issues/1272) — it re-extracted ~450 MB on *every* launch and took about two minutes to open, so it was removed. If you have one, install over it; your data lives in `%APPDATA%\Budojo\`, not in the exe.
 
-Both are unsigned, so Windows SmartScreen warns on first run — **More info → Run anyway**. Full walkthrough (first run, upgrades, why the warning) in **[`docs/desktop/install.md`](docs/desktop/install.md)**.
+It is unsigned, so Windows SmartScreen warns on first run — **More info → Run anyway**. Full walkthrough (first run, upgrades, why the warning) in **[`docs/desktop/install.md`](docs/desktop/install.md)**.
 
 > **Back up your data — and read how the encryption keys work.** A backup protects your athletes, attendance and payments anywhere, but the medical certificates are encrypted with a machine-bound key that a backup does not contain. Since v2.42.0 you can export that key as a recovery code — do it once, today. This matters the day a laptop dies: **[`docs/desktop/backup-restore.md`](docs/desktop/backup-restore.md)**.
 
@@ -235,7 +234,7 @@ budojo/
 │
 ├── desktop/              # Electron shell (M11) — main + preload + protocol + PHP supervisor
 │   ├── src/                  # main.ts, preload.cts, protocol.ts, php-supervisor.ts, bootstrap.ts, backup.ts, …
-│   ├── electron-builder.yml  # NSIS + portable packaging; php runtime + server as extraResources
+│   ├── electron-builder.yml  # NSIS packaging; php runtime + server as extraResources
 │   ├── runtime/              # php.manifest.json (pinned) — php.exe fetched, not committed
 │   └── scripts/              # fetch-php.mjs, build-renderer.mjs
 │
@@ -267,7 +266,7 @@ budojo/
 | UI components | PrimeNG 21 (Material preset, MD3) |
 | API contract | OpenAPI 3.0.3 + Spectral lint |
 | Desktop shell | Electron 33 + bundled PHP 8.4 |
-| Desktop packaging | electron-builder (NSIS + portable) |
+| Desktop packaging | electron-builder (NSIS) |
 | Dev environment | Docker + Compose |
 | PHP tests | PEST 4 |
 | PHP static analysis | PHPStan (level 9) |

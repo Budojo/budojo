@@ -122,7 +122,7 @@ Two consequences worth knowing rather than rediscovering:
 
 The install directory holds only the read-only runtime: `resources/php/php.exe` (the bundled PHP), `resources/server/` (the Laravel app, `--no-dev`), and the renderer inside `app.asar`. Because nothing user-owned lives there, the NSIS uninstaller is configured with `deleteAppDataOnUninstall: false` — uninstalling removes the program and leaves every byte of the gym's data in place.
 
-That path comes from the `appId`/`productName`, **not** from where the executable sits, which has one consequence worth knowing while developing: a locally-built exe, the portable and the installed release all share the *same* `%APPDATA%\Budojo\`. Test builds with `--user-data-dir=<scratch>` (honoured by the packaged app) so a half-finished migration never meets real data.
+That path comes from the `appId`/`productName`, **not** from where the executable sits, which has one consequence worth knowing while developing: a locally-built exe and the installed release share the *same* `%APPDATA%\Budojo\`. Test builds with `--user-data-dir=<scratch>` (honoured by the packaged app) so a half-finished migration never meets real data.
 
 ## Secrets
 

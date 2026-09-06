@@ -55,11 +55,12 @@ win:
   # picks a size per surface — 16 px in the Start-menu row, 32 in the taskbar,
   # 256 in the shortcut preview — and reads them out of the one file.
   icon: build/icon.ico
-  # NSIS for a normal install, portable so a copy can be run from a USB stick
-  # or a synced folder without administrator rights.
+  # NSIS only. The portable target was removed in #1272 — see the note below
+  # the nsis block for the measurements that killed it. NSIS is already
+  # per-user (`perMachine: false`) and needs no administrator rights, which
+  # was most of what "portable" was here to offer.
   target:
     - nsis
-    - portable
   # No code-signing certificate: it costs money, which is the entire point of
   # M11 (#1218). SmartScreen will warn on first install — documented in the
   # install guide (#1232) rather than papered over.
@@ -87,20 +88,25 @@ nsis:
   # so an uninstall must not be able to take the user's data with it.
   deleteAppDataOnUninstall: false
 
-portable:
-  artifactName: ${productName}-${version}.${ext}
-
-# NOTE — do not reach for `portable.unpackDirName` to make the portable start
-# faster. It was tried and measured: the portable re-extracts its ~112 MB
-# payload (the whole Laravel vendor tree, thousands of small files, each
-# re-scanned by Defender) on EVERY launch regardless of whether the unpack
-# directory has a stable name. Times to a responding API on the same machine:
+# NOTE — there was a `portable` target here until #1272, and it is not coming
+# back without new evidence. Not because self-extracting is a bad idea, but
+# because OUR payload makes it one: electron-builder's portable stub unpacks
+# the entire ~450 MB tree — the PHP runtime plus the whole Laravel `vendor/`,
+# thousands of small files Defender re-scans — to %TEMP% on EVERY launch, with
+# no window and no progress while it does. Measured on the shipped v2.42.0
+# artefacts, same machine, process start to a 200 from /api/v1/health:
 #
 #   installed build   13.7 s first launch, 2.4 s after
-#   portable          ~130 s, every launch (195 s with a stable unpack dir)
+#   portable          ~130 s, every launch
 #
-# The fix has to shrink or stop re-extracting the payload, not rename where it
-# lands — tracked in the issue linked from docs/desktop/install.md.
+# `portable.unpackDirName` (a stable unpack directory instead of the default
+# random one) does not help: the payload is re-extracted regardless, and it
+# measured SLOWER — 188 s / 195 s. Do not retry it.
+#
+# So the honest options were shrink the payload or stop shipping the artefact,
+# and the second one is what happened: NSIS is per-user, needs no admin
+# rights, and starts in seconds. If a portable is ever wanted again, the
+# payload has to shrink FIRST — the target is the easy part.
 
 # Real directories on disk, outside the asar: a child process cannot be spawned
 # from inside an archive, and PHP needs to require thousands of files by path.
