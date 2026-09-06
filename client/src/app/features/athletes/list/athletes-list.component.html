@@ -97,6 +97,38 @@
           data-cy="athletes-paid-filter"
         />
       }
+      <!--
+        The eye (#1403). The list answers "who trains here", so it shows the
+        actives; this reveals the rest. It writes the same signal the status
+        dropdown does — a shortcut for two of its values, not a second switch
+        that could disagree with it, which is why picking "Suspended" from the
+        menu also lights this up.
+      -->
+      @if (canToggleInactive()) {
+        <button
+          type="button"
+          class="athletes-page__reveal"
+          [class.athletes-page__reveal--on]="showingInactive()"
+          [attr.aria-pressed]="showingInactive()"
+          [pTooltip]="
+            (showingInactive() ? 'athletes.list.hideInactive' : 'athletes.list.showInactive')
+              | translate
+          "
+          [attr.aria-label]="
+            (showingInactive() ? 'athletes.list.hideInactive' : 'athletes.list.showInactive')
+              | translate
+          "
+          (click)="toggleInactive()"
+          data-cy="athletes-reveal-inactive"
+        >
+          <i
+            class="pi"
+            [class.pi-eye]="showingInactive()"
+            [class.pi-eye-slash]="!showingInactive()"
+            aria-hidden="true"
+          ></i>
+        </button>
+      }
     </div>
 
     <!--
@@ -220,7 +252,6 @@
                 </span>
               </button>
             </th>
-            <th>{{ 'athletes.list.table.status' | translate }}</th>
             @if (hasMonthlyFee()) {
               <!-- Header carries the current month abbreviation (#282) so an
                  instructor reading "Unpaid" on a row knows which month the
@@ -235,7 +266,7 @@
         </ng-template>
 
         <ng-template pTemplate="body" let-athlete>
-          <tr>
+          <tr [class.athletes-table__row--muted]="isNotActive(athlete)">
             <td>
               <!-- Name is the canonical affordance to open the athlete
                  detail (#281) — replaces the dropped folder icon as
@@ -292,6 +323,20 @@
                       [attr.data-cy]="'athlete-owner-chip-' + athlete.id"
                     />
                   }
+                  <!--
+                    The status, only when there is one worth saying (#1403).
+                    "Active" on twelve rows out of fourteen was a column that
+                    taught the eye to skip it; suspended and inactive are the
+                    two words that carry information, and they belong next to
+                    the name rather than in a place of their own.
+                  -->
+                  @if (isNotActive(athlete)) {
+                    <span
+                      class="athlete-name__status"
+                      [attr.data-cy]="'athlete-status-' + athlete.id"
+                      >{{ statusLabel(athlete.status) }}</span
+                    >
+                  }
                 </div>
                 <!-- Social icons inline below name+age. Conditional render —
                    no empty placeholders for athletes without socials.
@@ -337,13 +382,6 @@
             </td>
             <td>
               <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
-            </td>
-            <td>
-              <p-tag
-                [value]="statusLabel(athlete.status)"
-                [severity]="statusSeverity(athlete.status)"
-                [rounded]="true"
-              />
             </td>
             @if (hasMonthlyFee()) {
               <td>
@@ -495,7 +533,7 @@
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td [attr.colspan]="hasMonthlyFee() ? 5 : 4" class="empty-message">
+            <td [attr.colspan]="hasMonthlyFee() ? 4 : 3" class="empty-message">
               @if (loading()) {
                 <!-- Skeleton rows replace the PrimeNG header-spinner that
                    [showLoader]="false" suppressed. Canon § motion: skeletons
@@ -579,7 +617,11 @@
       } @else {
         <ul class="athletes-cards">
           @for (athlete of athletes(); track athlete.id) {
-            <li class="athlete-card" [attr.data-cy]="'athlete-card-' + athlete.id">
+            <li
+              class="athlete-card"
+              [class.athlete-card--muted]="isNotActive(athlete)"
+              [attr.data-cy]="'athlete-card-' + athlete.id"
+            >
               <header class="athlete-card__header">
                 @if (publicProfileHandle(athlete); as handle) {
                   <a
@@ -636,11 +678,16 @@
               </header>
               <div class="athlete-card__badges">
                 <app-belt-badge [belt]="athlete.belt" [stripes]="athlete.stripes" />
-                <p-tag
-                  [value]="statusLabel(athlete.status)"
-                  [severity]="statusSeverity(athlete.status)"
-                  [rounded]="true"
-                />
+                <!-- Same rule as the table (#1403): the status is only worth a
+                     chip when it is not "active", which is almost every row. -->
+                @if (isNotActive(athlete)) {
+                  <p-tag
+                    [value]="statusLabel(athlete.status)"
+                    [severity]="statusSeverity(athlete.status)"
+                    [rounded]="true"
+                    [attr.data-cy]="'athlete-card-status-' + athlete.id"
+                  />
+                }
                 @if (
                   hasMonthlyFee() &&
                   !paymentNotExpected(athlete) &&

@@ -633,3 +633,59 @@ $athletes-mobile-breakpoint: 768px;
     color: var(--p-red-600);
   }
 }
+
+// A row the eye revealed (#1403). Muted rather than hidden: the point of
+// asking for it is to see it, and the point of greying it is that it is not
+// part of the answer to "who trains here".
+.athletes-table__row--muted {
+  color: var(--p-text-muted-color);
+  background: var(--p-surface-50);
+}
+
+// The status beside the name, for the rows that have one worth saying. Small
+// and muted: it explains the grey, it does not compete with the name.
+.athlete-name__status {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  text-transform: lowercase;
+}
+
+// The eye itself, sized to match the filter selects beside it so the row of
+// controls keeps one baseline.
+.athletes-page__reveal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--budojo-radius-medium, 0.75rem);
+  background: var(--p-surface-100);
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  transition:
+    background-color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out),
+    color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out);
+
+  &:hover {
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+
+  // On: the list is showing more than it does by default, and the control
+  // says so — otherwise "why is this row grey" has no answer on screen.
+  &--on {
+    background: var(--p-highlight-background);
+    color: var(--p-primary-color);
+  }
+}
+
+// Same signal as the muted table row (#1403), for the mobile card.
+.athlete-card--muted {
+  color: var(--p-text-muted-color);
+  background: var(--p-surface-50);
+}

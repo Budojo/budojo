@@ -1773,7 +1773,9 @@
         "successSummary": "Atleta ripristinato",
         "errorSummary": "Impossibile ripristinare",
         "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
-      }
+      },
+      "showInactive": "Mostra anche i non attivi",
+      "hideInactive": "Mostra solo gli attivi"
     },
     "invitation": {
       "title": "Account & invito",

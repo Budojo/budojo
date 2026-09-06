@@ -1191,3 +1191,85 @@ describe('AthletesListComponent — the roster paid toggle says what it does (#1
     expect(confirmMessageFor(undefined, false)).not.toMatch(/–/);
   });
 });
+
+describe('AthletesListComponent — the roster shows who trains here (#1403)', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AthletesListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
+      ],
+    });
+  });
+
+  it('asks the server for the actives, not for everyone', () => {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+
+    const list = TestBed.inject(AthleteService).list as unknown as Mock;
+    // The roster answers "who trains here"; someone who left is not part of
+    // that answer, and used to arrive on page one anyway.
+    expect(list.mock.calls.at(-1)?.[0]).toMatchObject({ status: 'active' });
+  });
+
+  it('the eye asks for everyone, and asking again goes back', () => {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+    const cmp = fixture.componentInstance;
+    const list = TestBed.inject(AthleteService).list as unknown as Mock;
+
+    cmp.toggleInactive();
+    expect(cmp.showingInactive()).toBe(true);
+    expect(list.mock.calls.at(-1)?.[0].status).toBeUndefined();
+
+    cmp.toggleInactive();
+    expect(cmp.showingInactive()).toBe(false);
+    expect(list.mock.calls.at(-1)?.[0]).toMatchObject({ status: 'active' });
+  });
+
+  it('picking a status from the menu lights the eye, so the two never disagree', () => {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+    const cmp = fixture.componentInstance;
+
+    // Two controls, one piece of state: "Suspended" is not "only the actives",
+    // and the eye has to say so or the grey rows have no explanation.
+    cmp.onStatusChange('suspended');
+    expect(cmp.showingInactive()).toBe(true);
+  });
+
+  it('hides the eye in the restore picker, where it would mean nothing', () => {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+    const cmp = fixture.componentInstance;
+
+    cmp.onStatusChange('trashed');
+    expect(cmp.canToggleInactive()).toBe(false);
+  });
+
+  it('resets to the actives, not to everyone', () => {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+    const cmp = fixture.componentInstance;
+
+    cmp.onStatusChange('');
+    cmp.resetFilters();
+
+    // "Reset" means the list you started from, and that list is the actives.
+    expect(cmp.selectedStatus()).toBe('active');
+    expect(cmp.showingInactive()).toBe(false);
+  });
+
+  it('does not count the default as an active filter', () => {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+
+    // The mobile filter chip would otherwise show a permanent "1".
+    expect(fixture.componentInstance.activeFilterCount()).toBe(0);
+  });
+});

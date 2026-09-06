@@ -1773,7 +1773,9 @@
         "successSummary": "Athlete restored",
         "errorSummary": "Could not restore",
         "errorDetail": "Something went wrong. Try again in a moment."
-      }
+      },
+      "showInactive": "Also show the non-active",
+      "hideInactive": "Show only the active"
     },
     "invitation": {
       "title": "Account & invitation",
