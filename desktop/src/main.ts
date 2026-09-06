@@ -627,9 +627,18 @@ function registerFolderBridge(folderOf: () => FolderCopyService | null): void {
       return { ok: false };
     }
 
+    // Open where the current folder is, when there is one. Electron 43 changed
+    // an absent `defaultPath` from "the last directory you used" to "Downloads"
+    // — and Downloads is the one place a backup copy should not go. Someone
+    // pressing this a second time is almost always moving the folder, not
+    // choosing an unrelated one, so starting from the current answer is a
+    // shorter walk than either default. Left absent on the first pick, where
+    // there is nothing to be near.
+    const current = await service.state();
     const picked = await dialog.showOpenDialog({
       title: 'Choose a folder for backup copies',
       properties: ['openDirectory', 'createDirectory'],
+      ...(current.folder === null ? {} : { defaultPath: current.folder }),
     });
 
     if (picked.canceled || picked.filePaths[0] === undefined) {
