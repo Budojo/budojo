@@ -443,6 +443,17 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::apiResource('athletes', \App\Http\Controllers\Athlete\AthleteController::class)
                 ->only(['store', 'update', 'destroy']);
 
+            // Bulk roster import from a CSV (#1346). Declared beside `store`
+            // because it is the same operation at a different scale, and
+            // guarded by the same capability. POST-only, so it cannot collide
+            // with `GET /athletes/{athlete}`.
+            //
+            // Called twice for one import: once with `validate_only` (the
+            // default) to get the preview, once without to write. The dry run
+            // is the default on purpose — a missing flag must never be the one
+            // that creates sixty athletes.
+            Route::post('/athletes/import', \App\Http\Controllers\Athlete\AthleteImportController::class);
+
             // Athlete restore (#700). Brings a soft-deleted athlete back into
             // the active roster. `->withTrashed()` lets the route-model binding
             // resolve a soft-deleted id; without it the binding would 404
