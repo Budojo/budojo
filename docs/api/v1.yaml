@@ -3158,6 +3158,164 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /athletes/import:
+    post:
+      tags: [athletes]
+      summary: Import a roster from a CSV file
+      description: |
+        Bulk-create athletes from a spreadsheet (#1346). Guarded by the same
+        capability as creating one by hand — anyone who may add an athlete may
+        add sixty.
+
+        **Called twice for one import.** The first call sends the file alone
+        and answers with the columns found, the mapping guessed, and what every
+        row *would* do. The second sends the same file with
+        `validate_only=false`, plus a corrected `mapping` if the guess was
+        wrong. Nothing is written until that second call.
+
+        `validate_only` **defaults to `true`**, deliberately: a missing flag
+        must never be the one that creates sixty athletes.
+
+        The two-step shape is the feature, not caution. A real file's dates are
+        ambiguous (`03/04/2019` is 3 April in Europe and 4 March in the US),
+        its belts are in another language, and its columns are named by
+        whoever made the sheet. No parser settles that reliably — showing the
+        owner exactly what would be written does.
+
+        **What the server works out on its own:**
+
+        - The delimiter. Excel in an Italian locale writes `;`, because the
+          comma is the decimal separator.
+        - A UTF-8 BOM, which Excel writes and never mentions.
+        - Which column is which, from Italian or English header names.
+        - Belts written as `Blu`, `cintura blu` or `blue`.
+        - Dates as `gg/mm/aaaa`, `gg-mm-aa`, ISO, with or without a time.
+        - A phone in one column, split into the stored pair. A number with no
+          prefix takes the academy's own dial code.
+
+        **Defaults:** `status` is `active` and `joined_at` is today when the
+        column is absent; `stripes` is `0`. `belt`, `first_name` and
+        `last_name` have none — a request whose mapping lacks any of them is
+        refused with `422` naming the missing ones, rather than returning one
+        identical error per row.
+
+        **Rows are numbered as Excel shows them**, so the header is row 1 and
+        the first athlete is row 2.
+
+        Every row is validated against the same rules as `POST /athletes`. The
+        write is one transaction: an import either lands whole or not at all,
+        because a half-imported roster cannot be re-run without duplicating
+        whatever did land.
+      operationId: athletesImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: |
+                    The CSV, max 2 MB and 2000 rows. `.xlsx` is not read —
+                    "Save as CSV" is one menu item, and a spreadsheet library
+                    is a heavy thing to ship inside a desktop installer.
+                validate_only:
+                  type: boolean
+                  default: true
+                  description: |
+                    `true` (the default) reports what would happen and writes
+                    nothing. `false` performs the import.
+                mapping:
+                  type: object
+                  description: |
+                    Field → the header name carrying it. Optional: absent
+                    fields fall back to the server's guess, so correcting one
+                    wrong column does not mean restating the ones already
+                    right. Only the field names in `fields` are accepted; an
+                    unknown key is a validation error rather than a silently
+                    ignored instruction.
+                  additionalProperties:
+                    type: string
+      responses:
+        '200':
+          description: |
+            The import report. Identical in shape whether or not anything was
+            written — `dry_run` says which it was.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [dry_run, delimiter, columns, mapping, fields, imported, skipped, rows]
+                    properties:
+                      dry_run:
+                        type: boolean
+                      delimiter:
+                        type: string
+                        description: The separator detected in the file.
+                        example: ';'
+                      columns:
+                        type: array
+                        description: The header row, as written in the file.
+                        items: { type: string }
+                      mapping:
+                        type: object
+                        description: The mapping actually used — the caller's, filled out with the guess.
+                        additionalProperties: { type: string }
+                      fields:
+                        type: array
+                        description: Every field the import can fill, for building the mapping UI.
+                        items: { type: string }
+                      imported:
+                        type: integer
+                        description: Rows written, or that would be written on a dry run.
+                      skipped:
+                        type: integer
+                      rows:
+                        type: array
+                        items:
+                          type: object
+                          required: [row, status, values, errors]
+                          properties:
+                            row:
+                              type: integer
+                              description: The line number as Excel shows it; the header is row 1.
+                            status:
+                              type: string
+                              enum: [ok, invalid, duplicate]
+                              description: |
+                                `duplicate` means an athlete of that name is
+                                already on the roster, or appeared earlier in
+                                this same file. A known date of birth on both
+                                sides that differs makes them two people.
+                            values:
+                              type: object
+                              description: The parsed athlete, as it would be created.
+                              additionalProperties: true
+                            errors:
+                              type: object
+                              description: Field → messages, for an `invalid` row.
+                              additionalProperties:
+                                type: array
+                                items: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthleteWrite'
+        '422':
+          description: |
+            The upload failed validation, or the file cannot be imported as
+            mapped — no header row, more rows than one import takes, or a
+            required column left unmapped. The last carries `missing`,
+            `columns` and `mapping` so the caller can fix the mapping without
+            re-reading the file.
+
   /athletes/{id}:
     parameters:
       - $ref: '#/components/parameters/AthleteId'
