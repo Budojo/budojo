@@ -106,6 +106,8 @@ Format: `→` separates the symptom from the action.
 - `<p-table>` with both `[sortField]`/`[sortOrder]` bindings AND `(onSort)` → the controlled bindings race PrimeNG's internal toggle, so two clicks on the same header both emit `order=1` (asc) instead of asc-then-desc. Drop the input bindings; let the table own its sort state and just listen.
 - Assuming PrimeNG p-table sorts desc-first or skips the unsorted state → it actually cycles asc, then desc, then unsorted (first click is ASC, not DESC). Write Cypress assertions to match. Same convention as Material/AG-Grid; Jakob's law applies.
 
+- `cy.visitAuthenticated(url, { onBeforeLoad })` silently ignores the options: the signature is **`(url, token?, extra?)`**, so an options object in the second position lands in `token` and the hook never runs. It fails as "the thing I set up is not there" — a missing `__BUDOJO__` stub, an unrecorded console error — which sends you looking at the component. → pass the token explicitly: `cy.visitAuthenticated(url, 'fake-token', { onBeforeLoad })`. Cost two separate debugging detours in one session (#1401 and an earlier console capture).
+
 ### Cypress — whitespace in interpolated text
 
 - Asserted `cy.get(...).should('have.text', '—')` on an element whose template is `{{ a?.field ?? '—' }}` on its own line → Angular preserves the template's leading/trailing whitespace, so `textContent` is ` — ` (newline + indent + em-dash + newline). `have.text` does an exact match → fails. Fix: `.invoke('text').then((t) => expect(t.trim()).to.equal('—'))`. Vitest's `.textContent?.trim()` sidesteps the same trap.
