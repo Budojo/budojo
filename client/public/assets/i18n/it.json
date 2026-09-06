@@ -1796,7 +1796,8 @@
         "undoPaid": "Annulla pagamento",
         "sellCarnet": "Vendi un carnet",
         "openPayments": "Apri i pagamenti"
-      }
+      },
+      "importButton": "Importa"
     },
     "invitation": {
       "title": "Account & invito",
@@ -2151,6 +2152,68 @@
         "tooLargeSummary": "File troppo grande",
         "tooLargeDetail": "La foto non può superare 2 MB."
       }
+    },
+    "import": {
+      "title": "Importa atleti",
+      "subtitle": "Porta dentro la tua lista da un foglio di calcolo, una volta sola, invece di riscriverla.",
+      "back": "Torna agli atleti",
+      "pick": {
+        "title": "Scegli un file CSV",
+        "hint": "Serve una riga di intestazione, e una colonna per nome, cognome e cintura.",
+        "button": "Scegli un file",
+        "excelNote": "Esporti da Excel? File → Salva con nome → CSV. Punti e virgola, accenti e date italiane sono già gestiti."
+      },
+      "mapping": {
+        "title": "Colonne",
+        "hint": "Ecco come sono state lette le tue colonne. Correggi quello che non torna prima di importare.",
+        "missing": "Nessuna colonna corrisponde a:",
+        "none": "— non importare —"
+      },
+      "fields": {
+        "first_name": "Nome",
+        "last_name": "Cognome",
+        "belt": "Cintura",
+        "stripes": "Gradi",
+        "status": "Stato",
+        "joined_at": "Iscritto il",
+        "email": "Email",
+        "phone": "Telefono",
+        "date_of_birth": "Data di nascita"
+      },
+      "table": {
+        "row": "Riga",
+        "name": "Nome",
+        "outcome": "Esito"
+      },
+      "status": {
+        "ok": "Verrà importato",
+        "invalid": "Scartato",
+        "duplicate": "Già in lista"
+      },
+      "reason": {
+        "duplicate": "C'è già qualcuno con questo nome."
+      },
+      "summary": {
+        "willOne": "Verrà importato 1 atleta.",
+        "willOther": "Verranno importati {{count}} atleti.",
+        "doneOne": "1 atleta importato.",
+        "doneOther": "{{count}} atleti importati.",
+        "skippedOne": "1 riga scartata.",
+        "skippedOther": "{{count}} righe scartate."
+      },
+      "confirmOne": "Importa 1 atleta",
+      "confirmOther": "Importa {{count}} atleti",
+      "seeRoster": "Vai alla lista",
+      "error": {
+        "title": "Non sono riuscito a leggere il file",
+        "generic": "Controlla che sia un CSV e riprova."
+      },
+      "toast": {
+        "title": "Import completato",
+        "bodyOne": "1 atleta aggiunto alla lista.",
+        "bodyOther": "{{count}} atleti aggiunti alla lista."
+      },
+      "another": "Scegli un altro file"
     }
   },
   "month": {

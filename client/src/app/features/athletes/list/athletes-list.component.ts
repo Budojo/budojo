@@ -757,6 +757,11 @@ export class AthletesListComponent implements OnInit {
     void this.router.navigate(['/dashboard/athletes/new']);
   }
 
+  /** The bulk path to the same place (#1346). */
+  goToImport(): void {
+    void this.router.navigate(['/dashboard/athletes/import']);
+  }
+
   goToEdit(athlete: Athlete): void {
     void this.router.navigate(['/dashboard/athletes', athlete.id, 'edit']);
   }

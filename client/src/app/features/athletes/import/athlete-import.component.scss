@@ -1,0 +1,221 @@
+/* Import a roster from a CSV (#1346).
+   Page chrome comes from the shell (#261): max-width only, no padding. */
+.import-page {
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+}
+
+.import-card {
+  background: var(--p-content-background);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+
+  &__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  &__heading {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  &__file {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  &__filename {
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__note {
+    margin: 1rem 0 0;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+
+  /* The first screen is one decision, so it is centred and holds nothing else. */
+  &--pick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 3rem 1.5rem;
+  }
+
+  &__icon {
+    font-size: 2rem;
+    color: var(--p-text-muted-color);
+    margin-bottom: 1rem;
+  }
+}
+
+/* A real <input type="file"> inside a <label>: keyboard reachable and
+   announced by screen readers exactly as a file picker should be, which a
+   div-with-a-click-handler is not. The input is moved off-screen rather than
+   `display: none`, because a hidden input is skipped by focus entirely. */
+.import-file {
+  display: inline-block;
+  margin-top: 1.5rem;
+  cursor: pointer;
+
+  &__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    /* 48px tall — the canon's touch-target floor for a primary action. */
+    min-height: 3rem;
+    padding: 0 1.5rem;
+    border-radius: 0.75rem;
+    background: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
+    font-weight: 500;
+    transition: filter var(--budojo-motion-fast) var(--budojo-motion-ease);
+  }
+
+  &:hover &__button {
+    filter: brightness(0.95);
+  }
+
+  /* The same control, worn small: swapping the file mid-flow is a correction,
+     not the main event, so it reads as a link beside the filename. */
+  &--inline {
+    margin-top: 0;
+  }
+
+  &__link {
+    font-size: 0.875rem;
+    color: var(--p-primary-color);
+    text-decoration: underline;
+  }
+
+  &__input:focus-visible + &__link {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+
+  /* The visible focus ring belongs on the label, since the input it
+     decorates is off-screen. */
+  &__input:focus-visible + &__button {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.import-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--p-yellow-50, #fffbeb);
+  color: var(--p-yellow-900, #713f12);
+  font-size: 0.875rem;
+}
+
+.import-mapping {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+
+  &__row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  &__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  &__required {
+    color: var(--p-red-500, #ef4444);
+    margin-left: 0.25rem;
+  }
+
+  &__select {
+    width: 100%;
+  }
+
+  /* Two columns once there is room; the label reads as a form field label
+     rather than a heading above a control. */
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+
+    &__row {
+      grid-template-columns: 10rem minmax(0, 1fr);
+    }
+  }
+}
+
+.import-summary {
+  margin-bottom: 1rem;
+
+  &__line {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  &__skipped {
+    color: var(--p-text-muted-color);
+    font-weight: 400;
+  }
+}
+
+/* Wide content scrolls in its own box; the page body never scrolls sideways. */
+.import-table {
+  overflow-x: auto;
+
+  &__num {
+    width: 4rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--p-text-muted-color);
+  }
+
+  &__row--skipped {
+    opacity: 0.6;
+  }
+
+  &__reason {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.import-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}

@@ -26,6 +26,19 @@
   <app-onboarding-checklist />
 
   <app-page-header [title]="'athletes.list.title' | translate" [countLabel]="totalCountLabel()">
+    <!-- Secondary beside the primary, not a second primary (#1346). An
+         academy arriving with an existing roster needs to FIND this on day
+         one, so it sits in the header rather than behind an overflow. -->
+    <p-button
+      pageHeaderCta
+      [label]="'athletes.list.importButton' | translate"
+      icon="pi pi-file-import"
+      severity="secondary"
+      [outlined]="true"
+      size="small"
+      (onClick)="goToImport()"
+      data-cy="import-athletes-btn"
+    />
     <p-button
       pageHeaderCta
       [label]="'athletes.list.addButton' | translate"

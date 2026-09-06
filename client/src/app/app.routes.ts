@@ -255,6 +255,16 @@ export const routes: Routes = [
           ),
       },
       {
+        // Bulk roster import (#1346). Declared before `athletes/:id` so the
+        // literal segment wins — otherwise `/athletes/import` resolves as an
+        // athlete whose id is the string "import" and 404s from the API.
+        path: 'athletes/import',
+        loadComponent: () =>
+          import('./features/athletes/import/athlete-import.component').then(
+            (m) => m.AthleteImportComponent,
+          ),
+      },
+      {
         path: 'athletes/new',
         loadComponent: () =>
           import('./features/athletes/form/athlete-form.component').then(
