@@ -83,6 +83,15 @@ Because `amount_cents` is snapshotted at insert time (see Business rules above),
 
 The endpoint does NOT split by payment status today — the schema currently has no `payment_status` column (only paid rows exist as records). When that schema grows, the response can extend to a stacked split without breaking clients (additive change).
 
-## Resource-level derivation: `paid_current_month`
+## Resource-level derivation: `paid_current_month` and `payment_coverage`
 
-`AthleteResource` exposes a derived boolean `paid_current_month` so the SPA roster page can render the "paid" badge without a per-row payments-list call. The list endpoint (`GET /athletes`) eager-loads only the current-month payments slice (`WHERE year = NOW()->year AND month = NOW()->month`) to keep this derivation O(1) per row instead of N+1.
+`AthleteResource` exposes two derived fields so the SPA roster can render a row without a per-row payments call. The list endpoint (`GET /athletes`) eager-loads only the slice of payments that could cover the current month — `AthletePayment::scopeCovering(year, month)`, **not** an equality on `(year, month)`, since #1382 — which keeps both derivations O(1) per row instead of N+1.
+
+Both come from **one lookup**: the resource reads the covering payment itself and derives the boolean from it, so the two cannot drift.
+
+| Field | Says |
+|---|---|
+| `paid_current_month` | Whether a **fee payment** covers the month. A carnet does not make this true. It is what the `?paid=yes\|no` filter, the unpaid widget, the owner's digest and the athlete's overdue push all read — so its meaning is about **who owes money**, and widening it changes who gets chased. |
+| `payment_coverage` | **How** the month is covered (#1402): `monthly` / `quarterly` / `half_yearly` / `annual` / `carnet` / `none`. Resolved by `App\Support\MonthCoverage`, where the fee's precedence over a carnet is read from the rule the ledger already applies (#1380) rather than restated. |
+
+The roster renders `payment_coverage`; the boolean stayed because it answers a different, narrower question and several surfaces depend on that.
