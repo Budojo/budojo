@@ -60,6 +60,71 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.49.0',
+    date: '2026-09-06',
+    headline: {
+      en: 'The roster says what you mean.',
+      it: 'La lista atleti dice quello che intendi.',
+    },
+    sections: [
+      {
+        heading: { en: '💳 Payment, not "paid"', it: '💳 Pagamento, non «pagato»' },
+        bullets: [
+          {
+            en: 'The payments column had two values, Paid and Unpaid, which was fine when the only way to pay was the monthly fee — and has not been for a while. An athlete who bought a carnet last week read as Unpaid, with the entries they had left written right beside it: true of the month, false about the person.',
+            it: "La colonna dei pagamenti aveva due valori, Pagato e Non pagato, il che andava bene quando l'unico modo di pagare era la quota mensile — e non lo è più da un pezzo. Un atleta che aveva comprato un carnet la settimana prima risultava Non pagato, con gli ingressi residui scritti lì accanto: vero del mese, falso della persona.",
+          },
+          {
+            en: 'It is called Payment now and says how the month is covered: Monthly, Quarterly, Half-yearly, Annual, Carnet · 8 with the entries left, or Unpaid — which is now the only state that asks for anything. A quarterly bought in February is no longer a generic "paid" in April: you can see why.',
+            it: "Ora si chiama Pagamento e dice come è coperto il mese: Mensile, Trimestrale, Semestrale, Annuale, Carnet · 8 con gli ingressi che restano, oppure Non pagato — che adesso è l'unico stato che chiede qualcosa. Un trimestrale comprato a febbraio non è più genericamente «pagato» ad aprile: si vede perché.",
+          },
+          {
+            en: 'If both the fee and a carnet apply, the fee wins. Not a new rule — it is already what the entry count does, since a paid month never spends a carnet entry. The list now tells that story instead of contradicting it.',
+            it: 'Se paga sia la quota che il carnet, vince la quota. Non è una regola nuova: è già quello che fa il conteggio degli ingressi, visto che un mese pagato non scala niente dal carnet. La lista adesso lo racconta invece di contraddirlo.',
+          },
+          {
+            en: "And the cell opens a menu: mark paid, sell a carnet, undo the payment, open payments — only the ones that mean something for that row. Selling from the list is a straight confirmation, price and entries, starting today; back-dating a sale stays on the athlete's page where the date pickers are.",
+            it: "E la cella apre un menu: segna pagato, vendi un carnet, annulla il pagamento, apri i pagamenti — solo quelle che hanno senso per quella riga. Vendere dalla lista è una conferma secca, prezzo e ingressi, a partire da oggi; retrodatare una vendita resta nella scheda dell'atleta, dove ci sono i calendari.",
+          },
+        ],
+      },
+      {
+        heading: { en: '👁️ Only the ones who train', it: '👁️ Solo chi si allena' },
+        bullets: [
+          {
+            en: 'The Status column said "Active" on twelve rows out of fourteen. A column that repeats the same word almost everywhere is not telling you anything: it takes space and teaches you to skip it.',
+            it: 'La colonna Stato diceva «Attivo» su dodici righe su quattordici. Una colonna che ripete la stessa parola quasi ovunque non ti sta dicendo niente: occupa spazio e ti insegna a saltarla.',
+          },
+          {
+            en: 'It is gone. The list shows the active athletes, which is the answer to the question you open it with, and an eye beside the filters reveals the suspended and the inactive — greyed, with the status written next to the name.',
+            it: "Non c'è più. La lista mostra gli atleti attivi, che è la risposta alla domanda che ti fai aprendola, e un occhio accanto ai filtri fa comparire sospesi e inattivi — in grigio, con lo stato scritto vicino al nome.",
+          },
+          {
+            en: 'The "All statuses" menu stays for when you want only the suspended, and the two can no longer disagree: picking Suspended from the menu lights the eye, closing the eye goes back to the actives.',
+            it: "Il menu «Tutti gli stati» resta per quando vuoi isolare solo i sospesi, e i due non possono più contraddirsi: scegliere Sospesi dal menu accende l'occhio, chiudere l'occhio torna agli attivi.",
+          },
+        ],
+      },
+      {
+        heading: { en: '🖥️ The version, up in the bar', it: '🖥️ La versione nella barra, in alto' },
+        bullets: [
+          {
+            en: 'The bar above the window had a problem and an absence. The problem: no border, so it ended in nothing rather than looking like a bar. It has one now, the same as the sidebar.',
+            it: "La barra sopra la finestra aveva un problema e una mancanza. Il problema: nessun bordo, quindi finiva nel nulla invece di sembrare una barra. Adesso ce l'ha, lo stesso della barra laterale.",
+          },
+          {
+            en: "The absence: you could not tell which version you were running, or whether there was an update. The version is up there now — click it and it says Checking…, then You're up to date, or v2.50.0 · Install, and does it.",
+            it: 'La mancanza: non sapevi che versione stavi usando, né se ci fossero aggiornamenti. Ora la versione è lì — ci clicchi e dice Controllo…, poi Sei aggiornato, oppure v2.50.0 · Installa, e lo fa.',
+          },
+          {
+            en: 'The app already checked by itself at every launch and installed on close. What was missing was seeing it: "no update" and "never checked" both produced silence, and silence is not an answer.',
+            it: "L'app controllava già da sola a ogni avvio e installava alla chiusura. Quello che mancava era vederlo: «nessun aggiornamento» e «non ho controllato» producevano tutti e due silenzio, e il silenzio non è una risposta.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.48.0',
     date: '2026-09-06',
     headline: {
