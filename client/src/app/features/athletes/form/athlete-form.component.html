@@ -321,6 +321,56 @@
         </div>
 
         <!--
+          Which line of the academy's price list this athlete is on (#1381).
+          Hidden entirely when the academy has no tiers, which is every academy
+          that charges one flat fee — Hick's law: an empty dropdown is a choice
+          the owner should never be asked to make.
+        -->
+        @if (feeTierOptions().length > 0) {
+          <app-budojo-form-field
+            [label]="'athletes.form.label.feeTier' | translate"
+            [optionalLabel]="'athletes.form.optional' | translate"
+            controlId="fee_tier_id"
+            [hint]="'athletes.form.hint.feeTier' | translate"
+          >
+            <p-select
+              inputId="fee_tier_id"
+              [options]="feeTierOptions()"
+              formControlName="fee_tier_id"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              [placeholder]="'athletes.form.feeTierPlaceholder' | translate"
+              appendTo="body"
+              styleClass="w-full"
+              data-cy="athlete-form-fee-tier"
+            />
+          </app-budojo-form-field>
+        }
+
+        <!--
+          How often this athlete pays (#1382). Always offered, unlike the fee
+          tier above: an academy needs no configuration to put someone on a
+          quarterly, so there is nothing to hide behind.
+        -->
+        <app-budojo-form-field
+          [label]="'athletes.form.billingPeriod.label' | translate"
+          controlId="billing_period_months"
+          [hint]="'athletes.form.billingPeriod.hint' | translate"
+        >
+          <p-select
+            inputId="billing_period_months"
+            [options]="billingPeriodOptions()"
+            formControlName="billing_period_months"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            styleClass="w-full"
+            data-cy="athlete-form-billing-period"
+          />
+        </app-budojo-form-field>
+
+        <!--
         The address block stays on its bespoke <fieldset>/<legend>
         markup rather than the BudojoFormField wrapper (#1050): it's a
         nested form GROUP (not a single label+control+error), its

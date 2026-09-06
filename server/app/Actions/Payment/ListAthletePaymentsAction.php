@@ -11,9 +11,13 @@ use Illuminate\Database\Eloquent\Collection;
 class ListAthletePaymentsAction
 {
     /**
-     * Returns the athlete's payments for the given year, ordered by month
-     * ascending (January → December — calendar order, easiest to scan and
-     * to render as a 12-cell grid client-side without a sort step).
+     * Every payment whose period touches the given year, in calendar order.
+     *
+     * "Touches", not "starts in" (#1382): a quarterly bought in December 2025
+     * pays for January and February 2026, and the twelve-month table for 2026
+     * cannot render those months as covered without the row behind them. The
+     * client reads `year`, `month` and `period_months` off each payment and
+     * spreads it across the cells it covers.
      *
      * @return Collection<int, AthletePayment>
      */
@@ -21,7 +25,11 @@ class ListAthletePaymentsAction
     {
         return AthletePayment::query()
             ->where('athlete_id', $athlete->id)
-            ->where('year', $year)
+            // A period overlaps the year exactly when it overlaps the
+            // twelve-month interval starting at January — the same test the
+            // overlap guard uses, from the other end.
+            ->overlapping($year, 1, 12)
+            ->orderBy('year', 'asc')
             ->orderBy('month', 'asc')
             ->get();
     }

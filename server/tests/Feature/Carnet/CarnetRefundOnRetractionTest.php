@@ -13,6 +13,12 @@ use App\Models\CarnetEntry;
 use Carbon\CarbonImmutable;
 
 // helpers live in tests/Pest.php
+//
+// The promise here is unchanged by #1380 — retracting a presence gives its
+// entry back — but the mechanism is: there is no explicit refund any more. The
+// session leaves the set the ledger is derived from, and the entry goes with
+// it. These tests are kept precisely because the outcome must not move when
+// the implementation underneath does.
 
 beforeEach(function (): void {
     $this->user = userWithAcademy();

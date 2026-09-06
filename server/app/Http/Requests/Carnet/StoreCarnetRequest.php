@@ -50,6 +50,11 @@ class StoreCarnetRequest extends FormRequest
             // neighbouring date. The OpenAPI declares `format: date`; this is
             // the rule that actually holds us to it.
             'purchased_at' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+            // Where the carnet starts covering sessions (#1380). Defaults to
+            // the sale. May be back-dated to claim sessions already recorded;
+            // a future start is refused for the same reason a future sale is —
+            // validity runs from a day that has happened.
+            'valid_from' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
         ];
     }
 

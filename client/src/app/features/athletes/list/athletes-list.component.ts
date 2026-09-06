@@ -58,6 +58,7 @@ import { IconButtonComponent } from '../../../shared/components/icon-button/icon
 import { ConfirmDestructiveButtonComponent } from '../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
+import { academyChargesAFee } from '../../../shared/utils/academy-fee';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -158,14 +159,34 @@ export class AthletesListComponent implements OnInit {
   readonly sortOrder = signal<AthleteSortOrder>('desc');
 
   /**
-   * The paid badge + filter only make sense when the academy has configured
-   * a monthly fee — otherwise there's no expectation of payment to assert
-   * against. Reads from the cached `AcademyService.academy()` signal so we
-   * never block rendering on an additional fetch (#105).
+   * The paid badge + filter only make sense when the academy charges
+   * something — a flat fee or a price tier (#1381); otherwise there's no
+   * expectation of payment to assert against. Reads from the cached
+   * `AcademyService.academy()` signal so we never block rendering on an
+   * additional fetch (#105).
    */
-  readonly hasMonthlyFee = computed(
-    () => (this.academyService.academy()?.monthly_fee_cents ?? null) !== null,
-  );
+  readonly hasMonthlyFee = computed(() => academyChargesAFee(this.academyService.academy()));
+
+  /**
+   * Rows where a current-month payment is not expected, and the Paid cell
+   * shows an em-dash instead of a toggle:
+   *
+   *   - the owner training in their own academy (#750) — no payment ledger;
+   *   - a suspended or inactive athlete (#805) — surfacing "Unpaid" there
+   *     conflated "no payment recorded" with "owes";
+   *   - nobody resolved a fee for them (#1381) — on an academy priced only
+   *     by tier, an athlete on no tier owes nothing, and offering the toggle
+   *     would send the owner into a 422.
+   *
+   * `monthly_fee_cents` is absent on pre-#1381 payloads, and `undefined` is
+   * read as "a fee applies" so old fixtures and cached responses keep the
+   * toggle they have always had.
+   */
+  paymentNotExpected(athlete: Athlete): boolean {
+    return (
+      athlete.is_self === true || athlete.status !== 'active' || athlete.monthly_fee_cents === null
+    );
+  }
 
   /**
    * Current-month labels for the "Paid" column (#282). BOTH labels are
@@ -882,12 +903,26 @@ export class AthletesListComponent implements OnInit {
 
     const fullName = `${athlete.first_name} ${athlete.last_name}`;
     const willMarkPaid = !athlete.paid_current_month;
-    const message = this.translate.instant(
-      willMarkPaid
-        ? 'athletes.list.confirm.markPaidMessage'
-        : 'athletes.list.confirm.markUnpaidMessage',
-      { name: fullName, month: monthLabel },
-    );
+
+    // Say what the click actually does (#1382). On a quarterly athlete this
+    // records — or removes — three months at three times the fee, and
+    // "April 2026" alone would be a quietly false description of a €165
+    // receipt. Norman: show the consequence before the act.
+    const period = this.periodCaptionFor(year, month, athlete.billing_period_months ?? 1);
+    const message =
+      period !== null
+        ? this.translate.instant(
+            willMarkPaid
+              ? 'athletes.list.confirm.markPaidPeriodMessage'
+              : 'athletes.list.confirm.markUnpaidPeriodMessage',
+            { name: fullName, period },
+          )
+        : this.translate.instant(
+            willMarkPaid
+              ? 'athletes.list.confirm.markPaidMessage'
+              : 'athletes.list.confirm.markUnpaidMessage',
+            { name: fullName, month: monthLabel },
+          );
 
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
@@ -900,6 +935,29 @@ export class AthletesListComponent implements OnInit {
       rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
       accept: () => this.applyPaidToggle(athlete, year, month, willMarkPaid),
     });
+  }
+
+  /**
+   * "February – April 2026" for a period longer than a month, `null` for the
+   * monthly case where the month name alone already says it.
+   *
+   * Undoing is not symmetric with marking: the server removes whichever
+   * period *covers* the current month, which may have started earlier than
+   * this caption suggests. The athlete's configured period is the closest
+   * honest description available from the roster, which carries no payment
+   * rows — the per-athlete payments tab, which does, names the real range.
+   */
+  private periodCaptionFor(year: number, month: number, periodMonths: number): string | null {
+    if (periodMonths <= 1) return null;
+
+    const name = (offset: number): string =>
+      new Date(Date.UTC(year, month - 1 + offset, 1)).toLocaleString(this.locale(), {
+        month: 'long',
+        timeZone: 'UTC',
+      });
+    const endYear = new Date(Date.UTC(year, month - 1 + periodMonths - 1, 1)).getUTCFullYear();
+
+    return `${name(0)} – ${name(periodMonths - 1)} ${endYear}`;
   }
 
   private applyPaidToggle(athlete: Athlete, year: number, month: number, markPaid: boolean): void {

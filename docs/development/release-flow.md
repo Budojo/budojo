@@ -31,8 +31,10 @@ Every `develop → main` release PR body MUST end with an `## Auto-closes` block
 ```markdown
 ## Auto-closes
 
-Closes #N1, #N2, #N3, …
+Closes #N1, closes #N2, closes #N3, …
 ```
+
+> ⚠️ **Repeat the keyword before every reference.** `Closes #N1, #N2` closes only `#N1` — GitHub parses one issue per closing keyword and ignores the rest of the comma list. This is not theoretical: v2.47.0 shipped with `Closes #1362, #1364`, closed #1362, and left the epic #1364 open. Verify each issue actually flipped to CLOSED after the merge; a straggler means the keyword was dropped, not that GitHub was slow.
 
 GitHub auto-closes those issues the moment the release PR is merged. Without this block they stay open forever, because:
 

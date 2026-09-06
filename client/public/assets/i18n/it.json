@@ -1536,6 +1536,41 @@
         "errorRange": "Inserisci un numero tra 1 e 255."
       }
     },
+    "feeTiers": {
+      "title": "Listino quote mensili",
+      "hint": "Se l'academy ha più di una quota — per esempio 2 lezioni a settimana a 55 €, 3 lezioni a 65 € — elencale qui e assegna a ogni atleta la sua dal dettaglio atleta. Chi non sta su nessuna fascia paga la quota mensile qui sopra.",
+      "empty": "Nessuna fascia. Tutti gli atleti pagano la quota mensile qui sopra.",
+      "add": "Aggiungi fascia",
+      "editAria": "Modifica la fascia {{label}}",
+      "removeAria": "Elimina la fascia {{label}}",
+      "form": {
+        "label": "Nome della fascia",
+        "labelPlaceholder": "2 lezioni",
+        "labelHint": "Come la chiami tu: è il nome che vedrai scegliendo la fascia di un atleta.",
+        "amount": "Quota mensile",
+        "lessons": "Lezioni a settimana",
+        "cancel": "Annulla",
+        "create": "Aggiungi",
+        "save": "Salva"
+      },
+      "confirm": {
+        "remove": "Eliminare la fascia «{{label}}»?",
+        "removeWithAthletesOne": "Eliminare la fascia «{{label}}»? {{count}} atleta la sta usando e tornerà alla quota mensile dell’academy.",
+        "removeWithAthletesOther": "Eliminare la fascia «{{label}}»? {{count}} atleti la stanno usando e torneranno alla quota mensile dell’academy."
+      },
+      "toast": {
+        "savedSummary": "Listino aggiornato",
+        "removedSummary": "Fascia eliminata",
+        "errorSummary": "Operazione non riuscita",
+        "errorDetail": "Riprova tra poco.",
+        "duplicateDetail": "Esiste già una fascia con questo nome. Controlla anche importo e numero di lezioni.",
+        "loadErrorDetail": "Non è stato possibile caricare il listino."
+      },
+      "lessonsPerWeekOne": "{{count}} lezione a settimana",
+      "lessonsPerWeekOther": "{{count}} lezioni a settimana",
+      "athletesOnOne": "{{count}} atleta",
+      "athletesOnOther": "{{count}} atleti"
+    },
     "schedule": {
       "title": "Pianifica un cambio calendario futuro",
       "hint": "Usa questa sezione quando i giorni di allenamento cambieranno a partire da una data precisa — i mesi passati conservano i giorni effettivamente in vigore allora.",
@@ -1725,7 +1760,9 @@
         "markPaidAccept": "Segna pagato",
         "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}}?",
         "markUnpaidAccept": "Segna non pagato",
-        "cancel": "Annulla"
+        "cancel": "Annulla",
+        "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
+        "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?"
       },
       "restoreConfirm": {
         "message": "Ripristinare {{name}}?",
@@ -1770,7 +1807,9 @@
         "fallbackName": "questo atleta",
         "confirm": {
           "markPaidMessage": "Segnare {{name}} come pagato per {{month}} {{year}}?",
-          "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}} {{year}}?"
+          "markUnpaidMessage": "Segnare {{name}} come non pagato per {{month}} {{year}}?",
+          "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
+          "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?"
         },
         "toast": {
           "markedPaidSummary": "Pagato",
@@ -1779,7 +1818,8 @@
           "errorSummary": "Errore",
           "errorMissingFee": "Imposta una quota mensile sull'accademia prima di registrare i pagamenti.",
           "errorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
-          "loadErrorDetail": "Impossibile caricare i pagamenti."
+          "loadErrorDetail": "Impossibile caricare i pagamenti.",
+          "errorOverlap": "Quel mese è già coperto da un altro pagamento."
         },
         "title": "Pagamenti — {{year}}",
         "noFeeHint": "Imposta una quota mensile sull'accademia per iniziare a registrare i pagamenti. Fino ad allora questa pagina rimane di sola lettura.",
@@ -1793,7 +1833,10 @@
         "button": {
           "markPaid": "Segna pagato",
           "unmarkPaid": "Annulla pagato"
-        }
+        },
+        "feeTierHintOne": "Fascia {{label}} · {{amount}} al mese per {{count}} lezione a settimana.",
+        "feeTierHintOther": "Fascia {{label}} · {{amount}} al mese per {{count}} lezioni a settimana.",
+        "periodRange": "Da {{from}} a {{to}} {{year}}"
       },
       "documents": {
         "confirm": {
@@ -1901,7 +1944,9 @@
           "purchasedAt": "Data di acquisto",
           "purchasedAtHint": "Predefinita a oggi. Retrodatala se stai trascrivendo un registro cartaceo.",
           "confirm": "Vendi carnet",
-          "cancel": "Annulla"
+          "cancel": "Annulla",
+          "validFrom": "Copre gli allenamenti da",
+          "validFromHint": "Lascia vuoto per partire dalla data di acquisto. Anticipala per conteggiare allenamenti già registrati."
         },
         "toast": {
           "soldSummary": "Carnet venduto",
@@ -1910,9 +1955,25 @@
           "errorNotConfigured": "Imposta prima prezzo e taglia del carnet nelle impostazioni dell'academy.",
           "errorGeneric": "Non è stato possibile vendere il carnet. Riprova.",
           "errorEntries": "Non è stato possibile caricare il registro ingressi.",
-          "loadError": "Non è stato possibile caricare i carnet."
+          "loadError": "Non è stato possibile caricare i carnet.",
+          "validitySummary": "Validità aggiornata",
+          "validityDetail": "Il saldo è stato ricalcolato.",
+          "deletedSummary": "Carnet eliminato",
+          "deletedDetail": "Gli allenamenti restano nel registro presenze."
         },
-        "sellWithPrice": "Vendi carnet — {{price}} / {{entries}} ingressi"
+        "sellWithPrice": "Vendi carnet — {{price}} / {{entries}} ingressi",
+        "window": "Valido {{from}} → {{to}}",
+        "editValidity": "Modifica validità",
+        "delete": "Elimina",
+        "confirmDelete": "Eliminare il carnet {{code}}? Gli allenamenti che sta pagando ({{count}}) restano nel registro presenze ma perdono la copertura, a meno che un altro carnet li copra.",
+        "validityDialog": {
+          "title": "Modifica l'inizio della validità",
+          "body": "Il carnet copre gli allenamenti compresi fra l'inizio della validità e la scadenza. Spostare l'inizio sposta anche la scadenza — la finestra dura sempre 12 mesi, quindi anticiparla consuma validità invece di aggiungerne.",
+          "hint": "Gli allenamenti già registrati dentro la nuova finestra verranno conteggiati.",
+          "confirm": "Salva",
+          "newExpiry": "Nuova scadenza: {{date}}"
+        },
+        "soldOnFor": "Venduto il {{date}} per {{amount}}"
       }
     },
     "form": {
@@ -1948,7 +2009,8 @@
         "addressLine2": "Interno / piano / scala",
         "addressZip": "CAP",
         "addressCity": "Città",
-        "addressProvince": "Provincia"
+        "addressProvince": "Provincia",
+        "feeTier": "Fascia di quota"
       },
       "placeholder": {
         "phoneCountryCode": "Prefisso",
@@ -2004,7 +2066,8 @@
         }
       },
       "hint": {
-        "address": "Lascia tutti i campi vuoti per non assegnare un indirizzo all'atleta."
+        "address": "Lascia tutti i campi vuoti per non assegnare un indirizzo all'atleta.",
+        "feeTier": "Quale quota mensile paga. Lascia vuoto per la quota standard dell'academy."
       },
       "button": {
         "cancel": "Annulla",
@@ -2030,6 +2093,15 @@
           "portugal": "Portogallo",
           "netherlands": "Paesi Bassi"
         }
+      },
+      "feeTierPlaceholder": "Quota standard dell'academy",
+      "billingPeriod": {
+        "label": "Periodicità",
+        "hint": "Ogni quanto paga. Un pagamento trimestrale è una riga sola che copre tre mesi.",
+        "monthly": "Mensile",
+        "quarterly": "Trimestrale",
+        "halfYearly": "Semestrale",
+        "annual": "Annuale"
       }
     },
     "photo": {
@@ -2138,10 +2210,10 @@
     },
     "payments": {
       "monthlyTitle": "Incassi mensili",
-      "monthlyHint": "Ultimi 12 mesi · somma pagamenti registrati per mese di competenza",
+      "monthlyHint": "Ultimi 12 mesi · quote e carnet, ripartiti sui mesi che coprono",
       "loading": "Caricamento incassi…",
       "errored": "Impossibile caricare il trend.",
-      "empty": "Nessun pagamento registrato negli ultimi 12 mesi."
+      "empty": "Nessun incasso negli ultimi 12 mesi."
     },
     "athletes": {
       "ageBandsTitle": "Atleti per divisione IBJJF",

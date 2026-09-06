@@ -377,6 +377,14 @@
     </app-budojo-form-field>
 
     <!--
+      The price list (#1381) — the generalisation of the single fee above, for
+      an academy that charges by how often someone trains. It sits directly
+      under that field because the two answer the same question, and a tier
+      only ever overrides the fee for the athletes put on it.
+    -->
+    <app-fee-tier-list data-cy="academy-form-fee-tiers" />
+
+    <!--
       Entry carnets (#1364) — the pre-paid alternative to the monthly fee, for
       athletes who train occasionally. Both halves must be set before a carnet
       can be sold; leaving either empty means "this academy doesn't offer

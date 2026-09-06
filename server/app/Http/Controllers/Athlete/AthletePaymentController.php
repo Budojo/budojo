@@ -7,11 +7,13 @@ namespace App\Http\Controllers\Athlete;
 use App\Actions\Payment\DeleteAthletePaymentAction;
 use App\Actions\Payment\ListAthletePaymentsAction;
 use App\Actions\Payment\RecordAthletePaymentAction;
+use App\Enums\BillingPeriod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payment\StoreAthletePaymentRequest;
 use App\Http\Resources\AthletePaymentResource;
 use App\Models\Athlete;
 use App\Models\User;
+use App\Support\MonthlyFee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -50,21 +52,34 @@ class AthletePaymentController extends Controller
         // 403 ("you can't touch this resource at all"). The academy null
         // check is defensive — authorize() guarantees it, but PHPStan
         // can't follow that invariant across class boundaries.
-        $academy = $athlete->academy;
-        if ($academy === null || $academy->monthly_fee_cents === null) {
+        // What this athlete pays: their price tier if they are on one, the
+        // academy's flat fee otherwise (#1381). Null means neither is set and
+        // there is no amount to record — the same 422 as before, since an
+        // academy with no fee configured is still the case being refused.
+        $amountCents = MonthlyFee::forAthlete($athlete);
+        if ($amountCents === null) {
             return response()->json([
-                'message' => 'Cannot record payment — academy monthly fee is not configured.',
+                'message' => 'Cannot record payment — no monthly fee applies to this athlete.',
                 'errors' => [
                     'monthly_fee_cents' => ['The academy has not configured a monthly fee.'],
                 ],
             ], 422);
         }
 
+        // The period the caller asked for, or the athlete's own expectation
+        // when they didn't (#1382). The amount is the monthly fee times the
+        // months covered: Budojo has nowhere to record a discounted annual, so
+        // it does not pretend to — see docs/entities/athlete-payment.md.
+        $period = $request->has('period_months')
+            ? BillingPeriod::from($request->integer('period_months'))
+            : BillingPeriod::from($athlete->billing_period_months);
+
         $payment = $this->recordAction->execute(
             athlete: $athlete,
             year: $request->integer('year'),
             month: $request->integer('month'),
-            amountCents: $academy->monthly_fee_cents,
+            amountCents: $amountCents * $period->value,
+            period: $period,
         );
 
         return response()->json(['data' => new AthletePaymentResource($payment)], 201);

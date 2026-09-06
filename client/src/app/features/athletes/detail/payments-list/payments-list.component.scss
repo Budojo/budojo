@@ -173,3 +173,19 @@ $payments-mobile-breakpoint: 768px;
     align-items: center;
   }
 }
+
+// The "January to March 2026" caption under a month covered by a longer
+// payment (#1382). Muted and on its own line: it is the tie between this row
+// and the amount three rows up, not a second heading.
+.payments-list__period {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.payment-card__period {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--p-text-muted-color);
+}

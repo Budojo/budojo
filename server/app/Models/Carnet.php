@@ -28,12 +28,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int      $total_entries
  * @property int      $price_cents
  * @property Carbon   $purchased_at
+ * @property Carbon   $valid_from
  * @property Carbon   $expires_at
  * @property Carbon   $created_at
  * @property Carbon   $updated_at
  * @property-read int|null $entries_count Present only when the query used `withCount('entries')`
  */
-#[Fillable(['code', 'athlete_id', 'total_entries', 'price_cents', 'purchased_at', 'expires_at'])]
+#[Fillable(['code', 'athlete_id', 'total_entries', 'price_cents', 'purchased_at', 'valid_from', 'expires_at'])]
 #[ObservedBy([CarnetAuditObserver::class])]
 class Carnet extends Model
 {
@@ -70,7 +71,7 @@ class Carnet extends Model
     public function scopeValidOn(Builder $query, CarbonInterface $date): Builder
     {
         return $query
-            ->whereDate('purchased_at', '<=', $date->toDateString())
+            ->whereDate('valid_from', '<=', $date->toDateString())
             ->whereDate('expires_at', '>=', $date->toDateString())
             ->withCount('entries')
             ->orderBy('expires_at')
@@ -84,6 +85,7 @@ class Carnet extends Model
     {
         return [
             'purchased_at' => 'date:Y-m-d',
+            'valid_from' => 'date:Y-m-d',
             'expires_at' => 'date:Y-m-d',
             'total_entries' => 'integer',
             'price_cents' => 'integer',

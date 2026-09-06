@@ -13,6 +13,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AcademyService } from '../../../core/services/academy.service';
 import { AthleteService, Athlete } from '../../../core/services/athlete.service';
+import { academyChargesAFee } from '../../utils/academy-fee';
 
 const MONTH_KEYS = [
   'month.january',
@@ -44,9 +45,8 @@ export type NowProvider = () => Date;
  * that, it's still early in the cycle and chasing reads as
  * premature-noise. Hidden entirely when:
  *
- * - The academy has no `monthly_fee_cents` configured (mirrors the
- *   gate the inline mark-paid toggle and the per-athlete Payments
- *   tab use); or
+ * - The academy charges no fee at all — neither a flat
+ *   `monthly_fee_cents` nor a price tier (#1381); or
  * - Today is before the 16th of the month (issue #283 § visibility
  *   threshold).
  *
@@ -94,8 +94,8 @@ export class UnpaidThisMonthWidgetComponent implements OnInit {
   protected readonly loading = signal<boolean>(true);
   protected readonly errored = signal<boolean>(false);
 
-  protected readonly hasMonthlyFee = computed<boolean>(
-    () => (this.academyService.academy()?.monthly_fee_cents ?? null) !== null,
+  protected readonly hasMonthlyFee = computed<boolean>(() =>
+    academyChargesAFee(this.academyService.academy()),
   );
 
   /**

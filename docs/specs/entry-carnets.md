@@ -1,6 +1,28 @@
 # PRD — Entry carnets (#1364)
 
-**Status**: drafted 2026-09-04, awaiting PR-1 implementation.
+**Status**: shipped in v2.47.0. **Amended by #1380** — see the box below before
+trusting the consumption model described here.
+
+> ### Amendment: the consumption model changed (#1380)
+>
+> This PRD describes consumption as **event-driven**: an entry is charged when a
+> presence is marked, and sessions predating the sale are never revisited. That
+> shipped, and it was wrong for the first real carnet an owner sold — dated
+> 4 September, it ignored the session recorded on the 2nd.
+>
+> A carnet now carries a **`valid_from`** date, editable after the sale and
+> allowed to precede it, and what it pays for is a **function of its window**
+> rather than of when someone clicked. `carnet_entries` became a projection
+> rebuilt from the facts by `ReconcileCarnetEntriesAction`.
+>
+> What survived unchanged: monthly-first, the balance stopping at zero, FIFO by
+> earliest expiry, and attendance never being blocked. What changed besides the
+> model: the expiry now hangs off `valid_from` rather than the sale, paying a
+> month afterwards *releases* the entries it had taken (this PRD's "Edge cases"
+> section says the opposite), and a carnet can be **deleted**, which the
+> Non-goals below rule out.
+>
+> `docs/entities/carnet.md` and `carnet-entry.md` describe the current model.
 
 ## Why
 
@@ -279,4 +301,4 @@ Every new string lands in both `client/public/assets/i18n/it.json` and `en.json`
 - **Is 12 months fixed, or academy-configurable?** This PRD hardcodes 12 (stored per carnet at purchase, so making it configurable later is additive and doesn't touch sold rows). Confirm before the migration lands.
 - **Is the code searchable?** The repo has a global search surface (`app/Actions/Search`). Typing `A7K2` there and landing on the athlete holding it is the obvious affordance, but it is additive and not required for the code to do its job. Decide in PR 3 when the UI exists.
 - **Notification on low balance.** The notification infrastructure exists (`AthletePaymentMarkedPaidNotification` is the template) and "2 ingressi rimasti" is an obvious candidate. Deliberately out of this PRD's slices — its own ticket once the balance data exists.
-- **Stats.** `GET /stats/payments/monthly` buckets revenue by the business month of `athlete_payments`. A carnet sale is revenue on `purchased_at` that covers 12 months of unknown usage, so it does **not** belong in that series without a decision on how to attribute it. Left out of scope; the trend endpoint keeps meaning "monthly-fee revenue" until that decision is made.
+- ~~**Stats.** `GET /stats/payments/monthly` buckets revenue by the business month of `athlete_payments`. A carnet sale is revenue on `purchased_at` that covers 12 months of unknown usage, so it does **not** belong in that series without a decision on how to attribute it. Left out of scope; the trend endpoint keeps meaning "monthly-fee revenue" until that decision is made.~~ **Settled in #1383:** the decision was taken to spread a carnet's `price_cents` evenly across the months of its validity window, which is the same rule #1382 applies to a twelve-month fee payment. The trend endpoint now means "all revenue for this month" — fees and carnets alike. See [`carnet.md`](../entities/carnet.md) § Business rules.

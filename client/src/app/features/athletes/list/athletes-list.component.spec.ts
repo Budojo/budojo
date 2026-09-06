@@ -1074,3 +1074,120 @@ describe('AthletesListComponent', () => {
     });
   });
 });
+
+describe('AthletesListComponent — who is expected to pay (#1381)', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AthletesListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
+      ],
+    });
+  });
+
+  function athlete(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 1,
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      status: 'active',
+      is_self: false,
+      monthly_fee_cents: 6500,
+      ...overrides,
+    } as never;
+  }
+
+  function predicate() {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    return fixture.componentInstance.paymentNotExpected.bind(fixture.componentInstance);
+  }
+
+  it('expects payment from an ordinary active athlete on a fee', () => {
+    expect(predicate()(athlete())).toBe(false);
+  });
+
+  it('does not expect payment from the owner training in their own academy', () => {
+    expect(predicate()(athlete({ is_self: true }))).toBe(true);
+  });
+
+  it('does not expect payment from a suspended athlete', () => {
+    expect(predicate()(athlete({ status: 'suspended' }))).toBe(true);
+  });
+
+  it('does not expect payment when no fee resolves for them', () => {
+    // A tier-only academy where nobody put this athlete on a tier: they owe
+    // nothing, and the server would 422 the toggle.
+    expect(predicate()(athlete({ monthly_fee_cents: null }))).toBe(true);
+  });
+
+  it('still expects payment on a pre-#1381 payload with no fee field', () => {
+    expect(predicate()(athlete({ monthly_fee_cents: undefined }))).toBe(false);
+  });
+});
+
+describe('AthletesListComponent — the roster paid toggle says what it does (#1382)', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AthletesListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
+      ],
+    });
+  });
+
+  function confirmMessageFor(billingPeriodMonths: number | undefined, paid: boolean): string {
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    const cmp = fixture.componentInstance;
+    const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+
+    let message = '';
+    confirmService.confirm = vi.fn((cfg: { message: string }) => {
+      message = cfg.message;
+      return confirmService;
+    }) as never;
+
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+    cmp.confirmTogglePaid(event, {
+      id: 1,
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      paid_current_month: paid,
+      billing_period_months: billingPeriodMonths,
+    } as never);
+
+    return message;
+  }
+
+  it('names the whole quarter it is about to record', () => {
+    // "April 2026" alone would be a quietly false description of a €165
+    // receipt covering three months.
+    const message = confirmMessageFor(3, false);
+    expect(message).toContain('Mario Rossi');
+    expect(message).toMatch(/–/);
+  });
+
+  it('names the whole quarter it is about to undo', () => {
+    expect(confirmMessageFor(3, true)).toMatch(/–/);
+  });
+
+  it('keeps the plain single-month wording for a monthly athlete', () => {
+    const message = confirmMessageFor(1, false);
+    expect(message).toContain('Mario Rossi');
+    expect(message).not.toMatch(/–/);
+  });
+
+  it('treats a pre-#1382 payload with no period as monthly', () => {
+    expect(confirmMessageFor(undefined, false)).not.toMatch(/–/);
+  });
+});

@@ -36,7 +36,9 @@ import {
   MAX_STRIPES_PER_BELT,
 } from '../../../core/services/athlete.service';
 import { Address, CountryCode, ItalianProvinceCode } from '../../../core/services/academy.service';
+import { FeeTier, FeeTierService } from '../../../core/services/fee-tier.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { localeFor } from '../../../shared/utils/locale';
 import { BudojoFormFieldComponent } from '../../../shared/components/budojo-form-field/budojo-form-field.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import {
@@ -70,7 +72,9 @@ const COUNTRY_CODE_ENTRIES: readonly CountryCodeEntry[] = [
   { code: '+31', labelKey: 'athletes.form.phone.countryCode.netherlands' },
 ] as const;
 
-interface SelectOption<T extends string> {
+// Widened past `string` for the fee-tier select (#1381), whose value is the
+// tier's id. Every other option list here is still string-valued.
+interface SelectOption<T extends string | number> {
   label: string;
   value: T;
 }
@@ -177,6 +181,7 @@ const urlIfPresent: ValidatorFn = (control: AbstractControl) => {
 export class AthleteFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly athleteService = inject(AthleteService);
+  private readonly feeTierService = inject(FeeTierService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
@@ -207,6 +212,46 @@ export class AthleteFormComponent implements OnInit {
       label: this.translate.instant(BELT_KEYS[value]),
       value,
     }));
+  });
+
+  /**
+   * The academy's price list (#1381), for the tier dropdown. Empty for an
+   * academy that charges one flat fee — the field hides entirely in that
+   * case rather than offering an empty select.
+   */
+  private readonly feeTiers = signal<readonly FeeTier[]>([]);
+
+  /**
+   * Each option carries its price, because "2 lezioni" alone doesn't answer
+   * the question the owner is actually asking — which is how much this
+   * athlete pays. Reading the amount from a second screen would be exactly
+   * the kind of lookup Krug's first law says to remove.
+   */
+  readonly feeTierOptions = computed<SelectOption<number>[]>(() => {
+    const locale = localeFor(this.languageService.currentLang());
+    return this.feeTiers().map((tier) => ({
+      label: `${tier.label} — ${(tier.amount_cents / 100).toLocaleString(locale, {
+        style: 'currency',
+        currency: 'EUR',
+      })}`,
+      value: tier.id,
+    }));
+  });
+
+  /**
+   * The four billing periods (#1382), mirroring `App\Enums\BillingPeriod`.
+   * Four named choices rather than a free number: "somebody paid for seven
+   * months" is not a case anyone has, and a short list is one Hick's law says
+   * to keep short.
+   */
+  readonly billingPeriodOptions = computed<SelectOption<number>[]>(() => {
+    this.languageService.currentLang();
+    return [
+      { label: this.translate.instant('athletes.form.billingPeriod.monthly'), value: 1 },
+      { label: this.translate.instant('athletes.form.billingPeriod.quarterly'), value: 3 },
+      { label: this.translate.instant('athletes.form.billingPeriod.halfYearly'), value: 6 },
+      { label: this.translate.instant('athletes.form.billingPeriod.annual'), value: 12 },
+    ];
   });
 
   readonly statusOptions = computed<SelectOption<AthleteStatus>[]>(() => {
@@ -264,6 +309,13 @@ export class AthleteFormComponent implements OnInit {
     belt: this.fb.nonNullable.control<Belt>('white', Validators.required),
     stripes: this.fb.nonNullable.control<string>('0', Validators.required),
     status: this.fb.nonNullable.control<AthleteStatus>('active', Validators.required),
+    // Which price tier they're on (#1381). Null — the default, and the only
+    // value an academy with no price list can hold — means the academy's own
+    // monthly fee applies.
+    fee_tier_id: this.fb.control<number | null>(null),
+    // How often they pay (#1382). Monthly for everybody until changed, which
+    // is exactly what the app did before periods existed.
+    billing_period_months: this.fb.nonNullable.control<number>(1, Validators.required),
     joined_at: this.fb.nonNullable.control<Date>(new Date(), Validators.required),
     // Structured address (#72b) — same shape as the academy form.
     // The HTML fieldset is duplicated between the two forms; the validators,
@@ -310,6 +362,19 @@ export class AthleteFormComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // The price list (#1381). Loaded once for the lifetime of the form: it is
+    // academy configuration, not per-athlete data, and it cannot change while
+    // this page is open. A failure leaves the list empty, which hides the
+    // field — the athlete saves without a tier rather than being blocked by
+    // an error about a field they may not even use.
+    this.feeTierService
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (tiers) => this.feeTiers.set(tiers),
+        error: () => undefined,
+      });
+
     // The phone pair validators are mutually dependent — when one control's
     // value flips between empty/non-empty, the OTHER control's validity needs
     // a re-check. Without this wiring, typing a country code wouldn't surface
@@ -623,6 +688,8 @@ export class AthleteFormComponent implements OnInit {
             belt: athlete.belt,
             stripes: String(athlete.stripes),
             status: athlete.status,
+            fee_tier_id: athlete.fee_tier?.id ?? null,
+            billing_period_months: athlete.billing_period_months ?? 1,
             ...(joinedAt ? { joined_at: joinedAt } : {}),
             address: {
               line1: athlete.address?.line1 ?? '',
@@ -674,6 +741,8 @@ export class AthleteFormComponent implements OnInit {
       stripes: Number(v.stripes),
       status: v.status,
       joined_at: joinedAt,
+      fee_tier_id: v.fee_tier_id,
+      billing_period_months: v.billing_period_months,
       address: this.buildAddressPayload(v.address),
     };
   }

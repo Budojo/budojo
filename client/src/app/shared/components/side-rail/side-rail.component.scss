@@ -16,6 +16,16 @@ $rail-width: 15rem;
   background: var(--p-content-background);
   border-right: 1px solid var(--p-content-border-color);
 
+  // Budojo Desktop (#1379): the rail starts at the very top of the window, so
+  // its first row — the academy name — sat under the strip the shell paints
+  // for the window controls. That went unnoticed while the strip was
+  // transparent and the logo simply showed through it; the moment the bar
+  // became an opaque surface, the name was cut in half. `.main` next door has
+  // carried the same clearance since #1289.
+  :host-context(html.budojo-desktop) & {
+    padding-top: calc(1rem + var(--budojo-titlebar-height, 40px));
+  }
+
   // Mobile: the rail is replaced by the bottom tab bar.
   @media (max-width: $sidebar-breakpoint - 1) {
     display: none;

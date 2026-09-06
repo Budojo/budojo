@@ -10,6 +10,52 @@ import './commands';
 // an unverified user for the verification banner spec, etc.) registers
 // its own intercept later and Cypress matches the most-recent
 // registration. This default only catches the otherwise-unmocked case.
+// Default `GET /api/v1/runtime` mock. Every capability-gated route awaits
+// `RuntimeService.load()` before activating, so an unmocked runtime call means
+// the guard waits for a request that has to fail on its own — and how long
+// that takes depends on how the backend is absent. On CI the proxy target does
+// not resolve and it fails fast; locally, with the `api` container merely
+// stopped, the connection is refused more slowly and the wait can outlast the
+// spec. `public-profile.cy.ts` sat on that difference until the Angular 22
+// upgrade made it slower still.
+//
+// The web capability set is the app's own optimistic default, so this default
+// changes nothing a spec was relying on — it just stops the clock. A spec that
+// needs the desktop profile registers its own later, as
+// `desktop-capabilities.cy.ts` does.
+beforeEach(() => {
+  cy.intercept('GET', '/api/v1/runtime', {
+    statusCode: 200,
+    body: {
+      data: {
+        profile: 'web',
+        // `ALL_CAPABILITIES` from `runtime.service.ts`, which is also the
+        // app's optimistic web default — so this changes nothing a spec was
+        // relying on.
+        capabilities: [
+          'community',
+          'athlete_accounts',
+          'web_push',
+          'email',
+          'password_breach_check',
+        ],
+      },
+    },
+  });
+});
+
+// Default `GET /api/v1/academy/fee-tiers` mock (#1381) — the academy form and
+// the athlete form both load the price list on init. An empty list is the
+// state of every academy that charges one flat fee, so it is also the right
+// default here: the tier field simply doesn't render. Same override rule as
+// `/me` above — a spec that needs actual tiers registers its own later.
+beforeEach(() => {
+  cy.intercept('GET', '/api/v1/academy/fee-tiers*', {
+    statusCode: 200,
+    body: { data: [] },
+  });
+});
+
 beforeEach(() => {
   cy.intercept('GET', '/api/v1/auth/me*', {
     statusCode: 200,

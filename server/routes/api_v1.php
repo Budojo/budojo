@@ -528,6 +528,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::delete('/athletes/{athlete}/payments/{year}/{month}', [\App\Http\Controllers\Athlete\AthletePaymentController::class, 'destroy'])
             ->whereNumber(['year', 'month']);
 
+        // Monthly price list (#1381). An academy that charges one flat fee
+        // keeps using `academies.monthly_fee_cents` and never touches these.
+        Route::get('/academy/fee-tiers', [\App\Http\Controllers\Academy\FeeTierController::class, 'index']);
+        Route::post('/academy/fee-tiers', [\App\Http\Controllers\Academy\FeeTierController::class, 'store']);
+        Route::patch('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'update']);
+        Route::delete('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'destroy']);
+
         // Entry carnets — #1364. The pre-paid alternative to the monthly fee:
         // price + pack size are configured per academy via PATCH /academy and
         // snapshotted onto each carnet at sale. Consumption (one entry per
@@ -535,6 +542,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'index']);
         Route::post('/athletes/{athlete}/carnets', [\App\Http\Controllers\Athlete\CarnetController::class, 'store']);
         Route::get('/athletes/{athlete}/carnets/{carnet}/entries', [\App\Http\Controllers\Athlete\CarnetController::class, 'entries']);
+        // Re-dating the validity window (#1380) and undoing a mis-sale. The
+        // expiry follows `valid_from`, so a PATCH here moves both ends.
+        Route::patch('/athletes/{athlete}/carnets/{carnet}', [\App\Http\Controllers\Athlete\CarnetController::class, 'update']);
+        Route::delete('/athletes/{athlete}/carnets/{carnet}', [\App\Http\Controllers\Athlete\CarnetController::class, 'destroy']);
 
         // Attendance — M4. `/attendance/summary` must come BEFORE `/attendance/{id}`
         // or Laravel binds "summary" as an attendance-record id and returns 404.

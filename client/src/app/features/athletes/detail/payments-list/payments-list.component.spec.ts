@@ -26,12 +26,19 @@ class FakePaymentService {
   readonly unmarkPaid = vi.fn(() => of(void 0));
 }
 
+/**
+ * `monthly_fee_cents` and `fee_tier` come from the athlete since #1381 — the
+ * component asks "what does THIS athlete pay", not "what does the academy
+ * charge", because an academy that prices only by tier has no flat fee.
+ */
 class FakeAthleteService {
   readonly get = vi.fn(() =>
     of({
       id: 42,
       first_name: 'Mario',
       last_name: 'Rossi',
+      monthly_fee_cents: 9500,
+      fee_tier: null,
     }),
   );
 }
@@ -44,7 +51,13 @@ const ACADEMY_BASE = {
   logo_url: null,
 } as const;
 
-function setup(opts: { fee?: number | null; payments?: AthletePayment[] } = {}) {
+function setup(
+  opts: {
+    fee?: number | null;
+    feeTier?: { id: number; label: string; amount_cents: number; lessons_per_week: number } | null;
+    payments?: AthletePayment[];
+  } = {},
+) {
   TestBed.configureTestingModule({
     imports: [PaymentsListComponent],
     providers: [
@@ -64,10 +77,19 @@ function setup(opts: { fee?: number | null; payments?: AthletePayment[] } = {}) 
     ],
   });
 
-  TestBed.inject(AcademyService).academy.set({
-    ...ACADEMY_BASE,
-    monthly_fee_cents: opts.fee === undefined ? 9500 : opts.fee,
-  });
+  const fee = opts.fee === undefined ? 9500 : opts.fee;
+  TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: fee });
+
+  const athleteSvc = TestBed.inject(AthleteService) as unknown as { get: Mock };
+  athleteSvc.get = vi.fn(() =>
+    of({
+      id: 42,
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      monthly_fee_cents: opts.feeTier ? opts.feeTier.amount_cents : fee,
+      fee_tier: opts.feeTier ?? null,
+    }),
+  );
 
   if (opts.payments) {
     const svc = TestBed.inject(PaymentService) as unknown as { list: Mock };
@@ -140,6 +162,58 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="payments-no-fee-hint"]')).not.toBeNull();
   });
 
+  it('stays editable on a tier athlete even when the academy has no flat fee (#1381)', () => {
+    const { fixture } = setup({
+      fee: null,
+      feeTier: { id: 7, label: '2 lezioni', amount_cents: 5500, lessons_per_week: 2 },
+    });
+
+    // The academy prices only by tier, so the old academy-level gate would
+    // have locked this athlete out of being marked paid.
+    expect(fixture.nativeElement.querySelector('[data-cy="payments-no-fee-hint"]')).toBeNull();
+    const tierHint = fixture.nativeElement.querySelector('[data-cy="payments-fee-tier"]');
+    expect(tierHint).not.toBeNull();
+    expect(tierHint.textContent).toContain('2 lezioni');
+    expect(tierHint.textContent).toContain('55');
+  });
+
+  it('keeps the table usable when the athlete request fails (#1381)', () => {
+    TestBed.configureTestingModule({
+      imports: [PaymentsListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PaymentService, useClass: FakePaymentService },
+        {
+          provide: AthleteService,
+          useValue: { get: vi.fn(() => throwError(() => ({ status: 500 }))) },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { parent: { paramMap: of(convertToParamMap({ id: '42' })) } },
+        },
+        ...provideI18nTesting(),
+      ],
+    });
+    TestBed.inject(AcademyService).academy.set({ ...ACADEMY_BASE, monthly_fee_cents: 9500 });
+
+    const fixture = TestBed.createComponent(PaymentsListComponent);
+    fixture.detectChanges();
+
+    // The fee stays unknown, not absent: claiming "no fee configured" on a
+    // network blip would lock every button, which is what the silent-failure
+    // comment on the load handler exists to prevent.
+    expect(fixture.nativeElement.querySelector('[data-cy="payments-no-fee-hint"]')).toBeNull();
+    const marks = fixture.nativeElement.querySelectorAll('[data-cy^="payment-mark-"]');
+    expect(marks.length).toBeGreaterThan(0);
+  });
+
+  it('names no tier when the athlete is on the academy flat fee', () => {
+    const { fixture } = setup();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="payments-fee-tier"]')).toBeNull();
+  });
+
   it('confirmToggleRow → on accept (mark paid) calls PaymentService.markPaid + reloads + toasts', () => {
     const payment: AthletePayment = {
       id: 1,
@@ -209,5 +283,163 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
         detail: expect.stringContaining('monthly fee'),
       }),
     );
+  });
+});
+
+describe('PaymentsListComponent — billing periods (#1382)', () => {
+  const YEAR = new Date().getUTCFullYear();
+
+  function quarterlyFrom(month: number): AthletePayment {
+    return {
+      id: 7,
+      athlete_id: 42,
+      year: YEAR,
+      month,
+      period_months: 3,
+      amount_cents: 16500,
+      paid_at: `${YEAR}-0${month}-05T10:00:00Z`,
+    };
+  }
+
+  it('marks every month of the period paid, not only the one it started in', () => {
+    const { fixture } = setup({ payments: [quarterlyFrom(2)] });
+
+    for (const month of [2, 3, 4]) {
+      const row = fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`);
+      expect(row.textContent, `month ${month}`).toContain('Paid');
+    }
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-5"]').textContent).toContain(
+      'Unpaid',
+    );
+  });
+
+  it('shows the amount once, on the month the period started', () => {
+    const { fixture } = setup({ payments: [quarterlyFrom(2)] });
+
+    // Repeating €165 on all three rows would treble the year's takings on a
+    // table people read as a ledger.
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-2"]').textContent).toContain(
+      '165',
+    );
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="payment-row-3"]').textContent,
+    ).not.toContain('165');
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="payment-row-4"]').textContent,
+    ).not.toContain('165');
+  });
+
+  it('captions every covered month with the range the payment buys', () => {
+    const { fixture } = setup({ payments: [quarterlyFrom(2)] });
+
+    for (const month of [2, 3, 4]) {
+      const caption = fixture.nativeElement.querySelector(`[data-cy="payment-period-${month}"]`);
+      expect(caption, `month ${month}`).not.toBeNull();
+      expect(caption.textContent).toContain('February');
+      expect(caption.textContent).toContain('April');
+    }
+  });
+
+  it('leaves a plain monthly payment reading exactly as it always did', () => {
+    const payment: AthletePayment = {
+      id: 1,
+      athlete_id: 42,
+      year: YEAR,
+      month: 3,
+      period_months: 1,
+      amount_cents: 9500,
+      paid_at: `${YEAR}-03-05T10:00:00Z`,
+    };
+    const { fixture } = setup({ payments: [payment] });
+
+    const row = fixture.nativeElement.querySelector('[data-cy="payment-row-3"]');
+    expect(row.textContent).toContain('95');
+    expect(row.textContent).toContain(`${YEAR}-03-05`);
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-period-3"]')).toBeNull();
+  });
+
+  it('spreads a period that started last year into this one', () => {
+    const payment: AthletePayment = {
+      id: 9,
+      athlete_id: 42,
+      year: YEAR - 1,
+      month: 12,
+      period_months: 3,
+      amount_cents: 16500,
+      paid_at: `${YEAR - 1}-12-05T10:00:00Z`,
+    };
+    const { fixture } = setup({ payments: [payment] });
+
+    // December's own row belongs to last year's table; January and February
+    // are what this year sees of it.
+    for (const month of [1, 2]) {
+      expect(
+        fixture.nativeElement.querySelector(`[data-cy="payment-row-${month}"]`).textContent,
+        `month ${month}`,
+      ).toContain('Paid');
+    }
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-3"]').textContent).toContain(
+      'Unpaid',
+    );
+    // The amount stays on December, which is not in this table at all.
+    expect(
+      fixture.nativeElement.querySelector('[data-cy="payment-row-1"]').textContent,
+    ).not.toContain('165');
+  });
+
+  it('treats a payload with no period_months as monthly', () => {
+    // Pre-#1382 rows, and every Cypress mock written before it.
+    const payment = {
+      id: 1,
+      athlete_id: 42,
+      year: YEAR,
+      month: 3,
+      amount_cents: 9500,
+      paid_at: `${YEAR}-03-05T10:00:00Z`,
+    } as AthletePayment;
+    const { fixture } = setup({ payments: [payment] });
+
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-3"]').textContent).toContain(
+      'Paid',
+    );
+    expect(fixture.nativeElement.querySelector('[data-cy="payment-row-4"]').textContent).toContain(
+      'Unpaid',
+    );
+  });
+});
+
+describe('PaymentsListComponent — the 422 that is not about the fee (#1382)', () => {
+  function toastDetailFor(errors: Record<string, string[]>): string {
+    const { fixture, component } = setup({ payments: [] });
+
+    const confirmService = fixture.componentRef.injector.get(ConfirmationService);
+    confirmService.confirm = vi.fn((cfg: { accept: () => void }) => {
+      cfg.accept();
+      return confirmService;
+    }) as never;
+
+    const paymentSvc = TestBed.inject(PaymentService);
+    (paymentSvc as unknown as { markPaid: Mock }).markPaid = vi.fn(() =>
+      throwError(() => ({ status: 422, error: { errors } })),
+    );
+
+    const messageSpy = vi.spyOn(fixture.componentRef.injector.get(MessageService), 'add');
+
+    const januaryRow = component['monthRows']()[0];
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+    component.confirmToggleRow(event, januaryRow);
+
+    return String(messageSpy.mock.calls.at(-1)?.[0]?.detail ?? '');
+  }
+
+  it('says the month is already covered, not that no fee is configured', () => {
+    // "The academy has not configured a monthly fee" is flatly untrue here —
+    // the fee is fine, the month is taken by another period.
+    expect(toastDetailFor({ period_months: ['clash'] })).toContain('already covered');
+  });
+
+  it('still says what a missing-fee 422 means', () => {
+    expect(toastDetailFor({ monthly_fee_cents: ['missing'] })).toContain('monthly fee');
   });
 });

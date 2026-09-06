@@ -2849,6 +2849,131 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
 
+  /academy/fee-tiers:
+    get:
+      tags: [academy]
+      summary: The academy's monthly price list (#1381)
+      description: |
+        Returns every fee tier the academy has configured, ordered by
+        `lessons_per_week` then `id`. An academy that charges one flat fee
+        has none — the empty list is the normal state, not an error, and
+        `academies.monthly_fee_cents` is what applies to everyone.
+
+        Each row carries `athletes_count`: how many athletes are on that
+        tier. Deleting a tier hands all of them back to the academy's flat
+        fee, so the count is what turns that into a decision rather than a
+        guess.
+
+        Requires `academy_settings_read`, which every membership role holds.
+      operationId: academyFeeTierIndex
+      responses:
+        '200':
+          description: The price list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AcademyFeeTier'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [academy]
+      summary: Add a fee tier (#1381)
+      description: |
+        Creates one line of the price list. `label` must be unique within the
+        academy — two tiers with the same name at different prices is a
+        mistake, not a use case — and the owner reads the label to pick one,
+        so it has to identify.
+
+        Requires `academy_settings_update`: the price list is academy
+        configuration, gated by the same capability as the flat fee it
+        generalises.
+      operationId: academyFeeTierStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyFeeTierRequest'
+      responses:
+        '201':
+          description: Tier created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyFeeTierEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy/fee-tiers/{tier}:
+    patch:
+      tags: [academy]
+      summary: Re-price or rename a fee tier (#1381)
+      description: |
+        Partial update — send only the fields you want to change.
+
+        Re-pricing does **not** rewrite history: `athlete_payments.amount_cents`
+        is snapshotted when a payment is recorded, so what athletes already
+        handed over stays correct. It changes what the next payment will cost
+        for everyone on the tier.
+
+        Requires `academy_settings_update` **in the tier's own academy** —
+        the check is against the row, not the caller's active academy, so a
+        user with settings rights in academy A cannot re-price academy B.
+      operationId: academyFeeTierUpdate
+      parameters:
+        - $ref: '#/components/parameters/FeeTierId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyFeeTierUpdateRequest'
+      responses:
+        '200':
+          description: Tier updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademyFeeTierEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [academy]
+      summary: Remove a fee tier (#1381)
+      description: |
+        Deletes the tier. Athletes on it are **not** deleted with it — the FK
+        is `nullOnDelete`, so they fall back to the academy's own
+        `monthly_fee_cents`. Removing a price must never remove the people who
+        were paying it.
+
+        Requires `academy_settings_update` in the tier's own academy.
+      operationId: academyFeeTierDestroy
+      parameters:
+        - $ref: '#/components/parameters/FeeTierId'
+      responses:
+        '204':
+          description: Tier deleted; athletes on it fall back to the academy fee
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /search:
     get:
       tags: [auth]
@@ -3461,11 +3586,17 @@ paths:
   /athletes/{athlete}/payments:
     get:
       tags: [athletes]
-      summary: List an athlete's payments for a given year
+      summary: List an athlete's payments touching a given year
       description: |
-        Returns all `AthletePayment` rows for the given (athlete, year),
-        ordered by month ascending. Defaults to the current calendar year
-        when `?year` is omitted. Cross-academy access returns 403.
+        Returns every `AthletePayment` whose covered period **touches** the
+        given year, in calendar order. Touching, not starting in (#1382): a
+        quarterly bought in December 2025 pays for January and February 2026,
+        and the twelve-month table cannot render those months as covered
+        without the row behind them. The client spreads each payment across
+        the cells it covers, reading `year`, `month` and `period_months`.
+
+        Defaults to the current calendar year when `?year` is omitted.
+        Cross-academy access returns 403.
       operationId: athletePaymentList
       parameters:
         - name: athlete
@@ -3500,14 +3631,27 @@ paths:
       tags: [athletes]
       summary: Record an athlete's payment for a (year, month)
       description: |
-        Marks the athlete as paid for the given month. **Idempotent** —
-        POSTing the same `(year, month)` twice returns the existing row
-        instead of creating a duplicate. `amount_cents` on the resulting
-        row is snapshotted from the academy's current `monthly_fee_cents`;
-        future fee changes do NOT rewrite past records.
+        Records a payment covering `period_months` from `(year, month)`
+        (#1382) — one row, one amount, one receipt, whatever its length.
+        **Idempotent**: POSTing the same `(year, month, period_months)` twice
+        returns the existing row instead of creating a duplicate. Re-posting
+        the same start month with a *different* length is refused with a 422
+        instead — the caller is asking for something else.
 
-        Returns 422 if the academy has not configured a monthly fee
-        (`academy.monthly_fee_cents === null`). Cross-academy returns 403.
+        A period sharing a month with one already recorded is refused with a
+        422 on `period_months`. The unique index cannot catch that on its own:
+        a March monthly and a February quarterly start in different months and
+        both cover March. `amount_cents` on the resulting
+        row is snapshotted from **the fee that applies to this athlete** —
+        their price tier's amount if they are on one, the academy's flat
+        `monthly_fee_cents` otherwise (#1381). Future fee, tier, or
+        tier-membership changes do NOT rewrite past records.
+
+        Returns 422 when no fee applies at all: the athlete is on no tier
+        **and** `academy.monthly_fee_cents` is null. An athlete on a tier is
+        payable even when the academy has no flat fee. The athlete resource's
+        `monthly_fee_cents` is the resolved amount, so a client can tell
+        upfront. Cross-academy returns 403.
       operationId: athletePaymentRecord
       parameters:
         - name: athlete
@@ -3543,12 +3687,22 @@ paths:
   /athletes/{athlete}/payments/{year}/{month}:
     delete:
       tags: [athletes]
-      summary: Undo a paid month
+      summary: Undo the payment covering a month
       description: |
-        Hard-deletes the payment row for `(athlete, year, month)`. The table
-        has no soft-delete tombstone — the absence of a row IS the canonical
-        "not paid" state. Returns 404 if no payment exists for the given
-        coordinates; cross-academy access returns 403.
+        Hard-deletes the payment **covering** `(athlete, year, month)` —
+        whichever month its own period started in (#1382). The owner looking
+        at April clicks unmark and the quarterly bought in February comes off;
+        keying on the start month would make a quarterly undeletable from two
+        of the three months it pays for.
+
+        The **whole period** goes. One payment, one receipt, one deletion:
+        releasing a single month would leave the amount no longer matching
+        what it covers, and a partial refund is an accounting event Budojo
+        does not model.
+
+        The table has no soft-delete tombstone — the absence of a covering
+        row IS the canonical "not paid" state. Returns 404 if nothing covers
+        the given month; cross-academy access returns 403.
       operationId: athletePaymentDelete
       parameters:
         - name: athlete
@@ -3691,6 +3845,84 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/CarnetEntry'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /athletes/{athlete}/carnets/{carnet}:
+    patch:
+      tags: [athletes]
+      summary: Move a carnet's validity start
+      description: |
+        The only editable field on a carnet: code, price and pack size are
+        snapshots of the sale, and the expiry is derived. Moving `valid_from`
+        drags `expires_at` twelve months behind it and recomputes which
+        sessions the carnet pays for — in either direction, so pushing the
+        start forward releases sessions as surely as pulling it back claims
+        them.
+
+        403 when the carnet does not belong to the athlete in the path.
+      operationId: athleteCarnetUpdateValidity
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: carnet
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarnetValidityUpdateRequest'
+      responses:
+        '200':
+          description: The updated carnet, with the recomputed balance
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Carnet'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/ForbiddenAthlete'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [athletes]
+      summary: Undo a carnet sold by mistake
+      description: |
+        Removes the carnet. The sessions it paid for **stay on the attendance
+        register** — they are a record of what happened, not a payment — and
+        become uncovered, unless another carnet's window can take them.
+
+        403 when the carnet does not belong to the athlete in the path.
+      operationId: athleteCarnetDelete
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: carnet
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204':
+          description: Carnet deleted
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -4368,9 +4600,19 @@ paths:
         Returns N consecutive calendar-month buckets ending with the current
         month (default 12, max 24). Each bucket contains the total
         `amount_cents` collected across all athletes of the academy for that
-        business month. Bucketing uses the `(year, month)` columns on
+        business month. Bucketing uses the business months on
         `athlete_payments` — NOT `paid_at` — so the figures reflect the
         fee period the payment covers, not the wall-clock recording time.
+
+        A payment covering a period (#1382) is **spread evenly** across every
+        month it pays for: a €165 quarterly contributes €55 to each of three
+        buckets. The split is integer with the remainder on the first month,
+        so buckets always add back up to what was paid.
+
+        **Carnet sales are included on the same terms** (#1383): a pack's
+        `price_cents` is spread across the months of its validity window, so
+        €70 valid twelve months contributes about €5.83 a month. The expiry
+        month itself gets nothing.
         Buckets with no payments are included (amount_cents = 0) so the
         frontend can render a continuous chart without gap-filling.
         Currency is always EUR (single-currency-per-academy invariant).
@@ -5348,6 +5590,16 @@ components:
         format: int64
         minimum: 1
 
+    FeeTierId:
+      name: tier
+      in: path
+      required: true
+      description: Fee tier primary key
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
     DocumentId:
       name: id
       in: path
@@ -6273,10 +6525,25 @@ components:
           minimum: 0
           nullable: true
           description: |
-            Academy-wide membership fee in cents. `null` means "fee not
-            configured" — the payments endpoints reject `POST` with 422
-            until the owner sets this via `PATCH /api/v1/academy`.
+            Academy-wide membership fee in cents. Since #1381 this is the
+            **default for athletes on no price tier** rather than the only
+            fee. `null` means "fee not configured" — the payments endpoints
+            reject `POST` with 422 for any athlete no tier covers either.
+            Set via `PATCH /api/v1/academy`.
           example: 9500
+        fee_tier_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many monthly price tiers the academy has configured (#1381),
+            from `GET /academy/fee-tiers`. Zero on an academy that charges one
+            flat fee, which is every academy until the owner adds a tier.
+
+            The SPA gates the paid badge, the paid filter and the unpaid
+            widget on "does this academy manage payments at all" — a question
+            neither this nor `monthly_fee_cents` answers alone, since an
+            academy priced only by tier leaves the flat fee null.
+          example: 0
         carnet_price_cents:
           type: integer
           minimum: 0
@@ -6443,6 +6710,23 @@ components:
         joined_at:
           type: string
           format: date
+        billing_period_months:
+          type: integer
+          enum: [1, 3, 6, 12]
+          description: |
+            How often this athlete pays (#1382). Defaults to monthly.
+          example: 1
+        fee_tier_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            Which line of the academy's monthly price list to put the athlete
+            on (#1381). Omit or send `null` to leave them on the academy's flat
+            `monthly_fee_cents`, which is where every athlete starts. Must be a
+            tier belonging to the athlete's own academy — anything else is a
+            422 on `fee_tier_id`.
+          example: 3
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -6520,6 +6804,23 @@ components:
         joined_at:
           type: string
           format: date
+        billing_period_months:
+          type: integer
+          enum: [1, 3, 6, 12]
+          description: |
+            How often this athlete pays (#1382). Defaults to monthly.
+          example: 1
+        fee_tier_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            Which line of the academy's monthly price list to put the athlete
+            on (#1381). Omit or send `null` to leave them on the academy's flat
+            `monthly_fee_cents`, which is where every athlete starts. Must be a
+            tier belonging to the athlete's own academy — anything else is a
+            422 on `fee_tier_id`.
+          example: 3
         address:
           allOf:
             - $ref: '#/components/schemas/Address'
@@ -6529,6 +6830,89 @@ components:
               - omit the key → no change
               - `null` → delete the existing address row
               - `{ ... }` → upsert (create or replace in place)
+
+    AcademyFeeTier:
+      type: object
+      description: |
+        One line of an academy's monthly price list (#1381) — a label, an
+        amount, and how many lessons a week it buys.
+      required: [id, label, amount_cents, lessons_per_week, athletes_count]
+      properties:
+        id:
+          type: integer
+          format: int64
+        label:
+          type: string
+          maxLength: 60
+          description: |
+            Whatever the owner calls it — "2 lezioni", "Ragazzi". Free text,
+            because an academy's own vocabulary is the useful label. Unique
+            within the academy.
+          example: 2 lezioni
+        amount_cents:
+          type: integer
+          minimum: 0
+          description: |
+            Monthly fee for this tier, in cents (€55.00 = `5500`). Zero is
+            allowed — an academy may well list a free tier.
+          example: 5500
+        lessons_per_week:
+          type: integer
+          minimum: 1
+          maximum: 14
+          description: |
+            How often this tier trains. Structured rather than buried in the
+            label so the app can eventually ask questions of it; the 14 ceiling
+            catches a fat finger, it does not model a rule.
+          example: 2
+        athletes_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many athletes are on this tier. Deleting it hands all of them
+            back to the academy's flat fee, so this is what makes the deletion
+            a decision rather than a guess.
+          example: 7
+
+    AcademyFeeTierRequest:
+      type: object
+      required: [label, amount_cents, lessons_per_week]
+      properties:
+        label:
+          type: string
+          maxLength: 60
+          example: 2 lezioni
+        amount_cents:
+          type: integer
+          minimum: 0
+          example: 5500
+        lessons_per_week:
+          type: integer
+          minimum: 1
+          maximum: 14
+          example: 2
+
+    AcademyFeeTierUpdateRequest:
+      type: object
+      description: All properties are optional — send only the fields you want to change.
+      properties:
+        label:
+          type: string
+          maxLength: 60
+        amount_cents:
+          type: integer
+          minimum: 0
+        lessons_per_week:
+          type: integer
+          minimum: 1
+          maximum: 14
+
+    AcademyFeeTierEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AcademyFeeTier'
 
     Athlete:
       type: object
@@ -6649,6 +7033,53 @@ components:
             expires_at:
               type: string
               format: date
+        fee_tier:
+          type: object
+          nullable: true
+          description: |
+            The line of the academy's monthly price list this athlete is on
+            (#1381), or `null` when they are on none — the case for every
+            athlete until someone moves them, and the one where the academy's
+            own `monthly_fee_cents` applies.
+          required: [id, label, amount_cents, lessons_per_week]
+          properties:
+            id:
+              type: integer
+              format: int64
+            label:
+              type: string
+              example: 2 lezioni
+            amount_cents:
+              type: integer
+              minimum: 0
+              example: 5500
+            lessons_per_week:
+              type: integer
+              minimum: 1
+              maximum: 14
+              example: 2
+        billing_period_months:
+          type: integer
+          enum: [1, 3, 6, 12]
+          description: |
+            How often this athlete is expected to pay (#1382), in months.
+            Not the same question as what they last paid: the app needs the
+            expectation to answer "is anyone late", and a payment only says
+            what already happened. `1` — monthly — until someone changes it.
+          example: 1
+        monthly_fee_cents:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: |
+            What this athlete actually pays each month, in cents (#1381) —
+            their tier's amount if they are on one, the academy's flat
+            `monthly_fee_cents` otherwise. Resolved server-side so the client
+            never re-derives the fallback and the two cannot disagree.
+
+            `null` means neither exists and `POST /athletes/{id}/payments`
+            will refuse with 422.
+          example: 5500
         user_handle:
           type: string
           nullable: true
@@ -6721,7 +7152,7 @@ components:
 
     AthletePayment:
       type: object
-      required: [id, athlete_id, year, month, amount_cents, paid_at]
+      required: [id, athlete_id, year, month, period_months, amount_cents, paid_at]
       properties:
         id:
           type: integer
@@ -6733,14 +7164,33 @@ components:
           type: integer
           minimum: 2020
           maximum: 2100
+          description: Calendar year the covered period starts in.
         month:
           type: integer
           minimum: 1
           maximum: 12
+          description: Calendar month the covered period starts in.
+        period_months:
+          type: integer
+          enum: [1, 3, 6, 12]
+          description: |
+            How many months this one payment covers, counting from
+            (`year`, `month`) (#1382). `1` monthly, `3` quarterly, `6`
+            half-yearly, `12` annual — the four cases of `BillingPeriod`.
+
+            The period **runs from its start month**, not from a calendar
+            quarter: a quarterly recorded for February covers February, March
+            and April, and may cross a year boundary.
+          example: 3
         amount_cents:
           type: integer
           minimum: 0
-          description: Snapshot of `academy.monthly_fee_cents` at recording time
+          description: |
+            Snapshot of the fee that applied to this athlete at recording
+            time — their tier's amount if they were on one, the academy's
+            flat `monthly_fee_cents` otherwise (#1381) — **times the months
+            covered** (#1382). Budojo has nowhere to record a discounted
+            annual and does not pretend to.
         paid_at:
           type: string
           format: date-time
@@ -6753,15 +7203,26 @@ components:
           type: integer
           minimum: 2020
           maximum: 2100
+          description: Calendar year the covered period starts in.
         month:
           type: integer
           minimum: 1
           maximum: 12
+          description: Calendar month the covered period starts in.
+        period_months:
+          type: integer
+          enum: [1, 3, 6, 12]
+          description: |
+            How many months to cover (#1382). Omit it and the athlete's own
+            `billing_period_months` applies, which is monthly for everyone
+            until someone changes it. A period that shares a month with one
+            already recorded is refused with a 422 on this field.
+          example: 3
 
     Carnet:
       type: object
       required:
-        [id, code, athlete_id, total_entries, remaining_entries, price_cents, purchased_at, expires_at, is_active]
+        [id, code, athlete_id, total_entries, remaining_entries, price_cents, purchased_at, valid_from, expires_at, is_active]
       properties:
         id:
           type: integer
@@ -6797,10 +7258,21 @@ components:
         purchased_at:
           type: string
           format: date
+          description: When money changed hands.
+        valid_from:
+          type: string
+          format: date
+          description: |
+            When the carnet starts covering sessions. Defaults to the sale and
+            may precede it: a carnet dated to cover March pays for training
+            already on the register for March. Editable via `PATCH`.
         expires_at:
           type: string
           format: date
-          description: '`purchased_at` + 12 months, computed once at sale and stored'
+          description: |
+            `valid_from` + 12 months, recomputed whenever `valid_from` moves.
+            The window is always twelve months, so pulling the start back
+            spends validity rather than adding it.
         is_active:
           type: boolean
           description: |
@@ -6840,6 +7312,25 @@ components:
           description: |
             Business date of the sale. Defaults to today when omitted or null.
             May be back-dated; a future date is rejected with 422.
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Where the carnet starts covering sessions. Defaults to the sale.
+            Set it earlier to count training already on the register — those
+            sessions are charged immediately. A future date is rejected.
+
+    CarnetValidityUpdateRequest:
+      type: object
+      required: [valid_from]
+      properties:
+        valid_from:
+          type: string
+          format: date
+          description: |
+            The new validity start. The expiry moves with it and the ledger is
+            rebuilt: sessions are claimed or released at either end.
 
     AthleteEnvelope:
       type: object

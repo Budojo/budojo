@@ -347,7 +347,7 @@
             </td>
             @if (hasMonthlyFee()) {
               <td>
-                @if (athlete.is_self || athlete.status !== 'active') {
+                @if (paymentNotExpected(athlete)) {
                   <!-- Em-dash placeholder for rows where current-month
                      payment is not expected:
                      - Owner-as-athlete (#750) — no payment ledger
@@ -357,6 +357,10 @@
                        not expected for the current month; surfacing
                        "Unpaid" on those rows was false signal that
                        conflated "no payment recorded" with "owes".
+                     - No fee resolves for them (#1381) — an academy
+                       priced only by tier has no flat fee, so an
+                       athlete nobody put on a tier owes nothing and
+                       the server would 422 the toggle.
                      Empty cell would still let `app-paid-badge` ghost
                      a tooltip; the explicit em-dash keeps the column
                      geometry stable (the row above might be a regular
@@ -637,7 +641,11 @@
                   [severity]="statusSeverity(athlete.status)"
                   [rounded]="true"
                 />
-                @if (hasMonthlyFee() && athlete.paid_current_month !== undefined) {
+                @if (
+                  hasMonthlyFee() &&
+                  !paymentNotExpected(athlete) &&
+                  athlete.paid_current_month !== undefined
+                ) {
                   <app-paid-badge
                     [paid]="athlete.paid_current_month"
                     [clickable]="true"

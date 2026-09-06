@@ -7,6 +7,7 @@ namespace App\Http\Requests\Athlete;
 use App\Authorization\Capability;
 use App\Enums\AthleteStatus;
 use App\Enums\Belt;
+use App\Enums\BillingPeriod;
 use App\Http\Requests\Concerns\AuthorizesAcademyCapability;
 use App\Http\Requests\Concerns\ValidatesAddress;
 use App\Http\Requests\Concerns\ValidatesPhonePair;
@@ -100,6 +101,16 @@ class UpdateAthleteRequest extends FormRequest
             'stripes' => ['sometimes', 'integer', 'min:0', 'max:6'],
             'status' => ['sometimes', Rule::enum(AthleteStatus::class)],
             'joined_at' => ['sometimes', 'date'],
+            // Which price tier the athlete is on (#1381). Scoped to their own
+            // academy: attaching academy B's tier to academy A's athlete would
+            // make the fee resolve to a price the owner cannot even see.
+            // How often this athlete is expected to pay (#1382). Monthly for
+            // everyone until someone changes it.
+            'billing_period_months' => ['sometimes', 'integer', Rule::enum(BillingPeriod::class)],
+            'fee_tier_id' => [
+                'sometimes', 'nullable', 'integer',
+                Rule::exists('academy_fee_tiers', 'id')->where('academy_id', $academyId),
+            ],
             ...$this->addressRules(),
         ];
     }

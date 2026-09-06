@@ -130,8 +130,13 @@ class SendUnpaidAthletesDigest extends Command
             // academy treats payments as off-platform / cash, and a
             // monthly chase email there is noise. Mirror of the
             // dashboard's `unpaid-this-month-widget` which hides
-            // entirely when monthly_fee_cents is null.
-            ->whereNotNull('monthly_fee_cents')
+            // entirely when no fee applies.
+            //
+            // "Has a fee" means a flat fee OR a price list since #1381:
+            // an academy that prices only by tier leaves
+            // `monthly_fee_cents` null and would otherwise silently
+            // stop getting its digest.
+            ->chargingAFee()
             ->chunkById(50, function ($chunk) use ($year, $month, $sentForDate, $force, &$sent, &$skipped, &$failed): void {
                 foreach ($chunk as $academy) {
                     try {
@@ -236,6 +241,12 @@ class SendUnpaidAthletesDigest extends Command
      */
     private function unpaidActiveAthletesFor(Academy $academy, int $year, int $month): \Illuminate\Database\Eloquent\Collection
     {
+        // Bound to a variable rather than written inline: `whereDoesntHave`
+        // declares its callback over the base `Builder`, so an inline closure
+        // hides `AthletePayment`'s scopes from static analysis. Same shape
+        // `AthleteController::index` uses for the `?paid` filter.
+        $covering = fn ($q) => $q->covering($year, $month);
+
         return Athlete::query()
             ->where('academy_id', $academy->id)
             ->where('status', AthleteStatus::Active)
@@ -244,9 +255,11 @@ class SendUnpaidAthletesDigest extends Command
             // every month would be noise. The `(academy_id, is_self)`
             // composite index keeps the scan tight.
             ->where('is_self', false)
-            ->whereDoesntHave('payments', function ($q) use ($year, $month): void {
-                $q->where('year', $year)->where('month', $month);
-            })
+            // Covered by any payment whose period contains the month, not
+            // just one that starts in it (#1382) — otherwise the owner gets
+            // chased about every athlete on a quarterly for two months in
+            // three.
+            ->whereDoesntHave('payments', $covering)
             ->orderBy('last_name', 'asc')
             ->orderBy('first_name', 'asc')
             ->get();

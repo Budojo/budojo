@@ -81,19 +81,38 @@ html.budojo-desktop {
   // to the total and produced a scrollbar on a login page that fits perfectly.
   --budojo-safe-top: var(--budojo-titlebar-height);
 
-  // The strip itself: invisible and drag-only. It must stay hit-testable —
-  // `pointer-events: none` would take it out of hit-testing and silently kill
-  // the drag, which is the whole point of it. Nothing is drawn underneath: the
-  // body padding above pushes app content clear, and the dashboard topbar is
-  // `sticky`, so it starts below the strip rather than under it. The low
-  // z-index keeps overlays that legitimately reach the top of the viewport
-  // (toasts, dialog masks) above it and still clickable.
+  // The strip itself. It must stay hit-testable — `pointer-events: none` would
+  // take it out of hit-testing and silently kill the drag, which is the whole
+  // point of it.
+  //
+  // It used to be invisible, on the theory that the body clearance below was
+  // enough to keep content out of it (#1379). It is not: anything that sizes
+  // itself to the viewport rather than to the document — a full-bleed view, an
+  // embedded viewer — slides straight under the window buttons, and the text
+  // then runs into minimise/close with nothing between them. An opaque surface
+  // is what makes "the bar stays and the content passes beneath" true rather
+  // than merely intended.
+  //
+  // The colour is the one Windows paints behind its own buttons
+  // (`titleBarOverlay.color` in desktop/src/main.ts) so the strip and the
+  // native controls read as one bar. The two must change together.
+  //
+  // NOTE for whoever adds a dark theme: PrimeNG is configured with
+  // `darkModeSelector: '.dark'` but nothing in the app ever sets that class,
+  // so the app is light-only today and this can be a constant. The day it
+  // isn't, this needs a token AND `setTitleBarOverlay` on the shell side —
+  // moving one without the other leaves a light rectangle around the buttons.
   &::before {
     content: '';
     position: fixed;
     inset: 0 0 auto 0;
     height: var(--budojo-titlebar-height);
-    z-index: 1;
+    background: #fafafa;
+    // Above the app's own chrome (sticky topbar 60, cookie banner 1000) so
+    // scrolling content cannot reach the buttons, and below PrimeNG's overlay
+    // stack so a dialog mask or a toast — deliberate, transient, user-invoked
+    // — still renders over it and stays clickable.
+    z-index: 1050;
     -webkit-app-region: drag;
   }
 

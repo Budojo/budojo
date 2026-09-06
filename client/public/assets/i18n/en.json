@@ -1536,6 +1536,41 @@
         "errorRange": "Enter a number between 1 and 255."
       }
     },
+    "feeTiers": {
+      "title": "Monthly price list",
+      "hint": "If the academy charges more than one fee — say 2 lessons a week at €55 and 3 at €65 — list them here and pick each athlete's from their detail page. Anyone on no tier pays the monthly fee above.",
+      "empty": "No tiers. Every athlete pays the monthly fee above.",
+      "add": "Add a tier",
+      "editAria": "Edit the {{label}} tier",
+      "removeAria": "Delete the {{label}} tier",
+      "form": {
+        "label": "Tier name",
+        "labelPlaceholder": "2 lessons",
+        "labelHint": "Whatever you call it — this is the name you'll see when picking an athlete's tier.",
+        "amount": "Monthly fee",
+        "lessons": "Lessons a week",
+        "cancel": "Cancel",
+        "create": "Add",
+        "save": "Save"
+      },
+      "confirm": {
+        "remove": "Delete the “{{label}}” tier?",
+        "removeWithAthletesOne": "Delete the “{{label}}” tier? {{count}} athlete is on it and will fall back to the academy’s monthly fee.",
+        "removeWithAthletesOther": "Delete the “{{label}}” tier? {{count}} athletes are on it and will fall back to the academy’s monthly fee."
+      },
+      "toast": {
+        "savedSummary": "Price list updated",
+        "removedSummary": "Tier deleted",
+        "errorSummary": "That didn't work",
+        "errorDetail": "Try again in a moment.",
+        "duplicateDetail": "A tier with this name already exists. Check the amount and lesson count too.",
+        "loadErrorDetail": "The price list could not be loaded."
+      },
+      "lessonsPerWeekOne": "{{count}} lesson a week",
+      "lessonsPerWeekOther": "{{count}} lessons a week",
+      "athletesOnOne": "{{count}} athlete",
+      "athletesOnOther": "{{count}} athletes"
+    },
     "schedule": {
       "title": "Plan a future schedule change",
       "hint": "Use this when the academy's weekly schedule will change starting on a specific date — past months keep the schedule that was actually in effect.",
@@ -1725,7 +1760,9 @@
         "markPaidAccept": "Mark paid",
         "markUnpaidMessage": "Mark {{name}} unpaid for {{month}}?",
         "markUnpaidAccept": "Mark unpaid",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
+        "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?"
       },
       "restoreConfirm": {
         "message": "Restore {{name}}?",
@@ -1770,7 +1807,9 @@
         "fallbackName": "this athlete",
         "confirm": {
           "markPaidMessage": "Mark {{name}} paid for {{month}} {{year}}?",
-          "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?"
+          "markUnpaidMessage": "Mark {{name}} unpaid for {{month}} {{year}}?",
+          "markPaidPeriodMessage": "Record {{name}}’s payment for {{period}}?",
+          "markUnpaidPeriodMessage": "Undo {{name}}’s payment covering {{period}}?"
         },
         "toast": {
           "markedPaidSummary": "Marked paid",
@@ -1779,7 +1818,8 @@
           "errorSummary": "Error",
           "errorMissingFee": "Set a monthly fee on the academy first to record payments.",
           "errorGeneric": "Couldn't update the payment. Please try again.",
-          "loadErrorDetail": "Couldn't load payments."
+          "loadErrorDetail": "Couldn't load payments.",
+          "errorOverlap": "That month is already covered by another payment."
         },
         "title": "Payments — {{year}}",
         "noFeeHint": "Set a monthly fee on the academy to start recording payments. Until then this page stays read-only.",
@@ -1793,7 +1833,10 @@
         "button": {
           "markPaid": "Mark paid",
           "unmarkPaid": "Unmark paid"
-        }
+        },
+        "feeTierHintOne": "{{label}} tier · {{amount}} a month for {{count}} lesson a week.",
+        "feeTierHintOther": "{{label}} tier · {{amount}} a month for {{count}} lessons a week.",
+        "periodRange": "{{from}} to {{to}} {{year}}"
       },
       "documents": {
         "confirm": {
@@ -1901,7 +1944,9 @@
           "purchasedAt": "Purchase date",
           "purchasedAtHint": "Defaults to today. Back-date it if you are transcribing a paper register.",
           "confirm": "Sell carnet",
-          "cancel": "Cancel"
+          "cancel": "Cancel",
+          "validFrom": "Covers sessions from",
+          "validFromHint": "Leave empty to start from the purchase date. Set it earlier to count training already recorded."
         },
         "toast": {
           "soldSummary": "Carnet sold",
@@ -1910,9 +1955,25 @@
           "errorNotConfigured": "Set a carnet price and size in your academy settings first.",
           "errorGeneric": "Couldn't sell the carnet. Try again.",
           "errorEntries": "Couldn't load the entry register.",
-          "loadError": "Couldn't load the carnets."
+          "loadError": "Couldn't load the carnets.",
+          "validitySummary": "Validity updated",
+          "validityDetail": "The balance has been recalculated.",
+          "deletedSummary": "Carnet deleted",
+          "deletedDetail": "The sessions stay on the attendance register."
         },
-        "sellWithPrice": "Sell carnet — {{price}} / {{entries}} entries"
+        "sellWithPrice": "Sell carnet — {{price}} / {{entries}} entries",
+        "window": "Valid {{from}} → {{to}}",
+        "editValidity": "Change validity",
+        "delete": "Delete",
+        "confirmDelete": "Delete carnet {{code}}? The sessions it is paying for ({{count}}) stay on the attendance register but lose their cover, unless another carnet covers them.",
+        "validityDialog": {
+          "title": "Change the validity start",
+          "body": "The carnet covers the sessions between its validity start and its expiry. Moving the start moves the expiry with it — the window is always 12 months, so pulling it back spends validity rather than adding it.",
+          "hint": "Sessions already on the register inside the new window will be counted.",
+          "confirm": "Save",
+          "newExpiry": "New expiry: {{date}}"
+        },
+        "soldOnFor": "Sold on {{date}} for {{amount}}"
       }
     },
     "form": {
@@ -1948,7 +2009,8 @@
         "addressLine2": "Apt / floor / unit",
         "addressZip": "ZIP",
         "addressCity": "City",
-        "addressProvince": "Province"
+        "addressProvince": "Province",
+        "feeTier": "Fee tier"
       },
       "placeholder": {
         "phoneCountryCode": "Code",
@@ -2004,7 +2066,8 @@
         }
       },
       "hint": {
-        "address": "Leave every field empty to keep the athlete without an address on file."
+        "address": "Leave every field empty to keep the athlete without an address on file.",
+        "feeTier": "Which monthly fee they pay. Leave empty for the academy's standard fee."
       },
       "button": {
         "cancel": "Cancel",
@@ -2030,6 +2093,15 @@
           "portugal": "Portugal",
           "netherlands": "Netherlands"
         }
+      },
+      "feeTierPlaceholder": "Academy standard fee",
+      "billingPeriod": {
+        "label": "Billing period",
+        "hint": "How often they pay. A quarterly payment is one row covering three months.",
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "halfYearly": "Half-yearly",
+        "annual": "Annual"
       }
     },
     "photo": {
@@ -2138,10 +2210,10 @@
     },
     "payments": {
       "monthlyTitle": "Monthly revenue",
-      "monthlyHint": "Last 12 months · sum of recorded payments per business month",
+      "monthlyHint": "Last 12 months · fees and carnets, spread across the months they cover",
       "loading": "Loading revenue trend…",
       "errored": "Couldn't load revenue trend.",
-      "empty": "No payments recorded in the last 12 months."
+      "empty": "Nothing collected in the last 12 months."
     },
     "athletes": {
       "ageBandsTitle": "Athletes by IBJJF age division",

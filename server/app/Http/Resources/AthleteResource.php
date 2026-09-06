@@ -6,8 +6,10 @@ namespace App\Http\Resources;
 
 use App\Models\Athlete;
 use App\Models\AthleteInvitation;
+use App\Models\AthletePayment;
 use App\Models\Carnet;
 use App\Support\CarnetAvailability;
+use App\Support\MonthlyFee;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -24,6 +26,7 @@ class AthleteResource extends JsonResource
 
         $year = (int) now()->year;
         $month = (int) now()->month;
+        $target = AthletePayment::monthIndex($year, $month);
 
         // Two paths so we don't pull every payment row into memory just to
         // compute a boolean:
@@ -34,14 +37,14 @@ class AthleteResource extends JsonResource
         //     issue a constrained `exists()` query that returns a single
         //     bool without hydrating models.
         $paidCurrentMonth = $athlete->relationLoaded('payments')
-            ? $athlete->payments
-                ->where('year', $year)
-                ->where('month', $month)
-                ->isNotEmpty()
-            : $athlete->payments()
-                ->where('year', $year)
-                ->where('month', $month)
-                ->exists();
+            // In memory the containment test is the same arithmetic the scope
+            // does in SQL — one rule, two dialects, and `monthIndex` is what
+            // stops them drifting.
+            ? $athlete->payments->contains(
+                static fn (AthletePayment $p): bool => AthletePayment::monthIndex($p->year, $p->month) <= $target
+                    && AthletePayment::monthIndex($p->year, $p->month) + $p->period_months->value > $target,
+            )
+            : $athlete->payments()->covering($year, $month)->exists();
 
         // Carnet balance chip (#1364) — same two-path shape as
         // `paid_current_month` right above: the index endpoint pre-loads the
@@ -104,6 +107,21 @@ class AthleteResource extends JsonResource
             'address' => $address !== null ? new AddressResource($address)->toArray($request) : null,
             'created_at' => $athlete->created_at?->toIso8601String(),
             'paid_current_month' => $paidCurrentMonth,
+            // Which line of the price list this athlete is on (#1381), and the
+            // amount that actually applies to them — resolved server-side so
+            // the SPA never has to re-derive "tier, or academy fallback".
+            'fee_tier' => $athlete->feeTier === null ? null : [
+                'id' => $athlete->feeTier->id,
+                'label' => $athlete->feeTier->label,
+                'amount_cents' => $athlete->feeTier->amount_cents,
+                'lessons_per_week' => $athlete->feeTier->lessons_per_week,
+            ],
+            'monthly_fee_cents' => MonthlyFee::forAthlete($athlete),
+            // How often this athlete is expected to pay (#1382), in months.
+            // Not the same question as what they last paid: the app needs the
+            // expectation to answer "is anyone late", and a payment only says
+            // what already happened.
+            'billing_period_months' => $athlete->billing_period_months,
             // Null when the athlete holds no spendable carnet — the roster
             // chip and the athlete-detail header render from this without a
             // per-row call.

@@ -107,6 +107,35 @@ it('falls back to the athlete id in the label when the athlete relation is gone'
     expect($entry->academy_id)->toBeNull();
 });
 
+it('writes carnet.updated when the validity window moves', function (): void {
+    $user = userWithAcademy();
+    Sanctum::actingAs($user);
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $carnet = Carnet::factory()->for($athlete)->create(['valid_from' => '2026-06-01']);
+
+    AuditEntry::query()->delete();
+    $carnet->update(['valid_from' => '2026-03-01']);
+
+    $entry = AuditEntry::query()->where('action', 'carnet.updated')->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->before['valid_from'])->toContain('2026-06-01');
+    expect($entry->after['valid_from'])->toContain('2026-03-01');
+});
+
+it('writes carnet.deleted with the pre-deletion snapshot', function (): void {
+    $user = userWithAcademy();
+    Sanctum::actingAs($user);
+    $athlete = Athlete::factory()->for($user->academy)->create();
+    $carnet = Carnet::factory()->for($athlete)->create(['code' => 'C4RN']);
+
+    AuditEntry::query()->delete();
+    $carnet->delete();
+
+    $entry = AuditEntry::query()->where('action', 'carnet.deleted')->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->before['code'])->toBe('C4RN');
+});
+
 // ─── DocumentAuditObserver ──────────────────────────────────────────
 
 it('writes document.uploaded with the "<filename> (<athlete-name>)" label', function (): void {

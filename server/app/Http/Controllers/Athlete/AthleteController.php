@@ -67,13 +67,15 @@ class AthleteController extends Controller
         $currentYear = (int) now()->year;
         $currentMonth = (int) now()->month;
 
-        // Re-used twice: once as the eager-load scope (so the resource sees
-        // only this month's slice), once as the filter scope below for
-        // ?paid=yes|no. Pulling it into a closure means a future month
-        // boundary tweak only happens in one place.
-        $currentMonthScope = fn ($q) => $q
-            ->where('year', $currentYear)
-            ->where('month', $currentMonth);
+        // Re-used three times: as the eager-load scope (so the resource sees
+        // only the payments that could cover this month), and as the filter
+        // scope below for ?paid=yes|no. Pulling it into a closure means the
+        // rule is applied identically in all three.
+        //
+        // "Covering", not "starting in" (#1382): a quarterly bought in
+        // February pays for April, and asking for a row whose `month` is 4
+        // would report that athlete unpaid all quarter.
+        $currentMonthScope = fn ($q) => $q->covering($currentYear, $currentMonth);
 
         $paid = $request->input('paid');
 
@@ -94,6 +96,11 @@ class AthleteController extends Controller
             // out into N+1 queries on a 20-row page (#104). One extra query
             // total — payments for all visible athletes in this month.
             ->with(['payments' => $currentMonthScope])
+            // The price tier the resource reads for every row (#1381), and the
+            // academy behind it — an athlete on no tier falls back to the
+            // academy fee, so resolving the amount touches both. Two extra
+            // queries for the page instead of two per athlete.
+            ->with(['feeTier', 'academy'])
             // Same reasoning for the carnet chip (#1364): pre-load only the
             // carnets inside today's validity window, counted, so
             // `active_carnet` resolves in one extra query for the page
@@ -207,7 +214,10 @@ class AthleteController extends Controller
         // lazy follow-up query. Returns null when there's no active
         // (pending or accepted) row — terminal history stays in
         // `invitations()` but isn't surfaced to the wire.
-        $athlete->load('latestActiveInvitation');
+        // Plus both halves of the fee rule (#1381) — the resource resolves
+        // what this athlete pays, and a lazy load would issue them one at a
+        // time from inside the serializer.
+        $athlete->load(['latestActiveInvitation', 'feeTier', 'academy']);
 
         return response()->json(['data' => new AthleteResource($athlete)]);
     }

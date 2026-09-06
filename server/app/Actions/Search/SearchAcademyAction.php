@@ -82,9 +82,14 @@ class SearchAcademyAction
         $month = (int) now()->month;
         $builder->with([
             'address',
-            'payments' => fn ($query) => $query
-                ->where('year', $year)
-                ->where('month', $month),
+            // Both halves of the fee rule (#1381): the tier, and the academy
+            // an athlete on no tier falls back to.
+            'feeTier',
+            'academy',
+            // Covering, not starting in (#1382): the resource reads this
+            // pre-filtered collection, so an athlete on a February quarterly
+            // would show unpaid in search for two months out of three.
+            'payments' => fn ($query) => $query->covering($year, $month),
             // Same reason, for the `active_carnet` block (#1364): without this
             // the resource falls back to a per-row carnet query and the
             // palette pays 20 extra round-trips per keystroke.

@@ -19,9 +19,9 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { Tooltip } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { AcademyService } from '../../../../core/services/academy.service';
 import { AthleteService } from '../../../../core/services/athlete.service';
 import { LanguageService } from '../../../../core/services/language.service';
+import { FeeTier } from '../../../../core/services/fee-tier.service';
 import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
 import { localeFor } from '../../../../shared/utils/locale';
 import { CarnetPanelComponent } from '../carnet-panel/carnet-panel.component';
@@ -51,8 +51,18 @@ import { CarnetPanelComponent } from '../carnet-panel/carnet-panel.component';
 interface MonthRow {
   readonly month: number;
   readonly labelKey: string;
+  /** The payment covering this month, whichever month its period started in. */
   readonly payment: AthletePayment | null;
   readonly canEdit: boolean;
+  /**
+   * True when this month is covered by a period that started somewhere else
+   * (#1382). The row still reads "paid", but the amount belongs to the month
+   * the period started in — repeating €165 on all three months of a quarterly
+   * would treble the year's takings on a table people read as a ledger.
+   */
+  readonly coveredByEarlierPeriod: boolean;
+  /** How long the covering period is, for the row's "Feb-Apr" caption. */
+  readonly periodMonths: number;
 }
 
 @Component({
@@ -77,7 +87,6 @@ export class PaymentsListComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly paymentService = inject(PaymentService);
   private readonly athleteService = inject(AthleteService);
-  private readonly academyService = inject(AcademyService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
@@ -98,14 +107,41 @@ export class PaymentsListComponent implements OnInit {
   private readonly currentMonth = this.nowUtc.getUTCMonth() + 1;
 
   /**
-   * Read from the cached academy signal — same gate the athletes
-   * list uses. When the academy hasn't set `monthly_fee_cents`, the
-   * page renders the table read-only (no buttons): the user is told
-   * upfront, no surprising 422 toast.
+   * What this athlete pays each month, resolved server-side (#1381): their
+   * price tier if they are on one, the academy's flat fee otherwise.
+   *
+   * Three states, and the third one matters: `undefined` means the athlete
+   * request has not answered yet, `null` means no fee applies, a number is
+   * the amount. Collapsing "not known yet" into "no fee" would paint "this
+   * academy has not configured a monthly fee" for the fraction of a second
+   * before the athlete lands — a claim, not a loading state — and would
+   * leave the table permanently read-only when that request fails.
    */
-  protected readonly hasMonthlyFee = computed(
-    () => (this.academyService.academy()?.monthly_fee_cents ?? null) !== null,
-  );
+  protected readonly athleteFeeCents = signal<number | null | undefined>(undefined);
+
+  /** The tier they are on, or null when they are on the academy's flat fee. */
+  protected readonly feeTier = signal<FeeTier | null>(null);
+
+  /**
+   * How many months this athlete's payments cover (#1382). Read from the
+   * athlete rather than chosen at the click, so the confirmation can say what
+   * the click will actually record. `1` until they load, which is what the
+   * table did before periods existed.
+   */
+  protected readonly athleteBillingPeriod = signal<number>(1);
+
+  /**
+   * When no fee applies to this athlete the page renders the table read-only
+   * (no buttons): the user is told upfront, no surprising 422 toast.
+   *
+   * Read from the athlete rather than from the cached academy since #1381 —
+   * an academy that prices only by tier has no flat fee, and gating on that
+   * would lock the buttons for athletes who plainly do have a fee.
+   */
+  protected readonly hasMonthlyFee = computed(() => this.athleteFeeCents() !== null);
+
+  /** False until the athlete request answers — see `athleteFeeCents`. */
+  protected readonly feeKnown = computed(() => this.athleteFeeCents() !== undefined);
 
   /**
    * Pre-built 12-row view-model — joins the loaded payments with
@@ -113,21 +149,38 @@ export class PaymentsListComponent implements OnInit {
    * when `payments` or `hasMonthlyFee` changes).
    */
   protected readonly monthRows = computed<MonthRow[]>(() => {
+    // A payment covers a period now (#1382), so a month is not a key into the
+    // payment list any more — each payment is spread across the cells it pays
+    // for, including the ones in a different year at either end.
     const byMonth = new Map<number, AthletePayment>();
-    for (const p of this.payments()) byMonth.set(p.month, p);
+    for (const p of this.payments()) {
+      for (let i = 0; i < (p.period_months ?? 1); i++) {
+        const absolute = p.year * 12 + (p.month - 1) + i;
+        if (Math.floor(absolute / 12) !== this.year) continue;
+        byMonth.set((absolute % 12) + 1, p);
+      }
+    }
 
     const fee = this.hasMonthlyFee();
     return MONTH_KEYS.map((labelKey, i) => {
       const month = i + 1;
+      const payment = byMonth.get(month) ?? null;
       // Future months can't be paid (the month hasn't happened); past
       // and current months can. Read-only when no monthly fee is
-      // configured at all — there's nothing to record.
+      // configured at all — there's nothing to record. While the fee is
+      // still unknown the buttons stay live: a click that really has no
+      // fee behind it gets the server's 422 and its toast, which is a
+      // better trade than flickering the whole table read-only on
+      // every visit.
       const canEdit = fee && month <= this.currentMonth;
       return {
         month,
         labelKey,
-        payment: byMonth.get(month) ?? null,
+        payment,
         canEdit,
+        coveredByEarlierPeriod:
+          payment !== null && !(payment.year === this.year && payment.month === month),
+        periodMonths: payment?.period_months ?? 1,
       };
     });
   });
@@ -160,13 +213,30 @@ export class PaymentsListComponent implements OnInit {
     const willMarkPaid = row.payment === null;
     const fullName =
       this.athleteName() || this.translate.instant('athletes.detail.payments.fallbackName');
-    const monthLabel = this.translate.instant(row.labelKey);
-    const message = this.translate.instant(
-      willMarkPaid
-        ? 'athletes.detail.payments.confirm.markPaidMessage'
-        : 'athletes.detail.payments.confirm.markUnpaidMessage',
-      { name: fullName, month: monthLabel, year: this.year },
-    );
+
+    // Say what the click actually does (#1382). Marking April paid on an
+    // athlete billed quarterly records February through April, and undoing it
+    // from April removes the whole quarter — neither is what "April" alone
+    // suggests, and Norman's rule is to show the consequence before the act,
+    // not after.
+    const period = willMarkPaid
+      ? this.periodCaptionFor(this.year, row.month, this.athleteBillingPeriod())
+      : this.periodCaption(row);
+
+    const message =
+      period !== null
+        ? this.translate.instant(
+            willMarkPaid
+              ? 'athletes.detail.payments.confirm.markPaidPeriodMessage'
+              : 'athletes.detail.payments.confirm.markUnpaidPeriodMessage',
+            { name: fullName, period },
+          )
+        : this.translate.instant(
+            willMarkPaid
+              ? 'athletes.detail.payments.confirm.markPaidMessage'
+              : 'athletes.detail.payments.confirm.markUnpaidMessage',
+            { name: fullName, month: this.translate.instant(row.labelKey), year: this.year },
+          );
 
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
@@ -204,11 +274,18 @@ export class PaymentsListComponent implements OnInit {
           life: 3000,
         });
       },
-      error: (err: { status?: number }) => {
+      error: (err: { status?: number; error?: { errors?: Record<string, unknown> } }) => {
+        // A 422 has meant one thing for a long time — "no fee configured" —
+        // and since #1382 it can also mean "a period already covers that
+        // month". Read which field the server complained about rather than
+        // showing a message that is flatly untrue half the time.
+        const fields = err.error?.errors ?? {};
         const detail = this.translate.instant(
-          err.status === 422
-            ? 'athletes.detail.payments.toast.errorMissingFee'
-            : 'athletes.detail.payments.toast.errorGeneric',
+          err.status !== 422
+            ? 'athletes.detail.payments.toast.errorGeneric'
+            : 'period_months' in fields
+              ? 'athletes.detail.payments.toast.errorOverlap'
+              : 'athletes.detail.payments.toast.errorMissingFee',
         );
         this.messageService.add({
           severity: 'error',
@@ -253,10 +330,65 @@ export class PaymentsListComponent implements OnInit {
    */
   private loadAthleteName(athleteId: number): void {
     this.athleteService.get(athleteId).subscribe({
-      next: (athlete) => this.athleteName.set(`${athlete.first_name} ${athlete.last_name}`),
+      next: (athlete) => {
+        this.athleteName.set(`${athlete.first_name} ${athlete.last_name}`);
+        this.athleteFeeCents.set(athlete.monthly_fee_cents ?? null);
+        this.feeTier.set(athlete.fee_tier ?? null);
+        this.athleteBillingPeriod.set(athlete.billing_period_months ?? 1);
+      },
       // Silent failure here — the confirm popup falls back to "this
-      // athlete" rather than blocking the table.
+      // athlete" rather than blocking the table, and `athleteFeeCents`
+      // deliberately stays `undefined` so the fee is treated as unknown
+      // rather than absent. Setting it to null here would lock every
+      // button on a transient network blip.
       error: () => undefined,
+    });
+  }
+
+  /**
+   * "2 lezioni · €55.00 a month for 2 lessons a week." The lesson count
+   * pluralises, and ngx-translate has no plural rule — the repo picks between
+   * an explicit `…One` / `…Other` key pair in code.
+   */
+  protected feeTierHint(tier: FeeTier): string {
+    return this.translate.instant(
+      tier.lessons_per_week === 1
+        ? 'athletes.detail.payments.feeTierHintOne'
+        : 'athletes.detail.payments.feeTierHintOther',
+      {
+        label: tier.label,
+        amount: this.formatAmount(tier.amount_cents),
+        count: tier.lessons_per_week,
+      },
+    );
+  }
+
+  /**
+   * "Feb – Apr 2026" for a period longer than one month, `null` for a plain
+   * monthly payment where the row's own label already says everything.
+   *
+   * Shown on every month the period covers, which is how the reader knows the
+   * €165 on February and the dash on March and April belong to one payment
+   * rather than to three different stories.
+   */
+  protected periodCaption(row: MonthRow): string | null {
+    return row.payment === null
+      ? null
+      : this.periodCaptionFor(row.payment.year, row.payment.month, row.periodMonths);
+  }
+
+  /** The same caption for a period that has not been recorded yet. */
+  private periodCaptionFor(year: number, month: number, periodMonths: number): string | null {
+    if (periodMonths <= 1) return null;
+
+    const start = year * 12 + (month - 1);
+    const end = start + periodMonths - 1;
+    const label = (absolute: number): string => this.translate.instant(MONTH_KEYS[absolute % 12]);
+
+    return this.translate.instant('athletes.detail.payments.periodRange', {
+      from: label(start),
+      to: label(end),
+      year: Math.floor(end / 12),
     });
   }
 

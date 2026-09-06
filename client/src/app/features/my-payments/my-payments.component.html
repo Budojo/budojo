@@ -65,14 +65,29 @@
             [class.my-payments__row--paid]="row.payment !== null"
             [attr.data-cy]="'month-' + row.month"
           >
-            <time
-              [dateTime]="year() + '-' + (row.month < 10 ? '0' + row.month : row.month)"
-              class="my-payments__month"
-            >
-              {{ localMonthDate(row.month) | date: 'LLLL' }}
-            </time>
+            <div class="my-payments__label">
+              <time
+                [dateTime]="year() + '-' + (row.month < 10 ? '0' + row.month : row.month)"
+                class="my-payments__month"
+              >
+                {{ localMonthDate(row.month) | date: 'LLLL' }}
+              </time>
+              @if (row.periodCaption; as caption) {
+                <!-- The range that ties this month to the payment behind it
+                     (#1382), so a month with no amount of its own reads as
+                     covered rather than as a gap. Under the month name, not
+                     beside it: the row is a three-column grid and a fourth
+                     cell wraps the date onto a second line. -->
+                <span class="my-payments__period" [attr.data-cy]="'month-period-' + row.month">
+                  {{ caption }}
+                </span>
+              }
+            </div>
             @if (row.payment; as p) {
-              <span class="my-payments__amount">{{ formatAmount(p.amount_cents) }}</span>
+              <!-- The amount sits on the month the period started, once. -->
+              @if (!row.coveredByEarlierPeriod) {
+                <span class="my-payments__amount">{{ formatAmount(p.amount_cents) }}</span>
+              }
               <span class="my-payments__paid-on">{{ formatPaidAt(p.paid_at) }}</span>
             } @else {
               <span class="my-payments__unpaid">
