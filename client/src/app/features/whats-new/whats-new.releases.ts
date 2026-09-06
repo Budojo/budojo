@@ -60,6 +60,83 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.48.0',
+    date: '2026-09-06',
+    headline: {
+      en: 'More than one price, and more than one month.',
+      it: 'Più di un prezzo, e più di un mese.',
+    },
+    sections: [
+      {
+        heading: { en: '💶 More than one monthly fee', it: '💶 Più di una quota mensile' },
+        bullets: [
+          {
+            en: 'Your academy had exactly one monthly fee. If you charge by how often someone trains — 2 lezioni a settimana 55 €, 3 lezioni 65 € — there was nowhere to put that. In your academy settings, under the monthly fee, you can now add as many tiers as you charge: a name you choose, the amount, and how many lessons a week it buys.',
+            it: "L'academy aveva esattamente una quota mensile. Se fai pagare in base a quanto uno si allena — 2 lezioni a settimana 55 €, 3 lezioni 65 € — non c'era dove metterlo. Nelle impostazioni dell'academy, sotto la quota mensile, ora aggiungi tutte le fasce che ti servono: un nome che scegli tu, l'importo, e quante lezioni a settimana comprende.",
+          },
+          {
+            en: "Nothing changes until you add one: no tiers means every athlete pays the monthly fee, exactly as before. Once you have them, pick each athlete's from their page — their Payments tab says which tier they are on and what it costs.",
+            it: 'Finché non ne aggiungi una non cambia niente: nessuna fascia vuol dire che tutti pagano la quota mensile, esattamente come prima. Quando ci sono, scegli la fascia di ogni atleta dalla sua scheda — e la tab Pagamenti dice su quale sta e quanto costa.',
+          },
+          {
+            en: "Changing a price never rewrites the past: what someone already paid stays what they paid. And deleting a tier does not delete the people on it — they go back to the academy's standard fee, and the confirmation tells you how many that is before you do it.",
+            it: "Cambiare un prezzo non riscrive il passato: quello che uno ha già pagato resta quello che ha pagato. Ed eliminare una fascia non elimina chi ci sta sopra — tornano alla quota standard dell'academy, e la conferma ti dice quanti sono prima che tu lo faccia.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '📆 Quarterly, half-yearly, annual',
+          it: '📆 Trimestrale, semestrale, annuale',
+        },
+        bullets: [
+          {
+            en: 'A quarterly payment used to mean ticking three months and pretending they were three payments. They were not — the athlete handed you money once and has one receipt. You can now say how often each athlete pays and record it as one payment covering the whole period.',
+            it: "Un trimestrale voleva dire spuntare tre mesi e far finta che fossero tre pagamenti. Non lo erano — l'atleta ti ha dato i soldi una volta e ha una ricevuta sola. Ora dici ogni quanto paga ciascun atleta e lo registri come un pagamento solo che copre tutto il periodo.",
+          },
+          {
+            en: 'The months table shows all three months of a quarter as paid, with the amount on one row and the range — January to March 2026 — written under each of them, so a row without a figure never reads as a gap.',
+            it: "La tabella dei mesi mostra tutti e tre i mesi del trimestre come pagati, con l'importo su una riga sola e il periodo — Da gennaio a marzo 2026 — scritto sotto ciascuno, così una riga senza cifra non sembra mai un buco.",
+          },
+          {
+            en: 'Marking or undoing tells you what it will actually do — "Undo Mario Rossi\'s payment covering January to March 2026?" rather than a bare month name — and undoing works from any month in the period, removing the whole thing.',
+            it: 'Segnare o annullare ti dice cosa succede davvero — «Annullare il pagamento di Mario Rossi che copre da gennaio a marzo 2026?» invece del nome di un mese — e si annulla da qualunque mese del periodo, togliendolo tutto.',
+          },
+          {
+            en: "The unpaid list, the paid badge, the reminder email and the athlete's own reminder all understand periods, so nobody on a quarterly gets chased in month two.",
+            it: "L'elenco dei non paganti, il badge pagato, la mail di sollecito e il promemoria dell'atleta capiscono tutti i periodi, così chi è su un trimestrale non viene sollecitato al secondo mese.",
+          },
+        ],
+      },
+      {
+        heading: { en: '🎟️ Carnets, finished off', it: '🎟️ Carnet, completati' },
+        bullets: [
+          {
+            en: 'A carnet can now cover the past. Set the date it starts covering from and sessions already on the register inside that window count immediately — which is what you want when you sell a carnet to someone who has been training all month. Moving that date moves the expiry with it, and the app shows you where it lands before you confirm.',
+            it: "Un carnet ora può coprire il passato. Imposti da che data inizia a coprire e le presenze già sul registro dentro quella finestra contano subito — che è quello che serve quando vendi un carnet a chi si allena già da un mese. Spostare quella data sposta anche la scadenza, e l'app ti fa vedere dove va a finire prima che confermi.",
+          },
+          {
+            en: 'A carnet created by mistake can be deleted: the sessions stay on the register and go back to being uncovered, and the confirmation says how many that is. The sale date and the price are on the card — selling a carnet is the payment, and now it says so.',
+            it: 'Un carnet creato per sbaglio si può eliminare: le presenze restano sul registro e tornano scoperte, e la conferma dice quante sono. Data di vendita e prezzo sono sulla card — vendere un carnet è il pagamento, e adesso lo dice.',
+          },
+          {
+            en: 'Carnet money is in the revenue chart. A €70 carnet valid twelve months shows as about €5.83 a month across the months it covers, the same way a yearly fee does — so the chart now means all your revenue, not just the monthly fees.',
+            it: 'I soldi dei carnet sono nel grafico degli incassi. Un carnet da 70 € valido dodici mesi compare come circa 5,83 € al mese sui mesi che copre, come fa una quota annuale — così il grafico ora vuol dire tutti i tuoi incassi, non solo le quote mensili.',
+          },
+        ],
+      },
+      {
+        heading: { en: '🖥️ On the desktop', it: '🖥️ Sul desktop' },
+        bullets: [
+          {
+            en: 'The window buttons at the top right used to float over the page, with text sliding underneath them. There is now a proper bar for them to sit on.',
+            it: "I pulsanti della finestra in alto a destra galleggiavano sopra la pagina, con il testo che ci scorreva sotto. Ora c'è una barra vera su cui appoggiarsi.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.47.0',
     date: '2026-09-05',
     headline: {
