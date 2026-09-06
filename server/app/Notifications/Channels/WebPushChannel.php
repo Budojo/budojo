@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Minishlink\WebPush\ContentEncoding;
 use Minishlink\WebPush\MessageSentReport;
 use Minishlink\WebPush\Subscription as WebPushSubscription;
 use Minishlink\WebPush\WebPush;
@@ -138,6 +139,22 @@ class WebPushChannel
                     'endpoint' => $subscription->endpoint,
                     'publicKey' => $subscription->p256dh,
                     'authToken' => $subscription->auth,
+                    // Named explicitly because the library still defaults to
+                    // `aesgcm` — draft-04 of Web Push Encryption, deprecated
+                    // for years — and says in its own source that the next
+                    // major will flip it. Until then, omitting this is a
+                    // choice, not a neutral absence (#1391).
+                    //
+                    // It carries further than encryption: the same value is
+                    // handed to `VAPID::getVapidHeaders()`, which branches on
+                    // it to pick the authorization form. So `aes128gcm` buys
+                    // RFC 8291 for the body AND RFC 8292 (`vapid t=…, k=…`)
+                    // for the signature, instead of draft-01's `WebPush <jwt>`
+                    // plus a separate `Crypto-Key` header.
+                    //
+                    // It is also the only scheme Apple Web Push accepts, so
+                    // this is what stops Safari being a migration later.
+                    'contentEncoding' => ContentEncoding::aes128gcm,
                 ]),
                 $payloadJson,
             );
