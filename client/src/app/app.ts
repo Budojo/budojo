@@ -10,6 +10,7 @@ import { CookieBannerComponent } from './features/cookie-banner/cookie-banner.co
 import { NotificationOnboardingDialogComponent } from './shared/components/notification-onboarding-dialog/notification-onboarding-dialog.component';
 import { PushToastComponent } from './shared/components/push-toast/push-toast.component';
 import { UpdateBannerComponent } from './shared/components/update-banner/update-banner.component';
+import { DesktopTitlebarComponent } from './shared/components/desktop-titlebar/desktop-titlebar.component';
 
 @Component({
   selector: 'app-root',
@@ -20,6 +21,7 @@ import { UpdateBannerComponent } from './shared/components/update-banner/update-
     NotificationOnboardingDialogComponent,
     PushToastComponent,
     UpdateBannerComponent,
+    DesktopTitlebarComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',

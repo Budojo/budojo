@@ -28,6 +28,7 @@ type Bridge = NonNullable<Window['__BUDOJO__']>;
 interface BridgeOverrides {
   apiBase?: Bridge['apiBase'];
   platform?: Bridge['platform'];
+  version?: Bridge['version'];
   onNavigate?: Bridge['onNavigate'];
   token?: Partial<Bridge['token']>;
   backup?: Partial<Bridge['backup']>;
@@ -41,6 +42,7 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
   const base: Bridge = {
     apiBase: '',
     platform: 'win32',
+    version: async () => '0.0.0',
     onNavigate: () => () => undefined,
     token: { get: () => null, set: () => undefined, clear: () => undefined },
     backup: {
@@ -69,6 +71,7 @@ export function stubBridge(overrides: BridgeOverrides = {}): Bridge {
     update: {
       status: async () => ({ phase: 'idle' }),
       onStatus: () => () => undefined,
+      check: async () => ({ ok: true }),
       installNow: async () => ({ ok: false }),
     },
   };

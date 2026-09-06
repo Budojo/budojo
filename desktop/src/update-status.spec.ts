@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   idleUpdateStatus,
+  onCheckStarted,
   onDownloadProgress,
   onUpdateAvailable,
   onUpdateDownloaded,
   onUpdateError,
+  onUpdateNotAvailable,
   type UpdateStatus,
 } from './update-status.js';
 
@@ -118,5 +120,47 @@ describe('the percentage is rendered, so it is made safe here', () => {
     const next = onDownloadProgress(downloading('2.44.1', 0), input);
 
     expect(next).toMatchObject({ percent: expected });
+  });
+});
+
+describe('saying that a check happened (#1401)', () => {
+  it('announces the check itself, which used to be silent', () => {
+    expect(onCheckStarted(idleUpdateStatus())).toEqual({ phase: 'checking' });
+  });
+
+  it('says so when there is nothing to get', () => {
+    // The one piece of news the app never delivered: "no update" and "never
+    // looked" both produced silence, which is why a button was asked for.
+    expect(onUpdateNotAvailable({ phase: 'checking' })).toEqual({ phase: 'up-to-date' });
+  });
+
+  it('runs the whole no-op check as a sequence', () => {
+    const after = onUpdateNotAvailable(onCheckStarted(idleUpdateStatus()));
+
+    expect(after).toEqual({ phase: 'up-to-date' });
+  });
+
+  it('never paints over an update already sitting on disk', () => {
+    // A poll looking for a newer version must not erase the one that is
+    // downloaded and waiting — the same rule the rest of this engine follows.
+    const ready: UpdateStatus = { phase: 'ready', version: '2.49.0' };
+
+    expect(onCheckStarted(ready)).toEqual(ready);
+    expect(onUpdateNotAvailable(ready)).toEqual(ready);
+  });
+
+  it('lets a check in flight still find something', () => {
+    expect(onUpdateAvailable({ phase: 'checking' }, '2.49.0')).toEqual({
+      phase: 'downloading',
+      version: '2.49.0',
+      percent: 0,
+    });
+  });
+
+  it('clears a failed check instead of leaving it spinning', () => {
+    // Without this a network error mid-check leaves the button turning
+    // forever, which reads as broken rather than as offline.
+    expect(onUpdateError({ phase: 'checking' })).toEqual({ phase: 'idle' });
+    expect(onUpdateError({ phase: 'up-to-date' })).toEqual({ phase: 'idle' });
   });
 });

@@ -107,7 +107,19 @@ html.budojo-desktop {
     position: fixed;
     inset: 0 0 auto 0;
     height: var(--budojo-titlebar-height);
+    // The global reset is `*`, which does NOT match pseudo-elements — so
+    // without this the border below makes the strip 41px against Electron's
+    // 40, and the native buttons sit a pixel proud of it.
+    box-sizing: border-box;
     background: #fafafa;
+    // The hairline that makes it read as a surface rather than as empty space
+    // (#1400). Same token as the side rail's own border, deliberately: two
+    // pieces of chrome meeting at a corner in two almost-identical greys looks
+    // worse than one of them having no border at all.
+    //
+    // On a token, unlike the background above — that one is pinned to
+    // `titleBarOverlay.color`, an Electron value that cannot read CSS.
+    border-bottom: 1px solid var(--p-content-border-color);
     // Above the app's own chrome (sticky topbar 60, cookie banner 1000) so
     // scrolling content cannot reach the buttons, and below PrimeNG's overlay
     // stack so a dialog mask or a toast — deliberate, transient, user-invoked
