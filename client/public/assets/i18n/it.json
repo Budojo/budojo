@@ -1699,7 +1699,8 @@
         "fullName": "Nome e cognome",
         "belt": "Cintura",
         "status": "Stato",
-        "paidPrefix": "Pagato"
+        "paidPrefix": "Pagato",
+        "payment": "Pagamento"
       },
       "tooltip": {
         "fullNameSortInitial": "Clicca per ordinare per nome (A → Z)",
@@ -1751,7 +1752,10 @@
         "paidErrorGeneric": "Impossibile aggiornare il pagamento. Riprova.",
         "deleteErrorDetail": "Impossibile eliminare l'atleta. Riprova.",
         "markedPaidDetail": "{{name}} — {{month}}/{{year}}",
-        "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}"
+        "markedUnpaidDetail": "{{name}} — {{month}}/{{year}}",
+        "carnetSoldSummary": "Carnet venduto",
+        "carnetSoldDetail": "Il carnet di {{name}} parte da oggi.",
+        "carnetSoldError": "Non è stato possibile vendere il carnet."
       },
       "confirm": {
         "deleteMessage": "Eliminare {{name}}? I suoi documenti saranno cancellati definitivamente e non potranno essere ripristinati — solo la riga atleta può essere annullata.",
@@ -1762,7 +1766,9 @@
         "markUnpaidAccept": "Segna non pagato",
         "cancel": "Annulla",
         "markPaidPeriodMessage": "Registrare il pagamento di {{name}} per {{period}}?",
-        "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?"
+        "markUnpaidPeriodMessage": "Annullare il pagamento di {{name}} che copre {{period}}?",
+        "sellCarnetMessage": "Vendere un carnet da {{price}} per {{entries}} ingressi a {{name}}?",
+        "sellCarnetAccept": "Vendi"
       },
       "restoreConfirm": {
         "message": "Ripristinare {{name}}?",
@@ -1775,7 +1781,22 @@
         "errorDetail": "Qualcosa è andato storto. Riprova tra un momento."
       },
       "showInactive": "Mostra anche i non attivi",
-      "hideInactive": "Mostra solo gli attivi"
+      "hideInactive": "Mostra solo gli attivi",
+      "coverage": {
+        "monthly": "Mensile",
+        "quarterly": "Trimestrale",
+        "half_yearly": "Semestrale",
+        "annual": "Annuale",
+        "carnet": "Carnet · {{count}}",
+        "none": "Non pagato",
+        "aria": "Pagamento di {{name}}: {{coverage}}. Apri le azioni."
+      },
+      "payMenu": {
+        "markPaid": "Segna pagato",
+        "undoPaid": "Annulla pagamento",
+        "sellCarnet": "Vendi un carnet",
+        "openPayments": "Apri i pagamenti"
+      }
     },
     "invitation": {
       "title": "Account & invito",

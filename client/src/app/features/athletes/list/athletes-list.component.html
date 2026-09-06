@@ -5,6 +5,10 @@
      here at the page root (not inside the *ngFor) so we ship one menu
      element regardless of athlete count. -->
 <p-menu #cardMenu [popup]="true" [model]="cardMenuItems()" appendTo="body" />
+<!-- The payment cell's own popup (#1402). A second instance rather than a
+     shared one: both are reachable on a phone, and sharing would make the
+     second open steal the first's anchor. -->
+<p-menu #paymentMenu [popup]="true" [model]="paymentMenuItems()" appendTo="body" />
 <!-- Mobile delete confirmation. Routed by key from confirmDeleteFromCardMenu()
      so it doesn't compete with the desktop's anchored <p-confirmpopup>. -->
 <p-confirmDialog
@@ -258,7 +262,7 @@
                  status refers to without hovering. The full month+year
                  lives in the per-row tooltip below. -->
               <th data-cy="athletes-th-paid">
-                {{ 'athletes.list.table.paidPrefix' | translate }} · {{ currentMonthShort() }}
+                {{ 'athletes.list.table.payment' | translate }} · {{ currentMonthShort() }}
               </th>
             }
             <th style="width: 8rem"></th>
@@ -405,56 +409,39 @@
                      active athlete with a paid badge). -->
                   <span class="athlete-paid-empty" aria-hidden="true">—</span>
                 } @else {
-                  <!-- Tooltip telegraphs the full month + year + status (#282)
-                     so the user gets unambiguous context on hover/long-press
-                     without crowding the row visually. The bare badge
-                     already carries Paid / Unpaid; the tooltip adds the
-                     "April 2026" anchor.
+                  <!--
+                    What is paying for the month (#1402), not whether anything
+                    is. The column used to be a boolean and said "Non pagato"
+                    to someone who had bought a carnet the week before — true
+                    of the month, false about the person.
 
-                     Suppressed (empty string → no tooltip mounts) when
-                     `paid_current_month` is undefined — same gate that
-                     makes <app-paid-badge> render nothing for that athlete.
-                     Without the guard, an empty cell would still show a
-                     ghost tooltip reading "April 2026 — Unpaid" because
-                     the ternary defaults `undefined` to "Unpaid" (Copilot
-                     caught this on #289). -->
-                  <app-paid-badge
-                    [paid]="athlete.paid_current_month"
-                    [clickable]="true"
-                    (paidToggle)="confirmTogglePaid($event, athlete)"
-                    [pTooltip]="
-                      athlete.paid_current_month === undefined
-                        ? ''
-                        : currentMonthLong() +
-                          ' — ' +
-                          (athlete.paid_current_month
-                            ? ('athletes.list.tooltip.paid' | translate)
-                            : ('athletes.list.tooltip.unpaid' | translate))
+                    The chip is the menu's trigger: marking paid, selling a
+                    carnet and undoing a payment are the three things done from
+                    here, and which of them are offered depends on what is
+                    already true of the row.
+                  -->
+                  <button
+                    type="button"
+                    class="athlete-coverage"
+                    [attr.aria-label]="
+                      'athletes.list.coverage.aria'
+                        | translate
+                          : {
+                              name: athlete.first_name + ' ' + athlete.last_name,
+                              coverage: coverageLabel(athlete),
+                            }
                     "
+                    [pTooltip]="currentMonthLong()"
                     tooltipPosition="top"
-                  />
-                }
-                <!--
-                  Carnet balance chip (#1364). Rendered beside the paid badge
-                  rather than in a column of its own — most academies sell no
-                  carnets at all, and an always-empty column would cost every
-                  row horizontal space on the phone. Warning tone at two
-                  entries or fewer: the moment the owner needs to say "vuoi
-                  rinnovare?" before the athlete walks out.
-                -->
-                @if (athlete.active_carnet; as carnet) {
-                  <p-tag
-                    [severity]="carnet.remaining_entries <= 2 ? 'warn' : 'secondary'"
-                    icon="pi pi-ticket"
-                    [value]="carnet.remaining_entries.toString()"
-                    [pTooltip]="
-                      'athletes.list.tooltip.carnet'
-                        | translate: { code: carnet.code, count: carnet.remaining_entries }
-                    "
-                    tooltipPosition="top"
-                    styleClass="athletes-list__carnet-chip"
-                    data-cy="athlete-carnet-chip"
-                  />
+                    (click)="openPaymentMenu($event, athlete)"
+                    [attr.data-cy]="'athlete-coverage-' + athlete.id"
+                  >
+                    <p-tag
+                      [value]="coverageLabel(athlete)"
+                      [severity]="coverageSeverity(athlete)"
+                      [rounded]="true"
+                    />
+                  </button>
                 }
               </td>
             }
@@ -688,34 +675,35 @@
                     [attr.data-cy]="'athlete-card-status-' + athlete.id"
                   />
                 }
-                @if (
-                  hasMonthlyFee() &&
-                  !paymentNotExpected(athlete) &&
-                  athlete.paid_current_month !== undefined
-                ) {
-                  <app-paid-badge
-                    [paid]="athlete.paid_current_month"
-                    [clickable]="true"
-                    (paidToggle)="confirmTogglePaid($event, athlete)"
-                  />
-                }
-                <!-- Carnet balance chip (#1364), mirroring the desktop table
-                     cell. The phone is the primary form factor here, so the
-                     chip has to live in both layouts or it doesn't exist for
-                     the instructor on the mat. -->
-                @if (athlete.active_carnet; as carnet) {
-                  <p-tag
-                    [severity]="carnet.remaining_entries <= 2 ? 'warn' : 'secondary'"
-                    icon="pi pi-ticket"
-                    [rounded]="true"
-                    [value]="carnet.remaining_entries.toString()"
-                    [pTooltip]="
-                      'athletes.list.tooltip.carnet'
-                        | translate: { code: carnet.code, count: carnet.remaining_entries }
+                <!--
+                  The same chip as the table (#1402). The phone is the primary
+                  form factor, so the coverage has to read the same in both or
+                  it does not exist for the instructor on the mat — and the
+                  carnet balance is inside the label now rather than in a chip
+                  of its own, which is one fewer thing competing for a 375px
+                  row.
+                -->
+                @if (hasMonthlyFee() && !paymentNotExpected(athlete)) {
+                  <button
+                    type="button"
+                    class="athlete-coverage"
+                    [attr.aria-label]="
+                      'athletes.list.coverage.aria'
+                        | translate
+                          : {
+                              name: athlete.first_name + ' ' + athlete.last_name,
+                              coverage: coverageLabel(athlete),
+                            }
                     "
-                    tooltipPosition="top"
-                    data-cy="athlete-carnet-chip-mobile"
-                  />
+                    (click)="openPaymentMenu($event, athlete)"
+                    [attr.data-cy]="'athlete-card-coverage-' + athlete.id"
+                  >
+                    <p-tag
+                      [value]="coverageLabel(athlete)"
+                      [severity]="coverageSeverity(athlete)"
+                      [rounded]="true"
+                    />
+                  </button>
                 }
               </div>
               @if (athlete.facebook || athlete.instagram) {

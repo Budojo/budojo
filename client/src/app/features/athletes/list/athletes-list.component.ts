@@ -40,6 +40,7 @@ import {
   AthleteStatus,
   Belt,
   AthleteService,
+  type PaymentCoverage,
 } from '../../../core/services/athlete.service';
 import { PaymentService } from '../../../core/services/payment.service';
 import { RuntimeService } from '../../../core/services/runtime.service';
@@ -59,6 +60,7 @@ import { ConfirmDestructiveButtonComponent } from '../../../shared/components/co
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 import { academyChargesAFee } from '../../../shared/utils/academy-fee';
+import { CarnetService } from '../../../core/services/carnet.service';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -108,6 +110,7 @@ interface SelectOption<T extends string> {
 export class AthletesListComponent implements OnInit {
   private readonly athleteService = inject(AthleteService);
   private readonly paymentService = inject(PaymentService);
+  private readonly carnetService = inject(CarnetService);
   private readonly academyService = inject(AcademyService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
@@ -767,6 +770,159 @@ export class AthletesListComponent implements OnInit {
   // instead of the desktop confirm-popup (no good anchor on mobile).
   @ViewChild('cardMenu') protected cardMenu?: Menu;
   protected readonly cardMenuItems = signal<MenuItem[]>([]);
+
+  /**
+   * The payment cell's own popup (#1402). Separate instance from the card
+   * menu: they can both be reachable on a phone at the same time, and sharing
+   * one would make the second open steal the first's anchor.
+   */
+  @ViewChild('paymentMenu') protected paymentMenu?: Menu;
+  protected readonly paymentMenuItems = signal<MenuItem[]>([]);
+
+  /**
+   * What is paying for this athlete's month (#1402), as the roster shows it.
+   *
+   * Read from the server rather than re-derived: the rule about which cover
+   * wins lives in `App\Support\MonthCoverage`, and a second implementation
+   * here is how the roster and the ledger come to disagree. `undefined` is a
+   * pre-#1402 payload, which falls back to the boolean the column used to be.
+   */
+  protected coverageOf(athlete: Athlete): PaymentCoverage {
+    return athlete.payment_coverage ?? (athlete.paid_current_month ? 'monthly' : 'none');
+  }
+
+  /** "Mensile", "Trimestrale", "Carnet · 8", "Non pagato". */
+  protected coverageLabel(athlete: Athlete): string {
+    const coverage = this.coverageOf(athlete);
+
+    if (coverage === 'carnet') {
+      return this.translate.instant('athletes.list.coverage.carnet', {
+        count: athlete.active_carnet?.remaining_entries ?? 0,
+      });
+    }
+
+    return this.translate.instant(`athletes.list.coverage.${coverage}`);
+  }
+
+  /**
+   * `none` is the only state that asks for something, so it is the only one
+   * that gets warning tone. Everything else is settled and reads as settled.
+   */
+  protected coverageSeverity(athlete: Athlete): 'success' | 'warn' | 'secondary' {
+    const coverage = this.coverageOf(athlete);
+
+    if (coverage === 'none') return 'warn';
+
+    return coverage === 'carnet' ? 'secondary' : 'success';
+  }
+
+  /**
+   * The cell's menu (#1402), built per row from what is already true of it.
+   *
+   * Offering "undo the payment" to someone who has none, or "sell a carnet" in
+   * an academy that does not sell them, is a menu teaching the reader to
+   * ignore half of it.
+   */
+  protected openPaymentMenu(event: MouseEvent, athlete: Athlete): void {
+    const coverage = this.coverageOf(athlete);
+    const items: MenuItem[] = [];
+
+    if (coverage === 'none') {
+      items.push({
+        label: this.translate.instant('athletes.list.payMenu.markPaid'),
+        icon: 'pi pi-check',
+        command: () => this.confirmTogglePaid(event, athlete),
+      });
+    } else if (coverage !== 'carnet') {
+      // Only a fee payment can be undone from here. A carnet is undone by
+      // deleting the carnet, which is a different act with its own warning
+      // about the sessions it covers.
+      items.push({
+        label: this.translate.instant('athletes.list.payMenu.undoPaid'),
+        icon: 'pi pi-undo',
+        command: () => this.confirmTogglePaid(event, athlete),
+      });
+    }
+
+    if (this.sellsCarnets()) {
+      items.push({
+        label: this.translate.instant('athletes.list.payMenu.sellCarnet'),
+        icon: 'pi pi-ticket',
+        command: () => this.confirmSellCarnet(event, athlete),
+      });
+    }
+
+    items.push({
+      label: this.translate.instant('athletes.list.payMenu.openPayments'),
+      icon: 'pi pi-wallet',
+      command: () => this.goToTab(athlete, 'payments'),
+    });
+
+    this.paymentMenuItems.set(items);
+    this.paymentMenu?.toggle(event);
+  }
+
+  /** True when the academy has both halves of a carnet offering configured. */
+  protected readonly sellsCarnets = computed<boolean>(() => {
+    const academy = this.academyService.academy();
+
+    return (
+      (academy?.carnet_price_cents ?? null) !== null && (academy?.carnet_entries ?? null) !== null
+    );
+  });
+
+  /**
+   * Sell a carnet from the roster (#1402) — a confirmation, not a dialog.
+   *
+   * The dated sale, where the owner back-dates a transcription, stays on the
+   * athlete's Payments tab where the date pickers are. What belongs here is
+   * the case that is one gesture in real life: someone hands over the money at
+   * the door and the pack starts today.
+   */
+  protected confirmSellCarnet(event: MouseEvent, athlete: Athlete): void {
+    const academy = this.academyService.academy();
+    const message = this.translate.instant('athletes.list.confirm.sellCarnetMessage', {
+      name: `${athlete.first_name} ${athlete.last_name}`,
+      price: this.formatAmount(academy?.carnet_price_cents ?? 0),
+      entries: academy?.carnet_entries ?? 0,
+    });
+
+    this.confirmationService.confirm({
+      target: event.currentTarget as EventTarget,
+      message,
+      acceptLabel: this.translate.instant('athletes.list.confirm.sellCarnetAccept'),
+      rejectLabel: this.translate.instant('athletes.list.confirm.cancel'),
+      accept: () => this.sellCarnet(athlete),
+    });
+  }
+
+  private sellCarnet(athlete: Athlete): void {
+    this.carnetService.sell(athlete.id).subscribe({
+      next: () => {
+        this.load();
+        this.messageService.add({
+          severity: 'success',
+          summary: this.translate.instant('athletes.list.toast.carnetSoldSummary'),
+          detail: this.translate.instant('athletes.list.toast.carnetSoldDetail', {
+            name: `${athlete.first_name} ${athlete.last_name}`,
+          }),
+          life: 3000,
+        });
+      },
+      error: () =>
+        this.messageService.add({
+          severity: 'error',
+          summary: this.translate.instant('athletes.list.toast.errorSummary'),
+          detail: this.translate.instant('athletes.list.toast.carnetSoldError'),
+          life: 4000,
+        }),
+    });
+  }
+
+  /** Locale-aware currency, the same shape every other amount in the app uses. */
+  private formatAmount(cents: number): string {
+    return (cents / 100).toLocaleString(this.locale(), { style: 'currency', currency: 'EUR' });
+  }
 
   protected openCardMenu(event: Event, athlete: Athlete): void {
     // Build the menu model conditionally:

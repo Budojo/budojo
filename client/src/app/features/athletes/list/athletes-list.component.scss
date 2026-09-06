@@ -689,3 +689,20 @@ $athletes-mobile-breakpoint: 768px;
   color: var(--p-text-muted-color);
   background: var(--p-surface-50);
 }
+
+// The coverage chip is a button wrapping a tag (#1402): the tag carries the
+// look, the button carries the affordance. Stripped of its own chrome so the
+// cell still reads as a chip rather than as a button with a chip inside it.
+.athlete-coverage {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+    border-radius: var(--p-border-radius-lg);
+  }
+}

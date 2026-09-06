@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -473,7 +473,7 @@ describe('AthletesListComponent', () => {
       const headerText = fixture.nativeElement
         .querySelector('[data-cy="athletes-th-paid"]')
         ?.textContent?.trim();
-      const expected = `Paid · ${fixture.componentInstance.currentMonthShort()}`;
+      const expected = `Payment · ${fixture.componentInstance.currentMonthShort()}`;
       expect(headerText).toBe(expected);
 
       // Sanity-check that the derived month is a recognisable
@@ -983,7 +983,10 @@ describe('AthletesListComponent', () => {
       const tbody = el.querySelector('tbody');
       expect(tbody).not.toBeNull();
       expect(tbody?.querySelectorAll('.athlete-paid-empty').length).toBe(1);
-      expect(tbody?.querySelectorAll('app-paid-badge').length).toBe(1);
+      // The badge became the coverage chip (#1402): same gate, same em-dash
+      // for the rows where payment is not expected, a different thing on the
+      // rows where it is.
+      expect(tbody?.querySelectorAll('.athlete-coverage').length).toBe(1);
     });
 
     it('renders the paid placeholder (em-dash) for suspended + inactive rows, paid badge only on active rows (#805)', () => {
@@ -1017,11 +1020,11 @@ describe('AthletesListComponent', () => {
       fixture.detectChanges();
 
       const tbody = (fixture.nativeElement as HTMLElement).querySelector('tbody');
-      // Two em-dash placeholders (suspended + inactive); one paid-badge
+      // Two em-dash placeholders (suspended + inactive); one coverage chip
       // (active). The Owner-as-athlete branch is not exercised here
       // (all three rows have is_self=false from `makeAthlete` default).
       expect(tbody?.querySelectorAll('.athlete-paid-empty').length).toBe(2);
-      expect(tbody?.querySelectorAll('app-paid-badge').length).toBe(1);
+      expect(tbody?.querySelectorAll('.athlete-coverage').length).toBe(1);
     });
   });
 
@@ -1271,5 +1274,163 @@ describe('AthletesListComponent — the roster shows who trains here (#1403)', (
 
     // The mobile filter chip would otherwise show a permanent "1".
     expect(fixture.componentInstance.activeFilterCount()).toBe(0);
+  });
+});
+
+describe('AthletesListComponent — what is paying for the month (#1402)', () => {
+  // Local copy: the two existing `makeAthlete` helpers are scoped inside their
+  // own describes, and hoisting one out would touch specs this change has no
+  // business editing.
+  function makeAthlete(over: Partial<Athlete> = {}): Athlete {
+    return {
+      id: 42,
+      first_name: 'Mario',
+      last_name: 'Rossi',
+      email: null,
+      phone_country_code: null,
+      phone_national_number: null,
+      address: null,
+      date_of_birth: null,
+      belt: 'white',
+      stripes: 0,
+      status: 'active',
+      joined_at: '2026-01-01',
+      created_at: '2026-01-01T00:00:00Z',
+      ...over,
+    } as Athlete;
+  }
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [AthletesListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AthleteService, useClass: FakeAthleteService },
+        { provide: PaymentService, useClass: FakePaymentService },
+        ...provideI18nTesting(),
+      ],
+    });
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      monthly_fee_cents: 9500,
+      carnet_price_cents: 7000,
+      carnet_entries: 10,
+    } as Academy);
+  });
+
+  function render(rows: Athlete[]) {
+    const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
+    athleteService.list.mockReturnValue(
+      of({
+        data: rows,
+        meta: { total: rows.length, current_page: 1, per_page: 20, last_page: 1 },
+      }),
+    );
+    const fixture = TestBed.createComponent(AthletesListComponent);
+    fixture.detectChanges();
+
+    return fixture;
+  }
+
+  function chip(fixture: ComponentFixture<AthletesListComponent>, id: number): string {
+    return (
+      (fixture.nativeElement as HTMLElement)
+        .querySelector(`[data-cy="athlete-coverage-${id}"]`)
+        ?.textContent?.trim() ?? ''
+    );
+  }
+
+  it('says carnet for the athlete who bought one, instead of calling them unpaid', () => {
+    // The bug behind the whole change: eight entries left, and the column said
+    // "Non pagato".
+    const fixture = render([
+      makeAthlete({
+        id: 1,
+        paid_current_month: false,
+        payment_coverage: 'carnet',
+        active_carnet: { id: 9, code: 'A7K2', remaining_entries: 8, expires_at: '2027-01-01' },
+      }),
+    ]);
+
+    expect(chip(fixture, 1)).toContain('Carnet');
+    expect(chip(fixture, 1)).toContain('8');
+  });
+
+  it('names the period rather than just saying paid', () => {
+    const fixture = render([
+      makeAthlete({ id: 2, paid_current_month: true, payment_coverage: 'quarterly' }),
+    ]);
+
+    expect(chip(fixture, 2)).toContain('Quarterly');
+  });
+
+  it('still says unpaid when nothing covers the month', () => {
+    const fixture = render([
+      makeAthlete({ id: 3, paid_current_month: false, payment_coverage: 'none' }),
+    ]);
+
+    expect(chip(fixture, 3)).toContain('Unpaid');
+  });
+
+  it('falls back to the old boolean on a payload without the new field', () => {
+    // Pre-#1402 responses, and every fixture written before it.
+    const fixture = render([makeAthlete({ id: 4, paid_current_month: true })]);
+
+    expect(chip(fixture, 4)).toContain('Monthly');
+  });
+
+  it('offers marking paid only to someone who is not covered', () => {
+    const fixture = render([]);
+    const cmp = fixture.componentInstance;
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+
+    cmp['openPaymentMenu'](event, makeAthlete({ id: 5, payment_coverage: 'none' }) as never);
+    const labels = cmp['paymentMenuItems']().map((i) => i.label);
+
+    // A menu that offers "undo the payment" to someone who has none teaches
+    // the reader to ignore half of it.
+    expect(labels).toContain('Mark paid');
+    expect(labels).not.toContain('Undo the payment');
+  });
+
+  it('offers undoing only where there is a fee payment to undo', () => {
+    const fixture = render([]);
+    const cmp = fixture.componentInstance;
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+
+    cmp['openPaymentMenu'](event, makeAthlete({ id: 6, payment_coverage: 'quarterly' }) as never);
+    expect(cmp['paymentMenuItems']().map((i) => i.label)).toContain('Undo the payment');
+
+    // A carnet is undone by deleting the carnet — a different act, with its
+    // own warning about the sessions it covers.
+    cmp['openPaymentMenu'](event, makeAthlete({ id: 7, payment_coverage: 'carnet' }) as never);
+    expect(cmp['paymentMenuItems']().map((i) => i.label)).not.toContain('Undo the payment');
+  });
+
+  it('does not offer a carnet in an academy that sells none', () => {
+    TestBed.inject(AcademyService).academy.set({
+      id: 1,
+      name: 'Test',
+      slug: 'test',
+      address: null,
+      logo_url: null,
+      monthly_fee_cents: 9500,
+    } as Academy);
+
+    const fixture = render([]);
+    const cmp = fixture.componentInstance;
+    const event = new MouseEvent('click');
+    Object.defineProperty(event, 'currentTarget', { value: document.createElement('button') });
+
+    cmp['openPaymentMenu'](event, makeAthlete({ id: 8, payment_coverage: 'none' }) as never);
+    expect(cmp['paymentMenuItems']().map((i) => i.label)).not.toContain('Sell a carnet');
   });
 });
