@@ -37,14 +37,24 @@ Run `test-client.sh vitest` on that spec, open the PR to **develop**, merge it. 
 ### 3. Build the `## Auto-closes` block
 
 ```bash
+# The COMMITS on main..develop — a squash commit carries the keyword as often
+# as the PR body does, and more reliably.
+git log --format='%H %s%n%b' origin/main..origin/develop \
+  | grep -inE '(clos|fix|resolv)[a-z]* #[0-9]+'
+
+# ...and the PR bodies, which hold the ones the commit message dropped.
 prs=$(git log --oneline origin/main..origin/develop | grep -oE '\(#[0-9]+\)' | grep -oE '[0-9]+' | sort -un)
 for p in $prs; do gh pr view "$p" --json body -q .body \
   | grep -oiE '(clos|fix|resolv)[a-z]* #[0-9]+' | grep -oE '#[0-9]+'; done | sort -t'#' -k2 -un
 ```
 
+**Run both.** They disagree, and each one alone is wrong in a different direction.
+
 Every issue that list yields goes into a `## Auto-closes` block at the end of the release PR body, **with the keyword repeated before each one**: `Closes #N1, closes #N2, …`.
 
 > **Trap:** that grep matches the keyword anywhere in the body, **including inside a sentence that says the opposite.** A PR body reading *"This does **not** close #1298"* yields `#1298` — and #1298 was an issue whose whole scope was still outstanding, so pasting the output unread would have closed a job nobody had done. Real, on the v2.50.0 release. **Read the context of every hit before it goes in the block**, and prefer `grep -n "#N"` on the body over trusting the one-liner: the script finds candidates, it does not decide them. Sentences like "does not close", "will close once", and "closes the fanout half of" all match.
+
+> **Trap:** the PR-body grep alone misses the keywords that live in the **commit message**, and an empty result reads as "nothing to close" rather than "I looked in the wrong place". On v2.54.0 neither #1487 nor #1488 carried a keyword in its body, so the derivation yielded one issue out of five, and the block had to be rebuilt by hand against the shipped code. Worse, the keywords WERE there — in #1488's squash commit — which means they fire on the merge to `main` whether or not the block names them. **A deliberate omission from the block does not keep an issue open**: #1485 was left out on purpose, because two of its four bullets were still outstanding, and closed itself anyway. If you mean to keep an issue open, check the commit messages for its number and be ready to reopen it after the merge.
 
 > **Trap:** `Closes #N1, #N2` closes only `#N1`. GitHub takes one issue per closing keyword and ignores the rest of the comma list. v2.47.0 shipped this way and left its epic open.
 
