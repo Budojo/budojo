@@ -123,7 +123,7 @@ const EXPIRING_ONE = {
  * state we want captured on the dashboard widget).
  */
 
-// ── Fixtures for the rest of the app (#1497) ────────────────────────────
+// ── Fixtures for the rest of the app ────────────────────────────────────
 //
 // The inventory shipped covering three pages. Everything below is what it
 // takes to render the other fifty: every page in the SPA calls something,
