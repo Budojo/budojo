@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
+use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
@@ -24,6 +25,30 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     RateLimiter::clear('throttle:5,1');
+});
+
+it('is not there at all on a build that cannot send mail (#1476)', function (): void {
+    // The route was open, so on the desktop profile it accepted the message,
+    // wrote a row into the local SQLite and queued a mail nothing could
+    // deliver — then answered 201. #1464 hid the form, which stopped the SPA
+    // asking; it did not stop anything else.
+    //
+    // 404 and not 403 on purpose: on a build with no mail transport this
+    // endpoint does not exist, and 403 would say it does and that you may
+    // not use it. See App\Http\Middleware\RequireCapability.
+    config()->set('budojo.capabilities.web', []);
+
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $this->postJson('/api/v1/support', [
+        'subject' => 'Something broke',
+        'category' => SupportTicketCategory::Bug->value,
+        'body' => 'It broke.',
+    ])->assertNotFound();
+
+    expect(SupportTicket::count())->toBe(0);
+    Mail::assertNothingQueued();
 });
 
 it('persists a support ticket row and queues the email', function (): void {

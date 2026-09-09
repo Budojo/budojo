@@ -4312,6 +4312,10 @@ paths:
         Mail dispatch is best-effort: a queue insert failure does
         NOT fail the request, the row is still persisted and the
         client receives a 202.
+
+        **Requires the `email` runtime capability** (#1476). A build without
+        it answers 404 — see that response for why 404 rather than 403, and
+        what the SPA offers instead.
       operationId: submitSupportTicket
       requestBody:
         required: true
@@ -4367,6 +4371,22 @@ paths:
                   data: { $ref: '#/components/schemas/SupportTicket' }
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '404':
+          description: |
+            This build cannot send mail (#1476). Gated on the `email`
+            runtime capability, which the desktop profile does not have.
+
+            404 and not 403 on purpose: on a runtime with no mail transport
+            the endpoint does not exist, and 403 would say that it does and
+            that you may not use it. Same convention as every other
+            `capability:` gate.
+
+            The route was open until #1476, which made it a black hole with a
+            202 on the desktop build: it wrote a ticket row into the local
+            SQLite, queued a mail nothing could deliver, and answered "sent".
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorMessage' }
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':

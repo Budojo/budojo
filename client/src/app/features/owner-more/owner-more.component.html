@@ -46,17 +46,38 @@
     </li>
     <li>
       <!--
-        Only where there is somewhere for a ticket to go (#1464). The form
-        writes a row and queues an email, and the desktop profile has no
-        `email` capability — so on the shipped build it answered "sent",
-        wrote to the local database, and nobody ever read it. A missing
-        way to get in touch is honest; one that swallows the message is not.
+        Two ways in, decided by whether a ticket has anywhere to go (#1464,
+        answered in #1476).
+
+        The in-app form writes a row and queues an email, and the desktop
+        profile has no `email` capability — so on the shipped build it
+        answered "sent", wrote to the local database, and nobody ever read
+        it. #1464 hid the row, which was the honest half; a missing way to
+        get in touch is better than one that swallows the message, but it is
+        still a missing way to get in touch.
+
+        So the row stays and changes what it does: the form where the server
+        can send, a `mailto:` where it cannot. The mail client needs no
+        server of ours, queues offline, and puts the reply somewhere the
+        owner already reads.
       -->
       @if (runtime.has()('email')) {
         <a class="owner-more__row" routerLink="/dashboard/support" data-cy="owner-more-support">
           <i class="pi pi-comment" aria-hidden="true"></i>
           <span class="owner-more__label">{{ 'nav.support' | translate }}</span>
           <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
+        </a>
+      } @else {
+        <a
+          class="owner-more__row"
+          [href]="supportMailto()"
+          data-cy="owner-more-support-mailto"
+          [attr.aria-label]="'nav.supportAria' | translate"
+        >
+          <i class="pi pi-envelope" aria-hidden="true"></i>
+          <span class="owner-more__label">{{ 'nav.support' | translate }}</span>
+          <span class="owner-more__value owner-more__value--email">{{ supportEmail }}</span>
+          <i class="pi pi-external-link owner-more__chevron" aria-hidden="true"></i>
         </a>
       }
     </li>

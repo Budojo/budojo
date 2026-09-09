@@ -5,9 +5,10 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
+import { RuntimeService } from '../../core/services/runtime.service';
 import { OwnerMoreComponent } from './owner-more.component';
 
-function setup(handle: string | null = 'senseimario') {
+function setup(handle: string | null = 'senseimario', capabilities = ['email', 'community']) {
   const user = signal<{ handle: string | null } | null>({ handle });
   const logout = vi.fn();
   TestBed.configureTestingModule({
@@ -18,6 +19,13 @@ function setup(handle: string | null = 'senseimario') {
       ...provideI18nTesting(),
       { provide: AuthService, useValue: { user, logout } },
       { provide: LanguageService, useValue: { currentLang: signal('en'), setLanguage: vi.fn() } },
+      {
+        provide: RuntimeService,
+        useValue: {
+          profile: signal(capabilities.includes('email') ? 'web' : 'desktop'),
+          has: signal((c: string) => capabilities.includes(c)),
+        },
+      },
     ],
   });
   const fixture = TestBed.createComponent(OwnerMoreComponent);
@@ -31,6 +39,48 @@ describe('OwnerMoreComponent (#1111)', () => {
     for (const cy of ['activity', 'settings', 'support']) {
       expect(el.querySelector(`[data-cy="owner-more-${cy}"]`), cy).not.toBeNull();
     }
+  });
+
+  describe('reaching a person (#1476)', () => {
+    it('links the in-app form where the server can send it', () => {
+      const { el } = setup('senseimario', ['email', 'community']);
+
+      expect(el.querySelector('[data-cy="owner-more-support"]')).not.toBeNull();
+      expect(el.querySelector('[data-cy="owner-more-support-mailto"]')).toBeNull();
+    });
+
+    it('falls back to a mailto where it cannot', () => {
+      // #1464 hid the row on the desktop build because the form was a black
+      // hole. Hiding it was the honest half; this is the other half.
+      const { el } = setup('senseimario', ['community']);
+      const row = el.querySelector('[data-cy="owner-more-support-mailto"]');
+
+      expect(el.querySelector('[data-cy="owner-more-support"]')).toBeNull();
+      expect(row).not.toBeNull();
+      expect(row?.getAttribute('href')).toContain('mailto:matteo.bonanno@budojo.it');
+    });
+
+    it('prefills the version and the build so the first reply is not a question', () => {
+      const { el } = setup('senseimario', ['community']);
+      const href = decodeURIComponent(
+        el.querySelector('[data-cy="owner-more-support-mailto"]')?.getAttribute('href') ?? '',
+      );
+
+      expect(href).toContain('Version: ');
+      expect(href).toContain('Build: desktop');
+      expect(href).toContain('System: ');
+    });
+
+    it('shows the address as text, not only as a link target', () => {
+      // A `mailto:` does nothing at all on a machine with no mail client
+      // configured. An address you can read is the difference between a dead
+      // link and a way through.
+      const { el } = setup('senseimario', ['community']);
+
+      expect(el.querySelector('[data-cy="owner-more-support-mailto"]')?.textContent).toContain(
+        'matteo.bonanno@budojo.it',
+      );
+    });
   });
 
   it('does not repeat what the rail already carries (#1462)', () => {
