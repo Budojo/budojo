@@ -1919,7 +1919,8 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
       makeAthlete({ joined_at: iso, attendance_month_count: 1, attendance_total_count: 1 }),
     ]);
 
-    // One session held since they joined today, and they were at it.
+    // One session held since they joined today, and they were at it. No
+    // season on this fixture, so the window is theirs alone.
     expect(text(fixture, '.athlete-attendance__total')).toBe('1/1');
   });
 

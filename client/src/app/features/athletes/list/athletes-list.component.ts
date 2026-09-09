@@ -873,7 +873,8 @@ export class AthletesListComponent implements OnInit {
 
   /**
    * The two fractions the Sessions cell renders (#1455): attended over held,
-   * this month above, the athlete's whole history below.
+   * this month above, the season below (#1484 — it was the athlete's whole
+   * history until then).
    *
    * A bare count answers "how often" but not "out of how many", and those are
    * different questions — three sessions is everything in a month with three,
