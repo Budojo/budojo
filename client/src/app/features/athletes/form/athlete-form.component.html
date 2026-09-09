@@ -37,15 +37,16 @@
         data-cy="athlete-form"
       >
         <!--
-          Five sections, one column (#1459). The form was a flat run of
-          fields in the order they happened to be added: phone between date
-          of birth and website, the billing period between status and the
-          address. Nothing was wrong with any single field, and the whole was
-          unreadable — you had to scan it to find anything, every time.
+          Four sections, one column (#1459, one fewer since #1485). The form
+          was a flat run of fields in the order they happened to be added:
+          phone between date of birth and website, the billing period between
+          status and the address. Nothing was wrong with any single field, and
+          the whole was unreadable — you had to scan it to find anything,
+          every time.
 
           Grouped, each block answers one question about the athlete, and the
           order is the order someone would ask them: who they are, where they
-          are in the gym, how to reach them, what they pay, where they live.
+          are in the gym, how to reach them, where they live.
         -->
         <section class="athlete-form__section">
           <h2 class="athlete-form__section-title">
@@ -53,6 +54,7 @@
           </h2>
           <div class="athlete-form__row">
             <app-budojo-form-field
+              class="athlete-form__field--medium"
               [label]="'athletes.form.label.firstName' | translate"
               [required]="true"
               controlId="first_name"
@@ -71,6 +73,7 @@
             </app-budojo-form-field>
 
             <app-budojo-form-field
+              class="athlete-form__field--medium"
               [label]="'athletes.form.label.lastName' | translate"
               [required]="true"
               controlId="last_name"
@@ -88,6 +91,7 @@
               />
             </app-budojo-form-field>
             <app-budojo-form-field
+              class="athlete-form__field--short"
               [label]="'athletes.form.label.dateOfBirth' | translate"
               [optionalLabel]="'athletes.form.optional' | translate"
               controlId="date_of_birth"
@@ -111,6 +115,7 @@
           </h2>
           <div class="athlete-form__row athlete-form__row--three">
             <app-budojo-form-field
+              class="athlete-form__field--medium"
               [label]="'athletes.form.label.belt' | translate"
               [required]="true"
               controlId="belt"
@@ -127,6 +132,7 @@
             </app-budojo-form-field>
 
             <app-budojo-form-field
+              class="athlete-form__field--short"
               [label]="'athletes.form.label.stripes' | translate"
               [required]="true"
               controlId="stripes"
@@ -143,6 +149,7 @@
             </app-budojo-form-field>
 
             <app-budojo-form-field
+              class="athlete-form__field--medium"
               [label]="'athletes.form.label.status' | translate"
               [required]="true"
               controlId="status"
@@ -160,6 +167,7 @@
           </div>
           <div class="athlete-form__row">
             <app-budojo-form-field
+              class="athlete-form__field--short"
               [label]="'athletes.form.label.joined' | translate"
               [required]="true"
               controlId="joined_at"
@@ -173,6 +181,54 @@
                 appendTo="body"
                 styleClass="w-full"
                 [class.ng-invalid]="joinedAt.invalid && joinedAt.touched"
+              />
+            </app-budojo-form-field>
+          </div>
+          <!--
+            What they pay, folded in from its own section (#1485). It was a
+            heading — BILLING — spent on one control, or two when the academy
+            keeps a price list. What an athlete pays is a fact about their
+            membership, not a chapter of its own, and a fifth eyebrow for it
+            cost more attention than it directed.
+          -->
+          <div class="athlete-form__row">
+            @if (feeTierOptions().length > 0) {
+              <app-budojo-form-field
+                class="athlete-form__field--medium"
+                [label]="'athletes.form.label.feeTier' | translate"
+                [optionalLabel]="'athletes.form.optional' | translate"
+                controlId="fee_tier_id"
+                [hint]="'athletes.form.hint.feeTier' | translate"
+              >
+                <p-select
+                  inputId="fee_tier_id"
+                  [options]="feeTierOptions()"
+                  formControlName="fee_tier_id"
+                  optionLabel="label"
+                  optionValue="value"
+                  [showClear]="true"
+                  [placeholder]="'athletes.form.feeTierPlaceholder' | translate"
+                  appendTo="body"
+                  styleClass="w-full"
+                  data-cy="athlete-form-fee-tier"
+                />
+              </app-budojo-form-field>
+            }
+            <app-budojo-form-field
+              class="athlete-form__field--medium"
+              [label]="'athletes.form.billingPeriod.label' | translate"
+              controlId="billing_period_months"
+              [hint]="'athletes.form.billingPeriod.hint' | translate"
+            >
+              <p-select
+                inputId="billing_period_months"
+                [options]="billingPeriodOptions()"
+                formControlName="billing_period_months"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                styleClass="w-full"
+                data-cy="athlete-form-billing-period"
               />
             </app-budojo-form-field>
           </div>
@@ -334,49 +390,6 @@
               />
             </app-budojo-form-field>
           </div>
-        </section>
-
-        <section class="athlete-form__section">
-          <h2 class="athlete-form__section-title">
-            {{ 'athletes.form.section.billing' | translate }}
-          </h2>
-          @if (feeTierOptions().length > 0) {
-            <app-budojo-form-field
-              [label]="'athletes.form.label.feeTier' | translate"
-              [optionalLabel]="'athletes.form.optional' | translate"
-              controlId="fee_tier_id"
-              [hint]="'athletes.form.hint.feeTier' | translate"
-            >
-              <p-select
-                inputId="fee_tier_id"
-                [options]="feeTierOptions()"
-                formControlName="fee_tier_id"
-                optionLabel="label"
-                optionValue="value"
-                [showClear]="true"
-                [placeholder]="'athletes.form.feeTierPlaceholder' | translate"
-                appendTo="body"
-                styleClass="w-full"
-                data-cy="athlete-form-fee-tier"
-              />
-            </app-budojo-form-field>
-          }
-          <app-budojo-form-field
-            [label]="'athletes.form.billingPeriod.label' | translate"
-            controlId="billing_period_months"
-            [hint]="'athletes.form.billingPeriod.hint' | translate"
-          >
-            <p-select
-              inputId="billing_period_months"
-              [options]="billingPeriodOptions()"
-              formControlName="billing_period_months"
-              optionLabel="label"
-              optionValue="value"
-              appendTo="body"
-              styleClass="w-full"
-              data-cy="athlete-form-billing-period"
-            />
-          </app-budojo-form-field>
         </section>
 
         <section class="athlete-form__section">
