@@ -115,3 +115,82 @@ describe('Support page (#423)', () => {
   // hub with the rail refactor (#1112) — covered by owner-more.component.spec.ts
   // (owner-more-support). The legacy nav-feedback entry stays retired (#446).
 });
+
+/**
+ * The build that cannot send (#1476).
+ *
+ * The page above assumes a runtime with the `email` capability, which is the
+ * web profile. On the desktop build there is no mail transport, and until
+ * #1476 the form was still there: it posted, the server wrote a ticket row
+ * into the local SQLite, queued a mail nothing could deliver, and answered
+ * 202. #1464 hid the row that led here; this covers the two halves that were
+ * left — the route itself, and what replaced the row.
+ */
+describe('Support on a build with no mail transport (#1476)', () => {
+  function seed(capabilities: string[]) {
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/runtime', {
+      statusCode: 200,
+      body: {
+        data: { profile: capabilities.includes('email') ? 'web' : 'desktop', capabilities },
+      },
+    });
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
+    cy.intercept('GET', '/api/v1/auth/me', {
+      statusCode: 200,
+      body: {
+        data: {
+          id: 1,
+          first_name: 'Matteo',
+          last_name: 'Bonanno',
+          full_name: 'Matteo Bonanno',
+          handle: 'matteo',
+          email: 'm@example.com',
+          email_verified_at: '2025-01-01T00:00:00Z',
+          avatar_url: null,
+          two_factor_enabled: false,
+          role: 'owner',
+        },
+      },
+    });
+    cy.intercept('GET', '/api/v1/me/onboarding', {
+      statusCode: 200,
+      body: {
+        data: { dismissed_at: '2026-01-01T00:00:00Z', completed_steps: [], available_steps: [] },
+      },
+    });
+  }
+
+  it('sends a deep link away instead of rendering a form that cannot post', () => {
+    // A bookmark, a back button or a stale link. Without the guard the page
+    // renders, the user writes their message, and the POST answers 404.
+    seed(['community']);
+    cy.visitAuthenticated('/dashboard/support');
+
+    cy.location('pathname', { timeout: 8000 }).should('not.include', '/support');
+  });
+
+  it('leaves the form alone where it works', () => {
+    seed(['community', 'email']);
+    cy.visitAuthenticated('/dashboard/support');
+
+    cy.get('[data-cy="support-form"]').should('be.visible');
+  });
+
+  it('offers a mailto from the More hub, with the address readable', () => {
+    // The address as text and not only as a target: a `mailto:` does nothing
+    // at all on a machine with no mail client configured.
+    seed(['community']);
+    cy.viewport(1280, 800);
+    cy.visitAuthenticated('/dashboard/more');
+
+    cy.get('[data-cy="owner-more-support"]').should('not.exist');
+    cy.get('[data-cy="owner-more-support-mailto"]')
+      .should('contain.text', 'matteobonanno1990@gmail.com')
+      .and('have.attr', 'href')
+      .and('include', 'mailto:matteobonanno1990@gmail.com')
+      // CRLF line breaks — RFC 6068 §5, and what Outlook needs to keep the
+      // three diagnostic lines apart.
+      .and('include', '%0D%0A');
+  });
+});

@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DesktopBridgeService } from '../../core/services/desktop-bridge.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageService } from '../../core/services/language.service';
 import { RuntimeService } from '../../core/services/runtime.service';
+import { SUPPORT_EMAIL, supportMailtoHref } from '../../shared/utils/support-contact';
 import { LanguageSheetComponent } from '../../shared/components/language-sheet/language-sheet.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { VERSION } from '../../../environments/version';
@@ -34,6 +35,16 @@ export class OwnerMoreComponent {
   private readonly languageService = inject(LanguageService);
   /** "My public profile" leads behind `capabilityGuard('community')` (#1349). */
   protected readonly runtime = inject(RuntimeService);
+
+  /**
+   * The fallback contact, for the builds where a ticket has nowhere to go
+   * (#1476). Shown as the row's value so the owner can read the address
+   * without opening anything — on a desktop with no mail client configured,
+   * a `mailto:` does nothing at all, and an address you can copy is the
+   * difference between a dead link and a way through.
+   */
+  protected readonly supportEmail = SUPPORT_EMAIL;
+  protected readonly supportMailto = computed(() => supportMailtoHref(this.runtime.profile()));
 
   protected readonly user = this.authService.user;
   protected readonly currentLang = this.languageService.currentLang;

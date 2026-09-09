@@ -458,7 +458,14 @@ export const routes: Routes = [
         // reply. Sits inside the dashboard shell so the sidebar
         // context (academy name, version footer) is visible while
         // the user composes.
+        // Gated on `email` since #1476, alongside the server-side
+        // `capability:email` on the route it posts to. Without the guard
+        // the form stays reachable by bookmark, direct URL or back button
+        // on a build that cannot send — and now fails against a 404 with a
+        // generic error toast, which is the exact case capabilityGuard was
+        // written for. Same pairing as `community` and `athlete_accounts`.
         path: 'support',
+        canActivate: [capabilityGuard('email')],
         loadComponent: () =>
           import('./features/support/support.component').then((m) => m.SupportComponent),
       },

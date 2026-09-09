@@ -76,6 +76,20 @@
   font-size: 0.875rem;
 }
 
+// The support address is the one value long enough to push its own label onto
+// a second line, which breaks the one-line rhythm every other row keeps
+// (#1476). It earns its place on a wide window, where a `mailto:` may open
+// nothing and a readable address is the way through; on a phone that is the
+// case least likely to happen and the row is tightest, so the link carries it
+// alone.
+.owner-more__value--email {
+  display: none;
+
+  @media (min-width: 768px) {
+    display: inline;
+  }
+}
+
 .owner-more__footer {
   // Laid out explicitly rather than left to the whitespace between the tags.
   // What used to separate these was a side effect of the template's line

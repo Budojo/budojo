@@ -4,6 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { LanguageService, SupportedLanguage } from '../../core/services/language.service';
+import { SUPPORT_EMAIL } from '../../shared/utils/support-contact';
 
 /**
  * Public landing / about page at `/` (#330).
@@ -32,6 +33,13 @@ import { LanguageService, SupportedLanguage } from '../../core/services/language
  * Cal.com (open-source / EU trust signals), Plausible (GDPR-as-a-
  * feature angle).
  */
+/**
+ * A prospect writing from the landing page has no build to report, so this is
+ * the address and a subject and nothing else — the diagnostics block in
+ * `supportMailtoHref` belongs to someone who is already running the app.
+ */
+const LANDING_SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Budojo support')}`;
+
 @Component({
   selector: 'app-landing',
   standalone: true,
@@ -42,6 +50,13 @@ import { LanguageService, SupportedLanguage } from '../../core/services/language
 })
 export class LandingComponent {
   private readonly languageService = inject(LanguageService);
+
+  /**
+   * The support address, read from the one place that holds it (#1476).
+   * The footer hardcoded it before there was a constant, which meant two
+   * copies of a value that changes as a unit.
+   */
+  protected readonly supportMailto = LANDING_SUPPORT_MAILTO;
 
   /**
    * Current language for the header toggle. Two-state today (EN/IT) —
