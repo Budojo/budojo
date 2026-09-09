@@ -2000,10 +2000,18 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
     const text_ = tooltip.sessionsTooltip(makeAthlete({ joined_at: joined }));
 
     expect(text_).toContain('2025/26');
-    // The joining date is spelled out, so the shorter window is explained
-    // rather than merely implied.
-    expect(text_).toMatch(/\d{4}/);
-    expect(text_.length).toBeGreaterThan('This season (2025/26)'.length);
+    // The joining date itself, spelled out — so the shorter window is
+    // explained rather than merely implied. Asserted against the formatted
+    // date and not against `/\d{4}/`, which the `2025` inside the season
+    // label already satisfies: that version passed whether or not the date
+    // interpolated at all.
+    const [y, m, d] = joined.split('-').map(Number);
+    const spelled = new Date(y, m - 1, d).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    expect(text_).toContain(spelled);
   });
 
   it('shows no tooltip on the lower line until the academy has loaded', () => {

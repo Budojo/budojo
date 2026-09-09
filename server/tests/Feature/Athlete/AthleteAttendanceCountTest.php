@@ -83,10 +83,10 @@ it('counts both ends of the month and neither day outside it', function (): void
 
     $row = $this->getJson('/api/v1/athletes')->json('data.0');
 
-    // Only the month is asserted here; the season total depends on where the
-    // season boundary falls relative to `now()`, which is what the season
-    // tests below pin deliberately.
-    expect($row['attendance_month_count'])->toBe(2);
+    // All four dates sit inside the 2025/26 season (1 Sep 2025 - 31 Aug 2026),
+    // so the season total sees every one of them while the month sees two.
+    expect($row['attendance_month_count'])->toBe(2)
+        ->and($row['attendance_total_count'])->toBe(4);
 });
 
 it('reports zero for an athlete who has never trained', function (): void {
@@ -154,13 +154,16 @@ it('counts the season, not the athlete\'s whole history', function (): void {
         '2025-06-02',  // last season, before the September boundary
         '2025-09-01',  // this season's first day
         '2026-03-02',  // this season, this month
+        '2026-08-31',  // this season's last day
+        '2026-09-01',  // NEXT season's first day — the upper bound
     ]);
 
     $row = $this->getJson('/api/v1/athletes')->json('data.0');
 
-    // Only the two inside 2025/26. The other two belong to seasons nobody is
-    // asking about — which is the whole reason the window moved.
-    expect($row['attendance_total_count'])->toBe(2);
+    // Only the three inside 2025/26. Both bounds are pinned: the two before
+    // 1 Sep 2025 belong to seasons nobody is asking about, and the one on
+    // 1 Sep 2026 belongs to the season that has not started yet.
+    expect($row['attendance_total_count'])->toBe(3);
 });
 
 it('does not credit an athlete with sessions held before they joined', function (): void {

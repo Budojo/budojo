@@ -1728,8 +1728,8 @@
         "attendanceSortInitial": "Clicca per ordinare per presenze del mese (prima le più alte)",
         "attendanceSortMonthDesc": "Ordinato per presenze del mese (prima le più alte). Clicca per continuare.",
         "attendanceSortMonthAsc": "Ordinato per presenze del mese (prima le più basse). Clicca per continuare.",
-        "attendanceSortTotalDesc": "Ordinato per presenze totali (prima le più alte). Clicca per continuare.",
-        "attendanceSortTotalAsc": "Ordinato per presenze totali (prima le più basse). Clicca per continuare."
+        "attendanceSortTotalDesc": "Ordinato per presenze della stagione (prima le più alte). Clicca per continuare.",
+        "attendanceSortTotalAsc": "Ordinato per presenze della stagione (prima le più basse). Clicca per continuare."
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",

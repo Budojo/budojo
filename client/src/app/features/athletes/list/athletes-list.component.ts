@@ -1647,6 +1647,16 @@ export class AthletesListComponent implements OnInit {
     const paid = this.hasMonthlyFee() ? this.selectedPaid() : '';
     if (paid) filters.paid = paid;
 
+    // Re-ask for the academy alongside the roster (#1484). It answers from
+    // cache and costs nothing on all but one day a year — the exception is
+    // the day the season rolls over, when the cached `season_start` is a
+    // season out of date. Without this the count on the wire would be the new
+    // season's while the denominator beside it stayed the old one's.
+    this.academyService
+      .get()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => {} });
+
     this.athleteService
       .list(filters)
       .pipe(finalize(() => this.loading.set(false)))

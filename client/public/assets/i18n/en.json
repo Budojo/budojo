@@ -1728,8 +1728,8 @@
         "attendanceSortInitial": "Click to sort by sessions this month (most first)",
         "attendanceSortMonthDesc": "Sorted by sessions this month (most first). Click to cycle.",
         "attendanceSortMonthAsc": "Sorted by sessions this month (fewest first). Click to cycle.",
-        "attendanceSortTotalDesc": "Sorted by sessions all time (most first). Click to cycle.",
-        "attendanceSortTotalAsc": "Sorted by sessions all time (fewest first). Click to cycle."
+        "attendanceSortTotalDesc": "Sorted by sessions this season (most first). Click to cycle.",
+        "attendanceSortTotalAsc": "Sorted by sessions this season (fewest first). Click to cycle."
       },
       "social": {
         "facebookLabel": "Open Facebook profile",
