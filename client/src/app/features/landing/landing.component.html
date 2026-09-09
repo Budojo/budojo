@@ -1,4 +1,4 @@
-<div class="landing">
+<div class="landing" [class.landing--banner]="consentPending()">
   <!-- ============================================================
        The first screen of the app, not a page on a website (#1497).
 
@@ -7,20 +7,22 @@
        pricing block. It was written when Budojo was hosted and `budojo.it`
        served it to people who did not have the product yet.
 
-       It is not that any more. #1230 decommissioned the hosted stack and
-       there is no deploy workflow left, so nothing serves this page on the
-       web. The one thing that renders it is the desktop app: `main.ts` loads
-       `APP_ORIGIN/`, and `publicGuard` bounces anyone already signed in
-       straight to the roster. So the entire audience is a person who has
-       just installed Budojo and does not have an account yet — and the page
-       was selling them the product they had already downloaded, telling them
-       to install it on iOS and Android (there is no phone build), and
-       pointing at an in-app contact form that #1464 removed for not working.
+       It is not that any more. #1230 decommissioned the hosted stack, so
+       nothing serves this on the web; and #1289 sent every signed-out desktop
+       visitor past it to `/auth/login`, because an installed app has nothing
+       to sell. Between them the page had no readers at all — which is how it
+       came to advertise an iOS and Android install that does not exist, and a
+       contact form #1464 had removed for not working.
+
+       #1497 answered it the other way round: the marketing is gone, and the
+       desktop bypass with it. The audience is a person who has just installed
+       Budojo and has no account yet.
 
        What that person needs is not an argument. It is: what is this, and
        what do I do first.
        ============================================================ -->
   <header class="landing__nav">
+    <!-- Not a link any more: it pointed at `/`, which is this page. -->
     <span class="landing__brand">
       <app-brand-glyph />
       <span class="landing__brand-name">Budojo</span>
@@ -95,7 +97,7 @@
         else that contacts support sits behind the login they cannot get
         past, which is exactly the situation where they need it (#1476).
       -->
-      <a [href]="supportMailto" data-cy="landing-footer-support">
+      <a [href]="supportMailto()" data-cy="landing-footer-support">
         {{ 'landing.footer.support' | translate }}
       </a>
     </div>

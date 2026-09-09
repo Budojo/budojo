@@ -698,8 +698,7 @@
   },
   "landing": {
     "nav": {
-      "switchLanguage": "Cambia lingua",
-      "brandAriaLabel": "Home Budojo"
+      "switchLanguage": "Cambia lingua"
     },
     "welcome": {
       "headline": "Gestisci l'accademia, non il foglio di calcolo.",

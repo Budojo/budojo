@@ -698,8 +698,7 @@
   },
   "landing": {
     "nav": {
-      "switchLanguage": "Switch language",
-      "brandAriaLabel": "Budojo home"
+      "switchLanguage": "Switch language"
     },
     "welcome": {
       "headline": "Run your academy, not a spreadsheet.",

@@ -28,6 +28,31 @@
   // screen with two instructions.
   gap: clamp(1.5rem, 4vw, 2.5rem);
 
+  // Room for the consent banner while it is up (#1497 review).
+  //
+  // The banner is `position: fixed; bottom: 0` and this page pins its footer
+  // to the bottom of the viewport, so on a genuine first run — the only run
+  // that has no stored consent — the banner sits exactly on top of the
+  // support link, which is the one route to a person for someone who cannot
+  // get into the app. An attribute-only test does not catch it: the link is
+  // in the DOM with the right href and completely covered.
+  //
+  // Generous, and stacked taller below the breakpoint where the banner's
+  // three buttons wrap. Whether the banner should be there at all on a build
+  // with no third parties is #1508, and a different question.
+  //
+  // Padding after the footer, so the banner has something harmless to cover.
+  // `min-height: calc(100dvh - banner)` was tried first and does nothing here:
+  // it only binds when the content is SHORTER than the viewport, and the case
+  // that matters is the one where it is not.
+  &--banner {
+    padding-block-end: 16rem;
+
+    @media (min-width: 768px) {
+      padding-block-end: 8rem;
+    }
+  }
+
   // ============================================================
   // Header — the mark and the language toggle, and nothing else.
   // Log in moved into the body beside Create: on a first run those two

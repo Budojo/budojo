@@ -14,6 +14,29 @@
  * public-guard vitest spec; faking a session here would need full HTTP
  * intercepts for no extra confidence.
  */
+/**
+ * The support link must END above where the consent banner STARTS.
+ *
+ * Read off the live rects rather than asserted as a constant: the banner's
+ * height depends on how its three buttons wrap, which depends on the width
+ * and on the language.
+ */
+function assertClearOfBanner(): void {
+  // Scrolled to the foot first: on a short window the page is taller than the
+  // viewport whatever we do, and what has to be true is that the link is
+  // REACHABLE — not that it happens to start on screen.
+  cy.scrollTo('bottom');
+  cy.get('[data-cy="cookie-banner"]').then(($banner) => {
+    const bannerTop = $banner[0].getBoundingClientRect().top;
+    cy.get('[data-cy="landing-footer-support"]').then(($link) => {
+      expect(
+        $link[0].getBoundingClientRect().bottom,
+        'support link bottom vs banner top',
+      ).to.be.lessThan(bannerTop);
+    });
+  });
+}
+
 describe('First screen (#1497)', () => {
   beforeEach(() => {
     // No auth token, no API calls. A first run.
@@ -70,6 +93,28 @@ describe('First screen (#1497)', () => {
     cy.get('[data-cy="landing-footer-privacy"]').should('have.attr', 'href', '/privacy');
     cy.get('[data-cy="landing-footer-terms"]').should('have.attr', 'href', '/terms');
     cy.get('[data-cy="landing-footer-help"]').should('have.attr', 'href', '/help');
+  });
+
+  it('keeps the support link clear of the consent banner on a genuine first run', () => {
+    // The banner is `position: fixed; bottom: 0` and this page pins its
+    // footer to the bottom of the viewport, so without room reserved for it
+    // the support link sits underneath — present in the DOM, correct href,
+    // and completely covered. An attribute assertion cannot see that; a
+    // visibility assertion with the banner actually up can.
+    cy.clearLocalStorage();
+    cy.visit('/');
+
+    // Geometry, not `be.visible`: Cypress's visibility rule ignores an element
+    // covered by a fixed overlay, so `be.visible` passes on a link buried
+    // under the banner. What has to be true is that the link ends above where
+    // the banner starts.
+    cy.get('[data-cy="cookie-banner"]').should('be.visible');
+    assertClearOfBanner();
+
+    // And again at the width where the banner's buttons wrap and it grows to
+    // roughlythree  times the height.
+    cy.viewport(390, 844);
+    assertClearOfBanner();
   });
 
   it('the language toggle flips between EN / IT', () => {
