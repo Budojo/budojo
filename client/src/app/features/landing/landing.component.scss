@@ -1,23 +1,38 @@
-// Public landing page (#330). Apple-minimal canon — same tokens as the
-// dashboard, more breathing room because this is a marketing surface
-// not an operational one. Mobile-first; the desktop layout layers in
-// at 768px / 1024px breakpoints.
+// The app's first screen (#330, rewritten in #1497).
+//
+// It was a marketing page — hero, problem list, feature grid, trust columns,
+// how-it-works, pricing — and 448 lines of stylesheet for them. Nothing
+// serves it on the web any more (#1230), so its only reader is someone who
+// has just installed the desktop app and has no account yet. What is left is
+// a welcome: a headline, two buttons, and the three things to do first.
+//
+// Apple-minimal canon, same tokens as the dashboard. Mobile-first.
 
 .landing {
-  // The marketing page lives OUTSIDE the dashboard shell; the shell's
-  // `--budojo-page-padding-*` tokens don't apply here. Pad on the
-  // outer container instead, with generous breathing room.
+  // Outside the dashboard shell, so its `--budojo-page-padding-*` tokens do
+  // not apply. Padded on the outer container instead, and vertically centred:
+  // this page is short now, and left at the top of a desktop window it read
+  // as a page that had failed to finish loading.
   padding-inline: clamp(1rem, 5vw, 4rem);
   padding-block: clamp(1.5rem, 4vw, 3rem);
-  max-width: 80rem;
+  max-width: 48rem;
   margin: 0 auto;
+  min-height: 100dvh;
   color: var(--p-text-color);
   display: flex;
   flex-direction: column;
-  gap: clamp(3rem, 8vw, 6rem);
+  // Tuned so the whole screen — headline, buttons, all three steps and the
+  // footer — fits an 800px-tall window without scrolling. At the 3.5rem this
+  // started at, the third step and the footer fell below the fold, and a
+  // first screen whose last instruction you have to scroll for is a first
+  // screen with two instructions.
+  gap: clamp(1.5rem, 4vw, 2.5rem);
 
   // ============================================================
-  // Header / nav
+  // Header — the mark and the language toggle, and nothing else.
+  // Log in moved into the body beside Create: on a first run those two
+  // are the whole decision, and splitting them across the page made the
+  // header a second place to look for the same thing.
   // ============================================================
   &__nav {
     display: flex;
@@ -30,7 +45,6 @@
     display: inline-flex;
     align-items: center;
     gap: 0.625rem;
-    text-decoration: none;
     color: inherit;
 
     app-brand-glyph {
@@ -46,18 +60,7 @@
     letter-spacing: -0.01em;
   }
 
-  &__nav-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-
-    @media (max-width: 480px) {
-      gap: 0.5rem;
-    }
-  }
-
-  &__lang-toggle,
-  &__footer-lang {
+  &__lang-toggle {
     background: transparent;
     border: 1px solid var(--p-content-border-color);
     border-radius: var(--p-border-radius-full);
@@ -77,335 +80,129 @@
     }
   }
 
-  &__nav-link {
+  // ============================================================
+  // Welcome
+  // ============================================================
+  &__welcome {
+    // Takes the slack, so the header stays at the top and the footer at the
+    // bottom whatever the window height.
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+
+  &__headline {
+    margin: 0;
+    font-size: clamp(1.875rem, 5vw, 2.75rem);
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    max-width: 18ch;
+  }
+
+  &__sub {
+    margin: 0;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: var(--p-text-color-secondary);
+    // A readable measure. The old page ran this to the full 80rem container,
+    // which at desktop width is roughly 140 characters a line.
+    max-width: 54ch;
+  }
+
+  &__cta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+  }
+
+  &__cta-secondary {
     color: var(--p-text-color);
     text-decoration: none;
     font-size: 0.9375rem;
     font-weight: 500;
-    padding: 0.25rem 0.5rem;
-
-    &:hover {
-      color: var(--p-primary-700);
-    }
-  }
-
-  // ============================================================
-  // Hero — punch line + supporting paragraph + CTA + visual
-  // ============================================================
-  &__hero {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2.5rem;
-    align-items: center;
-
-    @media (min-width: 1024px) {
-      grid-template-columns: 1.2fr 1fr;
-      gap: 4rem;
-    }
-  }
-
-  &__hero-text {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  &__hero-headline {
-    margin: 0;
-    font-size: clamp(2rem, 5vw, 3.25rem);
-    line-height: 1.1;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
-  &__hero-sub {
-    margin: 0;
-    font-size: clamp(1rem, 2vw, 1.125rem);
-    line-height: 1.5;
-    color: var(--p-text-color-secondary);
-    max-width: 36ch;
-  }
-
-  &__hero-cta {
+    // 48px tall, so it is a target and not only a word (Fitts).
+    min-height: 3rem;
     display: inline-flex;
     align-items: center;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  &__hero-secondary {
-    color: var(--p-text-color);
-    font-weight: 500;
 
     &:hover {
       color: var(--p-primary-700);
     }
   }
 
-  &__hero-fineprint {
-    margin: 0;
-    font-size: 0.8125rem;
-    color: var(--p-text-color-secondary);
-  }
-
-  // Hero visual — real product screenshot framed by a soft surface
-  // backdrop. Aspect ratio is portrait on mobile (matches a phone-in-
-  // hand mental model) and square at desktop (paired side-by-side
-  // with the hero copy column).
-  &__hero-visual {
-    aspect-ratio: 4 / 5;
-    background: var(--p-surface-100);
-    border-radius: var(--p-border-radius-lg);
-    border: 1px solid var(--p-content-border-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-
-    @media (min-width: 1024px) {
-      aspect-ratio: 1 / 1;
-    }
-  }
-
-  &__hero-screenshot {
-    display: block;
-    max-height: 100%;
-    max-width: 100%;
-    width: auto;
-    height: auto;
-    border-radius: var(--p-border-radius-md);
-    box-shadow: var(--budojo-elevation-floating);
-  }
-
   // ============================================================
-  // Section title (shared across pain, features, trust, how, pricing)
+  // The three steps
   // ============================================================
-  &__section-title {
-    margin: 0 0 1.5rem;
-    font-size: clamp(1.5rem, 3vw, 2rem);
+  &__steps {
+    border-top: 1px solid var(--p-content-border-color);
+    padding-top: 1.5rem;
+  }
+
+  &__steps-title {
+    margin: 0 0 1rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    letter-spacing: -0.015em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
   }
 
-  // ============================================================
-  // Pain — bullet list, prose register
-  // ============================================================
-  &__pain-list {
+  &__steps-list {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.875rem;
-    max-width: 56rem;
-  }
-
-  &__pain-item {
-    font-size: clamp(1rem, 2vw, 1.125rem);
-    line-height: 1.5;
-    color: var(--p-text-color);
-    padding-inline-start: 1.5rem;
-    position: relative;
-
-    &::before {
-      content: '·';
-      position: absolute;
-      left: 0;
-      font-weight: 700;
-      color: var(--p-primary-color);
-    }
-  }
-
-  // ============================================================
-  // Features — 6-card grid, icon + heading + body
-  // ============================================================
-  &__features-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-
-    @media (min-width: 768px) {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    @media (min-width: 1024px) {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2rem;
-    }
-  }
-
-  &__feature-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 1.5rem;
-    background: var(--p-content-background);
-    border: 1px solid var(--p-content-border-color);
-    border-radius: var(--p-border-radius-md);
-    transition: border-color 160ms var(--budojo-motion-decelerate);
-
-    &:hover {
-      border-color: var(--p-primary-300);
-    }
-  }
-
-  &__feature-icon {
-    font-size: 1.5rem;
-    color: var(--p-primary-color);
-  }
-
-  &__feature-title {
-    margin: 0;
-    font-size: 1.0625rem;
-    font-weight: 600;
-  }
-
-  &__feature-body {
-    margin: 0;
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    color: var(--p-text-color-secondary);
-  }
-
-  // ============================================================
-  // Trust — 3 short claims, icon-led
-  // ============================================================
-  &__trust-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-
-    @media (min-width: 768px) {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2rem;
-    }
-  }
-
-  &__trust-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  &__trust-icon {
-    font-size: 1.25rem;
-    color: var(--p-primary-color);
-  }
-
-  &__trust-title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-  }
-
-  &__trust-body {
-    margin: 0;
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    color: var(--p-text-color-secondary);
-  }
-
-  // ============================================================
-  // How it works — 3-step ordered arc
-  // ============================================================
-  &__how-steps {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 2rem;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
-    max-width: 56rem;
   }
 
-  &__how-step {
+  &__step {
     display: flex;
     align-items: flex-start;
     gap: 1rem;
   }
 
-  &__how-step-number {
+  &__step-number {
     flex: 0 0 auto;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2rem;
+    height: 2rem;
     border-radius: var(--p-border-radius-full);
-    background: var(--p-primary-color);
-    color: var(--p-primary-contrast-color);
+    background: var(--p-surface-100);
+    color: var(--p-text-color-secondary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.875rem;
   }
 
-  &__how-step-text {
+  &__step-text {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
   }
 
-  &__how-step-title {
-    margin: 0;
-    font-size: 1.0625rem;
+  &__step-title {
+    font-size: 1rem;
     font-weight: 600;
   }
 
-  &__how-step-body {
-    margin: 0;
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    color: var(--p-text-color-secondary);
-  }
-
-  &__how-cta {
-    display: flex;
-    justify-content: flex-start;
-  }
-
-  // ============================================================
-  // Pricing — single MVP tile
-  // ============================================================
-  &__pricing-card {
-    padding: 2rem;
-    background: var(--p-surface-100);
-    border-radius: var(--p-border-radius-lg);
-    border: 1px solid var(--p-content-border-color);
-    max-width: 36rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  &__pricing-eyebrow {
-    margin: 0;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--p-text-color-secondary);
-  }
-
-  &__pricing-headline {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: -0.015em;
-  }
-
-  &__pricing-body {
-    margin: 0;
+  &__step-body {
     font-size: 0.9375rem;
     line-height: 1.5;
     color: var(--p-text-color-secondary);
   }
 
   // ============================================================
-  // Footer — discrete, hairline, language + privacy + GitHub
+  // Footer
   // ============================================================
   &__footer {
     border-top: 1px solid var(--p-content-border-color);
-    padding-block: 1.5rem;
+    padding-block: 1.5rem 0;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -423,8 +220,7 @@
     flex-wrap: wrap;
     gap: 1rem 1.25rem;
 
-    a,
-    button {
+    a {
       color: var(--p-text-color-secondary);
       text-decoration: none;
       font-size: 0.875rem;
@@ -434,10 +230,6 @@
         color: var(--p-text-color);
       }
     }
-  }
-
-  &__footer-lang {
-    cursor: pointer;
   }
 
   &__footer-meta {

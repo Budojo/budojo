@@ -698,95 +698,34 @@
   },
   "landing": {
     "nav": {
-      "login": "Log in",
-      "signup": "Start free",
       "switchLanguage": "Switch language",
-      "brandAriaLabel": "Budojo home",
-      "primaryAriaLabel": "Primary"
+      "brandAriaLabel": "Budojo home"
     },
-    "hero": {
-      "headline": "Run your academy from your phone, not from a spreadsheet.",
-      "sub": "Built by a BJJ instructor for instructors. Everything you used to keep on sticky notes and Google Sheets, in one place — on the phone you already carry to the mat.",
-      "cta": "Start free",
-      "fineprint": "No credit card. 2 minutes to set up.",
-      "visualAlt": "Budojo on a phone — the attendance heatmap on the Stats page."
-    },
-    "pain": {
-      "heading": "If any of this sounds familiar, we built Budojo for you.",
-      "point1": "Belt promotions tracked in a notebook that's gone missing twice.",
-      "point2": "Medical certificates expiring without anyone noticing until the kid can't compete.",
-      "point3": "That one parent who's behind two months on the fee and you keep forgetting to chase.",
-      "point4": "Attendance scrawled on a clipboard that's older than half your students."
-    },
-    "features": {
-      "heading": "What Budojo does",
-      "roster": {
-        "title": "Your roster, sorted.",
-        "body": "Every athlete in one place — belt, stripes, contact info, joining date. See who's been training, who's due for a promotion, who's owing fees. At a glance."
+    "welcome": {
+      "headline": "Run your academy, not a spreadsheet.",
+      "sub": "Everything you kept on sticky notes and in a shared sheet, in one place — on the gym's own computer. No internet needed, and nothing leaves the machine.",
+      "create": "Create your academy",
+      "login": "I already have an account",
+      "steps": "Three things to get started",
+      "step1": {
+        "title": "Create your account",
+        "body": "Your name, an email and a password. It lives on this computer — there is no server to sign up to."
       },
-      "documents": {
-        "title": "Documents that won't expire on you.",
-        "body": "Upload medical certificates, ID, insurance — with expiry dates. The dashboard surfaces anything within 30 days of expiring before it becomes a problem."
+      "step2": {
+        "title": "Set up the academy",
+        "body": "Name, address, the days you train, and a fee if you charge one. About a minute, and you can change any of it later."
       },
-      "attendance": {
-        "title": "Attendance without the clipboard.",
-        "body": "One tap per student, daily summary, monthly trends. The mobile-first interface is built for the side of the mat, not the office desk."
-      },
-      "payments": {
-        "title": "Who hasn't paid this month?",
-        "body": "Set a monthly fee, mark each athlete paid (or not). After the 15th, a dashboard widget surfaces who you still need to chase — before anyone has to ask."
-      },
-      "pwa": {
-        "title": "Your academy, in your pocket.",
-        "body": "Installable as an app on iOS and Android. Updates itself automatically when we ship. Works as well on a phone as it does on a laptop."
-      },
-      "support": {
-        "title": "Send us a note when something breaks.",
-        "body": "Spotted a bug or wishing for a feature? The in-app contact form sends a message straight to us with the version + device info already attached, and we reply to the email on your account."
+      "step3": {
+        "title": "Add your first athlete",
+        "body": "Name and belt is enough to start. Or bring a whole roster over from a spreadsheet in one go."
       }
-    },
-    "trust": {
-      "heading": "Why us, not them",
-      "builtBy": {
-        "title": "Built by a BJJ instructor.",
-        "body": "Not enterprise software pretending to know your world. Every feature exists because someone — usually the founder — needed it on the mat."
-      },
-      "gdpr": {
-        "title": "GDPR-first. Your data is yours.",
-        "body": "Export everything you've put in with one click. Delete your account and we wipe it within 30 days. No tracking cookies. No third-party analytics."
-      },
-      "italian": {
-        "title": "In English. In Italian.",
-        "body": "Both languages are first-class. Translated by a person who actually trains, not a machine. More languages on the way as the product reaches new markets."
-      }
-    },
-    "how": {
-      "heading": "How it works",
-      "signup": {
-        "title": "Sign up.",
-        "body": "Email and password. 30 seconds."
-      },
-      "setup": {
-        "title": "Set up your academy.",
-        "body": "Name, address, training schedule, monthly fee if you charge one. About a minute."
-      },
-      "firstAthlete": {
-        "title": "Add your first athlete.",
-        "body": "Done — you're using the product. Another 30 seconds."
-      }
-    },
-    "pricing": {
-      "heading": "Pricing",
-      "eyebrow": "While we're getting started",
-      "headline": "Free during MVP.",
-      "body": "No credit card. We'll tell you well before that changes — and you'll always be able to export everything and walk away."
     },
     "footer": {
       "privacy": "Privacy",
       "terms": "Terms",
-      "subProcessors": "Sub-processors",
       "support": "Contact us",
-      "tagline": "Made for the mat. Built in Italy."
+      "tagline": "Made for the mat. Built in Italy.",
+      "help": "Help"
     }
   },
   "profile": {

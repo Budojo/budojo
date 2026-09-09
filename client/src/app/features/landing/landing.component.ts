@@ -76,77 +76,21 @@ export class LandingComponent {
   }
 
   /**
-   * Pain-section bullets. Pulled from i18n keys at template time
-   * (TranslatePipe in the @for) so the array length is stable in
-   * tests. Indices are arbitrary — the keys themselves carry the
-   * meaning.
+   * What to do first, in order (#1497).
+   *
+   * The three steps that used to be the "how it works" arc of a sales page,
+   * kept because on this page they stopped being an argument and became
+   * instructions. A local-first app has no onboarding email to catch someone
+   * who installs it and stops — this is the only thing between the installer
+   * finishing and an empty roster.
+   *
+   * Full translation paths, never built by concatenation: the i18n parity
+   * check cannot see a dynamically-built key, and the IT side drifts in
+   * silence (`client/CLAUDE.md` § i18n).
    */
-  protected readonly painPoints: readonly string[] = [
-    'landing.pain.point1',
-    'landing.pain.point2',
-    'landing.pain.point3',
-    'landing.pain.point4',
-  ];
-
-  /**
-   * Solution-section feature cards. Each card has a heading + body +
-   * icon. `titleKey`/`bodyKey` are the FULL translation paths so the
-   * template never builds keys via string concatenation — that
-   * pattern is banned (`client/CLAUDE.md` § i18n) because the parity
-   * check can't see dynamically-built keys and IT translations drift
-   * silently.
-   */
-  protected readonly features: readonly {
-    iconClass: string;
-    titleKey: string;
-    bodyKey: string;
-  }[] = [
-    {
-      iconClass: 'pi-users',
-      titleKey: 'landing.features.roster.title',
-      bodyKey: 'landing.features.roster.body',
-    },
-    {
-      iconClass: 'pi-file',
-      titleKey: 'landing.features.documents.title',
-      bodyKey: 'landing.features.documents.body',
-    },
-    {
-      iconClass: 'pi-check-circle',
-      titleKey: 'landing.features.attendance.title',
-      bodyKey: 'landing.features.attendance.body',
-    },
-    {
-      iconClass: 'pi-credit-card',
-      titleKey: 'landing.features.payments.title',
-      bodyKey: 'landing.features.payments.body',
-    },
-    {
-      iconClass: 'pi-mobile',
-      titleKey: 'landing.features.pwa.title',
-      bodyKey: 'landing.features.pwa.body',
-    },
-    {
-      iconClass: 'pi-comment',
-      titleKey: 'landing.features.support.title',
-      bodyKey: 'landing.features.support.body',
-    },
-  ];
-
-  /**
-   * 3-step "how it works" arc. Same explicit-keys rule as `features`.
-   */
-  protected readonly steps: readonly {
-    number: string;
-    titleKey: string;
-    bodyKey: string;
-  }[] = [
-    { number: '1', titleKey: 'landing.how.signup.title', bodyKey: 'landing.how.signup.body' },
-    { number: '2', titleKey: 'landing.how.setup.title', bodyKey: 'landing.how.setup.body' },
-    {
-      number: '3',
-      titleKey: 'landing.how.firstAthlete.title',
-      bodyKey: 'landing.how.firstAthlete.body',
-    },
+  protected readonly steps: readonly { title: string; body: string }[] = [
+    { title: 'landing.welcome.step1.title', body: 'landing.welcome.step1.body' },
+    { title: 'landing.welcome.step2.title', body: 'landing.welcome.step2.body' },
+    { title: 'landing.welcome.step3.title', body: 'landing.welcome.step3.body' },
   ];
 }

@@ -1,84 +1,95 @@
 /**
- * Public landing / about page (#330) at `/` — replaces the cold
- * redirect to `/auth/login` we used to ship. Pairs with #331 (login
- * UX repositioning, the routing change is in the same PR).
+ * The app's first screen at `/` (#330, rewritten in #1497).
  *
- * Cypress sweep covers the cold-visitor flow:
- *   - `/` lands on the marketing page (NOT on /auth/login)
- *   - Header has a Login text link → /auth/login
- *   - Header has a Sign-up primary button → /auth/register
- *   - Hero CTA → /auth/register
- *   - Footer Privacy + Sub-processors links → public routes
+ * It was a marketing page, and this spec covered a cold visitor arriving on
+ * a website. Nothing serves it on the web any more (#1230 decommissioned the
+ * hosted stack and there is no deploy workflow left) — the only thing that
+ * renders it is the desktop app, which loads `APP_ORIGIN/`, with
+ * `publicGuard` sending anyone who already has an account to the roster.
  *
- * Authenticated bypass (publicGuard redirecting to /dashboard) is
- * exercised by the dedicated public-guard vitest spec — putting it
- * in cypress would need full HTTP intercepts to fake a logged-in
- * session and the unit-level test is enough for that branch.
+ * So the flow under test is not a prospect deciding. It is someone who has
+ * just installed Budojo, has no account, and needs to know what to do.
+ *
+ * The authenticated bypass (publicGuard → /dashboard) is covered by the
+ * public-guard vitest spec; faking a session here would need full HTTP
+ * intercepts for no extra confidence.
  */
-describe('Landing page (#330)', () => {
+describe('First screen (#1497)', () => {
   beforeEach(() => {
-    // No auth token, no API calls. Cold visit.
+    // No auth token, no API calls. A first run.
     cy.visit('/');
   });
 
-  it('renders the marketing page at `/` (not the login form)', () => {
+  it('welcomes rather than sells', () => {
     cy.location('pathname').should('eq', '/');
 
-    cy.get('.landing__hero-headline')
+    cy.get('.landing__headline')
       .should('be.visible')
-      .and('contain.text', 'Run your academy from your phone');
+      .and('contain.text', 'Run your academy, not a spreadsheet');
 
-    cy.get('[data-cy="landing-hero-cta"]').should('be.visible').and('contain.text', 'Start free');
+    // The page used to promise an iOS and Android install, a phone-first
+    // product, and an in-app contact form #1464 removed for not working.
+    cy.get('.landing').should('not.contain.text', 'iOS');
+    cy.get('.landing').should('not.contain.text', 'Android');
+    cy.get('.landing').should('not.contain.text', 'credit card');
   });
 
-  it('the header Login link routes to /auth/login', () => {
-    cy.get('[data-cy="landing-login"]')
+  it('creates the academy from the one filled button', () => {
+    // `<p-button [routerLink]>` renders a programmatic-navigation <button>,
+    // not an <a>, so this clicks and asserts the URL rather than the href.
+    // The 10s timeout absorbs the slowest CI shard's startup (#708 / #710).
+    cy.get('[data-cy="landing-signup"]')
       .should('be.visible')
-      .and('have.attr', 'href', '/auth/login');
-  });
+      .and('contain.text', 'Create your academy')
+      .click();
 
-  it('the header Sign-up button routes to /auth/register', () => {
-    // <p-button [routerLink]> renders a programmatic-navigation
-    // <button> (not an <a>), so we click and verify the URL change
-    // rather than asserting `href`. The cypress-side equivalent of
-    // the unit test that verifies the data-cy hook + label.
-    //
-    // Flake mitigation (caught on #708 + #710 CI): the unused
-    // `/auth/login` intercept was creating ordering noise with the
-    // PrimeNG button's onClick listener; removed. The location
-    // assertion runs under the default 4s retry — fine on local
-    // hardware but tight on CI runners under load. Bump to 10s to
-    // absorb the slowest CI shard's startup latency.
-    cy.get('[data-cy="landing-signup"]').should('be.visible').click();
     cy.location('pathname', { timeout: 10_000 }).should('eq', '/auth/register');
   });
 
-  it('the hero CTA also routes to /auth/register', () => {
-    cy.get('[data-cy="landing-hero-cta"]').should('be.visible').click();
-    cy.location('pathname').should('eq', '/auth/register');
+  it('keeps log in as the quieter route, for a reinstall or a second machine', () => {
+    cy.get('[data-cy="landing-login"]')
+      .should('be.visible')
+      .and('contain.text', 'I already have an account')
+      .and('have.attr', 'href', '/auth/login');
   });
 
-  it('the footer carries Privacy + Terms + Sub-processors links + GitHub', () => {
+  it('shows the three steps, numbered, in order', () => {
+    cy.get('.landing__step').should('have.length', 3);
+    cy.get('.landing__step').eq(0).should('contain.text', 'Create your account');
+    cy.get('.landing__step').eq(1).should('contain.text', 'Set up the academy');
+    cy.get('.landing__step').eq(2).should('contain.text', 'Add your first athlete');
+  });
+
+  it('leaves a way to reach a person, and the legal pages', () => {
+    // Support is the load-bearing one: every other route to it is behind the
+    // login this reader cannot get past (#1476).
+    cy.get('[data-cy="landing-footer-support"]')
+      .should('have.attr', 'href')
+      .and('include', 'mailto:matteobonanno1990@gmail.com');
+
     cy.get('[data-cy="landing-footer-privacy"]').should('have.attr', 'href', '/privacy');
     cy.get('[data-cy="landing-footer-terms"]').should('have.attr', 'href', '/terms');
-    cy.get('[data-cy="landing-footer-subprocessors"]').should(
-      'have.attr',
-      'href',
-      '/sub-processors',
-    );
-    cy.contains('a', 'GitHub').should('have.attr', 'href', 'https://github.com/Budojo/budojo');
+    cy.get('[data-cy="landing-footer-help"]').should('have.attr', 'href', '/help');
   });
 
   it('the language toggle flips between EN / IT', () => {
-    // Toggle starts on EN by default — the button shows the OTHER
-    // language as its label (IT). After clicking, the page renders
-    // Italian copy.
+    // The button shows the OTHER language as its label.
     cy.get('[data-cy="landing-lang-toggle"]').should('contain.text', 'IT').click();
 
-    cy.get('.landing__hero-headline').should('contain.text', 'Gestisci la tua palestra');
+    cy.get('.landing__headline').should('contain.text', "Gestisci l'accademia");
 
-    // Click again to flip back to English.
     cy.get('[data-cy="landing-lang-toggle"]').should('contain.text', 'EN').click();
-    cy.get('.landing__hero-headline').should('contain.text', 'Run your academy from your phone');
+
+    cy.get('.landing__headline').should('contain.text', 'Run your academy');
+  });
+
+  it('does not overflow a phone', () => {
+    cy.viewport(390, 844);
+    cy.get('.landing__headline').should('be.visible');
+
+    cy.document().then((doc) => {
+      const root = doc.documentElement;
+      expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
+    });
   });
 });
