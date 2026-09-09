@@ -27,5 +27,18 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
         expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
       });
     });
+
+    it('keeps the width scale inside the viewport (#1485)', () => {
+      // The scale caps fields at 11rem and 17rem, which is comfortably inside
+      // a phone — but a cap is a `max-width`, and the failure mode of getting
+      // that wrong is a fixed `width` that overflows on the narrowest device
+      // and nowhere else. Measured rather than assumed.
+      cy.get('#first_name').then(($el) => {
+        expect($el[0].getBoundingClientRect().width).to.be.lte(width);
+      });
+      cy.get('#date_of_birth').then(($el) => {
+        expect($el[0].getBoundingClientRect().width).to.be.lte(width);
+      });
+    });
   });
 });

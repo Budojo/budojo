@@ -79,6 +79,60 @@
     }
   }
 
+  // Three widths, and only three (#1485).
+  //
+  // Before this, a field's width was decided by the ROW it happened to land
+  // in: a two-column row made every field half the card, a three-column row a
+  // third, and a field alone in a row still got half a card — so a date input
+  // was as wide as a surname. First name and Date of birth matched each other
+  // and neither matched Joined, for a reason that is real (which grid they
+  // are in) and completely invisible to the reader.
+  //
+  // The field says how much room its CONTENT needs instead. `short` is for
+  // values of known, fixed length — a date, a count. `medium` is for names
+  // and selects. Anything without a modifier fills its column, which is right
+  // for an email, a URL or a street.
+  //
+  // `short` is 11rem and not the 9rem it started as: 9 clipped the Joined
+  // datepicker to `2023-01`, because a `yyyy-mm-dd` value plus the calendar
+  // button is the widest thing the size has to hold. A width scale is only
+  // worth having if the longest value in each size actually fits it.
+  //
+  // A `max-width` rather than a `width`, so the mobile single-column layout
+  // and any narrower track still shrink these normally — and so a select,
+  // which sizes to its own content, is capped rather than stretched.
+  &__field {
+    &--short {
+      max-width: 11rem;
+    }
+
+    &--medium {
+      max-width: 17rem;
+    }
+
+    // The cap has to reach the CONTROL, not only the wrapper.
+    //
+    // Every call site passes `styleClass="w-full"` and it does not do this:
+    // the only `.w-full` rule in the codebase sets `display: flex` on an
+    // input WRAPPER, so a `p-select` sizes to its longest option instead. The
+    // result was a scale that bound on text inputs and datepickers and not on
+    // selects — Belt, nominally `medium`, rendered NARROWER than Date of
+    // birth, nominally `short`, which is the same complaint in a new
+    // arrangement.
+    //
+    // `::ng-deep` because there is no width token to override, scoped under
+    // the two modifiers so it cannot reach a control that did not ask. Same
+    // shape as `.academy-phone-country-code` in the academy form.
+    &--short,
+    &--medium {
+      ::ng-deep .p-select,
+      ::ng-deep .p-datepicker,
+      ::ng-deep .p-inputtext {
+        width: 100%;
+      }
+    }
+  }
+
   &__actions {
     display: flex;
     justify-content: flex-end;
