@@ -60,6 +60,89 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.54.0',
+    date: '2026-09-09',
+    headline: {
+      en: 'The season — and the roster stops counting forever.',
+      it: 'La stagione — e la lista atleti smette di contare per sempre.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '📅 Sessions are counted per season now, not since someone joined',
+          it: '📅 Le presenze si contano per stagione, non da quando uno si è iscritto',
+        },
+        bullets: [
+          {
+            en: 'The lower number in the Sessions column counted EVERY session since the day that athlete joined. It looks like the fuller answer and it is the one that says least: 1204 never gets smaller, so it stops telling you anything long before anyone notices. And two athletes who joined five years apart cannot be compared on it — in March the question is how THIS year is going, and the answer arrived spread over three of them.',
+            it: "Il numero in basso della colonna «Sessioni» contava tutte le presenze dal giorno dell'iscrizione. Sembra l'informazione più completa, ed è quella che dice di meno: 1204 non diventa mai più piccolo, quindi smette di raccontare qualcosa molto prima che uno se ne accorga. E due atleti iscritti a cinque anni di distanza non sono confrontabili su quel numero: a marzo la domanda è come sta andando quest'anno, e la risposta arrivava spalmata su tre.",
+          },
+          {
+            en: 'There is a new field in the academy settings — Season starts in. Pick the month your training year restarts. Leave it alone and it is September, which is when the year restarts in almost every gym. A month and not a full date: a season starts on the first of a month, always, and offering "14 September" would be a second box to fill in and a rule — "sessions on the 12th belong to last year" — that helps nobody.',
+            it: "Nelle impostazioni dell'accademia c'è un campo nuovo: «La stagione inizia a». Scegli il mese in cui riparte il tuo anno di allenamenti. Se non lo tocchi vale settembre, che è quando ricomincia l'anno nella quasi totalità delle palestre. Un mese e non una data intera: la stagione riparte il primo del mese, sempre, e offrire «14 settembre» avrebbe voluto dire un secondo campo da compilare e una regola — «le presenze del 12 valgono l'anno scorso» — che non serve a nessuno.",
+          },
+          {
+            en: "Nobody who joined mid-season is penalised for it. Their count starts the day they arrived, not the day the season opened: someone who walks in during November could not have been at September's classes, and measuring them against the whole season reports the gym's calendar as if it were their record. Hover the number and it says so in full — which season it is, and the day the counting starts for that person.",
+            it: "Chi si è iscritto a stagione già iniziata non viene penalizzato. Il suo conteggio parte dal giorno in cui è arrivato, non dall'inizio della stagione: chi entra a novembre non poteva esserci a settembre, e misurarlo su tutta la stagione racconta il calendario della palestra come se fosse il suo. Passandoci sopra il mouse te lo dice per esteso: quale stagione è, e da che giorno si conta per quella persona.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: "🥋 The gym's logo arrives whole",
+          it: '🥋 Il logo della palestra arriva intero',
+        },
+        bullets: [
+          {
+            en: "It was wrong twice, in opposite directions. It started as a 28-pixel image with no cropping rule at all, so any logo that was not square arrived SQUASHED — and gym logos are nearly always wide. Last release stopped the squashing by CROPPING instead, which for a logo is the wrong half of the trade: cropping a badge cuts a piece off someone's identity. You see all of it now, letterboxed inside its square.",
+            it: "Era sbagliato due volte, in direzioni opposte. All'inizio era un'immagine da 28 pixel senza nessuna regola di ritaglio, quindi qualsiasi logo non quadrato arrivava schiacciato — e i loghi delle palestre sono quasi sempre larghi. Il rilascio scorso ha smesso di schiacciarlo tagliandolo, che per un logo è la metà sbagliata dello scambio: tagliare un fregio significa tagliare via un pezzo dell'identità di qualcuno. Adesso si vede tutto, riquadrato dentro il suo spazio.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '⚠️ The alert bell looks like an alert when there is one',
+          it: "⚠️ Il campanello degli avvisi si vede quando c'è qualcosa",
+        },
+        bullets: [
+          {
+            en: 'The alert icon above the roster was the same muted grey as the eye and the bin next to it. A warning that looks like every other control is not a warning. It is amber now when there is something to look at — and when there is not, it STAYS PUT in grey rather than disappearing: vanishing shifted the whole run of controls sideways the moment you filed the last certificate, and left nowhere to look to confirm that nothing is wrong.',
+            it: "L'icona degli avvisi, sopra la lista atleti, era dello stesso grigio spento dell'occhio e del cestino accanto. Un avviso che ha lo stesso aspetto di ogni altro comando non è un avviso. Ora è ambra quando c'è qualcosa da guardare, e quando non c'è niente resta al suo posto in grigio invece di sparire: sparendo spostava di lato tutta la fila di comandi nel momento in cui archiviavi l'ultimo certificato, e non lasciava nessun posto dove guardare per confermare che va tutto bene.",
+          },
+        ],
+      },
+      {
+        heading: { en: "📰 What's new was in two places", it: '📰 «Novità» stava in due posti' },
+        bullets: [
+          {
+            en: 'It was in the left rail AND under More. The same entry twice: the one under More is gone.',
+            it: "Era nella barra a sinistra e sotto «Altro». La stessa voce due volte: quella sotto «Altro» non c'è più.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '📝 The athlete form, below the fold',
+          it: '📝 La scheda atleta, sotto la piega',
+        },
+        bullets: [
+          {
+            en: 'The edit form had been reorganised into four sections, but the reorganisation stopped halfway down the page. The address kept a heading of its own — bold, with "(optional — fill all marked fields or none)" on the same line — sitting four inches under four small uppercase ones. The same words in two different voices a few centimetres apart, so it read as a second form pasted underneath. It wears the same small heading as the others now, with the note on the line below.',
+            it: "La modifica dell'atleta era stata riorganizzata in quattro sezioni, ma la riorganizzazione si fermava a metà pagina. L'indirizzo aveva un titolo tutto suo — in grassetto, con «(facoltativo — compila tutti i campi contrassegnati o nessuno)» sulla stessa riga — quattro dita sotto quattro titolini in maiuscolo. Le stesse parole con due voci diverse a pochi centimetri l'una dall'altra: si leggeva come un secondo modulo incollato sotto al primo. Ora porta lo stesso titolino degli altri, e la nota sta sulla riga sotto.",
+          },
+          {
+            en: 'ZIP, city and province shared a row that lined up with nothing above it and stretched the full width of the card, leaving a five-character postcode alone at one end. They are sized to their contents now and grouped at the start.',
+            it: "CAP, città e provincia stavano su una riga che non si allineava a niente e si allargava per tutta la scheda, lasciando un CAP di cinque cifre da solo a un capo. Adesso sono larghi quanto serve e raggruppati all'inizio.",
+          },
+          {
+            en: 'The Delete athlete button sat at the opposite end of its row from the text explaining it — two unrelated things sharing a line. On a narrow screen it was a small button floating under two lines of grey. The text keeps a readable width now and the button follows it; on a phone it takes the whole row.',
+            it: "Il bottone «Elimina atleta» era spinto all'estremità opposta della riga rispetto al testo che lo spiega: due cose senza rapporto che si dividono una riga. Su schermo stretto era un bottoncino che galleggiava sotto due righe di grigio. Ora il testo tiene una larghezza leggibile e il bottone lo segue; sul telefono prende la riga intera.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.53.0',
     date: '2026-09-08',
     headline: {
