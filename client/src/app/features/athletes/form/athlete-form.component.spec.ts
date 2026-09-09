@@ -569,11 +569,15 @@ describe('AthleteFormComponent', () => {
       const { fixture, httpMock } = renderEdit();
       const root = fixture.nativeElement as HTMLElement;
 
+      // Throws on a miss rather than reporting 'full'. Returning the
+      // no-modifier answer for an element that is not there makes the
+      // full-width case pass whether the field exists or not.
       const sizeOf = (controlId: string): string => {
-        const field = root
-          .querySelector(`#${controlId}`)
-          ?.closest('app-budojo-form-field') as HTMLElement | null;
-        const cls = field?.className ?? '';
+        const control = root.querySelector(`#${controlId}`);
+        if (!control) throw new Error(`no control #${controlId} in the form`);
+        const field = control.closest('app-budojo-form-field') as HTMLElement | null;
+        if (!field) throw new Error(`#${controlId} is not inside a form field`);
+        const cls = field.className;
         if (cls.includes('athlete-form__field--short')) return 'short';
         if (cls.includes('athlete-form__field--medium')) return 'medium';
         return 'full';

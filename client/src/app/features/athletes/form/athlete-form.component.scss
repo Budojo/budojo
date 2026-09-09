@@ -98,16 +98,26 @@
   // button is the widest thing the size has to hold. A width scale is only
   // worth having if the longest value in each size actually fits it.
   //
-  // A `max-width` rather than a `width`, so the mobile single-column layout
-  // and any narrower track still shrink these normally — and so a select,
-  // which sizes to its own content, is capped rather than stretched.
+  // Mobile-first, so the scale starts at `min-width: 768px` and the phone
+  // gets nothing. On one column a capped field does not fill its track — a
+  // 17rem field in a 19rem column leaves a sliver of empty space at the right
+  // margin, which reads as a misalignment rather than as a decision, and it
+  // costs tap width for nothing. The complaint this scale answers was a
+  // desktop one: it is the multi-column rows that made two dates different
+  // widths.
+  //
+  // A `max-width` rather than a `width` even inside the query, so a narrower
+  // desktop track still shrinks these — and so a select, which sizes to its
+  // own content, is capped rather than stretched.
   &__field {
-    &--short {
-      max-width: 11rem;
-    }
+    @media (min-width: 768px) {
+      &--short {
+        max-width: 11rem;
+      }
 
-    &--medium {
-      max-width: 17rem;
+      &--medium {
+        max-width: 17rem;
+      }
     }
 
     // The cap has to reach the CONTROL, not only the wrapper.
@@ -215,7 +225,7 @@
   min-width: 0;
 
   // The legend IS this section's heading, so it wears the same eyebrow as the
-  // four `<h2>`s above it (#1485). It was sentence-case bold with the
+  // three `<h2>`s above it (#1485). It was sentence-case bold with the
   // "(optional…)" note inline, which read as a different form pasted under
   // this one — the same words in a different voice, four inches apart.
   legend {
@@ -405,7 +415,13 @@
     max-width: 8rem;
   }
 
-  :has(> #stripes),
+  // Province only. Stripes lived here too until #1485 gave the form a width
+  // scale — and this rule quietly won: `inputId` lands on a span INSIDE the
+  // `p-select`, so `:has(> #stripes)` matches the host, and Angular scopes
+  // `:has()` from the outside, giving it (1,3,0) against the scale's (0,3,0).
+  // Stripes rendered 10rem beside two 11rem `--short` siblings — the same
+  // widths-differ-for-an-invisible-reason bug the scale exists to remove, and
+  // invisible to a spec that asserts class names rather than computed widths.
   :has(> #athlete-address-province) {
     max-width: 10rem;
   }
