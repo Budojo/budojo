@@ -527,10 +527,13 @@ describe('AthleteFormComponent', () => {
       return { fixture, httpMock };
     }
 
-    it('spends four section headings, not five', () => {
+    it('spends three section headings, not four', () => {
       // Billing was a heading over one control — two when the academy keeps a
       // price list. What an athlete pays is a fact about their membership, so
       // it folded into "At the gym" rather than earning an eyebrow of its own.
+      //
+      // Three, not four: the address block is a fourth <section> but wears a
+      // <legend> rather than an <h2>, so it is not in this count.
       const { fixture, httpMock } = renderEdit();
 
       const titles = Array.from(
