@@ -89,7 +89,12 @@ describe('Expiring documents widget + deep-link', () => {
     // The widget this used to assert became a button in the filter row
     // (#1456) — the count is on the control, the breakdown is in the panel,
     // and the panel is what leads to the full list.
-    cy.get('[data-cy="athletes-alerts"]').should('contain.text', '3').click();
+    cy.get('[data-cy="athletes-alerts"]')
+      .should('contain.text', '3')
+      // Amber, not the muted grey of the eye and the bin beside it — the one
+      // thing a warning must not look like is every other control (#1482).
+      .and('have.class', 'athletes-page__toggle--alert')
+      .click();
     cy.get('[data-cy="athletes-alerts-expiring"]').should('be.visible').click();
 
     cy.url().should('include', '/dashboard/documents/expiring');
@@ -99,10 +104,11 @@ describe('Expiring documents widget + deep-link', () => {
     cy.get('[data-cy="athlete-link"]').first().should('contain.text', 'Mario Rossi');
   });
 
-  it('shows no alert control at all when nothing needs attention (#1456)', () => {
-    // The old widget rendered an "all up to date" tile — a card whose whole
-    // message was that it had nothing to say. A control that disappears says
-    // the same thing and costs no space.
+  it('goes quiet rather than vanishing when nothing needs attention (#1482)', () => {
+    // It used to disappear entirely, which made the toolbar's controls shift
+    // sideways the moment the last certificate was filed — and left nowhere
+    // to look to confirm that nothing IS wrong. It stays, grey and without a
+    // count, and says so when opened.
     cy.intercept('GET', '/api/v1/documents/expiring*', {
       statusCode: 200,
       body: { data: [], missing_medical_certificate: [] },
@@ -111,7 +117,13 @@ describe('Expiring documents widget + deep-link', () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait(['@academy', '@athletes', '@getExpiring']);
 
-    cy.get('[data-cy="athletes-alerts"]').should('not.exist');
+    cy.get('[data-cy="athletes-alerts"]')
+      .should('be.visible')
+      .and('not.have.class', 'athletes-page__toggle--alert');
+    cy.get('[data-cy="athletes-alerts"] .athletes-page__toggle-count').should('not.exist');
+
+    cy.get('[data-cy="athletes-alerts"]').click();
+    cy.get('[data-cy="athletes-alerts-empty"]').should('be.visible');
   });
 
   it('the list page shows the empty-state block when no documents are expiring', () => {

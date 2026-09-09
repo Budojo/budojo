@@ -344,10 +344,6 @@
 // The alert button (#1456) wears the toolbar's shared control surface, with
 // the count in place of a label — the same shape as the payment toggle, so
 // the row stays one family of buttons.
-.athletes-page__toggle--alert {
-  color: var(--p-orange-600, #c2410c);
-}
-
 .athletes-page__toggle-count {
   font-size: 0.875rem;
   font-weight: 600;
@@ -387,6 +383,12 @@
       margin-left: auto;
       color: var(--p-text-muted-color);
     }
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 0.5rem;
+    color: var(--p-text-muted-color);
   }
 
   &__count {
@@ -690,6 +692,16 @@ $athletes-mobile-breakpoint: 768px;
   border-radius: var(--budojo-radius-medium, 0.75rem);
   background: var(--p-surface-100);
   color: var(--p-text-muted-color);
+
+  // Amber only when there is something to say (#1482).
+  //
+  // This lived in its own top-level rule ABOVE the base one, and at equal
+  // specificity the later rule won — so the warning triangle rendered in the
+  // same muted grey as the eye and the bin, which is the one thing it must
+  // not look like. Nested here it cannot be re-ordered out of effect.
+  &--alert {
+    color: var(--p-orange-600, #c2410c);
+  }
   cursor: pointer;
   transition:
     background-color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out),

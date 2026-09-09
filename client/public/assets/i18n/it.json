@@ -1513,6 +1513,11 @@
         "errorMin": "La quota non può essere negativa.",
         "hint": "Quanto paga ogni atleta al mese. Attiva la tab Pagamenti sul dettaglio atleta e il toggle pagato/non pagato sulla lista atleti. Lascia vuoto se non vuoi gestire i pagamenti tramite Budojo."
       },
+      "seasonStart": {
+        "label": "La stagione inizia a",
+        "placeholder": "Settembre",
+        "hint": "Il mese in cui ricomincia l'anno di allenamenti. La lista atleti conta le presenze da qui, non dal giorno di iscrizione del singolo atleta. Se lo lasci vuoto vale settembre."
+      },
       "trainingDays": {
         "label": "Giorni di allenamento",
         "hint": "Seleziona i giorni della settimana in cui si tiene lezione. Deseleziona tutti i giorni per cancellare la programmazione."
@@ -1723,8 +1728,8 @@
         "attendanceSortInitial": "Clicca per ordinare per presenze del mese (prima le più alte)",
         "attendanceSortMonthDesc": "Ordinato per presenze del mese (prima le più alte). Clicca per continuare.",
         "attendanceSortMonthAsc": "Ordinato per presenze del mese (prima le più basse). Clicca per continuare.",
-        "attendanceSortTotalDesc": "Ordinato per presenze totali (prima le più alte). Clicca per continuare.",
-        "attendanceSortTotalAsc": "Ordinato per presenze totali (prima le più basse). Clicca per continuare."
+        "attendanceSortTotalDesc": "Ordinato per presenze della stagione (prima le più alte). Clicca per continuare.",
+        "attendanceSortTotalAsc": "Ordinato per presenze della stagione (prima le più basse). Clicca per continuare."
       },
       "social": {
         "facebookLabel": "Apri profilo Facebook",
@@ -1802,17 +1807,19 @@
         "any": "Pagamento"
       },
       "attendance": {
-        "aria": "{{month}} presenze questo mese, {{total}} in totale",
+        "aria": "{{month}} presenze questo mese, {{total}} in questa stagione",
         "ariaMonth": "{{month}} presenze questo mese",
-        "cellAria": "{{monthAttended}} presenze su {{monthScheduled}} questo mese, {{totalAttended}} su {{totalScheduled}} da quando è iscritto",
-        "cellAriaCounts": "{{monthAttended}} presenze questo mese, {{totalAttended}} da quando è iscritto",
+        "cellAria": "{{monthAttended}} presenze su {{monthScheduled}} questo mese, {{totalAttended}} su {{totalScheduled}} in questa stagione",
+        "cellAriaCounts": "{{monthAttended}} presenze questo mese, {{totalAttended}} in questa stagione",
         "tooltipMonth": "Questo mese",
-        "tooltipTotal": "Da quando è iscritto"
+        "tooltipTotal": "Questa stagione ({{season}})",
+        "tooltipTotalJoined": "Questa stagione ({{season}}), contata dal {{joined}}, quando si è iscritto"
       },
       "alerts": {
         "button": "Avvisi",
         "missingCertificate": "senza certificato medico",
-        "expiringCertificate": "certificato in scadenza entro 30 giorni"
+        "expiringCertificate": "certificato in scadenza entro 30 giorni",
+        "none": "Non c'è niente da controllare"
       }
     },
     "invitation": {

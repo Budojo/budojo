@@ -160,9 +160,28 @@
   // fieldset wider than its parent and clip neighbouring content.
   min-width: 0;
 
+  // The legend IS this section's heading, so it wears the same eyebrow as the
+  // four `<h2>`s above it (#1485). It was sentence-case bold with the
+  // "(optional…)" note inline, which read as a different form pasted under
+  // this one — the same words in a different voice, four inches apart.
   legend {
     padding: 0;
     margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+
+  // The note goes under the heading rather than inside it: a heading that
+  // carries a sentence stops being scannable, which is the one job it has.
+  legend .optional {
+    display: block;
+    margin-top: 0.25rem;
+    letter-spacing: normal;
+    text-transform: none;
+    font-weight: 400;
   }
 }
 
@@ -171,8 +190,12 @@
   gap: 1rem;
   grid-template-columns: 1fr;
 
+  // ZIP, city, province — sized to what goes in them, and capped so the row
+  // does not stretch across a wide window with a five-character postcode
+  // sitting alone at one end of it (#1485).
   @media (min-width: 768px) {
-    grid-template-columns: 7rem 1fr 7rem;
+    grid-template-columns: 8rem minmax(0, 22rem) 10rem;
+    justify-content: start;
   }
 }
 
@@ -237,11 +260,51 @@
     align-items: flex-start;
     gap: 0.75rem;
 
+    // On a wide window `space-between` pushed the button to the far edge and
+    // left the paragraph stretched across everything in between, so the two
+    // read as unrelated things that happened to share a row (#1486). The copy
+    // keeps a readable measure and the button follows it — related, and
+    // still nowhere near where a stray click lands.
     @media (min-width: 768px) {
       flex-direction: row;
       align-items: center;
-      justify-content: space-between;
       gap: 1.5rem;
+    }
+  }
+
+  // A paragraph this wide is not read, it is skipped — and this is the one
+  // paragraph on the page that has to be.
+  &__copy {
+    max-width: 46ch;
+  }
+
+  // Below the breakpoint the row stacks, and a small outlined button sitting
+  // under two lines of grey text read as something half-finished rather than
+  // as the deliberate last step it is (#1486). Full width gives it the
+  // presence the copy above it is describing — and it is still the only
+  // control in a bordered red block, which is what keeps it hard to hit by
+  // accident, not its size.
+  app-confirm-destructive-button {
+    // `display: block` on purpose: the component's own `:host` is
+    // `inline-flex`, so `width: 100%` alone stretched the host and left the
+    // button floating centred inside it — wider than before and no more
+    // deliberate.
+    display: block;
+    width: 100%;
+
+    @media (min-width: 768px) {
+      display: inline-block;
+      width: auto;
+      flex: 0 0 auto;
+    }
+
+    ::ng-deep .p-button {
+      width: 100%;
+      justify-content: center;
+
+      @media (min-width: 768px) {
+        width: auto;
+      }
     }
   }
 

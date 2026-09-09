@@ -101,6 +101,8 @@ Separately from the semantic-release dev changelog, the SPA ships a **user-facin
 
 **Discipline:** every `develop → main` release PR adds the markdown file AND prepends the array entry in the same commit history. The vitest spec pinning the version order in the array (`renders all four backfilled releases`) fails when one is missing — that's the regression-catching trip-wire, by design.
 
+`whats-new.component.spec.ts` carries **four** of them, and they are in two different tests. Three sit together — the latest-version assertion, `cards.length`, and the head of the `versions` array — and the fourth is the remaining count in the *"Show N more releases"* button, which #1464 introduced when the page stopped rendering the whole history at once. It is `cards.length - 10`. It was missed on v2.54.0, the first release after #1464 shipped, precisely because it lives in its own test and every checklist said "three".
+
 **Compute the version BEFORE writing the file.** Angular preset rules:
 
 - Any `feat:` commit in `main..develop` → next bump is **minor** (`vX.(Y+1).0`).

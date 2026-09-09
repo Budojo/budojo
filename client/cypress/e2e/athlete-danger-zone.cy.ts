@@ -57,6 +57,43 @@ describe('Athlete danger zone (#1430)', () => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
   });
 
+  it('reads as one deliberate block at both widths (#1486)', () => {
+    // It looked unfinished: on a wide window `space-between` pushed the button
+    // to the far edge with the paragraph stretched across everything between
+    // them, and on a narrow one a small outlined button floated under two
+    // lines of grey text.
+    cy.intercept('GET', '/api/v1/athletes/42', {
+      statusCode: 200,
+      body: { data: ATHLETE_MARIO },
+    }).as('getAthlete');
+    cy.intercept('GET', '/api/v1/athletes?*', EMPTY_ATHLETES);
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
+    cy.wait(['@academy', '@getAthlete']);
+    cy.get('[data-cy="athlete-danger-zone"]').scrollIntoView();
+
+    // Wide: copy and button share a line, and the copy keeps a readable
+    // measure rather than running the full width of the card.
+    cy.viewport(1280, 800);
+    cy.get('[data-cy="athlete-danger-zone"] .danger-zone__copy').then(($copy) => {
+      const copy = $copy[0].getBoundingClientRect();
+      cy.get('[data-cy="danger-zone-delete-btn"]').then(($btn) => {
+        const btn = $btn[0].getBoundingClientRect();
+        expect(btn.top, "button shares the copy's line").to.be.lessThan(copy.bottom);
+        expect(copy.width, 'copy is capped to a readable measure').to.be.lessThan(600);
+      });
+    });
+
+    // Narrow: the button takes the full row, so it reads as the block's one
+    // action rather than as something left over.
+    cy.viewport(500, 800);
+    cy.get('[data-cy="athlete-danger-zone"] .danger-zone__row').then(($row) => {
+      const row = $row[0].getBoundingClientRect();
+      cy.get('[data-cy="danger-zone-delete-btn"]').then(($btn) => {
+        expect($btn[0].getBoundingClientRect().width).to.be.greaterThan(row.width * 0.9);
+      });
+    });
+  });
+
   it('deletes on confirm, toasts, and returns to the roster', () => {
     cy.intercept('GET', '/api/v1/athletes/42', {
       statusCode: 200,

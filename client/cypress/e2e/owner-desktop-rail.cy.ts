@@ -66,6 +66,38 @@ describe('Owner desktop social rail (#1112)', () => {
     cy.get('[data-cy="rail-create"]').should('not.exist');
   });
 
+  it('shows the academy mark whole, not cropped and not squashed (#1482)', () => {
+    // Two wrong answers already: a bare <img> with no object-fit squashed any
+    // logo that was not square, and `cover` fixed the squashing by CROPPING —
+    // which cuts the edges off someone's badge. A logo has to arrive whole.
+    // A deliberately WIDE mark — 4:1 — because that is the shape that broke:
+    // square logos survive any object-fit, and most gym badges are wide.
+    const wideLogo =
+      'data:image/svg+xml;utf8,' +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="50">' +
+          '<rect width="200" height="50" fill="%23333"/></svg>',
+      );
+    cy.intercept('GET', '/api/v1/academy', {
+      statusCode: 200,
+      body: { data: { ...MOCK_ACADEMY, logo_url: wideLogo } },
+    }).as('academyWithLogo');
+
+    cy.visitAuthenticated('/dashboard/athletes');
+    cy.wait('@academyWithLogo');
+
+    cy.get('[data-cy="rail-brand"] img.rail__logo')
+      .should('have.css', 'object-fit', 'contain')
+      .and(($img) => {
+        const el = $img[0] as HTMLImageElement;
+        // Square box, so neither dimension can stretch the other.
+        expect(el.clientWidth, 'box width').to.equal(el.clientHeight);
+        // And the source really is wide, so `contain` is doing work here
+        // rather than passing by accident on a square image.
+        expect(el.naturalWidth, 'source width').to.be.greaterThan(el.naturalHeight);
+      });
+  });
+
   it("pins What's new and Notifications at the foot, in that order (#1462)", () => {
     cy.visitAuthenticated('/dashboard/athletes');
     cy.wait('@academy');

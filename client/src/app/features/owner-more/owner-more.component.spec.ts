@@ -28,7 +28,7 @@ function setup(handle: string | null = 'senseimario') {
 describe('OwnerMoreComponent (#1111)', () => {
   it('homes the owner destinations demoted off the bottom bar', () => {
     const { el } = setup();
-    for (const cy of ['activity', 'settings', 'support', 'whats-new']) {
+    for (const cy of ['activity', 'settings', 'support']) {
       expect(el.querySelector(`[data-cy="owner-more-${cy}"]`), cy).not.toBeNull();
     }
   });
@@ -38,7 +38,7 @@ describe('OwnerMoreComponent (#1111)', () => {
     // and others are too. Stats moved up to the rail, which is where a
     // destination belongs when there is room for it.
     const { el } = setup();
-    for (const cy of ['attendance', 'stats']) {
+    for (const cy of ['attendance', 'stats', 'whats-new']) {
       expect(el.querySelector(`[data-cy="owner-more-${cy}"]`), cy).toBeNull();
     }
   });

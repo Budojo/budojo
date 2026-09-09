@@ -45,7 +45,7 @@ use Illuminate\Support\Facades\Storage;
  * @property \Carbon\Carbon|null     $updated_at
  * @property \Carbon\Carbon|null     $deleted_at
  * @property-read int|null           $attendance_month_count Present only on the roster index (#1447), which selects it as a `withCount` alias. Null everywhere else — read it as "not asked for", never as "zero".
- * @property-read int|null           $attendance_total_count Same, for the all-time count.
+ * @property-read int|null           $attendance_total_count Same, for the current SEASON (#1484) — the academy's training year, floored per row at this athlete's `joined_at`. It was an all-time count until then.
  */
 #[Fillable(['academy_id', 'fee_tier_id', 'billing_period_months', 'user_id', 'is_self', 'first_name', 'last_name', 'email', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'date_of_birth', 'belt', 'stripes', 'status', 'joined_at'])]
 #[ObservedBy([AthleteObserver::class, AthleteAuditObserver::class])]

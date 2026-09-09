@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Academy;
 use App\Models\Address;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -230,6 +231,69 @@ it('wipes the polymorphic address row when the academy is deleted via Eloquent (
     expect(Address::where('addressable_type', Academy::class)
         ->where('addressable_id', $academy->id)
         ->count())->toBe(0);
+});
+
+// ─── season start (#1484) ───────────────────────────────────────────────────
+
+it('persists season_start_month via PATCH /academy', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['season_start_month' => 1])
+        ->assertOk()
+        ->assertJsonPath('data.season_start_month', 1);
+});
+
+it('answers with the resolved season, not only the month it was told', function (): void {
+    // The month is the setting; the SPA needs the boundary and the name. It
+    // must not re-derive either — "does March belong to this season or the
+    // last?" has exactly one definition, and it lives on the server.
+    $this->travelTo(CarbonImmutable::create(2026, 3, 15));
+
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id, 'season_start_month' => 9]);
+    Sanctum::actingAs($user);
+
+    $this->getJson('/api/v1/academy')
+        ->assertOk()
+        ->assertJsonPath('data.season_start', '2025-09-01')
+        ->assertJsonPath('data.season_label', '2025/26');
+});
+
+it('falls back to September for an academy that has never chosen', function (): void {
+    // Null is not "no season" — every academy has a training year whether or
+    // not it has an opinion about when it starts.
+    $this->travelTo(CarbonImmutable::create(2026, 3, 15));
+
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id, 'season_start_month' => null]);
+    Sanctum::actingAs($user);
+
+    $this->getJson('/api/v1/academy')
+        ->assertOk()
+        ->assertJsonPath('data.season_start_month', null)
+        ->assertJsonPath('data.season_start', '2025-09-01');
+});
+
+it('clears season_start_month back to the default when set to null', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id, 'season_start_month' => 1]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['season_start_month' => null])
+        ->assertOk()
+        ->assertJsonPath('data.season_start_month', null);
+});
+
+it('rejects a season_start_month outside 1..12', function (): void {
+    $user = User::factory()->create();
+    Academy::factory()->create(['user_id' => $user->id]);
+    Sanctum::actingAs($user);
+
+    $this->patchJson('/api/v1/academy', ['season_start_month' => 13])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['season_start_month']);
 });
 
 // ─── training_days (#88a) ────────────────────────────────────────────────────

@@ -1513,6 +1513,11 @@
         "errorMin": "Fee can't be negative.",
         "hint": "How much each athlete pays per month. Drives the Payments tab on the athlete detail and the inline mark-paid toggle on the athletes list. Leave empty if you don't want to track payments through Budojo."
       },
+      "seasonStart": {
+        "label": "Season starts in",
+        "placeholder": "September",
+        "hint": "The month your training year restarts. The roster counts sessions from here, not from the day each athlete joined. September if you leave it empty."
+      },
       "trainingDays": {
         "label": "Training days",
         "hint": "Pick the weekdays your academy holds class. Deselect every day to clear the schedule."
@@ -1723,8 +1728,8 @@
         "attendanceSortInitial": "Click to sort by sessions this month (most first)",
         "attendanceSortMonthDesc": "Sorted by sessions this month (most first). Click to cycle.",
         "attendanceSortMonthAsc": "Sorted by sessions this month (fewest first). Click to cycle.",
-        "attendanceSortTotalDesc": "Sorted by sessions all time (most first). Click to cycle.",
-        "attendanceSortTotalAsc": "Sorted by sessions all time (fewest first). Click to cycle."
+        "attendanceSortTotalDesc": "Sorted by sessions this season (most first). Click to cycle.",
+        "attendanceSortTotalAsc": "Sorted by sessions this season (fewest first). Click to cycle."
       },
       "social": {
         "facebookLabel": "Open Facebook profile",
@@ -1802,17 +1807,19 @@
         "any": "Payment"
       },
       "attendance": {
-        "aria": "{{month}} sessions this month, {{total}} in total",
+        "aria": "{{month}} sessions this month, {{total}} this season",
         "ariaMonth": "{{month}} sessions this month",
-        "cellAria": "{{monthAttended}} of {{monthScheduled}} sessions this month, {{totalAttended}} of {{totalScheduled}} since joining",
-        "cellAriaCounts": "{{monthAttended}} sessions this month, {{totalAttended}} since joining",
+        "cellAria": "{{monthAttended}} of {{monthScheduled}} sessions this month, {{totalAttended}} of {{totalScheduled}} this season",
+        "cellAriaCounts": "{{monthAttended}} sessions this month, {{totalAttended}} this season",
         "tooltipMonth": "This month",
-        "tooltipTotal": "Since they joined"
+        "tooltipTotal": "This season ({{season}})",
+        "tooltipTotalJoined": "This season ({{season}}), counted from {{joined}} when they joined"
       },
       "alerts": {
         "button": "Alerts",
         "missingCertificate": "no medical certificate",
-        "expiringCertificate": "certificate expiring within 30 days"
+        "expiringCertificate": "certificate expiring within 30 days",
+        "none": "Nothing needs attention"
       }
     },
     "invitation": {

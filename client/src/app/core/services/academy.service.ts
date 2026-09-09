@@ -240,6 +240,26 @@ export interface Academy {
    * Optional for fixture-compat.
    */
   schedules?: AcademySchedule[];
+  /**
+   * The training year (#1484), in three parts because three places need
+   * different halves of it.
+   *
+   * `season_start_month` is the setting itself — 1-12, or `null` when nobody
+   * has chosen and the server's September default applies. The settings form
+   * is the only consumer.
+   *
+   * `season_start` and `season_label` are the server's answer for *today*:
+   * the ISO date the current season began, and the name a person reads for
+   * it (`2025/26`). Both are derived, so the SPA never re-implements the
+   * boundary — "is March in this season or last?" has exactly one
+   * definition, and it is `App\Support\Season`.
+   *
+   * All optional for the same fixture-compat reason as the fee above.
+   */
+  season_start_month?: number | null;
+  /** ISO `YYYY-MM-DD`. */
+  season_start?: string;
+  season_label?: string;
 }
 
 /**
@@ -319,6 +339,8 @@ export interface UpdateAcademyPayload {
   carnet_price_cents?: number | null;
   carnet_entries?: number | null;
   training_days?: number[] | null;
+  /** Month the training year restarts in, 1-12 (#1484). `null` = "not chosen". */
+  season_start_month?: number | null;
 }
 
 interface AcademyResponse {
@@ -357,10 +379,38 @@ export class AcademyService {
    * Call with `{ forceRefresh: true }` (or `clear()` first) when the server
    * state may have changed: after a mutation, on explicit reload, etc.
    */
+  /**
+   * Whether the cached payload's season has since ended (#1484).
+   *
+   * `season_start` and `season_label` are the server's answer for the day the
+   * response was built, and this cache outlives that day — the desktop app is
+   * left open for weeks at a time. Every other field on the payload goes
+   * stale only when somebody edits it, which is why the cache never needed to
+   * expire; these two go stale on their own, at midnight on the boundary.
+   *
+   * It matters because the roster divides one by the other: the attendance
+   * count is recomputed server-side on every request, while the denominator
+   * is derived from this payload. Across the rollover that renders a new
+   * season's count over the old season's sessions — `0/300` — which is not a
+   * rounding error, it is a different question answered on each line.
+   *
+   * The check costs one date comparison on the hot path and refetches once a
+   * year, on the one day the answer actually changed.
+   */
+  private seasonHasEnded(academy: Academy): boolean {
+    const iso = academy.season_start;
+    if (!iso) return false;
+
+    const [y, m, d] = iso.split('-').map(Number);
+    // A season runs a year from its start, so it has ended once today has
+    // reached the same date a year on.
+    return new Date() >= new Date(y + 1, m - 1, d);
+  }
+
   get(options: { forceRefresh?: boolean } = {}): Observable<Academy> {
     if (!options.forceRefresh) {
       const cached = this.academy();
-      if (cached) {
+      if (cached && !this.seasonHasEnded(cached)) {
         return of(cached);
       }
       if (this.inflight$) {

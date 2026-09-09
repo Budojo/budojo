@@ -29,12 +29,13 @@ use Illuminate\Support\Carbon;
  * @property string|null         $instagram             Full Instagram profile URL.
  * @property string              $slug
  * @property string|null         $logo_path
+ * @property int|null            $season_start_month     Month the training year begins, 1-12 (#1484). Null means nobody chose — resolve it through App\Support\Season, never raw.
  * @property int|null            $monthly_fee_cents
  * @property int|null            $carnet_price_cents
  * @property int|null            $carnet_entries
  * @property list<int>|null      $training_days  Carbon dayOfWeek ints (0=Sun..6=Sat); null = "not configured"
  */
-#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'carnet_price_cents', 'carnet_entries', 'training_days'])]
+#[Fillable(['user_id', 'name', 'phone_country_code', 'phone_national_number', 'website', 'facebook', 'instagram', 'slug', 'logo_path', 'monthly_fee_cents', 'carnet_price_cents', 'carnet_entries', 'training_days', 'season_start_month'])]
 #[ObservedBy([AcademyObserver::class, AcademyAuditObserver::class])]
 class Academy extends Model implements HasAddress
 {
@@ -203,6 +204,7 @@ class Academy extends Model implements HasAddress
     {
         return [
             'training_days' => 'array',
+            'season_start_month' => 'integer',
         ];
     }
 }

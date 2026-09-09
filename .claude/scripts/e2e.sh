@@ -61,6 +61,13 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
+# Format the specs before running them. Editing a spec and running `make e2e`
+# skips the client gate, so a formatting slip reaches CI instead of the
+# terminal — that has cost two round-trips. Cheap here, expensive there.
+echo "── prettier (cypress) ──"
+docker compose exec -T --user "$(id -u)" client sh -lc 'npx prettier --write cypress' \
+  2>/dev/null | grep -v unchanged || true
+
 echo "── cypress ──"
 # shellcheck disable=SC2086
 exec docker run --rm --network host \

@@ -257,9 +257,9 @@ describe('countScheduledTrainingDaysBetween (#1455)', () => {
   });
 
   it('never counts past today, however far the window reaches', () => {
-    // The roster asks "since they joined", and the answer must not include
-    // sessions that have not happened — otherwise everyone's rate falls as
-    // the month goes on, for a reason that is not about them.
+    // The roster's window runs to the end of the season, and the answer must
+    // not include sessions that have not happened — otherwise everyone's rate
+    // falls as the season goes on, for a reason that is not about them.
     const n = countScheduledTrainingDaysBetween(
       TUE_THU,
       new Date(2026, 8, 1),

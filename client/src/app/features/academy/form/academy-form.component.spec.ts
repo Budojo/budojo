@@ -170,6 +170,7 @@ describe('AcademyFormComponent', () => {
       monthly_fee_cents: null,
       carnet_price_cents: null,
       carnet_entries: null,
+      season_start_month: null,
       training_days: null,
     });
     req.flush({
@@ -217,6 +218,7 @@ describe('AcademyFormComponent', () => {
       monthly_fee_cents: null,
       carnet_price_cents: null,
       carnet_entries: null,
+      season_start_month: null,
       training_days: null,
     });
     req.flush({ data: makeAcademy({ address: null }) });

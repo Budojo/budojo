@@ -30,7 +30,7 @@ On a `chore/release-vX.Y.Z` branch off develop:
 
 - `docs/changelog/user-facing/vX.Y.Z.md` — plain English for an instructor, not a developer. Describe what changed *for them*; CI/infra work is invisible and belongs nowhere in this file.
 - **Prepend** a `Release` entry to `RELEASES` in `client/src/app/features/whats-new/whats-new.releases.ts` (newest first).
-- Bump the three trip-wires in `whats-new.component.spec.ts`: the latest-version assertion, `cards.length`, and the head of the `versions` array.
+- Bump the **four** trip-wires in `whats-new.component.spec.ts`: the latest-version assertion, `cards.length`, the head of the `versions` array, and the **remaining count in the "Show N more releases" button** (#1464 — the page opens on ten, so this one is `cards.length - 10`). That last one is not in the same test as the other three and was missed on the first release after #1464 shipped.
 
 Run `test-client.sh vitest` on that spec, open the PR to **develop**, merge it. The dedicated `Whats-new pin matches expected release` CI job gates this.
 

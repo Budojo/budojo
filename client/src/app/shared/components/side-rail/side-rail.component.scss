@@ -49,16 +49,18 @@ $rail-width: 15rem;
   min-width: 0;
 }
 
-// The academy's mark (#1462). It was a bare 28px `<img>` with no `object-fit`,
-// so any logo that was not square arrived squashed — and most gym logos are
-// wide. `cover` crops instead of distorting, which is the lesser damage to
-// someone's badge, and the hairline keeps a white or transparent mark from
-// dissolving into the rail.
+// The academy's mark (#1482). `contain`, not `cover`.
+//
+// It was a bare 28px `<img>` with no `object-fit` at all, so a wide logo
+// arrived squashed. #1462 gave it `cover`, which stops the distortion by
+// CROPPING instead — and cropping a badge cuts off part of someone's
+// identity, which is the wrong half of the trade for a logo. `contain` shows
+// the whole mark and letterboxes it inside the square.
 .rail__logo {
   width: 2rem;
   height: 2rem;
   border-radius: var(--p-border-radius-md);
-  object-fit: cover;
+  object-fit: contain;
   background: var(--p-surface-0);
   border: 1px solid var(--p-content-border-color);
   flex-shrink: 0;

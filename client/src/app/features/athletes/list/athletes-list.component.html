@@ -172,48 +172,54 @@
       panel answers "what" rather than only "how many": a count on its own
       sends the reader looking for the ten people it is talking about.
     -->
-    @if (alertCount() > 0) {
-      <button
-        type="button"
-        class="athletes-page__toggle athletes-page__toggle--alert"
-        [pTooltip]="'athletes.list.alerts.button' | translate"
-        tooltipPosition="top"
-        [attr.aria-label]="'athletes.list.alerts.button' | translate"
-        (click)="alertPanel.toggle($event)"
-        data-cy="athletes-alerts"
-      >
-        <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+    <button
+      type="button"
+      class="athletes-page__toggle"
+      [class.athletes-page__toggle--alert]="alertCount() > 0"
+      [pTooltip]="'athletes.list.alerts.button' | translate"
+      tooltipPosition="top"
+      [attr.aria-label]="'athletes.list.alerts.button' | translate"
+      (click)="alertPanel.toggle($event)"
+      data-cy="athletes-alerts"
+    >
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      @if (alertCount() > 0) {
         <span class="athletes-page__toggle-count">{{ alertCount() }}</span>
-      </button>
-      <p-popover #alertPanel>
-        <div class="athletes-alerts" data-cy="athletes-alerts-panel">
-          @if (alertsMissing() > 0) {
-            <button
-              type="button"
-              class="athletes-alerts__row"
-              (click)="goToExpiringDocuments(); alertPanel.hide()"
-              data-cy="athletes-alerts-missing"
-            >
-              <span class="athletes-alerts__count">{{ alertsMissing() }}</span>
-              <span>{{ 'athletes.list.alerts.missingCertificate' | translate }}</span>
-              <i class="pi pi-angle-right" aria-hidden="true"></i>
-            </button>
-          }
-          @if (alertsExpiring() > 0) {
-            <button
-              type="button"
-              class="athletes-alerts__row"
-              (click)="goToExpiringDocuments(); alertPanel.hide()"
-              data-cy="athletes-alerts-expiring"
-            >
-              <span class="athletes-alerts__count">{{ alertsExpiring() }}</span>
-              <span>{{ 'athletes.list.alerts.expiringCertificate' | translate }}</span>
-              <i class="pi pi-angle-right" aria-hidden="true"></i>
-            </button>
-          }
-        </div>
-      </p-popover>
-    }
+      }
+    </button>
+    <p-popover #alertPanel>
+      <div class="athletes-alerts" data-cy="athletes-alerts-panel">
+        @if (alertsMissing() > 0) {
+          <button
+            type="button"
+            class="athletes-alerts__row"
+            (click)="goToExpiringDocuments(); alertPanel.hide()"
+            data-cy="athletes-alerts-missing"
+          >
+            <span class="athletes-alerts__count">{{ alertsMissing() }}</span>
+            <span>{{ 'athletes.list.alerts.missingCertificate' | translate }}</span>
+            <i class="pi pi-angle-right" aria-hidden="true"></i>
+          </button>
+        }
+        @if (alertsExpiring() > 0) {
+          <button
+            type="button"
+            class="athletes-alerts__row"
+            (click)="goToExpiringDocuments(); alertPanel.hide()"
+            data-cy="athletes-alerts-expiring"
+          >
+            <span class="athletes-alerts__count">{{ alertsExpiring() }}</span>
+            <span>{{ 'athletes.list.alerts.expiringCertificate' | translate }}</span>
+            <i class="pi pi-angle-right" aria-hidden="true"></i>
+          </button>
+        }
+        @if (alertCount() === 0) {
+          <p class="athletes-alerts__empty" data-cy="athletes-alerts-empty">
+            {{ 'athletes.list.alerts.none' | translate }}
+          </p>
+        }
+      </div>
+    </p-popover>
 
     <!--
       The eye (#1403) and the bin, lifted OUT of `__filters-inline` (#1426).
@@ -472,9 +478,14 @@
                 <!--
                   Two numbers, one of them louder. The month is what the
                   instructor acts on — who has stopped coming — so it reads
-                  first and at full weight; the all-time count is the context
+                  first and at full weight; the season count is the context
                   that tells a quiet month apart from a quiet athlete, so it
                   is muted and sits behind a separator.
+
+                  The lower number counts the SEASON, not the athlete's whole
+                  history (#1484) — its tooltip is built in the component
+                  because it has to name the season and, for a mid-year
+                  arrival, the day their own window opens.
 
                   Not a link and not a button: the issue asked for a column
                   that informs, and giving it a target would promise a drill-
@@ -491,7 +502,7 @@
                   >
                   <span
                     class="athlete-attendance__total"
-                    [pTooltip]="'athletes.list.attendance.tooltipTotal' | translate"
+                    [pTooltip]="sessionsTooltip(athlete)"
                     tooltipPosition="left"
                     aria-hidden="true"
                     >{{ sessionsLine(s.totalAttended, s.totalScheduled) }}</span

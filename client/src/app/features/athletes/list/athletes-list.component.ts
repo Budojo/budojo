@@ -65,6 +65,7 @@ import {
 } from '../../../shared/utils/attendance-rate';
 import { DocumentService } from '../../../core/services/document.service';
 import { BELT_KEYS, BELT_ORDER } from '../../../shared/utils/i18n-enum-keys';
+import { localeFor } from '../../../shared/utils/locale';
 import { CarnetService } from '../../../core/services/carnet.service';
 
 interface SelectOption<T extends string> {
@@ -792,34 +793,88 @@ export class AthletesListComponent implements OnInit {
   });
 
   /**
-   * Sessions held since THIS athlete joined — a different window per row, and
-   * the only honest denominator for a lifetime rate. Measuring someone who
-   * joined last month against three years of sessions reports a number about
-   * the academy, not about them.
+   * The day the current season began (#1484), as the server resolved it.
    *
-   * Memoised on `joined_at`: the schedule is shared, so two athletes who
-   * joined the same day have the same denominator, and the walk is one day at
-   * a time over what can be years.
+   * Not computed here from `season_start_month`: the boundary rule ("March
+   * belongs to the season that started last September") already exists in
+   * `App\Support\Season`, and a second copy of it in TypeScript is a second
+   * chance to get the off-by-one wrong — in a place where being wrong means
+   * the numerator and the denominator measure different windows and the
+   * fraction quietly lies.
+   *
+   * `null` while the academy is still loading; the cell then shows bare
+   * counts, exactly as it does when no schedule is configured.
    */
-  private readonly scheduledSinceJoined = new Map<string, number | null>();
+  private readonly seasonStart = computed<Date | null>(() => {
+    const iso = this.academyService.academy()?.season_start;
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  });
+
+  /** The season's name for the tooltip — `2025/26`. */
+  protected readonly seasonLabel = computed<string>(
+    () => this.academyService.academy()?.season_label ?? '',
+  );
+
+  /**
+   * Sessions held this season, floored at the day THIS athlete joined — a
+   * different window per row.
+   *
+   * Both bounds matter, and for the same reason. The season bound is the
+   * point of #1484: a lifetime total answers a question about the gym's
+   * history rather than about this year. The joining bound is what keeps that
+   * honest per row — someone who arrived in November cannot have attended
+   * September's sessions, and dividing by them reports the academy's calendar
+   * as if it were their record.
+   *
+   * Memoised on `joined_at`: the schedule and the season are shared, so two
+   * athletes who joined the same day have the same denominator, and the walk
+   * is one day at a time.
+   *
+   * The memo lives inside a `computed` WITH the inputs it was built from, so
+   * a new academy discards it. As a bare field it outlived them: the academy
+   * arrives over HTTP, the first rows can render before it does, and every
+   * `null` computed against an absent schedule was then served forever.
+   */
+  private readonly seasonDenominators = computed(() => ({
+    schedules: this.schedules(),
+    seasonStart: this.seasonStart(),
+    cache: new Map<string, number | null>(),
+  }));
 
   private scheduledSince(joinedAt: string): number | null {
-    const cached = this.scheduledSinceJoined.get(joinedAt);
+    const { schedules, seasonStart, cache } = this.seasonDenominators();
+
+    const cached = cache.get(joinedAt);
     if (cached !== undefined) return cached;
 
     const [y, m, d] = joinedAt.split('-').map(Number);
-    const value = countScheduledTrainingDaysBetween(
-      this.schedules(),
-      new Date(y, m - 1, d),
-      new Date(),
-    );
-    this.scheduledSinceJoined.set(joinedAt, value);
+    const joined = new Date(y, m - 1, d);
+    const from = seasonStart !== null && seasonStart > joined ? seasonStart : joined;
+
+    const value = countScheduledTrainingDaysBetween(schedules, from, new Date());
+    cache.set(joinedAt, value);
     return value;
   }
 
   /**
+   * Whether this athlete's window starts later than the season's — i.e. they
+   * joined mid-year, and their two numbers cover less of it than everyone
+   * else's. The tooltip says so; without that the row reads as a low
+   * attendance rate rather than a short membership.
+   */
+  protected joinedMidSeason(athlete: Athlete): boolean {
+    const season = this.seasonStart();
+    if (season === null) return false;
+    const [y, m, d] = athlete.joined_at.split('-').map(Number);
+    return new Date(y, m - 1, d) > season;
+  }
+
+  /**
    * The two fractions the Sessions cell renders (#1455): attended over held,
-   * this month above, the athlete's whole history below.
+   * this month above, the season below (#1484 — it was the athlete's whole
+   * history until then).
    *
    * A bare count answers "how often" but not "out of how many", and those are
    * different questions — three sessions is everything in a month with three,
@@ -852,6 +907,37 @@ export class AthletesListComponent implements OnInit {
    */
   protected sessionsLine(attended: number, scheduled: number | null): string {
     return scheduled === null ? String(attended) : `${attended}/${scheduled}`;
+  }
+
+  /**
+   * The lower line's tooltip (#1484).
+   *
+   * The line used to say "Since they joined", and the number under it now
+   * counts a single season — so the tooltip has to carry both the window and,
+   * for anyone who arrived after it opened, the fact that their window is
+   * shorter than the season's. Without the second half a February arrival
+   * reads as an athlete who misses most sessions, when the truth is that most
+   * of the season happened before they existed.
+   */
+  protected sessionsTooltip(athlete: Athlete): string {
+    this.languageService.currentLang();
+    // No academy yet: an empty string renders no tooltip at all, which is
+    // the honest answer — better than naming a season we cannot name.
+    const season = this.seasonLabel();
+    if (!season) return '';
+
+    if (!this.joinedMidSeason(athlete)) {
+      return this.translate.instant('athletes.list.attendance.tooltipTotal', { season });
+    }
+
+    const [y, m, d] = athlete.joined_at.split('-').map(Number);
+    return this.translate.instant('athletes.list.attendance.tooltipTotalJoined', {
+      season,
+      joined: new Date(y, m - 1, d).toLocaleDateString(
+        localeFor(this.languageService.currentLang()),
+        { day: 'numeric', month: 'long', year: 'numeric' },
+      ),
+    });
   }
 
   /** One label for both stacked lines — the layout alone does not say which is which. */
@@ -1560,6 +1646,16 @@ export class AthletesListComponent implements OnInit {
     // the empty-state hint stops blaming a filter the user can't see.
     const paid = this.hasMonthlyFee() ? this.selectedPaid() : '';
     if (paid) filters.paid = paid;
+
+    // Re-ask for the academy alongside the roster (#1484). It answers from
+    // cache and costs nothing on all but one day a year — the exception is
+    // the day the season rolls over, when the cached `season_start` is a
+    // season out of date. Without this the count on the wire would be the new
+    // season's while the denominator beside it stayed the old one's.
+    this.academyService
+      .get()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => {} });
 
     this.athleteService
       .list(filters)
