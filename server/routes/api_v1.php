@@ -589,7 +589,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // can't flood the support inbox.
     //
     // Gated on `capability:email` since #1476. The route was open, and on a
-    // build with no way to send mail that made it a black hole with a 201:
+    // build with no way to send mail that made it a black hole with a 202:
     // it wrote a ticket row into the local SQLite, queued a mail the profile
     // cannot deliver, and answered "sent". #1464 hid the form on the desktop
     // build, which stopped the SPA reaching it and left every other caller —

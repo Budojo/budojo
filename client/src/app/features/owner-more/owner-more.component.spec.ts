@@ -57,7 +57,7 @@ describe('OwnerMoreComponent (#1111)', () => {
 
       expect(el.querySelector('[data-cy="owner-more-support"]')).toBeNull();
       expect(row).not.toBeNull();
-      expect(row?.getAttribute('href')).toContain('mailto:matteo.bonanno@budojo.it');
+      expect(row?.getAttribute('href')).toContain('mailto:matteobonanno1990@gmail.com');
     });
 
     it('prefills the version and the build so the first reply is not a question', () => {
@@ -78,7 +78,7 @@ describe('OwnerMoreComponent (#1111)', () => {
       const { el } = setup('senseimario', ['community']);
 
       expect(el.querySelector('[data-cy="owner-more-support-mailto"]')?.textContent).toContain(
-        'matteo.bonanno@budojo.it',
+        'matteobonanno1990@gmail.com',
       );
     });
   });

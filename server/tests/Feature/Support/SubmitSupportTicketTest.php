@@ -30,7 +30,7 @@ afterEach(function (): void {
 it('is not there at all on a build that cannot send mail (#1476)', function (): void {
     // The route was open, so on the desktop profile it accepted the message,
     // wrote a row into the local SQLite and queued a mail nothing could
-    // deliver — then answered 201. #1464 hid the form, which stopped the SPA
+    // deliver — then answered 202. #1464 hid the form, which stopped the SPA
     // asking; it did not stop anything else.
     //
     // 404 and not 403 on purpose: on a build with no mail transport this

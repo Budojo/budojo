@@ -35,7 +35,7 @@ class SubmitSupportTicketAction
      * `SubmitFeedbackAction` (#311); a future "support team" mailbox
      * would extract this to config.
      */
-    public const string SUPPORT_EMAIL = 'matteo.bonanno@budojo.it';
+    public const string SUPPORT_EMAIL = 'matteobonanno1990@gmail.com';
 
     public function execute(
         User $user,

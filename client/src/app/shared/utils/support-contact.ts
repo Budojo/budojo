@@ -3,10 +3,12 @@ import { VERSION } from '../../../environments/version';
 /**
  * Where a message actually reaches a person (#1476).
  *
- * One constant, because the landing page's footer already hardcoded this
- * address and a second copy is a second thing to forget when it changes.
+ * One constant. The landing page's footer hardcoded this address before
+ * there was one; it reads it from here now, so the address lives in a single
+ * place on the client side. (`SubmitSupportTicketAction` has the server's own
+ * copy, which is a different runtime and deliberately separate.)
  */
-export const SUPPORT_EMAIL = 'matteo.bonanno@budojo.it';
+export const SUPPORT_EMAIL = 'matteobonanno1990@gmail.com';
 
 /**
  * A `mailto:` for the builds that have no way to send a ticket.
@@ -30,8 +32,12 @@ export function supportMailtoHref(
   platform = navigator.userAgent,
 ): string {
   const subject = `Budojo — ${VERSION.tag}`;
+  // CRLF, not LF. RFC 6068 §5 specifies `%0D%0A` for a mailto body, and
+  // Outlook — the likely default client on the Windows-only shipped build —
+  // collapses a bare `%0A`, which would run the three diagnostic lines
+  // together exactly where being able to read them is the point.
   const body = [`Version: ${VERSION.tag}`, `Build: ${profile}`, `System: ${platform}`, '', ''].join(
-    '\n',
+    '\r\n',
   );
 
   return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

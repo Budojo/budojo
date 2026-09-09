@@ -43,8 +43,7 @@
       "addAthlete": "Add athlete",
       "post": "New post"
     },
-    "backup": "Backup",
-    "supportAria": "Contact support by email"
+    "backup": "Backup"
   },
   "auth": {
     "shared": {

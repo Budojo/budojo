@@ -68,12 +68,7 @@
           <i class="pi pi-angle-right owner-more__chevron" aria-hidden="true"></i>
         </a>
       } @else {
-        <a
-          class="owner-more__row"
-          [href]="supportMailto()"
-          data-cy="owner-more-support-mailto"
-          [attr.aria-label]="'nav.supportAria' | translate"
-        >
+        <a class="owner-more__row" [href]="supportMailto()" data-cy="owner-more-support-mailto">
           <i class="pi pi-envelope" aria-hidden="true"></i>
           <span class="owner-more__label">{{ 'nav.support' | translate }}</span>
           <span class="owner-more__value owner-more__value--email">{{ supportEmail }}</span>
