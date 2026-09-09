@@ -47,7 +47,7 @@ describe('publicGuard (#330)', () => {
   });
 });
 
-describe('publicGuard — desktop entry (#1289)', () => {
+describe('publicGuard — the desktop bypass, removed (#1497)', () => {
   function runGuard(loggedIn: boolean, isDesktop: boolean): boolean | UrlTree {
     const authStub: Pick<AuthService, 'isLoggedIn'> = { isLoggedIn: signal<boolean>(loggedIn) };
 
@@ -64,20 +64,21 @@ describe('publicGuard — desktop entry (#1289)', () => {
     ) as boolean | UrlTree;
   }
 
-  it('sends a signed-out desktop user to sign-in, never to the marketing page', () => {
-    // The desktop app is already installed: there is nothing to "start free",
-    // no pricing and no phone to show a mockup of.
-    const result = runGuard(false, true) as UrlTree;
-
-    expect(result).toBeInstanceOf(UrlTree);
-    expect(TestBed.inject(Router).serializeUrl(result)).toBe('/auth/login');
+  it('shows a signed-out desktop user the first screen, not the sign-in form', () => {
+    // #1289 sent them to /auth/login, and it was right about the page that
+    // existed then — a marketing page with pricing and a phone mockup, inside
+    // an app you had already installed. That page is gone (#1497). What is
+    // there now is a welcome, and a first launch has no password to type.
+    expect(runGuard(false, true)).toBe(true);
   });
 
-  it('still shows the landing to a signed-out visitor on the web', () => {
+  it('shows the same screen on the web', () => {
+    // One page, one behaviour. The runtime does not change what a person who
+    // is not signed in needs to see.
     expect(runGuard(false, false)).toBe(true);
   });
 
-  it('prefers the dashboard over sign-in when the desktop user is signed in', () => {
+  it('still prefers the roster when the desktop user is signed in', () => {
     const result = runGuard(true, true) as UrlTree;
 
     expect(TestBed.inject(Router).serializeUrl(result)).toBe('/dashboard/athletes');
