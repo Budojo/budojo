@@ -220,6 +220,31 @@ export class AcademyFormComponent implements OnInit {
     carnet_price: this.fb.control<number | null>(null, [Validators.min(0)]),
     carnet_entries: this.fb.control<number | null>(null, [Validators.min(1), Validators.max(255)]),
     training_days: this.fb.nonNullable.control<number[]>([]),
+    // The month the training year restarts in (#1484), 1-12. `null` is not
+    // "no season" — it is "nobody has said", which the server answers with
+    // September.
+    season_start_month: this.fb.control<number | null>(null),
+  });
+
+  /**
+   * The twelve months, named by the current language (#1484).
+   *
+   * Built from `Intl` rather than twelve translation keys: the browser
+   * already knows every month in every locale we ship, and a hand-maintained
+   * list would be twelve more strings to keep in lock-step for no new
+   * information. A `computed` on the language signal so the labels follow the
+   * sidebar toggle without a reload.
+   */
+  protected readonly seasonMonthOptions = computed<{ label: string; value: number }[]>(() => {
+    const format = new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
+      month: 'long',
+    });
+    return Array.from({ length: 12 }, (_, i) => ({
+      // Day 1 of each month of an arbitrary non-leap year — only the month
+      // name is read off it.
+      label: format.format(new Date(2025, i, 1)),
+      value: i + 1,
+    }));
   });
 
   ngOnInit(): void {
@@ -266,6 +291,7 @@ export class AcademyFormComponent implements OnInit {
       carnet_price: academy.carnet_price_cents == null ? null : academy.carnet_price_cents / 100,
       carnet_entries: academy.carnet_entries ?? null,
       training_days: academy.training_days ?? [],
+      season_start_month: academy.season_start_month ?? null,
     });
   }
 
@@ -530,6 +556,7 @@ export class AcademyFormComponent implements OnInit {
       carnet_price_cents: v.carnet_price == null ? null : Math.round(v.carnet_price * 100),
       carnet_entries: v.carnet_entries ?? null,
       training_days: v.training_days.length === 0 ? null : v.training_days,
+      season_start_month: v.season_start_month ?? null,
     };
   }
 

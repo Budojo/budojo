@@ -441,6 +441,40 @@
       />
     </app-budojo-form-field>
 
+    <!--
+      When the training year restarts (#1484).
+
+      It sits directly above the training days because the two answer the same
+      question at two scales — which year the roster is counting, and which
+      days inside it. The roster's Sessions column reads this: before it
+      existed the lower number counted an athlete's whole history with the
+      gym, which is a different question from the one an instructor asks in
+      March.
+
+      One control, not a full date: a season boundary is the first of a month
+      in every academy that has one, and offering the 14th of September would
+      be a second field to fill in and a rule nobody asked for.
+    -->
+    <app-budojo-form-field
+      [label]="'academy.form.seasonStart.label' | translate"
+      controlId="academy-season-start-month"
+      [hint]="'academy.form.seasonStart.hint' | translate"
+    >
+      <p-select
+        inputId="academy-season-start-month"
+        [options]="seasonMonthOptions()"
+        formControlName="season_start_month"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="'academy.form.seasonStart.placeholder' | translate"
+        appendTo="body"
+        [showClear]="true"
+        styleClass="academy-season-start-month"
+        data-cy="academy-form-season-start-month"
+        aria-describedby="academy-season-start-month-hint"
+      />
+    </app-budojo-form-field>
+
     <div class="field">
       <span class="field__label">
         {{ 'academy.form.trainingDays.label' | translate }}

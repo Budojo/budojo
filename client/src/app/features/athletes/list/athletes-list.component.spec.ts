@@ -1853,7 +1853,11 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
     });
   });
 
-  function render(rows: Athlete[], trainingDays: number[] | null = [1, 2, 3, 4, 5, 6, 0]) {
+  function render(
+    rows: Athlete[],
+    trainingDays: number[] | null = [1, 2, 3, 4, 5, 6, 0],
+    season: { season_start: string; season_label: string } | null = null,
+  ) {
     TestBed.inject(AcademyService).academy.set({
       id: 1,
       name: 'Test',
@@ -1861,6 +1865,7 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
       address: null,
       logo_url: null,
       training_days: trainingDays,
+      ...(season ?? {}),
     } as unknown as Academy);
     const athleteService = TestBed.inject(AthleteService) as unknown as FakeAthleteService;
     athleteService.list.mockReturnValue(
@@ -1872,6 +1877,19 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
     const fixture = TestBed.createComponent(AthletesListComponent);
     fixture.detectChanges();
     return fixture;
+  }
+
+  /**
+   * `YYYY-MM-DD`, n days before today.
+   *
+   * Relative rather than fixed because the component's windows all end at
+   * `new Date()`, so a hard-coded season start would make the denominator
+   * grow by one every day and the test fail tomorrow.
+   */
+  function isoDaysAgo(days: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   function text(fixture: ComponentFixture<AthletesListComponent>, sel: string): string {
@@ -1901,7 +1919,8 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
       makeAthlete({ joined_at: iso, attendance_month_count: 1, attendance_total_count: 1 }),
     ]);
 
-    // One session held since they joined today, and they were at it.
+    // One session held since they joined today, and they were at it. No
+    // season on this fixture, so the window is theirs alone.
     expect(text(fixture, '.athlete-attendance__total')).toBe('1/1');
   });
 
@@ -1924,7 +1943,85 @@ describe('AthletesListComponent — sessions out of sessions held (#1455)', () =
         ?.getAttribute('aria-label') ?? '';
 
     expect(label).toContain('this month');
-    expect(label).toContain('joining');
+    expect(label).toContain('this season');
+  });
+
+  it('measures the lower line against the season, not the whole membership', () => {
+    // A veteran of three years, in a season 20 days old. The denominator has
+    // to be the season's sessions, not the academy's history — that is the
+    // entire point of #1484, and the bug it replaces showed a 900-session
+    // denominator next to a number that only ever counted this year.
+    const fixture = render(
+      [makeAthlete({ joined_at: '2023-01-10', attendance_total_count: 12 })],
+      [1, 2, 3, 4, 5, 6, 0],
+      { season_start: isoDaysAgo(19), season_label: '2025/26' },
+    );
+
+    // 20 days of a train-every-day schedule, inclusive of both ends.
+    expect(text(fixture, '.athlete-attendance__total')).toBe('12/20');
+  });
+
+  it('starts a mid-season arrival at their own joining day', () => {
+    // Joined ten days into a twenty-day season. Dividing them by the season's
+    // twenty would report the academy's calendar as if it were their record.
+    const fixture = render(
+      [makeAthlete({ joined_at: isoDaysAgo(9), attendance_total_count: 4 })],
+      [1, 2, 3, 4, 5, 6, 0],
+      { season_start: isoDaysAgo(19), season_label: '2025/26' },
+    );
+
+    expect(text(fixture, '.athlete-attendance__total')).toBe('4/10');
+  });
+
+  it('names the season in the lower line\u2019s tooltip', () => {
+    const fixture = render([makeAthlete({ joined_at: '2023-01-10' })], [1, 2, 3, 4, 5, 6, 0], {
+      season_start: isoDaysAgo(19),
+      season_label: '2025/26',
+    });
+    const tooltip = fixture.componentInstance as unknown as {
+      sessionsTooltip: (a: Athlete) => string;
+    };
+
+    expect(tooltip.sessionsTooltip(makeAthlete({ joined_at: '2023-01-10' }))).toContain('2025/26');
+  });
+
+  it('says so in the tooltip when the athlete joined after the season opened', () => {
+    // The half of #1484 the feedback asked for by name: without it a February
+    // arrival reads as someone who misses most sessions, when the truth is
+    // that most of the season happened before they existed.
+    const joined = isoDaysAgo(9);
+    const fixture = render([makeAthlete({ joined_at: joined })], [1, 2, 3, 4, 5, 6, 0], {
+      season_start: isoDaysAgo(19),
+      season_label: '2025/26',
+    });
+    const tooltip = fixture.componentInstance as unknown as {
+      sessionsTooltip: (a: Athlete) => string;
+    };
+    const text_ = tooltip.sessionsTooltip(makeAthlete({ joined_at: joined }));
+
+    expect(text_).toContain('2025/26');
+    // The joining date itself, spelled out — so the shorter window is
+    // explained rather than merely implied. Asserted against the formatted
+    // date and not against `/\d{4}/`, which the `2025` inside the season
+    // label already satisfies: that version passed whether or not the date
+    // interpolated at all.
+    const [y, m, d] = joined.split('-').map(Number);
+    const spelled = new Date(y, m - 1, d).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    expect(text_).toContain(spelled);
+  });
+
+  it('shows no tooltip on the lower line until the academy has loaded', () => {
+    // Naming a season we cannot name would be worse than saying nothing.
+    const fixture = render([makeAthlete()]);
+    const tooltip = fixture.componentInstance as unknown as {
+      sessionsTooltip: (a: Athlete) => string;
+    };
+
+    expect(tooltip.sessionsTooltip(makeAthlete())).toBe('');
   });
 
   it('no longer draws the attendance summary widget beside the table', () => {

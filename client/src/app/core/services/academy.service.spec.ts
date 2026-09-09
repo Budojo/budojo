@@ -58,6 +58,74 @@ describe('AcademyService', () => {
       expect(secondHit).toEqual(academy);
     });
 
+    /**
+     * The season is the one cached field that expires on its own (#1484).
+     * Everything else on the payload changes when somebody edits it; these
+     * two are the server's answer for a particular day, and this cache
+     * outlives that day.
+     */
+    function isoYearsFromToday(years: number, days = 0): string {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() + years);
+      d.setDate(d.getDate() + days);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    it('keeps serving a cached academy whose season is still running', () => {
+      // Started a month ago: nothing to re-ask about, and re-fetching on
+      // every guard run would undo the whole point of the cache.
+      service.get().subscribe();
+      httpMock
+        .expectOne('/api/v1/academy')
+        .flush({ data: makeAcademy({ season_start: isoYearsFromToday(0, -30) }) });
+
+      service.get().subscribe();
+
+      httpMock.expectNone('/api/v1/academy');
+    });
+
+    it('re-fetches once the cached season has ended', () => {
+      // A window left open across the rollover. The roster's count comes
+      // fresh from the server on every request while the denominator is
+      // derived from this payload, so a season-old `season_start` renders the
+      // new season's count over the old season's sessions.
+      service.get().subscribe();
+      httpMock
+        .expectOne('/api/v1/academy')
+        .flush({ data: makeAcademy({ season_start: isoYearsFromToday(-1, -1) }) });
+
+      const fresh = makeAcademy({ season_start: isoYearsFromToday(0), season_label: '2026/27' });
+      let received: Academy | undefined;
+      service.get().subscribe((a) => (received = a));
+
+      httpMock.expectOne('/api/v1/academy').flush({ data: fresh });
+      expect(received?.season_label).toBe('2026/27');
+    });
+
+    it('treats the boundary day itself as the new season, not the old one', () => {
+      // Exactly a year on: the season that started then has ended, because
+      // the next one starts today.
+      service.get().subscribe();
+      httpMock
+        .expectOne('/api/v1/academy')
+        .flush({ data: makeAcademy({ season_start: isoYearsFromToday(-1) }) });
+
+      service.get().subscribe();
+
+      httpMock.expectOne('/api/v1/academy').flush({ data: makeAcademy() });
+    });
+
+    it('never expires a payload from a server that sends no season', () => {
+      // Older backend, or a fixture that omits it. Absent is not expired —
+      // expiring on a missing field would re-fetch on every single guard run.
+      service.get().subscribe();
+      httpMock.expectOne('/api/v1/academy').flush({ data: makeAcademy() });
+
+      service.get().subscribe();
+
+      httpMock.expectNone('/api/v1/academy');
+    });
+
     it('deduplicates concurrent in-flight callers — single HTTP request', () => {
       // Two guards firing in the same tick (noAcademyGuard redirect → hasAcademyGuard).
       const firstResults: Academy[] = [];

@@ -163,6 +163,18 @@
   min-width: 9rem;
 }
 
+// The season-start select, sized to the text inputs around it (#1484).
+//
+// Left to itself a `p-select` shrinks to its longest option, so "September"
+// produced a trigger narrower than every field above it and pressed the
+// clear-X hard against the word. `<input>` defaults to roughly 20 characters,
+// which is where the 17rem comes from — the point is that the column of
+// controls reads as a column.
+:host ::ng-deep .academy-season-start-month {
+  width: 17rem;
+  max-width: 100%;
+}
+
 .phone-national-number {
   flex: 1 1 auto;
   min-width: 0;

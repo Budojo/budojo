@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\Academy;
+use App\Support\Season;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -56,6 +58,17 @@ class AcademyResource extends JsonResource
             'carnet_price_cents' => $academy->carnet_price_cents,
             'carnet_entries' => $academy->carnet_entries,
             'training_days' => $academy->training_days,
+            // The training year (#1484). Three fields for one setting,
+            // because the SPA needs different halves of it in different
+            // places: the raw month to put back in the settings form, and the
+            // resolved boundary + label to explain a roster number that is
+            // now scoped to a year rather than to forever. Resolving it here
+            // rather than in the client keeps one definition of where a
+            // season starts — the client re-deriving it from the month would
+            // be a second implementation of the same off-by-one.
+            'season_start_month' => $academy->season_start_month,
+            'season_start' => Season::startFor($academy, CarbonImmutable::now())->toDateString(),
+            'season_label' => Season::labelFor($academy, CarbonImmutable::now()),
             // Schedule history (#1094). Pull the full history once,
             // then derive current/next from the in-memory collection —
             // 1 query instead of separate `currentSchedule()` /

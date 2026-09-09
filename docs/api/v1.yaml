@@ -6597,6 +6597,8 @@ components:
             object to attach one. Half-filled payloads are rejected with 422.
         training_days:
           $ref: '#/components/schemas/TrainingDays'
+        season_start_month:
+          $ref: '#/components/schemas/SeasonStartMonth'
 
     AcademyUpdateRequest:
       type: object
@@ -6688,6 +6690,8 @@ components:
           example: 10
         training_days:
           $ref: '#/components/schemas/TrainingDays'
+        season_start_month:
+          $ref: '#/components/schemas/SeasonStartMonth'
 
     Address:
       type: object
@@ -6770,6 +6774,9 @@ components:
           carnet_price_cents,
           carnet_entries,
           training_days,
+          season_start_month,
+          season_start,
+          season_label,
           phone_country_code,
           phone_national_number,
           website,
@@ -6884,6 +6891,25 @@ components:
           example: 10
         training_days:
           $ref: '#/components/schemas/TrainingDays'
+        season_start_month:
+          $ref: '#/components/schemas/SeasonStartMonth'
+        season_start:
+          type: string
+          format: date
+          description: |
+            The day the CURRENT season began, resolved server-side from
+            `season_start_month` against today (#1484). Read-only: it is an
+            answer, not a setting. Supplied so the SPA never re-implements
+            the boundary rule — "is March in this season or the last?" has
+            exactly one definition, and a second copy in TypeScript is a
+            second chance to get the off-by-one wrong.
+          example: '2025-09-01'
+        season_label:
+          type: string
+          description: |
+            The current season's name for display — `2025/26` when it
+            crosses new year, `2026` when it does not (#1484).
+          example: '2025/26'
         current_schedule:
           allOf:
             - $ref: '#/components/schemas/AcademySchedule'
@@ -6929,6 +6955,21 @@ components:
           format: date
           description: ISO calendar date (YYYY-MM-DD), no time component.
           example: '2026-06-01'
+
+    SeasonStartMonth:
+      type: integer
+      minimum: 1
+      maximum: 12
+      nullable: true
+      description: |
+        The month the academy's training year restarts in, 1-12 (#1484).
+
+        A month rather than a date, because a season is a recurring boundary
+        and not an event: "we start again in September" stays true every year.
+        `null` is not "no season" — it is "nobody has chosen", which the
+        server answers with September. Every academy has a training year
+        whether or not it has an opinion about when it starts.
+      example: 9
 
     TrainingDays:
       type: array
@@ -7419,12 +7460,20 @@ components:
           nullable: true
           minimum: 0
           description: |
-            The same count over the athlete's whole history (#1447). Same
-            null-means-not-selected rule as `attendance_month_count`.
+            The same count over the current SEASON (#1447, rescoped in
+            #1484) — the academy's training year, resolved from
+            `season_start_month`, floored per athlete at their own
+            `joined_at`. Same null-means-not-selected rule as
+            `attendance_month_count`.
 
-            The two answer different questions, and diverge on exactly the
-            athlete the roster is most worth spotting: the veteran with three
-            years of sessions who has not appeared this month.
+            It counted the athlete's whole history until #1484, which answers
+            a question about the gym rather than about this year: a number
+            that silently spans three seasons is not comparable between two
+            athletes who joined five years apart.
+
+            The two counts answer different questions, and diverge on exactly
+            the athlete the roster is most worth spotting: the one with a full
+            season of sessions who has not appeared this month.
           example: 214
         billing_period_months:
           type: integer

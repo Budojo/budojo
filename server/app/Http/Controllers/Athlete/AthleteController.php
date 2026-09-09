@@ -16,6 +16,7 @@ use App\Http\Resources\AthleteResource;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
+use App\Support\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -117,6 +118,27 @@ class AthleteController extends Controller
 
         $academy = $user->activeAcademy();
         \assert($academy !== null); // guarded above
+
+        // The season this moment falls in (#1484) — see App\Support\Season for
+        // why the academy stores a recurring month rather than a date.
+        $now = CarbonImmutable::now();
+        $seasonAttendanceScope = fn ($q) => $q
+            ->whereBetween('attended_on', [
+                Season::startFor($academy, $now)->toDateString(),
+                Season::endFor($academy, $now)->toDateString(),
+            ])
+            // The per-row floor: an athlete's own joining date, when it falls
+            // inside the season. `athletes.joined_at` is reachable here
+            // because this is a subquery correlated to the outer row.
+            //
+            // `DATE()` around it rather than a bare column comparison: the
+            // column is a DATE but its cast carries no format, so Eloquent
+            // writes `2026-09-01 00:00:00` while `attended_on` is normalised
+            // to `2026-09-01` by its own `date:Y-m-d` cast. Compared as
+            // strings the athlete's first day loses to itself, and someone
+            // who trained on the day they joined was not counted for it.
+            ->whereRaw('attended_on >= DATE(athletes.joined_at)');
+
         $query = $academy->athletes()
             ->when($trashedMode, fn ($q) => $q->onlyTrashed())
             // Eager-load only the current-month payments slice so the
@@ -160,8 +182,14 @@ class AthleteController extends Controller
             // insert, and the SoftDeletes global scope keeps a corrected-by-
             // delete-and-reinsert day from being counted twice. See the
             // uniqueness note in the create_attendance_records migration.
+            // The season's count, not a lifetime one (#1484), and floored at
+            // the athlete's own joining date because the lower bound differs
+            // per ROW: someone who joined in November cannot have attended
+            // the September sessions, and measuring them against the whole
+            // season reports the academy's calendar as if it were their
+            // record.
             ->withCount([
-                'attendanceRecords as attendance_total_count',
+                'attendanceRecords as attendance_total_count' => $seasonAttendanceScope,
                 'attendanceRecords as attendance_month_count' => $currentMonthAttendanceScope,
             ])
             ->when($request->filled('belt'), fn ($q) => $q->where('belt', $request->input('belt')))

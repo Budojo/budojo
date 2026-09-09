@@ -104,11 +104,13 @@ export function countScheduledTrainingDays(
  * been missed yet.
  *
  * This is the general shape; `countScheduledTrainingDays` above is the
- * calendar-month case of it. The roster needs the range form to ask "how
- * many sessions has there been since THIS athlete joined", which is a
- * different window per row and the only honest denominator for a lifetime
- * attendance rate: measuring someone who joined last month against three
- * years of sessions reports a number about the academy, not about them.
+ * calendar-month case of it. The roster needs the range form because its
+ * window differs per ROW: the season, floored at the day that athlete
+ * joined (#1484). Both bounds earn their place — the season keeps the
+ * number about this year rather than about the gym's whole history, and the
+ * joining floor keeps it about the athlete, since measuring someone who
+ * arrived in November against September's sessions reports the academy's
+ * calendar as if it were their record.
  *
  * Returns `null` on the same "no schedule configured anywhere" condition,
  * and `0` for a range that is entirely in the future — known-to-be-zero
