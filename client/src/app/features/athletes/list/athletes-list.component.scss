@@ -693,15 +693,6 @@ $athletes-mobile-breakpoint: 768px;
   background: var(--p-surface-100);
   color: var(--p-text-muted-color);
 
-  // Amber only when there is something to say (#1482).
-  //
-  // This lived in its own top-level rule ABOVE the base one, and at equal
-  // specificity the later rule won — so the warning triangle rendered in the
-  // same muted grey as the eye and the bin, which is the one thing it must
-  // not look like. Nested here it cannot be re-ordered out of effect.
-  &--alert {
-    color: var(--p-orange-600, #c2410c);
-  }
   cursor: pointer;
   transition:
     background-color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out),
@@ -738,6 +729,23 @@ $athletes-mobile-breakpoint: 768px;
   gap: 0.5rem;
   height: 2.75rem;
   flex: 0 0 auto;
+
+  // Amber only when there is something to say (#1482).
+  //
+  // Twice in the wrong place now. It began as its own top-level rule ABOVE
+  // the base one, and at equal specificity the later rule won — so the
+  // warning triangle rendered in the same muted grey as the eye and the bin,
+  // which is the one thing it must not look like. The fix nested it in the
+  // shared `.athletes-page__reveal, .athletes-page__toggle` block, which
+  // solved the ordering and quietly declared `.athletes-page__reveal--alert`
+  // as well: `&` resolves against EVERY parent in a comma group, and no eye
+  // button is ever an alert. `make dead-styles` reported it.
+  //
+  // Here it is nested (so ordering cannot betray it again) under the one
+  // selector that wears it.
+  &--alert {
+    color: var(--p-orange-600, #c2410c);
+  }
   font: inherit;
   font-size: 0.875rem;
   // The row wraps on a phone; a label that breaks mid-word would take the
