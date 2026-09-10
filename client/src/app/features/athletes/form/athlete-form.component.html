@@ -99,7 +99,7 @@
               <p-datepicker
                 inputId="date_of_birth"
                 formControlName="date_of_birth"
-                dateFormat="yy-mm-dd"
+                [dateFormat]="datePickerFormat()"
                 [showIcon]="true"
                 [maxDate]="today"
                 appendTo="body"
@@ -176,7 +176,7 @@
               <p-datepicker
                 inputId="joined_at"
                 formControlName="joined_at"
-                dateFormat="yy-mm-dd"
+                [dateFormat]="datePickerFormat()"
                 [showIcon]="true"
                 appendTo="body"
                 styleClass="w-full"

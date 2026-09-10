@@ -29,7 +29,7 @@
       (ngModelChange)="selectedDate.set($event); onDateChanged()"
       [maxDate]="maxDate"
       [disabledDays]="disabledWeekdays()"
-      dateFormat="yy-mm-dd"
+      [dateFormat]="datePickerFormat()"
       [showIcon]="true"
       iconDisplay="input"
       data-cy="attendance-date"

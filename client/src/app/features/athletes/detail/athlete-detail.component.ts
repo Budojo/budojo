@@ -16,6 +16,8 @@ import { TabsModule } from 'primeng/tabs';
 import { TagModule } from 'primeng/tag';
 import { Athlete, AthleteService, AthleteStatus } from '../../../core/services/athlete.service';
 import { RuntimeService } from '../../../core/services/runtime.service';
+import { LanguageService } from '../../../core/services/language.service';
+import { formatIsoDate } from '../../../shared/utils/locale';
 import { AgeBadgeComponent } from '../../../shared/components/age-badge/age-badge.component';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { STATUS_KEYS } from '../../../shared/utils/i18n-enum-keys';
@@ -49,6 +51,22 @@ export class AthleteDetailComponent implements OnInit {
   protected readonly runtime = inject(RuntimeService);
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly languageService = inject(LanguageService);
+
+  /**
+   * The joining date, as a person reads it (#1498).
+   *
+   * The template interpolated `a.joined_at` straight into the label, so the
+   * line under an athlete's name read `Joined 2024-09-01`. An ISO date is a
+   * wire format; nobody reads one as a date.
+   *
+   * Reading `currentLang()` inside makes this re-evaluate when the sidebar
+   * toggle flips, which is the whole point — before this, switching to
+   * Italian changed every word on the page and not one date.
+   */
+  protected joinedOn(iso: string): string {
+    return formatIsoDate(iso, this.languageService.currentLang());
+  }
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);

@@ -31,6 +31,7 @@ import {
   DocumentType,
 } from '../../../../core/services/document.service';
 import { LanguageService } from '../../../../core/services/language.service';
+import { datePickerFormatFor } from '../../../../shared/utils/locale';
 
 interface TypeOption {
   label: string;
@@ -107,6 +108,17 @@ export class UploadDocumentDialogComponent {
   private readonly documentService = inject(DocumentService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+
+  /**
+   * The date format for every picker on this component (#1498).
+   *
+   * A signal, not a constant, so switching the sidebar language re-renders
+   * the dates with it — before this the format was hardcoded in the template
+   * and the app shipped two different ones.
+   */
+  protected readonly datePickerFormat = computed(() =>
+    datePickerFormatFor(this.languageService.currentLang()),
+  );
 
   /** Two-way bound. Parent owns the open/closed state — we just toggle it. */
   readonly visible = model.required<boolean>();
