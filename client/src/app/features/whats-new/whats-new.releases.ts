@@ -60,6 +60,134 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.55.1',
+    date: '2026-09-10',
+    headline: {
+      en: 'Dates, tables, and ten things seen with fresh eyes.',
+      it: 'Le date, le tabelle, e dieci cose viste con occhi nuovi.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '📅 Dates you can read, in your language',
+          it: '📅 Le date si leggono, e parlano la tua lingua',
+        },
+        bullets: [
+          {
+            en: "The app wrote dates THREE different ways. Editing an athlete you saw their joining date as 2024-09-01; recording that same person's belt one click away it became 01/09/2024. Same person, same session, two formats — and one of them a machine format nobody writes by hand. Neither followed the language either: you switched the app to Italian and every word changed except the dates.",
+            it: "L'app scriveva le date in tre modi diversi. Modificando la scheda di un atleta la data di iscrizione appariva come 2024-09-01; registrando la cintura di quella stessa persona, un clic più in là, diventava 01/09/2024. Stessa persona, stessa sessione, due formati — e uno dei due è un formato da macchina che nessuno scrive a mano. E nessuno dei due seguiva la lingua: passavi l'app in italiano e cambiavano tutte le parole tranne le date.",
+          },
+          {
+            en: 'One format now, and it follows the language. Where a date is text you read — under an athlete\'s name — it is spelled out: "Joined 1 September 2024", not 2024-09-01.',
+            it: "Adesso c'è un formato solo, e segue la lingua. Dove la data è un testo da leggere — sotto il nome dell'atleta — è scritta per esteso: «Iscritta il 1 settembre 2024», non 2024-09-01.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: "🗂️ The athlete's page starts with what you came for",
+          it: "🗂️ La scheda dell'atleta parte da quello che sei venuto a vedere",
+        },
+        bullets: [
+          {
+            en: 'You clicked Documents and the documents were off-screen. Above the tabs sat three panels — invitation, email, photo — taking the first two thirds of the page. Those are things you do ONCE, when you create the athlete. The tabs answer the weekly questions: has the certificate expired, have they paid, when did they last train. The page was ordered by how permanent the information is, not by how often it is needed. The three panels live under Edit now, with every other editable field, and the tabs sit right under the name.',
+            it: "Cliccavi Documenti e i documenti erano fuori schermo. Sopra le linguette c'erano tre riquadri — invito, email, foto — che occupavano i primi due terzi della pagina. Sono cose che si fanno una volta, quando crei l'atleta. Le linguette invece rispondono alle domande di ogni settimana: il certificato è scaduto? ha pagato? quando si è allenato l'ultima volta? La pagina era ordinata per quanto un'informazione è permanente, non per quanto spesso serve. Ora i tre riquadri stanno sotto «Modifica», insieme a tutti gli altri campi modificabili, e le linguette sono subito sotto il nome.",
+          },
+        ],
+      },
+      {
+        heading: { en: "🏫 Your gym's name", it: '🏫 Il nome della tua palestra' },
+        bullets: [
+          {
+            en: 'In the left bar it was cut in half — "Gracie Barra T…". Academy names are almost always shaped that way, a brand plus a city, so the part that got cut was the part saying WHICH one. It wraps now and you can read all of it. On the phone it was not there at all: the top bar said "Budojo". It says your gym\'s name now — the mark beside it already says which program you are using.',
+            it: "Nella barra a sinistra era tagliato a metà: «Gracie Barra T…». E i nomi delle accademie sono quasi sempre fatti così — un marchio più una città — quindi la parte tagliata era proprio quella che dice quale. Ora va a capo e si legge tutto. Sul telefono non c'era per niente: la barra in alto diceva «Budojo». Adesso dice il nome della tua palestra — il simbolo accanto basta già a dire quale programma stai usando.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🔍 Five icons on the phone were a riddle',
+          it: '🔍 Cinque icone sul telefono erano un indovinello',
+        },
+        bullets: [
+          {
+            en: 'Above the athlete list were five unlabelled buttons: funnel, sort, triangle, crossed-out eye, bin. Two of them — "show hidden" and "show deleted" — are things you do rarely and on purpose, but they sat there at the same weight as the sort you use every time you open the app. Those two moved into the filter panel, where they are WORDS: "Show deleted athletes" is a sentence, a bin is a puzzle. Three left in the bar.',
+            it: "Sopra la lista atleti c'erano cinque pulsanti tutti senza etichetta: imbuto, ordinamento, triangolo, occhio sbarrato, cestino. Due di quelli — «mostra nascosti» e «mostra eliminati» — sono cose che si fanno di rado e di proposito, ma stavano lì con lo stesso peso dell'ordinamento che usi ogni volta che apri l'app. Quei due sono passati dentro il pannello dei filtri, dove sono parole: «Mostra atleti eliminati» è una frase, un cestino è un enigma. In barra ne restano tre.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '📋 Every table spells its headers the same way',
+          it: '📋 Le tabelle si scrivono tutte allo stesso modo',
+        },
+        bullets: [
+          {
+            en: "The daily check-in table's header said FULL NAME in capitals; the athlete list said Full name. Same column, same product, one click apart — and the difference came only from how the two tables happened to be built inside. They match now.",
+            it: "L'intestazione della tabella del check-in giornaliero diceva «FULL NAME» in maiuscolo; quella della lista atleti «Full name». Stessa colonna, stesso prodotto, un clic di distanza — e la differenza dipendeva solo da come le due tabelle erano costruite dentro. Ora sono uguali.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '⚠️ "Try again" now has a button',
+          it: '⚠️ «Riprova» adesso ha un pulsante',
+        },
+        bullets: [
+          {
+            en: 'When notifications failed to load you got four grey words: "Couldn\'t load your notifications. Try again." And there was nothing to press — the only way was reloading the page, if you thought of it. There is a proper block now, with an icon, an explanation and a Try again button that retries in place.',
+            it: "Quando le notifiche non si caricavano comparivano quattro parole grigie: «Non siamo riusciti a caricare le notifiche. Riprova.» E non c'era niente da premere: l'unico modo era ricaricare la pagina, sapendo di doverlo fare. Ora c'è un riquadro con l'icona, la spiegazione e un pulsante Riprova che ritenta lì, senza ricaricare niente.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🏫 The academy shows what you can set',
+          it: "🏫 L'accademia mostra quello che puoi impostare",
+        },
+        bullets: [
+          {
+            en: 'The academy page was missing the training days and the season — two things you set in the form and then could not see anywhere. The season matters more than it looks: it is the denominator of the attendance number you read every day, so when a fraction looks odd, "what is it counting?" had no answer.',
+            it: "Nella scheda dell'accademia mancavano i giorni di allenamento e la stagione — due cose che imposti nel modulo e che poi non si vedevano da nessuna parte. La stagione conta più di quanto sembri: è il denominatore del numero delle presenze che leggi ogni giorno, quindi quando una frazione ti sembra strana, la domanda «ma cosa sta contando?» non aveva risposta.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🎨 Two buttons that shouted too loudly',
+          it: '🎨 Due bottoni che gridavano troppo',
+        },
+        bullets: [
+          {
+            en: '"Upload photo" was the brightest control on the athlete page, while "Invite to the system" — which gives a person an account and a password — was the dimmest. The hierarchy is the right way round now.',
+            it: '«Carica foto» era il pulsante più acceso della scheda atleta, mentre «Invita nel sistema» — che dà a una persona un account e una password — era il più spento. Ora la gerarchia è quella giusta.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🍪 No cookie banner on your own computer',
+          it: '🍪 Niente banner dei cookie sul tuo computer',
+        },
+        bullets: [
+          {
+            en: 'Straight after installing, the first thing you saw was not the welcome — it was a cookie consent request. On a program that runs only on your machine, with no network, no analytics and no third parties at all; and on the phone it covered all three of the get-started steps. It is gone. It stays on the web version, where it makes sense.',
+            it: "Appena installato, la prima cosa che vedevi non era il benvenuto: era una richiesta di consenso sui cookie. Su un programma che gira solo sulla tua macchina, senza rete, senza analytics e senza nessuna terza parte — e sul telefono copriva tutti e tre i passi per iniziare. Non c'è più. Resta sulla versione web, dove ha senso.",
+          },
+        ],
+      },
+      {
+        heading: { en: '🔧 And an invisible tidy-up', it: '🔧 E una pulizia invisibile' },
+        bullets: [
+          {
+            en: 'A styling class used in 37 places did nothing in 26 of them. What you could see: inside the "Add a past promotion" window the dropdowns were all different widths, each as wide as the longest word it held. They are one column now.',
+            it: "Una classe usata in 37 punti dell'app non faceva niente in 26 di quelli. Il risultato visibile: dentro la finestra «Aggiungi una promozione passata» i menu a tendina erano tutti di larghezze diverse, ognuno largo quanto la parola più lunga che conteneva. Ora sono una colonna sola.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.55.0',
     date: '2026-09-10',
     headline: {
