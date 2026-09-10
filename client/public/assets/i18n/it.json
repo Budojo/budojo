@@ -417,7 +417,6 @@
     },
     "empty": "Sei in pari, nessuna notifica.",
     "emptyUnread": "Nessuna notifica non letta.",
-    "error": "Non riesco a caricare le notifiche. Riprova.",
     "bell": {
       "ariaLabel": "Notifiche",
       "tooltip": "Notifiche",
@@ -425,7 +424,10 @@
     },
     "toast": {
       "dismiss": "Chiudi notifica"
-    }
+    },
+    "errorTitle": "Non siamo riusciti a caricare le notifiche",
+    "errorHint": "Qualcosa è andato storto. Controlla la connessione e riprova.",
+    "errorRetry": "Riprova"
   },
   "onboarding": {
     "checklist": {
@@ -1365,7 +1367,9 @@
         "permalink": "Permalink",
         "phone": "Telefono",
         "links": "Link",
-        "address": "Indirizzo"
+        "address": "Indirizzo",
+        "trainingDays": "Giorni di allenamento",
+        "season": "Stagione"
       },
       "linksAria": "Link di contatto dell'academy",
       "links": {
@@ -1390,7 +1394,8 @@
         "removeMessage": "Rimuovere il logo dell'academy?",
         "removeAccept": "Rimuovi",
         "removeReject": "Annulla"
-      }
+      },
+      "seasonStarted": "iniziata il {{date}}"
     },
     "form": {
       "eyebrow": "Academy",

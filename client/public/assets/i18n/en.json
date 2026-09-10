@@ -417,7 +417,6 @@
     },
     "empty": "You're all caught up.",
     "emptyUnread": "No unread notifications.",
-    "error": "Couldn't load your notifications. Try again.",
     "bell": {
       "ariaLabel": "Notifications",
       "tooltip": "Notifications",
@@ -425,7 +424,10 @@
     },
     "toast": {
       "dismiss": "Dismiss notification"
-    }
+    },
+    "errorTitle": "Couldn't load your notifications",
+    "errorHint": "Something went wrong. Check your connection and try again.",
+    "errorRetry": "Try again"
   },
   "onboarding": {
     "checklist": {
@@ -1365,7 +1367,9 @@
         "permalink": "Permalink",
         "phone": "Phone",
         "links": "Links",
-        "address": "Address"
+        "address": "Address",
+        "trainingDays": "Training days",
+        "season": "Season"
       },
       "linksAria": "Academy contact links",
       "links": {
@@ -1390,7 +1394,8 @@
         "removeMessage": "Remove the academy logo?",
         "removeAccept": "Remove",
         "removeReject": "Cancel"
-      }
+      },
+      "seasonStarted": "started {{date}}"
     },
     "form": {
       "eyebrow": "Academy",

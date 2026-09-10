@@ -55,9 +55,23 @@
         }
       </div>
     } @else if (loadError()) {
-      <p class="notifications__empty" data-cy="notifications-error">
-        {{ 'notifications.error' | translate }}
-      </p>
+      <!--
+        The shared state component, with something to press (#1499).
+
+        This was a bare `<p>` whose text ended "Try again." with nothing to
+        try it with — and the empty branch four lines below had an icon and a
+        block, so the state that needed help was treated worse than the state
+        that did not. An empty list is a fine terminal state; a failed load is
+        a temporary one that needs exactly one action.
+      -->
+      <app-error-state
+        [title]="'notifications.errorTitle' | translate"
+        [hint]="'notifications.errorHint' | translate"
+        [retryLabel]="'notifications.errorRetry' | translate"
+        [headingLevel]="2"
+        (retry)="load()"
+        dataCy="notifications-error"
+      />
     } @else if (isEmpty()) {
       <div class="notifications__empty" data-cy="notifications-empty">
         <i class="pi pi-bell-slash" aria-hidden="true"></i>
