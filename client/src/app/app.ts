@@ -31,6 +31,14 @@ export class App implements OnInit {
   private readonly appUpdateService = inject(AppUpdateService);
   private readonly versionCheckService = inject(VersionCheckService);
   private readonly runtimeService = inject(RuntimeService);
+
+  /**
+   * Exposed to the template for the consent banner's gate (#1508). Defaults
+   * to `web` until `/runtime` answers, so a hosted build never flashes
+   * without its banner; the desktop build resolves to `desktop` in the same
+   * bootstrap tick that loads it.
+   */
+  protected readonly runtime = this.runtimeService;
   private readonly desktopBridge = inject(DesktopBridgeService);
 
   ngOnInit(): void {
