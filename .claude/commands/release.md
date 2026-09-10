@@ -32,6 +32,8 @@ On a `chore/release-vX.Y.Z` branch off develop:
 - **Prepend** a `Release` entry to `RELEASES` in `client/src/app/features/whats-new/whats-new.releases.ts` (newest first).
 - Bump the **four** trip-wires in `whats-new.component.spec.ts`: the latest-version assertion, `cards.length`, the head of the `versions` array, and the **remaining count in the "Show N more releases" button** (#1464 — the page opens on ten, so this one is `cards.length - 10`). That last one is not in the same test as the other three and was missed on the first release after #1464 shipped.
 
+> **Trap:** there used to be a fifth, and it fired exactly once. The language tests anchor on a specific old release (`cardFor(fixture, 'v2.45.0')`) so they do not break every release — but #1464 made the page open on ten, so the anchor eventually falls off the first page and the lookup returns nothing. Fixed at the root on v2.55.0: `cardFor` now presses "show more" until it finds the card. **Do not bump the anchor** if this ever fails again — that would restore the every-release breakage the anchor exists to prevent.
+
 Run `test-client.sh vitest` on that spec, open the PR to **develop**, merge it. The dedicated `Whats-new pin matches expected release` CI job gates this.
 
 ### 3. Build the `## Auto-closes` block

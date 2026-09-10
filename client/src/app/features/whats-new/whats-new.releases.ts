@@ -60,6 +60,76 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.55.0',
+    date: '2026-09-10',
+    headline: {
+      en: 'The first thing you see, and a way to write to us.',
+      it: 'La prima schermata, e un modo per scriverci.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '👋 When you open Budojo for the first time',
+          it: '👋 Quando apri Budojo la prima volta',
+        },
+        bullets: [
+          {
+            en: 'Until now a fresh install opened on the SIGN-IN form — email and password. The trouble is that on a first launch you do not have a password: you do not have an account yet. The link to create one was there, at the bottom, in small type.',
+            it: "Finora, appena installato, Budojo ti apriva il modulo di accesso: email e password. Il problema è che al primo avvio una password non ce l'hai — non hai ancora nessun account. Il collegamento per crearne uno c'era, in fondo, in piccolo.",
+          },
+          {
+            en: 'The first screen is a welcome now: what this program is, one button to create your academy, and the three things to do first — create the account, set up the academy, add the first athlete. Coming back after signing out, "I already have an account" sits right beside it.',
+            it: "Adesso la prima schermata è un benvenuto: cosa fa questo programma, un bottone per creare la tua accademia, e i tre passi per iniziare — crea l'account, imposta l'accademia, aggiungi il primo atleta. Chi rientra dopo essere uscito trova «Ho già un account» proprio lì accanto.",
+          },
+          {
+            en: 'That screen used to be an advertisement, written when Budojo ran on the internet. It said things that stopped being true: that it installs on iPhone and Android, that it updates itself on your phone, that there is a form inside the app to write to us. There is no phone version, and that form had been removed because it did not work. Who was seeing it? Nobody — the desktop skipped past it and the website is gone. That is how it drifted without anyone noticing.',
+            it: "Quella schermata prima era una pagina pubblicitaria, scritta quando Budojo girava su internet. Diceva cose che non sono più vere: che si installa su iPhone e Android, che si aggiorna da solo sul telefono, che c'è un modulo dentro l'app per scriverci. Non c'è nessuna versione per telefono, e quel modulo era stato tolto perché non funzionava. Chi la vedeva? Nessuno: sul desktop veniva saltata, e il sito non esiste più. È così che era rimasta indietro senza che nessuno se ne accorgesse.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '✉️ A way to write to us that actually works',
+          it: '✉️ Un modo per scriverci che funziona davvero',
+        },
+        bullets: [
+          {
+            en: 'Under More, "Contact support" had disappeared. It was removed for an honest reason: the form accepted your message, told you it was sent, and sent it to nobody — the program on your computer has no way to post email.',
+            it: 'Sotto «Altro» era sparita la voce «Contatta il supporto». Era stata tolta per un motivo onesto: il modulo accettava il messaggio, ti diceva «inviato», e non lo mandava a nessuno — il programma sul tuo computer non ha modo di spedire email.',
+          },
+          {
+            en: 'It is back, and it opens YOUR mail program with the address already filled in and, in the body, the version of Budojo and the system you are on. Delete them if you would rather not send them. It works offline too: the message goes out when you are back online.',
+            it: "Adesso la voce c'è di nuovo, e apre il tuo programma di posta con l'indirizzo già scritto e, nel corpo del messaggio, la versione di Budojo e il sistema che stai usando. Puoi cancellarli se preferisci non mandarli. Funziona anche senza internet: il messaggio parte quando torni in linea.",
+          },
+          {
+            en: 'The address is written next to the row, so if your computer has no mail program set up you can copy it anyway.',
+            it: "L'indirizzo è scritto accanto alla voce, così se il tuo computer non ha un programma di posta configurato puoi comunque copiarlo.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: "📝 The athlete's form, below the fold",
+          it: "📝 La scheda dell'atleta, sotto la piega",
+        },
+        bullets: [
+          {
+            en: '"Billing" is no longer a section of its own. It was a heading spent on one control — two if you keep a price list. What an athlete pays is a fact about their membership, not a chapter apart: it sits under "At the gym" now, with the belt, the status and the joining date. One less section to scroll.',
+            it: '«Fatturazione» non è più una sezione a sé. Era un titolo speso per un controllo solo — due se hai un listino prezzi. Quanto paga un atleta è un fatto della sua permanenza in palestra, non un capitolo a parte: adesso sta sotto «In palestra», insieme a cintura, stato e data di iscrizione. Una sezione in meno da scorrere.',
+          },
+          {
+            en: 'The fields have widths that explain themselves. Before, how wide a field was depended on how many other fields shared its row: a box for a date could be as wide as a surname, and two dates in different parts of the form came out different widths. Now each field is as wide as what it holds — short for dates and counts, medium for names and menus, full for emails and addresses. The rows line up, and you can see why.',
+            it: "I campi hanno larghezze che si spiegano. Prima la larghezza di un campo dipendeva da quanti altri campi c'erano sulla stessa riga: una casella per una data poteva essere larga quanto un cognome, e due date in punti diversi della scheda venivano larghe diverse. Ora ogni campo è largo quanto serve a quello che contiene — corto per date e numeri, medio per nomi e menu, pieno per email e indirizzi. Le righe si allineano, e la ragione si vede.",
+          },
+          {
+            en: 'Nothing changes on the phone: there the fields take the whole row, as before.',
+            it: 'Sul telefono nessun cambiamento: lì i campi occupano tutta la riga, come prima.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.54.0',
     date: '2026-09-09',
     headline: {
