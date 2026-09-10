@@ -363,3 +363,36 @@ describe('Athlete promotion history (#1431)', () => {
     });
   });
 });
+
+/**
+ * The dialog's controls fill their column (#1495).
+ *
+ * They carried `styleClass="w-full"`, which does nothing to a `p-select`: the
+ * only `.w-full` rule in the codebase is nested inside `.p-password`. So five
+ * selects in a 26rem dialog sized to their longest belt name and came out
+ * ragged — "Purple" wider than "White" — for a reason no reader could see.
+ */
+describe('the promotion dialog is one column (#1495)', () => {
+  it('gives every control the same width', () => {
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
+    cy.intercept('GET', '/api/v1/athletes/1', { statusCode: 200, body: { data: ATHLETE } });
+    cy.intercept('GET', '/api/v1/athletes/1/promotions*', promotionsPage([]));
+    cy.visitAuthenticated('/dashboard/athletes/1/promotions');
+
+    cy.get('[data-cy="promotions-add"]').click();
+
+    cy.get('[data-cy="promotion-create-dialog"] .p-select')
+      .first()
+      .then(($first) => {
+        const width = $first[0].getBoundingClientRect().width;
+        // Every select the same, and none of them content-sized: the dialog
+        // is 26rem, so a filled control is comfortably past 300px.
+        expect(width, 'a filled select in a 26rem dialog').to.be.greaterThan(300);
+
+        cy.get('[data-cy="promotion-create-dialog"] .p-select').each(($s) => {
+          expect($s[0].getBoundingClientRect().width).to.be.closeTo(width, 1);
+        });
+      });
+  });
+});
