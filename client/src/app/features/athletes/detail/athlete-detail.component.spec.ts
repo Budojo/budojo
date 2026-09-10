@@ -201,8 +201,12 @@ describe('AthleteDetailComponent', () => {
     httpMock.verify();
   });
 
-  it('still renders the three surfaces on a regular (non-self) row', () => {
-    const { http: httpMock } = setupTestBed('42');
+  it('still renders the three surfaces on a regular (non-self) row — under Edit', () => {
+    // They used to sit above the tab strip on every tab, which pushed it to
+    // y≈678 on a 1280×800 window: clicking Documents landed you where the
+    // documents were off-screen (#1500). They live behind Edit now, with the
+    // rest of the editable fields.
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/edit');
     const fixture = TestBed.createComponent(AthleteDetailComponent);
     fixture.detectChanges();
     httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
@@ -210,7 +214,26 @@ describe('AthleteDetailComponent', () => {
 
     expect(fixture.nativeElement.querySelector('app-athlete-invitation-card')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('app-athlete-email-change-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-athlete-photo-card')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('[data-cy="athlete-tab-payments"]')).not.toBeNull();
+    httpMock.verify();
+  });
+
+  it('keeps the account cards out of the way on every other tab (#1500)', () => {
+    // The point of the move: what you navigated to is what you see.
+    const { http: httpMock } = setupTestBed('42', '/dashboard/athletes/42/documents');
+    const fixture = TestBed.createComponent(AthleteDetailComponent);
+    fixture.detectChanges();
+    httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete() });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-athlete-invitation-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-athlete-email-change-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-athlete-photo-card')).toBeNull();
+
+    // The tab strip and the athlete's identity are still there — this moved
+    // the cards, it did not hide the page.
+    expect(fixture.nativeElement.querySelector('[data-cy="athlete-tabs"]')).not.toBeNull();
     httpMock.verify();
   });
 

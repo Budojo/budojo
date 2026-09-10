@@ -272,3 +272,42 @@ describe('Athlete documents page', () => {
     cy.get('h1').should('contain', 'Mario Rossi');
   });
 });
+
+/**
+ * What you navigated to is what you see (#1500).
+ *
+ * Three account cards — invitation, email, photo — used to sit above the tab
+ * strip on every tab, which put it at y≈678 on a 1280×800 window. Clicking
+ * Documents landed you on a page where the documents were off-screen.
+ */
+describe('the athlete record starts above the fold (#1500)', () => {
+  it('puts the tab strip and its content in the first screen', () => {
+    cy.viewport(1280, 800);
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
+    cy.intercept('GET', '/api/v1/athletes/42', { statusCode: 200, body: { data: ATHLETE } });
+    cy.intercept('GET', '/api/v1/athletes/42/documents*', { statusCode: 200, body: { data: [] } });
+    cy.visitAuthenticated('/dashboard/athletes/42/documents');
+
+    cy.get('[data-cy="athlete-tabs"]')
+      .should('be.visible')
+      .then(($tabs) => {
+        // It was 678. Anything in the upper half means the content below it
+        // has room on an 800px window.
+        expect($tabs[0].getBoundingClientRect().bottom, 'tab strip bottom').to.be.lessThan(400);
+      });
+
+    // And the cards are not in the way.
+    cy.get('app-athlete-photo-card').should('not.exist');
+    cy.get('app-athlete-invitation-card').should('not.exist');
+  });
+
+  it('keeps them one click away, under Edit', () => {
+    cy.viewport(1280, 800);
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
+    cy.intercept('GET', '/api/v1/athletes/42', { statusCode: 200, body: { data: ATHLETE } });
+    cy.intercept('GET', '/api/v1/academy/fee-tiers*', { statusCode: 200, body: { data: [] } });
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
+
+    cy.get('app-athlete-photo-card').should('exist');
+  });
+});
