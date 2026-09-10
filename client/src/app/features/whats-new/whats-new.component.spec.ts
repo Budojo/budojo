@@ -26,15 +26,29 @@ describe('WhatsNewComponent (#254)', () => {
     // version of these tests asserted on whatever was at the top, so they broke
     // on the very next release — a test that fails for being right is worse
     // than no test.
+    //
+    // ...and then it broke anyway, once, on v2.55.0: #1464 made the page open
+    // on ten releases, and the anchor eventually falls past the tenth. So the
+    // lookup presses "show more" until it finds the card or runs out of
+    // history, which keeps the anchor stable without pinning it to a position.
     function cardFor(fixture: ComponentFixture<WhatsNewComponent>, version: string): HTMLElement {
-      const cards: HTMLElement[] = Array.from(
-        fixture.nativeElement.querySelectorAll('.whats-new__release'),
-      );
-      const card = cards.find(
-        (el) => el.querySelector('.whats-new__version')?.textContent?.trim() === version,
-      );
+      const find = (): HTMLElement | undefined =>
+        Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.whats-new__release')).find(
+          (el) => el.querySelector('.whats-new__version')?.textContent?.trim() === version,
+        );
 
-      expect(card, `no card for ${version}`).toBeTruthy();
+      let card = find();
+      while (!card) {
+        const more = fixture.nativeElement.querySelector(
+          '[data-cy="whats-new-more"]',
+        ) as HTMLButtonElement | null;
+        if (!more) break;
+        more.click();
+        fixture.detectChanges();
+        card = find();
+      }
+
+      expect(card, `no card for ${version} anywhere in the history`).toBeTruthy();
 
       return card as HTMLElement;
     }
@@ -111,7 +125,7 @@ describe('WhatsNewComponent (#254)', () => {
     // version we've shipped; when we ship a new version and forget
     // to prepend instead of append, this fails.
     const firstRelease = root.querySelector('.whats-new__release');
-    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v2.54.0');
+    expect(firstRelease?.querySelector('.whats-new__version')?.textContent?.trim()).toBe('v2.55.0');
   });
 
   it('opens on ten releases, with the rest a press away (#1464)', () => {
@@ -124,7 +138,7 @@ describe('WhatsNewComponent (#254)', () => {
 
     const more = root.querySelector('[data-cy="whats-new-more"]') as HTMLButtonElement;
     expect(more).not.toBeNull();
-    expect(more.textContent).toContain('87');
+    expect(more.textContent).toContain('88');
 
     more.click();
     fixture.detectChanges();
@@ -147,7 +161,7 @@ describe('WhatsNewComponent (#254)', () => {
     expect(root.querySelector('[data-cy="whats-new-more"]')).toBeNull();
 
     const cards = fixture.nativeElement.querySelectorAll('.whats-new__release');
-    expect(cards.length).toBe(97);
+    expect(cards.length).toBe(98);
 
     // Pin every version in the order we ship them so a refactor that
     // accidentally reverses the array (e.g. a sort that reads ids
@@ -156,6 +170,7 @@ describe('WhatsNewComponent (#254)', () => {
       (el as HTMLElement).querySelector('.whats-new__version')?.textContent?.trim(),
     );
     expect(versions).toEqual([
+      'v2.55.0',
       'v2.54.0',
       'v2.53.0',
       'v2.52.0',
