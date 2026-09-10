@@ -255,3 +255,52 @@ describe('Cookie banner cross-link from /privacy (#421)', () => {
     cy.get('a[href="/cookie-policy/it"], a[routerLink="/cookie-policy/it"]').should('exist');
   });
 });
+
+/**
+ * The runtime gate (#1508).
+ *
+ * On the desktop build this was the first thing a new owner saw — before the
+ * welcome screen they had installed the app to reach — asking them to decide
+ * about third parties, analytics and tracking that build does not have. At
+ * 390px it covered all three of the welcome's get-started steps.
+ *
+ * Gated, not deleted: the web profile still needs it exactly as it is.
+ */
+describe('the consent banner belongs to the web build (#1508)', () => {
+  function visitWith(profile: 'web' | 'desktop') {
+    cy.clearLocalStorage();
+    cy.intercept('GET', '/api/v1/runtime', {
+      statusCode: 200,
+      body: {
+        data: {
+          profile,
+          capabilities: profile === 'web' ? ['community', 'email', 'athlete_accounts'] : [],
+        },
+      },
+    }).as('runtime');
+    cy.visit('/');
+    cy.wait('@runtime');
+  }
+
+  it('shows on the web, where there is something to consent to', () => {
+    visitWith('web');
+
+    cy.get('[data-cy="cookie-banner"]').should('be.visible');
+  });
+
+  it('stays out of the way on the desktop build', () => {
+    visitWith('desktop');
+
+    cy.get('[data-cy="cookie-banner"]').should('not.exist');
+  });
+
+  it('leaves the welcome screen unobstructed on a phone', () => {
+    // The concrete harm: at 390px the banner is ~250px tall and the three
+    // steps are what it covered.
+    cy.viewport(390, 844);
+    visitWith('desktop');
+
+    cy.get('.landing__step').should('have.length', 3);
+    cy.get('.landing__step').last().should('be.visible');
+  });
+});
