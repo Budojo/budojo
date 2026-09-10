@@ -27,5 +27,31 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
         expect(root.scrollWidth, 'documentElement.scrollWidth').to.be.lte(root.clientWidth);
       });
     });
+
+    it('lets the width scale collapse to the phone column (#1485)', () => {
+      // The invariant a `max-width` buys, and a `width` would not: on one
+      // column every field fills the track, whatever cap it carries at desktop.
+      //
+      // Asserting `width <= viewportWidth` instead — which is what this test
+      // said first — proves nothing: the caps are 176px and 272px against a
+      // 375px phone, so it holds for a hard `width`, for the cap, and for no
+      // rule at all.
+      cy.get('#first_name').then(($el) => {
+        const field = $el[0].closest('app-budojo-form-field') as HTMLElement;
+        const row = field.parentElement as HTMLElement;
+        expect(
+          field.getBoundingClientRect().width,
+          'a --medium field fills its single-column track',
+        ).to.be.closeTo(row.getBoundingClientRect().width, 1);
+      });
+      cy.get('#date_of_birth').then(($el) => {
+        const field = $el[0].closest('app-budojo-form-field') as HTMLElement;
+        const row = field.parentElement as HTMLElement;
+        expect(
+          field.getBoundingClientRect().width,
+          'a --short field fills its single-column track',
+        ).to.be.closeTo(row.getBoundingClientRect().width, 1);
+      });
+    });
   });
 });

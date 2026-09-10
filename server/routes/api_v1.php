@@ -587,8 +587,18 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // and the auto-attached app version + User-Agent inherit from the
     // legacy feedback flow. Throttled to 5 req/min per user so a script
     // can't flood the support inbox.
+    //
+    // Gated on `capability:email` since #1476. The route was open, and on a
+    // build with no way to send mail that made it a black hole with a 202:
+    // it wrote a ticket row into the local SQLite, queued a mail the profile
+    // cannot deliver, and answered "sent". #1464 hid the form on the desktop
+    // build, which stopped the SPA reaching it and left every other caller —
+    // a future web build, a curl, a stale bundle — writing tickets nobody
+    // reads. The middleware answers 404 rather than 403, which is right here:
+    // on a build that cannot send mail this endpoint does not exist, and 403
+    // would say it does and that you may not use it.
     Route::post('/support', [\App\Http\Controllers\Support\SupportTicketController::class, 'store'])
-        ->middleware('throttle:5,1');
+        ->middleware(['capability:email', 'throttle:5,1']);
 
     // Owner-only search + stats (#774). The Cmd/Ctrl-K palette and the
     // /dashboard/stats charts both surface academy-wide PII (athlete

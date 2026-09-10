@@ -1,211 +1,86 @@
-<div class="landing">
+<div class="landing" [class.landing--banner]="consentPending()">
   <!-- ============================================================
-       Header — logo left, lang toggle + Login + Sign-up right.
-       Tiny chrome by design (Krug § signposts) — the marketing
-       arc happens in the page body, not in the nav.
+       The first screen of the app, not a page on a website (#1497).
+
+       This was a marketing landing: a hero, four problem bullets, six
+       feature cards, three trust columns, a three-step how-it-works and a
+       pricing block. It was written when Budojo was hosted and `budojo.it`
+       served it to people who did not have the product yet.
+
+       It is not that any more. #1230 decommissioned the hosted stack, so
+       nothing serves this on the web; and #1289 sent every signed-out desktop
+       visitor past it to `/auth/login`, because an installed app has nothing
+       to sell. Between them the page had no readers at all — which is how it
+       came to advertise an iOS and Android install that does not exist, and a
+       contact form #1464 had removed for not working.
+
+       #1497 answered it the other way round: the marketing is gone, and the
+       desktop bypass with it. The audience is a person who has just installed
+       Budojo and has no account yet.
+
+       What that person needs is not an argument. It is: what is this, and
+       what do I do first.
        ============================================================ -->
   <header class="landing__nav">
-    <a
-      class="landing__brand"
-      routerLink="/"
-      [attr.aria-label]="'landing.nav.brandAriaLabel' | translate"
-    >
+    <!-- Not a link any more: it pointed at `/`, which is this page. -->
+    <span class="landing__brand">
       <app-brand-glyph />
       <span class="landing__brand-name">Budojo</span>
-    </a>
-    <nav
-      class="landing__nav-actions"
-      [attr.aria-label]="'landing.nav.primaryAriaLabel' | translate"
+    </span>
+    <button
+      type="button"
+      class="landing__lang-toggle"
+      (click)="switchLanguage()"
+      [attr.aria-label]="'landing.nav.switchLanguage' | translate"
+      data-cy="landing-lang-toggle"
     >
-      <button
-        type="button"
-        class="landing__lang-toggle"
-        (click)="switchLanguage()"
-        [attr.aria-label]="'landing.nav.switchLanguage' | translate"
-        data-cy="landing-lang-toggle"
-      >
-        {{ otherLanguage() === 'it' ? 'IT' : 'EN' }}
-      </button>
-      <a class="landing__nav-link" routerLink="/auth/login" data-cy="landing-login">
-        {{ 'landing.nav.login' | translate }}
-      </a>
+      {{ otherLanguage() === 'it' ? 'IT' : 'EN' }}
+    </button>
+  </header>
+
+  <main class="landing__welcome">
+    <h1 class="landing__headline">{{ 'landing.welcome.headline' | translate }}</h1>
+    <p class="landing__sub">{{ 'landing.welcome.sub' | translate }}</p>
+
+    <!--
+      Create first, and it is the only filled button on the page. Someone
+      opening Budojo for the first time has no account to sign in to; the
+      exception is a reinstall or a second machine, which is what the quieter
+      link beside it is for (canon § one primary CTA per view).
+    -->
+    <div class="landing__cta">
       <p-button
-        [label]="'landing.nav.signup' | translate"
-        size="small"
+        [label]="'landing.welcome.create' | translate"
         routerLink="/auth/register"
         data-cy="landing-signup"
       />
-    </nav>
-  </header>
-
-  <!-- ============================================================
-       Hero — punch line, supporting paragraph, primary CTA.
-       The product IS the proof: a real product screenshot would
-       drop in here later (placeholder for now: a soft surface tile
-       with the brand glyph centred — honest about MVP-phase, no
-       fake mockups).
-       ============================================================ -->
-  <section class="landing__hero">
-    <div class="landing__hero-text">
-      <h1 class="landing__hero-headline">{{ 'landing.hero.headline' | translate }}</h1>
-      <p class="landing__hero-sub">{{ 'landing.hero.sub' | translate }}</p>
-      <div class="landing__hero-cta">
-        <p-button
-          [label]="'landing.hero.cta' | translate"
-          severity="primary"
-          routerLink="/auth/register"
-          data-cy="landing-hero-cta"
-        />
-        <a class="landing__hero-secondary" routerLink="/auth/login" data-cy="landing-hero-login">
-          {{ 'landing.nav.login' | translate }}
-        </a>
-      </div>
-      <p class="landing__hero-fineprint">{{ 'landing.hero.fineprint' | translate }}</p>
+      <a class="landing__cta-secondary" routerLink="/auth/login" data-cy="landing-login">
+        {{ 'landing.welcome.login' | translate }}
+      </a>
     </div>
-    <div class="landing__hero-visual">
-      <img
-        class="landing__hero-screenshot"
-        src="assets/landing/stats-attendance-heatmap-iphone.webp"
-        [alt]="'landing.hero.visualAlt' | translate"
-        width="1024"
-        height="2218"
-        loading="eager"
-        decoding="async"
-        fetchpriority="high"
-      />
-    </div>
-  </section>
 
-  <!-- ============================================================
-       Pain — 4 lines that name the audience's daily reality.
-       Specific, slightly self-deprecating, no buzzwords.
-       ============================================================ -->
-  <section class="landing__pain" aria-labelledby="landing-pain-h">
-    <h2 id="landing-pain-h" class="landing__section-title">
-      {{ 'landing.pain.heading' | translate }}
-    </h2>
-    <ul class="landing__pain-list">
-      @for (key of painPoints; track key) {
-        <li class="landing__pain-item">{{ key | translate }}</li>
-      }
-    </ul>
-  </section>
+    <!--
+      Three steps, because the gap between "installed" and "using it" is
+      where a local-first app loses people: there is no onboarding email to
+      catch them and nobody to ask. Numbered rather than bulleted — this is
+      an order, not a list.
+    -->
+    <section class="landing__steps" data-cy="landing-steps">
+      <h2 class="landing__steps-title">{{ 'landing.welcome.steps' | translate }}</h2>
+      <ol class="landing__steps-list">
+        @for (step of steps; track step.title) {
+          <li class="landing__step">
+            <span class="landing__step-number" aria-hidden="true">{{ $index + 1 }}</span>
+            <span class="landing__step-text">
+              <strong class="landing__step-title">{{ step.title | translate }}</strong>
+              <span class="landing__step-body">{{ step.body | translate }}</span>
+            </span>
+          </li>
+        }
+      </ol>
+    </section>
+  </main>
 
-  <!-- ============================================================
-       Solution — feature grid. Each card: icon + heading + body.
-       Benefit-driven copy (the feature is in parens in the body).
-       Same Apple-minimal register as the dashboard.
-       ============================================================ -->
-  <section aria-labelledby="landing-features-h">
-    <h2 id="landing-features-h" class="landing__section-title">
-      {{ 'landing.features.heading' | translate }}
-    </h2>
-    <div class="landing__features-grid">
-      @for (feature of features; track feature.titleKey) {
-        <article class="landing__feature-card">
-          <i [class]="'landing__feature-icon pi ' + feature.iconClass" aria-hidden="true"></i>
-          <h3 class="landing__feature-title">
-            {{ feature.titleKey | translate }}
-          </h3>
-          <p class="landing__feature-body">
-            {{ feature.bodyKey | translate }}
-          </p>
-        </article>
-      }
-    </div>
-  </section>
-
-  <!-- ============================================================
-       Trust — 3 honest, audience-relevant claims. No fake social
-       proof; we don't have customer testimonials yet.
-       ============================================================ -->
-  <section class="landing__trust" aria-labelledby="landing-trust-h">
-    <h2 id="landing-trust-h" class="landing__section-title">
-      {{ 'landing.trust.heading' | translate }}
-    </h2>
-    <div class="landing__trust-grid">
-      <div class="landing__trust-item">
-        <i class="landing__trust-icon pi pi-heart-fill" aria-hidden="true"></i>
-        <h3 class="landing__trust-title">
-          {{ 'landing.trust.builtBy.title' | translate }}
-        </h3>
-        <p class="landing__trust-body">{{ 'landing.trust.builtBy.body' | translate }}</p>
-      </div>
-      <div class="landing__trust-item">
-        <i class="landing__trust-icon pi pi-shield" aria-hidden="true"></i>
-        <h3 class="landing__trust-title">
-          {{ 'landing.trust.gdpr.title' | translate }}
-        </h3>
-        <p class="landing__trust-body">{{ 'landing.trust.gdpr.body' | translate }}</p>
-      </div>
-      <div class="landing__trust-item">
-        <i class="landing__trust-icon pi pi-flag-fill" aria-hidden="true"></i>
-        <h3 class="landing__trust-title">
-          {{ 'landing.trust.italian.title' | translate }}
-        </h3>
-        <p class="landing__trust-body">{{ 'landing.trust.italian.body' | translate }}</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       How it works — 3-step activation arc with the time cost
-       called out (so the prospect knows it's low).
-       ============================================================ -->
-  <section class="landing__how" aria-labelledby="landing-how-h">
-    <h2 id="landing-how-h" class="landing__section-title">
-      {{ 'landing.how.heading' | translate }}
-    </h2>
-    <ol class="landing__how-steps">
-      @for (step of steps; track step.titleKey) {
-        <li class="landing__how-step">
-          <span class="landing__how-step-number">{{ step.number }}</span>
-          <div class="landing__how-step-text">
-            <h3 class="landing__how-step-title">
-              {{ step.titleKey | translate }}
-            </h3>
-            <p class="landing__how-step-body">
-              {{ step.bodyKey | translate }}
-            </p>
-          </div>
-        </li>
-      }
-    </ol>
-    <div class="landing__how-cta">
-      <p-button
-        [label]="'landing.hero.cta' | translate"
-        severity="primary"
-        size="large"
-        routerLink="/auth/register"
-        data-cy="landing-how-cta"
-      />
-    </div>
-  </section>
-
-  <!-- ============================================================
-       Pricing — single tile, MVP-honest.
-       ============================================================ -->
-  <section class="landing__pricing" aria-labelledby="landing-pricing-h">
-    <h2 id="landing-pricing-h" class="landing__section-title">
-      {{ 'landing.pricing.heading' | translate }}
-    </h2>
-    <div class="landing__pricing-card">
-      <p class="landing__pricing-eyebrow">
-        {{ 'landing.pricing.eyebrow' | translate }}
-      </p>
-      <p class="landing__pricing-headline">
-        {{ 'landing.pricing.headline' | translate }}
-      </p>
-      <p class="landing__pricing-body">
-        {{ 'landing.pricing.body' | translate }}
-      </p>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       Footer — discrete, no marketing footer of doom. Privacy /
-       sub-processors / language toggle / GitHub.
-       ============================================================ -->
   <footer class="landing__footer">
     <div class="landing__footer-links">
       <a routerLink="/privacy" data-cy="landing-footer-privacy">
@@ -214,32 +89,17 @@
       <a routerLink="/terms" data-cy="landing-footer-terms">
         {{ 'landing.footer.terms' | translate }}
       </a>
-      <a routerLink="/sub-processors" data-cy="landing-footer-subprocessors">
-        {{ 'landing.footer.subProcessors' | translate }}
+      <a routerLink="/help" data-cy="landing-footer-help">
+        {{ 'landing.footer.help' | translate }}
       </a>
-      <!-- Logged-out support fallback (#423). The signed-in surface
-           is /dashboard/support; for prospects who haven't created an
-           account, a mailto: with a sensible subject prefix is the
-           lowest-friction way to reach us. The Reply-To story doesn't
-           apply (the user IS the From: address from their own client),
-           so the simpler artefact is correct here. -->
-      <a
-        href="mailto:matteo.bonanno@budojo.it?subject=Budojo%20support"
-        data-cy="landing-footer-support"
-      >
+      <!--
+        The one place a stuck first-run user can reach a person. Everything
+        else that contacts support sits behind the login they cannot get
+        past, which is exactly the situation where they need it (#1476).
+      -->
+      <a [href]="supportMailto()" data-cy="landing-footer-support">
         {{ 'landing.footer.support' | translate }}
       </a>
-      <a href="https://github.com/Budojo/budojo" rel="noopener noreferrer" target="_blank">
-        GitHub
-      </a>
-      <button
-        type="button"
-        class="landing__footer-lang"
-        (click)="switchLanguage()"
-        [attr.aria-label]="'landing.nav.switchLanguage' | translate"
-      >
-        {{ otherLanguage() === 'it' ? 'Italiano' : 'English' }}
-      </button>
     </div>
     <p class="landing__footer-meta">{{ 'landing.footer.tagline' | translate }}</p>
   </footer>

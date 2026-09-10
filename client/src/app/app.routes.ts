@@ -458,7 +458,14 @@ export const routes: Routes = [
         // reply. Sits inside the dashboard shell so the sidebar
         // context (academy name, version footer) is visible while
         // the user composes.
+        // Gated on `email` since #1476, alongside the server-side
+        // `capability:email` on the route it posts to. Without the guard
+        // the form stays reachable by bookmark, direct URL or back button
+        // on a build that cannot send — and now fails against a 404 with a
+        // generic error toast, which is the exact case capabilityGuard was
+        // written for. Same pairing as `community` and `athlete_accounts`.
         path: 'support',
+        canActivate: [capabilityGuard('email')],
         loadComponent: () =>
           import('./features/support/support.component').then((m) => m.SupportComponent),
       },
@@ -580,13 +587,16 @@ export const routes: Routes = [
     path: 'help',
     loadComponent: () => import('./features/help/help.component').then((m) => m.HelpComponent),
   },
-  // Public landing / about page (#330). Replaces the cold redirect to
-  // `/auth/login` we used to ship — standard SaaS pattern: marketing
-  // surface at the root, login one click away in the header. The
-  // `publicGuard` short-circuits authenticated visitors back to
-  // `/dashboard/athletes` so the marketing page is never visible to
-  // someone who already has an account. Pairs with #331 (login
-  // repositioning, which is the routing change in this very block).
+  // The app's first screen (#330, rewritten in #1497). It was a marketing
+  // page at the root — the standard SaaS shape, login one click away in the
+  // header. Nothing serves that on the web any more (#1230), and #1289 sent
+  // signed-out desktop visitors past it to `/auth/login`, so it had no
+  // readers and drifted: an iOS and Android install that does not exist, and
+  // a contact form #1464 had removed.
+  //
+  // It is a welcome now, and the desktop bypass is gone with the marketing —
+  // a first launch has no password to type. `publicGuard` still short-
+  // circuits anyone who IS signed in back to `/dashboard/athletes`.
   {
     path: '',
     pathMatch: 'full',

@@ -15,130 +15,107 @@ function setup() {
   return { fixture, cmp: fixture.componentInstance };
 }
 
-describe('LandingComponent (#330)', () => {
-  it('renders the hero headline + supporting paragraph + primary CTA', () => {
+/**
+ * The app's first screen (#330, rewritten in #1497).
+ *
+ * It was a marketing page and this spec pinned its sales arc — four pain
+ * points, six feature cards, three trust claims, a pricing tile. Nothing
+ * serves the page on the web any more (#1230); the only thing that renders
+ * it is the desktop app at `APP_ORIGIN/`, and `publicGuard` sends anyone
+ * with an account to the roster. So the reader is always someone who has
+ * just installed Budojo, and the assertions below are about what they need
+ * next rather than about what would persuade them.
+ */
+describe('LandingComponent (#1497)', () => {
+  it('says what the app is, without selling it', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
 
-    // Headline copy is the "what + who" punch line — assert the
-    // English default ships as we wrote it.
-    expect(root.querySelector('.landing__hero-headline')?.textContent).toContain(
-      'Run your academy from your phone',
+    expect(root.querySelector('.landing__headline')?.textContent).toContain(
+      'Run your academy, not a spreadsheet',
     );
+    // Local-first is the fact that makes the rest of the screen make sense:
+    // no account on a server, no network, nothing leaving the machine.
+    expect(root.querySelector('.landing__sub')?.textContent).toContain("on the gym's own computer");
+  });
 
-    // Supporting paragraph carries the founder-voice lead-in.
-    expect(root.querySelector('.landing__hero-sub')?.textContent).toContain(
-      'Built by a BJJ instructor for instructors',
+  it('makes creating the academy the one loud action', () => {
+    // Someone opening this for the first time has no account to sign in to.
+    // Log in is for a reinstall or a second machine, and reads as such.
+    const { fixture } = setup();
+    const root: HTMLElement = fixture.nativeElement;
+
+    const create = root.querySelector('[data-cy="landing-signup"]');
+    const login = root.querySelector('[data-cy="landing-login"]');
+
+    expect(create?.textContent).toContain('Create your academy');
+    expect(login?.textContent).toContain('I already have an account');
+    // One filled button on the page — the canon's one-primary-CTA rule.
+    expect(root.querySelectorAll('p-button').length).toBe(1);
+  });
+
+  it('lists the three steps in order', () => {
+    // The gap between "installed" and "using it" is where a local-first app
+    // loses people: no onboarding email, nobody to ask.
+    const { fixture } = setup();
+    const root: HTMLElement = fixture.nativeElement;
+
+    const steps = root.querySelectorAll('.landing__step');
+    expect(steps.length).toBe(3);
+    expect(steps[0].textContent).toContain('Create your account');
+    expect(steps[1].textContent).toContain('Set up the academy');
+    expect(steps[2].textContent).toContain('Add your first athlete');
+
+    const numbers = Array.from(root.querySelectorAll('.landing__step-number')).map((n) =>
+      n.textContent?.trim(),
     );
-
-    // Primary CTA in the hero — `data-cy` hook for the cypress spec.
-    const heroCta = root.querySelector('[data-cy="landing-hero-cta"]') as HTMLElement | null;
-    expect(heroCta).not.toBeNull();
-    expect(heroCta?.textContent).toContain('Start free');
+    expect(numbers).toEqual(['1', '2', '3']);
   });
 
-  it('renders nav: Login link + Sign-up button + language toggle', () => {
+  it('promises nothing the shipped build cannot do', () => {
+    // The page advertised an iOS and Android install, a phone-first product
+    // and an in-app contact form that #1464 removed for not working. This is
+    // the regression test for the whole of #1497.
+    const { fixture } = setup();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    for (const claim of ['iOS', 'Android', 'phone', 'pocket', 'credit card', 'Free during']) {
+      expect(text, claim).not.toContain(claim);
+    }
+  });
+
+  it('leaves a stuck first-run user a way to reach a person', () => {
+    // Every other route to support sits behind the login they cannot get
+    // past, which is exactly when they need it (#1476).
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
 
-    // Login text link, top-right header.
-    const login = root.querySelector('[data-cy="landing-login"]') as HTMLAnchorElement | null;
-    expect(login).not.toBeNull();
-    expect(login?.getAttribute('href')).toBe('/auth/login');
-    expect(login?.textContent?.trim()).toBe('Log in');
-
-    // Sign-up primary button — `<p-button>` host carries the
-    // routerLink; the directive navigates programmatically rather
-    // than exposing `href` on the host. Asserting the data-cy hook
-    // and the visible label is enough; the routerLink wiring is
-    // covered end-to-end by the cypress spec.
-    const signup = root.querySelector('[data-cy="landing-signup"]') as HTMLElement | null;
-    expect(signup).not.toBeNull();
-    expect(signup?.textContent).toContain('Start free');
-
-    // Language toggle.
-    const langBtn = root.querySelector(
-      '[data-cy="landing-lang-toggle"]',
-    ) as HTMLButtonElement | null;
-    expect(langBtn).not.toBeNull();
+    const support = root.querySelector('[data-cy="landing-footer-support"]');
+    expect(support?.getAttribute('href')).toContain('mailto:matteobonanno1990@gmail.com');
   });
 
-  it('renders 4 pain points (no more, no less)', () => {
-    const { fixture } = setup();
-    const items = fixture.nativeElement.querySelectorAll('.landing__pain-item');
-    expect(items.length).toBe(4);
-  });
-
-  it('renders 6 feature cards', () => {
-    const { fixture } = setup();
-    const cards = fixture.nativeElement.querySelectorAll('.landing__feature-card');
-    // Six features advertised: roster, documents, attendance, payments,
-    // pwa, feedback. Pinned so a refactor that drops one trips the test.
-    expect(cards.length).toBe(6);
-  });
-
-  it('renders 3 trust claims and 3 how-it-works steps', () => {
-    const { fixture } = setup();
-    expect(fixture.nativeElement.querySelectorAll('.landing__trust-item').length).toBe(3);
-    expect(fixture.nativeElement.querySelectorAll('.landing__how-step').length).toBe(3);
-  });
-
-  it('renders the pricing tile with the MVP-honest copy', () => {
-    const { fixture } = setup();
-    const card = fixture.nativeElement.querySelector('.landing__pricing-card') as HTMLElement;
-    expect(card?.textContent).toContain('Free during MVP');
-  });
-
-  it('footer carries privacy + terms + sub-processors links + GitHub + lang toggle', () => {
-    const { fixture } = setup();
-    const root: HTMLElement = fixture.nativeElement;
-    expect(
-      (root.querySelector('[data-cy="landing-footer-privacy"]') as HTMLAnchorElement)?.getAttribute(
-        'href',
-      ),
-    ).toBe('/privacy');
-    expect(
-      (root.querySelector('[data-cy="landing-footer-terms"]') as HTMLAnchorElement)?.getAttribute(
-        'href',
-      ),
-    ).toBe('/terms');
-    expect(
-      (
-        root.querySelector('[data-cy="landing-footer-subprocessors"]') as HTMLAnchorElement
-      )?.getAttribute('href'),
-    ).toBe('/sub-processors');
-  });
-
-  it('renders the hero product screenshot in place of the brand-glyph placeholder (#372)', () => {
+  it('keeps the legal links and the help page', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
 
-    // Placeholder is gone — the hero visual no longer renders the
-    // brand-glyph centred-tile that #330 shipped as a stand-in.
-    expect(root.querySelector('.landing__hero-visual app-brand-glyph')).toBeNull();
-
-    // Real screenshot drops in. Width/height attributes are set so
-    // the browser can reserve layout space before the asset loads
-    // (CLS budget, Doherty Threshold).
-    const img = root.querySelector('.landing__hero-screenshot') as HTMLImageElement | null;
-    expect(img).not.toBeNull();
-    expect(img?.getAttribute('src')).toContain(
-      'assets/landing/stats-attendance-heatmap-iphone.webp',
-    );
-    expect(img?.getAttribute('width')).toBe('1024');
-    expect(img?.getAttribute('height')).toBe('2218');
-    // Meaningful alt — the screenshot is content (it shows what
-    // Budojo looks like), not decoration.
-    expect(img?.getAttribute('alt')).toBeTruthy();
-    expect(img?.getAttribute('alt')?.length).toBeGreaterThan(5);
+    for (const cy of ['privacy', 'terms', 'help']) {
+      expect(root.querySelector(`[data-cy="landing-footer-${cy}"]`), cy).not.toBeNull();
+    }
   });
 
   it('switchLanguage flips between en and it', () => {
     const { cmp } = setup();
-    expect(cmp['currentLanguage']()).toBe('en');
-    cmp['switchLanguage']();
-    expect(cmp['currentLanguage']()).toBe('it');
-    cmp['switchLanguage']();
-    expect(cmp['currentLanguage']()).toBe('en');
+    const component = cmp as unknown as {
+      currentLanguage: () => string;
+      otherLanguage: () => string;
+      switchLanguage: () => void;
+    };
+
+    expect(component.currentLanguage()).toBe('en');
+    expect(component.otherLanguage()).toBe('it');
+
+    component.switchLanguage();
+    expect(component.currentLanguage()).toBe('it');
+    expect(component.otherLanguage()).toBe('en');
   });
 });

@@ -44,15 +44,20 @@ GitHub auto-closes those issues the moment the release PR is merged. Without thi
 - Feature PRs target `develop`, not `main`, so their `Closes #N` references never fire.
 - The release PR (develop → main) IS merged to `main`, but its own body doesn't carry the sub-issue references unless we add them — squash commits of sub-PRs carry only `(#PR_N)` in their subject lines, which is a reference and not a close keyword.
 
+**Except when the squash commit's BODY carries the keyword**, which happens whenever the author wrote `Closes #N` into the commit message rather than only into the PR description. Those fire on the merge to `main` on their own, block or no block. That cuts both ways: it is why the block sometimes looks redundant, and it is why **leaving an issue out of the block does not keep it open**. See the `/release` command's traps — v2.54.0 lost this argument with #1485.
+
 ### How to build the block when opening the release PR
 
-1. Walk the squash commits between `main..develop`.
-2. For each squash subject that includes a `(#PR_N)` reference (any conventional-commit type: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`, …), pick up the PR body:
+1. Walk the squash commits between `main..develop`, **bodies included** — the keyword lives there at least as often as in the PR description:
+   ```bash
+   git log --format='%H %s%n%b' origin/main..origin/develop | grep -inE '(clos|fix|resolv)[a-z]* #[0-9]+'
+   ```
+2. For each squash subject that includes a `(#PR_N)` reference (any conventional-commit type: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`, …), pick up the PR body too — it holds the ones the commit message dropped:
    ```bash
    gh pr view <PR_N> --json body
    ```
-3. Grep its body for `Closes #M` / `Fixes #M` / `Resolves #M`.
-4. Aggregate every `#M` into the release PR body's `## Auto-closes` block.
+3. Grep both for `Closes #M` / `Fixes #M` / `Resolves #M`. **An empty result from one source is not an answer** — it usually means the keyword is in the other one.
+4. Aggregate every `#M` into the release PR body's `## Auto-closes` block, **after checking each against the shipped code**. An issue whose scope is only partly delivered does not belong in the block — and, because a commit-message keyword closes it regardless, must be reopened after the merge.
 5. `gh pr create --body-file …`. The user only clicks Merge; GitHub closes the listed issues.
 
 ### Corollary on every sub-PR
@@ -102,6 +107,8 @@ Separately from the semantic-release dev changelog, the SPA ships a **user-facin
 **Discipline:** every `develop → main` release PR adds the markdown file AND prepends the array entry in the same commit history. The vitest spec pinning the version order in the array (`renders all four backfilled releases`) fails when one is missing — that's the regression-catching trip-wire, by design.
 
 `whats-new.component.spec.ts` carries **four** of them, and they are in two different tests. Three sit together — the latest-version assertion, `cards.length`, and the head of the `versions` array — and the fourth is the remaining count in the *"Show N more releases"* button, which #1464 introduced when the page stopped rendering the whole history at once. It is `cards.length - 10`. It was missed on v2.54.0, the first release after #1464 shipped, precisely because it lives in its own test and every checklist said "three".
+
+The same file's language tests anchor on an old release on purpose — asserting on "the newest card" broke them every single release. On v2.55.0 that anchor fell past the tenth card and stopped being found; the lookup now pages through the history to reach it, so it needs no maintenance. If it ever fails again, fix the lookup, not the anchor.
 
 **Compute the version BEFORE writing the file.** Angular preset rules:
 

@@ -515,6 +515,86 @@ describe('AthleteFormComponent', () => {
     });
   });
 
+  describe('sections and field widths (#1485)', () => {
+    beforeEach(() => setupTestBed('42'));
+
+    function renderEdit() {
+      const fixture = TestBed.createComponent(AthleteFormComponent);
+      const httpMock = TestBed.inject(HttpTestingController);
+      fixture.detectChanges();
+      httpMock.expectOne('/api/v1/athletes/42').flush({ data: makeAthlete({ id: 42 }) });
+      fixture.detectChanges();
+      return { fixture, httpMock };
+    }
+
+    it('spends three section headings, not four', () => {
+      // Billing was a heading over one control — two when the academy keeps a
+      // price list. What an athlete pays is a fact about their membership, so
+      // it folded into "At the gym" rather than earning an eyebrow of its own.
+      //
+      // Three, not four: the address block is a fourth <section> but wears a
+      // <legend> rather than an <h2>, so it is not in this count.
+      const { fixture, httpMock } = renderEdit();
+
+      const titles = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.athlete-form__section-title'),
+      ).map((el) => el.textContent?.trim());
+
+      expect(titles).toEqual(['Who they are', 'At the gym', 'Contact']);
+      flushFeeTiers(httpMock);
+    });
+
+    it('keeps the billing controls, in the section above', () => {
+      // Folding a section must not lose what was inside it.
+      const { fixture, httpMock } = renderEdit();
+      const root = fixture.nativeElement as HTMLElement;
+
+      const billing = root.querySelector('[data-cy="athlete-form-billing-period"]');
+      expect(billing).not.toBeNull();
+
+      const sections = Array.from(root.querySelectorAll('.athlete-form__section'));
+      const owner = sections.find((s) => s.contains(billing));
+      expect(owner?.querySelector('.athlete-form__section-title')?.textContent?.trim()).toBe(
+        'At the gym',
+      );
+      flushFeeTiers(httpMock);
+    });
+
+    it('sizes a field by what it holds, not by the row it landed in', () => {
+      // The complaint was that First name and Date of birth matched each other
+      // and neither matched Joined — true, and for a reason nobody can see:
+      // the width came from the grid the field happened to be in. Three sizes
+      // now, declared per field, so two dates are the same width wherever they
+      // sit.
+      const { fixture, httpMock } = renderEdit();
+      const root = fixture.nativeElement as HTMLElement;
+
+      // Throws on a miss rather than reporting 'full'. Returning the
+      // no-modifier answer for an element that is not there makes the
+      // full-width case pass whether the field exists or not.
+      const sizeOf = (controlId: string): string => {
+        const control = root.querySelector(`#${controlId}`);
+        if (!control) throw new Error(`no control #${controlId} in the form`);
+        const field = control.closest('app-budojo-form-field') as HTMLElement | null;
+        if (!field) throw new Error(`#${controlId} is not inside a form field`);
+        const cls = field.className;
+        if (cls.includes('athlete-form__field--short')) return 'short';
+        if (cls.includes('athlete-form__field--medium')) return 'medium';
+        return 'full';
+      };
+
+      // Same kind of value, same width — the two dates, and the two names.
+      expect(sizeOf('date_of_birth')).toBe('short');
+      expect(sizeOf('joined_at')).toBe('short');
+      expect(sizeOf('first_name')).toBe('medium');
+      expect(sizeOf('last_name')).toBe('medium');
+
+      // And a free-text value that has no natural length keeps the column.
+      expect(sizeOf('website')).toBe('full');
+      flushFeeTiers(httpMock);
+    });
+  });
+
   describe('danger zone (#1430)', () => {
     beforeEach(() => setupTestBed('42'));
 

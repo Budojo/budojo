@@ -39,8 +39,14 @@ const CLIENT_CONTAINER = 'budojo_client';
 // Config values passed to Cypress at runtime:
 //   - baseUrl: local to the shared network namespace (dev server inside
 //     budojo_client).
-//   - screenshotsFolder: relative to the workdir (`client/`), so
-//     `../docs/...` resolves to the repo root's docs folder.
+//   - screenshotsFolder: left at the Cypress default, which is
+//     `client/cypress/screenshots/` and gitignored. The inventory used to
+//     aim at `docs/design/screenshots/` so the library could be committed —
+//     that never worked (the override was silently ignored and the folder
+//     holds only its README), and it should not: one full set is 26 MB
+//     against a 15 MB repo, every regeneration adds another set to history
+//     for good, and a pull request with 150 changed PNGs is not reviewable
+//     anyway. The inventory is for LOOKING at, freshly generated.
 //   - trashAssetsBeforeRuns: keep prior screenshots — we want additive
 //     regeneration, not wipe-on-each-run.
 //   - specPattern: scoped to the inventory folder. Required to *enable*
@@ -48,14 +54,23 @@ const CLIENT_CONTAINER = 'budojo_client';
 //     which deliberately excludes `cypress/inventory/`.
 const cypressConfig = [
   'baseUrl=http://localhost:4200',
-  'screenshotsFolder=../docs/design/screenshots',
   'trashAssetsBeforeRuns=false',
   'specPattern=cypress/inventory/**/*.cy.ts',
 ].join(',');
 
+// Run as the invoking user. Without this the container writes as root, and on
+// a Linux bind mount that is the host's real filesystem — so every screenshot
+// and every failure capture lands in the working tree owned by root, and the
+// next run cannot overwrite its own output. `.claude/scripts/e2e.sh` has
+// passed `--user` since it was written; this script was missed.
+const uid = typeof process.getuid === 'function' ? process.getuid() : null;
+const gid = typeof process.getgid === 'function' ? process.getgid() : null;
+const userArgs = uid !== null && gid !== null ? ['--user', `${uid}:${gid}`] : [];
+
 const dockerArgs = [
   'run',
   '--rm',
+  ...userArgs,
   `--network=container:${CLIENT_CONTAINER}`,
   '-v',
   `${REPO_ROOT}:/repo`,
@@ -75,7 +90,10 @@ console.log('→ regenerating design inventory screenshots');
 console.log('  cypress image:     ', CYPRESS_IMAGE);
 console.log('  shared network of: ', CLIENT_CONTAINER);
 console.log('  repo mount:        ', REPO_ROOT, '→ /repo');
-console.log('  output:            ', path.join(REPO_ROOT, 'docs', 'design', 'screenshots'));
+console.log(
+  '  output:            ',
+  path.join(REPO_ROOT, 'client', 'cypress', 'screenshots', 'design-inventory.cy.ts'),
+);
 console.log('');
 
 const result = spawnSync('docker', dockerArgs, { stdio: 'inherit' });

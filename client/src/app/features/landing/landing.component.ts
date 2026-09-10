@@ -4,34 +4,34 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { LanguageService, SupportedLanguage } from '../../core/services/language.service';
+import { ConsentService } from '../../core/services/consent.service';
+import { RuntimeService } from '../../core/services/runtime.service';
+import { supportMailtoHref } from '../../shared/utils/support-contact';
 
 /**
- * Public landing / about page at `/` (#330).
+ * The app's first screen, at `/` (#330, rewritten in #1497).
  *
- * Replaces the cold redirect to `/auth/login` that we used to ship —
- * standard SaaS pattern: marketing surface at the root, login one
- * click away in the header. Only visible to non-authenticated visitors
- * (the `publicGuard` bounces logged-in users back to
- * `/dashboard/athletes`).
+ * It was a marketing page — a hero, a problem list, six feature cards, three
+ * trust columns, a how-it-works arc and a pricing tile — written when Budojo
+ * was hosted and `budojo.it` served it to people who did not have the product.
  *
- * Pairs with #331 (login repositioning) — the routing change that
- * removes the `path: '' → redirectTo: 'auth/login'` line lives in
- * `app.routes.ts` and ships in the same PR.
+ * Two things ended that. #1230 decommissioned the hosted stack, and there is
+ * no deploy workflow left, so nothing serves this on the web. And #1289 sent
+ * every signed-out desktop visitor past it to `/auth/login`, on the grounds
+ * that an installed app has nothing to sell. Between them the page had no
+ * readers at all, which is how it came to advertise an iOS and Android
+ * install that does not exist and a contact form #1464 had removed.
  *
- * Voice + composition: the issue body (issue #330) is the canonical
- * brief — founder-first, conversational, benefit-driven copy in
- * lock-step with `en.json` + `it.json` from day one. Italian is a
- * first-class deliverable; the language toggle lives in the header
- * next to the auth links so a prospect who lands EN-default can flip
- * to IT instantly.
+ * #1497 answered it the other way round: the marketing is gone, and the
+ * desktop bypass with it. What is here is a welcome — what the app is, one
+ * button to create the academy, and the three steps after it. A first launch
+ * has no password to type, and a local-first app has no onboarding email to
+ * catch someone who installs it and stops.
  *
- * Visual register: same Apple-minimal canon as the dashboard. Same
- * tokens (`var(--p-*)`, `var(--budojo-*)`). Same iconography
- * (`pi pi-*`). Reference UIs we mirror in CADENCE not COPY: Linear
- * (hero+screenshot composition), Tally (founder-voice register),
- * Cal.com (open-source / EU trust signals), Plausible (GDPR-as-a-
- * feature angle).
+ * Visual register unchanged: the same Apple-minimal canon and the same tokens
+ * as the dashboard.
  */
+
 @Component({
   selector: 'app-landing',
   standalone: true,
@@ -42,6 +42,34 @@ import { LanguageService, SupportedLanguage } from '../../core/services/language
 })
 export class LandingComponent {
   private readonly languageService = inject(LanguageService);
+  private readonly consentService = inject(ConsentService);
+  private readonly runtimeService = inject(RuntimeService);
+
+  /**
+   * Whether the consent banner is still up. It is `position: fixed` at the
+   * bottom of the viewport and this page pins its footer there, so without
+   * the room the stylesheet reserves for it the support link is covered on
+   * exactly the run where somebody might need it.
+   */
+  protected readonly consentPending = computed(() => !this.consentService.decided());
+
+  /**
+   * The support address, read from the one place that holds it (#1476).
+   * The footer hardcoded it before there was a constant, which meant two
+   * copies of a value that changes as a unit.
+   */
+  /**
+   * The support address, with the build already in the body (#1476).
+   *
+   * This used to be a bare subject line, on the reasoning that a prospect
+   * reading a landing page has no build to report. That reasoning inverted
+   * with the page: the only person who reaches this screen is running a
+   * shipped copy and cannot get into it, which makes them the one user whose
+   * message is useless without the version attached.
+   */
+  protected readonly supportMailto = computed(() =>
+    supportMailtoHref(this.runtimeService.profile()),
+  );
 
   /**
    * Current language for the header toggle. Two-state today (EN/IT) —
@@ -61,77 +89,21 @@ export class LandingComponent {
   }
 
   /**
-   * Pain-section bullets. Pulled from i18n keys at template time
-   * (TranslatePipe in the @for) so the array length is stable in
-   * tests. Indices are arbitrary — the keys themselves carry the
-   * meaning.
+   * What to do first, in order (#1497).
+   *
+   * The three steps that used to be the "how it works" arc of a sales page,
+   * kept because on this page they stopped being an argument and became
+   * instructions. A local-first app has no onboarding email to catch someone
+   * who installs it and stops — this is the only thing between the installer
+   * finishing and an empty roster.
+   *
+   * Full translation paths, never built by concatenation: the i18n parity
+   * check cannot see a dynamically-built key, and the IT side drifts in
+   * silence (`client/CLAUDE.md` § i18n).
    */
-  protected readonly painPoints: readonly string[] = [
-    'landing.pain.point1',
-    'landing.pain.point2',
-    'landing.pain.point3',
-    'landing.pain.point4',
-  ];
-
-  /**
-   * Solution-section feature cards. Each card has a heading + body +
-   * icon. `titleKey`/`bodyKey` are the FULL translation paths so the
-   * template never builds keys via string concatenation — that
-   * pattern is banned (`client/CLAUDE.md` § i18n) because the parity
-   * check can't see dynamically-built keys and IT translations drift
-   * silently.
-   */
-  protected readonly features: readonly {
-    iconClass: string;
-    titleKey: string;
-    bodyKey: string;
-  }[] = [
-    {
-      iconClass: 'pi-users',
-      titleKey: 'landing.features.roster.title',
-      bodyKey: 'landing.features.roster.body',
-    },
-    {
-      iconClass: 'pi-file',
-      titleKey: 'landing.features.documents.title',
-      bodyKey: 'landing.features.documents.body',
-    },
-    {
-      iconClass: 'pi-check-circle',
-      titleKey: 'landing.features.attendance.title',
-      bodyKey: 'landing.features.attendance.body',
-    },
-    {
-      iconClass: 'pi-credit-card',
-      titleKey: 'landing.features.payments.title',
-      bodyKey: 'landing.features.payments.body',
-    },
-    {
-      iconClass: 'pi-mobile',
-      titleKey: 'landing.features.pwa.title',
-      bodyKey: 'landing.features.pwa.body',
-    },
-    {
-      iconClass: 'pi-comment',
-      titleKey: 'landing.features.support.title',
-      bodyKey: 'landing.features.support.body',
-    },
-  ];
-
-  /**
-   * 3-step "how it works" arc. Same explicit-keys rule as `features`.
-   */
-  protected readonly steps: readonly {
-    number: string;
-    titleKey: string;
-    bodyKey: string;
-  }[] = [
-    { number: '1', titleKey: 'landing.how.signup.title', bodyKey: 'landing.how.signup.body' },
-    { number: '2', titleKey: 'landing.how.setup.title', bodyKey: 'landing.how.setup.body' },
-    {
-      number: '3',
-      titleKey: 'landing.how.firstAthlete.title',
-      bodyKey: 'landing.how.firstAthlete.body',
-    },
+  protected readonly steps: readonly { title: string; body: string }[] = [
+    { title: 'landing.welcome.step1.title', body: 'landing.welcome.step1.body' },
+    { title: 'landing.welcome.step2.title', body: 'landing.welcome.step2.body' },
+    { title: 'landing.welcome.step3.title', body: 'landing.welcome.step3.body' },
   ];
 }
