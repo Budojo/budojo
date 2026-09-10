@@ -31,9 +31,7 @@
       </aside>
     }
 
-    @if (error()) {
-      <p-message severity="error" [text]="error()!" styleClass="w-full" />
-    }
+    @if (error()) {}
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <app-budojo-form-field

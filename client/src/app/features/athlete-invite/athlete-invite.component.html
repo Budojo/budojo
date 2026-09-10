@@ -35,7 +35,6 @@
           <p-message
             severity="error"
             [text]="'athleteInvite.errors.' + errorMessage() | translate"
-            styleClass="w-full"
             data-cy="invite-error"
           />
         }
@@ -164,7 +163,6 @@
             [disabled]="form.invalid || state() === 'submitting'"
             [loading]="state() === 'submitting'"
             severity="primary"
-            styleClass="w-full"
             data-cy="invite-submit"
           />
         </form>

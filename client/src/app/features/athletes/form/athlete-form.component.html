@@ -19,9 +19,7 @@
   />
 
   <div class="athlete-form-page__body">
-    @if (error()) {
-      <p-message severity="error" [text]="error()!" styleClass="w-full" />
-    }
+    @if (error()) {}
 
     @if (loading()) {
       <div class="athlete-form-page__loading">
@@ -103,7 +101,6 @@
                 [showIcon]="true"
                 [maxDate]="today"
                 appendTo="body"
-                styleClass="w-full"
               />
             </app-budojo-form-field>
           </div>
@@ -127,7 +124,6 @@
                 optionLabel="label"
                 optionValue="value"
                 appendTo="body"
-                styleClass="w-full"
               />
             </app-budojo-form-field>
 
@@ -144,7 +140,6 @@
                 optionLabel="label"
                 optionValue="value"
                 appendTo="body"
-                styleClass="w-full"
               />
             </app-budojo-form-field>
 
@@ -161,7 +156,6 @@
                 optionLabel="label"
                 optionValue="value"
                 appendTo="body"
-                styleClass="w-full"
               />
             </app-budojo-form-field>
           </div>
@@ -179,7 +173,6 @@
                 [dateFormat]="datePickerFormat()"
                 [showIcon]="true"
                 appendTo="body"
-                styleClass="w-full"
                 [class.ng-invalid]="joinedAt.invalid && joinedAt.touched"
               />
             </app-budojo-form-field>
@@ -209,7 +202,6 @@
                   [showClear]="true"
                   [placeholder]="'athletes.form.feeTierPlaceholder' | translate"
                   appendTo="body"
-                  styleClass="w-full"
                   data-cy="athlete-form-fee-tier"
                 />
               </app-budojo-form-field>
@@ -227,7 +219,6 @@
                 optionLabel="label"
                 optionValue="value"
                 appendTo="body"
-                styleClass="w-full"
                 data-cy="athlete-form-billing-period"
               />
             </app-budojo-form-field>
@@ -521,7 +512,6 @@
                   optionValue="value"
                   [ariaLabel]="'athletes.form.aria.province' | translate"
                   appendTo="body"
-                  styleClass="w-full"
                   [showClear]="true"
                   data-cy="athlete-form-address-province"
                 />
