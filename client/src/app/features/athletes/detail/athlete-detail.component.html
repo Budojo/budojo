@@ -37,7 +37,7 @@
         />
       </div>
       <p class="athlete-detail-page__meta">
-        {{ 'athletes.detail.joinedLabel' | translate: { date: a.joined_at } }}
+        {{ 'athletes.detail.joinedLabel' | translate: { date: joinedOn(a.joined_at) } }}
       </p>
 
       @let links = contactLinks();

@@ -154,7 +154,7 @@
       formControlName="recorded_at"
       [maxDate]="maxDate"
       [showIcon]="true"
-      dateFormat="dd/mm/yy"
+      [dateFormat]="datePickerFormat()"
       appendTo="body"
       data-cy="promotion-edit-date"
     />
@@ -211,7 +211,7 @@
       formControlName="recorded_at"
       [maxDate]="maxDate"
       [showIcon]="true"
-      dateFormat="dd/mm/yy"
+      [dateFormat]="datePickerFormat()"
       appendTo="body"
       data-cy="promotion-create-date"
     />

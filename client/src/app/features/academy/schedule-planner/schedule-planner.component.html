@@ -64,7 +64,7 @@
           inputId="schedule-planner-date"
           formControlName="effective_from"
           [minDate]="minDate"
-          dateFormat="dd/mm/yy"
+          [dateFormat]="datePickerFormat()"
           appendTo="body"
           [showIcon]="true"
           data-cy="schedule-planner-date"

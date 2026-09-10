@@ -32,6 +32,7 @@ import {
   MAX_STRIPES_PER_BELT,
 } from '../../../../core/services/athlete.service';
 import { LanguageService } from '../../../../core/services/language.service';
+import { datePickerFormatFor } from '../../../../shared/utils/locale';
 import { BELT_KEYS, BELT_ORDER } from '../../../../shared/utils/i18n-enum-keys';
 import { BeltBadgeComponent } from '../../../../shared/components/belt-badge/belt-badge.component';
 import { ConfirmDestructiveButtonComponent } from '../../../../shared/components/confirm-destructive-button/confirm-destructive-button.component';
@@ -102,6 +103,17 @@ export class PromotionsListComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+
+  /**
+   * The date format for every picker on this component (#1498).
+   *
+   * A signal, not a constant, so switching the sidebar language re-renders
+   * the dates with it — before this the format was hardcoded in the template
+   * and the app shipped two different ones.
+   */
+  protected readonly datePickerFormat = computed(() =>
+    datePickerFormatFor(this.languageService.currentLang()),
+  );
 
   protected readonly promotions = signal<readonly AthletePromotion[]>([]);
   protected readonly loading = signal(true);
