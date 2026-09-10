@@ -715,6 +715,33 @@ $athletes-mobile-breakpoint: 768px;
   }
 }
 
+// Hidden and deleted: the toolbar keeps them where there is room for them,
+// the sheet carries them where there is not (#1505). Mobile-first, so the
+// default is absent and the breakpoint brings them back.
+.athletes-page__reveal--desktop-only {
+  display: none;
+
+  @media (min-width: 768px) {
+    display: inline-flex;
+  }
+}
+
+// A labelled row inside the filter sheet: the word on the left, the switch on
+// the right, the whole row a target.
+.athletes-page__sheet-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3rem;
+  font-size: 0.9375rem;
+  color: var(--p-text-color);
+
+  label {
+    cursor: pointer;
+  }
+}
+
 // Icon-only: a fixed square, because there is no word to size it around.
 .athletes-page__reveal {
   width: 2.75rem;

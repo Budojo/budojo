@@ -199,7 +199,7 @@
         formControlName="purchased_at"
         [maxDate]="maxPurchaseDate"
         [showIcon]="true"
-        dateFormat="dd/mm/yy"
+        [dateFormat]="datePickerFormat()"
         appendTo="body"
         data-cy="carnet-purchased-at"
       />
@@ -215,7 +215,7 @@
         formControlName="valid_from"
         [maxDate]="maxPurchaseDate"
         [showIcon]="true"
-        dateFormat="dd/mm/yy"
+        [dateFormat]="datePickerFormat()"
         appendTo="body"
         data-cy="carnet-valid-from"
       />
@@ -262,7 +262,7 @@
         formControlName="valid_from"
         [maxDate]="maxPurchaseDate"
         [showIcon]="true"
-        dateFormat="dd/mm/yy"
+        [dateFormat]="datePickerFormat()"
         appendTo="body"
         data-cy="carnet-new-valid-from"
       />

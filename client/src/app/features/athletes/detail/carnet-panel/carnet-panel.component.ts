@@ -22,7 +22,7 @@ import { AcademyService } from '../../../../core/services/academy.service';
 import { Carnet, CarnetEntry, CarnetService } from '../../../../core/services/carnet.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { activeCarnetOf } from '../../../../shared/utils/active-carnet';
-import { localeFor } from '../../../../shared/utils/locale';
+import { localeFor, datePickerFormatFor } from '../../../../shared/utils/locale';
 
 /**
  * Entry-carnet panel on the athlete's payments tab (#1364).
@@ -59,6 +59,18 @@ export class CarnetPanelComponent {
   private readonly carnetService = inject(CarnetService);
   private readonly academyService = inject(AcademyService);
   private readonly languageService = inject(LanguageService);
+
+  /**
+   * The date format for every picker on this component (#1498).
+   *
+   * A signal, not a constant, so switching the sidebar language re-renders
+   * the dates with it — before this the format was hardcoded in the template
+   * and the app shipped two different ones.
+   */
+  protected readonly datePickerFormat = computed(() =>
+    datePickerFormatFor(this.languageService.currentLang()),
+  );
+
   private readonly messageService = inject(MessageService);
   // The popup element itself is the parent tab's — rendering a second one
   // here would put two on the page reacting to the same service, and show two.

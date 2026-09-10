@@ -11,8 +11,15 @@
     <p class="athlete-photo-card__title">{{ 'athletes.photo.title' | translate }}</p>
     <p class="athlete-photo-card__hint">{{ 'athletes.photo.hint' | translate }}</p>
     <div class="athlete-photo-card__actions">
+      <!--
+        Secondary, not primary (#1502). This was the loudest control on the
+        athlete's page while "Invite to the system" — which gives a person an
+        account — was the quietest. The hierarchy was inverted against how
+        consequential the two actions are.
+      -->
       <p-button
         [label]="(photoUrl() ? 'athletes.photo.replace' : 'athletes.photo.upload') | translate"
+        severity="secondary"
         icon="pi pi-upload"
         [loading]="uploading()"
         (onClick)="browse()"

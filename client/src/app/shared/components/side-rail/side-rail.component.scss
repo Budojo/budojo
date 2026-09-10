@@ -47,6 +47,9 @@ $rail-width: 15rem;
   font-weight: 700;
   font-size: 1.125rem;
   min-width: 0;
+  // Top-aligned, so the mark stays level with the first line when the name
+  // wraps to a second.
+  align-items: flex-start;
 }
 
 // The academy's mark (#1482). `contain`, not `cover`.
@@ -83,10 +86,26 @@ app-brand-glyph.rail__logo {
   gap: 0.125rem;
 }
 
+// The academy's name, wrapped rather than cut (#1503).
+//
+// The rail is 15rem, and the brand row spends 2rem on the mark, 0.5rem on the
+// gap and 1.5rem on padding — leaving about eleven bold characters at
+// 1.125rem. "Gracie Barra Torino" is nineteen, and most academy names are that
+// shape: a franchise prefix plus a city, so the part that got cut was the part
+// that says WHICH one. It rendered as "Gracie Barra T…".
+//
+// The row has vertical room and a name is worth two lines. Three would be a
+// different problem, so the line clamp stops there and the ellipsis comes back
+// for the pathological case.
 .rail__brand-text {
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  // A wrapped name needs its lines tighter than body copy, or two lines of
+  // 1.125rem read as two separate things.
+  line-height: 1.25;
+  min-width: 0;
 }
 
 .rail__nav {

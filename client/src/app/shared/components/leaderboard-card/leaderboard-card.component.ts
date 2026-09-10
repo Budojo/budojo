@@ -1,5 +1,14 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  computed,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { LanguageService } from '../../../core/services/language.service';
+import { formatIsoMonth } from '../../utils/locale';
 import { TranslatePipe } from '@ngx-translate/core';
 import {
   LeaderboardResult,
@@ -27,10 +36,22 @@ import {
 export class LeaderboardCardComponent {
   private readonly service = inject(LeaderboardService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly languageService = inject(LanguageService);
 
   protected readonly status = signal<'loading' | 'ok' | 'error' | 'empty'>('loading');
   protected readonly rows = signal<readonly LeaderboardRow[]>([]);
-  protected readonly month = signal<string>('');
+  /** The API's `meta.month`, an ISO `YYYY-MM`. */
+  private readonly monthIso = signal<string>('');
+
+  /**
+   * The period this card covers, as a person reads it (#1498).
+   *
+   * The template rendered `meta.month` verbatim, so the label beside "Top of
+   * the mat — this month" read `2026-04`.
+   */
+  protected readonly month = computed(() =>
+    this.monthIso() ? formatIsoMonth(this.monthIso(), this.languageService.currentLang()) : '',
+  );
 
   constructor() {
     this.service
@@ -40,7 +61,7 @@ export class LeaderboardCardComponent {
         next: (result: LeaderboardResult) => {
           if (result.status === 'ok') {
             const data = result.page.data;
-            this.month.set(result.page.meta.month);
+            this.monthIso.set(result.page.meta.month);
             if (data.length === 0) {
               this.status.set('empty');
             } else {

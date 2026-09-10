@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, finalize, map } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -78,6 +79,7 @@ interface SelectOption<T extends string> {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    ToggleSwitchModule,
     RouterLink,
     ButtonModule,
     IconFieldModule,

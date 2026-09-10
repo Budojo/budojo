@@ -41,10 +41,17 @@
         <p class="logo-card__title">{{ 'academy.detail.logoTitle' | translate }}</p>
         <p class="logo-card__hint">{{ 'academy.detail.logoHint' | translate }}</p>
         <div class="logo-card__actions">
+          <!--
+            Secondary, not primary (#1502). This and the page-header Edit were
+            both filled indigo, so the page had two equal loudest controls and
+            one of them changed a logo. The canon allows one primary CTA per
+            view, and it belongs to Edit.
+          -->
           <p-button
             [label]="
               (logoUrl() ? 'academy.detail.logoReplace' : 'academy.detail.logoUpload') | translate
             "
+            severity="secondary"
             icon="pi pi-upload"
             [loading]="logoUploading()"
             (onClick)="onLogoBrowse()"
@@ -135,6 +142,40 @@
             </ul>
           } @else {
             —
+          }
+        </dd>
+      </div>
+
+      <!--
+        The training schedule and the season (#1504). Both are settable in the
+        form and neither was readable anywhere — you could change them and not
+        see them. The season matters more than it looks: it is the denominator
+        of a number the owner reads on the roster every day, so "what is the
+        app counting?" had no answer on the page that names the academy.
+      -->
+      <div class="row">
+        <dt class="row__label">{{ 'academy.detail.row.trainingDays' | translate }}</dt>
+        <dd class="row__value" data-cy="academy-row-training-days">
+          @if (trainingDaysLabel(); as days) {
+            {{ days }}
+          } @else {
+            <span class="row__empty">—</span>
+          }
+        </dd>
+      </div>
+
+      <div class="row">
+        <dt class="row__label">{{ 'academy.detail.row.season' | translate }}</dt>
+        <dd class="row__value" data-cy="academy-row-season">
+          @if (seasonLabel(); as label) {
+            {{ label }}
+            @if (seasonStart(); as start) {
+              <span class="row__hint">
+                {{ 'academy.detail.seasonStarted' | translate: { date: start } }}
+              </span>
+            }
+          } @else {
+            <span class="row__empty">—</span>
           }
         </dd>
       </div>

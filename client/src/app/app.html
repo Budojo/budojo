@@ -13,11 +13,28 @@
      space in the normal case. Absent outside Electron. -->
 <app-update-banner />
 <router-outlet />
-<!-- Cookie consent banner (#421). Mounted at the app root so it's
-     visible on every public route (landing, /privacy, /cookie-policy,
-     /sub-processors) AND inside the dashboard shell. Renders only
-     while ConsentService.decided() is false. -->
-<app-cookie-banner />
+<!--
+  Cookie consent banner (#421), on the web profile only (#1508).
+
+  Mounted at the app root so it reaches every public route (landing,
+  /privacy, /cookie-policy, /sub-processors) as well as the dashboard shell,
+  and it renders only while `ConsentService.decided()` is false.
+
+  The runtime gate is new. On the desktop build this was the FIRST thing a
+  new owner saw — before the welcome screen they came for — asking them to
+  decide about a category of thing that build does not do: no third parties,
+  no analytics, no tracking, nothing that leaves the machine. At 390px it
+  covered all three of the welcome's get-started steps.
+
+  Gated rather than deleted: the web profile is still alive and tested, and a
+  hosted build would need this back exactly as it is. Whether a local-only
+  build needs consent at all is a legal question, not a code one — #1255 is
+  open to review the legal docs against that reality, and if the answer comes
+  back "yes" this is one condition to remove.
+-->
+@if (runtime.profile() === 'web') {
+  <app-cookie-banner />
+}
 <!-- Browser-notifications soft prompt (#745). Mounted once at the app
      root so the dialog can appear over either dashboard shell (owner
      or athlete) the moment a post-registration trigger fires. The

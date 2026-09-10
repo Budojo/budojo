@@ -148,13 +148,13 @@
   <label class="promotions__dialog-label" for="promotion-recorded-at">
     {{ 'athletes.detail.promotions.editDialog.label' | translate }}
   </label>
-  <form [formGroup]="editForm">
+  <form [formGroup]="editForm" class="promotions__edit-form">
     <p-datepicker
       inputId="promotion-recorded-at"
       formControlName="recorded_at"
       [maxDate]="maxDate"
       [showIcon]="true"
-      dateFormat="dd/mm/yy"
+      [dateFormat]="datePickerFormat()"
       appendTo="body"
       data-cy="promotion-edit-date"
     />
@@ -211,7 +211,7 @@
       formControlName="recorded_at"
       [maxDate]="maxDate"
       [showIcon]="true"
-      dateFormat="dd/mm/yy"
+      [dateFormat]="datePickerFormat()"
       appendTo="body"
       data-cy="promotion-create-date"
     />
@@ -227,7 +227,6 @@
         optionLabel="label"
         optionValue="value"
         appendTo="body"
-        styleClass="w-full"
         data-cy="promotion-create-from-belt"
       />
 
@@ -241,7 +240,6 @@
         optionLabel="label"
         optionValue="value"
         appendTo="body"
-        styleClass="w-full"
         data-cy="promotion-create-to-belt"
       />
     } @else {
@@ -255,7 +253,6 @@
         optionLabel="label"
         optionValue="value"
         appendTo="body"
-        styleClass="w-full"
         data-cy="promotion-create-belt-at-event"
       />
 
@@ -272,7 +269,6 @@
             optionValue="value"
             [disabled]="createStripesOptions().length === 0"
             appendTo="body"
-            styleClass="w-full"
             data-cy="promotion-create-from-stripes"
           />
         </div>
@@ -288,7 +284,6 @@
             optionValue="value"
             [disabled]="createStripesOptions().length === 0"
             appendTo="body"
-            styleClass="w-full"
             data-cy="promotion-create-to-stripes"
           />
         </div>
@@ -297,12 +292,7 @@
   </form>
 
   @if (createError(); as error) {
-    <p-message
-      severity="error"
-      [text]="error"
-      styleClass="w-full"
-      data-cy="promotion-create-error"
-    />
+    <p-message severity="error" [text]="error" data-cy="promotion-create-error" />
   }
 
   <ng-template pTemplate="footer">

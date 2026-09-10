@@ -76,7 +76,7 @@
         <p-datepicker
           inputId="doc-issued"
           formControlName="issued_at"
-          dateFormat="yy-mm-dd"
+          [dateFormat]="datePickerFormat()"
           [showIcon]="true"
           appendTo="body"
           data-cy="doc-issued"
@@ -89,7 +89,7 @@
         <p-datepicker
           inputId="doc-expires"
           formControlName="expires_at"
-          dateFormat="yy-mm-dd"
+          [dateFormat]="datePickerFormat()"
           [showIcon]="true"
           appendTo="body"
           data-cy="doc-expires"

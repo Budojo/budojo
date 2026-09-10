@@ -69,6 +69,20 @@
   word-break: break-word;
 }
 
+// The em-dash placeholder for a setting nobody has chosen. Muted, so an
+// unset row reads as empty rather than as a value (#1504).
+.row__empty {
+  color: var(--p-text-muted-color);
+}
+
+// The season's start date, beside its name. Secondary because "2025/26" is
+// the answer and the date is the footnote that makes it checkable.
+.row__hint {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--p-text-color-secondary);
+}
+
 // Slug wants a monospace treatment so the visual affordance matches its
 // role (a machine-stable identifier, not a human label). Using ui-monospace
 // first picks up SF Mono / Menlo on Apple, Consolas on Windows.

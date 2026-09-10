@@ -128,3 +128,24 @@
     gap: 1rem;
   }
 }
+
+// The promotion dialogs' controls fill their column (#1495).
+//
+// They carried `styleClass="w-full"`, which does nothing to a `p-select`: the
+// only `.w-full` rule in the codebase is nested inside `.p-password` and sets
+// `display: flex`, not a width. So five selects in a 26rem dialog sized to
+// their longest belt name — "Purple" against "White" — and came out ragged,
+// for a reason no reader could see.
+//
+// A dialog is a narrow column and its controls fill it. Declared here rather
+// than by fixing `.w-full` globally: that class sits at 37 sites across
+// twelve components, and making it mean what it says would change the width
+// of selects on all of them at once, several of which were laid out around
+// the accidental behaviour without anyone knowing it was accidental.
+:host ::ng-deep .promotions__create-form,
+:host ::ng-deep .promotions__edit-form {
+  .p-select,
+  .p-datepicker {
+    width: 100%;
+  }
+}

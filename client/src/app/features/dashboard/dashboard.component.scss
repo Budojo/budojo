@@ -51,6 +51,9 @@ $bottom-nav-height: 3.5rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     margin-right: auto;
+    // Takes the slack but yields it: the bell and the avatar chip beside it
+    // are fixed-width and must not be pushed off by a long academy name.
+    min-width: 0;
     color: inherit;
     text-decoration: none;
     transition: opacity var(--budojo-motion-fast) var(--budojo-motion-decelerate);
@@ -64,6 +67,17 @@ $bottom-nav-height: 3.5rem;
       outline-offset: 2px;
       border-radius: var(--p-border-radius-sm);
     }
+  }
+
+  // The academy's name (#1503). One line here, unlike the desktop rail: the
+  // topbar is a fixed-height bar with a bell and an avatar beside it, so a
+  // second line would push them out of it. Ellipsed rather than wrapped, and
+  // the full name is one tap away on the academy page this links to.
+  &__brand-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
   &__logo {

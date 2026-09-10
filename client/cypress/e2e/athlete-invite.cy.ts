@@ -48,6 +48,11 @@ const ATHLETE_ACCEPTED = {
   },
 };
 
+/**
+ * These land on `/edit` since #1500. The invitation, email and photo cards
+ * used to render above the tab strip on every tab; they sit behind Edit now,
+ * which put the tab strip — and the record it opens — back above the fold.
+ */
 describe('Athlete invitation card on athlete detail (#467)', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
@@ -87,7 +92,7 @@ describe('Athlete invitation card on athlete detail (#467)', () => {
       },
     }).as('invite');
 
-    cy.visitAuthenticated('/dashboard/athletes/42');
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
     cy.wait('@getAthlete');
 
     cy.get('[data-cy="athlete-invitation-card"]').should('exist');
@@ -115,7 +120,7 @@ describe('Athlete invitation card on athlete detail (#467)', () => {
       body: { data: ATHLETE_NO_EMAIL },
     }).as('getAthlete');
 
-    cy.visitAuthenticated('/dashboard/athletes/42');
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
     cy.wait('@getAthlete');
 
     cy.get('[data-cy="athlete-invitation-no-email"]').should('be.visible');
@@ -143,7 +148,7 @@ describe('Athlete invitation card on athlete detail (#467)', () => {
       },
     }).as('resend');
 
-    cy.visitAuthenticated('/dashboard/athletes/42');
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
     cy.wait('@getAthlete');
 
     cy.get('[data-cy="athlete-invitation-resend"]').scrollIntoView().should('be.visible').click();
@@ -158,7 +163,7 @@ describe('Athlete invitation card on athlete detail (#467)', () => {
       body: { data: ATHLETE_ACCEPTED },
     }).as('getAthlete');
 
-    cy.visitAuthenticated('/dashboard/athletes/42');
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
     cy.wait('@getAthlete');
 
     cy.get('[data-cy="athlete-invitation-accepted"]').should('be.visible');
@@ -182,7 +187,7 @@ describe('Athlete invitation card on athlete detail (#467)', () => {
       },
     }).as('invite');
 
-    cy.visitAuthenticated('/dashboard/athletes/42');
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
     cy.wait('@getAthlete');
 
     // Inner <button>, not the <p-button> host — see the no-invitation

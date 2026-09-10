@@ -61,6 +61,8 @@ Effects:
 3. **Notification bell badge eager / panel deferred** — the badge count needs to render with the shell, but the dropdown panel (which pulls in PrimeNG `OverlayPanel` etc.) could be `@defer (on interaction(bellButton))`.
 4. **Per-component SCSS budget warnings** — `profile.scss` (5 kB), `landing.scss` (6 kB), `dashboard.scss` (6 kB), `athletes-list.scss` (8 kB) — all exceed the per-component 4 kB warning budget. Most are legitimate (the dashboard shell is intrinsically big), but a quick deduplication of the design-token blocks across `landing` and `profile` could trim ~2 kB each.
 
+   > **`landing.scss` is settled.** #1497 replaced the marketing page with a first-run welcome and took the stylesheet from 448 lines to ~240, well under the budget. The de-duplication suggestion above no longer applies to it — `profile.scss` is the remaining candidate.
+
 ## How to repeat this audit
 
 ```bash

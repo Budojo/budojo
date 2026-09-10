@@ -15,6 +15,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AcademyService } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
+import { formatIsoDate } from '../../../shared/utils/locale';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
@@ -43,6 +44,50 @@ export class AcademyDetailComponent {
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+  /**
+   * When the academy trains, and which year it is counting (#1504).
+   *
+   * Both are settable in the form and neither was readable anywhere. The
+   * season matters more than it looks: it is the denominator of a number the
+   * owner reads on the roster every day, so when "6/12 this month" looks
+   * wrong, the first question is what the app is counting — and the page that
+   * names the academy did not answer it.
+   *
+   * Mon-first, like the picker that sets them, and not Carbon's Sunday-first
+   * value order: a training week starts on Monday for everyone who reads this.
+   */
+  protected readonly trainingDaysLabel = computed<string | null>(() => {
+    // Read so the label re-renders when the sidebar toggle flips.
+    this.languageService.currentLang();
+
+    const days = this.academyService.academy()?.training_days;
+    if (!days || days.length === 0) return null;
+
+    const ORDER = [
+      { key: 'weekdays.mon', value: 1 },
+      { key: 'weekdays.tue', value: 2 },
+      { key: 'weekdays.wed', value: 3 },
+      { key: 'weekdays.thu', value: 4 },
+      { key: 'weekdays.fri', value: 5 },
+      { key: 'weekdays.sat', value: 6 },
+      { key: 'weekdays.sun', value: 0 },
+    ];
+
+    return ORDER.filter((d) => days.includes(d.value))
+      .map((d) => this.translate.instant(d.key) as string)
+      .join(' · ');
+  });
+
+  /** `2025/26`, resolved server-side — see `App\Support\Season`. */
+  protected readonly seasonLabel = computed(
+    () => this.academyService.academy()?.season_label ?? null,
+  );
+
+  /** The day it began, spelled out rather than left as `2025-09-01`. */
+  protected readonly seasonStart = computed(() => {
+    const iso = this.academyService.academy()?.season_start;
+    return iso ? formatIsoDate(iso, this.languageService.currentLang()) : null;
+  });
 
   @ViewChild('logoInput') private logoInput?: ElementRef<HTMLInputElement>;
 

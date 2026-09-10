@@ -17,7 +17,7 @@ import { MessageModule } from 'primeng/message';
 import { finalize } from 'rxjs';
 import { AcademyService, AcademySchedule } from '../../../core/services/academy.service';
 import { LanguageService } from '../../../core/services/language.service';
-import { localeFor } from '../../../shared/utils/locale';
+import { localeFor, datePickerFormatFor } from '../../../shared/utils/locale';
 import { TrainingDaysPickerComponent } from '../../../shared/components/training-days-picker/training-days-picker.component';
 
 /** Carbon dayOfWeek convention (0=Sun..6=Sat). Display order: Mon-first. */
@@ -75,6 +75,18 @@ export class SchedulePlannerComponent {
   private readonly confirmation = inject(ConfirmationService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+
+  /**
+   * The date format for every picker on this component (#1498).
+   *
+   * A signal, not a constant, so switching the sidebar language re-renders
+   * the dates with it — before this the format was hardcoded in the template
+   * and the app shipped two different ones.
+   */
+  protected readonly datePickerFormat = computed(() =>
+    datePickerFormatFor(this.languageService.currentLang()),
+  );
+
   private readonly destroyRef = inject(DestroyRef);
 
   /** Tomorrow at 00:00 — the min date the picker will accept. */
