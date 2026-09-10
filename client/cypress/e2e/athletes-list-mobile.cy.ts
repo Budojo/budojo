@@ -161,3 +161,58 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
     });
   });
 });
+
+/**
+ * The chrome, on the form factor the canon calls primary (#1503, #1505).
+ */
+describe('whose gym is this, and how many riddles (#1503, #1505)', () => {
+  const ACADEMY_NAMED = {
+    statusCode: 200,
+    body: {
+      data: {
+        id: 1,
+        name: 'Gracie Barra Torino',
+        slug: 'gracie-barra-torino',
+        address: null,
+        logo_url: null,
+      },
+    },
+  };
+
+  beforeEach(() => {
+    cy.viewport(390, 844);
+    cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/academy', ACADEMY_NAMED);
+    cy.intercept('GET', '/api/v1/documents/expiring*', {
+      statusCode: 200,
+      body: { data: [], missing_medical_certificate: [] },
+    });
+    cy.visitAuthenticated('/dashboard/athletes');
+  });
+
+  it('names the gym in the topbar, not the product', () => {
+    // It said "Budojo". The glyph beside it already carries the product's
+    // identity, so the word was the redundant half — and the academy's name
+    // was on no phone screen at all.
+    cy.get('.topbar__brand-name').should('contain.text', 'Gracie Barra Torino');
+    cy.get('.topbar').should('not.contain.text', 'Budojo');
+  });
+
+  it('leaves three controls in the toolbar, not five', () => {
+    // Hidden and deleted moved into the sheet. They are entered deliberately
+    // and rarely, and sat at the same weight as the sort control used on
+    // every visit.
+    cy.get('[data-cy="athletes-reveal-inactive"]').should('not.be.visible');
+    cy.get('[data-cy="athletes-reveal-trashed"]').should('not.be.visible');
+
+    cy.get('[data-cy="filter-sheet-chip"]').should('be.visible');
+    cy.get('[data-cy="athletes-sort-belt"]').should('be.visible');
+  });
+
+  it('carries them in the sheet instead, in words', () => {
+    cy.get('[data-cy="filter-sheet-chip"]').click();
+
+    cy.get('[data-cy="athletes-sheet-trashed"]').should('be.visible');
+    cy.get('[data-cy="filter-sheet-panel"]').should('contain.text', 'deleted');
+  });
+});

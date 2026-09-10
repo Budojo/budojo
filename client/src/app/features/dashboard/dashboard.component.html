@@ -16,7 +16,18 @@
         <!-- Inline so stroke="currentColor" inherits the topbar text color (#99). -->
         <app-brand-glyph class="topbar__logo" />
       }
-      Budojo
+      <!--
+        The academy's name, not the product's (#1503). The topbar said
+        "Budojo" while the desktop rail said the academy — so on the phone,
+        which the canon calls the primary form factor, the name of the gym you
+        run was on no screen at all. The glyph beside it already carries the
+        product's identity, which is what made the word redundant rather than
+        missing.
+
+        `brandLabel` falls back to "Budojo" while the academy is still
+        loading, and for the moment before one exists.
+      -->
+      <span class="topbar__brand-name">{{ brandLabel() }}</span>
     </a>
     <!-- In-app notification center (#418). Bell + unread badge + dropdown.
          Kept in the owner topbar on mobile — the bottom bar carries no
