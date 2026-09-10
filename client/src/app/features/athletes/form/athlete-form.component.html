@@ -19,7 +19,9 @@
   />
 
   <div class="athlete-form-page__body">
-    @if (error()) {}
+    @if (error()) {
+      <p-message severity="error" [text]="error()!" />
+    }
 
     @if (loading()) {
       <div class="athlete-form-page__loading">

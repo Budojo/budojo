@@ -6,7 +6,9 @@
       <p>{{ 'auth.login.subtitle' | translate }}</p>
     </div>
 
-    @if (error()) {}
+    @if (error()) {
+      <p-message severity="error" [text]="error()!" />
+    }
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       @if (!twoFactorRequired()) {
