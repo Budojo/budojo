@@ -109,6 +109,45 @@
         styleClass="filter-select"
         appendTo="body"
       />
+
+      <!--
+        Hidden and deleted athletes, moved in here (#1505).
+        
+        They were two of five unlabelled glyphs in the toolbar, at the same
+        weight as the sort control someone uses every time they open the app —
+        and they are the two an owner enters deliberately and rarely. The
+        labels came off in #1446 for a real reason (with words the bar wrapped
+        to three rows on a phone, which was the vertical space that round of
+        feedback had just won back), but what was never decided is whether all
+        five belonged in that row at all.
+        
+        In the sheet they read as what they are: filters, in words. "Show
+        deleted athletes" is a sentence; a bin is a riddle.
+      -->
+      @if (canToggleInactive()) {
+        <div class="athletes-page__sheet-toggle">
+          <label for="athletes-sheet-inactive">
+            {{ 'athletes.list.showInactive' | translate }}
+          </label>
+          <p-toggleswitch
+            inputId="athletes-sheet-inactive"
+            [ngModel]="showingInactive()"
+            (ngModelChange)="toggleInactive()"
+            data-cy="athletes-sheet-inactive"
+          />
+        </div>
+      }
+      <div class="athletes-page__sheet-toggle">
+        <label for="athletes-sheet-trashed">
+          {{ 'athletes.list.showTrashed' | translate }}
+        </label>
+        <p-toggleswitch
+          inputId="athletes-sheet-trashed"
+          [ngModel]="isTrashedMode()"
+          (ngModelChange)="toggleTrashed()"
+          data-cy="athletes-sheet-trashed"
+        />
+      </div>
     </app-filter-sheet>
 
     <!--
@@ -232,7 +271,7 @@
     @if (canToggleInactive()) {
       <button
         type="button"
-        class="athletes-page__reveal"
+        class="athletes-page__reveal athletes-page__reveal--desktop-only"
         [class.athletes-page__reveal--on]="showingInactive()"
         [attr.aria-pressed]="showingInactive()"
         [pTooltip]="
@@ -264,7 +303,7 @@
     -->
     <button
       type="button"
-      class="athletes-page__reveal"
+      class="athletes-page__reveal athletes-page__reveal--desktop-only"
       [class.athletes-page__reveal--on]="isTrashedMode()"
       [attr.aria-pressed]="isTrashedMode()"
       [pTooltip]="
