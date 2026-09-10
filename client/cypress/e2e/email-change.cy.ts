@@ -35,6 +35,11 @@ const FAKE_USER_WITH_PENDING = {
 
 const ACADEMY_OK = { statusCode: 200, body: { data: MOCK_ACADEMY } };
 
+/**
+ * These land on `/edit` since #1500. The invitation, email and photo cards
+ * used to render above the tab strip on every tab; they sit behind Edit now,
+ * which put the tab strip — and the record it opens — back above the fold.
+ */
 describe('Email change — owner profile (#476)', () => {
   beforeEach(() => {
     cy.clearLocalStorage();
@@ -134,7 +139,7 @@ describe('Email change — athlete state A (#476)', () => {
       body: { data: { mode: 'direct' } },
     }).as('change');
 
-    cy.visitAuthenticated('/dashboard/athletes/42');
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
     cy.wait('@getAthlete');
 
     cy.get('[data-cy="athlete-email-edit"]').click();
@@ -192,7 +197,7 @@ describe('Email change — athlete state B (#476)', () => {
       body: { data: { mode: 'invite_swap' } },
     }).as('change');
 
-    cy.visitAuthenticated('/dashboard/athletes/42');
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
     cy.wait('@getAthlete');
 
     cy.get('[data-cy="athlete-email-edit"]').click();
@@ -253,7 +258,7 @@ describe('Email change — athlete state C (#476)', () => {
       body: { data: { mode: 'pending' } },
     }).as('change');
 
-    cy.visitAuthenticated('/dashboard/athletes/42');
+    cy.visitAuthenticated('/dashboard/athletes/42/edit');
     cy.wait('@getAthlete');
 
     cy.get('[data-cy="athlete-email-edit"]').click();
