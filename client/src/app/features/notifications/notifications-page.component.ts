@@ -19,6 +19,7 @@ import {
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component';
 import { groupNotifications } from './notification-grouping';
 import { notificationVisual } from './notification-visual';
 
@@ -43,6 +44,7 @@ import { notificationVisual } from './notification-visual';
     UserAvatarComponent,
     RelativeTimePipe,
     PageHeaderComponent,
+    ErrorStateComponent,
   ],
   templateUrl: './notifications-page.component.html',
   styleUrl: './notifications-page.component.scss',
@@ -66,6 +68,19 @@ export class NotificationsPageComponent implements OnInit {
   protected readonly visualFor = notificationVisual;
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  /**
+   * Extracted so the error state can offer a retry (#1499).
+   *
+   * The error branch used to be a bare paragraph reading "Couldn't load your
+   * notifications. Try again." — naming an action the page did not offer. The
+   * only way back was a page reload the reader had to think of themselves.
+   */
+  protected load(): void {
+    this.loading.set(true);
+    this.loadError.set(false);
     this.inbox
       .load()
       .pipe(
