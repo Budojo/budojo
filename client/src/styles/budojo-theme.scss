@@ -390,12 +390,25 @@
 }
 
 // Tables — grouped-list look
+// Sentence case, not uppercase (#1501).
+//
+// This rule used to `text-transform: uppercase` every PrimeNG table header in
+// the app — and the athletes roster is a hand-rolled `<table>`, so it did not.
+// Two tables one navigation click apart, spelling the same column two
+// different ways, decided by which of them happened to be a framework
+// component.
+//
+// The canon settles it: "Sentence-case everything. Buttons, headers, tags. No
+// title-case, no uppercase — except eyebrow labels." A column header is not an
+// eyebrow — an eyebrow categorises a block of content, a column header names
+// something you sort by. The 0.06em tracking left behind is the tell: this was
+// written as the eyebrow treatment and applied to the wrong element. It goes
+// with the uppercase, because letter-spacing on sentence case just looks
+// loose.
 .p-datatable .p-datatable-thead > tr > th {
   background: transparent;
   border-bottom: 1px solid var(--p-content-border-color);
   font: 600 12px/16px var(--p-font-family);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--p-text-muted-color);
   padding: 12px 16px;
 }

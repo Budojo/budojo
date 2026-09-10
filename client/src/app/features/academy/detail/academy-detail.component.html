@@ -41,10 +41,17 @@
         <p class="logo-card__title">{{ 'academy.detail.logoTitle' | translate }}</p>
         <p class="logo-card__hint">{{ 'academy.detail.logoHint' | translate }}</p>
         <div class="logo-card__actions">
+          <!--
+            Secondary, not primary (#1502). This and the page-header Edit were
+            both filled indigo, so the page had two equal loudest controls and
+            one of them changed a logo. The canon allows one primary CTA per
+            view, and it belongs to Edit.
+          -->
           <p-button
             [label]="
               (logoUrl() ? 'academy.detail.logoReplace' : 'academy.detail.logoUpload') | translate
             "
+            severity="secondary"
             icon="pi pi-upload"
             [loading]="logoUploading()"
             (onClick)="onLogoBrowse()"
