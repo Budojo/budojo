@@ -60,6 +60,64 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.58.0',
+    date: '2026-09-11',
+    headline: {
+      en: 'The timetable.',
+      it: "L'orario.",
+    },
+    sections: [
+      {
+        heading: {
+          en: '🗓️ The weekly timetable',
+          it: "🗓️ L'orario settimanale",
+        },
+        bullets: [
+          {
+            en: 'Until now the app knew your training days — "Monday, Wednesday, Friday" — and nothing more. Kids at 17:00 and adults at 19:00 on the same Monday went into one bucket, and "who was at the kids\' class?" could not be asked. From Academy → Timetable you now write your classes down: a name, the day, the time, the length, and whether it is gi, no-gi or both. The week reads in one screen, one day per row; empty days are drawn empty on purpose, with a "+" beside them, so adding Thursday\'s class is three fields and a tap.',
+            it: "Finora l'app conosceva i giorni di allenamento — «lunedì, mercoledì, venerdì» — e basta. Chi ha i bambini alle 17:00 e gli adulti alle 19:00 lo stesso lunedì aveva un unico calderone, e «chi c'era ai bambini?» non si poteva chiedere. Da Accademia → Orario ora scrivi le tue lezioni: nome, giorno, ora, durata e se è gi, no-gi o entrambi. La settimana si legge in una schermata, un giorno per riga; i giorni vuoti sono vuoti apposta, con un «+» accanto, così aggiungere la lezione del giovedì sono tre campi e un tocco.",
+          },
+          {
+            en: 'None of it is mandatory. If you never open the timetable, the check-in works exactly as it did.',
+            it: "Non è obbligatorio. Se non apri mai l'orario, il check-in funziona esattamente come prima.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '✅ The check-in knows which class you are running',
+          it: '✅ Il check-in sa quale lezione stai facendo',
+        },
+        bullets: [
+          {
+            en: 'With a timetable in place, the day\'s classes appear above the athlete list and the one nearest the clock is already selected: at 18:30 on a Monday you find "Fundamentals 19:00" on. Every tick lands in the right class. An athlete who does fundamentals and then stays for the open mat counts twice, because those are two classes — and a carnet spends two entries that evening, one per presence, the rule it always had.',
+            it: "Con l'orario impostato, sopra l'elenco degli atleti compaiono le lezioni del giorno, e quella dell'ora è già selezionata: alle 18:30 di lunedì trovi accesa «Fondamentali 19:00». Ogni spunta finisce nella lezione giusta. Un atleta che fa fondamentali e poi resta per l'open mat conta due volte, perché sono due lezioni — e un carnet quella sera spende due ingressi, uno per presenza, la regola di sempre.",
+          },
+          {
+            en: 'One class on the day means nothing to choose: it is simply named. No class on the day means the page you had before.',
+            it: 'Una sola lezione nel giorno vuol dire niente da scegliere: te la mostra e basta. Nessuna lezione vuol dire la pagina di prima.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '📜 The past stays as it was',
+          it: "📜 Il passato resta com'era",
+        },
+        bullets: [
+          {
+            en: 'The attendance you have already recorded — thousands of rows, perhaps — stays "present on the day": we did not guess a class for any of it. Open a Monday from March in a class view and you still see who was there. Move or rename a class in the timetable and the evenings already held keep the name and time they had.',
+            it: "Le presenze che hai già registrato — anche migliaia — restano «presenze nel giorno»: non gli abbiamo attribuito una lezione a caso. Apri un lunedì di marzo nella vista di una lezione e vedi comunque chi c'era. Sposta o rinomina una lezione nell'orario e le sere già fatte restano con il nome e l'ora che avevano.",
+          },
+          {
+            en: "The timetable is the first piece of a series: the topics covered in each class, the year's programme, and a chart of how much of it you have taught. Each one stands on this.",
+            it: "L'orario è il primo pezzo di una serie: gli argomenti trattati in ogni lezione, il programma dell'anno, e il grafico di quanto ne hai coperto. Ognuno si appoggia a questo.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.57.1',
     date: '2026-09-11',
     headline: {
