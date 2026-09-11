@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\User;
 
 use App\Actions\User\CompleteOnboardingStepAction;
+use App\Actions\User\ResolveOnboardingStepsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\CompleteOnboardingStepRequest;
 use App\Models\User;
@@ -37,6 +38,7 @@ class OnboardingController extends Controller
 {
     public function __construct(
         private readonly CompleteOnboardingStepAction $completeStep,
+        private readonly ResolveOnboardingStepsAction $resolveSteps,
     ) {
     }
 
@@ -48,7 +50,7 @@ class OnboardingController extends Controller
         return response()->json([
             'data' => [
                 'dismissed_at' => $user->onboarding_dismissed_at?->toIso8601String(),
-                'completed_steps' => $user->onboarding_completed_steps ?? [],
+                'completed_steps' => $this->resolveSteps->execute($user),
                 'available_steps' => OnboardingStep::all(),
             ],
         ]);
@@ -61,11 +63,14 @@ class OnboardingController extends Controller
         /** @var array{step: string} $validated */
         $validated = $request->validated();
 
-        $completed = $this->completeStep->execute($user, $validated['step']);
+        $this->completeStep->execute($user, $validated['step']);
 
+        // Resolved, not the action's return value: a manual tick is one input
+        // to the answer (#1536), and the caller should get the same list
+        // `show()` would give it rather than a partial one it has to merge.
         return response()->json([
             'data' => [
-                'completed_steps' => $completed,
+                'completed_steps' => $this->resolveSteps->execute($user->refresh()),
             ],
         ]);
     }

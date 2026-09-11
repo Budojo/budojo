@@ -1180,8 +1180,8 @@ paths:
 
         - `dismissed_at !== null` → user explicitly dismissed the tour;
           the SPA never re-renders it.
-        - `completed_steps.length === available_steps.length` → user
-          has ticked every step; checklist self-dismisses.
+        - `completed_steps.length === available_steps.length` → every step
+          is done; checklist self-dismisses.
         - Otherwise → checklist + tour both render.
       operationId: meOnboardingShow
       responses:
@@ -1205,7 +1205,22 @@ paths:
                         type: array
                         items:
                           type: string
-                        example: ['add_athlete']
+                        description: |
+                          **Resolved from the academy, not only from what the
+                          user ticked** (#1536). Four of the five steps are
+                          questions the data answers — `add_athlete`,
+                          `log_attendance`, `mark_payment` and
+                          `upload_document` are complete as soon as the
+                          academy has one of the thing in question, whether it
+                          arrived through the UI, a CSV import or a restored
+                          backup. `view_stats` stays manual: a visit leaves no
+                          trace to read back.
+
+                          A step the user ticked by hand is still honoured and
+                          unioned in, so someone who ticks a step they do not
+                          intend to use keeps it ticked. The list comes back in
+                          `available_steps` order.
+                        example: ['add_athlete', 'log_attendance']
                       available_steps:
                         type: array
                         items:
