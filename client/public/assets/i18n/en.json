@@ -2294,7 +2294,7 @@
     "loadError": "Couldn't load the stats. Please try again.",
     "emptyTitle": "Not enough data yet",
     "emptyHint": "Add your first athlete and the charts will populate here.",
-    "total": "Across {{count}} athletes on file.",
+    "total": "Across {{count}} active athletes.",
     "belt": {
       "title": "Belts",
       "hint": "Athletes by IBJJF rank, kids → seniors. Hover a slice for the count + share."
