@@ -3003,6 +3003,10 @@ paths:
             Free-text name search. Tokens are AND-matched across
             `first_name` + `last_name`. Empty / whitespace-only values
             short-circuit to an empty `data` array.
+
+            Accent- and case-insensitive (#1527): the needle and the columns
+            are both folded, so `angelo` finds `Ângelo` and `ozturk` finds
+            `Öztürk` — and so does either spelling of the query.
           required: false
           schema:
             type: string
@@ -3060,6 +3064,11 @@ paths:
             Rossi (token `mario` matches first_name, token `ros` matches
             last_name) but not Marco Rossini. Empty/whitespace-only values
             are ignored and return the unfiltered list.
+
+            Accent-insensitive since #1527: matching runs against a folded
+            copy of each column, with the needle folded the same way, so
+            `angelo` finds `Ângelo` and `muller` finds `Müller`. `LIKE` alone
+            folds ASCII case only, which is why neither used to work.
           required: false
           schema:
             type: string
@@ -3112,6 +3121,13 @@ paths:
             block reorders between requests and an athlete can land on two
             pages or none. The tiebreak stays ascending because the names are
             a stable key, not a second dimension the caller asked to reverse.
+
+            **Names order on a folded key, not the raw column (#1527).** Both
+            name sorts read a generated `*_sort` column — lower-cased,
+            diacritics stripped — so `da Silva` sorts with the D's rather than
+            after `Z`, and `Ângelo` with the A's. Every name ordering ends on
+            `id`, because folding makes ties common enough that an unstable
+            tail would put an athlete on two pages or on neither.
 
             Unknown values also fall back to the default `created_at desc`.
           required: false

@@ -13,6 +13,7 @@ use App\Support\Import\AthleteCsv;
 use App\Support\Import\BeltText;
 use App\Support\Import\DateText;
 use App\Support\Import\PhoneText;
+use App\Support\NameFold;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -240,8 +241,15 @@ final class ImportAthletesAction
     {
         $firstRaw = $values['first_name'] ?? '';
         $lastRaw = $values['last_name'] ?? '';
-        $first = mb_strtolower(trim(\is_string($firstRaw) ? $firstRaw : ''));
-        $last = mb_strtolower(trim(\is_string($lastRaw) ? $lastRaw : ''));
+        // Folded, not just lower-cased (#1527). The rest of the app now treats
+        // `Angelo` and `Ângelo` as the same name — it sorts them together and
+        // one query finds the other — and a duplicate check that disagreed
+        // would import a second row for a person the roster already has, which
+        // is the exact failure the check exists to prevent. Symmetric by
+        // construction: `existingPeople()` builds its keys through this same
+        // method, so both sides of the comparison fold identically.
+        $first = NameFold::fold(trim(\is_string($firstRaw) ? $firstRaw : ''));
+        $last = NameFold::fold(trim(\is_string($lastRaw) ? $lastRaw : ''));
         $born = $values['date_of_birth'] ?? null;
 
         return ['name' => "{$first}|{$last}", 'born' => \is_string($born) && $born !== '' ? $born : null];

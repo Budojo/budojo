@@ -44,6 +44,8 @@ use Illuminate\Support\Facades\Storage;
  * @property \Carbon\Carbon|null     $created_at
  * @property \Carbon\Carbon|null     $updated_at
  * @property \Carbon\Carbon|null     $deleted_at
+ * @property-read string             $first_name_sort        Folded twin of `first_name` (#1527) — lower-cased, diacritics stripped. A generated column: SQLite derives it, nothing writes it. Ordered and searched by, never displayed.
+ * @property-read string             $last_name_sort         Same, for `last_name`.
  * @property-read int|null           $attendance_month_count Present only on the roster index (#1447), which selects it as a `withCount` alias. Null everywhere else — read it as "not asked for", never as "zero".
  * @property-read int|null           $attendance_total_count Same, for the current SEASON (#1484) — the academy's training year, floored per row at this athlete's `joined_at`. It was an all-time count until then.
  */
