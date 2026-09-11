@@ -158,19 +158,16 @@ it('still AND-matches tokens across the two columns', function (): void {
     expect($found)->toBe(['da Silva']);
 });
 
-it('keeps the sort key and the PHP fold saying the same thing', function (): void {
-    // The map in NameFold and the expression frozen into the column when the
-    // migration ran are the same knowledge in two places. Editing the map does
-    // NOT rewrite an existing column, so this is the guard: every name below
-    // must fold identically on both sides.
+it('stores a key that matches the fold, for every name in the fixture', function (): void {
+    // The keys are WRITTEN by `AthleteObserver::saving()`, not derived by the
+    // database — a generated column turned out not to be portable across
+    // SQLite builds. So the guard is that the observer actually ran and stored
+    // the right thing, read straight off the row rather than through Eloquent.
     $names = [
         'Ângelo', 'da Silva', 'Öztürk', 'Núñez', 'Élena', 'Straße',
         'Æbelø', 'Jürgen', 'Müller', 'Renée', 'Škoda', 'Łukasz', 'Français',
-        // Outside the map, and that is the point: `fold()` must leave them
-        // exactly as SQLite's `lower()` does. Using `mb_strtolower` here
-        // instead made the column say `Şahin` and the needle say `şahin`, and
-        // the row became unreachable by every spelling of the query. Every one
-        // of these carries an upper-case letter the map does not cover.
+        // Outside the map, and that is the point: `fold()` leaves them as
+        // written, and so must the stored key.
         'Şahin', 'Ana Şahin', 'Żuk', 'Ğokhan', 'Ōmura', 'İstanbul', 'Đoković',
     ];
 
@@ -183,23 +180,40 @@ it('keeps the sort key and the PHP fold saying the same thing', function (): voi
 
         expect($row->first_name_sort)->toBe(
             NameFold::fold($name),
-            "NameFold::fold() and the generated column disagree on '{$name}' — the map changed without a migration rebuilding the column",
+            "the stored sort key for '{$name}' is not what NameFold::fold() produces",
         );
         expect($row->last_name_sort)->toBe(NameFold::fold($name));
     }
 });
 
-it('leaves a letter outside the map alone, so the exact spelling still finds it', function (): void {
-    collationAthlete($this->academy, 'Ana', 'Şahin');
+it('re-folds the key when the name is renamed', function (): void {
+    // The half a generated column got for free. A rename that left the old key
+    // behind would leave the athlete sorted and findable under a name they no
+    // longer have — and nothing on screen would say so.
+    $athlete = collationAthlete($this->academy, 'Mario', 'Rossi');
 
-    // Not reachable as `sahin` — Turkish is not in the map — but reachable as
-    // itself, which is the floor this must never drop below.
-    expect(collect($this->getJson('/api/v1/athletes?q=Şahin')->json('data'))->pluck('last_name')->all())
-        ->toBe(['Şahin']);
+    $athlete->update(['first_name' => 'Ângelo', 'last_name' => 'da Silva']);
 
-    // And the ASCII half of the same name still folds case.
-    expect(collect($this->getJson('/api/v1/athletes?q=ANA')->json('data'))->pluck('first_name')->all())
-        ->toBe(['Ana']);
+    $row = DB::table('athletes')->where('id', $athlete->id)->first(['first_name_sort', 'last_name_sort']);
+    expect($row->first_name_sort)->toBe('angelo')
+        ->and($row->last_name_sort)->toBe('da silva');
+
+    // And the rename is reachable through the API it changed.
+    expect(collect($this->getJson('/api/v1/athletes?q=angelo')->json('data'))->pluck('last_name')->all())
+        ->toBe(['da Silva']);
+});
+
+it('folds a name written straight through the model, not just the API', function (): void {
+    // The CSV import, the seeder and the factory all take this path.
+    $athlete = Athlete::factory()->create([
+        'academy_id' => $this->academy->id,
+        'first_name' => 'Érika',
+        'last_name' => 'dos Santos',
+    ]);
+
+    $row = DB::table('athletes')->where('id', $athlete->id)->first(['first_name_sort', 'last_name_sort']);
+    expect($row->first_name_sort)->toBe('erika')
+        ->and($row->last_name_sort)->toBe('dos santos');
 });
 
 it('folds every pair in the map, in both cases', function (): void {

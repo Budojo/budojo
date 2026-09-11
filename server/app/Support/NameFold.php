@@ -22,18 +22,25 @@ namespace App\Support;
  * And LIKE, which is case-insensitive for ASCII only, cannot find `Ângelo` for
  * someone typing `angelo`.
  *
- * So the two columns have a folded twin — lower-cased, diacritics removed —
- * that every ORDER BY and every search reads instead. They are **generated
- * columns**: SQLite derives them from the source column, so there is no write
- * path to keep in sync and no way for them to go stale.
+ * So each name column has a folded twin — `first_name_sort`, `last_name_sort` —
+ * that every ORDER BY and every search reads instead, and a search needle goes
+ * through the same `fold()` before it meets them.
  *
- * **The map below and the column definition in the database are the same
- * knowledge in two places.** The migration builds the column from
- * `sqlExpression()`, and once a column is created its expression is frozen in
- * the schema — editing this map does NOT change an existing database. Adding a
- * pair here therefore needs a migration that rebuilds the columns, and
- * `AthleteNameCollationTest` fails until the two agree again — it reads
- * the column back out of the database and compares it to `fold()`.
+ * **The columns are written, not derived.** `AthleteObserver::saving()` fills
+ * them on every write. The first version made them SQLite generated columns,
+ * which was better in every way except the one that counts: the REPLACE chain
+ * they were defined by is ~74 calls deep, and SQLite's parser stack depth is a
+ * compile-time constant. The dev container took 120 levels; CI's build threw
+ * `parser stack overflow` at 74. The desktop app bundles its own PHP, so the
+ * SQLite that would run that migration on an owner's machine is whichever build
+ * went into the installer — an expression frozen into the schema has to be
+ * portable to a database we do not compile, and that one was not.
+ *
+ * The cost of writing them is a path that can drift. `AthleteNameCollationTest`
+ * is what holds it: it reads the stored keys back out and compares them to
+ * `fold()`, after an insert and after a rename. The only way past the observer
+ * is a raw `DB::table('athletes')` update touching a name — there are none
+ * today, and a future one has to fold by hand.
  *
  * Not an ICU collation: that would mean a custom SQLite collation registered on
  * every connection the app opens — web, queue, artisan, and the desktop build's
@@ -46,9 +53,12 @@ final class NameFold
     /**
      * Lower-case accented character → its ASCII form.
      *
-     * Upper-case forms are derived, not listed: `sqlExpression()` and `fold()`
-     * both handle `À` alongside `à`. Two entries per letter would be two places
-     * to forget one.
+     * Upper-case forms are derived, not listed — `fold()` handles `À` alongside
+     * `à`. Two entries per letter would be two places to forget one.
+     *
+     * Changing this map changes how names sort, but NOT the keys already
+     * stored: they were folded by the map as it stood when each row was last
+     * written. A map change needs a migration that re-folds the table.
      *
      * The set is the Latin-script diacritics that turn up on a mat: Italian,
      * Portuguese and Spanish first (this is a BJJ app), then French, German and
@@ -69,22 +79,23 @@ final class NameFold
     ];
 
     /**
-     * The PHP side of the fold — what a search needle goes through before it
-     * meets a folded column.
+     * Fold a name — or a search needle — into the form the sort keys hold.
      *
-     * **ASCII-only lower-casing, deliberately**, because that is all SQLite's
-     * `lower()` does and the two sides have to produce byte-identical results.
-     * `mb_strtolower` here instead looked more correct and silently broke every
-     * name carrying an upper-case letter the map does not cover: the column
-     * kept `Şahin`, the needle became `şahin`, and no spelling of the query
-     * could reach the row any more — worse than before this class existed,
-     * where at least the exact spelling matched. `/prereview` found it; the
-     * equivalence test below now carries an out-of-map name so it cannot come
-     * back.
+     * **ASCII-only lower-casing.** It began as a constraint: SQLite's `lower()`
+     * is ASCII-only and a generated column had to agree with this method byte
+     * for byte. Getting that wrong broke every name carrying an upper-case
+     * letter outside the map — `Şahin` in the column, `şahin` in the needle,
+     * the row unreachable by any spelling — which `/prereview` caught.
      *
-     * A letter outside the map is therefore left exactly as written, on both
-     * sides. `Şahin` is findable as `Şahin`, not as `sahin` — adding Turkish to
-     * the map is what would change that, and it needs a migration.
+     * The constraint is gone now that PHP writes both sides, and the choice
+     * stays, because it is the one that can be stated exactly: **the map, plus
+     * A-Z.** `mb_strtolower` would fold more scripts and bring its own corners
+     * with it (`İ` lower-cases to `i` plus a combining dot, which no one typing
+     * `istanbul` will produce).
+     *
+     * So a letter outside the map is left as written. `Şahin` is findable as
+     * `Şahin`, not as `sahin`; adding Turkish to the map is what would change
+     * that, and it needs a migration to re-fold the rows.
      */
     public static function fold(string $value): string
     {
@@ -97,32 +108,5 @@ final class NameFold
         }
 
         return strtr($value, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz');
-    }
-
-    /**
-     * The SQL side — the expression a generated column is defined by.
-     *
-     * **`lower()` goes outermost and folds only ASCII.** SQLite's `lower()`
-     * leaves every non-ASCII byte alone, so an upper-case `Ö` walks straight
-     * through it and out past `z`; the first version of this shipped that way
-     * in a spike and put `Öztürk` below `Zanetti`. Hence both cases in the
-     * REPLACE chain, and `lower()` left to do the A-Z half only.
-     *
-     * The caller passes a bare column name it controls — this is used by a
-     * migration, never with user input.
-     */
-    public static function sqlExpression(string $column): string
-    {
-        $expression = $column;
-
-        foreach (self::MAP as $accented => $plain) {
-            // Every pair in the map has a distinct upper-case form — `ß`
-            // included, which upper-cases to `SS` and so folds a literal `SS`
-            // to `ss` as well. `lower()` would have done that anyway.
-            $expression = "REPLACE({$expression},'{$accented}','{$plain}')";
-            $expression = \sprintf("REPLACE(%s,'%s','%s')", $expression, mb_strtoupper($accented), $plain);
-        }
-
-        return "lower({$expression})";
     }
 }

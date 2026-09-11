@@ -3123,7 +3123,7 @@ paths:
             a stable key, not a second dimension the caller asked to reverse.
 
             **Names order on a folded key, not the raw column (#1527).** Both
-            name sorts read a generated `*_sort` column — lower-cased,
+            name sorts read a folded `*_sort` column — lower-cased,
             diacritics stripped — so `da Silva` sorts with the D's rather than
             after `Z`, and `Ângelo` with the A's. Every name ordering ends on
             `id`, because folding makes ties common enough that an unstable

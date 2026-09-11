@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Support\NameFold;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -18,48 +19,64 @@ return new class extends Migration
      * most common surnames in Brazilian jiu jitsu were at the bottom of every
      * list, and typing `angelo` found nobody. See `App\Support\NameFold`.
      *
-     * **Generated, not written.** SQLite derives these from the source column
-     * on read, so there is no observer, no mutator and no backfill — and no
-     * way for a name and its sort key to disagree. The import path, the athlete
-     * form and a direct `DB::table()->update()` all get a correct key for free.
+     * **Written by the application, not derived by the database.** The first
+     * version of this was a generated column — `GENERATED ALWAYS AS (…)
+     * VIRTUAL` over a REPLACE chain, so nothing could ever write a stale key.
+     * It worked, and it was the wrong shape: the chain is ~74 calls deep, and
+     * SQLite's parser stack depth is a **compile-time constant**. The dev
+     * container swallowed 120 levels; CI's build threw `parser stack overflow`
+     * at 74 and took 1378 tests with it.
      *
-     * **VIRTUAL, not STORED.** SQLite refuses `ALTER TABLE ADD COLUMN` for a
-     * stored generated column; only virtual ones can be added to a table that
-     * already exists. Virtual means computed per read, which an index makes
-     * moot — the index below stores the computed value, and the query plan for
-     * an ordered roster reads `SCAN athletes USING INDEX`.
+     * That is not a CI problem to work around. The desktop app ships its own
+     * bundled PHP, so the SQLite that runs this migration on an owner's machine
+     * is whichever build went into the installer — and the failure mode is a
+     * migration that throws on upgrade and an app that will not start. An
+     * expression frozen into the schema has to be portable to every build of a
+     * database we do not compile.
+     *
+     * So: ordinary columns, filled by `AthleteObserver::saving()` on every
+     * write, backfilled here for the rows that already exist. The cost is a
+     * write path that can drift; `AthleteNameCollationTest` is what holds it,
+     * and the only way round the observer is a raw `DB::table('athletes')`
+     * update touching a name — of which there are none today.
      */
     public function up(): void
     {
-        // Raw, because Laravel's schema builder has no vocabulary for a
-        // generated column on SQLite, and because the expression is 1.1 KB of
-        // nested REPLACE that belongs in one place rather than smeared across
-        // a fluent chain.
-        foreach (['first_name', 'last_name'] as $column) {
-            $expression = NameFold::sqlExpression($column);
+        Schema::table('athletes', function (Blueprint $table): void {
+            // Nullable, because the backfill below runs after the column
+            // exists and a NOT NULL with no default cannot be added to a
+            // populated table. The observer never writes null afterwards.
+            $table->string('first_name_sort')->nullable()->after('last_name');
+            $table->string('last_name_sort')->nullable()->after('first_name_sort');
 
-            DB::statement(
-                "ALTER TABLE athletes ADD COLUMN {$column}_sort TEXT GENERATED ALWAYS AS ({$expression}) VIRTUAL"
-            );
-        }
-
-        Schema::table('athletes', function ($table): void {
             // Composite and in this order because that is how the roster reads
-            // them: surname leads, forename breaks the tie. The reverse cycle
-            // (`sort_by=first_name`) scans instead, which is the right trade
-            // for a list of a few hundred rows paginated at twenty.
+            // them: surname leads, forename breaks the tie.
             $table->index(['last_name_sort', 'first_name_sort'], 'athletes_name_sort_index');
         });
+
+        // Chunked and keyed by id, so a roster of any size migrates in bounded
+        // memory. `DB::table` rather than the model on purpose: the observer
+        // is not needed here (this IS the fold) and an Eloquent save would fire
+        // the promotion and audit observers for a write that changes nothing a
+        // reader would recognise.
+        DB::table('athletes')
+            ->select(['id', 'first_name', 'last_name'])
+            ->orderBy('id')
+            ->chunk(500, function ($rows): void {
+                foreach ($rows as $row) {
+                    DB::table('athletes')->where('id', $row->id)->update([
+                        'first_name_sort' => NameFold::fold((string) $row->first_name),
+                        'last_name_sort' => NameFold::fold((string) $row->last_name),
+                    ]);
+                }
+            });
     }
 
     public function down(): void
     {
-        Schema::table('athletes', function ($table): void {
+        Schema::table('athletes', function (Blueprint $table): void {
             $table->dropIndex('athletes_name_sort_index');
+            $table->dropColumn(['first_name_sort', 'last_name_sort']);
         });
-
-        foreach (['first_name', 'last_name'] as $column) {
-            DB::statement("ALTER TABLE athletes DROP COLUMN {$column}_sort");
-        }
     }
 };
