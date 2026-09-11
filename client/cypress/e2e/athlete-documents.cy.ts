@@ -127,7 +127,11 @@ describe('Athlete documents page', () => {
     // Scope the visibility check to the desktop table — the mobile
     // card list also carries the cancelled tag but is display:none at
     // viewport ≥ 768px (cypress default).
-    cy.get('[data-cy="documents-table"]').contains('Cancelled on 2026-04-20').should('be.visible');
+    // Written for a reader since #1537 — and still the calendar day the server
+    // recorded, because the timestamp is truncated rather than converted.
+    cy.get('[data-cy="documents-table"]')
+      .contains('Cancelled on 20 April 2026')
+      .should('be.visible');
     // Tombstone row has no action buttons (Norman constraint).
     cy.contains('td', 'old.pdf').parent().find('[data-cy="download-btn"]').should('not.exist');
     cy.contains('td', 'old.pdf').parent().find('[data-cy="delete-btn"]').should('not.exist');
