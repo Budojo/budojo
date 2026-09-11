@@ -67,6 +67,44 @@
   }
 
   <!--
+    Which class (#1562). The day's classes as chips, the one the clock points
+    at already on — see `pickDefaultClass`. Ticks go into the selected class's
+    lesson. A day with one class needs no choice and gets a label instead; a
+    day with none renders nothing here, and the page is what it was before
+    the timetable existed.
+  -->
+  @if (dayClasses().length > 1) {
+    <div
+      class="attendance__classes"
+      role="group"
+      [attr.aria-label]="'attendance.daily.classPicker.aria' | translate"
+      data-cy="attendance-class-picker"
+    >
+      @for (c of dayClasses(); track c.id) {
+        <button
+          type="button"
+          class="class-chip"
+          [class.class-chip--on]="c.id === selectedClassId()"
+          [attr.aria-pressed]="c.id === selectedClassId()"
+          [disabled]="anyInflight()"
+          (click)="selectClass(c.id)"
+          [attr.data-cy]="'attendance-class-' + c.id"
+        >
+          <span class="class-chip__name">{{ c.name }}</span>
+          @if (c.starts_at) {
+            <span class="class-chip__time">{{ c.starts_at }}</span>
+          }
+        </button>
+      }
+    </div>
+  } @else if (dayClasses().length === 1) {
+    <p class="attendance__class-label" data-cy="attendance-class-single">
+      <i class="pi pi-calendar" aria-hidden="true"></i>
+      <span>{{ classLabel(dayClasses()[0]) }}</span>
+    </p>
+  }
+
+  <!--
     Search + belt filter strip — same shape as athletes-list (#184).
     Filters are forwarded to the same paginated athletes endpoint that
     feeds the page, so server-side filtering applies. Status is fixed

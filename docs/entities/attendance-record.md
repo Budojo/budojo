@@ -10,6 +10,7 @@ One `AttendanceRecord` is one athlete-was-present-on-one-date row. This is M4's 
 |---|---|---|---|
 | `id` | bigint unsigned | PK, auto-increment | |
 | `athlete_id` | bigint unsigned | FK `athletes.id`, cascade on delete, **indexed** | Tenant scoping (an athlete belongs to exactly one academy → an attendance row inherits the academy through it) |
+| `lesson_id` | bigint unsigned | FK `lessons.id`, **null on delete**, nullable, **indexed** | Which [lesson](./lesson.md) the presence was recorded into (#1562). Null on every row that predates the timetable and on any day the academy has no class — a presence on a day, which is all a row here ever was before. No backfill: guessing which class somebody attended eight months ago would be inventing history. |
 | `attended_on` | date | not null, **indexed** | YYYY-MM-DD. Cast to `Carbon\Carbon` on the model with `date:Y-m-d` so the serialisation stays stable across MySQL (DATE type, time-truncated natively) and SQLite (TEXT type, stores whatever you write). |
 | `notes` | text | nullable, max 500 chars | Instructor's free-form note about the session — "did the lapel choke drill", "complained about a sore shoulder". Empty on self-marks. |
 | `source` | enum(`'instructor'`, `'self'`) | not null, default `'instructor'` | Who pinned the row (#960). `'instructor'` is the default for every backfill row + every owner-side widget mark. `'self'` is set by `POST /me/attendance/today` (athlete portal). The owner-side daily widget renders a small "Self" badge next to self-marked rows so the instructor can spot anomalies. |
@@ -30,10 +31,14 @@ One `AttendanceRecord` is one athlete-was-present-on-one-date row. This is M4's 
 ## Relations
 
 - `belongsTo(Athlete::class)` — inverse of `Athlete::attendanceRecords()`.
+- `belongsTo(Lesson::class)` — nullable; inverse of `Lesson::attendanceRecords()` (#1562).
 
 ## Business rules
 
 - **Idempotent marking** — `MarkAttendanceAction::execute(...)` re-submitting the same `(athlete, date)` is a no-op, never a 422. The action's "already present?" check filters via the SoftDeletes scope so a soft-deleted row does NOT block a fresh insert (correct-a-mistake flow).
+- **With a class, the unit is `(athlete, date, lesson)`** (#1562). `POST /api/v1/attendance` with an `academy_class_id` materialises that class's lesson for the day (first tap creates, every tap after reuses — inside the same transaction as the inserts) and records the presence into it. The same athlete can be in the kids' class at 17:00 and the adults' at 19:00: two rows, not a duplicate. A presence on the day **with no lesson** still counts as "already present" for every class of that day, so a Monday from before the timetable existed does not read as empty once Monday has one. Without a class nothing changes from before.
+- **Reading by class** — `GET /api/v1/attendance?date=…&academy_class_id=…` returns that class's lesson **plus** the day's class-less presences, and leaves out rows that belong to a *different* class that day. A GET never creates a lesson. A class from another academy is a 403, like an athlete from another academy.
+- **Carnets count sessions, not days.** `ReconcileCarnetEntriesAction` was not changed by #1562: it hands one entry to each attendance row, so an athlete checked into two classes on one evening spends two entries. That is the meaning of "10 sessions" on a pack; an academy that sells "10 days" would need a per-day rule, which does not exist yet.
 - **Source defaults to `instructor`** — both for the legacy backfill (every row before #960) and for the owner-side widget. Only `POST /me/attendance/today` pins `source = self`.
 - **Athletes can only revert their own self-marks** — `UnmarkTodayAttendanceAction` returns `InstructorLocked` (→ HTTP 403) when today's row is `source = instructor`. Instructors retain DELETE authority on rows of either source via the existing `DELETE /attendance/{id}`.
 - **Self-mark today only** — `POST /me/attendance/today` is hardcoded to `Carbon::today()`; there is no `date` parameter. An athlete cannot retroactively claim past presences.
@@ -42,7 +47,7 @@ One `AttendanceRecord` is one athlete-was-present-on-one-date row. This is M4's 
 
 ## Wire shape
 
-`AttendanceRecordResource` mirrors the model columns 1:1, including `source` (#960). The full schema lives in [`../api/v1.yaml § AttendanceRecord`](../api/v1.yaml).
+`AttendanceRecordResource` mirrors the model columns 1:1, including `source` (#960) and `lesson_id` (#1562). The full schema lives in [`../api/v1.yaml § AttendanceRecord`](../api/v1.yaml).
 
 ## Lifecycle
 
@@ -57,7 +62,8 @@ One `AttendanceRecord` is one athlete-was-present-on-one-date row. This is M4's 
 - `MarkAttendanceAction` — bulk insert from the owner-side widget. Accepts `AttendanceSource` parameter (default `Instructor`).
 - `MarkTodayAttendanceAction` (#960) — athlete-side single-row insert wrapping the training-day rule + idempotent-fetch.
 - `UnmarkTodayAttendanceAction` (#960) — athlete-side revert with source-based authorisation.
-- `GetDailyAttendanceAction` — owner's "who's here today?" query.
+- `GetDailyAttendanceAction` — owner's "who's here today?" query, optionally narrowed to one class (#1562).
+- `App\Actions\Lesson\MaterialiseLessonAction` — the class's lesson for the day, found or created (#1562).
 - `GetAthleteAttendanceAction` — per-athlete history with optional date window.
 - `GetAthleteAttendanceSummaryAction` — % presenze denominator clipped at `joined_at` (#893).
 - `GetMonthlyAttendanceSummaryAction` — cross-athlete aggregate for the dashboard widget.

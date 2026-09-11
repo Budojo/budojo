@@ -1369,7 +1369,13 @@
         "links": "Links",
         "address": "Address",
         "trainingDays": "Training days",
+        "timetable": "Timetable",
         "season": "Season"
+      },
+      "timetable": {
+        "none": "Not set up yet",
+        "manage": "Manage",
+        "setUp": "Set up"
       },
       "linksAria": "Academy contact links",
       "links": {
@@ -1520,6 +1526,60 @@
       "athletesOnOne": "{{count}} athlete",
       "athletesOnOther": "{{count}} athletes"
     },
+    "timetable": {
+      "title": "Timetable",
+      "hint": "The classes you run each week. The check-in offers the day's classes, so who was at which becomes a question you can ask.",
+      "countOne": "{{count}} class a week",
+      "countOther": "{{count}} classes a week",
+      "add": "Add class",
+      "addOnDay": "Add a class on {{day}}",
+      "restDay": "No class",
+      "today": "Today",
+      "editAria": "Edit {{name}}",
+      "untimed": "No fixed time",
+      "empty": {
+        "title": "No classes yet",
+        "hint": "Add the classes you run — kids at 17:00, fundamentals at 19:00 — and the check-in will know which one it is.",
+        "cta": "Add your first class"
+      },
+      "dialog": {
+        "addTitle": "New class",
+        "editTitle": "Edit class"
+      },
+      "form": {
+        "name": "Name",
+        "namePlaceholder": "Fundamentals",
+        "day": "Day",
+        "dayAria": "Day of the week",
+        "time": "Starts at",
+        "timeHint": "Leave it empty if the class has no fixed time.",
+        "duration": "Duration",
+        "durationSuffix": " min",
+        "kind": "Type",
+        "cancel": "Cancel",
+        "create": "Add class",
+        "save": "Save",
+        "remove": "Remove class"
+      },
+      "kind": {
+        "gi": "Gi",
+        "nogi": "No-gi",
+        "both": "Gi and no-gi",
+        "other": "Other"
+      },
+      "confirm": {
+        "remove": "Remove {{name}} from the timetable? The lessons already held stay as they were.",
+        "accept": "Remove",
+        "reject": "Keep"
+      },
+      "toast": {
+        "saved": "Class saved",
+        "removed": "Class removed",
+        "errorSummary": "Something went wrong",
+        "errorDetail": "The change was not saved. Try again.",
+        "loadErrorDetail": "The timetable could not be loaded."
+      }
+    },
     "schedule": {
       "title": "Plan a future schedule change",
       "hint": "Use this when the academy's weekly schedule will change starting on a specific date — past months keep the schedule that was actually in effect.",
@@ -1567,6 +1627,9 @@
       "title": "Today's check-in",
       "titleForDate": "Check-in · {{date}}",
       "noClassToday": "No class today — you're looking at the {{date}} session.",
+      "classPicker": {
+        "aria": "Which class"
+      },
       "searchPlaceholder": "Search by name",
       "beltPlaceholder": "Belt",
       "table": {
@@ -1586,6 +1649,7 @@
       "toast": {
         "loadAthletesError": "Could not load the athletes list.",
         "loadAttendanceError": "Could not load today's attendance.",
+        "loadClassesError": "The classes could not be loaded — marking by day.",
         "markedPresent": "{{name}} marked present.",
         "unmarked": "{{name}} un-marked.",
         "markError": "Couldn't mark {{name}} present. Try again.",

@@ -180,6 +180,33 @@
         </dd>
       </div>
 
+      <!--
+        The weekly timetable (#1562). The count is on the academy resource;
+        the page it links to is where the classes get their names and times.
+      -->
+      <div class="row">
+        <dt class="row__label">{{ 'academy.detail.row.timetable' | translate }}</dt>
+        <dd class="row__value row__value--with-action" data-cy="academy-row-timetable">
+          @if (timetableLabel(); as label) {
+            <span>{{ label }}</span>
+          } @else {
+            <span class="row__empty">{{ 'academy.detail.timetable.none' | translate }}</span>
+          }
+          <a
+            class="row__link"
+            routerLink="/dashboard/academy/timetable"
+            data-cy="academy-timetable-link"
+          >
+            {{
+              (timetableLabel()
+                ? 'academy.detail.timetable.manage'
+                : 'academy.detail.timetable.setUp'
+              ) | translate
+            }}
+          </a>
+        </dd>
+      </div>
+
       @let addr = a?.address;
       <div class="row">
         <dt class="row__label">{{ 'academy.detail.row.address' | translate }}</dt>

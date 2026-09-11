@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AcademyClass } from '../../../core/services/academy-class.service';
 import { AcademyService } from '../../../core/services/academy.service';
 import { Athlete } from '../../../core/services/athlete.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
@@ -59,13 +60,19 @@ function setup(): Harness {
   };
 }
 
-/** Settle both initial requests (athletes list + daily attendance). */
+/**
+ * Settle the initial requests: the roster, the timetable, then the day's
+ * attendance — in that order, because the attendance fetch waits for the
+ * timetable (#1562): which class is selected decides which records to ask
+ * for.
+ */
 function flushInit(
   httpMock: HttpTestingController,
   opts: {
     athletes?: Athlete[];
     meta?: { total: number };
     presentRecords?: { id: number; athlete_id: number; attended_on: string }[];
+    classes?: AcademyClass[];
   },
 ): void {
   const athletes = opts.athletes ?? [];
@@ -86,6 +93,8 @@ function flushInit(
         total,
       },
     });
+
+  httpMock.expectOne('/api/v1/academy/classes').flush({ data: opts.classes ?? [] });
 
   httpMock
     .expectOne((r) => r.url === '/api/v1/attendance')
@@ -822,5 +831,176 @@ describe('DailyAttendanceComponent', () => {
     // resetFilters() reloads athletes — drain the request so the
     // afterEach `verify()` stays clean.
     httpMock.expectOne((req) => req.url === '/api/v1/athletes').flush({ data: [], meta: {} });
+  });
+
+  describe('classes (#1562)', () => {
+    function klass(overrides: Partial<AcademyClass> & { id: number }): AcademyClass {
+      return {
+        name: `Class ${overrides.id}`,
+        weekday: 1,
+        starts_at: '19:00',
+        duration_minutes: 60,
+        kind: 'gi',
+        ...overrides,
+      };
+    }
+
+    // Monday: kids at 17:00, fundamentals at 19:00. Advanced is on Wednesday.
+    const KIDS = klass({ id: 1, name: 'Kids', weekday: 1, starts_at: '17:00' });
+    const FUNDAMENTALS = klass({ id: 2, name: 'Fundamentals', weekday: 1, starts_at: '19:00' });
+    const ADVANCED = klass({ id: 3, name: 'Advanced', weekday: 3, starts_at: '19:00' });
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      // Monday 14 September 2026, half an hour before fundamentals.
+      vi.setSystemTime(new Date(2026, 8, 14, 18, 30));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** Roster and timetable flushed; the attendance request is handed back unflushed. */
+    function flushUpToAttendance(httpMock: HttpTestingController, classes: AcademyClass[]) {
+      httpMock.expectOne((r) => r.url === '/api/v1/athletes').flush(emptyPage());
+      httpMock.expectOne('/api/v1/academy/classes').flush({ data: classes });
+      return httpMock.expectOne((r) => r.url === '/api/v1/attendance');
+    }
+
+    it("offers the day's classes as chips, the one the clock points at already on", () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      const req = flushUpToAttendance(httpMock, [KIDS, FUNDAMENTALS, ADVANCED]);
+
+      // 18:30 on a Monday: fundamentals at 19:00 is the nearest start.
+      expect(component['selectedClassId']()).toBe(FUNDAMENTALS.id);
+      expect(req.request.params.get('academy_class_id')).toBe('2');
+      req.flush({ data: [] });
+      fixture.detectChanges();
+
+      const chips = fixture.nativeElement.querySelectorAll(
+        '.class-chip',
+      ) as NodeListOf<HTMLButtonElement>;
+      // Wednesday's class is not today's.
+      expect(chips.length).toBe(2);
+      expect(chips[0].getAttribute('aria-pressed')).toBe('false');
+      expect(chips[1].getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('sends the selected class with every mark', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      flushInit(httpMock, { athletes: [makeAthlete({ id: 1 })], classes: [KIDS, FUNDAMENTALS] });
+
+      component['togglePresent'](makeAthlete({ id: 1 }));
+
+      const req = httpMock.expectOne('/api/v1/attendance');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        date: '2026-09-14',
+        athlete_ids: [1],
+        academy_class_id: FUNDAMENTALS.id,
+      });
+      req.flush({ data: [{ id: 9, athlete_id: 1, lesson_id: 5, attended_on: '2026-09-14' }] });
+    });
+
+    it('re-reads the records — and only the records — when another chip is tapped', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+
+      component['selectClass'](KIDS.id);
+
+      const req = httpMock.expectOne((r) => r.url === '/api/v1/attendance');
+      expect(req.request.params.get('academy_class_id')).toBe('1');
+      httpMock.expectNone((r) => r.url === '/api/v1/athletes');
+      req.flush({ data: [] });
+      expect(component['selectedClassId']()).toBe(KIDS.id);
+    });
+
+    it('names the class instead of asking when the day has exactly one', () => {
+      const { fixture, httpMock } = setup();
+      fixture.detectChanges();
+      const req = flushUpToAttendance(httpMock, [FUNDAMENTALS, ADVANCED]);
+      expect(req.request.params.get('academy_class_id')).toBe('2');
+      req.flush({ data: [] });
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.class-chip')).toBeNull();
+      expect(el.querySelector('[data-cy="attendance-class-single"]')?.textContent).toContain(
+        'Fundamentals · 19:00',
+      );
+    });
+
+    it('marks by the day, as before, when the date has no class', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      const req = flushUpToAttendance(httpMock, [ADVANCED]);
+      expect(req.request.params.has('academy_class_id')).toBe(false);
+      req.flush({ data: [] });
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-cy="attendance-class-picker"]')).toBeNull();
+      expect(el.querySelector('[data-cy="attendance-class-single"]')).toBeNull();
+
+      component['togglePresent'](makeAthlete({ id: 1 }));
+      const post = httpMock.expectOne('/api/v1/attendance');
+      expect(post.request.body).toEqual({ date: '2026-09-14', athlete_ids: [1] });
+      post.flush({ data: [{ id: 9, athlete_id: 1, lesson_id: null, attended_on: '2026-09-14' }] });
+    });
+
+    it('re-picks the class when the date moves — a past day opens on its first class', () => {
+      // Wednesday evening, backfilling Monday.
+      vi.setSystemTime(new Date(2026, 8, 16, 18, 30));
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS, ADVANCED] });
+      expect(component['selectedClassId']()).toBe(ADVANCED.id);
+
+      component['selectedDate'].set(new Date(2026, 8, 14));
+      component['onDateChanged']();
+
+      httpMock.expectOne((r) => r.url === '/api/v1/athletes').flush(emptyPage());
+      // The timetable is not re-read: it was loaded once for the visit.
+      httpMock.expectNone('/api/v1/academy/classes');
+      const req = httpMock.expectOne((r) => r.url === '/api/v1/attendance');
+      // Kids, the first of Monday — the clock says nothing about last Monday.
+      expect(req.request.params.get('academy_class_id')).toBe('1');
+      req.flush({ data: [] });
+    });
+
+    it('ignores a chip tap while a mark is in flight', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      flushInit(httpMock, { athletes: [makeAthlete({ id: 1 })], classes: [KIDS, FUNDAMENTALS] });
+
+      component['togglePresent'](makeAthlete({ id: 1 })); // POST pending
+      component['selectClass'](KIDS.id);
+
+      expect(component['selectedClassId']()).toBe(FUNDAMENTALS.id);
+      httpMock.expectNone((r) => r.url === '/api/v1/attendance' && r.method === 'GET');
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/attendance' && r.method === 'POST')
+        .flush({ data: [] });
+    });
+
+    it('keeps the page whole when the timetable cannot be loaded, and marks by the day', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+
+      httpMock.expectOne((r) => r.url === '/api/v1/athletes').flush(emptyPage());
+      httpMock
+        .expectOne('/api/v1/academy/classes')
+        .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+
+      const req = httpMock.expectOne((r) => r.url === '/api/v1/attendance');
+      expect(req.request.params.has('academy_class_id')).toBe(false);
+      req.flush({ data: [] });
+
+      expect(component['loading']()).toBe(false);
+      expect(component['dayClasses']()).toEqual([]);
+    });
   });
 });

@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * @property int                 $id
  * @property int                 $athlete_id
+ * @property int|null            $lesson_id    Which lesson this presence belongs to (#1562); null for a presence on a day with no class
  * @property \Carbon\Carbon      $attended_on
  * @property string|null         $notes
  * @property AttendanceSource    $source
@@ -26,6 +27,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 #[Fillable([
     'athlete_id',
+    'lesson_id',
     'attended_on',
     'notes',
     'source',
@@ -42,6 +44,18 @@ class AttendanceRecord extends Model
     public function athlete(): BelongsTo
     {
         return $this->belongsTo(Athlete::class);
+    }
+
+    /**
+     * The lesson this presence was recorded into (#1562). Null on every row
+     * that predates the timetable and on any day the academy has no class —
+     * a presence on a day, which is all a row here ever was before.
+     *
+     * @return BelongsTo<Lesson, $this>
+     */
+    public function lesson(): BelongsTo
+    {
+        return $this->belongsTo(Lesson::class);
     }
 
     /**

@@ -41,6 +41,7 @@ describe('daily check-in — sorting', () => {
   beforeEach(() => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
+    cy.intercept('GET', '/api/v1/academy/classes', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/attendance*', { statusCode: 200, body: { data: [] } }).as(
       'getDaily',
     );

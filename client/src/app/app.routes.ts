@@ -248,6 +248,16 @@ export const routes: Routes = [
           ),
       },
       {
+        // The weekly timetable (#1562) — its own page rather than a section
+        // of the already-long academy form: it is read as often as it is
+        // edited, and a seven-day grid needs the width.
+        path: 'academy/timetable',
+        loadComponent: () =>
+          import('./features/academy/timetable/timetable.component').then(
+            (m) => m.TimetableComponent,
+          ),
+      },
+      {
         path: 'athletes',
         loadComponent: () =>
           import('./features/athletes/list/athletes-list.component').then(

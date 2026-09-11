@@ -2989,6 +2989,137 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /academy/classes:
+    get:
+      tags: [academy]
+      summary: The weekly timetable (#1562)
+      description: |
+        Every class the academy runs each week, ordered by `weekday`, then
+        `starts_at` (untimed classes last within their day), then `name`.
+        Empty on an academy that has never set one up — the normal state for
+        many, and not an error: the check-in then records a presence on a
+        day, as it always did.
+
+        Requires `academy_settings_read`, which every membership role holds.
+      operationId: academyClassIndex
+      responses:
+        '200':
+          description: The week
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AcademyClass'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [academy]
+      summary: Add a class to the timetable (#1562)
+      description: |
+        Requires `academy_settings_update` — the same gate as the training
+        days and the price list. An instructor who records attendance does
+        not thereby get to move the class they teach.
+      operationId: academyClassStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyClassPayload'
+      responses:
+        '201':
+          description: Class added
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AcademyClass'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /academy/classes/{academyClass}:
+    patch:
+      tags: [academy]
+      summary: Change a class (#1562)
+      description: |
+        Partial — only the fields sent change. Lessons already held keep the
+        name, time and kind they were held under: they copied the class at
+        creation and never look back at it.
+
+        The capability is checked against the class's own academy, not the
+        caller's active one; a class from another academy is a 403.
+      operationId: academyClassUpdate
+      parameters:
+        - in: path
+          name: academyClass
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyClassPayload'
+      responses:
+        '200':
+          description: Class changed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AcademyClass'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [academy]
+      summary: Remove a class from the timetable (#1562)
+      description: |
+        The lessons it produced stay, with `academy_class_id` nulled and their
+        snapshot intact. Removing a slot from next week's timetable must never
+        remove the evenings people already trained.
+      operationId: academyClassDelete
+      parameters:
+        - in: path
+          name: academyClass
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Class removed; its lessons survive
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /search:
     get:
       tags: [auth]
@@ -4157,6 +4288,18 @@ paths:
           required: false
           schema: { type: integer, enum: [0, 1] }
           description: Pass `1` to include tombstones.
+        - name: academy_class_id
+          in: query
+          required: false
+          schema: { type: integer, format: int64 }
+          description: |
+            Narrow to one class (#1562): its lesson for the day **plus**
+            every presence recorded on the day with no class at all — so a
+            Monday from before the timetable existed still reads as the
+            evening it was. Rows belonging to a *different* class that day
+            are left out. Never creates the lesson; if nobody has been
+            checked into the class yet, only the class-less presences come
+            back. A class from another academy is a 403.
       responses:
         '200':
           description: Attendance records for the given date.
@@ -4179,6 +4322,13 @@ paths:
         Bulk upsert — idempotent. Re-posting the same athlete + date is a
         no-op, not a validation error. Date must be today or within the
         last 7 days (backfill window). Future dates are rejected.
+
+        With `academy_class_id` (#1562) the presence goes into that class's
+        lesson for the day — created on the first mark, reused after — and
+        the unit of idempotency becomes (athlete, date, lesson): the same
+        athlete can be in two classes on one day. A presence recorded on the
+        day with no lesson still counts as already present for every class
+        of that day. Without it, nothing changes from before.
       operationId: attendanceMark
       requestBody:
         required: true
@@ -6996,6 +7146,14 @@ components:
             Schedule history (#1094) — the pending future change, or `null`
             when no future row exists. By application invariant at most one
             pending row exists at a time.
+        classes_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many classes are on the weekly timetable (#1562) — enough for
+            the academy page to say "4 classes a week" or "not set up yet"
+            without a second request.
+          example: 4
         schedules:
           type: array
           description: |
@@ -7004,6 +7162,91 @@ components:
             transitions on the FE.
           items:
             $ref: '#/components/schemas/AcademySchedule'
+
+    ClassKind:
+      type: string
+      enum: [gi, nogi, both, other]
+      description: |
+        What a class is trained in (#1562). A dimension of the class, not a
+        tag on a lesson — heel hooks live in no-gi, lapel guards in gi, and a
+        coverage chart that mixes the two says a number that is quietly
+        wrong. `other` is what is on the timetable without being jiu-jitsu
+        in a kimono or out of one: conditioning, wrestling, a yoga slot.
+
+    AcademyClassPayload:
+      type: object
+      description: |
+        A timetable slot as the owner writes it (#1562). `name`, `weekday`
+        and `kind` are required on create; on update every field is optional
+        and only what is sent changes.
+      properties:
+        name:
+          type: string
+          maxLength: 60
+          description: The owner's own word for it.
+          example: Fundamentals
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: |
+            Carbon `dayOfWeek` — 0 is Sunday, 6 is Saturday. The same
+            convention as `training_days`, so the two never need translating.
+          example: 1
+        starts_at:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          nullable: true
+          description: |
+            `HH:MM`, 24-hour, or null for a class with no fixed time. Stored
+            and sorted as text, so `7:00 PM` is a 422 rather than a row that
+            lands after `19:00`.
+          example: '19:00'
+        duration_minutes:
+          type: integer
+          minimum: 15
+          maximum: 480
+          nullable: true
+          description: |
+            The ceiling catches a duration typed in seconds; it does not
+            model a rule about how long people train.
+          example: 60
+        kind:
+          $ref: '#/components/schemas/ClassKind'
+
+    AcademyClass:
+      type: object
+      description: |
+        One recurring slot on the academy's weekly timetable (#1562) —
+        "Fundamentals, Monday, 19:00, gi". Mutable: the past is protected by
+        each lesson copying what it needs at creation, not by a history
+        table.
+      required: [id, name, weekday, starts_at, duration_minutes, kind]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 60
+          example: Fundamentals
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: Carbon `dayOfWeek` — 0 is Sunday, 6 is Saturday.
+          example: 1
+        starts_at:
+          type: string
+          nullable: true
+          description: '`HH:MM`, or null for a class with no fixed time.'
+          example: '19:00'
+        duration_minutes:
+          type: integer
+          nullable: true
+          example: 60
+        kind:
+          $ref: '#/components/schemas/ClassKind'
 
     AcademySchedule:
       type: object
@@ -8036,7 +8279,7 @@ components:
 
     AttendanceRecord:
       type: object
-      required: [id, athlete_id, attended_on, source]
+      required: [id, athlete_id, lesson_id, attended_on, source]
       properties:
         id:
           type: integer
@@ -8044,6 +8287,15 @@ components:
         athlete_id:
           type: integer
           format: int64
+        lesson_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            Which lesson the presence was recorded into (#1562). Null on
+            every row from before the timetable existed and on any day
+            with no class — a presence on a day, which is all a row ever
+            was before.
         attended_on:
           type: string
           format: date
@@ -8117,6 +8369,16 @@ components:
           items:
             type: integer
             format: int64
+        academy_class_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            The class this check-in is for (#1562). The server creates the
+            day's lesson on the first mark and reuses it after. Omit on an
+            academy with no timetable and on a day with no class — the row is
+            then a presence on the day, as before. A class from another
+            academy is a 403; one that does not exist is a 422.
 
     AttendanceSummaryRow:
       type: object

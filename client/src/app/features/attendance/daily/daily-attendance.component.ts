@@ -31,6 +31,7 @@ import {
   AthleteSortOrder,
   Belt,
 } from '../../../core/services/athlete.service';
+import { AcademyClass, AcademyClassService } from '../../../core/services/academy-class.service';
 import { AttendanceService } from '../../../core/services/attendance.service';
 import { AthleteIdentityComponent } from '../../../shared/components/athlete-identity/athlete-identity.component';
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
@@ -46,6 +47,7 @@ import {
   nextNameSort,
   type SortState,
 } from '../../../shared/utils/athlete-sort';
+import { pickDefaultClass } from './class-pick';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -101,6 +103,7 @@ export class DailyAttendanceComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
+  private readonly academyClassService = inject(AcademyClassService);
 
   /**
    * The date format for every picker on this component (#1498).
@@ -300,6 +303,34 @@ export class DailyAttendanceComponent implements OnInit {
    */
   protected readonly inflight = signal<Set<number>>(new Set());
 
+  // ── Classes (#1562) ────────────────────────────────────────────────────────
+  // The timetable, read once per visit. Empty on an academy that never set
+  // one up, and then nothing on this page changes: no picker, no class on the
+  // wire, a presence on a day exactly as before.
+
+  protected readonly classes = signal<readonly AcademyClass[]>([]);
+  private classesLoaded = false;
+
+  /** The selected date's classes, in the server's order — by time, untimed last. */
+  protected readonly dayClasses = computed<readonly AcademyClass[]>(() => {
+    const weekday = this.selectedDate().getDay();
+    return this.classes().filter((c) => c.weekday === weekday);
+  });
+
+  /**
+   * Which class the ticks go into. Chosen by the clock when the page opens
+   * (see `pickDefaultClass`), by a tap on a chip after that, and re-chosen
+   * whenever the date moves. Null on a day with no class.
+   */
+  protected readonly selectedClassId = signal<number | null>(null);
+
+  /**
+   * Chips lock while any mark is in flight. A response landing after the
+   * class changed underneath it would write its record id into the other
+   * lesson's present-map — the one race the per-athlete guard cannot see.
+   */
+  protected readonly anyInflight = computed<boolean>(() => this.inflight().size > 0);
+
   /**
    * Monotonic counter for `loadDay()` calls. A request whose captured
    * epoch no longer matches the current value is stale (the user clicked
@@ -481,7 +512,48 @@ export class DailyAttendanceComponent implements OnInit {
     };
 
     this.fetchAthletes(epoch, settle);
-    this.fetchAttendance(epoch, settle);
+
+    // The day's records depend on which class is selected, and that depends
+    // on the timetable — so the classes come first (once), the class is
+    // picked, and the attendance fetch follows. `fetchAttendance` is itself
+    // epoch-gated, so a date change while the timetable is still loading
+    // cannot land a stale day's records.
+    this.withClasses(() => {
+      if (epoch === this.loadEpoch) {
+        this.selectedClassId.set(
+          pickDefaultClass(this.dayClasses(), this.selectedDate(), new Date())?.id ?? null,
+        );
+      }
+      this.fetchAttendance(epoch, settle);
+    });
+  }
+
+  /**
+   * Runs `then` with the timetable known. Loaded on the first call, cached
+   * after — a class list does not change while the check-in is open.
+   *
+   * On failure the page degrades rather than blocks: the roster is still
+   * there and a presence on the day is still a presence. It says so, because
+   * from here on marks go in without a class.
+   */
+  private withClasses(then: () => void): void {
+    if (this.classesLoaded) {
+      then();
+      return;
+    }
+
+    this.academyClassService.list().subscribe({
+      next: (classes) => {
+        this.classes.set(classes);
+        this.classesLoaded = true;
+        then();
+      },
+      error: () => {
+        this.classesLoaded = true;
+        this.toastError(this.translate.instant('attendance.daily.toast.loadClassesError'));
+        then();
+      },
+    });
   }
 
   /**
@@ -545,7 +617,8 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private fetchAttendance(epoch: number, settle: () => void): void {
     const date = toLocalDateString(this.selectedDate());
-    this.attendanceService.getDaily(date).subscribe({
+    const classId = this.selectedClassId() ?? undefined;
+    this.attendanceService.getDaily(date, { classId }).subscribe({
       next: (records) => {
         if (epoch === this.loadEpoch) {
           const map = new Map<number, number>();
@@ -613,35 +686,42 @@ export class DailyAttendanceComponent implements OnInit {
     this.optimisticAdd(athlete.id, -1);
     this.markInflight(athlete.id, true);
 
-    this.attendanceService.markBulk({ date, athlete_ids: [athlete.id] }).subscribe({
-      next: (records) => {
-        // The server returns the FULL "now present on this date" list for
-        // the posted athletes; idempotent path returns the existing record.
-        // Either way we want the record id for this athlete.
-        const fresh = records.find((r) => r.athlete_id === athlete.id);
-        if (fresh) {
-          this.optimisticAdd(athlete.id, fresh.id);
-          if (!options.silent) {
-            this.toastUndo(
-              this.translate.instant('attendance.daily.toast.markedPresent', {
-                name: `${athlete.first_name} ${athlete.last_name}`,
-              }),
-              () => this.unmark(athlete, fresh.id, { silent: true }),
-            );
+    const classId = this.selectedClassId();
+    this.attendanceService
+      .markBulk({
+        date,
+        athlete_ids: [athlete.id],
+        ...(classId !== null ? { academy_class_id: classId } : {}),
+      })
+      .subscribe({
+        next: (records) => {
+          // The server returns the FULL "now present on this date" list for
+          // the posted athletes; idempotent path returns the existing record.
+          // Either way we want the record id for this athlete.
+          const fresh = records.find((r) => r.athlete_id === athlete.id);
+          if (fresh) {
+            this.optimisticAdd(athlete.id, fresh.id);
+            if (!options.silent) {
+              this.toastUndo(
+                this.translate.instant('attendance.daily.toast.markedPresent', {
+                  name: `${athlete.first_name} ${athlete.last_name}`,
+                }),
+                () => this.unmark(athlete, fresh.id, { silent: true }),
+              );
+            }
           }
-        }
-        this.markInflight(athlete.id, false);
-      },
-      error: () => {
-        this.optimisticRemove(athlete.id);
-        this.markInflight(athlete.id, false);
-        this.toastError(
-          this.translate.instant('attendance.daily.toast.markError', {
-            name: athlete.first_name,
-          }),
-        );
-      },
-    });
+          this.markInflight(athlete.id, false);
+        },
+        error: () => {
+          this.optimisticRemove(athlete.id);
+          this.markInflight(athlete.id, false);
+          this.toastError(
+            this.translate.instant('attendance.daily.toast.markError', {
+              name: athlete.first_name,
+            }),
+          );
+        },
+      });
   }
 
   /**
@@ -680,6 +760,39 @@ export class DailyAttendanceComponent implements OnInit {
   protected onDateChanged(): void {
     // ngModel pushes the new Date into selectedDate(). Reload accordingly.
     this.loadDay();
+  }
+
+  // ── Class picker (#1562) ───────────────────────────────────────────────────
+
+  /** A chip tap: same day, different lesson — only the records move. */
+  protected selectClass(id: number): void {
+    if (id === this.selectedClassId() || this.anyInflight()) {
+      return;
+    }
+    this.selectedClassId.set(id);
+    this.loadAttendanceOnly();
+  }
+
+  /**
+   * "Fundamentals · 19:00" — the label for a day with exactly one class,
+   * built here so the template stays a projection.
+   */
+  protected classLabel(c: AcademyClass): string {
+    return c.starts_at ? `${c.name} · ${c.starts_at}` : c.name;
+  }
+
+  /**
+   * Refetch the records and nothing else: the roster has not changed, and
+   * re-reading it would race an in-flight mark for no reason.
+   */
+  private loadAttendanceOnly(): void {
+    this.loading.set(true);
+    const epoch = ++this.loadEpoch;
+    this.fetchAttendance(epoch, () => {
+      if (epoch === this.loadEpoch) {
+        this.loading.set(false);
+      }
+    });
   }
 
   // ── Filter handlers (#184) ─────────────────────────────────────────────────

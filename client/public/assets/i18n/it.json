@@ -1369,7 +1369,13 @@
         "links": "Link",
         "address": "Indirizzo",
         "trainingDays": "Giorni di allenamento",
+        "timetable": "Orario",
         "season": "Stagione"
+      },
+      "timetable": {
+        "none": "Non ancora impostato",
+        "manage": "Gestisci",
+        "setUp": "Imposta"
       },
       "linksAria": "Link di contatto dell'academy",
       "links": {
@@ -1520,6 +1526,60 @@
       "athletesOnOne": "{{count}} atleta",
       "athletesOnOther": "{{count}} atleti"
     },
+    "timetable": {
+      "title": "Orario",
+      "hint": "Le lezioni che fai ogni settimana. Il check-in propone quelle del giorno, così «chi c'era a quale» diventa una domanda che puoi fare.",
+      "countOne": "{{count}} lezione a settimana",
+      "countOther": "{{count}} lezioni a settimana",
+      "add": "Aggiungi lezione",
+      "addOnDay": "Aggiungi una lezione di {{day}}",
+      "restDay": "Nessuna lezione",
+      "today": "Oggi",
+      "editAria": "Modifica {{name}}",
+      "untimed": "Senza orario fisso",
+      "empty": {
+        "title": "Ancora nessuna lezione",
+        "hint": "Aggiungi le lezioni che fai — bambini alle 17:00, fondamentali alle 19:00 — e il check-in saprà quale è.",
+        "cta": "Aggiungi la prima lezione"
+      },
+      "dialog": {
+        "addTitle": "Nuova lezione",
+        "editTitle": "Modifica lezione"
+      },
+      "form": {
+        "name": "Nome",
+        "namePlaceholder": "Fondamentali",
+        "day": "Giorno",
+        "dayAria": "Giorno della settimana",
+        "time": "Inizio",
+        "timeHint": "Lascialo vuoto se la lezione non ha un orario fisso.",
+        "duration": "Durata",
+        "durationSuffix": " min",
+        "kind": "Tipo",
+        "cancel": "Annulla",
+        "create": "Aggiungi lezione",
+        "save": "Salva",
+        "remove": "Rimuovi lezione"
+      },
+      "kind": {
+        "gi": "Gi",
+        "nogi": "No-gi",
+        "both": "Gi e no-gi",
+        "other": "Altro"
+      },
+      "confirm": {
+        "remove": "Rimuovere {{name}} dall'orario? Le lezioni già tenute restano come sono.",
+        "accept": "Rimuovi",
+        "reject": "Tieni"
+      },
+      "toast": {
+        "saved": "Lezione salvata",
+        "removed": "Lezione rimossa",
+        "errorSummary": "Qualcosa è andato storto",
+        "errorDetail": "La modifica non è stata salvata. Riprova.",
+        "loadErrorDetail": "Impossibile caricare l'orario."
+      }
+    },
     "schedule": {
       "title": "Pianifica un cambio calendario futuro",
       "hint": "Usa questa sezione quando i giorni di allenamento cambieranno a partire da una data precisa — i mesi passati conservano i giorni effettivamente in vigore allora.",
@@ -1567,6 +1627,9 @@
       "title": "Check-in di oggi",
       "titleForDate": "Check-in · {{date}}",
       "noClassToday": "Oggi nessun allenamento — stai vedendo la sessione di {{date}}.",
+      "classPicker": {
+        "aria": "Quale lezione"
+      },
       "searchPlaceholder": "Cerca per nome",
       "beltPlaceholder": "Cintura",
       "table": {
@@ -1586,6 +1649,7 @@
       "toast": {
         "loadAthletesError": "Impossibile caricare la lista atleti.",
         "loadAttendanceError": "Impossibile caricare le presenze di oggi.",
+        "loadClassesError": "Impossibile caricare le lezioni: segno per giorno.",
         "markedPresent": "{{name}} segnato presente.",
         "unmarked": "{{name}} non più segnato.",
         "markError": "Impossibile segnare {{name}} come presente. Riprova.",
