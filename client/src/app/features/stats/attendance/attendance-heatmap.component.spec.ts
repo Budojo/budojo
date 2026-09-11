@@ -40,28 +40,24 @@ describe('AttendanceHeatmapComponent', () => {
     expect(rects.length).toBeLessThanOrEqual(98);
   });
 
-  it('applies a month-hued fill to populated cells and surface token to empty cells', () => {
-    // Use local-time dates to avoid UTC-parse timezone drift.
-    // May 2026: month index 4 → MONTH_HUES[4] = '#9ccc65'
-    const windowStart = new Date(2026, 4, 4); // 2026-05-04 (Mon) local
-    const windowEnd = new Date(2026, 4, 10); // 2026-05-10 (Sun) local
-    const points = [{ date: '2026-05-04', count: 3 }]; // bucket-2 → '#9ccc6580'
-    createComponent(points, windowStart, windowEnd);
+  it('colours a cell by how busy the day was, on one shared ramp (#1550)', () => {
+    // It used to colour by MONTH — pink for September, orange for July — while
+    // the legend beneath taught a blue scale the squares only used in January.
+    // The hue said which month, which the axis above already says in words.
+    const windowStart = new Date(2026, 4, 4); // Mon 4 May 2026, local
+    const windowEnd = new Date(2026, 4, 10); // Sun 10 May 2026, local
+    createComponent([{ date: '2026-05-04', count: 3 }], windowStart, windowEnd);
 
-    // Populated cells carry the per-month hue via inline [style.fill]; empty
-    // cells fall back to the surface token. JSDOM normalises hex → rgb when
-    // it reads `style.fill` back, so we identify each kind by whether the
-    // inline-style string still references a CSS variable (empty path) or
-    // a concrete color (populated path).
     const rects: NodeListOf<SVGRectElement> =
       fixture.nativeElement.querySelectorAll('rect.heatmap__cell');
-    const styleStrings = Array.from(rects).map((r) => r.getAttribute('style') ?? '');
 
-    const emptyRects = styleStrings.filter((s) => s.includes('var('));
-    expect(emptyRects.length).toBe(6);
-
-    const populatedRects = styleStrings.filter((s) => s !== '' && !s.includes('var('));
-    expect(populatedRects.length).toBe(1);
+    // Three sessions → bucket 2. Every other day in the window is empty →
+    // bucket 0. Nothing carries an inline fill any more: the class is the
+    // single source, shared with the legend.
+    const classLists = Array.from(rects).map((r) => r.getAttribute('class') ?? '');
+    expect(classLists.filter((c) => c.includes('heatmap__cell--b2')).length).toBe(1);
+    expect(classLists.filter((c) => c.includes('heatmap__cell--b0')).length).toBe(6);
+    expect(Array.from(rects).every((r) => r.getAttribute('style') === null)).toBe(true);
   });
 
   it('gives cells outside the window the --out modifier class', () => {

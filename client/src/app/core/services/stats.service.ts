@@ -12,6 +12,15 @@ export interface MonthlyPaymentsBucket {
   readonly month: string; // 'YYYY-MM'
   readonly currency: string;
   readonly amount_cents: number;
+  /**
+   * Past the current month (#1553) — already collected, not yet earned.
+   *
+   * The window reaches forward to the last month a fee has been paid for, so
+   * a quarterly bought this month puts two buckets to the right of today.
+   * Drawn lighter, because a bar for November in September is a different
+   * kind of fact from the ten bars to its left.
+   */
+  readonly future: boolean;
 }
 
 export type AgeBandCode =
