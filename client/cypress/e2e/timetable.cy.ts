@@ -120,7 +120,7 @@ describe('Weekly timetable', () => {
     // Thursday is pre-selected from the "+" that opened the form.
     cy.get('[data-cy="timetable-form-day-4"]').should('have.attr', 'aria-checked', 'true');
 
-    cy.get('[data-cy="timetable-form-name"]').type('Advanced');
+    cy.get('[data-cy="timetable-form-name"]').type('Advanced').should('have.value', 'Advanced');
     // Not `type()`: on a native time input it drives the browser's own
     // hour / minute / AM-PM segments, and in Electron's en-US locale the
     // value sometimes never reaches the control — green locally, red on
@@ -130,8 +130,19 @@ describe('Weekly timetable', () => {
       .invoke('val', '20:00')
       .trigger('input')
       .should('have.value', '20:00');
-    cy.get('[data-cy="timetable-form-duration"] input').clear().type('90');
+    // p-inputnumber commits on blur and clamps to [min, max]: a `9` caught
+    // mid-typing is below 15 and would leave the form invalid. Blur, then
+    // read the value back before moving on.
+    cy.get('[data-cy="timetable-form-duration"] input')
+      .clear()
+      .type('90')
+      .blur()
+      .should('have.value', '90');
     cy.get('[data-cy="timetable-form-kind"]').contains('No-gi').click();
+    cy.get('[data-cy="timetable-form-kind"]')
+      .contains('No-gi')
+      .closest('button')
+      .should('have.attr', 'aria-pressed', 'true');
 
     cy.intercept(
       'GET',
@@ -149,6 +160,11 @@ describe('Weekly timetable', () => {
       ]),
     ).as('reload');
     cy.get('[data-cy="timetable-form-save"]').click();
+    // If Save found the form invalid it says so at the field and posts
+    // nothing — assert that first, so a failure names the field instead of
+    // timing out on the request that never came.
+    cy.get('[data-cy="timetable-form-name-error"]').should('not.exist');
+    cy.get('[data-cy="timetable-form-day-error"]').should('not.exist');
     cy.wait('@create');
     cy.wait('@reload');
 
