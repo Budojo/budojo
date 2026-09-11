@@ -1,4 +1,5 @@
 import { MOCK_ACADEMY } from '../support/fixtures';
+import { VIEWPORT_IPHONE_SE } from '../support/viewports';
 
 const ACADEMY_OK = {
   statusCode: 200,
@@ -97,5 +98,86 @@ describe('monthly attendance summary', () => {
     cy.get('[data-cy="monthly-summary-table-row-3"]').should('exist'); // Marco
     cy.get('[data-cy="monthly-summary-table-row-1"]').should('exist'); // Mario
     cy.get('[data-cy="monthly-summary-table-row-2"]').should('not.exist'); // Luigi
+  });
+
+  it('orders the table from its headers, the roster’s way (#1526)', () => {
+    cy.intercept('GET', `/api/v1/attendance/summary?month=${currentMonthStr()}`, SUMMARY_THREE).as(
+      'summary',
+    );
+
+    cy.visitAuthenticated('/dashboard/attendance/summary');
+    cy.wait('@summary');
+
+    const ids = (): Cypress.Chainable<string[]> =>
+      cy
+        .get('[data-cy="monthly-summary-table"] tbody tr')
+        .then(($rows) => Cypress.$.map($rows, (row) => row.getAttribute('data-cy') ?? ''));
+
+    // Opens on most-first, which is what the page is opened to see.
+    ids().should('deep.equal', [
+      'monthly-summary-table-row-3',
+      'monthly-summary-table-row-1',
+      'monthly-summary-table-row-2',
+    ]);
+
+    // Fewest first — who has stopped coming. The question the table could not
+    // answer before, on the page that exists to answer it.
+    cy.get('[data-cy="monthly-summary-th-days"]').click();
+    ids().should('deep.equal', [
+      'monthly-summary-table-row-2',
+      'monthly-summary-table-row-1',
+      'monthly-summary-table-row-3',
+    ]);
+
+    // And the athlete column carries the roster's own 4-state cycle: first
+    // name ascending on the first press, with the signifier to say so.
+    cy.get('[data-cy="monthly-summary-th-athlete"]').click();
+    ids().should('deep.equal', [
+      'monthly-summary-table-row-2', // Luigi
+      'monthly-summary-table-row-3', // Marco
+      'monthly-summary-table-row-1', // Mario
+    ]);
+    cy.get('[data-cy="monthly-summary-th-athlete"] .sort-header__signifier').should(
+      'have.text',
+      'F↑',
+    );
+    // ...and the days header lets go of its arrow when it stops driving.
+    cy.get('[data-cy="monthly-summary-th-days"] .sort-header__signifier').should('have.text', '↕');
+  });
+
+  it('the days sort reaches a phone, where the table does not exist (#1526)', () => {
+    // Below 768px `.summary-page__table-wrapper` is `display: none` and the
+    // card list renders instead, so a sort living only in a `<th>` would be
+    // desktop-only — the mistake #1443 fixed for belt on the roster. "Who has
+    // stopped coming" is what this page is for; it cannot be desktop-only.
+    cy.viewport(VIEWPORT_IPHONE_SE.width, VIEWPORT_IPHONE_SE.height);
+    cy.intercept('GET', `/api/v1/attendance/summary?month=${currentMonthStr()}`, SUMMARY_THREE).as(
+      'summary',
+    );
+
+    cy.visitAuthenticated('/dashboard/attendance/summary');
+    cy.wait('@summary');
+
+    cy.get('[data-cy="monthly-summary-table"]').should('not.be.visible');
+    cy.get('[data-cy="monthly-summary-th-days"]').should('not.be.visible');
+
+    const mobileIds = (): Cypress.Chainable<string[]> =>
+      cy
+        .get('[data-cy="monthly-summary-mobile-list"] li')
+        .then(($rows) => Cypress.$.map($rows, (row) => row.getAttribute('data-cy') ?? ''));
+
+    mobileIds().should('deep.equal', [
+      'monthly-summary-mobile-row-3',
+      'monthly-summary-mobile-row-1',
+      'monthly-summary-mobile-row-2',
+    ]);
+
+    cy.get('[data-cy="monthly-summary-sort-days"]').should('be.visible').click();
+
+    mobileIds().should('deep.equal', [
+      'monthly-summary-mobile-row-2',
+      'monthly-summary-mobile-row-1',
+      'monthly-summary-mobile-row-3',
+    ]);
   });
 });

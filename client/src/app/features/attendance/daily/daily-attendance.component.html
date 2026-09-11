@@ -119,6 +119,19 @@
         appendTo="body"
       />
     </app-filter-sheet>
+
+    <!--
+      Belt sorting, the same control the roster carries (#1526). Outside
+      `__filters-inline` on purpose: that container is `display: none` below
+      768px, and the mobile card list below is sorted by this too — the same
+      reasoning that put the roster's copy in the shared row in #1443.
+    -->
+    <app-belt-sort-button
+      [field]="sortField()"
+      [order]="sortOrder()"
+      dataCy="attendance-sort-belt"
+      (cycle)="cycleBeltSort()"
+    />
   </div>
 
   <div class="attendance__table-wrapper">
@@ -132,8 +145,6 @@
       [paginator]="totalActiveAthletes() > 20"
       (onPage)="onPageChange($event)"
       [lazy]="true"
-      (onSort)="onSort($event)"
-      sortMode="single"
       responsiveLayout="scroll"
       styleClass="p-datatable-sm"
       data-cy="attendance-list"
@@ -146,8 +157,21 @@
             identity block says it, and saying it twice cost the widest column
             on a table with three.
           -->
-          <th pSortableColumn="last_name" data-cy="attendance-th-name">
-            {{ 'attendance.daily.table.fullName' | translate }} <p-sortIcon field="last_name" />
+          <th class="sort-th" [attr.aria-sort]="fullNameAriaSort()">
+            <!--
+              The roster's header, not PrimeNG's (#1526). Stock
+              `pSortableColumn` is a 2-state cycle on one field; this column is
+              `first_name + last_name` glued together, so it needs four — which
+              name leads, and the direction — or same-first-name athletes tie
+              and land in whatever order the database felt like.
+            -->
+            <app-sort-header
+              [label]="'attendance.daily.table.fullName' | translate"
+              [signifier]="fullNameSortLabel()"
+              [tooltip]="fullNameSortTooltip()"
+              dataCy="attendance-th-name"
+              (cycle)="cycleFullNameSort()"
+            />
           </th>
           <th
             class="attendance-cell-indicator"

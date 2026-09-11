@@ -92,6 +92,23 @@ function flushInit(
     .flush({ data: opts.presentRecords ?? [] });
 }
 
+/** An empty first page — the sort specs only care about the request. */
+function emptyPage() {
+  return {
+    data: [],
+    links: { first: null, last: null, prev: null, next: null },
+    meta: {
+      current_page: 1,
+      from: null,
+      last_page: 1,
+      path: '',
+      per_page: 20,
+      to: null,
+      total: 0,
+    },
+  };
+}
+
 describe('DailyAttendanceComponent', () => {
   it('loads the academy roster and todays records on init', () => {
     const { fixture, component, httpMock } = setup();
@@ -475,68 +492,95 @@ describe('DailyAttendanceComponent', () => {
     expect(component['selectedBelt']()).toBe('blue');
   });
 
-  it('honors the sort allowlist and forwards sort_by + sort_order on header click', () => {
+  it('opens on belt, highest rank first — the order the roster opens on', () => {
+    const { fixture, httpMock } = setup();
+    fixture.detectChanges();
+
+    httpMock.expectOne(
+      (r) =>
+        r.url === '/api/v1/athletes' &&
+        r.params.get('sort_by') === 'belt' &&
+        r.params.get('sort_order') === 'desc',
+    );
+  });
+
+  it('cycles the name header first asc → first desc → last asc → last desc', () => {
     const { fixture, component, httpMock } = setup();
     fixture.detectChanges();
     flushInit(httpMock, {});
 
-    component['onSort']({ field: 'last_name', order: 1 });
-    expect(component['sortField']()).toBe('last_name');
-    expect(component['sortOrder']()).toBe('asc');
+    const expectSort = (field: string, order: string): void => {
+      expect(component['sortField']()).toBe(field);
+      expect(component['sortOrder']()).toBe(order);
+      httpMock
+        .expectOne(
+          (r) =>
+            r.url === '/api/v1/athletes' &&
+            r.params.get('sort_by') === field &&
+            r.params.get('sort_order') === order,
+        )
+        .flush(emptyPage());
+      // Filter/sort changes route through `loadAthletes()` (not loadDay) so
+      // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
+      // mark from being clobbered by a parallel attendance refetch.
+      httpMock.expectNone((r) => r.url === '/api/v1/attendance');
+    };
 
+    // Arriving from the belt default, the cycle restarts at first asc.
+    component['cycleFullNameSort']();
+    expectSort('first_name', 'asc');
+
+    component['cycleFullNameSort']();
+    expectSort('first_name', 'desc');
+
+    component['cycleFullNameSort']();
+    expectSort('last_name', 'asc');
+
+    component['cycleFullNameSort']();
+    expectSort('last_name', 'desc');
+  });
+
+  it('the name header signifier says which name leads, and goes neutral off a name sort', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    // Belt is the default, so the header starts neutral.
+    expect(component['fullNameSortLabel']()).toBeNull();
+    expect(component['fullNameAriaSort']()).toBe('none');
+
+    component['cycleFullNameSort']();
+    httpMock.match((r) => r.url === '/api/v1/athletes')[0].flush(emptyPage());
+    expect(component['fullNameSortLabel']()).toBe('F↑');
+    expect(component['fullNameAriaSort']()).toBe('ascending');
+
+    component['cycleBeltSort']();
+    httpMock.match((r) => r.url === '/api/v1/athletes')[0].flush(emptyPage());
+    expect(component['fullNameSortLabel']()).toBeNull();
+    expect(component['fullNameAriaSort']()).toBe('none');
+  });
+
+  it('the belt control flips direction and never turns the sort off', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {});
+
+    component['cycleBeltSort']();
+    expect(component['sortField']()).toBe('belt');
+    expect(component['sortOrder']()).toBe('asc');
     httpMock
       .expectOne(
         (r) =>
           r.url === '/api/v1/athletes' &&
-          r.params.get('sort_by') === 'last_name' &&
+          r.params.get('sort_by') === 'belt' &&
           r.params.get('sort_order') === 'asc',
       )
-      .flush({
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 1,
-          from: null,
-          last_page: 1,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 0,
-        },
-      });
-    // Filter/sort changes route through `loadAthletes()` (not loadDay) so
-    // the attendance endpoint is NOT re-hit — keeps an in-flight optimistic
-    // mark from being clobbered by a parallel attendance refetch.
-    httpMock.expectNone((r) => r.url === '/api/v1/attendance');
-  });
+      .flush(emptyPage());
 
-  it('rejects fields outside the sort allowlist (e.g. created_at)', () => {
-    const { fixture, component, httpMock } = setup();
-    fixture.detectChanges();
-    flushInit(httpMock, {});
-
-    component['onSort']({ field: 'last_name', order: 1 });
-    httpMock
-      .match((r) => r.url === '/api/v1/athletes')[0]
-      .flush({
-        data: [],
-        links: { first: null, last: null, prev: null, next: null },
-        meta: {
-          current_page: 1,
-          from: null,
-          last_page: 1,
-          path: '',
-          per_page: 20,
-          to: null,
-          total: 0,
-        },
-      });
-    // No attendance refetch on sort change (loadAthletes path).
-
-    component['onSort']({ field: 'created_at', order: -1 });
-    // created_at is not in the daily-attendance allowlist (only the
-    // first/last_name + belt sorts are surfaced) — sortField stays put.
-    expect(component['sortField']()).toBe('last_name');
+    component['cycleBeltSort']();
+    expect(component['sortField']()).toBe('belt');
+    expect(component['sortOrder']()).toBe('desc');
+    httpMock.match((r) => r.url === '/api/v1/athletes')[0].flush(emptyPage());
   });
 
   // ─── Pagination (#527) ─────────────────────────────────────────────────────
@@ -702,7 +746,7 @@ describe('DailyAttendanceComponent', () => {
 
     // Belt sort from page 3 must bounce to page 1 — otherwise a sort that
     // changes the row order leaves us on a stale slice.
-    component['onSort']({ field: 'belt', order: 1 });
+    component['cycleBeltSort']();
 
     httpMock
       .expectOne(

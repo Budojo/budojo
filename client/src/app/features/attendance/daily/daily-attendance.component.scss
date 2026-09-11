@@ -57,6 +57,10 @@
 
 .attendance__filters {
   display: flex;
+  // The controls have different heights — a 2.75rem button beside a select —
+  // so without this they sit on the row's baseline and the button looks
+  // dropped. The roster's strip, which this one copies, has always had it.
+  align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
   flex-wrap: wrap;
@@ -81,9 +85,13 @@
   }
 }
 
+// `0 0 auto`, not `1 1 auto` (#1526): the search above already takes the row's
+// slack, and while this container took it too the belt-sort button that now
+// follows it was flung to the far right edge — alone, a screen away from the
+// controls it belongs with. Same value the roster's inline row carries.
 .attendance__filters-inline {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   gap: 0.5rem;
   flex-wrap: wrap;
 

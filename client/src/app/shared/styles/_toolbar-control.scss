@@ -1,0 +1,84 @@
+// The toolbar control surface — one square-or-labelled button, shared (#1526).
+//
+// The roster's filter row has five of these side by side: belt sort, payment,
+// alerts, the eye, the bin. They are one family of buttons and a second visual
+// language for any of them would read as a second kind of control. Belt sort
+// moved into a shared component so the check-in could have the same one, which
+// took its styles out of the page — these mixins are what keeps it looking like
+// the four buttons it still stands next to.
+
+// The base: background, hairline, focus ring, hover. Square by default.
+@mixin toolbar-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--budojo-radius-medium, 0.75rem);
+  background: var(--p-surface-100);
+  color: var(--p-text-muted-color);
+
+  cursor: pointer;
+  transition:
+    background-color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out),
+    color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out);
+
+  &:hover {
+    color: var(--p-text-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}
+
+// On: the list is showing something other than its default, and the control
+// says so — otherwise "why is this row grey" / "why is this order" has no
+// answer on screen.
+@mixin toolbar-control-on {
+  background: var(--p-highlight-background);
+  color: var(--p-primary-color);
+}
+
+// Icon-only: a fixed square, because there is no word to size it around.
+@mixin toolbar-control-square {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+// Labelled: the icon says what kind of control it is, the word says which field
+// it acts on. Icon alone would leave adjacent square buttons distinguishable
+// only by glyph, and "which one sorts by belt" is not a question a tooltip
+// should be the only answer to (Krug).
+//
+// Mobile-first it is square anyway, because five labelled controls do not share
+// 375px and the row spilled onto a third line — on the page whose job is to
+// list athletes. The word returns at 768px. Nothing is lost meanwhile: the
+// icons carry their own state, so none of them relies on colour alone.
+@mixin toolbar-control-labelled {
+  gap: 0.5rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 0.875rem;
+  // The row wraps on a phone; a label that breaks mid-word would take the
+  // control's height with it.
+  white-space: nowrap;
+
+  width: 2.75rem;
+  padding: 0;
+
+  @media (min-width: 768px) {
+    width: auto;
+    padding: 0 1rem;
+  }
+}
+
+// The word itself, which only exists from 768px up.
+@mixin toolbar-control-label {
+  display: none;
+
+  @media (min-width: 768px) {
+    display: inline;
+  }
+}
