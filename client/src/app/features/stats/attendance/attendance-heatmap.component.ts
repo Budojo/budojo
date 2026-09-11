@@ -4,14 +4,22 @@ import { LanguageService } from '../../../core/services/language.service';
 import { DailyAttendancePoint } from '../../../core/services/stats.service';
 import { localeFor } from '../../../shared/utils/locale';
 
+type Bucket = 0 | 1 | 2 | 3 | 4;
+
 interface Cell {
   readonly date: Date;
   readonly iso: string; // 'YYYY-MM-DD' for the title tooltip
   readonly count: number;
-  readonly bucket: 0 | 1 | 2 | 3 | 4; // intensity bucket
+  readonly bucket: Bucket; // intensity bucket
   readonly inWindow: boolean; // false for cells outside the data range (alignment padding)
   readonly tooltip: string; // localized, prebuilt for the <title>
 }
+
+/**
+ * The three cut points between the four non-empty shades — the 25th, 50th
+ * and 75th percentile of the window's non-zero day counts.
+ */
+type Thresholds = readonly [number, number, number];
 
 @Component({
   selector: 'app-attendance-heatmap',
@@ -30,6 +38,37 @@ export class AttendanceHeatmapComponent {
   readonly windowEnd = input.required<Date>();
 
   /**
+   * Where the four shades begin, read off the window itself (#1560).
+   *
+   * The cut points used to be absolute — 0 / ≤2 / ≤5 / ≤10 / more — a scale
+   * written for one athlete's history, where a busy week is four sessions.
+   * This chart is the whole academy's: on a 33-athlete roster every session
+   * has 20-29 people, so every training day landed in the top bucket and the
+   * map was one solid block. It said "you train Mon, Wed, Fri", which the
+   * axis already says, and nothing else — and the bigger the academy, the
+   * less it said.
+   *
+   * Quartiles of the non-zero counts instead: the busiest quarter of the
+   * window's days is the darkest whether that means 4 people or 40, and the
+   * chart means the same thing on a roster of 12 and a roster of 120. Null
+   * when nobody trained at all — every cell is then empty and there is no
+   * scale to draw.
+   */
+  private readonly thresholds = computed<Thresholds | null>(() => {
+    const nonZero = this.points()
+      .map((p) => p.count)
+      .filter((c) => c > 0)
+      .sort((a, b) => a - b);
+    if (nonZero.length === 0) return null;
+
+    // Nearest-rank percentile: the smallest value with at least p of the
+    // counts at or below it.
+    const at = (p: number): number =>
+      nonZero[Math.min(nonZero.length - 1, Math.max(0, Math.ceil(p * nonZero.length) - 1))];
+    return [at(0.25), at(0.5), at(0.75)];
+  });
+
+  /**
    * 7 rows × N columns grid. Row 0 = Monday, row 6 = Sunday.
    * Column 0 = the week containing windowStart (left-padded with
    * out-of-window cells if windowStart isn't a Monday).
@@ -37,6 +76,7 @@ export class AttendanceHeatmapComponent {
   protected readonly grid = computed(() => {
     // Register dependency on the active language so the tooltip locale re-evaluates on lang switch.
     const tooltipLocale = localeFor(this.languageService.currentLang());
+    const thresholds = this.thresholds();
 
     const start = this.windowStart();
     const end = this.windowEnd();
@@ -57,7 +97,7 @@ export class AttendanceHeatmapComponent {
         const iso = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
         const count = counts.get(iso) ?? 0;
         const inWindow = cursor >= start && cursor <= end;
-        const bucket = this.bucketFor(count);
+        const bucket = this.bucketFor(count, thresholds);
         const cellDate = new Date(cursor);
         const dateLabel = cellDate.toLocaleDateString(tooltipLocale, {
           weekday: 'short',
@@ -117,11 +157,57 @@ export class AttendanceHeatmapComponent {
     return labels;
   });
 
-  private bucketFor(count: number): 0 | 1 | 2 | 3 | 4 {
-    if (count === 0) return 0;
-    if (count <= 2) return 1;
-    if (count <= 5) return 2;
-    if (count <= 10) return 3;
-    return 4;
+  /**
+   * What the four shades mean in THIS window — "20–21 · 22–23 · 24–26 · 27–29
+   * attendances a day" — because a scale that moves with the data has to
+   * say where it moved to (Norman: explain the mapping at the control).
+   * A shade nothing landed in reads as "—". Null when the window is empty
+   * and there is no scale to explain.
+   */
+  protected readonly scaleLabel = computed<string | null>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    if (this.thresholds() === null) return null;
+
+    const ranges = new Map<Bucket, { min: number; max: number }>();
+    for (const week of this.grid()) {
+      for (const cell of week) {
+        if (!cell.inWindow || cell.count === 0) continue;
+        const range = ranges.get(cell.bucket);
+        if (range === undefined) {
+          ranges.set(cell.bucket, { min: cell.count, max: cell.count });
+        } else {
+          range.min = Math.min(range.min, cell.count);
+          range.max = Math.max(range.max, cell.count);
+        }
+      }
+    }
+
+    const label = (bucket: Bucket): string => {
+      const range = ranges.get(bucket);
+      if (range === undefined) return '—';
+      return range.min === range.max ? `${range.min}` : `${range.min}–${range.max}`;
+    };
+
+    return this.translate.instant('stats.attendance.heatmap.scale', {
+      b1: label(1),
+      b2: label(2),
+      b3: label(3),
+      b4: label(4),
+    });
+  });
+
+  /**
+   * Upward from the top: at or above the 75th percentile is the darkest, and
+   * so on down. Ties resolve towards the darker shade, which is what makes a
+   * window where every day drew the same crowd read as full rather than
+   * pale — no variation is not the same thing as nothing happened.
+   */
+  private bucketFor(count: number, thresholds: Thresholds | null): Bucket {
+    if (count === 0 || thresholds === null) return 0;
+    const [q25, q50, q75] = thresholds;
+    if (count >= q75) return 4;
+    if (count >= q50) return 3;
+    if (count >= q25) return 2;
+    return 1;
   }
 }

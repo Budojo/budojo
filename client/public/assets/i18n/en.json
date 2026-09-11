@@ -2382,6 +2382,7 @@
         "ariaLabel": "Daily attendance heatmap",
         "less": "Less",
         "more": "More",
+        "scale": "Shades follow this window: {{b1}} · {{b2}} · {{b3}} · {{b4}} attendances a day",
         "tooltipCount": "{{count}} attendances on {{date}}",
         "tooltipEmpty": "No attendance on {{date}}",
         "dow": {

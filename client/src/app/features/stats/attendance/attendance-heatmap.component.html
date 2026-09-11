@@ -8,7 +8,7 @@
     [attr.aria-label]="'stats.attendance.heatmap.ariaLabel' | translate"
   >
     <!-- Day-of-week labels on the left -->
-    <g class="heatmap__dow-labels">
+    <g>
       <text x="0" y="32" class="heatmap__dow">
         {{ 'stats.attendance.heatmap.dow.mon' | translate }}
       </text>
@@ -27,8 +27,13 @@
       }
     </g>
 
-    <!-- Cells -->
-    <g class="heatmap__cells" transform="translate(30, 16)">
+    <!--
+      Cells. One explicit class binding per shade rather than a class name
+      built by concatenation: `make dead-styles` cannot see a name it never
+      reads whole, and the five `--bN` rules sat in its report as unworn while
+      being worn on every cell.
+    -->
+    <g transform="translate(30, 16)">
       @for (week of grid(); let colIdx = $index; track colIdx) {
         @for (cell of week; let rowIdx = $index; track rowIdx) {
           <rect
@@ -37,7 +42,12 @@
             width="11"
             height="11"
             rx="2"
-            [class]="'heatmap__cell heatmap__cell--b' + cell.bucket"
+            class="heatmap__cell"
+            [class.heatmap__cell--b0]="cell.bucket === 0"
+            [class.heatmap__cell--b1]="cell.bucket === 1"
+            [class.heatmap__cell--b2]="cell.bucket === 2"
+            [class.heatmap__cell--b3]="cell.bucket === 3"
+            [class.heatmap__cell--b4]="cell.bucket === 4"
             [class.heatmap__cell--out]="!cell.inWindow"
           >
             <title>{{ cell.tooltip }}</title>
@@ -47,14 +57,24 @@
     </g>
   </svg>
 
-  <!-- Legend -->
-  <div class="heatmap__legend" aria-hidden="true">
-    <span>{{ 'stats.attendance.heatmap.less' | translate }}</span>
-    <span class="heatmap__legend-cell heatmap__legend-cell--b0"></span>
-    <span class="heatmap__legend-cell heatmap__legend-cell--b1"></span>
-    <span class="heatmap__legend-cell heatmap__legend-cell--b2"></span>
-    <span class="heatmap__legend-cell heatmap__legend-cell--b3"></span>
-    <span class="heatmap__legend-cell heatmap__legend-cell--b4"></span>
-    <span>{{ 'stats.attendance.heatmap.more' | translate }}</span>
+  <!--
+    The key. The ramp, and under it what the ramp means in this window
+    (#1560): the shades are quartiles of the days shown, so "more" is a
+    different number on every academy and every range, and a legend that
+    only said less → more would be explaining a scale it does not show.
+  -->
+  <div class="heatmap__key" aria-hidden="true">
+    <div class="heatmap__legend">
+      <span>{{ 'stats.attendance.heatmap.less' | translate }}</span>
+      <span class="heatmap__legend-cell heatmap__legend-cell--b0"></span>
+      <span class="heatmap__legend-cell heatmap__legend-cell--b1"></span>
+      <span class="heatmap__legend-cell heatmap__legend-cell--b2"></span>
+      <span class="heatmap__legend-cell heatmap__legend-cell--b3"></span>
+      <span class="heatmap__legend-cell heatmap__legend-cell--b4"></span>
+      <span>{{ 'stats.attendance.heatmap.more' | translate }}</span>
+    </div>
+    @if (scaleLabel(); as scale) {
+      <p class="heatmap__scale" data-cy="attendance-heatmap-scale">{{ scale }}</p>
+    }
   </div>
 </div>
