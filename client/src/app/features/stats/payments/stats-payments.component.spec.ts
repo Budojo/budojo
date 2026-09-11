@@ -48,8 +48,8 @@ describe('StatsPaymentsComponent', () => {
     fixture.detectChanges();
     http.expectOne('/api/v1/stats/payments/monthly?months=12').flush({
       data: [
-        { month: '2026-04', currency: 'EUR', amount_cents: 30000 },
-        { month: '2026-05', currency: 'EUR', amount_cents: 50000 },
+        { month: '2026-04', currency: 'EUR', amount_cents: 30000, future: false },
+        { month: '2026-05', currency: 'EUR', amount_cents: 50000, future: false },
       ],
     });
     fixture.detectChanges();
@@ -61,7 +61,7 @@ describe('StatsPaymentsComponent', () => {
     // The currency was computed from the first release and never rendered.
     fixture.detectChanges();
     http.expectOne('/api/v1/stats/payments/monthly?months=12').flush({
-      data: [{ month: '2026-09', currency: 'EUR', amount_cents: 1761 }],
+      data: [{ month: '2026-09', currency: 'EUR', amount_cents: 1761, future: false }],
     });
     fixture.detectChanges();
 
@@ -75,7 +75,7 @@ describe('StatsPaymentsComponent', () => {
   it('follows the language for the symbol side and the separators', () => {
     fixture.detectChanges();
     http.expectOne('/api/v1/stats/payments/monthly?months=12').flush({
-      data: [{ month: '2026-09', currency: 'EUR', amount_cents: 256000 }],
+      data: [{ month: '2026-09', currency: 'EUR', amount_cents: 256000, future: false }],
     });
     fixture.detectChanges();
 
@@ -93,6 +93,31 @@ describe('StatsPaymentsComponent', () => {
     expect(italian.endsWith('€')).toBe(true);
     expect(italian).toContain(',00');
     expect(italian.startsWith('€')).toBe(false);
+  });
+
+  it('draws the months already paid for, past today, as lighter bars (#1553)', () => {
+    // The window reaches forward to the last month a fee covers, so a
+    // quarterly bought this month puts two bars to the right of today. They
+    // are the same series — money the academy already has — but they are not
+    // earned yet, and a bar for November drawn in September at full strength
+    // would read as revenue that has happened.
+    fixture.detectChanges();
+    http.expectOne('/api/v1/stats/payments/monthly?months=12').flush({
+      data: [
+        { month: '2026-09', currency: 'EUR', amount_cents: 8000, future: false },
+        { month: '2026-10', currency: 'EUR', amount_cents: 8000, future: true },
+        { month: '2026-11', currency: 'EUR', amount_cents: 8000, future: true },
+      ],
+    });
+    fixture.detectChanges();
+
+    const data = (
+      fixture.componentInstance as unknown as {
+        chartData(): { datasets: { backgroundColor: string[] }[] };
+      }
+    ).chartData();
+
+    expect(data.datasets[0].backgroundColor).toEqual(['#5b6cff', '#5b6cff55', '#5b6cff55']);
   });
 
   it('shows the error state when the request fails', () => {

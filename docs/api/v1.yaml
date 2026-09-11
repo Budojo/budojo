@@ -4968,22 +4968,33 @@ paths:
       operationId: statsPaymentsMonthly
       summary: Monthly revenue bucketed by business (year, month)
       description: |
-        Returns N consecutive calendar-month buckets ending with the current
-        month (default 12, max 24). Each bucket contains the total
-        `amount_cents` collected across all athletes of the academy for that
-        business month. Bucketing uses the business months on
-        `athlete_payments` — NOT `paid_at` — so the figures reflect the
-        fee period the payment covers, not the wall-clock recording time.
+        Returns N consecutive calendar-month buckets starting N-1 months
+        before the current one (default 12, max 24), **and continuing past
+        today for as long as a fee has already been paid for** (#1553). Each
+        bucket contains the total `amount_cents` for that business month.
+        Bucketing uses the business months on `athlete_payments` — NOT
+        `paid_at` — so the figures reflect the fee period the payment covers,
+        not the wall-clock recording time.
+
+        **So the response can be longer than `months`.** A quarterly bought
+        this month puts two buckets to the right of today. The window used to
+        stop at the current month, which dropped those slices entirely: a €240
+        quarterly paid in September reported €80 and the other €160 appeared
+        on no bucket at all, so the last bucket was always a fraction of what
+        came in. Buckets past the current month carry `future: true`.
 
         A payment covering a period (#1382) is **spread evenly** across every
         month it pays for: a €165 quarterly contributes €55 to each of three
         buckets. The split is integer with the remainder on the first month,
         so buckets always add back up to what was paid.
 
-        **Carnet sales are included on the same terms** (#1383): a pack's
-        `price_cents` is spread across the months of its validity window, so
-        €70 valid twelve months contributes about €5.83 a month. The expiry
-        month itself gets nothing.
+        **Carnets follow a different rule** (#1383, changed in #1553): a pack
+        lands **whole in the month it was sold**, keyed on `purchased_at`. It
+        was spread like a fee until then, which made a sale invisible — €70
+        over twelve months moved the chart by €5.83. A carnet is a lump the
+        academy either took or did not; a fee is an entitlement that accrues.
+        Two rules on one chart, deliberately, and the SPA's hint says so.
+
         Buckets with no payments are included (amount_cents = 0) so the
         frontend can render a continuous chart without gap-filling.
         Currency is always EUR (single-currency-per-academy invariant).
@@ -5005,8 +5016,13 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [month, currency, amount_cents]
+                      required: [month, currency, amount_cents, future]
                       properties:
+                        future:
+                          type: boolean
+                          description: |
+                            Past the current month (#1553) — already collected,
+                            not yet earned. The SPA draws these bars lighter.
                         month: { type: string, pattern: '^\d{4}-\d{2}$' }
                         currency: { type: string, example: EUR }
                         amount_cents: { type: integer, minimum: 0 }

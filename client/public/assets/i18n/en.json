@@ -2327,7 +2327,7 @@
     },
     "payments": {
       "monthlyTitle": "Monthly revenue",
-      "monthlyHint": "Last 12 months · fees and carnets, spread across the months they cover",
+      "monthlyHint": "Last 12 months and whatever is already paid for · fees spread across the months they cover, carnets booked when sold",
       "loading": "Loading revenue trend…",
       "errored": "Couldn't load revenue trend.",
       "empty": "Nothing collected in the last 12 months."
