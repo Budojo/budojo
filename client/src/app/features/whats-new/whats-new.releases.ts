@@ -60,6 +60,56 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.57.1',
+    date: '2026-09-11',
+    headline: {
+      en: 'The numbers on the Stats screen.',
+      it: 'I numeri delle statistiche.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '💶 The revenue chart said a number, never how much',
+          it: '💶 Il grafico degli incassi diceva un numero, non diceva quanto',
+        },
+        bullets: [
+          {
+            en: 'Hovering a bar read `17.61`. Seventeen WHAT? The axis was just as silent — `0 2 4 … 18`, no symbol. The title said "Monthly revenue" and then every number on the chart declined to be money. The currency was never missing: the app received it from day one and rendered it nowhere. The axis now reads €2,500.00 and the bar under your cursor reads €17.61, with the symbol on the correct side and the right separator for your language.',
+            it: "Passavi sopra una barra e leggeva «17.61». Diciassette cosa? L'asse era altrettanto muto: 0 2 4 … 18, senza simbolo. Il titolo diceva «Ricavi mensili» e poi ogni numero sul grafico si rifiutava di essere denaro. La valuta non mancava: il programma la riceveva dal primo giorno e non la scriveva da nessuna parte. Adesso l'asse dice €2.500,00 e la barra sotto il mouse dice €17,61 — con il simbolo dalla parte giusta e la virgola al posto giusto secondo la lingua.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '📉 And that number was also wrong',
+          it: '📉 E soprattutto: quel numero era anche sbagliato',
+        },
+        bullets: [
+          {
+            en: 'The chart spreads a fee across the months it covers — a €240 quarterly is €80 to September, €80 to October, €80 to November. That is right: otherwise anyone billing quarterly reads zero for two months in three. But the chart STOPPED at the current month, so October and November were not there and that €160 appeared on no bar at all. The last column — the only one anyone actually looks at — was always a fraction of what you took. With a carnet it was worse: sell a €70 twelve-month pack and September showed €5.87.',
+            it: "Il grafico spalma ogni quota sui mesi che copre — un trimestrale da €240 vale €80 a settembre, €80 a ottobre, €80 a novembre. È giusto così: altrimenti chi paga a trimestre risulterebbe a zero due mesi su tre. Ma il grafico si fermava al mese corrente, quindi ottobre e novembre non c'erano e quei €160 non comparivano su nessuna barra. L'ultima colonna — l'unica che uno guarda davvero — era sempre una frazione di quello che avevi incassato. Con un carnet era peggio: ne vendevi uno da €70 valido un anno e a settembre comparivano €5,87.",
+          },
+          {
+            en: 'The chart now reaches to the last month already paid for. A quarterly sold in September shows on September, October and November, and the bars add back up to what you actually took. Months past today are drawn lighter — that money is in the till but not yet earned. And carnets now land whole in the month you sell them: a pack is a lump sum, €70 in and €70 shown. The line under the chart says both rules, because they are two different ones on one picture and nobody can guess that.',
+            it: "Da adesso il grafico arriva fino all'ultimo mese già pagato. Il trimestrale venduto a settembre si vede su settembre, ottobre e novembre, e la somma delle barre torna a essere quello che hai preso. I mesi oltre oggi sono più chiari: quei soldi li hai in cassa ma non li hai ancora maturati. E i carnet ora vanno interi nel mese in cui li vendi: entrano €70 e si vedono €70. Sotto il grafico c'è scritto, perché sono due regole diverse sullo stesso disegno e non si possono indovinare.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🎨 The attendance map',
+          it: '🎨 La mappa delle presenze',
+        },
+        bullets: [
+          {
+            en: 'It used one colour per month — September pink, August red, July orange — under a "less → more" legend that was entirely blue. It taught you a scale the squares never used, except in January. The real problem was not the look: the colour said WHICH MONTH, which the axis above already spells out in words. So the chart\'s only visual channel was spent on something you already had, and "how busy was it" was left to the transparency. Across twelve months that was twelve different scales side by side. There is one scale now, pale to full, the same one the legend shows.',
+            it: "Usava un colore per ogni mese — settembre rosa, agosto rosso, luglio arancione — con sotto una legenda «meno → più» tutta blu: ti spiegava una scala che i quadretti non usavano mai, tranne a gennaio. Il punto però non era l'estetica: il colore diceva quale mese, cosa che l'asse sopra già scrive a parole. Così l'unico strumento visivo del grafico era speso per un'informazione che avevi già, e «quanto si è allenato» finiva relegato alla trasparenza. Con dodici mesi erano dodici scale affiancate. Ora c'è una scala sola, dal chiaro al pieno, uguale a quella della legenda.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.57.0',
     date: '2026-09-11',
     headline: {
