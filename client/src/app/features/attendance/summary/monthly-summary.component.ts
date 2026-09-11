@@ -26,10 +26,45 @@ import {
 } from '../../../shared/utils/attendance-rate';
 import { localeFor } from '../../../shared/utils/locale';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
+import { SortToggleComponent } from '../../../shared/components/sort-toggle/sort-toggle.component';
+import {
+  nameSortAria,
+  nameSortSignifier,
+  nameSortTooltipKey,
+  nextNameSort,
+  type SortState,
+} from '../../../shared/utils/athlete-sort';
+import type { AthleteSortOrder } from '../../../core/services/athlete.service';
 
 interface YearMonth {
   year: number;
   month: number; // 1-indexed
+}
+
+/** What this table can be ordered by. `days` is the column only it has. */
+type SummarySortField = 'first_name' | 'last_name' | 'days';
+
+/**
+ * Locale-aware name comparison, leading with `primary` and breaking ties on the
+ * other field in the same direction — the same CYCLE as the server's
+ * `applyNameSort` (#196), but not the same collation.
+ *
+ * The server orders through SQLite's default BINARY collation, which sorts by
+ * code point: `Ángela` lands after `Zoe`, and a lower-case `de Rossi` after
+ * `Zanetti`. `localeCompare` puts both where an Italian reader expects them, so
+ * this list and the roster can disagree on an accented surname. The client
+ * behaviour is the right one; aligning the server is #1527, not this.
+ */
+function compareNames(
+  a: AttendanceSummaryRow,
+  b: AttendanceSummaryRow,
+  primary: 'first_name' | 'last_name',
+  direction: number,
+): number {
+  const secondary = primary === 'first_name' ? 'last_name' : 'first_name';
+  const lead = a[primary].localeCompare(b[primary]);
+  return (lead !== 0 ? lead : a[secondary].localeCompare(b[secondary])) * direction;
 }
 
 function currentYearMonth(): YearMonth {
@@ -73,6 +108,8 @@ function compareYearMonth(a: YearMonth, b: YearMonth): number {
     TranslatePipe,
     PageHeaderComponent,
     ErrorStateComponent,
+    SortHeaderComponent,
+    SortToggleComponent,
   ],
   templateUrl: './monthly-summary.component.html',
   styleUrl: './monthly-summary.component.scss',
@@ -114,13 +151,47 @@ export class MonthlySummaryComponent implements OnInit {
     () => compareYearMonth(this.visible(), currentYearMonth()) < 0,
   );
 
+  /**
+   * How the table is ordered (#1526). `days` is the default and the reason
+   * this page exists — who turned up, most first — but it was the ONLY order
+   * on offer, and the opposite question ("who has stopped coming") is the one
+   * an instructor opens a monthly summary to answer.
+   *
+   * Sorted here rather than on the wire: the endpoint returns the month whole,
+   * so every order is a comparison away and a round-trip would buy nothing.
+   */
+  protected readonly sortField = signal<SummarySortField>('days');
+  protected readonly sortOrder = signal<AthleteSortOrder>('desc');
+
+  /**
+   * The order as the shared name helpers want it — `days` is not a name, so it
+   * reads to them as "sorted by something else", which is exactly right.
+   */
+  private readonly nameState = computed<SortState>(() => {
+    const field = this.sortField();
+    return { field: field === 'days' ? null : field, order: this.sortOrder() };
+  });
+
   /** Filtered + sorted view — the table receives this directly. */
   protected readonly displayRows = computed(() => {
     const needle = this.nameFilter().trim().toLowerCase();
     const matches = needle
       ? this.rows().filter((r) => `${r.first_name} ${r.last_name}`.toLowerCase().includes(needle))
       : this.rows();
-    return [...matches].sort((a, b) => b.count - a.count);
+
+    const field = this.sortField();
+    const direction = this.sortOrder() === 'asc' ? 1 : -1;
+
+    return [...matches].sort((a, b) => {
+      if (field === 'days') {
+        // A count over a roster of dozens ties constantly — half a class shares
+        // "3 this month" — so the name breaks it, always ascending. Without a
+        // stable second key the tied block reorders itself on every recompute.
+        // Same reasoning as the roster's server-side tiebreak (#1447).
+        return (a.count - b.count) * direction || compareNames(a, b, 'last_name', 1);
+      }
+      return compareNames(a, b, field, direction);
+    });
   });
 
   protected readonly totalDays = computed(() => this.rows().reduce((acc, r) => acc + r.count, 0));
@@ -191,6 +262,67 @@ export class MonthlySummaryComponent implements OnInit {
   protected onFilterChange(value: string): void {
     this.nameFilter.set(value);
   }
+
+  // ── Sorting (#1526) ────────────────────────────────────────────────────────
+  // The name column borrows the roster's 4-state cycle wholesale; `days` gets
+  // the 2-state one, because a single count has no lead to choose — only a
+  // direction — and it opens descending for the reason every leaderboard does.
+
+  protected cycleNameSort(): void {
+    const next = nextNameSort(this.nameState());
+    // `nextNameSort` only ever returns a name field, so this is total.
+    this.sortField.set(next.field as 'first_name' | 'last_name');
+    this.sortOrder.set(next.order);
+  }
+
+  protected cycleDaysSort(): void {
+    if (this.sortField() === 'days') {
+      this.sortOrder.set(this.sortOrder() === 'desc' ? 'asc' : 'desc');
+      return;
+    }
+    this.sortField.set('days');
+    this.sortOrder.set('desc');
+  }
+
+  protected readonly nameSortLabel = computed<string | null>(() =>
+    nameSortSignifier(this.nameState()),
+  );
+
+  protected readonly nameSortTooltip = computed<string>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    return this.translate.instant(nameSortTooltipKey(this.nameState()));
+  });
+
+  protected readonly nameAriaSort = computed<'ascending' | 'descending' | 'none'>(() =>
+    nameSortAria(this.nameState()),
+  );
+
+  /**
+   * One arrow, no letter: the column carries a single number, so there is no
+   * lead to abbreviate — unlike the roster's Sessions column, which carries
+   * two and needs `M` / `T` to say which one is driving.
+   */
+  protected readonly daysSortLabel = computed<string | null>(() => {
+    if (this.sortField() !== 'days') return null;
+    return this.sortOrder() === 'asc' ? '↑' : '↓';
+  });
+
+  protected readonly daysSortTooltip = computed<string>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    if (this.sortField() !== 'days') {
+      return this.translate.instant('attendance.summary.tooltip.daysInitial');
+    }
+    return this.translate.instant(
+      this.sortOrder() === 'asc'
+        ? 'attendance.summary.tooltip.daysAsc'
+        : 'attendance.summary.tooltip.daysDesc',
+    );
+  });
+
+  protected readonly daysAriaSort = computed<'ascending' | 'descending' | 'none'>(() => {
+    if (this.sortField() !== 'days') return 'none';
+    return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
+  });
 
   protected trackByAthlete = (_: number, row: AttendanceSummaryRow): number => row.athlete_id;
 

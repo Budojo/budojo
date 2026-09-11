@@ -56,6 +56,8 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { IconButtonComponent } from '../../../shared/components/icon-button/icon-button.component';
+import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
+import { BeltSortButtonComponent } from '../../../shared/components/belt-sort-button/belt-sort-button.component';
 import { OnboardingChecklistComponent } from '../../onboarding/onboarding-checklist.component';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 import { academyChargesAFee } from '../../../shared/utils/academy-fee';
@@ -66,6 +68,14 @@ import {
 } from '../../../shared/utils/attendance-rate';
 import { DocumentService } from '../../../core/services/document.service';
 import { BELT_KEYS, BELT_ORDER } from '../../../shared/utils/i18n-enum-keys';
+import {
+  nameSortAria,
+  nameSortSignifier,
+  nameSortTooltipKey,
+  nextBeltSort,
+  nextNameSort,
+  type SortState,
+} from '../../../shared/utils/athlete-sort';
 import { localeFor } from '../../../shared/utils/locale';
 import { CarnetService } from '../../../core/services/carnet.service';
 
@@ -108,6 +118,8 @@ interface SelectOption<T extends string> {
     ErrorStateComponent,
     EmptyStateComponent,
     IconButtonComponent,
+    SortHeaderComponent,
+    BeltSortButtonComponent,
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './athletes-list.component.html',
@@ -562,101 +574,40 @@ export class AthletesListComponent implements OnInit {
     this.load();
   }
 
+  /** Current order, in the shape the shared sort helpers take. */
+  private readonly sortState = computed<SortState>(() => ({
+    field: this.sortField(),
+    order: this.sortOrder(),
+  }));
+
   /**
-   * 4-state cycle on the synthetic "Full name" column header (#196). The
-   * column is `first_name + last_name` glued client-side, so a single
-   * scalar sort is degenerate (ties between same-first-name athletes
-   * sail through in arbitrary order). The cycle:
+   * 4-state cycle on the synthetic "Full name" column header (#196).
    *
-   *   none/other → first asc → first desc → last asc → last desc → first asc
-   *
-   * The backend honours the matching `applyNameSort` tiebreak — primary
-   * column orders, then the OTHER name field tiebreaks in the same
-   * direction. See AthleteController.applyNameSort().
-   *
-   * The Belt column keeps the standard 2-state PrimeNG cycle via
-   * `onSort()`; this method is wired only to the Full name <th>.
+   * The cycle itself moved to `shared/utils/athlete-sort.ts` in #1526, so the
+   * daily check-in could have the same one — it draws the same roster and was
+   * still on PrimeNG's stock two-state sort. What stays here is the reload.
    */
   cycleFullNameSort(): void {
-    const f = this.sortField();
-    const o = this.sortOrder();
-
-    let nextField: AthleteSortField;
-    let nextOrder: AthleteSortOrder;
-    if (f === 'first_name' && o === 'asc') {
-      nextField = 'first_name';
-      nextOrder = 'desc';
-    } else if (f === 'first_name' && o === 'desc') {
-      nextField = 'last_name';
-      nextOrder = 'asc';
-    } else if (f === 'last_name' && o === 'asc') {
-      nextField = 'last_name';
-      nextOrder = 'desc';
-    } else {
-      // Coming from any other state (null, belt, created_at, or last desc):
-      // restart the cycle at first asc — the most common starting point
-      // for "alphabetical by first name" expectations.
-      nextField = 'first_name';
-      nextOrder = 'asc';
-    }
-
-    this.sortField.set(nextField);
-    this.sortOrder.set(nextOrder);
+    const next = nextNameSort(this.sortState());
+    this.sortField.set(next.field);
+    this.sortOrder.set(next.order);
     this.resetPage();
     this.load();
   }
 
-  /**
-   * Compact two-character signifier for the Full name header — letter
-   * indicates which name leads the sort (`F` first / `L` last), arrow
-   * indicates direction. Returns null when the active sort isn't a name
-   * sort, so the template can render a default neutral state.
-   */
-  readonly fullNameSortLabel = computed<string | null>(() => {
-    const f = this.sortField();
-    const o = this.sortOrder();
-    if (f !== 'first_name' && f !== 'last_name') return null;
-    const lead = f === 'first_name' ? 'F' : 'L';
-    const arrow = o === 'asc' ? '↑' : '↓';
-    return `${lead}${arrow}`;
-  });
+  /** `F↑` / `L↓`, or null when a name is not what the roster is sorted by. */
+  readonly fullNameSortLabel = computed<string | null>(() => nameSortSignifier(this.sortState()));
 
-  /**
-   * Plain-English tooltip for the Full name header — Norman § signifier:
-   * the compact F↑/L↓ indicator carries the meaning at a glance, the
-   * tooltip spells it out for the first-time user.
-   */
+  /** Plain-English tooltip for the Full name header — Norman § signifier. */
   readonly fullNameSortTooltip = computed<string>(() => {
     this.languageService.currentLang(); // signal dep — recompute on toggle
-    const f = this.sortField();
-    const o = this.sortOrder();
-    if (f !== 'first_name' && f !== 'last_name') {
-      return this.translate.instant('athletes.list.tooltip.fullNameSortInitial');
-    }
-    const key =
-      f === 'first_name'
-        ? o === 'asc'
-          ? 'athletes.list.tooltip.fullNameSortFirstAsc'
-          : 'athletes.list.tooltip.fullNameSortFirstDesc'
-        : o === 'asc'
-          ? 'athletes.list.tooltip.fullNameSortLastAsc'
-          : 'athletes.list.tooltip.fullNameSortLastDesc';
-    return this.translate.instant(key);
+    return this.translate.instant(nameSortTooltipKey(this.sortState()));
   });
 
-  /**
-   * `aria-sort` value for the Full name <th>. WAI-ARIA only knows
-   * `ascending` / `descending` / `none` — it doesn't differentiate which
-   * field is the lead, so the screen reader gets the direction here and
-   * the lead through the inner button's aria-label (which mirrors the
-   * tooltip). Together they convey the full state to AT users (#199
-   * follow-up to Copilot a11y review).
-   */
-  readonly fullNameAriaSort = computed<'ascending' | 'descending' | 'none'>(() => {
-    const f = this.sortField();
-    if (f !== 'first_name' && f !== 'last_name') return 'none';
-    return this.sortOrder() === 'asc' ? 'ascending' : 'descending';
-  });
+  /** Direction for AT; the lead reaches it through the button's aria-label. */
+  readonly fullNameAriaSort = computed<'ascending' | 'descending' | 'none'>(() =>
+    nameSortAria(this.sortState()),
+  );
 
   /**
    * 4-state cycle on the Attendance column (#1447).
@@ -1026,60 +977,21 @@ export class AthletesListComponent implements OnInit {
   }
 
   /**
-   * Belt sort cycle (#210, follow-up to #205). Same pattern as the
-   * Full-name column but with only 2 states (asc / desc), since Belt
-   * isn't a synthetic column — there's no first-vs-last lead to choose,
-   * just a direction. The cycle:
+   * Belt sort cycle (#210, follow-up to #205). Two states, not three (#1457)
+   * — the rationale, and the cycle itself, live in `nextBeltSort`, which the
+   * daily check-in shares since #1526.
    *
-   *   none/other → asc → desc → asc → ...
-   *
-   * Backend's `applyBeltSort` is rank-aware (white < blue < ... < black)
-   * with stripes desc + last_name asc as stable tiebreakers. Direction
-   * here is the rank direction.
-   *
-   * Replaces the old `pSortableColumn="belt"` + `<p-sortIcon>` pair so
-   * the active visual reads from OUR signals — when the sort moves to
-   * first/last_name, this column's arrow goes back to neutral instead
-   * of staying highlighted via PrimeNG's stale internal state.
+   * Backend's `applyBeltSort` is rank-aware (white < blue < ... < black) with
+   * stripes desc + last_name asc as stable tiebreakers, so the direction here
+   * is the rank direction.
    */
   cycleBeltSort(): void {
-    const f = this.sortField();
-    const o = this.sortOrder();
-
-    // desc ⇄ asc, two states (#1457). The third "off" leg went with the
-    // default: belt is now what the roster opens on, so "stop sorting by
-    // belt" would drop the reader back into insertion order — a state that
-    // exists only as an accident of how rows were typed in, and one nobody
-    // would choose on purpose.
-    //
-    // The sort still moves away from belt, just not from this button: the
-    // Full name and Sessions headers take it, and this one goes neutral and
-    // returns to descending when pressed again.
-    if (f === 'belt') {
-      this.sortOrder.set(o === 'desc' ? 'asc' : 'desc');
-    } else {
-      // Coming back from a name or sessions sort — highest rank first, the
-      // same order the page opens on.
-      this.sortField.set('belt');
-      this.sortOrder.set('desc');
-    }
-
+    const next = nextBeltSort(this.sortState());
+    this.sortField.set(next.field);
+    this.sortOrder.set(next.order);
     this.resetPage();
     this.load();
   }
-
-  /** Plain-English tooltip — Norman § signifier. Says what the NEXT press does. */
-  readonly beltSortTooltip = computed<string>(() => {
-    this.languageService.currentLang(); // signal dep — recompute on toggle
-    if (this.sortField() !== 'belt') {
-      return this.translate.instant('athletes.list.tooltip.beltSortInitial');
-    }
-    return this.translate.instant(
-      this.sortOrder() === 'asc'
-        ? 'athletes.list.tooltip.beltSortAsc'
-        : 'athletes.list.tooltip.beltSortDesc',
-    );
-  });
 
   /**
    * all → paid → unpaid → all (#1446).

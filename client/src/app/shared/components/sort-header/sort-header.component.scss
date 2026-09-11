@@ -1,0 +1,52 @@
+// The button is the whole cell. `.sort-th` (in `budojo-theme.scss`) zeroes the
+// `<th>`'s own padding and this puts it back on the button, so the click and
+// focus target spans the full cell (Fitts) — without it the button covers only
+// the inline content and the padded strip around it swallows clicks.
+:host {
+  display: block;
+}
+
+.sort-header__btn {
+  // Strip the browser's button chrome — the <button> is here for semantics and
+  // keyboard handling, not to look like a button. Inheriting the <th>'s
+  // typography makes it read as the static label it replaced.
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--p-focus-ring-color, var(--p-primary-color));
+    outline-offset: -2px;
+  }
+
+  // Right-aligned for a column of numbers, which is read down its last digit.
+  &--end {
+    justify-content: flex-end;
+  }
+}
+
+.sort-header__signifier {
+  display: inline-block;
+  min-width: 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--p-text-muted-color);
+
+  // Active (#205): the glyph takes the primary colour when this column is what
+  // actually drives the sort. Norman § signifier — "active" has to be visually
+  // distinct from "neutral", and the `↕` placeholder stays muted.
+  &--active {
+    color: var(--p-primary-color);
+  }
+}

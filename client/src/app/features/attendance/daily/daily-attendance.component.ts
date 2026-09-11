@@ -36,6 +36,16 @@ import { AthleteIdentityComponent } from '../../../shared/components/athlete-ide
 import { BeltBadgeComponent } from '../../../shared/components/belt-badge/belt-badge.component';
 import { FilterSheetComponent } from '../../../shared/components/filter-sheet/filter-sheet.component';
 import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
+import { SortHeaderComponent } from '../../../shared/components/sort-header/sort-header.component';
+import { BeltSortButtonComponent } from '../../../shared/components/belt-sort-button/belt-sort-button.component';
+import {
+  nameSortAria,
+  nameSortSignifier,
+  nameSortTooltipKey,
+  nextBeltSort,
+  nextNameSort,
+  type SortState,
+} from '../../../shared/utils/athlete-sort';
 
 interface SelectOption<T extends string> {
   label: string;
@@ -77,6 +87,8 @@ function toLocalDateString(d: Date): string {
     AthleteIdentityComponent,
     FilterSheetComponent,
     PageHeaderComponent,
+    SortHeaderComponent,
+    BeltSortButtonComponent,
   ],
   providers: [MessageService],
   templateUrl: './daily-attendance.component.html',
@@ -279,8 +291,23 @@ export class DailyAttendanceComponent implements OnInit {
 
   protected readonly searchTerm = signal<string>('');
   protected readonly selectedBelt = signal<Belt | ''>('');
-  protected readonly sortField = signal<AthleteSortField | null>(null);
+
+  /**
+   * Rank first, highest first — the order the roster has opened on since
+   * #1457, and now this page too (#1526).
+   *
+   * The check-in used to open in insertion order, which answers "who did I
+   * type in last": a question nobody asks, and a different answer from the
+   * one the roster gives for the same people.
+   */
+  protected readonly sortField = signal<AthleteSortField | null>('belt');
   protected readonly sortOrder = signal<AthleteSortOrder>('desc');
+
+  /** Current order, in the shape the shared sort helpers take. */
+  private readonly sortState = computed<SortState>(() => ({
+    field: this.sortField(),
+    order: this.sortOrder(),
+  }));
 
   /**
    * Debounce pipeline matching athletes-list (#102): each keystroke
@@ -669,22 +696,47 @@ export class DailyAttendanceComponent implements OnInit {
     this.loadAthletes();
   }
 
-  /**
-   * 2-state header sort. Mirrors athletes-list's `onSort()` minus the
-   * Full-name 4-state cycle — daily attendance is small enough that a
-   * single primary sort + direction toggle covers the use case. Same
-   * allowlist (`first_name`, `last_name`, `belt`) the backend honors.
-   */
-  protected onSort(event: { field?: string; order?: number }): void {
-    const allowed: AthleteSortField[] = ['first_name', 'last_name', 'belt'];
-    const field = event.field;
-    if (!field || !(allowed as string[]).includes(field)) return;
+  // ── Sorting (#1526) ────────────────────────────────────────────────────────
+  // The same two controls the roster has, from the same place: the 4-state
+  // name header and the belt button in the filter row. This page had PrimeNG's
+  // stock 2-state `pSortableColumn` on the name and no belt control at all —
+  // `onSort()` allowlisted `belt`, but nothing on the page could ever emit it.
+  //
+  // Sort changes reload the ROSTER only, like the filters above: the date has
+  // not moved, so the attendance records on the wire are unchanged and a
+  // parallel re-fetch would race any in-flight optimistic mark.
 
-    this.sortField.set(field as AthleteSortField);
-    this.sortOrder.set(event.order === 1 ? 'asc' : 'desc');
+  protected cycleFullNameSort(): void {
+    const next = nextNameSort(this.sortState());
+    this.sortField.set(next.field);
+    this.sortOrder.set(next.order);
     this.resetPage();
     this.loadAthletes();
   }
+
+  protected cycleBeltSort(): void {
+    const next = nextBeltSort(this.sortState());
+    this.sortField.set(next.field);
+    this.sortOrder.set(next.order);
+    this.resetPage();
+    this.loadAthletes();
+  }
+
+  /** `F↑` / `L↓`, or null when a name is not what the list is sorted by. */
+  protected readonly fullNameSortLabel = computed<string | null>(() =>
+    nameSortSignifier(this.sortState()),
+  );
+
+  /** Plain-English tooltip for the Full name header — Norman § signifier. */
+  protected readonly fullNameSortTooltip = computed<string>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    return this.translate.instant(nameSortTooltipKey(this.sortState()));
+  });
+
+  /** Direction for AT; the lead reaches it through the button's aria-label. */
+  protected readonly fullNameAriaSort = computed<'ascending' | 'descending' | 'none'>(() =>
+    nameSortAria(this.sortState()),
+  );
 
   /**
    * `<p-table>` (paginator) emits `{first, rows}` on page change.

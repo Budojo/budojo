@@ -1,3 +1,5 @@
+@use '../../../shared/styles/toolbar-control' as toolbar;
+
 .athletes-page {
   // Page chrome (max-width + side padding) comes from the dashboard
   // shell tokens — see `styles/budojo-theme.scss` and `.main` in the
@@ -219,95 +221,12 @@
 // now owns the icon-clear inset (40px on iconPosition=left), shared
 // across this surface, daily-attendance, the search palette, and help.
 
-// ── Full-name 4-state sort header (#196) ───────────────────────────────────────
+// ── Sortable headers ──────────────────────────────────────────────────────────
 //
-// The Full name column is wired directly (no `pSortableColumn`) because
-// PrimeNG's sort plumbing hard-codes a 2-state cycle. To preserve native
-// column-header semantics for assistive tech, the click target is a real
-// `<button>` INSIDE the `<th>` — `aria-sort` on the <th>, `aria-label`
-// (active state in plain English) on the button. Native `<button>`
-// handles Enter / Space natively, no manual keydown bindings needed.
-// Signifier slot shows F↑/F↓/L↑/L↓ when sorted, or `↕` when neutral.
-//
-// The <th>'s default cell padding is moved INTO the button so the
-// click/focus target spans the full cell (Fitts) — without this the
-// button only covers the inline-content area and the surrounding
-// padded strip swallows clicks. Visual rhythm matches the other <th>s
-// because the same padding still applies, just on a different element.
-
-.full-name-th,
-.attendance-th {
-  // Hand the cell padding off to the inner button below — the button
-  // is the actual interactive element, so the padding lives there.
-  padding: 0;
-}
-
-.full-name-th__btn,
-.attendance-th__btn {
-  // Strip the browser default button chrome — the <button> exists for
-  // semantics + keyboard handling, not for visual buttoning. Inherits
-  // the parent <th>'s typography so it reads identically to a static
-  // label and respects PrimeNG's table styling.
-  //
-  // `display: flex` + `width: 100%` makes the click target span the
-  // full width of the <th>; the explicit padding below mirrors what
-  // PrimeNG would have applied to the cell, so the vertical strip
-  // keeps its full height as part of the button. Combined, the entire
-  // visible cell area dispatches the cycle on click — same affordance
-  // the other PrimeNG sortable headers carry.
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  width: 100%;
-  padding: 0.75rem 1rem;
-  margin: 0;
-  background: transparent;
-  border: 0;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  user-select: none;
-
-  &:focus-visible {
-    outline: 2px solid var(--p-focus-ring-color, var(--p-primary-color));
-    outline-offset: -2px;
-  }
-}
-
-.full-name-th__signifier,
-.attendance-th__signifier {
-  display: inline-block;
-  min-width: 1.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--p-text-muted-color);
-
-  // Active state (#205): the F↑/F↓/L↑/L↓ glyph switches to the primary
-  // color when this column actually drives the sort. Norman § signifier
-  // — "active" must be visually distinct from "neutral" (the `↕`
-  // placeholder stays muted).
-  &--active {
-    color: var(--p-primary-color);
-  }
-}
-
-// The Belt sort header (#210) and its custom signifier lived here until
-// #1443 moved belt sorting into the toolbar, where a phone can reach it.
-// `.athletes-page__toggle` above carries it now; the Full-name header keeps
-// the in-table cycle it has always had.
-
-// The Attendance header (#1447) wears the Full-name header's clothes,
-// because it is the same thing: one column over two related scalars, so the
-// cycle picks which one leads and its direction, and the signifier says
-// which. Extending those selectors rather than restating them keeps the two
-// headers from drifting apart the first time either is restyled.
-.attendance-th__btn {
-  // Right-aligned, unlike the name: these are numbers, and a column of
-  // numbers is read down its last digit.
-  justify-content: flex-end;
-}
+// The Full name and Sessions headers are `<th appSortHeader>` since #1526 —
+// markup, styles and the `↕ / F↑ / M↓` signifier all live in the shared
+// component, because the daily check-in needed the same header and a copy of
+// it here is how the two screens drifted apart in the first place.
 
 // The cell. The month is the number the instructor acts on, so it carries
 // the weight; the all-time count is the context that tells a quiet month
@@ -678,40 +597,21 @@ $athletes-mobile-breakpoint: 768px;
   text-transform: lowercase;
 }
 
-// The eye itself, sized to match the filter selects beside it so the row of
-// controls keeps one baseline — and, since #1443, the two labelled toggles
-// that joined it there (belt sort, payment filter). One surface, one focus
-// ring, one "on" state: they are the same kind of control and a second
+// The eye, the bin, the payment cycle and the alert button, sized to match the
+// filter selects beside them so the row keeps one baseline. One surface, one
+// focus ring, one "on" state: they are the same kind of control and a second
 // visual language for them would read as a second kind.
+//
+// The declarations themselves moved to `shared/styles/_toolbar-control.scss`
+// in #1526, when belt sort became a shared component and took its styles with
+// it — the belt button still stands in this row, so the two have to be styled
+// from one place or they drift.
 .athletes-page__reveal,
 .athletes-page__toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-  border-radius: var(--budojo-radius-medium, 0.75rem);
-  background: var(--p-surface-100);
-  color: var(--p-text-muted-color);
+  @include toolbar.toolbar-control;
 
-  cursor: pointer;
-  transition:
-    background-color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out),
-    color var(--budojo-motion-fast, 120ms) var(--budojo-motion-easing, ease-out);
-
-  &:hover {
-    color: var(--p-text-color);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--p-primary-color);
-    outline-offset: 2px;
-  }
-
-  // On: the list is showing more than it does by default, and the control
-  // says so — otherwise "why is this row grey" has no answer on screen.
   &--on {
-    background: var(--p-highlight-background);
-    color: var(--p-primary-color);
+    @include toolbar.toolbar-control-on;
   }
 }
 
@@ -742,20 +642,12 @@ $athletes-mobile-breakpoint: 768px;
   }
 }
 
-// Icon-only: a fixed square, because there is no word to size it around.
 .athletes-page__reveal {
-  width: 2.75rem;
-  height: 2.75rem;
+  @include toolbar.toolbar-control-square;
 }
 
-// Labelled: the icon says what kind of control it is, the word says which
-// field it acts on. Icon alone would have made three adjacent square buttons
-// distinguishable only by glyph, and "which one sorts by belt" is not a
-// question a tooltip should be the only answer to (Krug).
 .athletes-page__toggle {
-  gap: 0.5rem;
-  height: 2.75rem;
-  flex: 0 0 auto;
+  @include toolbar.toolbar-control-labelled;
 
   // Amber only when there is something to say (#1482).
   //
@@ -773,32 +665,10 @@ $athletes-mobile-breakpoint: 768px;
   &--alert {
     color: var(--p-orange-600, #c2410c);
   }
-  font: inherit;
-  font-size: 0.875rem;
-  // The row wraps on a phone; a label that breaks mid-word would take the
-  // control's height with it.
-  white-space: nowrap;
-
-  // Mobile-first: square like the eye and the bin, because five labelled
-  // controls do not share 375px and the row was spilling onto a third line —
-  // on the page whose job is to list athletes. The word returns at 768px.
-  // Nothing is lost meanwhile: both icons carry their own state (sort
-  // direction, wallet/tick/cross), so neither relies on colour alone.
-  width: 2.75rem;
-  padding: 0;
-
-  @media (min-width: 768px) {
-    width: auto;
-    padding: 0 1rem;
-  }
 }
 
 .athletes-page__toggle-label {
-  display: none;
-
-  @media (min-width: 768px) {
-    display: inline;
-  }
+  @include toolbar.toolbar-control-label;
 }
 
 // Same signal as the muted table row (#1403), for the mobile card.

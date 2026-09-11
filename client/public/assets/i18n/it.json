@@ -1611,6 +1611,11 @@
       "table": {
         "athlete": "Atleta",
         "days": "Giorni"
+      },
+      "tooltip": {
+        "daysInitial": "Clicca per ordinare per giorni di presenza (prima i più alti)",
+        "daysDesc": "Ordinato per giorni di presenza (prima i più alti). Clicca per invertire.",
+        "daysAsc": "Ordinato per giorni di presenza (prima i più bassi). Clicca per invertire."
       }
     }
   },
@@ -1636,21 +1641,12 @@
       },
       "table": {
         "fullName": "Nome e cognome",
-        "belt": "Cintura",
         "status": "Stato",
         "paidPrefix": "Pagato",
         "payment": "Pagamento",
         "attendance": "Presenze"
       },
       "tooltip": {
-        "fullNameSortInitial": "Clicca per ordinare per nome (A → Z)",
-        "fullNameSortFirstAsc": "Ordinato per nome (A → Z). Clicca per cambiare.",
-        "fullNameSortFirstDesc": "Ordinato per nome (Z → A). Clicca per cambiare.",
-        "fullNameSortLastAsc": "Ordinato per cognome (A → Z). Clicca per cambiare.",
-        "fullNameSortLastDesc": "Ordinato per cognome (Z → A). Clicca per cambiare.",
-        "beltSortInitial": "Clicca per ordinare per cintura (nera → bianca)",
-        "beltSortAsc": "Ordinato per cintura (bianca → nera). Clicca per invertire.",
-        "beltSortDesc": "Ordinato per cintura (nera → bianca). Clicca per invertire.",
         "edit": "Modifica",
         "editAria": "Modifica {{name}}",
         "openMenuAria": "Apri il menu per {{name}}",
@@ -2278,6 +2274,17 @@
       "apply": "Applica",
       "reset": "Azzera",
       "close": "Chiudi"
+    },
+    "sort": {
+      "beltLabel": "Cintura",
+      "beltInitial": "Clicca per ordinare per cintura (nera → bianca)",
+      "beltAsc": "Ordinato per cintura (bianca → nera). Clicca per invertire.",
+      "beltDesc": "Ordinato per cintura (nera → bianca). Clicca per invertire.",
+      "nameInitial": "Clicca per ordinare per nome (A → Z)",
+      "nameFirstAsc": "Ordinato per nome (A → Z). Clicca per cambiare.",
+      "nameFirstDesc": "Ordinato per nome (Z → A). Clicca per cambiare.",
+      "nameLastAsc": "Ordinato per cognome (A → Z). Clicca per cambiare.",
+      "nameLastDesc": "Ordinato per cognome (Z → A). Clicca per cambiare."
     }
   },
   "stats": {

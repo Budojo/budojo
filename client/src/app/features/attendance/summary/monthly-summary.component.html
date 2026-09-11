@@ -36,6 +36,22 @@
         data-cy="monthly-summary-filter"
         [attr.aria-label]="'attendance.summary.filterAria' | translate"
       />
+      <!--
+        The days sort, in the row that renders at BOTH breakpoints (#1526).
+        Below 768px the table is `display: none` and the card list below takes
+        over, so a sort that lives only in a `<th>` is desktop-only — the same
+        reason belt sorting left the roster's header in #1443. "Who has stopped
+        coming" is the question this page is for; it cannot be a desktop
+        feature.
+      -->
+      <app-sort-toggle
+        [label]="'attendance.summary.table.days' | translate"
+        [tooltip]="daysSortTooltip()"
+        [active]="sortField() === 'days'"
+        [order]="sortOrder()"
+        dataCy="monthly-summary-sort-days"
+        (cycle)="cycleDaysSort()"
+      />
     </div>
 
     @if (loading()) {
@@ -94,10 +110,35 @@
           data-cy="monthly-summary-table"
         >
           <ng-template pTemplate="header">
+            <!--
+              Sortable since #1526, with the roster's header rather than one of
+              its own. The rows are already here — this table filters and orders
+              client-side — so "who came least this month" was one comparison
+              away and the table just would not make it.
+            -->
             <tr>
-              <th scope="col">{{ 'attendance.summary.table.athlete' | translate }}</th>
-              <th scope="col" class="summary-page__count-col">
-                {{ 'attendance.summary.table.days' | translate }}
+              <th scope="col" class="sort-th" [attr.aria-sort]="nameAriaSort()">
+                <app-sort-header
+                  [label]="'attendance.summary.table.athlete' | translate"
+                  [signifier]="nameSortLabel()"
+                  [tooltip]="nameSortTooltip()"
+                  dataCy="monthly-summary-th-athlete"
+                  (cycle)="cycleNameSort()"
+                />
+              </th>
+              <th
+                scope="col"
+                class="sort-th summary-page__count-col"
+                [attr.aria-sort]="daysAriaSort()"
+              >
+                <app-sort-header
+                  [label]="'attendance.summary.table.days' | translate"
+                  [signifier]="daysSortLabel()"
+                  [tooltip]="daysSortTooltip()"
+                  align="end"
+                  dataCy="monthly-summary-th-days"
+                  (cycle)="cycleDaysSort()"
+                />
               </th>
             </tr>
           </ng-template>
