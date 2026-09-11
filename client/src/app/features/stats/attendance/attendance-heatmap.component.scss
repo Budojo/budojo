@@ -68,13 +68,31 @@
     }
   }
 
+  // The ramp and, under it, what the ramp means in this window (#1560). One
+  // block, right-aligned as the legend always was, so the number line reads
+  // as the legend's own footnote rather than a second caption.
+  &__key {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    align-self: flex-end;
+  }
+
+  &__scale {
+    margin: 0;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--p-text-muted-color);
+    text-align: right;
+  }
+
   &__legend {
     display: flex;
     align-items: center;
     gap: 0.25rem;
     font-size: 0.75rem;
     color: var(--p-text-muted-color);
-    align-self: flex-end;
 
     &-cell {
       display: inline-block;

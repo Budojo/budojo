@@ -129,6 +129,13 @@ describe('Support page (#423)', () => {
 describe('Support on a build with no mail transport (#1476)', () => {
   function seed(capabilities: string[]) {
     cy.intercept('GET', '/api/v1/**', { statusCode: 200, body: { data: [] } });
+    // The deep-link test bounces to /dashboard/athletes, and the roster reads
+    // `meta.total` off the response. The bare catch-all above has no `meta`,
+    // so whether the test passed depended on whether the roster's fetch
+    // resolved before or after the location assertion — green most days,
+    // red on #1573's CI. The real envelope, the same one the first describe
+    // in this file uses.
+    cy.intercept('GET', '/api/v1/athletes*', ATHLETES_EMPTY);
     cy.intercept('GET', '/api/v1/runtime', {
       statusCode: 200,
       body: {

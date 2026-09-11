@@ -51,13 +51,159 @@ describe('AttendanceHeatmapComponent', () => {
     const rects: NodeListOf<SVGRectElement> =
       fixture.nativeElement.querySelectorAll('rect.heatmap__cell');
 
-    // Three sessions → bucket 2. Every other day in the window is empty →
-    // bucket 0. Nothing carries an inline fill any more: the class is the
-    // single source, shared with the legend.
+    // The one training day is as full as this window gets → the top shade
+    // (#1560; it was bucket 2 under the old absolute cut points). Every other
+    // day is empty → bucket 0. Nothing carries an inline fill: the class is
+    // the single source, shared with the legend.
     const classLists = Array.from(rects).map((r) => r.getAttribute('class') ?? '');
-    expect(classLists.filter((c) => c.includes('heatmap__cell--b2')).length).toBe(1);
+    expect(classLists.filter((c) => c.includes('heatmap__cell--b4')).length).toBe(1);
     expect(classLists.filter((c) => c.includes('heatmap__cell--b0')).length).toBe(6);
     expect(Array.from(rects).every((r) => r.getAttribute('style') === null)).toBe(true);
+  });
+
+  // The shades are quartiles of the window's own counts (#1560). The cut
+  // points used to be absolute — 0 / ≤2 / ≤5 / ≤10 / more — a scale for one
+  // athlete's history; on a 33-athlete academy every session has 20-29 people,
+  // so every training day was the darkest shade and the map was one block.
+
+  describe('shades scaled to the window (#1560)', () => {
+    // Two weeks, ten training days, 20 to 29 on the mat.
+    const windowStart = new Date(2026, 4, 4); // Mon 4 May 2026
+    const windowEnd = new Date(2026, 4, 17); // Sun 17 May 2026
+    const busyAcademy = [
+      { date: '2026-05-04', count: 20 },
+      { date: '2026-05-05', count: 21 },
+      { date: '2026-05-06', count: 22 },
+      { date: '2026-05-07', count: 23 },
+      { date: '2026-05-08', count: 24 },
+      { date: '2026-05-11', count: 25 },
+      { date: '2026-05-12', count: 26 },
+      { date: '2026-05-13', count: 27 },
+      { date: '2026-05-14', count: 28 },
+      { date: '2026-05-15', count: 29 },
+    ];
+
+    function bucketOf(iso: string): string {
+      const rect = Array.from(
+        fixture.nativeElement.querySelectorAll('rect.heatmap__cell') as NodeListOf<SVGRectElement>,
+      ).find((r) => r.querySelector('title')?.textContent?.includes(labelOf(iso)));
+      const match = /heatmap__cell--b(\d)/.exec(rect?.getAttribute('class') ?? '');
+      return match ? match[1] : 'none';
+    }
+
+    function labelOf(iso: string): string {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+
+    it('spreads a busy academy across all four shades instead of one block', () => {
+      createComponent(busyAcademy, windowStart, windowEnd);
+
+      // Quartiles of 20..29: below 22 → 1, 22-23 → 2, 24-26 → 3, 27 and up → 4.
+      expect(bucketOf('2026-05-04')).toBe('1');
+      expect(bucketOf('2026-05-05')).toBe('1');
+      expect(bucketOf('2026-05-06')).toBe('2');
+      expect(bucketOf('2026-05-08')).toBe('3');
+      expect(bucketOf('2026-05-13')).toBe('4');
+      expect(bucketOf('2026-05-15')).toBe('4');
+
+      const classLists = Array.from(
+        fixture.nativeElement.querySelectorAll('rect.heatmap__cell') as NodeListOf<SVGRectElement>,
+      ).map((r) => r.getAttribute('class') ?? '');
+      for (const shade of ['b1', 'b2', 'b3', 'b4']) {
+        expect(classLists.some((c) => c.includes(`heatmap__cell--${shade}`))).toBe(true);
+      }
+    });
+
+    it('says what the shades mean in this window', () => {
+      createComponent(busyAcademy, windowStart, windowEnd);
+
+      const scale = fixture.nativeElement.querySelector('[data-cy="attendance-heatmap-scale"]');
+      expect(scale?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Shades follow this window: 20–21 · 22–23 · 24–26 · 27–29 attendances a day',
+      );
+    });
+
+    it('draws a window where every day drew the same crowd as full, not pale', () => {
+      // No variation is not the same thing as nothing happened.
+      createComponent(
+        [
+          { date: '2026-05-04', count: 12 },
+          { date: '2026-05-06', count: 12 },
+          { date: '2026-05-08', count: 12 },
+        ],
+        windowStart,
+        windowEnd,
+      );
+
+      expect(bucketOf('2026-05-04')).toBe('4');
+      expect(bucketOf('2026-05-08')).toBe('4');
+      // Three shades unused, and the key says so rather than inventing numbers.
+      const scale = fixture.nativeElement.querySelector('[data-cy="attendance-heatmap-scale"]');
+      expect(scale?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Shades follow this window: — · — · — · 12 attendances a day',
+      );
+    });
+
+    it('lets the one busy day stand out of a crowd that repeats', () => {
+      // Nine days of 5 and one of 10. Quartiles over the DAYS would make 5
+      // every cut point and paint the 10 like the 5s — the one day the chart
+      // exists to show. Over the distinct values, [5, 10] cuts 3 / 4.
+      createComponent(
+        [
+          { date: '2026-05-04', count: 5 },
+          { date: '2026-05-05', count: 5 },
+          { date: '2026-05-06', count: 5 },
+          { date: '2026-05-07', count: 5 },
+          { date: '2026-05-08', count: 5 },
+          { date: '2026-05-11', count: 5 },
+          { date: '2026-05-12', count: 5 },
+          { date: '2026-05-13', count: 5 },
+          { date: '2026-05-14', count: 5 },
+          { date: '2026-05-15', count: 10 },
+        ],
+        windowStart,
+        windowEnd,
+      );
+
+      expect(bucketOf('2026-05-04')).toBe('3');
+      expect(bucketOf('2026-05-15')).toBe('4');
+      const scale = fixture.nativeElement.querySelector('[data-cy="attendance-heatmap-scale"]');
+      expect(scale?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Shades follow this window: — · — · 5 · 10 attendances a day',
+      );
+    });
+
+    it('exposes the scale to assistive tech instead of hiding it with the swatches', () => {
+      createComponent(busyAcademy, windowStart, windowEnd);
+
+      const svg = fixture.nativeElement.querySelector('svg.heatmap__svg') as SVGElement;
+      const caption = fixture.nativeElement.querySelector(
+        '#attendance-heatmap-scale',
+      ) as HTMLElement;
+      expect(svg.getAttribute('aria-describedby')).toBe('attendance-heatmap-scale');
+      expect(caption.closest('[aria-hidden="true"]')).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('.heatmap__legend')?.getAttribute('aria-hidden'),
+      ).toBe('true');
+    });
+
+    it('draws no key for a window where nobody trained', () => {
+      createComponent([], windowStart, windowEnd);
+
+      expect(
+        fixture.nativeElement.querySelector('[data-cy="attendance-heatmap-scale"]'),
+      ).toBeNull();
+      const classLists = Array.from(
+        fixture.nativeElement.querySelectorAll('rect.heatmap__cell') as NodeListOf<SVGRectElement>,
+      ).map((r) => r.getAttribute('class') ?? '');
+      expect(classLists.every((c) => c.includes('heatmap__cell--b0'))).toBe(true);
+    });
   });
 
   it('gives cells outside the window the --out modifier class', () => {

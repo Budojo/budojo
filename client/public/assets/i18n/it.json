@@ -2387,6 +2387,7 @@
         "ariaLabel": "Mappa presenze giornaliera",
         "less": "Meno",
         "more": "Più",
+        "scale": "Le tonalità seguono questo periodo: {{b1}} · {{b2}} · {{b3}} · {{b4}} presenze al giorno",
         "tooltipCount": "{{count}} presenze il {{date}}",
         "tooltipEmpty": "Nessuna presenza il {{date}}",
         "dow": {
