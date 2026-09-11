@@ -69,6 +69,16 @@
   word-break: break-word;
 }
 
+// A value with a way through beside it (#1562): "4 classes a week · Manage".
+// The link sits on the same line as the fact it acts on, wrapping under it
+// when a phone runs out of room.
+.row__value--with-action {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
 // The em-dash placeholder for a setting nobody has chosen. Muted, so an
 // unset row reads as empty rather than as a value (#1504).
 .row__empty {

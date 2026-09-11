@@ -15,6 +15,8 @@ use App\Http\Requests\Attendance\AthleteAttendanceSummaryRequest;
 use App\Http\Requests\Attendance\MarkAttendanceRequest;
 use App\Http\Requests\Attendance\MonthlySummaryRequest;
 use App\Http\Resources\AttendanceRecordResource;
+use App\Models\Academy;
+use App\Models\AcademyClass;
 use App\Models\Athlete;
 use App\Models\AttendanceRecord;
 use App\Models\User;
@@ -68,10 +70,16 @@ class AttendanceController extends Controller
             );
         }
 
+        $academyClass = $this->classFor($academy, $request->query('academy_class_id'));
+        if ($academyClass instanceof JsonResponse) {
+            return $academyClass;
+        }
+
         $records = $this->dailyAction->execute(
             academy: $academy,
             date: $date,
             includeTrashed: $request->boolean('trashed'),
+            academyClass: $academyClass,
         );
 
         return AttendanceRecordResource::collection($records);
@@ -123,10 +131,18 @@ class AttendanceController extends Controller
             return response()->json(['message' => 'Invalid date.'], 422);
         }
 
+        // Same guard as the athletes above: the FormRequest checked the class
+        // exists, this checks it is ours.
+        $academyClass = $this->classFor($academy, $request->input('academy_class_id'));
+        if ($academyClass instanceof JsonResponse) {
+            return $academyClass;
+        }
+
         $records = $this->markAction->execute(
             academy: $academy,
             date: $date,
             athleteIds: $athleteIds,
+            academyClass: $academyClass,
         );
 
         return AttendanceRecordResource::collection($records)
@@ -228,6 +244,35 @@ class AttendanceController extends Controller
         return $user->activeAcademyId() !== null
             && $record->athlete !== null
             && $record->athlete->academy_id === $user->activeAcademyId();
+    }
+
+    /**
+     * The class a check-in is for (#1562), or null when none was asked for.
+     *
+     * A class that is not one of this academy's — another academy's, or no
+     * one's at all — is one Forbidden, like an athlete from another academy.
+     * The two cases must not be told apart, or the answer says which ids
+     * exist somewhere; that is also why the FormRequest carries no `exists`
+     * rule for it. Malformed input is the caller's mistake and says so.
+     */
+    private function classFor(Academy $academy, mixed $raw): AcademyClass|JsonResponse|null
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        if (! is_numeric($raw)) {
+            return response()->json(
+                ['message' => 'Invalid class.', 'errors' => ['academy_class_id' => ['Invalid class.']]],
+                422,
+            );
+        }
+
+        $academyClass = AcademyClass::query()
+            ->where('academy_id', $academy->id)
+            ->find((int) $raw);
+
+        return $academyClass ?? response()->json(['message' => 'Forbidden.'], 403);
     }
 
     private function parseOptionalDate(Request $request, string $key): ?CarbonImmutable

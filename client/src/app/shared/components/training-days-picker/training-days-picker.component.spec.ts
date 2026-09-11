@@ -89,4 +89,47 @@ describe('TrainingDaysPickerComponent', () => {
     ) as NodeListOf<HTMLButtonElement>;
     expect(buttons.length).toBe(0);
   });
+
+  describe('single selection (#1562)', () => {
+    function renderSingle(value: number[] | null) {
+      const fixture = TestBed.createComponent(TrainingDaysPickerComponent);
+      fixture.componentRef.setInput('value', value);
+      fixture.componentRef.setInput('selectionMode', 'single');
+      fixture.componentRef.setInput('dataCyPrefix', 'class-day-');
+      const emissions: number[][] = [];
+      fixture.componentInstance.valueChange.subscribe((v) => emissions.push(v));
+      fixture.detectChanges();
+      return { fixture, emissions };
+    }
+
+    it('replaces the day instead of adding to it', () => {
+      const { fixture, emissions } = renderSingle([1]);
+
+      (fixture.nativeElement.querySelector('[data-cy="class-day-3"]') as HTMLButtonElement).click();
+
+      expect(emissions).toEqual([[3]]);
+    });
+
+    it('does not un-pick the selected day when it is pressed again', () => {
+      const { fixture, emissions } = renderSingle([1]);
+
+      (fixture.nativeElement.querySelector('[data-cy="class-day-1"]') as HTMLButtonElement).click();
+
+      expect(emissions).toEqual([]);
+    });
+
+    it('reads as a radio group to assistive tech, not a row of toggles', () => {
+      const { fixture } = renderSingle([1]);
+
+      const group = fixture.nativeElement.querySelector('.training-days-picker') as HTMLElement;
+      const mon = fixture.nativeElement.querySelector('[data-cy="class-day-1"]') as HTMLElement;
+      const tue = fixture.nativeElement.querySelector('[data-cy="class-day-2"]') as HTMLElement;
+
+      expect(group.getAttribute('role')).toBe('radiogroup');
+      expect(mon.getAttribute('role')).toBe('radio');
+      expect(mon.getAttribute('aria-checked')).toBe('true');
+      expect(tue.getAttribute('aria-checked')).toBe('false');
+      expect(mon.hasAttribute('aria-pressed')).toBe(false);
+    });
+  });
 });

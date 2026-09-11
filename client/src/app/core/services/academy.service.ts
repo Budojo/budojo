@@ -260,6 +260,12 @@ export interface Academy {
   /** ISO `YYYY-MM-DD`. */
   season_start?: string;
   season_label?: string;
+  /**
+   * How many classes are on the weekly timetable (#1562) — enough for the
+   * academy page to say "4 classes a week" or "not set up yet" without a
+   * second request. Optional for fixture-compat; absent reads as zero.
+   */
+  classes_count?: number;
 }
 
 /**

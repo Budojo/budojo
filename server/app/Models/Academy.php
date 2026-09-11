@@ -60,6 +60,29 @@ class Academy extends Model implements HasAddress
     }
 
     /**
+     * The weekly timetable (#1562) — one row per recurring class. Empty on
+     * an academy that has never opened it, and that changes nothing: the
+     * check-in then records a presence on a day, as it always has.
+     *
+     * @return HasMany<AcademyClass, $this>
+     */
+    public function classes(): HasMany
+    {
+        return $this->hasMany(AcademyClass::class);
+    }
+
+    /**
+     * Every lesson actually held — the occurrences the classes above produced
+     * the first time somebody was checked into them (#1562).
+     *
+     * @return HasMany<Lesson, $this>
+     */
+    public function lessons(): HasMany
+    {
+        return $this->hasMany(Lesson::class);
+    }
+
+    /**
      * Academies that manage payments in Budojo at all (#1381).
      *
      * Before the price list existed this was simply `monthly_fee_cents IS NOT
