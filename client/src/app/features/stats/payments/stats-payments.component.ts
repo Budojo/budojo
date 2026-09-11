@@ -31,11 +31,16 @@ export class StatsPaymentsComponent {
     datasets: [
       {
         data: this.buckets().map((b) => b.amount_cents / 100),
-        // Primary indigo — uniform with the athletes histogram. Heatmap is
-        // intentionally per-month rainbow because the color encodes
-        // information; this trend chart is monocolor by design.
+        // Primary indigo, one colour for the series — the bars differ by
+        // height, which is the whole point of a trend chart.
+        //
+        // Except the months past today (#1553): the window reaches forward to
+        // the last month already paid for, and a bar for November drawn in
+        // September is a different kind of fact from the ones behind it.
+        // Same hue at a third of the strength, so it reads as the same series
+        // seen through glass rather than as a second one.
         // Literal hex because Chart.js canvas can't resolve var(--*).
-        backgroundColor: '#5b6cff',
+        backgroundColor: this.buckets().map((b) => (b.future ? '#5b6cff55' : '#5b6cff')),
       },
     ],
   }));

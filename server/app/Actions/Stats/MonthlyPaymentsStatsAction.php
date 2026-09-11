@@ -19,20 +19,33 @@ use Illuminate\Support\Facades\DB;
  * API doesn't accept a custom `paid_at` — but the business month is the
  * user-facing definition of "this month's revenue".
  *
- * Since #1382 a payment covers a **period**, so its amount is spread evenly
- * across every month that period pays for: a €165 quarterly contributes €55
- * to each of three buckets rather than €165 to one. Booking it whole would
- * make an academy that bills quarterly read €0 for two months in three,
- * which is exactly the "revenue *for* this month" promise this endpoint has
- * always made. The split is done in PHP — SQL cannot expand one row into
- * three buckets without a calendar table, and the volume here is one
- * academy's payments over at most 24 months.
+ * **Two rules, deliberately, and they are different (#1553).**
  *
- * Carnets join the same axis under the same rule (#1383): a pack is collected
- * in one go but bought for its whole validity window, so €70 valid twelve
- * months contributes about €5.83 a month. The alternative — booking it into
- * the sale month — would put two different rules on one chart, and the sum of
- * every bucket would stop being what the academy actually took.
+ * A FEE covers a **period**, so its amount is spread evenly across every month
+ * that period pays for: a €165 quarterly contributes €55 to each of three
+ * buckets rather than €165 to one. Booking it whole would make an academy that
+ * bills quarterly read €0 for two months in three. The split is done in PHP —
+ * SQL cannot expand one row into three buckets without a calendar table, and
+ * the volume here is one academy's payments over at most a couple of years.
+ *
+ * A CARNET lands whole in the month it was **sold**. It was spread like a fee
+ * until #1553, on the reasoning that a pack is bought for its validity window
+ * — which is true and which made it invisible: selling a €70 twelve-month
+ * carnet moved the chart by €5.83, and the owner who had just taken €70 could
+ * not find it. A carnet is a lump the academy either took or did not; a fee is
+ * an entitlement that accrues. Same chart, two rules, said out loud here and
+ * in the hint under the chart because a reader cannot infer it.
+ *
+ * **The window extends forward to the last month already paid for (#1553).**
+ * It used to stop at the current month, so the slices of a period reaching
+ * into the future had nowhere to land and simply vanished: a €240 quarterly
+ * paid in September showed €80 and the other €160 appeared on no bar at all.
+ * The last bar — the one an owner actually looks at — was therefore always a
+ * fraction of what came in, and the chart's own total did not match the
+ * ledger. Extending means every bucket a payment reaches is visible, and the
+ * sum of the bars is what the academy has been paid. Buckets past the current
+ * month carry `future: true` so the SPA can draw them as what they are:
+ * already collected, not yet earned.
  *
  * `currency` is currently hardcoded to EUR — single-currency-per-academy
  * is the model invariant and the academies table doesn't carry a
@@ -44,7 +57,7 @@ class MonthlyPaymentsStatsAction
     private const string CURRENCY = 'EUR';
 
     /**
-     * @return list<array{month: string, currency: string, amount_cents: int}>
+     * @return list<array{month: string, currency: string, amount_cents: int, future: bool}>
      */
     public function execute(Academy $academy, int $months): array
     {
@@ -60,18 +73,17 @@ class MonthlyPaymentsStatsAction
         $nowMonth = (int) $now->format('m');
 
         $firstBucket = AthletePayment::monthIndex($startYear, $startMonth);
-        $lastBucket = AthletePayment::monthIndex($nowYear, $nowMonth);
+        $currentBucket = AthletePayment::monthIndex($nowYear, $nowMonth);
 
         /** @var array<string, int> $byKey */
         $byKey = [];
 
-        // Every payment whose period OVERLAPS the window, not just one that
-        // starts inside it: a quarterly bought the month before the window
-        // still pays for its first months.
+        // Every fee whose period REACHES the window. No upper bound: a period
+        // running past today is exactly what the extended window exists to
+        // show, so the query cannot be the thing that cuts it off.
         $payments = DB::table('athlete_payments')
             ->join('athletes', 'athletes.id', '=', 'athlete_payments.athlete_id')
             ->where('athletes.academy_id', $academy->id)
-            ->whereRaw('(athlete_payments.year * 12 + athlete_payments.month - 1) <= ?', [$lastBucket])
             ->whereRaw(
                 '(athlete_payments.year * 12 + athlete_payments.month - 1 + athlete_payments.period_months) > ?',
                 [$firstBucket],
@@ -84,6 +96,15 @@ class MonthlyPaymentsStatsAction
             ])
             ->get();
 
+        // How far right the chart has to reach: the current month, or the last
+        // month any fee has already been paid for, whichever is later.
+        $lastBucket = $currentBucket;
+        foreach ($payments as $row) {
+            $end = AthletePayment::monthIndex((int) $row->year, (int) $row->month)
+                + max(1, (int) $row->period_months) - 1;
+            $lastBucket = max($lastBucket, $end);
+        }
+
         foreach ($payments as $row) {
             $this->spread(
                 $byKey,
@@ -95,50 +116,37 @@ class MonthlyPaymentsStatsAction
             );
         }
 
-        // Carnets (#1383). A pack is collected in one go but bought for the
-        // whole of its validity window, so it lands on this axis the same way
-        // an annual fee does — spread across the months it covers. Booking it
-        // whole into the sale month would leave the chart running two rules
-        // at once: fees spread, carnets not.
+        // Carnets (#1383, changed in #1553). Booked whole into the month the
+        // pack was SOLD. `purchased_at`, not `valid_from`: the money arrives
+        // when the academy takes it, and a carnet bought in August to start in
+        // September is August's takings.
         $carnets = DB::table('carnets')
             ->join('athletes', 'athletes.id', '=', 'carnets.athlete_id')
             ->where('athletes.academy_id', $academy->id)
-            // Only the windows that reach the chart. Expressed as plain date
-            // comparisons rather than the month arithmetic used above: the
-            // columns are dates, and `expires_at` already carries the far end
-            // of the window, so this needs no substring surgery on a
-            // `YYYY-MM-DD` string to stay portable.
-            ->where('carnets.valid_from', '<=', $now->endOfMonth()->toDateString())
-            ->where('carnets.expires_at', '>', $start->toDateString())
-            ->select(['carnets.valid_from', 'carnets.expires_at', 'carnets.price_cents'])
+            ->select(['carnets.purchased_at', 'carnets.price_cents'])
             ->get();
 
         foreach ($carnets as $carnet) {
-            $validFrom = CarbonImmutable::parse((string) $carnet->valid_from);
-            $expiresAt = CarbonImmutable::parse((string) $carnet->expires_at);
+            $soldOn = CarbonImmutable::parse((string) $carnet->purchased_at);
+            $bucket = AthletePayment::monthIndex((int) $soldOn->year, (int) $soldOn->month);
 
-            $windowStart = AthletePayment::monthIndex((int) $validFrom->year, (int) $validFrom->month);
-            // The expiry month itself gets nothing: a carnet valid from 1 Sep
-            // 2026 to 1 Sep 2027 covers the twelve months Sep-Aug, and the
-            // difference of the two indices is exactly that count.
-            $span = max(
-                1,
-                AthletePayment::monthIndex((int) $expiresAt->year, (int) $expiresAt->month) - $windowStart,
-            );
+            if ($bucket < $firstBucket || $bucket > $lastBucket) {
+                continue;
+            }
 
-            $this->spread($byKey, $windowStart, $span, (int) $carnet->price_cents, $firstBucket, $lastBucket);
+            $key = \sprintf('%04d-%02d', intdiv($bucket, 12), ($bucket % 12) + 1);
+            $byKey[$key] = ($byKey[$key] ?? 0) + (int) $carnet->price_cents;
         }
 
         $out = [];
-        $cursor = $start;
-        for ($i = 0; $i < $months; $i++) {
-            $key = $cursor->format('Y-m');
+        for ($bucket = $firstBucket; $bucket <= $lastBucket; $bucket++) {
+            $key = \sprintf('%04d-%02d', intdiv($bucket, 12), ($bucket % 12) + 1);
             $out[] = [
                 'month' => $key,
                 'currency' => self::CURRENCY,
                 'amount_cents' => $byKey[$key] ?? 0,
+                'future' => $bucket > $currentBucket,
             ];
-            $cursor = $cursor->addMonth();
         }
 
         return $out;

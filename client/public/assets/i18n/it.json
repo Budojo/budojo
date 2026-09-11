@@ -2327,7 +2327,7 @@
     },
     "payments": {
       "monthlyTitle": "Incassi mensili",
-      "monthlyHint": "Ultimi 12 mesi · quote e carnet, ripartiti sui mesi che coprono",
+      "monthlyHint": "Ultimi 12 mesi più quello che è già stato pagato · le quote spalmate sui mesi che coprono, i carnet nel mese in cui li vendi",
       "loading": "Caricamento incassi…",
       "errored": "Impossibile caricare il trend.",
       "empty": "Nessun incasso negli ultimi 12 mesi."
