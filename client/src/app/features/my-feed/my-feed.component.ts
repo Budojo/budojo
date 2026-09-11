@@ -50,6 +50,8 @@ import { VideoComposerComponent } from './video-composer/video-composer.componen
 import { EventDatePipe } from '../../shared/pipes/event-date.pipe';
 import { RelativeTimePipe } from '../../shared/pipes/relative-time.pipe';
 import { ReactionsListSheetComponent } from './reactions-list-sheet/reactions-list-sheet.component';
+import { LanguageService } from '../../core/services/language.service';
+import { formatIsoDate } from '../../shared/utils/locale';
 import {
   VideoFacadeComponent,
   VideoProvider,
@@ -110,6 +112,7 @@ export class MyFeedComponent implements OnInit {
   private readonly injector = inject(Injector);
   private readonly messageService = inject(MessageService);
   private readonly translateService = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
   private readonly authService = inject(AuthService);
   private readonly academyService = inject(AcademyService);
   private readonly shareCard = inject(PromotionShareCardService);
@@ -433,7 +436,7 @@ export class MyFeedComponent implements OnInit {
         fromBelt: oldBelt,
         toBelt: newBelt,
         academyName: academy,
-        date: post.created_at.slice(0, 10),
+        date: formatIsoDate(post.created_at, this.languageService.currentLang()),
       });
 
       const file = new File([blob], 'budojo-promotion.png', { type: 'image/png' });

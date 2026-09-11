@@ -58,6 +58,21 @@ describe('one date format, and dates people read (#1498)', () => {
       expect(formatIsoDate('', 'en')).toBe('');
       expect(formatIsoDate('not-a-date', 'en')).toBe('not-a-date');
     });
+    it('takes the date part of a timestamp rather than converting it (#1537)', () => {
+      // `paid_at` and `deleted_at` arrive as full ISO timestamps, and what they
+      // mean is a calendar day the server recorded. 23:00 UTC on the 31st is
+      // the 31st — converting to local time would move a payment into the next
+      // month for every reader east of Greenwich.
+      expect(formatIsoDate('2026-01-31T23:00:00+00:00', 'en')).toBe('31 January 2026');
+      expect(formatIsoDate('2026-04-20T10:00:00+00:00', 'it')).toBe('20 aprile 2026');
+      expect(formatIsoDate('2026-04-20T00:00:00Z', 'en')).toBe('20 April 2026');
+    });
+
+    it('hands back anything it cannot read', () => {
+      expect(formatIsoDate('', 'en')).toBe('');
+      expect(formatIsoDate('not a date', 'en')).toBe('not a date');
+      expect(formatIsoDate('2026-13', 'en')).toBe('2026-13');
+    });
   });
 
   describe('formatIsoMonth', () => {

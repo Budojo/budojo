@@ -23,7 +23,7 @@ import { AthleteService } from '../../../../core/services/athlete.service';
 import { LanguageService } from '../../../../core/services/language.service';
 import { FeeTier } from '../../../../core/services/fee-tier.service';
 import { AthletePayment, PaymentService } from '../../../../core/services/payment.service';
-import { localeFor } from '../../../../shared/utils/locale';
+import { formatIsoDate, localeFor } from '../../../../shared/utils/locale';
 import { CarnetPanelComponent } from '../carnet-panel/carnet-panel.component';
 
 /**
@@ -397,10 +397,18 @@ export class PaymentsListComponent implements OnInit {
     return (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' });
   }
 
+  /**
+   * The day the money changed hands, written the way the rest of the app
+   * writes a day (#1537).
+   *
+   * This printed the raw `YYYY-MM-DD` until #1537 — four lines below a header
+   * already reading "Joined 15 January 2022", which is the pairing that made
+   * it obvious. `formatIsoDate` parses field by field rather than through
+   * `new Date(iso)`, so it keeps the calendar-date property the old slice was
+   * protecting: no UTC parse, no midnight shift, no time of day.
+   */
   protected formatPaidAt(iso: string): string {
-    // ISO-8601 → YYYY-MM-DD. Calendar date only — no timezone shift
-    // needed since we're showing the day, not the local time.
-    return iso.slice(0, 10);
+    return formatIsoDate(iso, this.languageService.currentLang());
   }
 }
 

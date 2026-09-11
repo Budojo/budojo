@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\AthleteStatus;
 use App\Models\Athlete;
 use Carbon\CarbonImmutable;
 use Laravel\Sanctum\Sanctum;
@@ -88,6 +89,29 @@ it('isolates academies on age-bands aggregation', function (): void {
 
     expect(collect($payload['bands'])->sum('count'))->toBe(0);
     expect($payload['total'])->toBe(0);
+});
+
+it('counts only athletes who still train here (#1538)', function (): void {
+    // The chart describes who is on the mat. Counting the people who left
+    // inflates every band, and nothing on the page says it is doing that —
+    // the same defect the belt donut had, and the same answer the roster has
+    // given since #1403.
+    $user = userWithAcademy();
+
+    Athlete::factory()->for($user->academy)->create([
+        'date_of_birth' => '1990-01-01',
+        'status' => AthleteStatus::Active,
+    ]);
+    Athlete::factory()->for($user->academy)->create([
+        'date_of_birth' => '1992-01-01',
+        'status' => AthleteStatus::Inactive,
+    ]);
+
+    Sanctum::actingAs($user);
+    $payload = $this->getJson('/api/v1/stats/athletes/age-bands')->assertOk()->json('data');
+
+    expect(collect($payload['bands'])->sum('count'))->toBe(1)
+        ->and($payload['total'])->toBe(1);
 });
 
 it('rejects unauthenticated callers on age-bands endpoint', function (): void {

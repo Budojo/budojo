@@ -204,8 +204,10 @@ describe('DocumentsListComponent', () => {
     httpMock.expectOne((r) => r.url === '/api/v1/athletes/42/documents').flush({ data: [] });
 
     const cmp = fixture.componentInstance;
+    // Written for a reader since #1537, and still the calendar day the server
+    // recorded — the timestamp is truncated, not converted to local time.
     expect(cmp.cancelledOn(makeDoc({ deleted_at: '2026-04-20T10:00:00+00:00' }))).toBe(
-      '2026-04-20',
+      '20 April 2026',
     );
     expect(cmp.cancelledOn(makeDoc({ deleted_at: null }))).toBe(null);
     httpMock.verify();

@@ -60,6 +60,72 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.57.0',
+    date: '2026-09-11',
+    headline: {
+      en: 'Five things found by using it.',
+      it: 'Cinque cose trovate usandola.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '👋 "Add your first athlete" — with 33 already on the mat',
+          it: '👋 «Aggiungi il tuo primo atleta» — con 33 atleti in palestra',
+        },
+        bullets: [
+          {
+            en: 'You opened the athlete list and the whole first screen said "Getting started · 0 of 5 done — Add your first athlete". With 33 athletes, a year of attendance and a ledger of payments behind you. Those circles only ticked when you clicked them: no real action ever marked one. Create an athlete and "Add your first athlete" stayed exactly where it was, and the card stayed on the page until you closed it by hand.',
+            it: "Aprivi l'elenco atleti e la prima schermata, tutta intera, diceva «Per cominciare · 0 di 5 fatti — Aggiungi il tuo primo atleta». Con 33 atleti, un anno di presenze e un registro di pagamenti alle spalle. Quei pallini si spuntavano solo cliccandoci sopra: nessuna azione vera li segnava. Creavi un atleta e «Aggiungi il tuo primo atleta» restava lì, e la scheda restava sulla pagina finché non la chiudevi a mano.",
+          },
+          {
+            en: 'The list now looks at your gym: athletes on the roster, attendance recorded, payments taken — each one ticks itself. It works the same whether the data arrived through the app, a spreadsheet import or a restored backup, which is where it stung most. "Check your stats" still ticks by hand, because visiting a page leaves nothing to read back.',
+            it: "Adesso la lista guarda la palestra: se hai atleti il passo è fatto, se hai presenze è fatto, se hai pagamenti è fatto. Vale anche se i dati sono entrati da un'importazione o da un backup ripristinato — che è poi il caso in cui dava più fastidio. «Guarda le statistiche» resta da spuntare a mano, perché una visita non lascia tracce da leggere.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '📅 The dates that still spoke machine',
+          it: '📅 Le date che parlavano ancora da macchina',
+        },
+        bullets: [
+          {
+            en: 'Last release said the app writes dates one way. Four were left. The clearest sat on one page four lines apart: "Joined 15 January 2022" above, and 2026-01-31 in the payments table below. The other three: the payment history the ATHLETE sees, the date on a cancelled document, and the worst one — the promotion card an athlete shares on social media, where 2026-05-23 was painted straight onto the image.',
+            it: "Nel rilascio scorso avevamo detto che l'app scrive le date in un modo solo. Ne erano rimaste quattro. La più evidente stava sulla stessa pagina, a quattro righe di distanza: sopra «Iscritto il 15 gennaio 2022», sotto, nella tabella dei pagamenti, 2026-01-31. Le altre tre: la cronologia pagamenti che vede l'atleta, la data di un documento annullato, e — la peggiore — la card di promozione che l'atleta condivide sui social, dove 2026-05-23 veniva scritto direttamente sull'immagine.",
+          },
+          {
+            en: "All four are written to be read now. With one care taken: the date stays the day the server recorded, not converted into the reader's timezone. A payment at 23:00 on 31 January stays the 31st rather than becoming 1 February.",
+            it: "Ora sono tutte scritte per essere lette. Con un'attenzione: la data resta il giorno che il server ha registrato, non viene convertita nel fuso di chi guarda. Un pagamento delle 23:00 del 31 gennaio resta del 31, non diventa del 1° febbraio.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '✅ How many are on the mat tonight',
+          it: '✅ Quanti sono in palestra stasera',
+        },
+        bullets: [
+          {
+            en: 'The check-in never said. You ticked nineteen names out of thirty-three and then counted the ticks by eye, scrolling. The number is in the header now, beside the title — "Today\'s check-in · 29 present" — and follows the tally as you tick. Before anyone arrives it is not there: "0 present" is not information. On the phone the header stays put as you scroll, so the count comes with you.',
+            it: "Il check-in non l'ha mai detto. Spuntavi diciannove nomi su trentatré e poi li contavi a occhio, scorrendo. Adesso il numero è nell'intestazione, accanto al titolo — «Check-in di oggi · 29 presenti» — e segue la conta mentre spunti. Prima che arrivi qualcuno non c'è: «0 presenti» non è un'informazione. Su telefono l'intestazione resta in cima mentre scorri, quindi il numero ti segue.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '📊 The stats counted people who had left',
+          it: "📊 Le statistiche contavano chi se n'era andato",
+        },
+        bullets: [
+          {
+            en: 'Stats said "Across 40 athletes", the athlete list said "33 total". The difference was the inactive ones, and neither screen said so. The number was the smaller half: the BELT DONUT was built from the same 40, so a chart called "Academy at a glance" showed a distribution inflated by people who had stopped training. Same for the age bands. Both now count only who actually trains, and the caption says which: "Across 33 active athletes".',
+            it: "Stats diceva «Su 40 atleti», l'elenco atleti diceva «33 totali». La differenza erano gli atleti non più attivi, e nessuna delle due schermate lo diceva. Il guaio vero non era il numero: la ciambella delle cinture era costruita sugli stessi 40, quindi un grafico intitolato «L'accademia a colpo d'occhio» mostrava una distribuzione gonfiata da chi ha smesso. Stessa cosa per le fasce d'età. Ora entrambi contano solo chi si allena davvero, e la didascalia lo dice: «Su 33 atleti attivi».",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.56.0',
     date: '2026-09-11',
     headline: {

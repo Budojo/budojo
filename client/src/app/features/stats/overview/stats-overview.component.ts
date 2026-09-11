@@ -193,7 +193,13 @@ export class StatsOverviewComponent implements OnInit {
     this.errored.set(false);
 
     this.athleteService
-      .list({ page: 1 })
+      // Active only (#1538), the same answer the roster gives. `status` was
+      // omitted here, so "Academy at a glance" was a glance at everyone who
+      // has ever been on the roster — the belt distribution counted people
+      // who left, and the caption said 40 where the roster said 33. The
+      // roster settled this in #1403: "the roster answers 'who trains here',
+      // and someone who left is not part of that answer."
+      .list({ page: 1, status: 'active' })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (firstPage) => {
@@ -207,7 +213,7 @@ export class StatsOverviewComponent implements OnInit {
           // Fetch pages 2..lastPage with bounded concurrency.
           range(2, lastPage - 1)
             .pipe(
-              mergeMap((p) => this.athleteService.list({ page: p }), 4),
+              mergeMap((p) => this.athleteService.list({ page: p, status: 'active' }), 4),
               toArray(),
               takeUntilDestroyed(this.destroyRef),
             )

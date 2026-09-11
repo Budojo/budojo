@@ -18,10 +18,14 @@ use Illuminate\Database\Seeder;
  * 12-month window with deliberate gaps:
  *
  * - Active athletes: pay 10-12 of the last 12 months (random gaps)
- * - Suspended athletes: pay 6-8 of the last 12 months, no payments in
- *   the most recent month (mimics "stopped paying when paused")
  * - Inactive athletes: pay 4-6 of the last 12 months, no payments in
  *   the most recent 2-3 months (mimics "left the academy")
+ *
+ * There were three cases until #1427 retired `Suspended`. This file kept the
+ * third arm for four months and nobody noticed, because `match` only throws
+ * when it actually meets the missing case — and it did, on every
+ * `migrate:fresh --seed`, which is the one command a new environment runs
+ * first.
  *
  * `amount_cents` is snapshotted from the academy's monthly_fee_cents
  * — the same path the production POST /payments endpoint uses.
@@ -63,12 +67,10 @@ class DemoAcademyPaymentSeeder extends Seeder
         foreach ($athletes as $athlete) {
             $skipMonths = match ($athlete->status) {
                 AthleteStatus::Active => random_int(0, 2),
-                AthleteStatus::Suspended => random_int(4, 6),
                 AthleteStatus::Inactive => random_int(6, 8),
             };
             $skipMostRecent = match ($athlete->status) {
                 AthleteStatus::Active => 0,
-                AthleteStatus::Suspended => 1,
                 AthleteStatus::Inactive => random_int(2, 3),
             };
 
