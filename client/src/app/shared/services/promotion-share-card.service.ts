@@ -30,7 +30,12 @@ export interface PromotionShareCardInput {
   readonly fromBelt: Belt | null;
   readonly toBelt: Belt;
   readonly academyName: string;
-  readonly date: string; // YYYY-MM-DD
+  /**
+   * Already written for a reader, in their language (#1537) — `23 May 2026`,
+   * not `2026-05-23`. It is painted straight onto the card with `fillText`,
+   * so whatever arrives here is what gets shared.
+   */
+  readonly date: string;
 }
 
 /**

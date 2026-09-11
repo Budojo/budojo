@@ -83,7 +83,7 @@ export function datePickerFormatFor(lang: SupportedLanguage): string {
 }
 
 /**
- * A date a person reads, from an ISO `YYYY-MM-DD` (#1498).
+ * A date a person reads, from an ISO date **or timestamp** (#1498, #1537).
  *
  * `Joined 2024-09-01` was rendered straight from the API on the athlete's
  * page. An ISO date is a wire format: unambiguous for a machine, and read by
@@ -92,9 +92,22 @@ export function datePickerFormatFor(lang: SupportedLanguage): string {
  * Parsed field by field rather than through `new Date(iso)`, which reads a
  * bare `YYYY-MM-DD` as UTC midnight and can land on the previous day for
  * anyone west of Greenwich.
+ *
+ * **A timestamp is truncated, not converted** (#1537). The API sends `paid_at`
+ * and `deleted_at` as full ISO timestamps, and what those mean is a calendar
+ * day the server recorded — so `2026-01-31T23:00:00+00:00` is the 31st,
+ * including for a reader in Rome where the local clock says the 1st. Taking
+ * the date part of the string keeps that; converting to local time would move
+ * a payment into the next month. The `slice(0, 10)` calls this replaced were
+ * protecting the same property, and their comments said so — they just never
+ * went on to write the date for a person.
+ *
+ * Anything it cannot read comes back untouched, which is how #1537's first
+ * attempt was caught: a timestamp fell through this guard and the payment
+ * table would have grown a time of day.
  */
 export function formatIsoDate(iso: string, lang: SupportedLanguage): string {
-  const [y, m, d] = iso.split('-').map(Number);
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
   if (!y || !m || !d) return iso;
 
   return new Date(y, m - 1, d).toLocaleDateString(localeFor(lang), {

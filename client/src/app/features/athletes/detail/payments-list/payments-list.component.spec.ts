@@ -145,8 +145,10 @@ describe('PaymentsListComponent (#182 Surface 2)', () => {
     // 9500 cents → "€95.00". We assert the integer portion is present so
     // a future locale tweak doesn't churn this assertion.
     expect(marchRow.textContent).toContain('95');
-    // Calendar date prefix only — no timezone shift.
-    expect(marchRow.textContent).toContain('2026-03-05');
+    // Written for a reader since #1537 — and still the calendar day the
+    // server recorded, because the timestamp is truncated rather than
+    // converted (23:00 UTC on the 31st must not become the 1st in Rome).
+    expect(marchRow.textContent).toContain('5 March 2026');
   });
 
   it('hides edit buttons on every row when the academy has no monthly fee', () => {
@@ -354,7 +356,7 @@ describe('PaymentsListComponent — billing periods (#1382)', () => {
 
     const row = fixture.nativeElement.querySelector('[data-cy="payment-row-3"]');
     expect(row.textContent).toContain('95');
-    expect(row.textContent).toContain(`${YEAR}-03-05`);
+    expect(row.textContent).toContain(`5 March ${YEAR}`);
     expect(fixture.nativeElement.querySelector('[data-cy="payment-period-3"]')).toBeNull();
   });
 

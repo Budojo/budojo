@@ -16,7 +16,7 @@ import { AthletePayment, PaymentService } from '../../core/services/payment.serv
 import { Carnet, CarnetService } from '../../core/services/carnet.service';
 import { LanguageService } from '../../core/services/language.service';
 import { activeCarnetOf } from '../../shared/utils/active-carnet';
-import { localeFor } from '../../shared/utils/locale';
+import { formatIsoDate, localeFor } from '../../shared/utils/locale';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 /**
@@ -182,13 +182,13 @@ export class MyPaymentsComponent implements OnInit {
   }
 
   /**
-   * Calendar-date-only display for `paid_at` — slices the YYYY-MM-DD
-   * prefix from the ISO timestamp instead of piping through `DatePipe`
-   * which (a) parses the ISO as UTC and can shift the day, (b) shows
-   * the time-of-day which is noise for a payment ledger. Mirrors
+   * Calendar-date-only display for `paid_at`, in the reader's language
+   * (#1537). Still not `DatePipe`: that parses the ISO as UTC and can shift
+   * the day, and shows a time of day that is noise on a ledger.
+   * `formatIsoDate` reads the fields directly and does neither. Mirrors
    * `PaymentsListComponent.formatPaidAt` (Copilot review on #624).
    */
   protected formatPaidAt(iso: string): string {
-    return iso.slice(0, 10);
+    return formatIsoDate(iso, this.languageService.currentLang());
   }
 }
