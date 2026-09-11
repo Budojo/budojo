@@ -11,7 +11,6 @@ interface Cell {
   readonly bucket: 0 | 1 | 2 | 3 | 4; // intensity bucket
   readonly inWindow: boolean; // false for cells outside the data range (alignment padding)
   readonly tooltip: string; // localized, prebuilt for the <title>
-  readonly fill: string | null; // per-month hued fill color; null for bucket-0 cells (CSS default)
 }
 
 @Component({
@@ -25,22 +24,6 @@ interface Cell {
 export class AttendanceHeatmapComponent {
   private readonly translate = inject(TranslateService);
   private readonly languageService = inject(LanguageService);
-
-  /** One hue per calendar month (index 0 = Jan … 11 = Dec). */
-  private static readonly MONTH_HUES: readonly string[] = [
-    '#5b6cff', // Jan — primary blue
-    '#7c4dff', // Feb — violet
-    '#26a69a', // Mar — teal
-    '#66bb6a', // Apr — green
-    '#9ccc65', // May — lime
-    '#ffca28', // Jun — amber
-    '#ffa726', // Jul — orange
-    '#ef5350', // Aug — red
-    '#ec407a', // Sep — pink
-    '#ab47bc', // Oct — purple
-    '#5c6bc0', // Nov — indigo
-    '#42a5f5', // Dec — light blue
-  ];
 
   readonly points = input.required<readonly DailyAttendancePoint[]>();
   readonly windowStart = input.required<Date>();
@@ -96,7 +79,6 @@ export class AttendanceHeatmapComponent {
           bucket,
           inWindow,
           tooltip,
-          fill: this.fillFor(cellDate, bucket),
         });
         cursor.setDate(cursor.getDate() + 1);
       }
@@ -141,15 +123,5 @@ export class AttendanceHeatmapComponent {
     if (count <= 5) return 2;
     if (count <= 10) return 3;
     return 4;
-  }
-
-  private fillFor(date: Date, bucket: 0 | 1 | 2 | 3 | 4): string | null {
-    // Bucket 0 returns null so [attr.fill]="null" removes the attribute from
-    // the <rect>, letting the CSS-defined fill on .heatmap__cell take over.
-    // That CSS fill uses a --p-surface-200 token, which adapts to dark mode.
-    if (bucket === 0) return null;
-    const hue = AttendanceHeatmapComponent.MONTH_HUES[date.getMonth()];
-    const alphas = ['', '40', '80', 'bf', ''] as const;
-    return `${hue}${alphas[bucket]}`;
   }
 }
