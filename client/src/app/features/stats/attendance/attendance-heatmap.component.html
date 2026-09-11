@@ -37,7 +37,12 @@
             width="11"
             height="11"
             rx="2"
-            [class]="'heatmap__cell heatmap__cell--b' + cell.bucket"
+            class="heatmap__cell"
+            [class.heatmap__cell--b0]="cell.bucket === 0"
+            [class.heatmap__cell--b1]="cell.bucket === 1"
+            [class.heatmap__cell--b2]="cell.bucket === 2"
+            [class.heatmap__cell--b3]="cell.bucket === 3"
+            [class.heatmap__cell--b4]="cell.bucket === 4"
             [class.heatmap__cell--out]="!cell.inWindow"
           >
             <title>{{ cell.tooltip }}</title>
