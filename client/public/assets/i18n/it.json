@@ -1559,7 +1559,9 @@
         "cancel": "Annulla",
         "create": "Aggiungi lezione",
         "save": "Salva",
-        "remove": "Rimuovi lezione"
+        "remove": "Rimuovi lezione",
+        "nameRequired": "Dai un nome alla lezione.",
+        "dayRequired": "Scegli un giorno."
       },
       "kind": {
         "gi": "Gi",

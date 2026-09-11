@@ -339,6 +339,15 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private loadEpoch = 0;
 
+  /**
+   * The attendance fetch keeps its own counter (#1562). It used to share
+   * `loadEpoch`, so any roster-only reload — a search keystroke — bumped it
+   * and silently dropped the day's records if they were still in flight; a
+   * chip tap would have done the same to the roster. Two questions, two
+   * counters: each response is measured against the one that asked it.
+   */
+  private attendanceEpoch = 0;
+
   // ── Search + filters (#184) ────────────────────────────────────────────────
   // Mirrors the athletes-list filter strip — same shape, same debounce
   // pipeline. Filter parameters are forwarded to the SAME paginated
@@ -502,6 +511,7 @@ export class DailyAttendanceComponent implements OnInit {
   protected loadDay(): void {
     this.loading.set(true);
     const epoch = ++this.loadEpoch;
+    const attendanceEpoch = ++this.attendanceEpoch;
 
     let pending = 2;
     const settle = (): void => {
@@ -519,12 +529,12 @@ export class DailyAttendanceComponent implements OnInit {
     // epoch-gated, so a date change while the timetable is still loading
     // cannot land a stale day's records.
     this.withClasses(() => {
-      if (epoch === this.loadEpoch) {
+      if (attendanceEpoch === this.attendanceEpoch) {
         this.selectedClassId.set(
           pickDefaultClass(this.dayClasses(), this.selectedDate(), new Date())?.id ?? null,
         );
       }
-      this.fetchAttendance(epoch, settle);
+      this.fetchAttendance(attendanceEpoch, settle);
     });
   }
 
@@ -620,7 +630,7 @@ export class DailyAttendanceComponent implements OnInit {
     const classId = this.selectedClassId() ?? undefined;
     this.attendanceService.getDaily(date, { classId }).subscribe({
       next: (records) => {
-        if (epoch === this.loadEpoch) {
+        if (epoch === this.attendanceEpoch) {
           const map = new Map<number, number>();
           const selfSet = new Set<number>();
           for (const r of records) {
@@ -633,7 +643,7 @@ export class DailyAttendanceComponent implements OnInit {
         settle();
       },
       error: () => {
-        if (epoch === this.loadEpoch) {
+        if (epoch === this.attendanceEpoch) {
           this.toastError(this.translate.instant('attendance.daily.toast.loadAttendanceError'));
         }
         settle();
@@ -661,7 +671,12 @@ export class DailyAttendanceComponent implements OnInit {
    * already in flight.
    */
   protected togglePresent(athlete: Athlete): void {
-    if (this.isInflight(athlete.id)) {
+    // Not while the day is still loading (#1562): before the timetable has
+    // answered, `selectedClassId` is null and a tap would record a
+    // class-less presence on a day that has classes — a row that then shows
+    // as present in every one of them. The table is dimmed and the phone
+    // shows skeletons meanwhile, so the refusal is visible, not silent.
+    if (this.loading() || this.isInflight(athlete.id)) {
       return;
     }
     const existingRecordId = this.presentMap().get(athlete.id);
@@ -766,7 +781,7 @@ export class DailyAttendanceComponent implements OnInit {
 
   /** A chip tap: same day, different lesson — only the records move. */
   protected selectClass(id: number): void {
-    if (id === this.selectedClassId() || this.anyInflight()) {
+    if (id === this.selectedClassId() || this.anyInflight() || this.loading()) {
       return;
     }
     this.selectedClassId.set(id);
@@ -787,9 +802,9 @@ export class DailyAttendanceComponent implements OnInit {
    */
   private loadAttendanceOnly(): void {
     this.loading.set(true);
-    const epoch = ++this.loadEpoch;
+    const epoch = ++this.attendanceEpoch;
     this.fetchAttendance(epoch, () => {
-      if (epoch === this.loadEpoch) {
+      if (epoch === this.attendanceEpoch) {
         this.loading.set(false);
       }
     });

@@ -1559,7 +1559,9 @@
         "cancel": "Cancel",
         "create": "Add class",
         "save": "Save",
-        "remove": "Remove class"
+        "remove": "Remove class",
+        "nameRequired": "Give the class a name.",
+        "dayRequired": "Pick a day."
       },
       "kind": {
         "gi": "Gi",

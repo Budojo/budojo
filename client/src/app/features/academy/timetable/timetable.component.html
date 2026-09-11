@@ -139,8 +139,22 @@
         maxlength="60"
         autocomplete="off"
         [placeholder]="'academy.timetable.form.namePlaceholder' | translate"
+        [class.ng-invalid]="nameError()"
+        [class.ng-dirty]="nameError()"
+        [attr.aria-invalid]="nameError() ? 'true' : null"
+        [attr.aria-describedby]="nameError() ? 'class-name-error' : null"
         data-cy="timetable-form-name"
       />
+      @if (nameError()) {
+        <small
+          id="class-name-error"
+          class="field__error"
+          role="alert"
+          data-cy="timetable-form-name-error"
+        >
+          {{ 'academy.timetable.form.nameRequired' | translate }}
+        </small>
+      }
     </div>
 
     <div class="field">
@@ -156,6 +170,16 @@
         dataCyPrefix="timetable-form-day-"
         (valueChange)="setDay($event[0] ?? null)"
       />
+      @if (dayError()) {
+        <small
+          id="class-day-error"
+          class="field__error"
+          role="alert"
+          data-cy="timetable-form-day-error"
+        >
+          {{ 'academy.timetable.form.dayRequired' | translate }}
+        </small>
+      }
     </div>
 
     <div class="class-form__row">
@@ -252,7 +276,7 @@
           (editing() ? 'academy.timetable.form.save' : 'academy.timetable.form.create') | translate
         "
         [loading]="saving()"
-        [disabled]="form.invalid || saving()"
+        [disabled]="saving()"
         [fluid]="true"
         (onClick)="submit()"
         data-cy="timetable-form-save"

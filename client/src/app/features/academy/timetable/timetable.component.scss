@@ -299,6 +299,14 @@
     color: var(--p-text-muted-color);
   }
 
+  // Same shape as the academy form's field error: small, danger, under the
+  // control it explains.
+  &__error {
+    font-size: 0.75rem;
+    color: var(--budojo-danger);
+    line-height: 1.5;
+  }
+
   input[type='time'] {
     width: 100%;
   }

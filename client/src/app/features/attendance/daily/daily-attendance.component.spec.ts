@@ -883,8 +883,67 @@ describe('DailyAttendanceComponent', () => {
       ) as NodeListOf<HTMLButtonElement>;
       // Wednesday's class is not today's.
       expect(chips.length).toBe(2);
-      expect(chips[0].getAttribute('aria-pressed')).toBe('false');
-      expect(chips[1].getAttribute('aria-pressed')).toBe('true');
+      expect(chips[0].getAttribute('aria-checked')).toBe('false');
+      expect(chips[1].getAttribute('aria-checked')).toBe('true');
+      expect(chips[1].getAttribute('role')).toBe('radio');
+    });
+
+    it('ignores a row tap before the timetable has answered — a mark must know its class', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      httpMock.expectOne((r) => r.url === '/api/v1/athletes').flush(emptyPage());
+
+      // The roster is on screen, the classes are not back yet.
+      component['togglePresent'](makeAthlete({ id: 1 }));
+
+      httpMock.expectNone((r) => r.url === '/api/v1/attendance' && r.method === 'POST');
+      expect(component['isPresent'](1)).toBe(false);
+
+      httpMock.expectOne('/api/v1/academy/classes').flush({ data: [KIDS, FUNDAMENTALS] });
+      httpMock.expectOne((r) => r.url === '/api/v1/attendance').flush({ data: [] });
+      expect(component['loading']()).toBe(false);
+    });
+
+    it('ignores a chip tap while the day is still loading', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      // The timetable answers first; the roster is still in flight.
+      httpMock.expectOne('/api/v1/academy/classes').flush({ data: [KIDS, FUNDAMENTALS] });
+      const records = httpMock.expectOne((r) => r.url === '/api/v1/attendance');
+
+      component['selectClass'](KIDS.id);
+
+      expect(component['selectedClassId']()).toBe(FUNDAMENTALS.id);
+      records.flush({ data: [] });
+      httpMock
+        .expectOne((r) => r.url === '/api/v1/athletes')
+        .flush({
+          data: [makeAthlete({ id: 1 })],
+          links: { first: null, last: null, prev: null, next: null },
+          meta: { current_page: 1, from: 1, last_page: 1, path: '', per_page: 20, to: 1, total: 1 },
+        });
+      expect(component['athletes']().length).toBe(1);
+      expect(component['loading']()).toBe(false);
+    });
+
+    it('does not drop the records when the roster reloads while they are in flight', () => {
+      const { fixture, component, httpMock } = setup();
+      fixture.detectChanges();
+      flushInit(httpMock, { classes: [KIDS, FUNDAMENTALS] });
+
+      component['selectClass'](KIDS.id);
+      const records = httpMock.expectOne((r) => r.url === '/api/v1/attendance');
+      // A search keystroke: roster-only reload, while the records are loading.
+      component['applySearch']('mar');
+      const roster = httpMock.expectOne((r) => r.url === '/api/v1/athletes');
+
+      records.flush({ data: [{ id: 5, athlete_id: 1, lesson_id: 3, attended_on: '2026-09-14' }] });
+      roster.flush(emptyPage());
+
+      // The two fetches answer two different questions; one must not
+      // invalidate the other.
+      expect(component['isPresent'](1)).toBe(true);
+      expect(component['loading']()).toBe(false);
     });
 
     it('sends the selected class with every mark', () => {

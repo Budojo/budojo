@@ -51,9 +51,11 @@ class MarkAttendanceRequest extends FormRequest
             'athlete_ids.*' => ['integer', 'exists:athletes,id', 'distinct'],
             // Which class the presence goes into (#1562). Optional, and
             // absent on every academy that has no timetable — then the row
-            // is a presence on a day, as before. Shape here, ownership in
-            // the controller, the same split as `athlete_ids`.
-            'academy_class_id' => ['sometimes', 'nullable', 'integer', 'exists:academy_classes,id'],
+            // is a presence on a day, as before. Shape here; existence AND
+            // ownership in the controller, as one 403: an `exists` rule here
+            // would answer 422 for an id nobody has and 403 for another
+            // academy's, and the difference tells a caller which ids exist.
+            'academy_class_id' => ['sometimes', 'nullable', 'integer'],
         ];
     }
 

@@ -53,10 +53,11 @@ class MarkAttendanceAction
      * unit of idempotency becomes (athlete, date, lesson): the same athlete
      * can be in the kids' class at 17:00 and the adults' at 19:00, and that is
      * two rows. A presence recorded on the day with no lesson — every row
-     * from before the timetable existed, and any day the academy has no
-     * class — still counts as "already present" for every class of that day,
-     * so a Monday from last spring does not read as empty once Monday has a
-     * timetable. Without a class, nothing changes from before.
+     * from before the timetable existed, any day the academy has no class,
+     * and the athlete's own self-mark, which knows no class — still counts as
+     * "already present" for every class of that day, so a Monday from last
+     * spring does not read as empty once Monday has a timetable. Without a
+     * class, nothing changes from before.
      *
      * @param  list<int>  $athleteIds
      * @return Collection<int, AttendanceRecord>

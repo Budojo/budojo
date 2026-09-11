@@ -142,12 +142,32 @@ it('refuses a class that belongs to another academy', function (): void {
         ->and(AttendanceRecord::count())->toBe(0);
 });
 
-it('rejects a class that does not exist', function (): void {
+it('answers a class that does not exist exactly like a foreign one', function (): void {
+    // One 403 for "not yours" and "not anyone's" alike: a 422 on the second
+    // would tell a caller which ids exist somewhere.
     $this->actingAs($this->user)->postJson('/api/v1/attendance', [
         'date' => '2026-09-14',
         'athlete_ids' => [$this->mario->id],
         'academy_class_id' => 999_999,
+    ])->assertForbidden();
+
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/attendance?date=2026-09-14&academy_class_id=999999')
+        ->assertForbidden();
+
+    expect(AttendanceRecord::count())->toBe(0);
+});
+
+it('still refuses a class id that is not a number', function (): void {
+    $this->actingAs($this->user)->postJson('/api/v1/attendance', [
+        'date' => '2026-09-14',
+        'athlete_ids' => [$this->mario->id],
+        'academy_class_id' => 'kids',
     ])->assertStatus(422)->assertJsonValidationErrors('academy_class_id');
+
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/attendance?date=2026-09-14&academy_class_id=kids')
+        ->assertStatus(422);
 });
 
 // ─── GET with a class ────────────────────────────────────────────────────────

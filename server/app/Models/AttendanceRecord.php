@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * @property int                 $id
  * @property int                 $athlete_id
- * @property int|null            $lesson_id    Which lesson this presence belongs to (#1562); null for a presence on a day with no class
+ * @property int|null            $lesson_id    Which lesson this presence belongs to (#1562); null when it was recorded without one — before the timetable, on a day with no class, or by the athlete's self-mark
  * @property \Carbon\Carbon      $attended_on
  * @property string|null         $notes
  * @property AttendanceSource    $source
@@ -47,9 +47,12 @@ class AttendanceRecord extends Model
     }
 
     /**
-     * The lesson this presence was recorded into (#1562). Null on every row
-     * that predates the timetable and on any day the academy has no class —
-     * a presence on a day, which is all a row here ever was before.
+     * The lesson this presence was recorded into (#1562). Null when the
+     * presence was recorded without one: every row that predates the
+     * timetable, any day the academy has no class, and the athlete's own
+     * self-mark (`POST /me/attendance/today`), which knows no class. A
+     * presence on a day, which is all a row here ever was before — and
+     * which reads as present in every class of that day.
      *
      * @return BelongsTo<Lesson, $this>
      */

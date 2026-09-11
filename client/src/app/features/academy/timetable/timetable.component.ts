@@ -113,6 +113,15 @@ export class TimetableComponent {
   /** The day picked in the form — a signal because the picker takes a list. */
   protected readonly selectedDay = signal<number | null>(null);
 
+  /**
+   * The two things a class cannot do without, said next to the field when
+   * Save is pressed without them. A disabled Save with no reason is a grey
+   * button and a question (Norman: the constraint has to be explained at the
+   * control); so Save stays pressable and the press explains itself.
+   */
+  protected readonly nameError = signal<boolean>(false);
+  protected readonly dayError = signal<boolean>(false);
+
   protected readonly form = this.fb.group({
     name: this.fb.control<string>('', {
       nonNullable: true,
@@ -214,6 +223,12 @@ export class TimetableComponent {
 
   constructor() {
     this.load();
+
+    // Typing a name is the fix for "give it a name" — the message goes as
+    // soon as the fix starts, not on the next failed Save.
+    this.form.controls.name.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.nameError.set(false));
   }
 
   /** Open the form empty — or with the day already chosen, from a day's "+". */
@@ -221,6 +236,7 @@ export class TimetableComponent {
     this.editing.set(null);
     this.form.reset({ name: '', weekday, starts_at: '', duration_minutes: null, kind: 'gi' });
     this.selectedDay.set(weekday);
+    this.clearErrors();
     this.dialogOpen.set(true);
   }
 
@@ -234,6 +250,7 @@ export class TimetableComponent {
       kind: c.kind,
     });
     this.selectedDay.set(c.weekday);
+    this.clearErrors();
     this.dialogOpen.set(true);
   }
 
@@ -244,12 +261,15 @@ export class TimetableComponent {
   protected setDay(weekday: number | null): void {
     this.selectedDay.set(weekday);
     this.form.controls.weekday.setValue(weekday);
-    this.form.controls.weekday.markAsTouched();
+    this.dayError.set(false);
   }
 
   protected submit(): void {
-    if (this.form.invalid || this.saving()) {
-      this.form.markAllAsTouched();
+    if (this.saving()) return;
+
+    if (this.form.invalid) {
+      this.nameError.set(this.form.controls.name.invalid);
+      this.dayError.set(this.form.controls.weekday.invalid);
       return;
     }
 
@@ -319,6 +339,11 @@ export class TimetableComponent {
     const hh = String(Math.floor(end / 60)).padStart(2, '0');
     const mm = String(end % 60).padStart(2, '0');
     return `${c.starts_at} – ${hh}:${mm}`;
+  }
+
+  private clearErrors(): void {
+    this.nameError.set(false);
+    this.dayError.set(false);
   }
 
   private remove(id: number): void {

@@ -8292,10 +8292,12 @@ components:
           format: int64
           nullable: true
           description: |
-            Which lesson the presence was recorded into (#1562). Null on
-            every row from before the timetable existed and on any day
-            with no class — a presence on a day, which is all a row ever
-            was before.
+            Which lesson the presence was recorded into (#1562). Null when
+            the presence was recorded without one: every row from before
+            the timetable existed, any day with no class, and the athlete's
+            own self-mark (`POST /me/attendance/today`), which knows no
+            class. A class-less row reads as present in every class of its
+            day.
         attended_on:
           type: string
           format: date
@@ -8377,8 +8379,10 @@ components:
             The class this check-in is for (#1562). The server creates the
             day's lesson on the first mark and reuses it after. Omit on an
             academy with no timetable and on a day with no class — the row is
-            then a presence on the day, as before. A class from another
-            academy is a 403; one that does not exist is a 422.
+            then a presence on the day, as before. A class that is not the
+            academy's own — another academy's, or one that does not exist —
+            is a 403 either way, so the endpoint cannot be used to learn
+            which ids exist. A value that is not an integer is a 422.
 
     AttendanceSummaryRow:
       type: object

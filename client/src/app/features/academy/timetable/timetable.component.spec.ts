@@ -191,7 +191,15 @@ describe('TimetableComponent (#1562)', () => {
     component['submit']();
 
     httpMock.expectNone(CLASSES_URL);
-    expect(component['form'].controls.name.touched).toBe(true);
+    // Save stays pressable; the press says what is missing, at the field.
+    expect(component['nameError']()).toBe(true);
+    expect(component['dayError']()).toBe(true);
+
+    // Starting to fix either one takes its message away.
+    component['form'].controls.name.setValue('Kids');
+    expect(component['nameError']()).toBe(false);
+    component['setDay'](2);
+    expect(component['dayError']()).toBe(false);
   });
 
   it('edits a class in place with a PATCH', () => {

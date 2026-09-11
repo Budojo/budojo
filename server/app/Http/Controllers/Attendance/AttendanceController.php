@@ -249,9 +249,11 @@ class AttendanceController extends Controller
     /**
      * The class a check-in is for (#1562), or null when none was asked for.
      *
-     * A class from another academy is a Forbidden, like an athlete from
-     * another academy — not a Not Found, which would confirm the id exists
-     * somewhere. Malformed input is the caller's mistake and says so.
+     * A class that is not one of this academy's — another academy's, or no
+     * one's at all — is one Forbidden, like an athlete from another academy.
+     * The two cases must not be told apart, or the answer says which ids
+     * exist somewhere; that is also why the FormRequest carries no `exists`
+     * rule for it. Malformed input is the caller's mistake and says so.
      */
     private function classFor(Academy $academy, mixed $raw): AcademyClass|JsonResponse|null
     {

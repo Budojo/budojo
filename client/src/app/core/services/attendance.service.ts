@@ -18,9 +18,10 @@ export interface AttendanceRecord {
   id: number;
   athlete_id: number;
   /**
-   * Which lesson the presence was recorded into (#1562). Null on every row
-   * from before the timetable existed and on any day with no class — a
-   * presence on a day, which is all a row ever was before.
+   * Which lesson the presence was recorded into (#1562). Null when it was
+   * recorded without one: every row from before the timetable existed, any
+   * day with no class, and the athlete's own self-mark, which knows no
+   * class. A class-less row shows as present in every class of its day.
    */
   lesson_id: number | null;
   attended_on: string; // YYYY-MM-DD

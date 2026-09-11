@@ -74,18 +74,24 @@
     the timetable existed.
   -->
   @if (dayClasses().length > 1) {
+    <!--
+      Radios, not toggles: exactly one class is on, so the row is a radio
+      group for assistive tech — the same semantics the weekday picker
+      carries in single-select mode.
+    -->
     <div
       class="attendance__classes"
-      role="group"
+      role="radiogroup"
       [attr.aria-label]="'attendance.daily.classPicker.aria' | translate"
       data-cy="attendance-class-picker"
     >
       @for (c of dayClasses(); track c.id) {
         <button
           type="button"
+          role="radio"
           class="class-chip"
           [class.class-chip--on]="c.id === selectedClassId()"
-          [attr.aria-pressed]="c.id === selectedClassId()"
+          [attr.aria-checked]="c.id === selectedClassId()"
           [disabled]="anyInflight()"
           (click)="selectClass(c.id)"
           [attr.data-cy]="'attendance-class-' + c.id"
