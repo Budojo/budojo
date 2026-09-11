@@ -26,6 +26,8 @@ import {
   DocumentService,
   DocumentType,
 } from '../../../../core/services/document.service';
+import { LanguageService } from '../../../../core/services/language.service';
+import { formatIsoDate } from '../../../../shared/utils/locale';
 
 /**
  * Explicit allow-list of `documents.types.*` translation keys per
@@ -73,6 +75,7 @@ export class DocumentsListComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
   private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly documents = signal<Document[]>([]);
@@ -115,9 +118,10 @@ export class DocumentsListComponent implements OnInit {
 
   cancelledOn(doc: Document): string | null {
     if (!doc.deleted_at) return null;
-    // Render the first 10 chars of ISO timestamp → YYYY-MM-DD, server already
-    // emits ISO-8601 so no timezone conversion needed for a calendar date.
-    return doc.deleted_at.slice(0, 10);
+    // In the reader's language (#1537), not the raw ISO prefix. Still no
+    // timezone conversion: `formatIsoDate` reads the fields rather than
+    // parsing the string into a `Date`.
+    return formatIsoDate(doc.deleted_at, this.languageService.currentLang());
   }
 
   confirmDelete(event: MouseEvent, doc: Document): void {
