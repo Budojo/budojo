@@ -6,6 +6,7 @@ namespace App\Actions\Search;
 
 use App\Models\Academy;
 use App\Models\Athlete;
+use App\Support\NameFold;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -64,10 +65,13 @@ class SearchAcademyAction
             if ($token === '') {
                 continue;
             }
-            $like = '%' . $token . '%';
+            // Folded on both sides (#1527) — the palette has to find
+            // `Ângelo` for someone typing `angelo`, which is how the owner
+            // spells it when they are in a hurry.
+            $like = '%' . NameFold::fold($token) . '%';
             $builder->where(function ($qb) use ($like): void {
-                $qb->where('first_name', 'LIKE', $like)
-                    ->orWhere('last_name', 'LIKE', $like);
+                $qb->where('first_name_sort', 'LIKE', $like)
+                    ->orWhere('last_name_sort', 'LIKE', $like);
             });
         }
 
@@ -101,8 +105,8 @@ class SearchAcademyAction
         // SPA's keyboard navigation depends on a stable order so "first
         // result" means the same row across re-fetches of the same query.
         return $builder
-            ->orderBy('last_name')
-            ->orderBy('first_name')
+            ->orderBy('last_name_sort')
+            ->orderBy('first_name_sort')
             ->orderBy('id')
             ->limit(self::MAX_RESULTS)
             ->get();

@@ -466,6 +466,31 @@ Grouped-list feel: no vertical borders, hairline horizontal dividers, row hover 
 }
 ```
 
+**Sortable headers** use `<app-sort-header>` inside a `<th class="sort-th">`, never
+`pSortableColumn` + `<p-sortIcon>` — PrimeNG's plumbing hard-codes a 2-state cycle, and
+the name column needs four (which name leads, and the direction). The shared component
+carries the click target, the `↕ / F↑ / M↓` signifier and the tooltip; the page keeps
+`[attr.aria-sort]` on the `<th>`, since WAI-ARIA wants it on the header cell. The
+`.sort-th` rule (global, in `budojo-theme.scss`) zeroes the cell's padding so the button
+inside can take it and the whole cell becomes the target (Fitts) — it has to be global
+because the button belongs to a shared component and the `<th>` to the host page.
+
+```html
+<th class="sort-th" [attr.aria-sort]="nameAriaSort()">
+  <app-sort-header
+    [label]="'athletes.list.table.fullName' | translate"
+    [signifier]="nameSortLabel()"
+    [tooltip]="nameSortTooltip()"
+    dataCy="athletes-th-name"
+    (cycle)="cycleNameSort()"
+  />
+</th>
+```
+
+The cycles themselves live in `shared/utils/athlete-sort.ts`, and belt sorting is
+`<app-belt-sort-button>` in the filter row rather than a column — a `<th>` does not exist
+on the mobile card list (#1443, #1526).
+
 ### p-datepicker
 Inline calendar: rounded 12px, today = accent ring, selected = accent fill pill, weekday header muted. **Mobile** (≤599px): render as sheet via containing `p-dialog`, not floating overlay.
 

@@ -71,8 +71,9 @@ class GetExpiringDocumentsAction
         return $academy->athletes()
             ->where('status', AthleteStatus::Active->value)
             ->whereDoesntHave('documents', fn ($q) => $q->where('type', DocumentType::MedicalCertificate->value))
-            ->orderBy('first_name')
-            ->orderBy('last_name')
+            ->orderBy('first_name_sort')
+            ->orderBy('last_name_sort')
+            ->orderBy('id')
             ->limit(self::MAX_RESULTS)
             ->get();
     }

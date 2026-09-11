@@ -412,6 +412,23 @@
   color: var(--p-text-muted-color);
   padding: 12px 16px;
 }
+// A header cell that hands its padding to the `<app-sort-header>` button inside
+// it (#1526), so the whole cell is the click and focus target rather than just
+// the words in it (Fitts). It has to be global: the button belongs to a shared
+// component, the `<th>` belongs to whichever page drew the table, and a
+// component's styles cannot reach its host's parent.
+//
+// Two different rules have to be beaten, by two different mechanisms. The one
+// directly above is (0,2,2) and this is (0,3,2), so specificity settles it —
+// which is exactly what the per-component `.full-name-th { padding: 0 }` at
+// (0,1,0) failed to do for the four years it sat in `athletes-list`, leaving
+// that header 30px taller than every cell beside it. PrimeNG's own
+// `p-datatable-sm` header padding is beaten by being unlayered instead: it
+// lives in `@layer primeng`, and unlayered always wins over layered.
+.p-datatable .p-datatable-thead > tr > th.sort-th {
+  padding: 0;
+}
+
 .p-datatable .p-datatable-tbody > tr > td {
   border-bottom: 1px solid var(--p-content-border-color);
   padding: 12px 16px;

@@ -1,0 +1,21 @@
+@use '../../styles/toolbar-control' as toolbar;
+
+// `contents`, so the button itself is the flex item of whatever toolbar row
+// hosts it. A wrapper box here would size and wrap on its own, and these rows
+// are tuned control-by-control.
+:host {
+  display: contents;
+}
+
+.sort-toggle {
+  @include toolbar.toolbar-control;
+  @include toolbar.toolbar-control-labelled;
+
+  &--on {
+    @include toolbar.toolbar-control-on;
+  }
+}
+
+.sort-toggle__label {
+  @include toolbar.toolbar-control-label;
+}

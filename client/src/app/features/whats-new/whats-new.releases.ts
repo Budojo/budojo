@@ -60,6 +60,64 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.56.0',
+    date: '2026-09-11',
+    headline: {
+      en: 'Names go back where they belong.',
+      it: 'I nomi tornano al loro posto.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '🔤 "da Silva" is no longer at the bottom of the list',
+          it: '🔤 «da Silva» non sta più in fondo alla lista',
+        },
+        bullets: [
+          {
+            en: 'If you have a da Silva, a dos Santos or a de Souza on the mat — and anyone doing jiu jitsu does — you found them at the bottom of every list. After Z. Every time. The app ordered names by comparing letters the way a computer sees them, where a lower-case "d" comes AFTER an upper-case "Z". Same thing one step further out for Ângelo, Núñez and Öztürk: an accented letter landed past the end of the alphabet.',
+            it: "Se hai in palestra un da Silva, un dos Santos o un de Souza — e chi fa jiu jitsu ce l'ha — finora li trovavi in fondo a ogni elenco. Dopo la Z. Sempre. Il programma ordinava i nomi confrontando le lettere come le vede un computer, dove la «d» minuscola viene dopo la «Z» maiuscola. Stessa cosa, un gradino più in là, per Ângelo, Núñez e Öztürk: le lettere accentate finivano oltre la fine dell'alfabeto.",
+          },
+          {
+            en: 'And searching did not work either. You typed "angelo" and nobody came up, because as far as the app was concerned Ângelo did not contain angelo. Not even typing Ângelo with the circumflex — which nobody does when they are looking for a person. Names now sort and match the way they READ: da Silva sits with the D surnames, "angelo" finds Ângelo, "muller" finds Müller.',
+            it: "E cercarli non funzionava. Scrivevi «angelo» e non usciva nessuno, perché per il programma «Ângelo» non conteneva «angelo». Neanche scrivendo «Ângelo» con l'accento — che poi, chi lo scrive quando sta cercando una persona. Adesso i nomi si ordinano e si cercano come si leggono: «da Silva» sta tra i cognomi con la D, «angelo» trova «Ângelo», «muller» trova «Müller».",
+          },
+          {
+            en: 'It applies everywhere a name appears: the athlete list, the check-in, the monthly summary, quick search, expiring certificates, the unpaid-fees reminder. And on the leaderboard, where the fault did worse damage — the board shows only the top five, so an Ângelo tied on sessions was not last, he was left off. The spreadsheet import noticed too: if your file spells him Angelo and the roster already has an Ângelo, it now recognises the same person instead of adding them twice.',
+            it: "Vale ovunque compaia un nome: elenco atleti, check-in, riepilogo del mese, ricerca rapida, certificati in scadenza, promemoria delle quote non pagate. E in classifica, dove il difetto faceva un danno peggiore: la classifica mostra solo i primi cinque, quindi un «Ângelo» a pari merito non arrivava ultimo, veniva escluso. Anche l'importazione se n'è accorta: se il tuo foglio scrive «Angelo» senza accento e in palestra hai già un «Ângelo», ora riconosce che è la stessa persona invece di aggiungerla due volte.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '✅ The check-in sorts the way the athlete list sorts',
+          it: "✅ Il check-in si ordina come l'elenco atleti",
+        },
+        bullets: [
+          {
+            en: 'The two screens show the same people and put them in two different orders. The athlete list has had a Belt button for a while, and a Full name header that changes the ordering each time you click it — by first name, then by surname, forwards and back. The check-in had neither: a different, poorer sort on the header, and no way to order by belt at all.',
+            it: "Le due schermate mostrano le stesse persone, e le mettevano in ordine in due modi diversi. Sull'elenco atleti c'è da tempo il bottone «Cintura» e l'intestazione «Nome e cognome» che a ogni clic cambia ordinamento — prima per nome, poi per cognome, avanti e indietro. Sul check-in non c'era nessuna delle due: l'intestazione aveva un ordinamento diverso e più povero, e per cintura non si poteva ordinare affatto.",
+          },
+          {
+            en: 'Both are there now, identical, in the same place — and the check-in opens sorted by belt, highest first, the way the athlete list does. The Belt button sits in the filter row rather than inside the table, so it works on the phone too, where there is no table and you see cards.',
+            it: "Ora ci sono entrambe, identiche, nello stesso posto — e il check-in si apre ordinato per cintura, dalla più alta, come fa l'elenco atleti. Il bottone Cintura sta nella riga dei filtri e non dentro la tabella, così funziona anche da telefono, dove la tabella non c'è e si vedono le schede.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '📊 The monthly summary can be turned around',
+          it: '📊 Il riepilogo mensile si può girare',
+        },
+        bullets: [
+          {
+            en: 'The summary table listed everyone by attendance, most first. Useful — but that is one question, and the page is opened for the opposite one too: who has stopped coming. Both columns, Athlete and Days, now sort when you click them, and a button beside the filter flips the day order — that one works on the phone as well.',
+            it: "La tabella del riepilogo mostrava tutti in ordine di presenze, dalle più alte. Utile — ma è una domanda sola, e quella pagina si apre anche per l'opposto: chi ha smesso di venire. Adesso entrambe le colonne, «Atleta» e «Giorni», si ordinano cliccandoci sopra, e un bottone accanto al filtro inverte l'ordine dei giorni — quello funziona anche da telefono.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.55.1',
     date: '2026-09-10',
     headline: {

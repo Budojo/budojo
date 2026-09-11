@@ -28,11 +28,18 @@ $summary-mobile-breakpoint: 768px;
     gap: 0.25rem;
   }
 
+  // Search plus the days sort (#1526). `align-items: center` because the two
+  // are different heights, `flex-wrap` because at 375px they do not share a
+  // line once the sort control takes its square.
   &__filter {
     display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 
     input {
-      width: 100%;
+      flex: 1 1 auto;
+      min-width: 0;
       max-width: 24rem;
     }
   }

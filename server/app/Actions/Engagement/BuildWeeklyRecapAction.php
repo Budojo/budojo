@@ -77,7 +77,10 @@ class BuildWeeklyRecapAction
             ->selectRaw('partner.id, partner.first_name, partner.last_name, COUNT(DISTINCT attendance_records.attended_on) as overlap')
             ->groupBy('partner.id', 'partner.first_name', 'partner.last_name')
             ->orderByDesc('overlap')
-            ->orderBy('partner.first_name')
+            // Same as the leaderboard (#1527): a `LIMIT` over a tied count
+            // makes the name collation decide who appears at all.
+            ->orderBy('partner.first_name_sort')
+            ->orderBy('partner.id')
             ->limit(self::MAX_PARTNERS)
             ->get()
             ->map(function (AttendanceRecord $row): array {

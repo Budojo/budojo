@@ -156,26 +156,16 @@
       belt was desktop-only for as long as it was a column. Here it sits in
       the row that renders at BOTH breakpoints, which is the same reasoning
       that put the eye and the bin here in #1432.
+
+      Shared with the daily check-in since #1526, which draws the same roster
+      and had no way to sort it by belt at all.
     -->
-    <button
-      type="button"
-      class="athletes-page__toggle"
-      [class.athletes-page__toggle--on]="sortField() === 'belt'"
-      [pTooltip]="beltSortTooltip()"
-      tooltipPosition="top"
-      [attr.aria-label]="beltSortTooltip()"
-      (click)="cycleBeltSort()"
-      data-cy="athletes-sort-belt"
-    >
-      <i
-        class="pi"
-        [class.pi-sort-alt]="sortField() !== 'belt'"
-        [class.pi-sort-amount-up-alt]="sortField() === 'belt' && sortOrder() === 'asc'"
-        [class.pi-sort-amount-down]="sortField() === 'belt' && sortOrder() === 'desc'"
-        aria-hidden="true"
-      ></i>
-      <span class="athletes-page__toggle-label">{{ 'athletes.list.table.belt' | translate }}</span>
-    </button>
+    <app-belt-sort-button
+      [field]="sortField()"
+      [order]="sortOrder()"
+      dataCy="athletes-sort-belt"
+      (cycle)="cycleBeltSort()"
+    />
 
     <!--
       Payment, as a cycling button rather than a select (#1446). Three
@@ -345,25 +335,14 @@
       >
         <ng-template pTemplate="header">
           <tr>
-            <th class="full-name-th" [attr.aria-sort]="fullNameAriaSort()">
-              <button
-                type="button"
-                class="full-name-th__btn"
-                data-cy="athletes-th-name"
-                [pTooltip]="fullNameSortTooltip()"
-                tooltipPosition="top"
-                (click)="cycleFullNameSort()"
-                [attr.aria-label]="fullNameSortTooltip()"
-              >
-                {{ 'athletes.list.table.fullName' | translate }}
-                <span
-                  class="full-name-th__signifier"
-                  [class.full-name-th__signifier--active]="fullNameSortLabel() !== null"
-                  aria-hidden="true"
-                >
-                  {{ fullNameSortLabel() ?? '↕' }}
-                </span>
-              </button>
+            <th class="sort-th" [attr.aria-sort]="fullNameAriaSort()">
+              <app-sort-header
+                [label]="'athletes.list.table.fullName' | translate"
+                [signifier]="fullNameSortLabel()"
+                [tooltip]="fullNameSortTooltip()"
+                dataCy="athletes-th-name"
+                (cycle)="cycleFullNameSort()"
+              />
             </th>
             <!--
               The Belt column left in #1443. The belt-coloured spine down the
@@ -379,25 +358,15 @@
               answer half of what it shows.
             -->
             @if (hasAttendanceCounts()) {
-              <th class="attendance-th" [attr.aria-sort]="attendanceAriaSort()">
-                <button
-                  type="button"
-                  class="attendance-th__btn"
-                  data-cy="athletes-th-attendance"
-                  [pTooltip]="attendanceSortTooltip()"
-                  tooltipPosition="top"
-                  (click)="cycleAttendanceSort()"
-                  [attr.aria-label]="attendanceSortTooltip()"
-                >
-                  {{ 'athletes.list.table.attendance' | translate }}
-                  <span
-                    class="attendance-th__signifier"
-                    [class.attendance-th__signifier--active]="attendanceSortLabel() !== null"
-                    aria-hidden="true"
-                  >
-                    {{ attendanceSortLabel() ?? '↕' }}
-                  </span>
-                </button>
+              <th class="sort-th" [attr.aria-sort]="attendanceAriaSort()">
+                <app-sort-header
+                  [label]="'athletes.list.table.attendance' | translate"
+                  [signifier]="attendanceSortLabel()"
+                  [tooltip]="attendanceSortTooltip()"
+                  align="end"
+                  dataCy="athletes-th-attendance"
+                  (cycle)="cycleAttendanceSort()"
+                />
               </th>
             }
             @if (hasMonthlyFee()) {

@@ -56,6 +56,25 @@ it('returns top 5 athletes ranked by session count desc', function (): void {
     expect(array_column($data, 'sessions'))->toBe([7, 5, 4, 3, 2]);
 });
 
+it('does not push an accented name off the board on a tie (#1527)', function (): void {
+    // The tiebreak decides MEMBERSHIP here, not just order: six athletes tied
+    // on sessions, five seats. Under the raw column `Ângelo` sorted past every
+    // ASCII name and was the one who lost his place — for a diacritic.
+    $names = ['Ângelo', 'Bruno', 'Carlo', 'Dario', 'Enzo', 'Fabio'];
+    foreach ($names as $name) {
+        [, $athlete] = makeLeaderboardAthlete($this->academy, 4);
+        $athlete->update(['first_name' => $name]);
+    }
+
+    $data = $this->actingAs($this->owner)
+        ->getJson('/api/v1/attendance/leaderboard')
+        ->assertOk()
+        ->json('data');
+
+    // A, B, C, D, E — Fabio is the one who misses out, alphabetically.
+    expect(array_column($data, 'first_name'))->toBe(['Ângelo', 'Bruno', 'Carlo', 'Dario', 'Enzo']);
+});
+
 it('caps at 5 even when more athletes are tied at the same threshold', function (): void {
     for ($i = 0; $i < 10; $i++) {
         makeLeaderboardAthlete($this->academy, 3);

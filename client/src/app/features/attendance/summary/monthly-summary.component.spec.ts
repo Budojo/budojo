@@ -102,7 +102,7 @@ describe('MonthlySummaryComponent', () => {
     http.verify();
   });
 
-  it('sorts rows by descending count for the table view', () => {
+  it('opens on descending count — the question the page is opened with', () => {
     const { http, setMonthParam } = setupTestBed();
     const fixture = TestBed.createComponent(MonthlySummaryComponent);
     fixture.detectChanges();
@@ -113,6 +113,141 @@ describe('MonthlySummaryComponent', () => {
       .flush({ data: [makeRow(1, 3), makeRow(2, 9), makeRow(3, 6)] });
 
     expect(fixture.componentInstance['displayRows']().map((r) => r.athlete_id)).toEqual([2, 3, 1]);
+    http.verify();
+  });
+
+  it('flips the days column to fewest-first — who has stopped coming (#1526)', () => {
+    const { http, setMonthParam } = setupTestBed();
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+
+    http
+      .expectOne('/api/v1/attendance/summary?month=2026-04')
+      .flush({ data: [makeRow(1, 3), makeRow(2, 9), makeRow(3, 6)] });
+
+    fixture.componentInstance['cycleDaysSort']();
+    expect(fixture.componentInstance['displayRows']().map((r) => r.athlete_id)).toEqual([1, 3, 2]);
+    expect(fixture.componentInstance['daysSortLabel']()).toBe('\u2191');
+
+    // Two presses return where they started.
+    fixture.componentInstance['cycleDaysSort']();
+    expect(fixture.componentInstance['displayRows']().map((r) => r.athlete_id)).toEqual([2, 3, 1]);
+    http.verify();
+  });
+
+  it('breaks a shared first name on the last name, in the same direction', () => {
+    const { http, setMonthParam } = setupTestBed();
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+
+    // Three Marios — the case the primary key cannot decide on its own, and
+    // the one every fixture above happens to avoid.
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      data: [
+        makeRow(1, 5, 'Mario', 'Rossi'),
+        makeRow(2, 3, 'Mario', 'Bianchi'),
+        makeRow(3, 7, 'Mario', 'Conti'),
+      ],
+    });
+
+    const ids = (): number[] => fixture.componentInstance['displayRows']().map((r) => r.athlete_id);
+
+    fixture.componentInstance['cycleNameSort']();
+    expect(ids()).toEqual([2, 3, 1]); // Bianchi, Conti, Rossi
+
+    // Descending flips the tiebreak with it — otherwise the block of Marios
+    // would keep its ascending order under a descending header.
+    fixture.componentInstance['cycleNameSort']();
+    expect(ids()).toEqual([1, 3, 2]);
+    http.verify();
+  });
+
+  it('breaks a tied day count on the last name, always ascending', () => {
+    const { http, setMonthParam } = setupTestBed();
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      data: [
+        makeRow(1, 4, 'Mario', 'Rossi'),
+        makeRow(2, 4, 'Luigi', 'Bianchi'),
+        makeRow(3, 4, 'Anna', 'Conti'),
+      ],
+    });
+
+    const ids = (): number[] => fixture.componentInstance['displayRows']().map((r) => r.athlete_id);
+
+    // Bianchi, Conti, Rossi — and the SAME order when the count direction
+    // flips, because a tiebreak that flipped too would reshuffle the tied
+    // block for no reason the reader asked for.
+    expect(ids()).toEqual([2, 3, 1]);
+    fixture.componentInstance['cycleDaysSort']();
+    expect(ids()).toEqual([2, 3, 1]);
+    http.verify();
+  });
+
+  it('cycles the athlete column first asc -> first desc -> last asc -> last desc', () => {
+    const { http, setMonthParam } = setupTestBed();
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      data: [
+        makeRow(1, 5, 'Mario', 'Rossi'),
+        makeRow(2, 3, 'Luigi', 'Bianchi'),
+        makeRow(3, 7, 'Anna', 'Verdi'),
+      ],
+    });
+
+    const ids = (): number[] => fixture.componentInstance['displayRows']().map((r) => r.athlete_id);
+
+    // The days column is the default, so the first press restarts the name
+    // cycle at first asc rather than continuing anything.
+    fixture.componentInstance['cycleNameSort']();
+    expect(ids()).toEqual([3, 2, 1]); // Anna, Luigi, Mario
+    expect(fixture.componentInstance['nameSortLabel']()).toBe('F\u2191');
+    expect(fixture.componentInstance['nameAriaSort']()).toBe('ascending');
+
+    fixture.componentInstance['cycleNameSort']();
+    expect(ids()).toEqual([1, 2, 3]);
+    expect(fixture.componentInstance['nameSortLabel']()).toBe('F\u2193');
+
+    fixture.componentInstance['cycleNameSort']();
+    expect(ids()).toEqual([2, 1, 3]); // Bianchi, Rossi, Verdi
+    expect(fixture.componentInstance['nameSortLabel']()).toBe('L\u2191');
+
+    fixture.componentInstance['cycleNameSort']();
+    expect(ids()).toEqual([3, 1, 2]);
+    expect(fixture.componentInstance['nameSortLabel']()).toBe('L\u2193');
+
+    // ...and the days header goes neutral while a name drives the sort.
+    expect(fixture.componentInstance['daysSortLabel']()).toBeNull();
+    expect(fixture.componentInstance['daysAriaSort']()).toBe('none');
+    http.verify();
+  });
+
+  it('keeps the filter and the order independent', () => {
+    const { http, setMonthParam } = setupTestBed();
+    const fixture = TestBed.createComponent(MonthlySummaryComponent);
+    fixture.detectChanges();
+    setMonthParam(null);
+
+    http.expectOne('/api/v1/attendance/summary?month=2026-04').flush({
+      data: [
+        makeRow(1, 5, 'Mario', 'Rossi'),
+        makeRow(2, 3, 'Marco', 'Bianchi'),
+        makeRow(3, 7, 'Luigi', 'Verdi'),
+      ],
+    });
+
+    fixture.componentInstance['nameFilter'].set('mar');
+    fixture.componentInstance['cycleDaysSort']();
+
+    expect(fixture.componentInstance['displayRows']().map((r) => r.athlete_id)).toEqual([2, 1]);
     http.verify();
   });
 

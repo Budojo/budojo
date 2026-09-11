@@ -1611,6 +1611,11 @@
       "table": {
         "athlete": "Athlete",
         "days": "Days"
+      },
+      "tooltip": {
+        "daysInitial": "Click to sort by days attended (most first)",
+        "daysDesc": "Sorted by days attended (most first). Click to flip.",
+        "daysAsc": "Sorted by days attended (fewest first). Click to flip."
       }
     }
   },
@@ -1636,21 +1641,12 @@
       },
       "table": {
         "fullName": "Full name",
-        "belt": "Belt",
         "status": "Status",
         "paidPrefix": "Paid",
         "payment": "Payment",
         "attendance": "Sessions"
       },
       "tooltip": {
-        "fullNameSortInitial": "Click to sort by first name (A → Z)",
-        "fullNameSortFirstAsc": "Sorted by first name (A → Z). Click to cycle.",
-        "fullNameSortFirstDesc": "Sorted by first name (Z → A). Click to cycle.",
-        "fullNameSortLastAsc": "Sorted by last name (A → Z). Click to cycle.",
-        "fullNameSortLastDesc": "Sorted by last name (Z → A). Click to cycle.",
-        "beltSortInitial": "Click to sort by belt rank (black → white)",
-        "beltSortAsc": "Sorted by belt (white → black). Click to flip.",
-        "beltSortDesc": "Sorted by belt (black → white). Click to flip.",
         "edit": "Edit",
         "editAria": "Edit {{name}}",
         "openMenuAria": "Open menu for {{name}}",
@@ -2278,6 +2274,17 @@
       "apply": "Apply",
       "reset": "Reset",
       "close": "Close"
+    },
+    "sort": {
+      "beltLabel": "Belt",
+      "beltInitial": "Click to sort by belt rank (black → white)",
+      "beltAsc": "Sorted by belt (white → black). Click to flip.",
+      "beltDesc": "Sorted by belt (black → white). Click to flip.",
+      "nameInitial": "Click to sort by first name (A → Z)",
+      "nameFirstAsc": "Sorted by first name (A → Z). Click to cycle.",
+      "nameFirstDesc": "Sorted by first name (Z → A). Click to cycle.",
+      "nameLastAsc": "Sorted by last name (A → Z). Click to cycle.",
+      "nameLastDesc": "Sorted by last name (Z → A). Click to cycle."
     }
   },
   "stats": {
