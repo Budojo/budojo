@@ -510,9 +510,11 @@ describe('DailyAttendanceComponent', () => {
 
     // ...and it follows a correction back down, because it reads the same map
     // every row reads.
-    httpMock.match((r) => r.url === '/api/v1/attendance').forEach((req) =>
-      req.flush({ data: [{ id: 99, athlete_id: 1, attended_on: '2026-04-24' }] }),
-    );
+    httpMock
+      .match((r) => r.url === '/api/v1/attendance')
+      .forEach((req) =>
+        req.flush({ data: [{ id: 99, athlete_id: 1, attended_on: '2026-04-24' }] }),
+      );
     component['optimisticRemove'](2);
     expect(component['presentCountLabel']()).toBe('1 present');
   });
