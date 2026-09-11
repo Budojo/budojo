@@ -121,7 +121,15 @@ describe('Weekly timetable', () => {
     cy.get('[data-cy="timetable-form-day-4"]').should('have.attr', 'aria-checked', 'true');
 
     cy.get('[data-cy="timetable-form-name"]').type('Advanced');
-    cy.get('[data-cy="timetable-form-time"]').type('20:00');
+    // Not `type()`: on a native time input it drives the browser's own
+    // hour / minute / AM-PM segments, and in Electron's en-US locale the
+    // value sometimes never reaches the control — green locally, red on
+    // #1574's CI with `starts_at: null`. Set the value the way the control
+    // reads it and fire the event Angular listens for.
+    cy.get('[data-cy="timetable-form-time"]')
+      .invoke('val', '20:00')
+      .trigger('input')
+      .should('have.value', '20:00');
     cy.get('[data-cy="timetable-form-duration"] input').clear().type('90');
     cy.get('[data-cy="timetable-form-kind"]').contains('No-gi').click();
 
@@ -163,7 +171,11 @@ describe('Weekly timetable', () => {
 
     cy.get('[data-cy="timetable-class-1"]').click();
     cy.get('[data-cy="timetable-form-name"]').should('have.value', 'Kids');
-    cy.get('[data-cy="timetable-form-time"]').should('have.value', '17:00').clear().type('17:30');
+    cy.get('[data-cy="timetable-form-time"]')
+      .should('have.value', '17:00')
+      .invoke('val', '17:30')
+      .trigger('input')
+      .should('have.value', '17:30');
     cy.get('[data-cy="timetable-form-save"]').click();
     cy.wait('@update');
     cy.wait('@classes');
