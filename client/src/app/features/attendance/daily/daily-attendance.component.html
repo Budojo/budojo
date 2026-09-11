@@ -22,7 +22,7 @@
 </p-toast>
 
 <section class="attendance" data-cy="attendance-page">
-  <app-page-header [title]="attendanceTitle()">
+  <app-page-header [title]="attendanceTitle()" [countLabel]="presentCountLabel()">
     <p-datepicker
       pageHeaderCta
       [ngModel]="selectedDate()"

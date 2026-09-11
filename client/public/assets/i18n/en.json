@@ -1591,7 +1591,9 @@
         "markError": "Couldn't mark {{name}} present. Try again.",
         "unmarkError": "Couldn't un-mark {{name}}. Try again."
       },
-      "monthlySummary": "Monthly summary"
+      "monthlySummary": "Monthly summary",
+      "presentCountOne": "{{count}} present",
+      "presentCountOther": "{{count}} present"
     },
     "summary": {
       "eyebrow": "Attendance summary",

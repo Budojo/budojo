@@ -492,6 +492,33 @@ describe('DailyAttendanceComponent', () => {
     expect(component['selectedBelt']()).toBe('blue');
   });
 
+  it('says how many are present, and says nothing before anyone arrives (#1539)', () => {
+    const { fixture, component, httpMock } = setup();
+    fixture.detectChanges();
+    flushInit(httpMock, {
+      athletes: [makeAthlete({ id: 1 }), makeAthlete({ id: 2, first_name: 'Luigi' })],
+    });
+
+    // An empty mat is not information — the chip is absent, not "0 present".
+    expect(component['presentCountLabel']()).toBeNull();
+
+    component['togglePresent'](makeAthlete({ id: 1 }));
+    expect(component['presentCountLabel']()).toBe('1 present');
+
+    component['togglePresent'](makeAthlete({ id: 2, first_name: 'Luigi' }));
+    expect(component['presentCountLabel']()).toBe('2 present');
+
+    // ...and it follows a correction back down, because it reads the same map
+    // every row reads.
+    httpMock
+      .match((r) => r.url === '/api/v1/attendance')
+      .forEach((req) =>
+        req.flush({ data: [{ id: 99, athlete_id: 1, attended_on: '2026-04-24' }] }),
+      );
+    component['optimisticRemove'](2);
+    expect(component['presentCountLabel']()).toBe('1 present');
+  });
+
   it('opens on belt, highest rank first — the order the roster opens on', () => {
     const { fixture, httpMock } = setup();
     fixture.detectChanges();

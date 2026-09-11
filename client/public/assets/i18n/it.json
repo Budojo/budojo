@@ -1591,7 +1591,9 @@
         "markError": "Impossibile segnare {{name}} come presente. Riprova.",
         "unmarkError": "Impossibile rimuovere il segno per {{name}}. Riprova."
       },
-      "monthlySummary": "Riepilogo del mese"
+      "monthlySummary": "Riepilogo del mese",
+      "presentCountOne": "{{count}} presente",
+      "presentCountOther": "{{count}} presenti"
     },
     "summary": {
       "eyebrow": "Riepilogo presenze",
