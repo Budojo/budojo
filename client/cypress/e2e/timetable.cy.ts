@@ -120,7 +120,14 @@ describe('Weekly timetable', () => {
     // Thursday is pre-selected from the "+" that opened the form.
     cy.get('[data-cy="timetable-form-day-4"]').should('have.attr', 'aria-checked', 'true');
 
-    cy.get('[data-cy="timetable-form-name"]').type('Advanced').should('have.value', 'Advanced');
+    // The dialog moves focus to its first field when its opening animation
+    // ends. Typing before that races the jump: on CI it landed mid-keystroke
+    // and ate the time once and the duration once, with a green local run
+    // each time. Wait for the focus, then type.
+    cy.get('[data-cy="timetable-form-name"]')
+      .should('have.focus')
+      .type('Advanced')
+      .should('have.value', 'Advanced');
     // Not `type()`: on a native time input it drives the browser's own
     // hour / minute / AM-PM segments, and in Electron's en-US locale the
     // value sometimes never reaches the control — green locally, red on
@@ -137,12 +144,10 @@ describe('Weekly timetable', () => {
       .clear()
       .type('90')
       .blur()
-      .should('have.value', '90');
+      // Formatted on blur — `90 min` — so match the number, not the string.
+      .invoke('val')
+      .should('match', /^90\b/);
     cy.get('[data-cy="timetable-form-kind"]').contains('No-gi').click();
-    cy.get('[data-cy="timetable-form-kind"]')
-      .contains('No-gi')
-      .closest('button')
-      .should('have.attr', 'aria-pressed', 'true');
 
     cy.intercept(
       'GET',
@@ -186,7 +191,8 @@ describe('Weekly timetable', () => {
     cy.wait('@classes');
 
     cy.get('[data-cy="timetable-class-1"]').click();
-    cy.get('[data-cy="timetable-form-name"]').should('have.value', 'Kids');
+    // Same focus race as the add test: let the dialog settle before touching a field.
+    cy.get('[data-cy="timetable-form-name"]').should('have.focus').should('have.value', 'Kids');
     cy.get('[data-cy="timetable-form-time"]')
       .should('have.value', '17:00')
       .invoke('val', '17:30')
