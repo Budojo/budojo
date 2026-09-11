@@ -260,8 +260,9 @@ class SendUnpaidAthletesDigest extends Command
             // chased about every athlete on a quarterly for two months in
             // three.
             ->whereDoesntHave('payments', $covering)
-            ->orderBy('last_name', 'asc')
-            ->orderBy('first_name', 'asc')
+            ->orderBy('last_name_sort', 'asc')
+            ->orderBy('first_name_sort', 'asc')
+            ->orderBy('id')
             ->get();
     }
 }

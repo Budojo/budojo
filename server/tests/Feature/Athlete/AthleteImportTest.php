@@ -127,6 +127,24 @@ it('does not import the same person twice from within one file', function (): vo
         ->and($response->json('data.rows.1.status'))->toBe('duplicate');
 });
 
+it('spots a duplicate spelled without its accent (#1527)', function (): void {
+    // The roster already holds Ângelo; the spreadsheet the owner exports from
+    // somewhere else spells him Angelo. Sorting and search treat the two as the
+    // same person, so the duplicate check has to as well — otherwise the import
+    // quietly adds a second row for someone already on the mat.
+    importRoster($this, rosterCsv([
+        ['Ângelo', 'da Silva', 'blu', '0', '15/03/1990', '', '01/09/2024'],
+    ]), ['validate_only' => false])->assertOk();
+
+    $second = importRoster($this, rosterCsv([
+        ['Angelo', 'Da Silva', 'blu', '0', '15/03/1990', '', '01/09/2024'],
+    ]), ['validate_only' => false])->assertOk();
+
+    expect($second->json('data.imported'))->toBe(0)
+        ->and($second->json('data.rows.0.status'))->toBe('duplicate')
+        ->and(Athlete::query()->count())->toBe(1);
+});
+
 it('lets two real namesakes in when their birthdays differ', function (): void {
     $response = importRoster($this, rosterCsv([
         ['Marco', 'Rossi', 'blu', '0', '15/03/1990', '', '01/09/2024'],

@@ -16,6 +16,7 @@ use App\Http\Resources\AthleteResource;
 use App\Models\Academy;
 use App\Models\Athlete;
 use App\Models\User;
+use App\Support\NameFold;
 use App\Support\Season;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -244,8 +245,9 @@ class AthleteController extends Controller
             // on neither. Same reasoning as the name sort's own tiebreak
             // (#196).
             $query->orderBy(self::SORTABLE_AGGREGATES[$sortBy], $sortOrder)
-                ->orderBy('last_name')
-                ->orderBy('first_name');
+                ->orderBy('last_name_sort')
+                ->orderBy('first_name_sort')
+                ->orderBy('id');
         } elseif ($sortBy !== null && \array_key_exists($sortBy, self::SORTABLE_COLUMNS)) {
             $query->orderBy(self::SORTABLE_COLUMNS[$sortBy], $sortOrder);
         } else {
@@ -415,7 +417,8 @@ class AthleteController extends Controller
 
         $query->orderByRaw($direction === 'asc' ? $caseAsc : $caseDesc);
         $query->orderBy('stripes', 'desc');
-        $query->orderBy('last_name', 'asc');
+        $query->orderBy('last_name_sort', 'asc');
+        $query->orderBy('id');
     }
 
     /**
@@ -423,8 +426,13 @@ class AthleteController extends Controller
      * a synthetic field — `{first_name} {last_name}` — and the 4-state
      * click cycle (first asc/desc, last asc/desc) maps to:
      *
-     *   sort_by=first_name → ORDER BY first_name [dir], last_name [dir]
-     *   sort_by=last_name  → ORDER BY last_name  [dir], first_name [dir]
+     *   sort_by=first_name → ORDER BY first_name_sort [dir], last_name_sort [dir], id
+     *   sort_by=last_name  → ORDER BY last_name_sort  [dir], first_name_sort [dir], id
+     *
+     * Both keys are the FOLDED columns (#1527) — lower-cased, diacritics
+     * stripped — so `da Silva` sorts with the D's rather than after `Z`. The
+     * `id` tail is what folding made necessary: `de Luca` and `De Luca` used to
+     * be far apart and now tie.
      *
      * Tiebreak direction matches the primary direction so that two
      * athletes sharing the primary name fall into a stable, intuitive
@@ -440,15 +448,26 @@ class AthleteController extends Controller
     private function applyNameSort(Builder|HasMany $query, string $primary, string $direction): void
     {
         $secondary = $primary === 'first_name' ? 'last_name' : 'first_name';
-        $query->orderBy($primary, $direction);
-        $query->orderBy($secondary, $direction);
+        $query->orderBy($primary . '_sort', $direction);
+        $query->orderBy($secondary . '_sort', $direction);
+        // Both keys are folded, so `de Luca` and `De Luca` now tie where they
+        // used to be far apart (#1527). A tie with no further key reorders
+        // between requests, which on a paginated list puts an athlete on two
+        // pages or on neither. The id is arbitrary but stable, which is the
+        // whole requirement.
+        $query->orderBy('id');
     }
 
     /**
-     * Token-AND search across first_name + last_name. The user's query is
-     * split on whitespace; each token must match either column independently
-     * (case-insensitive via the column collation — MySQL `utf8mb4_unicode_ci`
-     * and SQLite ASCII LIKE both behave this way out of the box).
+     * Token-AND search across the FOLDED name columns (#1527). The user's
+     * query is split on whitespace; each token is folded the same way the
+     * columns are and must match either of them independently.
+     *
+     * The folding is what makes it case- and accent-insensitive. `LIKE` alone
+     * folds ASCII case only, so `angelo` could never reach `Ângelo` — and
+     * neither could `Ângelo`, because nobody types the circumflex when they
+     * are looking for someone. A letter outside `NameFold::MAP` is left as
+     * written on both sides, so it stays findable by its exact spelling.
      *
      * Why token-AND instead of CONCAT-LIKE: the latter needs DB-specific SQL
      * (MySQL `CONCAT(...)` vs SQLite `||`), and PHPStan rejects the dynamic
@@ -475,10 +494,14 @@ class AthleteController extends Controller
             if ($token === '') {
                 continue;
             }
-            $like = '%' . $token . '%';
+            // Both sides folded (#1527): the column by the database, the needle
+            // here. LIKE is case-insensitive for ASCII only, so `angelo` could
+            // never reach `Ângelo` — and neither could `Ângelo`, because the
+            // owner rarely types the circumflex.
+            $like = '%' . NameFold::fold($token) . '%';
             $query->where(function ($qb) use ($like): void {
-                $qb->where('first_name', 'LIKE', $like)
-                    ->orWhere('last_name', 'LIKE', $like);
+                $qb->where('first_name_sort', 'LIKE', $like)
+                    ->orWhere('last_name_sort', 'LIKE', $like);
             });
         }
     }

@@ -50,7 +50,8 @@ class GetMonthlyAttendanceSummaryAction
                 DB::raw('COUNT(*) as count'),
             ])
             ->orderByDesc('count')
-            ->orderBy('athletes.last_name')
+            ->orderBy('athletes.last_name_sort')
+            ->orderBy('athletes.id')
             ->get();
 
         return $rows->map(fn ($row) => [

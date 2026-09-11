@@ -59,7 +59,12 @@ class GetMonthlyLeaderboardAction
             )
             ->groupBy('athletes.id', 'athletes.first_name', 'athletes.last_name', 'visible')
             ->orderByDesc('session_count')
-            ->orderBy('athletes.first_name')
+            // Folded (#1527), and here the collation decides MEMBERSHIP rather
+            // than just order: with a `LIMIT` on a tied session count, an
+            // `Ângelo` sorted past every ASCII name is not merely last — he is
+            // off the board.
+            ->orderBy('athletes.first_name_sort')
+            ->orderBy('athletes.id')
             ->limit(self::TOP_N)
             ->get();
 

@@ -47,14 +47,16 @@ type SummarySortField = 'first_name' | 'last_name' | 'days';
 
 /**
  * Locale-aware name comparison, leading with `primary` and breaking ties on the
- * other field in the same direction — the same CYCLE as the server's
- * `applyNameSort` (#196), but not the same collation.
+ * other field in the same direction — the client-side twin of the server's
+ * `applyNameSort` (#196).
  *
- * The server orders through SQLite's default BINARY collation, which sorts by
- * code point: `Ángela` lands after `Zoe`, and a lower-case `de Rossi` after
- * `Zanetti`. `localeCompare` puts both where an Italian reader expects them, so
- * this list and the roster can disagree on an accented surname. The client
- * behaviour is the right one; aligning the server is #1527, not this.
+ * It was NOT a twin when this shipped: the server ordered through SQLite's
+ * BINARY collation, so `Ángela` landed after `Zoe` and `da Silva` after
+ * `Zanetti`, while `localeCompare` put both where a reader looks for them. The
+ * server caught up in #1527 — it orders on a folded key now — so the two agree
+ * on every name the fixture there covers. The remaining difference is below the
+ * folding: ICU separates `de Luca` from `De Luca` at tertiary strength and the
+ * folded key ties them, which is why the server ends its ordering on `id`.
  */
 function compareNames(
   a: AttendanceSummaryRow,

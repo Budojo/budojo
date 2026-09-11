@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Notifications\AthletePromotedNotification;
 use App\Notifications\CommunityBeltCelebrationNotification;
 use App\Notifications\CommunityNewPostNotification;
+use App\Support\NameFold;
 use App\Support\NotificationCategory;
 use App\Support\NotificationPreferences;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +28,26 @@ class AthleteObserver
         private readonly DeleteDocumentAction $deleteDocument,
         private readonly EvaluateAchievementsAction $evaluateAchievements,
     ) {
+    }
+
+    /**
+     * Keep the folded sort keys in step with the names (#1527).
+     *
+     * `first_name_sort` / `last_name_sort` are what every ORDER BY and every
+     * name search actually read — lower-cased, diacritics stripped, so
+     * `da Silva` sorts with the D's and `angelo` finds `Ângelo`. See
+     * `App\Support\NameFold` for why the roster needed them.
+     *
+     * On `saving`, so the keys are part of the same INSERT/UPDATE as the names
+     * they derive from: a `saved` hook would need a second write and could
+     * leave a row briefly ordered under its old name. Unconditional rather
+     * than guarded on `isDirty` — folding two short strings is cheaper than
+     * being wrong the one time the guard is subtly off.
+     */
+    public function saving(Athlete $athlete): void
+    {
+        $athlete->first_name_sort = NameFold::fold($athlete->first_name);
+        $athlete->last_name_sort = NameFold::fold($athlete->last_name);
     }
 
     /**
