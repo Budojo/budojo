@@ -64,6 +64,7 @@ MOBILE_VIEWPORTS.forEach(({ name, width, height }) => {
       cy.intercept('GET', '/api/v1/academy', ACADEMY_OK);
       cy.intercept('GET', '/api/v1/athletes*', ATHLETES_TWO);
       cy.intercept('GET', '/api/v1/documents/expiring*', EXPIRING_EMPTY);
+      cy.intercept('GET', '/api/v1/academy/classes', ATTENDANCE_EMPTY);
       cy.intercept('GET', '/api/v1/attendance*', ATTENDANCE_EMPTY);
       cy.visitAuthenticated('/dashboard/attendance');
     });

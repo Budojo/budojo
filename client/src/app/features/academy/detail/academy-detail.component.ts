@@ -78,6 +78,21 @@ export class AcademyDetailComponent {
       .join(' · ');
   });
 
+  /**
+   * "4 classes a week" (#1562), or null before the timetable exists — the
+   * row then says so and offers to set it up. The count rides on the academy
+   * resource, so the page needs no second request to answer it.
+   */
+  protected readonly timetableLabel = computed<string | null>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const n = this.academyService.academy()?.classes_count ?? 0;
+    if (n === 0) return null;
+    return this.translate.instant(
+      n === 1 ? 'academy.timetable.countOne' : 'academy.timetable.countOther',
+      { count: n },
+    );
+  });
+
   /** `2025/26`, resolved server-side — see `App\Support\Season`. */
   protected readonly seasonLabel = computed(
     () => this.academyService.academy()?.season_label ?? null,

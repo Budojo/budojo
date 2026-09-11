@@ -1,0 +1,313 @@
+@use '../../../shared/styles/toolbar-control' as tc;
+
+.timetable {
+  // Page chrome (max-width + side padding) comes from the dashboard shell
+  // tokens — see `.main` in the dashboard component (#261).
+  max-width: var(--budojo-page-content-max);
+  margin: 0 auto;
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+}
+
+// ── The week ──────────────────────────────────────────────────────────────────
+//
+// Seven rows, Monday first, at every width. The first cut was seven COLUMNS
+// from 1024px — the wall-poster shape — and the shot said no: beside the
+// sidebar each column had ~130px, day names truncated under the "+", and
+// "Fundamentals" broke in two. A gym with three classes a day does not need
+// a grid of time slots; it needs each day readable in one line. So the phone
+// layout — a day, its classes, a "+" — simply gets wider: the name becomes a
+// left column and the classes flow across the row.
+.week {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.day {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'name add'
+    'body body';
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--budojo-radius-medium, 0.75rem);
+
+  // Name | classes | "+" on one line, once there is a line to have.
+  @media (min-width: 768px) {
+    grid-template-columns: 10rem minmax(0, 1fr) auto;
+    grid-template-areas: 'name body add';
+  }
+
+  // A day with nothing on it is quieter than one with classes, not louder —
+  // the absence should be readable, not shouting.
+  &--rest {
+    background: var(--p-surface-50);
+  }
+
+  &__name {
+    grid-area: name;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-width: 0;
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+  }
+
+  // Today reads in the accent, for the instructor who opens this on the day —
+  // one glance, no counting rows.
+  &--today &__name {
+    color: var(--p-primary-color);
+  }
+
+  &__today {
+    padding: 0 0.5rem;
+    line-height: 1.5rem;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--p-primary-color) 14%, transparent);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  &__body {
+    grid-area: body;
+    min-width: 0;
+  }
+
+  // The same square control the toolbar rows use (#1526): this is one more
+  // secondary control, and a second visual language for it would read as a
+  // second kind of button.
+  &__add {
+    @include tc.toolbar-control;
+    @include tc.toolbar-control-square;
+    grid-area: add;
+    flex: 0 0 auto;
+  }
+
+  &__rest {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__classes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+  }
+
+  &__class {
+    min-width: 0;
+
+    @media (min-width: 768px) {
+      flex: 0 1 auto;
+    }
+  }
+}
+
+// ── One class ─────────────────────────────────────────────────────────────────
+//
+// A button that fills its row: the whole slot is the tap target (Fitts), and
+// its 48px minimum height is the canon's touch target. Two lines, always —
+// the time and the type as a small first line, the name under them with the
+// full width. The one-line version put the name between two fixed-width
+// neighbours and "Open mat" wrapped in a 375px card while "Fundamentals" did
+// in a desktop column; the name is the thing that must never break.
+.slot {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'time kind'
+    'name name';
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  min-height: 3rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--p-surface-50);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--budojo-radius-small, 0.5rem);
+  transition:
+    background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  // In a row of cards each one sizes to its name, within reason.
+  @media (min-width: 768px) {
+    width: auto;
+    min-width: 12rem;
+    max-width: 20rem;
+  }
+
+  &:hover {
+    background: var(--p-content-hover-background);
+    border-color: color-mix(in srgb, var(--p-primary-color) 30%, var(--p-content-border-color));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+
+  // Tabular figures so a column of times lines up digit for digit.
+  &__time {
+    grid-area: time;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+
+    &--none {
+      font-style: italic;
+    }
+  }
+
+  &__name {
+    grid-area: name;
+    min-width: 0;
+    font-weight: 500;
+    color: var(--p-text-color);
+    overflow-wrap: anywhere;
+  }
+
+  // The type as an eyebrow chip, monochrome on purpose: the word carries the
+  // meaning, and a colour per kind would be a second channel saying the same
+  // thing (#1550 — one channel, one meaning).
+  &__kind {
+    grid-area: kind;
+    padding: 0 0.5rem;
+    line-height: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--p-content-border-color);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+}
+
+// ── The form ──────────────────────────────────────────────────────────────────
+
+.class-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+
+  // Mobile-first: time and duration stack until there is room for both.
+  &__row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    @media (min-width: 30rem) {
+      flex-direction: row;
+
+      .field {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+    }
+  }
+
+  // Mobile-first: one action per line, the primary on top where the thumb
+  // lands first and Remove at the very bottom, as far from Save as the
+  // footer allows (Fitts). From 30rem the three share a row — Remove on the
+  // left, Cancel and Save on the right.
+  &__footer {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 0.5rem;
+    // The dialog's own footer is a right-aligned flex row, so without this
+    // the stacked column shrinks to its widest button and sits at the edge.
+    width: 100%;
+
+    @media (min-width: 30rem) {
+      flex-direction: row;
+      align-items: center;
+
+      // Content-sized in the row; the `fluid` inside then fills exactly that.
+      > p-button {
+        flex: 0 0 auto;
+      }
+    }
+  }
+
+  &__spacer {
+    display: none;
+
+    @media (min-width: 30rem) {
+      display: block;
+      flex: 1 1 auto;
+    }
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+
+  &__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--p-text-color);
+  }
+
+  &__hint {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+
+  // Same shape as the academy form's field error: small, danger, under the
+  // control it explains.
+  &__error {
+    font-size: 0.75rem;
+    color: var(--budojo-danger);
+    line-height: 1.5;
+  }
+
+  input[type='time'] {
+    width: 100%;
+  }
+}

@@ -555,6 +555,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::patch('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'update']);
         Route::delete('/academy/fee-tiers/{tier}', [\App\Http\Controllers\Academy\FeeTierController::class, 'destroy']);
 
+        // The weekly timetable (#1562): named classes with a day and a time.
+        // Optional — an academy that never opens it keeps checking people in
+        // by the day, exactly as before. The check-in reads this list to
+        // offer today's classes and sends `academy_class_id` with each mark.
+        Route::get('/academy/classes', [\App\Http\Controllers\Academy\AcademyClassController::class, 'index']);
+        Route::post('/academy/classes', [\App\Http\Controllers\Academy\AcademyClassController::class, 'store']);
+        Route::patch('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'update']);
+        Route::delete('/academy/classes/{academyClass}', [\App\Http\Controllers\Academy\AcademyClassController::class, 'destroy']);
+
         // Entry carnets — #1364. The pre-paid alternative to the monthly fee:
         // price + pack size are configured per academy via PATCH /academy and
         // snapshotted onto each carnet at sale. Consumption (one entry per

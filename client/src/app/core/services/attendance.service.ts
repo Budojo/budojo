@@ -17,6 +17,13 @@ export type AttendanceSource = 'instructor' | 'self';
 export interface AttendanceRecord {
   id: number;
   athlete_id: number;
+  /**
+   * Which lesson the presence was recorded into (#1562). Null when it was
+   * recorded without one: every row from before the timetable existed, any
+   * day with no class, and the athlete's own self-mark, which knows no
+   * class. A class-less row shows as present in every class of its day.
+   */
+  lesson_id: number | null;
   attended_on: string; // YYYY-MM-DD
   notes: string | null;
   source: AttendanceSource;
@@ -41,11 +48,24 @@ export interface MarkAttendancePayload {
   /** Athletes to mark present on `date`. Idempotent — already-marked
    *  ids are no-ops, not 422s. */
   athlete_ids: number[];
+  /**
+   * The class this check-in is for (#1562). The server creates the day's
+   * lesson on the first mark and reuses it after. Omit on an academy with
+   * no timetable, and on a day that has no class — the row is then a
+   * presence on the day, as before.
+   */
+  academy_class_id?: number;
 }
 
 export interface AttendanceListOptions {
   /** Pass `true` to include soft-deleted (tombstone) records. */
   trashed?: boolean;
+  /**
+   * Narrow to one class (#1562): its lesson for the day plus every presence
+   * recorded on the day with no class at all, so a Monday from before the
+   * timetable existed still reads as the evening it was.
+   */
+  classId?: number;
 }
 
 interface AttendanceListResponse {
@@ -100,6 +120,9 @@ export class AttendanceService {
     let params = new HttpParams().set('date', date);
     if (options.trashed) {
       params = params.set('trashed', '1');
+    }
+    if (options.classId !== undefined) {
+      params = params.set('academy_class_id', String(options.classId));
     }
     return this.http
       .get<AttendanceListResponse>(this.base, { params })

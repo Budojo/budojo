@@ -455,3 +455,107 @@ $attendance-mobile-breakpoint: 768px;
 .attendance-cell-name {
   position: relative;
 }
+
+// ── Class picker (#1562) ──────────────────────────────────────────────────────
+//
+// The day's classes as a row of pills, the same shape as the weekday pills the
+// owner set the timetable with (Jakob). One row that scrolls sideways on a
+// phone rather than wrapping: three classes stay three thumb-sized targets on
+// one line, and the row never pushes the roster down a screen.
+.attendance__classes {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+  // Breathing room for the focus ring, which the scroll box would otherwise
+  // clip on the first and last chip.
+  padding: 2px;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}
+
+.class-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  min-height: 3rem; // 48px — the canon's touch target, on the control used on the mat
+  padding: 0 1rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: var(--p-content-background);
+  color: var(--p-text-color);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    border-color var(--budojo-motion-fast) var(--budojo-motion-decelerate),
+    color var(--budojo-motion-fast) var(--budojo-motion-decelerate);
+
+  &:hover:not(:disabled) {
+    background: var(--p-content-hover-background);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: progress;
+  }
+
+  // The name carries the weight; the time beside it stays regular so the
+  // two read as label and footnote rather than one bold lump.
+  &__name {
+    font-weight: 500;
+  }
+
+  &__time {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &--on {
+    background: var(--p-primary-color);
+    border-color: var(--p-primary-color);
+    color: var(--p-primary-contrast-color);
+
+    .class-chip__time {
+      color: inherit;
+      opacity: 0.8;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--p-primary-hover-color, var(--p-primary-color));
+      border-color: var(--p-primary-hover-color, var(--p-primary-color));
+    }
+  }
+}
+
+// One class today: nothing to choose, so it is named, quietly — the
+// instructor still sees what the ticks are going into.
+.attendance__class-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--p-text-muted-color);
+
+  i {
+    font-size: 1rem;
+  }
+}

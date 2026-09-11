@@ -34,6 +34,8 @@ Today the model is 1-to-1 with `User` — one owner per academy, one academy per
 - `hasMany(Athlete::class)` — all athletes in this academy
 - `hasMany(AcademyFeeTier::class)` — the monthly price list (#1381); empty on an academy that charges one flat fee. See [`academy-fee-tier.md`](./academy-fee-tier.md)
 - `hasMany(AcademySchedule::class)` — schedule history (#1094); see [`academy-schedule.md`](./academy-schedule.md). Read-side helpers: `scheduleForDate(Carbon)`, `currentSchedule()`, `nextSchedule()`
+- `hasMany(AcademyClass::class)` — the weekly timetable (#1562); empty on an academy that never set one up, which changes nothing. See [`academy-class.md`](./academy-class.md)
+- `hasMany(Lesson::class)` — every lesson actually held, the occurrences the classes produced (#1562). See [`lesson.md`](./lesson.md)
 - `morphOne(Address::class, 'addressable')` — structured address (#72), see [`address.md`](./address.md)
 
 ## Indexes

@@ -11,6 +11,7 @@ function record(over: Partial<AttendanceRecord> = {}): AttendanceRecord {
   return {
     id: 1,
     athlete_id: 1,
+    lesson_id: null,
     attended_on: '2026-05-01',
     notes: null,
     source: 'instructor',

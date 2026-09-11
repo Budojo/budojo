@@ -67,6 +67,10 @@ class AcademyResource extends JsonResource
             // season starts — the client re-deriving it from the month would
             // be a second implementation of the same off-by-one.
             'season_start_month' => $academy->season_start_month,
+            // How many classes are on the weekly timetable (#1562) — what the
+            // academy page needs to say "4 classes a week" or "not set up
+            // yet" without a second round-trip. One indexed COUNT.
+            'classes_count' => $academy->classes()->count(),
             'season_start' => Season::startFor($academy, CarbonImmutable::now())->toDateString(),
             'season_label' => Season::labelFor($academy, CarbonImmutable::now()),
             // Schedule history (#1094). Pull the full history once,

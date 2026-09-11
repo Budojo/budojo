@@ -1,0 +1,286 @@
+<p-toast position="top-right" />
+<p-confirmpopup />
+
+<section class="timetable" data-cy="timetable-page">
+  <app-page-header [title]="'academy.timetable.title' | translate" [countLabel]="countLabel()">
+    <!--
+      The page's one primary CTA. Hidden while the week is empty — the empty
+      state below carries the same action, and two loudest buttons for one
+      job is one too many.
+    -->
+    @if (!loading() && classes().length > 0) {
+      <p-button
+        pageHeaderCta
+        [label]="'academy.timetable.add' | translate"
+        icon="pi pi-plus"
+        size="small"
+        (onClick)="startAdding()"
+        data-cy="timetable-add"
+      />
+    }
+  </app-page-header>
+
+  <div class="timetable__body">
+    <p class="timetable__hint">{{ 'academy.timetable.hint' | translate }}</p>
+
+    @if (loading()) {
+      <div class="week" aria-hidden="true" data-cy="timetable-loading">
+        @for (i of [1, 2, 3, 4, 5, 6, 7]; track i) {
+          <p-skeleton height="5.5rem" borderRadius="0.75rem" />
+        }
+      </div>
+    } @else if (classes().length === 0) {
+      <app-empty-state
+        icon="pi pi-calendar"
+        [title]="'academy.timetable.empty.title' | translate"
+        [hint]="'academy.timetable.empty.hint' | translate"
+        [ctaLabel]="'academy.timetable.empty.cta' | translate"
+        (ctaClick)="startAdding()"
+        dataCy="timetable-empty"
+      />
+    } @else {
+      <!--
+        Every day is drawn, the rest days too. A Thursday with nothing on it
+        is information, and its "+" is the invitation — the form opens with
+        Thursday already chosen, so adding a class there is three fields.
+      -->
+      <ol class="week" data-cy="timetable-week">
+        @for (day of week(); track day.weekday) {
+          <li
+            class="day"
+            [class.day--rest]="day.classes.length === 0"
+            [class.day--today]="day.isToday"
+            [attr.data-cy]="'timetable-day-' + day.weekday"
+          >
+            <h2 class="day__name">
+              <span>{{ day.name }}</span>
+              @if (day.isToday) {
+                <span class="day__today">{{ 'academy.timetable.today' | translate }}</span>
+              }
+            </h2>
+
+            <div class="day__body">
+              @if (day.classes.length === 0) {
+                <p class="day__rest">{{ 'academy.timetable.restDay' | translate }}</p>
+              } @else {
+                <ul class="day__classes">
+                  @for (c of day.classes; track c.id) {
+                    <li class="day__class">
+                      <!--
+                        The whole slot is the tap target (Fitts): time, name
+                        and type read as one thing, and pressing any of it
+                        opens the class for editing.
+                      -->
+                      <button
+                        type="button"
+                        class="slot"
+                        (click)="startEditing(c)"
+                        [attr.aria-label]="
+                          'academy.timetable.editAria' | translate: { name: c.name }
+                        "
+                        [attr.data-cy]="'timetable-class-' + c.id"
+                      >
+                        <span class="slot__time" [class.slot__time--none]="!timeRange(c)">
+                          {{ timeRange(c) ?? ('academy.timetable.untimed' | translate) }}
+                        </span>
+                        <span class="slot__kind">{{ kindLabels()[c.kind] }}</span>
+                        <span class="slot__name">{{ c.name }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+
+            <button
+              type="button"
+              class="day__add"
+              [attr.aria-label]="'academy.timetable.addOnDay' | translate: { day: day.name }"
+              (click)="startAdding(day.weekday)"
+              [attr.data-cy]="'timetable-add-' + day.weekday"
+            >
+              <i class="pi pi-plus" aria-hidden="true"></i>
+            </button>
+          </li>
+        }
+      </ol>
+    }
+  </div>
+</section>
+
+<!--
+  One dialog for add and edit. The owner sees the same four fields either
+  way, so a second form would be a second thing to learn — and a second
+  place to change the day a field moves.
+-->
+<p-dialog
+  [visible]="dialogOpen()"
+  (visibleChange)="dialogOpen.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [breakpoints]="{ '768px': '92vw' }"
+  [style]="{ width: '34rem' }"
+  [header]="
+    (editing() ? 'academy.timetable.dialog.editTitle' : 'academy.timetable.dialog.addTitle')
+      | translate
+  "
+  data-cy="timetable-dialog"
+>
+  <form class="class-form" [formGroup]="form" (ngSubmit)="submit()" data-cy="timetable-form">
+    <div class="field">
+      <label for="class-name" class="field__label">
+        {{ 'academy.timetable.form.name' | translate }}
+      </label>
+      <input
+        id="class-name"
+        type="text"
+        pInputText
+        formControlName="name"
+        maxlength="60"
+        autocomplete="off"
+        [placeholder]="'academy.timetable.form.namePlaceholder' | translate"
+        [class.ng-invalid]="nameError()"
+        [class.ng-dirty]="nameError()"
+        [attr.aria-invalid]="nameError() ? 'true' : null"
+        [attr.aria-describedby]="nameError() ? 'class-name-error' : null"
+        data-cy="timetable-form-name"
+      />
+      @if (nameError()) {
+        <small
+          id="class-name-error"
+          class="field__error"
+          role="alert"
+          data-cy="timetable-form-name-error"
+        >
+          {{ 'academy.timetable.form.nameRequired' | translate }}
+        </small>
+      }
+    </div>
+
+    <div class="field">
+      <span class="field__label">{{ 'academy.timetable.form.day' | translate }}</span>
+      <!--
+        The seven pills the owner already knows from the training days, in
+        single-select — a weekday looks the same wherever it is chosen.
+      -->
+      <app-training-days-picker
+        selectionMode="single"
+        [value]="dayValue()"
+        [ariaLabel]="'academy.timetable.form.dayAria' | translate"
+        dataCyPrefix="timetable-form-day-"
+        (valueChange)="setDay($event[0] ?? null)"
+      />
+      @if (dayError()) {
+        <small
+          id="class-day-error"
+          class="field__error"
+          role="alert"
+          data-cy="timetable-form-day-error"
+        >
+          {{ 'academy.timetable.form.dayRequired' | translate }}
+        </small>
+      }
+    </div>
+
+    <div class="class-form__row">
+      <div class="field">
+        <label for="class-time" class="field__label">
+          {{ 'academy.timetable.form.time' | translate }}
+        </label>
+        <!--
+          The native time input: on a phone it opens the system picker, which
+          beats any widget for typing "19:00" standing up. It always yields
+          24-hour `HH:MM`, whatever the display locale.
+        -->
+        <input
+          id="class-time"
+          type="time"
+          pInputText
+          formControlName="starts_at"
+          step="300"
+          data-cy="timetable-form-time"
+        />
+        <small class="field__hint">{{ 'academy.timetable.form.timeHint' | translate }}</small>
+      </div>
+
+      <div class="field">
+        <label for="class-duration" class="field__label">
+          {{ 'academy.timetable.form.duration' | translate }}
+        </label>
+        <p-inputnumber
+          inputId="class-duration"
+          formControlName="duration_minutes"
+          [min]="15"
+          [max]="480"
+          [step]="15"
+          [showButtons]="true"
+          [fluid]="true"
+          [suffix]="'academy.timetable.form.durationSuffix' | translate"
+          data-cy="timetable-form-duration"
+        />
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="field__label" id="class-kind-label">
+        {{ 'academy.timetable.form.kind' | translate }}
+      </span>
+      <p-selectbutton
+        [options]="kindOptions()"
+        formControlName="kind"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        ariaLabelledBy="class-kind-label"
+        data-cy="timetable-form-kind"
+      />
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="class-form__footer">
+      @if (editing()) {
+        <!--
+          Removal lives at the far end from Save (Fitts), as quiet text — the
+          confirm popup does the asking.
+        -->
+        <p-button
+          type="button"
+          [label]="'academy.timetable.form.remove' | translate"
+          icon="pi pi-trash"
+          severity="danger"
+          [text]="true"
+          [fluid]="true"
+          (onClick)="confirmRemove($event)"
+          data-cy="timetable-form-remove"
+        />
+      }
+      <span class="class-form__spacer"></span>
+      <!--
+        `fluid` so each button fills its host: stacked on a phone the hosts
+        stretch and the buttons follow; in the desktop row the hosts size to
+        content and fluid changes nothing.
+      -->
+      <p-button
+        type="button"
+        [label]="'academy.timetable.form.cancel' | translate"
+        severity="secondary"
+        [text]="true"
+        [fluid]="true"
+        (onClick)="closeDialog()"
+        data-cy="timetable-form-cancel"
+      />
+      <p-button
+        type="button"
+        [label]="
+          (editing() ? 'academy.timetable.form.save' : 'academy.timetable.form.create') | translate
+        "
+        [loading]="saving()"
+        [disabled]="saving()"
+        [fluid]="true"
+        (onClick)="submit()"
+        data-cy="timetable-form-save"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

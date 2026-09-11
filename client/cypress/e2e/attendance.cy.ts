@@ -69,6 +69,8 @@ describe('Daily attendance check-in', () => {
     cy.intercept('GET', '/api/v1/academy', ACADEMY_OK).as('academy');
     cy.intercept('GET', '/api/v1/athletes*', ATHLETES_TWO).as('athletes');
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
+    // No timetable (#1562): the page behaves exactly as it did before one existed.
+    cy.intercept('GET', '/api/v1/academy/classes', { statusCode: 200, body: { data: [] } });
     cy.intercept('GET', '/api/v1/attendance*', { statusCode: 200, body: { data: [] } }).as(
       'getDaily',
     );

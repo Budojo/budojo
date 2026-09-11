@@ -16,6 +16,7 @@ import { MyAttendanceTodayComponent } from './my-attendance-today.component';
 const baseRecord = (overrides: Partial<AttendanceRecord> = {}): AttendanceRecord => ({
   id: 1,
   athlete_id: 7,
+  lesson_id: null,
   attended_on: '2026-05-22',
   notes: null,
   source: 'self',
