@@ -19,13 +19,14 @@ import {
   AttendanceSummaryRange,
   AttendanceSummaryService,
 } from '../../../core/services/attendance-summary.service';
+import { LanguageService } from '../../../core/services/language.service';
 
 /**
  * Shared "% di presenze" chart (#894).
  *
  * Reads `/api/v1/athletes/{id}/attendance/summary?range=N` and renders:
  *  - A donut with the headline rate in the centre (e.g. "75%").
- *  - A short bar timeline below it, one bar per realized lesson day,
+ *  - A short bar timeline below it, one bar per lesson day held,
  *    colour-encoded (primary = attended, muted = missed).
  *  - A 30 / 90 / 365 range switcher above.
  *
@@ -50,6 +51,7 @@ import {
 export class AttendanceSummaryChartComponent {
   private readonly summaryService = inject(AttendanceSummaryService);
   private readonly translate = inject(TranslateService);
+  private readonly languageService = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly athleteId = input.required<number>();
@@ -61,13 +63,30 @@ export class AttendanceSummaryChartComponent {
   protected readonly errored = signal<boolean>(false);
   protected readonly summary = signal<AttendanceSummary | null>(null);
 
-  // `p-selectbutton` types `options` as `any[]` (not readonly), so a
-  // ReadonlyArray here trips the strict-templates check (TS4104).
-  protected readonly rangeOptions: { label: string; value: AttendanceSummaryRange }[] = [
-    { label: '30g', value: 30 },
-    { label: '90g', value: 90 },
-    { label: '1a', value: 365 },
-  ];
+  /**
+   * The range switcher's labels, in the reader's language (#1559).
+   *
+   * They were `30g / 90g / 1a` hardcoded — Italian abbreviations of giorni
+   * and anno — so an English reader got two words they do not speak, and an
+   * Italian reader got the right string by accident rather than by
+   * translation. The i18n parity check cannot see a literal in a `.ts`
+   * file, which is the hole the "every visible string lives in the JSON"
+   * rule exists to close.
+   *
+   * A computed rather than a constant so the sidebar language toggle
+   * re-renders the buttons. `p-selectbutton` types `options` as a mutable
+   * `any[]`, so this returns a fresh plain array rather than a ReadonlyArray.
+   */
+  protected readonly rangeOptions = computed<{ label: string; value: AttendanceSummaryRange }[]>(
+    () => {
+      this.languageService.currentLang(); // signal dep — recompute on toggle
+      return [
+        { label: this.translate.instant('attendanceSummary.range.days30'), value: 30 },
+        { label: this.translate.instant('attendanceSummary.range.days90'), value: 90 },
+        { label: this.translate.instant('attendanceSummary.range.year1'), value: 365 },
+      ];
+    },
+  );
 
   protected readonly hasData = computed<boolean>(() => {
     const s = this.summary();
@@ -127,7 +146,7 @@ export class AttendanceSummaryChartComponent {
   } as const;
 
   /**
-   * Timeline bars — one bar per realized lesson day. Height is constant
+   * Timeline bars — one bar per lesson day held. Height is constant
    * (1 = "lesson happened"); colour is the encoding (primary = athlete
    * attended, muted = missed). Keeps the read fast without needing a
    * legend.

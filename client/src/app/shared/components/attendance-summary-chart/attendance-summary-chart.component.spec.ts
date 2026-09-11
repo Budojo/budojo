@@ -5,6 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { AttendanceSummary } from '../../../core/services/attendance-summary.service';
+import { LanguageService } from '../../../core/services/language.service';
 import { AttendanceSummaryChartComponent } from './attendance-summary-chart.component';
 
 @Component({
@@ -63,6 +64,53 @@ describe('AttendanceSummaryChartComponent (#894)', () => {
 
     const rate = fixture.nativeElement.querySelector('[data-cy="attendance-summary-rate"]');
     expect(rate?.textContent?.trim()).toBe('75%');
+  });
+
+  // The range switcher and the counts line, in the reader's language (#1559).
+  // The buttons read `30g / 90g / 1a` in BOTH languages — Italian abbreviations
+  // hardcoded in the component — and the English counts line said "realized
+  // lessons", a false friend of `lezioni effettive` that in English means
+  // "came to understand".
+
+  it('labels the range switcher in English, and calls the lessons "held"', async () => {
+    const { fixture, http } = setup();
+    fixture.detectChanges();
+    flush(http, makePayload());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const switcher = el.querySelector('[data-cy="attendance-summary-range"]')?.textContent ?? '';
+    expect(switcher).toContain('30d');
+    expect(switcher).toContain('90d');
+    expect(switcher).toContain('1y');
+    expect(switcher).not.toContain('30g');
+
+    const counts = el.querySelector('[data-cy="attendance-summary-counts"]')?.textContent ?? '';
+    expect(counts.replace(/\s+/g, ' ').trim()).toBe('3 of 4 lessons held');
+  });
+
+  it('labels the range switcher in Italian after the language switch', async () => {
+    // `setup()` configures the TestBed; the service can only be reached
+    // after that. The switch lands before the first change detection, so the
+    // buttons and the counts line both render in Italian from the start.
+    const { fixture, http } = setup();
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+    flush(http, makePayload());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const switcher = el.querySelector('[data-cy="attendance-summary-range"]')?.textContent ?? '';
+    expect(switcher).toContain('30g');
+    expect(switcher).toContain('90g');
+    expect(switcher).toContain('1a');
+
+    const counts = el.querySelector('[data-cy="attendance-summary-counts"]')?.textContent ?? '';
+    expect(counts.replace(/\s+/g, ' ').trim()).toBe('3 su 4 lezioni effettive');
   });
 
   it('renders the empty-state block when expected_count is 0 (no lessons in the window)', async () => {
