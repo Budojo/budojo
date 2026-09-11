@@ -37,9 +37,8 @@
             width="11"
             height="11"
             rx="2"
-            class="heatmap__cell"
+            [class]="'heatmap__cell heatmap__cell--b' + cell.bucket"
             [class.heatmap__cell--out]="!cell.inWindow"
-            [style.fill]="cell.fill ?? 'var(--p-surface-200)'"
           >
             <title>{{ cell.tooltip }}</title>
           </rect>
