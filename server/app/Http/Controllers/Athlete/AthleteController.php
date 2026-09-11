@@ -41,11 +41,17 @@ class AthleteController extends Controller
      * @var array<string, string>
      */
     private const SORTABLE_COLUMNS = [
-        'first_name' => 'first_name',
-        'last_name' => 'last_name',
         'joined_at' => 'joined_at',
         'created_at' => 'created_at',
     ];
+
+    // `first_name` and `last_name` are deliberately NOT here. They are caught
+    // two branches earlier by `applyNameSort()`, so these entries were dead
+    // from the day #196 added that branch — and since #1527 they would be
+    // worse than dead: they named the RAW columns, so anyone removing the
+    // name branch would land on this fallback and silently restore ordering
+    // by code point, with `da Silva` back below `Z` and no test failing (the
+    // sort specs use ASCII names). Found in the v2.56.0 sweep.
 
     /**
      * Sortable AGGREGATES (#1447) — separate from the whitelist above because
