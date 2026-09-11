@@ -151,6 +151,32 @@ export class DailyAttendanceComponent implements OnInit {
    */
   protected readonly selectedDate = signal<Date>(new Date());
 
+  /**
+   * How many are on the mat, in the header (#1539).
+   *
+   * The screen exists to produce this number and never showed it: you ticked
+   * nineteen names out of thirty-three and then counted the ticks by eye,
+   * down a list that scrolls. `presentMap()` has been the exact answer all
+   * along — it is what every row reads to decide whether it is ticked.
+   *
+   * Null at zero rather than "0 present": before anyone arrives the count is
+   * not information, and `<app-page-header>` drops the chip entirely when it
+   * is null. It appears on the first tap and follows the tally from there.
+   *
+   * The numerator alone, no denominator. "19 / 33" invites "33 of what" —
+   * active athletes, or the filtered page? — and the answer changes as soon
+   * as someone types in the search box.
+   */
+  protected readonly presentCountLabel = computed<string | null>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+    const present = this.presentMap().size;
+    if (present === 0) return null;
+
+    const key =
+      present === 1 ? 'attendance.daily.presentCountOne' : 'attendance.daily.presentCountOther';
+    return this.translate.instant(key, { count: present });
+  });
+
   /** Translated header title — today / dated variant in one place for <app-page-header>. */
   protected readonly attendanceTitle = computed<string>(() => {
     return this.selectedDateIsToday()
