@@ -48,23 +48,32 @@ export class AttendanceHeatmapComponent {
    * axis already says, and nothing else — and the bigger the academy, the
    * less it said.
    *
-   * Quartiles of the non-zero counts instead: the busiest quarter of the
-   * window's days is the darkest whether that means 4 people or 40, and the
-   * chart means the same thing on a roster of 12 and a roster of 120. Null
-   * when nobody trained at all — every cell is then empty and there is no
-   * scale to draw.
+   * Quartiles of the window's own counts instead: the top quarter of the
+   * crowds seen is the darkest whether that means 4 people or 40, and the
+   * chart means the same thing on a roster of 12 and a roster of 120.
+   *
+   * Quartiles of the DISTINCT counts, not of the days. Over the days, a
+   * crowd that repeats becomes every cut point at once — thirty days of 5
+   * make the thresholds [5, 5, 5], and the three days of 6 the chart exists
+   * to show are painted the same as the 5s. Over the distinct values a mode
+   * is one value like any other, so [4, 5, 6] cuts 2 / 3 / 4 and the busy
+   * day stands out. Null when nobody trained at all — every cell is then
+   * empty and there is no scale to draw.
    */
   private readonly thresholds = computed<Thresholds | null>(() => {
-    const nonZero = this.points()
-      .map((p) => p.count)
-      .filter((c) => c > 0)
-      .sort((a, b) => a - b);
-    if (nonZero.length === 0) return null;
+    const distinct = [
+      ...new Set(
+        this.points()
+          .map((p) => p.count)
+          .filter((c) => c > 0),
+      ),
+    ].sort((a, b) => a - b);
+    if (distinct.length === 0) return null;
 
-    // Nearest-rank percentile: the smallest value with at least p of the
-    // counts at or below it.
+    // Nearest-rank percentile over the distinct values: the smallest value
+    // with at least p of them at or below it.
     const at = (p: number): number =>
-      nonZero[Math.min(nonZero.length - 1, Math.max(0, Math.ceil(p * nonZero.length) - 1))];
+      distinct[Math.min(distinct.length - 1, Math.max(0, Math.ceil(p * distinct.length) - 1))];
     return [at(0.25), at(0.5), at(0.75)];
   });
 

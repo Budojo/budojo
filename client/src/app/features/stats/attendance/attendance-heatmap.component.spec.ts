@@ -150,6 +150,49 @@ describe('AttendanceHeatmapComponent', () => {
       );
     });
 
+    it('lets the one busy day stand out of a crowd that repeats', () => {
+      // Nine days of 5 and one of 10. Quartiles over the DAYS would make 5
+      // every cut point and paint the 10 like the 5s — the one day the chart
+      // exists to show. Over the distinct values, [5, 10] cuts 3 / 4.
+      createComponent(
+        [
+          { date: '2026-05-04', count: 5 },
+          { date: '2026-05-05', count: 5 },
+          { date: '2026-05-06', count: 5 },
+          { date: '2026-05-07', count: 5 },
+          { date: '2026-05-08', count: 5 },
+          { date: '2026-05-11', count: 5 },
+          { date: '2026-05-12', count: 5 },
+          { date: '2026-05-13', count: 5 },
+          { date: '2026-05-14', count: 5 },
+          { date: '2026-05-15', count: 10 },
+        ],
+        windowStart,
+        windowEnd,
+      );
+
+      expect(bucketOf('2026-05-04')).toBe('3');
+      expect(bucketOf('2026-05-15')).toBe('4');
+      const scale = fixture.nativeElement.querySelector('[data-cy="attendance-heatmap-scale"]');
+      expect(scale?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Shades follow this window: — · — · 5 · 10 attendances a day',
+      );
+    });
+
+    it('exposes the scale to assistive tech instead of hiding it with the swatches', () => {
+      createComponent(busyAcademy, windowStart, windowEnd);
+
+      const svg = fixture.nativeElement.querySelector('svg.heatmap__svg') as SVGElement;
+      const caption = fixture.nativeElement.querySelector(
+        '#attendance-heatmap-scale',
+      ) as HTMLElement;
+      expect(svg.getAttribute('aria-describedby')).toBe('attendance-heatmap-scale');
+      expect(caption.closest('[aria-hidden="true"]')).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('.heatmap__legend')?.getAttribute('aria-hidden'),
+      ).toBe('true');
+    });
+
     it('draws no key for a window where nobody trained', () => {
       createComponent([], windowStart, windowEnd);
 

@@ -6,6 +6,7 @@
     preserveAspectRatio="xMinYMin meet"
     role="img"
     [attr.aria-label]="'stats.attendance.heatmap.ariaLabel' | translate"
+    [attr.aria-describedby]="scaleLabel() ? 'attendance-heatmap-scale' : null"
   >
     <!-- Day-of-week labels on the left -->
     <g>
@@ -63,8 +64,11 @@
     different number on every academy and every range, and a legend that
     only said less → more would be explaining a scale it does not show.
   -->
-  <div class="heatmap__key" aria-hidden="true">
-    <div class="heatmap__legend">
+  <div class="heatmap__key">
+    <!-- The swatch row is decorative; the caption under it is the one place
+         the scale is said in words, so it stays exposed and the SVG points
+         at it. -->
+    <div class="heatmap__legend" aria-hidden="true">
       <span>{{ 'stats.attendance.heatmap.less' | translate }}</span>
       <span class="heatmap__legend-cell heatmap__legend-cell--b0"></span>
       <span class="heatmap__legend-cell heatmap__legend-cell--b1"></span>
@@ -74,7 +78,9 @@
       <span>{{ 'stats.attendance.heatmap.more' | translate }}</span>
     </div>
     @if (scaleLabel(); as scale) {
-      <p class="heatmap__scale" data-cy="attendance-heatmap-scale">{{ scale }}</p>
+      <p id="attendance-heatmap-scale" class="heatmap__scale" data-cy="attendance-heatmap-scale">
+        {{ scale }}
+      </p>
     }
   </div>
 </div>
