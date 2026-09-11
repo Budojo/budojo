@@ -91,12 +91,11 @@ describe('AttendanceSummaryChartComponent (#894)', () => {
     expect(counts.replace(/\s+/g, ' ').trim()).toBe('3 of 4 lessons held');
   });
 
-  it('labels the range switcher in Italian after the language switch', async () => {
-    // `setup()` configures the TestBed; the service can only be reached
-    // after that. The switch lands before the first change detection, so the
-    // buttons and the counts line both render in Italian from the start.
+  it('re-renders the switcher and the counts line when the language is toggled after render', async () => {
+    // Rendered in English first, switched afterwards: this is the path the
+    // `currentLang()` reads inside the computeds exist for. Switching before
+    // the first render would pass with those reads deleted.
     const { fixture, http } = setup();
-    TestBed.inject(LanguageService).setLanguage('it');
     fixture.detectChanges();
     flush(http, makePayload());
     fixture.detectChanges();
@@ -104,13 +103,23 @@ describe('AttendanceSummaryChartComponent (#894)', () => {
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
-    const switcher = el.querySelector('[data-cy="attendance-summary-range"]')?.textContent ?? '';
-    expect(switcher).toContain('30g');
-    expect(switcher).toContain('90g');
-    expect(switcher).toContain('1a');
+    const switcher = () =>
+      el.querySelector('[data-cy="attendance-summary-range"]')?.textContent ?? '';
+    const counts = () =>
+      (el.querySelector('[data-cy="attendance-summary-counts"]')?.textContent ?? '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    expect(switcher()).toContain('30d');
+    expect(counts()).toBe('3 of 4 lessons held');
 
-    const counts = el.querySelector('[data-cy="attendance-summary-counts"]')?.textContent ?? '';
-    expect(counts.replace(/\s+/g, ' ').trim()).toBe('3 su 4 lezioni effettive');
+    TestBed.inject(LanguageService).setLanguage('it');
+    fixture.detectChanges();
+
+    expect(switcher()).toContain('30g');
+    expect(switcher()).toContain('90g');
+    expect(switcher()).toContain('1a');
+    expect(switcher()).not.toContain('30d');
+    expect(counts()).toBe('3 su 4 lezioni effettive');
   });
 
   it('renders the empty-state block when expected_count is 0 (no lessons in the window)', async () => {

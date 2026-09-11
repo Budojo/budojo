@@ -104,6 +104,7 @@ export class AttendanceSummaryChartComponent {
   });
 
   protected readonly attendedExpectedLabel = computed<string>(() => {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
     const s = this.summary();
     if (s === null) return '';
     return this.translate.instant('attendanceSummary.attendedOfExpected', {
@@ -119,6 +120,7 @@ export class AttendanceSummaryChartComponent {
    * stats charts.
    */
   protected readonly donutData = computed(() => {
+    this.languageService.currentLang(); // signal dep — the slice labels are translated
     const s = this.summary();
     if (s === null) return { labels: [], datasets: [] };
     const missed = Math.max(0, s.expected_count - s.attended_count);
