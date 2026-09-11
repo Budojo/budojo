@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Stats;
 
+use App\Enums\AthleteStatus;
 use App\Models\Academy;
 use Carbon\CarbonImmutable;
 
@@ -79,7 +80,15 @@ class AthleteAgeBandsAction
         $missingDob = 0;
         $total = 0;
 
-        $athletes = $academy->athletes()->select(['id', 'date_of_birth'])->get();
+        // Active only (#1538). Without this the bands counted every athlete
+        // the academy has ever had, so a chart describing who is on the mat
+        // was inflated by everyone who left it — the same defect the belt
+        // donut had on the client side, and the same answer the roster has
+        // given since #1403.
+        $athletes = $academy->athletes()
+            ->where('status', AthleteStatus::Active->value)
+            ->select(['id', 'date_of_birth'])
+            ->get();
         foreach ($athletes as $athlete) {
             $total++;
             $dob = $athlete->date_of_birth;

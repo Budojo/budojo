@@ -2294,7 +2294,7 @@
     "loadError": "Impossibile caricare le statistiche. Riprova.",
     "emptyTitle": "Dati non sufficienti",
     "emptyHint": "Aggiungi il primo atleta e i grafici si popoleranno qui.",
-    "total": "Su {{count}} atleti totali.",
+    "total": "Su {{count}} atleti attivi.",
     "belt": {
       "title": "Cinture",
       "hint": "Atleti per grado IBJJF, kids → senior. Passa sopra a una fetta per il conteggio + percentuale."
