@@ -1313,7 +1313,12 @@
   },
   "attendanceSummary": {
     "title": "Attendance rate",
-    "attendedOfExpected": "{{attended}} of {{expected}} realized lessons",
+    "range": {
+      "days30": "30d",
+      "days90": "90d",
+      "year1": "1y"
+    },
+    "attendedOfExpected": "{{attended}} of {{expected}} lessons held",
     "legend": {
       "attended": "Attended",
       "missed": "Missed"

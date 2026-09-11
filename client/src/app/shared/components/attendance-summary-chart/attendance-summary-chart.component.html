@@ -2,7 +2,7 @@
   <header class="attendance-chart__header">
     <h3 class="attendance-chart__title">{{ 'attendanceSummary.title' | translate }}</h3>
     <p-selectbutton
-      [options]="rangeOptions"
+      [options]="rangeOptions()"
       [ngModel]="range()"
       (ngModelChange)="onRangeChange($event)"
       optionLabel="label"
@@ -53,7 +53,7 @@
         {{ attendedExpectedLabel() }}
       </p>
 
-      <!-- Bar timeline — one bar per realized lesson day, colour-encoded
+      <!-- Bar timeline — one bar per lesson day held, colour-encoded
            by attendance. Keeps a fast "are they trending up or down?"
            read alongside the bare % number. -->
       <div class="attendance-chart__timeline">
