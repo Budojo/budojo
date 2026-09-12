@@ -60,6 +60,56 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.61.0',
+    date: '2026-09-12',
+    headline: {
+      en: 'What to teach tonight, and what they missed.',
+      it: 'Cosa insegnare stasera, e cosa si è perso.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '💡 Three suggestions for tonight',
+          it: '💡 Tre proposte per stasera',
+        },
+        bullets: [
+          {
+            en: 'Open a lesson and the programme offers three things to teach, each one saying why: never taught this season, taught once, or longest since.',
+            it: 'Apri una lezione e il programma propone tre cose da fare, ognuna con il suo motivo: mai fatto questa stagione, fatto una volta, o quello che manca da più tempo.',
+          },
+          {
+            en: 'At the check-in and on the timetable, so planning ahead works the same way. A gi class is never offered a no-gi technique.',
+            it: 'Al check-in e sull’orario, così pianificare in anticipo funziona uguale. Una lezione gi non riceve mai una tecnica no-gi.',
+          },
+          {
+            en: 'Nothing is pre-selected, and any suggestion can be waved away with one tap — for tonight, not forever.',
+            it: 'Niente è preselezionato, e ogni proposta si scarta con un tocco: per stasera, non per sempre.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🥋 What each athlete has missed',
+          it: '🥋 Cosa si è perso ogni atleta',
+        },
+        bullets: [
+          {
+            en: 'A new Programme tab on the athlete page: what they have seen, what they saw once, and what they missed, with how many chances they had at each.',
+            it: 'Nuova scheda Programma sulla pagina atleta: cosa ha visto, cosa ha visto una volta, e cosa si è perso, con quante occasioni ha avuto per ognuno.',
+          },
+          {
+            en: 'The percentage counts what the academy actually taught. Anything not covered yet is the academy’s gap, written separately, never theirs.',
+            it: 'La percentuale conta quello che la palestra ha davvero insegnato. Quello che non è ancora stato fatto è una lacuna della palestra, scritta a parte, mai sua.',
+          },
+          {
+            en: 'Nothing before the day they joined is counted, and sessions that do not say which class they were are stated rather than counted as absence.',
+            it: 'Niente viene contato prima del giorno di iscrizione, e gli allenamenti che non dicono a quale lezione fossero vengono dichiarati, non contati come assenza.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.60.1',
     date: '2026-09-12',
     headline: {
