@@ -120,6 +120,32 @@ describe('MyPaymentsComponent (M7 PR-D slice 4)', () => {
     expect(el.querySelector('[data-cy="my-carnet-remaining"]')?.textContent?.trim()).toBe('6');
   });
 
+  function flushMyAcademy(http: HttpTestingController, unit: 'lesson' | 'day'): void {
+    http
+      .expectOne(`${environment.apiBase}/api/v1/me/academy`)
+      .flush({ data: { id: 1, name: 'Test', carnet_entry_unit: unit } });
+  }
+
+  it('says an entry covers the whole day when the academy sells days (#1576)', () => {
+    const { fixture, el, http } = setup();
+    flushCarnets(http, [carnet()]);
+    flushMyAcademy(http, 'day');
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="my-carnet-entry-unit"]')?.textContent?.trim()).toBe(
+      'One entry covers the whole day, however many classes.',
+    );
+  });
+
+  it('says nothing about it when an entry is a lesson', () => {
+    const { fixture, el, http } = setup();
+    flushCarnets(http, [carnet()]);
+    flushMyAcademy(http, 'lesson');
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-cy="my-carnet-entry-unit"]')).toBeNull();
+  });
+
   it('shows no carnet card when the athlete holds none', () => {
     const { fixture, el, http } = setup();
     flushCarnets(http, []);

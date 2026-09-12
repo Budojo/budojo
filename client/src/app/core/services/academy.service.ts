@@ -328,6 +328,12 @@ export interface MeAcademy {
   readonly logo_url: string | null;
   readonly training_days: number[] | null;
   readonly owner: MeAcademyOwner | null;
+  /**
+   * What one carnet entry pays for (#1576) — the athlete's balance drops by
+   * one after two check-ins under `day`, and the portal says so. Optional
+   * for fixture compat only; never null on the wire.
+   */
+  readonly carnet_entry_unit?: CarnetEntryUnit;
 }
 
 export interface CreateAcademyPayload {

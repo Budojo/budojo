@@ -494,6 +494,22 @@ describe('AcademyFormComponent — what one carnet entry covers (#1576)', () => 
     expect(component.form.controls.carnet_entry_unit.value).toBe('lesson');
   });
 
+  it('keeps the persisted unit when the offering is cleared, so hiding the question does not answer it', () => {
+    // The control leaves the page when either half of the offering goes; the
+    // value it holds must still be the academy's, or clearing the price would
+    // silently flip a `day` academy back to lessons and recount every carnet.
+    const { component, httpMock } = setup(
+      makeAcademy({ carnet_price_cents: 7000, carnet_entries: 10, carnet_entry_unit: 'day' }),
+    );
+    component.form.patchValue({ carnet_price: null });
+    component.submit();
+
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.carnet_price_cents).toBeNull();
+    expect(req.request.body.carnet_entry_unit).toBe('day');
+    req.flush({ data: makeAcademy({ carnet_entry_unit: 'day' }) });
+  });
+
   it('sends the chosen unit with the rest of the offering', () => {
     const { component, httpMock } = setup(
       makeAcademy({ carnet_price_cents: 7000, carnet_entries: 10 }),

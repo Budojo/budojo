@@ -22,13 +22,14 @@ class ReconcileAcademyCarnetsAction
      * changes for everybody at once, and this is where everybody is
      * recomputed. Only athletes holding a carnet: the others have no ledger
      * to rebuild, and an academy's roster is far larger than its carnet
-     * customers.
+     * customers. Archived athletes included — a restore does not reconcile,
+     * so one left out here would come back with a ledger under the old rule.
      */
     public function execute(Academy $academy): void
     {
         $athleteIds = array_values(array_map(
             static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0,
-            $academy->athletes()->whereHas('carnets')->pluck('id')->all(),
+            $academy->athletes()->withTrashed()->whereHas('carnets')->pluck('id')->all(),
         ));
 
         $this->reconcileEntries->execute($athleteIds);

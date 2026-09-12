@@ -30,6 +30,13 @@
             'athletePortal.carnet.expiresOn' | translate: { date: formatDate(carnet.expires_at) }
           }}
         </p>
+        <!-- Two check-ins, one entry gone: the athlete whose balance it is
+             gets the same one-line explanation the owner's card has (#1576). -->
+        @if (entryCoversDay()) {
+          <p class="my-payments__carnet-entry-unit" data-cy="my-carnet-entry-unit">
+            {{ 'athletePortal.carnet.entryCoversDay' | translate }}
+          </p>
+        }
         <!-- The athlete is the one who has to act on a near-empty carnet, so
              they get the same nudge the owner does rather than less. -->
         @if (carnet.remaining_entries <= 2) {

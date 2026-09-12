@@ -398,6 +398,7 @@
     "carnet": {
       "title": "Your entry carnet",
       "entriesWord": "entries",
+      "entryCoversDay": "One entry covers the whole day, however many classes.",
       "expiresOn": "Expires on {{date}}",
       "lowBalance": "Running low"
     }

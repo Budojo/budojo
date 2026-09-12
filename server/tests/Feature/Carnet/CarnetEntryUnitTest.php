@@ -73,6 +73,23 @@ it('recounts the carnets already sold when the unit changes', function (): void 
     expect(CarnetEntry::where('carnet_id', $carnet->id)->count())->toBe(2);
 });
 
+it('recounts an archived athlete\'s carnet too — a restore would not', function (): void {
+    $athlete = Athlete::factory()->for($this->academy)->create();
+    $carnet = Carnet::factory()->for($athlete)->validFrom('2026-01-10')->create();
+    $fundamentals = AcademyClass::factory()->for($this->academy)->create(['weekday' => 4, 'starts_at' => '19:00']);
+    $openMat = AcademyClass::factory()->for($this->academy)->create(['weekday' => 4, 'starts_at' => '20:30']);
+
+    $mark = app(MarkAttendanceAction::class);
+    foreach ([$fundamentals, $openMat] as $class) {
+        $mark->execute($this->academy, CarbonImmutable::parse('2026-03-05'), [$athlete->id], AttendanceSource::Instructor, $class);
+    }
+    $athlete->delete();
+
+    $this->patchJson('/api/v1/academy', ['carnet_entry_unit' => 'day'])->assertOk();
+
+    expect(CarnetEntry::where('carnet_id', $carnet->id)->count())->toBe(1);
+});
+
 it('recounts alongside the rest of the PATCH, not only when the unit travels alone', function (): void {
     $athlete = Athlete::factory()->for($this->academy)->create();
     $carnet = Carnet::factory()->for($athlete)->validFrom('2026-01-10')->create();

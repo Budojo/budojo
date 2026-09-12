@@ -398,6 +398,7 @@
     "carnet": {
       "title": "Il tuo carnet ingressi",
       "entriesWord": "ingressi",
+      "entryCoversDay": "Un ingresso copre l'intera giornata, qualunque sia il numero di lezioni.",
       "expiresOn": "Scade il {{date}}",
       "lowBalance": "In esaurimento"
     }

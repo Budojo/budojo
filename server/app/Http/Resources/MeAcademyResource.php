@@ -48,6 +48,11 @@ class MeAcademyResource extends JsonResource
                 ? Storage::disk('public')->url($academy->logo_path)
                 : null,
             'training_days' => $academy->training_days,
+            // What one carnet entry pays for (#1576) — the athlete's balance
+            // drops by one after two check-ins under `day`, and the person
+            // whose balance it is gets the same one-line explanation the
+            // owner's card has.
+            'carnet_entry_unit' => $academy->carnet_entry_unit->value,
             'owner' => $owner !== null ? [
                 'first_name' => $owner->first_name,
                 'last_name' => $owner->last_name,
