@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\ClassKind;
+use App\Observers\AcademyClassObserver;
 use Carbon\Carbon;
 use Database\Factories\AcademyClassFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Carbon      $updated_at
  */
 #[Fillable(['academy_id', 'name', 'weekday', 'starts_at', 'duration_minutes', 'kind'])]
+#[ObservedBy([AcademyClassObserver::class])]
 class AcademyClass extends Model
 {
     /** @use HasFactory<AcademyClassFactory> */

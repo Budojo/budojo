@@ -81,6 +81,45 @@ describe('AcademyFormComponent', () => {
     expect(component.slug()).toBe('gracie-barra-torino-a1b2c3d4');
   });
 
+  it('hides the training-day pills and sends no training_days while the timetable sets them (#1575)', () => {
+    const { fixture, component, httpMock } = setup(
+      makeAcademy({ classes_count: 3, training_days: [1, 3, 5] }),
+    );
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="academy-form-training-days"]')).toBeNull();
+    expect(el.querySelector('[data-cy="academy-form-schedule-planner"]')).toBeNull();
+    expect(el.querySelector('[data-cy="academy-form-training-days-derived"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="academy-form-open-timetable"]')?.getAttribute('href')).toBe(
+      '/dashboard/academy/timetable',
+    );
+
+    component.submit();
+
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.method).toBe('PATCH');
+    // The server refuses it in this state; the form does not offer it.
+    expect('training_days' in req.request.body).toBe(false);
+    req.flush({ data: makeAcademy({ classes_count: 3 }) });
+  });
+
+  it('keeps the pills, and sends the days, when there is no timetable', () => {
+    const { fixture, component, httpMock } = setup(makeAcademy({ classes_count: 0 }));
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('[data-cy="academy-form-training-days"]')).not.toBeNull();
+    expect(el.querySelector('[data-cy="academy-form-training-days-derived"]')).toBeNull();
+
+    component.setTrainingDays([1, 3]);
+    component.submit();
+
+    const req = httpMock.expectOne('/api/v1/academy');
+    expect(req.request.body.training_days).toEqual([1, 3]);
+    req.flush({ data: makeAcademy({ training_days: [1, 3] }) });
+  });
+
   it('renders empty address fields when the cached academy has a null address', () => {
     const { component } = setup(makeAcademy({ address: null }));
     expect(component.form.value.address?.line1).toBe('');

@@ -1474,7 +1474,9 @@
       },
       "trainingDays": {
         "label": "Training days",
-        "hint": "Pick the weekdays your academy holds class. Deselect every day to clear the schedule."
+        "hint": "Pick the weekdays your academy holds class. Deselect every day to clear the schedule.",
+        "fromTimetable": "Set by the timetable — the days with at least one class.",
+        "openTimetable": "Open the timetable"
       },
       "actions": {
         "cancel": "Cancel",

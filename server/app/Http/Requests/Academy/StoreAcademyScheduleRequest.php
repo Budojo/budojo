@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Academy;
 
 use App\Models\User;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -18,6 +19,10 @@ use Illuminate\Foundation\Http\FormRequest;
  * Only one pending future row per academy at any time — the single
  * pending-change invariant from the PRD (`docs/specs/training-schedule-history.md`).
  * The owner cancels the pending row (DELETE) before scheduling another.
+ *
+ * Refused altogether while the timetable has classes (#1575): the days are
+ * derived from the classes then, and a planned change would be deleted by
+ * the next class saved. Future changes are made on the timetable.
  */
 class StoreAcademyScheduleRequest extends FormRequest
 {
@@ -55,7 +60,27 @@ class StoreAcademyScheduleRequest extends FormRequest
     {
         return [
             'effective_from.after' => 'Choose a date after today — same-day changes go through the academy update endpoint.',
+            'training_days.missing' => 'Training days come from the timetable while it has classes; change the timetable instead.',
         ];
+    }
+
+    /**
+     * The whole request is meaningless while the timetable sets the days
+     * (#1575); the FormRequest carries the refusal so it reads like every
+     * other 422 the SPA handles.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v): void {
+            /** @var User|null $user */
+            $user = $this->user();
+            if ($user?->activeAcademy()?->classes()->exists() ?? false) {
+                $v->errors()->add(
+                    'training_days',
+                    'Training days come from the timetable while it has classes; change the timetable instead.',
+                );
+            }
+        });
     }
 
     // NOTE: the single-pending-future invariant is enforced

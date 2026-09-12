@@ -11,6 +11,7 @@ use App\Http\Requests\Concerns\ValidatesPhonePair;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class UpdateAcademyRequest extends FormRequest
 {
@@ -91,7 +92,17 @@ class UpdateAcademyRequest extends FormRequest
             // the same column on the model. `min:1` keeps "not configured"
             // canonically as `null` rather than admitting `[]` as a distinct
             // ambiguous state.
-            'training_days' => ['sometimes', 'nullable', 'array', 'min:1', 'max:7'],
+            // While the timetable has classes the days come from it (#1575)
+            // and a hand-set value would be overwritten by the next class
+            // change — refusing it says so, instead of accepting a write
+            // that does not stick. `missing`, not `prohibited`: prohibited
+            // only fails on a non-empty value, and `null` would slip through
+            // and blank the days.
+            'training_days' => Rule::when(
+                fn (): bool => $this->user()?->activeAcademy()?->classes()->exists() ?? false,
+                ['missing'],
+                ['sometimes', 'nullable', 'array', 'min:1', 'max:7'],
+            ),
             'training_days.*' => ['integer', 'between:0,6', 'distinct'],
             // The month the training year restarts in (#1484). Nullable, and
             // null is not "no season" — it is "nobody has said", which
@@ -100,6 +111,16 @@ class UpdateAcademyRequest extends FormRequest
             // not it has an opinion about it.
             'season_start_month' => ['sometimes', 'nullable', 'integer', 'between:1,12'],
             ...$this->addressRules(),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'training_days.missing' => 'Training days come from the timetable while it has classes.',
         ];
     }
 

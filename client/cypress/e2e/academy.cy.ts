@@ -118,6 +118,27 @@ describe('Academy edit form', () => {
     cy.intercept('GET', '/api/v1/documents/expiring*', { statusCode: 200, body: { data: [] } });
   });
 
+  it('says the training days come from the timetable, and points at it, once one exists (#1575)', () => {
+    // Later intercepts win: the same academy, with three classes on its week.
+    cy.intercept('GET', '/api/v1/academy', {
+      statusCode: 200,
+      body: { data: { ...ACADEMY_TORINO, classes_count: 3, training_days: [1, 3, 5] } },
+    }).as('academyWithTimetable');
+
+    cy.visitAuthenticated('/dashboard/academy/edit');
+    cy.wait('@academyWithTimetable');
+
+    cy.get('[data-cy="academy-form-training-days"]').should('not.exist');
+    cy.get('[data-cy="academy-form-schedule-planner"]').should('not.exist');
+    // Below the fold of a long form inside the shell's own scroll container —
+    // `.main { overflow: auto }` clips it until it is scrolled into view.
+    cy.get('[data-cy="academy-form-training-days-derived"]').scrollIntoView().should('be.visible');
+    cy.get('[data-cy="academy-form-open-timetable"]')
+      .should('have.attr', 'href', '/dashboard/academy/timetable')
+      .click();
+    cy.location('pathname').should('eq', '/dashboard/academy/timetable');
+  });
+
   it('pre-populates the form with the current academy values (#72)', () => {
     cy.visitAuthenticated('/dashboard/academy/edit');
     cy.wait('@academy');
