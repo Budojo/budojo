@@ -52,7 +52,9 @@ it('counts distinct sessions in the iso week (Mon-Sun inclusive)', function (): 
     $recap = app(BuildWeeklyRecapAction::class)->execute($athlete, $weekStart);
 
     expect($recap->sessions)->toBe(3);
-    expect($recap->hours)->toBe(4.5); // 3 × 1.5h
+    // These presences name no lesson, so each falls back to ninety minutes
+    // (#1591). Three of those is 4.5h — the fallback, not a flat rule.
+    expect($recap->hours)->toBe(4.5);
 });
 
 it('returns zero sessions + empty partners when the athlete never trained', function (): void {
@@ -209,6 +211,7 @@ it('GET /me/recap returns the recap data for the requested ISO week', function (
 
     expect($response->json('data.iso_week_start'))->toBe('2026-05-18');
     expect($response->json('data.sessions'))->toBe(2);
+    // Two lesson-less presences at the ninety-minute fallback (#1591).
     // JSON serialises a clean float as int — `3.0` → `3` on the wire.
     expect((float) $response->json('data.hours'))->toBe(3.0);
 });

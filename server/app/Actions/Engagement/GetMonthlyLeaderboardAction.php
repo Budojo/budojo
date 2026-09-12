@@ -6,6 +6,7 @@ namespace App\Actions\Engagement;
 
 use App\Models\Academy;
 use App\Models\AttendanceRecord;
+use App\Support\MatHours;
 use Carbon\CarbonImmutable;
 
 /**
@@ -16,13 +17,13 @@ use Carbon\CarbonImmutable;
  * collapses to "Anonimo" / "Anonymous" on the wire.
  *
  * Per athlete: count distinct attended_on rows in the window,
- * multiply by HOURS_PER_SESSION (1.5h flat per the M4 PRD). The
+ * sum the length of each lesson they name (#1591, `App\Support\MatHours`),
+ * falling back to ninety minutes for a presence that names none. The
  * action returns the top 5 ranked desc by hours, then first_name
  * asc as a tiebreaker.
  */
 class GetMonthlyLeaderboardAction
 {
-    private const float HOURS_PER_SESSION = 1.5;
     private const int TOP_N = 5;
 
     /**
@@ -45,6 +46,10 @@ class GetMonthlyLeaderboardAction
         $rows = AttendanceRecord::query()
             ->join('athletes', 'athletes.id', '=', 'attendance_records.athlete_id')
             ->leftJoin('users', 'users.id', '=', 'athletes.user_id')
+            // Left, not inner: a presence that names no lesson still counts,
+            // at the fallback length. An inner join would drop it entirely and
+            // quietly shrink the month.
+            ->leftJoin('lessons', 'lessons.id', '=', 'attendance_records.lesson_id')
             ->where('athletes.academy_id', $academy->id)
             ->whereBetween('attendance_records.attended_on', [
                 $start->toDateString(),
@@ -55,7 +60,12 @@ class GetMonthlyLeaderboardAction
                 . 'athletes.first_name, '
                 . 'athletes.last_name, '
                 . 'COALESCE(users.leaderboard_visible, 1) as visible, '
-                . 'COUNT(DISTINCT attendance_records.attended_on) as session_count',
+                . 'COUNT(DISTINCT attendance_records.attended_on) as session_count, '
+                // The 90 is `MatHours::FALLBACK_MINUTES` spelled out, because
+                // `selectRaw` demands a literal-string and a concatenated
+                // constant is not one. The lesson-less leaderboard test pins
+                // the two together, so they cannot drift unnoticed.
+                . 'SUM(COALESCE(lessons.duration_minutes, 90)) as total_minutes',
             )
             ->groupBy('athletes.id', 'athletes.first_name', 'athletes.last_name', 'visible')
             ->orderByDesc('session_count')
@@ -76,6 +86,8 @@ class GetMonthlyLeaderboardAction
             $sessionsRaw = $row->getAttribute('session_count');
             $athleteId = is_numeric($athleteIdRaw) ? (int) $athleteIdRaw : 0;
             $sessions = is_numeric($sessionsRaw) ? (int) $sessionsRaw : 0;
+            $minutesRaw = $row->getAttribute('total_minutes');
+            $minutes = is_numeric($minutesRaw) ? (int) $minutesRaw : 0;
             $visibleRaw = $row->getAttribute('visible');
             // Comparison-safe — MySQL returns int, SQLite returns string sometimes.
             $anonymous = ! ((bool) $visibleRaw);
@@ -94,7 +106,7 @@ class GetMonthlyLeaderboardAction
                     ? ''
                     : mb_strtoupper(mb_substr($lastName, 0, 1)),
                 'sessions' => $sessions,
-                'hours' => $sessions * self::HOURS_PER_SESSION,
+                'hours' => MatHours::fromMinutes($minutes),
                 'anonymous' => $anonymous,
                 'is_self' => $selfAthleteId !== null && $selfAthleteId === $athleteId,
             ];

@@ -60,6 +60,56 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.60.1',
+    date: '2026-09-12',
+    headline: {
+      en: 'The numbers add up again.',
+      it: 'I numeri tornano.',
+    },
+    sections: [
+      {
+        heading: {
+          en: '📊 The programme chart counts the lessons you tagged',
+          it: '📊 Il grafico del programma conta le lezioni che hai segnato',
+        },
+        bullets: [
+          {
+            en: 'Tagging a lesson now claims that day’s attendance, so a session full of people stops reading as never taught.',
+            it: 'Segnare gli argomenti di una lezione adesso le assegna le presenze di quella giornata, così una lezione piena smette di risultare mai fatta.',
+          },
+          {
+            en: 'Past lessons were repaired on update. There is nothing to redo by hand.',
+            it: 'Le lezioni già passate sono state sistemate all’aggiornamento: non devi rifare niente a mano.',
+          },
+          {
+            en: 'On a day with two different classes nothing is guessed — the attendance is left as it is.',
+            it: 'Se una giornata aveva due lezioni diverse non si tira a indovinare: la presenza resta dov’è.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '⏱️ Mat hours follow your timetable',
+          it: '⏱️ Le ore di tatami seguono il tuo orario',
+        },
+        bullets: [
+          {
+            en: 'Three one-hour classes a week now read three hours, not four and a half. Every session counts what it really lasts.',
+            it: 'Tre lezioni da un’ora a settimana adesso fanno tre ore, non quattro e mezza. Ogni allenamento vale quanto dura davvero.',
+          },
+          {
+            en: 'The length is captured when the lesson happens, so shortening a class tomorrow never rewrites last March.',
+            it: 'La durata viene fotografata quando la lezione si tiene, così accorciare una classe domani non riscrive marzo.',
+          },
+          {
+            en: 'Train twice in one evening and it stays one session, but the hours count both classes.',
+            it: 'Se ti alleni due volte la stessa sera resta un allenamento, ma le ore contano entrambe le lezioni.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.60.0',
     date: '2026-09-12',
     headline: {
