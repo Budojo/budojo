@@ -3499,6 +3499,216 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /athletes/{athlete}/syllabus-coverage:
+    get:
+      tags: [attendance]
+      summary: What one athlete has seen of the programme (#1567)
+      description: |
+        Somebody away for six weeks did not miss "six lessons" — they missed
+        specific topics. This is the join between attendance and lesson topics,
+        read for one person.
+
+        **Four states, not the academy view's three, and the fourth is the
+        point.** "Never seen" would merge two unlike things: a topic the academy
+        taught while this athlete was away, which is their gap, and one the
+        academy has not taught at all, which is not. Merging them writes a low
+        number on a person for a decision somebody else made about the
+        programme.
+
+          - `seen` — attended two or more held lessons naming it
+          - `thin` — attended exactly one
+          - `missed` — taught while they were on the roster, and they were not there
+          - `not_taught_yet` — the academy has not covered it this season
+
+        `percentage` is `seen` over `taught_by_academy`, so it answers "how much
+        of what happened did you catch?" and never "how much of the syllabus are
+        you?". `not_taught_yet` is reported beside the fraction, never inside it.
+
+        **Everything is scoped to on or after the athlete's `joined_at`**, which
+        the response echoes as `joined_on`. Nobody misses what predates them.
+
+        `unattributed_presences` counts sessions in the window that name no
+        lesson and so can be attributed to no topic (#1562, #1590). They are
+        reported rather than counted as absence: a gap that is really a missing
+        record would be a lie about a person.
+
+        Requires `attendance_read`, not `stats_view` — this lives beside the
+        athlete's attendance, and the reader is the instructor planning their
+        next private lesson.
+      operationId: athleteSyllabusCoverage
+      parameters:
+        - name: athlete
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: seasons_back
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, maximum: 10, default: 0 }
+          description: 0 is the current season; 1 the one before it.
+      responses:
+        '200':
+          description: What this athlete has seen and missed
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [season, joined_on, totals, missed, seen_lately, unattributed_presences]
+                    properties:
+                      season:
+                        type: object
+                        required: [start, end, label]
+                        properties:
+                          start: { type: string, format: date }
+                          end: { type: string, format: date }
+                          label: { type: string, example: '2026/27' }
+                      joined_on:
+                        type: string
+                        format: date
+                        description: Nothing before this date is counted.
+                      totals:
+                        type: object
+                        required: [taught_by_academy, seen, thin, missed, percentage, not_taught_yet]
+                        properties:
+                          taught_by_academy:
+                            type: integer
+                            description: The denominator — what the academy taught while they were here.
+                          seen: { type: integer }
+                          thin: { type: integer }
+                          missed: { type: integer }
+                          percentage: { type: integer }
+                          not_taught_yet:
+                            type: integer
+                            description: Context about the programme, deliberately outside the fraction.
+                      missed:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, name, parent_name, kind, taught_times]
+                          properties:
+                            id: { type: integer }
+                            name: { type: string }
+                            parent_name: { type: string, nullable: true }
+                            kind: { type: string, enum: [gi, nogi, both] }
+                            taught_times:
+                              type: integer
+                              description: How many evenings it was on the mat while they were on the roster.
+                      seen_lately:
+                        type: array
+                        description: Everything they have seen, most recent first.
+                        items:
+                          type: object
+                          required: [id, name, parent_name, lessons, last_seen_on]
+                          properties:
+                            id: { type: integer }
+                            name: { type: string }
+                            parent_name: { type: string, nullable: true }
+                            lessons: { type: integer }
+                            last_seen_on: { type: string, format: date }
+                      unattributed_presences:
+                        type: integer
+                        description: Sessions that name no lesson, and so count neither way.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /lessons/suggestions:
+    get:
+      tags: [attendance]
+      summary: What to teach next in a class (#1566)
+      description: |
+        The coverage report (#1565) answering the question at the moment it is
+        actually asked — on the mat, ten minutes before class — rather than in
+        a screen the owner opens when they sit down to plan a season.
+
+        Three rules, applied in order, and every row says which one produced
+        it. A suggestion whose reasoning is invisible gets ignored; one that
+        says why gets trusted or overruled on the merits.
+
+          1. `never` — in season and not taught yet this season, returned in
+             programme order so a block of work stays coherent.
+          2. `thin` — taught in exactly one held lesson, oldest first.
+          3. `stale` — least recently taught, so an academy that is on top of
+             its programme still gets an answer rather than an empty panel.
+
+        Scoped to the class's own `kind`: a `gi` class is never told to teach a
+        no-gi technique, and a `nogi` class never a gi one. A `both` or `other`
+        class admits everything. Positions are never suggested — "teach closed
+        guard tonight" is not an answer.
+
+        "Held" and "this season" mean exactly what they mean in
+        `/stats/syllabus/coverage`: only lessons somebody was checked into, only
+        up to today, so a topic on next week's plan still reads as untaught.
+
+        Addressed by class alone, with no date: the ranking reads the season so
+        far, so the answer is the same for next Wednesday as for the one after.
+
+        Requires `attendance_read`. An academy with no programme gets an empty
+        list, and the client renders no panel at all.
+      operationId: lessonSuggestions
+      parameters:
+        - name: academy_class_id
+          in: query
+          required: true
+          schema: { type: integer }
+          description: A class on the caller's own timetable.
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 10, default: 3 }
+          description: |
+            How many to return. Three is what fits beside the picker without
+            becoming a list to read; the cap stops a client turning a
+            suggestion into the whole syllabus.
+      responses:
+        '200':
+          description: What to teach next, best first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, parent_name, kind, reason, last_taught_on]
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        parent_name:
+                          type: string
+                          nullable: true
+                          description: The position it sits under.
+                        kind:
+                          type: string
+                          enum: [gi, nogi, both]
+                        reason:
+                          type: string
+                          enum: [never, thin, stale]
+                          description: Which of the three rules produced this row.
+                        last_taught_on:
+                          type: string
+                          format: date
+                          nullable: true
+                          description: Null exactly when `reason` is `never`.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /stats/syllabus/coverage:
     get:
       tags: [Stats]

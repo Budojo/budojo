@@ -592,6 +592,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // not exist yet. `/recent-topics` first, or it would never be
         // reachable behind a wildcard added here later.
         Route::get('/lessons/recent-topics', [\App\Http\Controllers\Lesson\LessonController::class, 'recent']);
+        Route::get('/lessons/suggestions', [\App\Http\Controllers\Lesson\LessonController::class, 'suggestions']);
         Route::get('/lessons', [\App\Http\Controllers\Lesson\LessonController::class, 'show']);
         Route::put('/lessons/topics', [\App\Http\Controllers\Lesson\LessonController::class, 'setTopics']);
         Route::put('/lessons/notes', [\App\Http\Controllers\Lesson\LessonController::class, 'setNotes']);
@@ -603,6 +604,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // general /athletes/{athlete}/attendance route or "summary" would
         // bind as a record id.
         Route::get('/athletes/{athlete}/attendance/summary', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteSummary']);
+        // What this athlete has seen of the programme (#1567). Beside their
+        // attendance rather than under the owner-only stats group: the reader
+        // is the instructor planning their next private lesson.
+        Route::get('/athletes/{athlete}/syllabus-coverage', \App\Http\Controllers\Stats\AthleteSyllabusCoverageController::class);
         Route::get('/athletes/{athlete}/attendance', [\App\Http\Controllers\Attendance\AttendanceController::class, 'athleteHistory']);
     });
 

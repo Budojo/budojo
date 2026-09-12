@@ -1795,6 +1795,15 @@
         "errorSummary": "Qualcosa è andato storto",
         "errorDetail": "La modifica non è stata salvata. Riprova.",
         "loadErrorDetail": "Impossibile caricare la lezione."
+      },
+      "suggestions": {
+        "title": "Suggeriti per stasera",
+        "dismiss": "Non stasera",
+        "reason": {
+          "never": "Non ancora fatto questa stagione",
+          "thin": "Fatto una volta: {{date}}",
+          "stale": "Ultima volta: {{date}}"
+        }
       }
     }
   },
@@ -2061,7 +2070,8 @@
         "attendance": "Presenze",
         "payments": "Pagamenti",
         "promotions": "Promozioni",
-        "edit": "Modifica"
+        "edit": "Modifica",
+        "coverage": "Programma"
       },
       "contactLinks": {
         "website": "Sito web",
@@ -2412,6 +2422,46 @@
         "bodyOther": "{{count}} atleti aggiunti alla lista."
       },
       "another": "Scegli un altro file"
+    },
+    "coverage": {
+      "fraction": "{{seen}} su {{total}} cose che la palestra ha fatto",
+      "since": "Conteggio dal {{date}}, giorno di iscrizione.",
+      "notTaughtYet": "Altri {{count}} sono nel programma ma non sono ancora stati fatti. È una lacuna della palestra, non sua.",
+      "unattributed": "{{count}} dei suoi allenamenti non dicono a quale lezione fossero, quindi qui non contano in nessun senso.",
+      "legend": {
+        "seen": "{{count}} visti",
+        "thin": "{{count}} visti una volta",
+        "missed": "{{count}} persi"
+      },
+      "missed": {
+        "title": "Cosa si è perso",
+        "chances": "fatto {{count}}×"
+      },
+      "seen": {
+        "title": "Cosa ha visto"
+      },
+      "error": {
+        "title": "Non sono riuscito a caricare",
+        "hint": "Il programma è sempre lì. Riprova."
+      },
+      "empty": {
+        "noProgramme": {
+          "title": "Nessun programma",
+          "hint": "Scrivi il programma della palestra e questa pagina inizia a dire cosa ne ha visto ogni atleta.",
+          "cta": "Vai al programma"
+        },
+        "nothingTaught": {
+          "title": "Ancora nessuna lezione",
+          "hint": "Nessuna lezione è stata segnata da quando si è iscritto, il {{date}}. Non c'è niente che possa essersi perso."
+        }
+      },
+      "ago": {
+        "today": "oggi",
+        "yesterday": "ieri",
+        "days": "{{count}} giorni fa",
+        "weekOne": "una settimana fa",
+        "weeks": "{{count}} settimane fa"
+      }
     }
   },
   "month": {

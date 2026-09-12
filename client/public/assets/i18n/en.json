@@ -1795,6 +1795,15 @@
         "errorSummary": "Something went wrong",
         "errorDetail": "The change was not saved. Try again.",
         "loadErrorDetail": "The lesson could not be loaded."
+      },
+      "suggestions": {
+        "title": "Suggested tonight",
+        "dismiss": "Not tonight",
+        "reason": {
+          "never": "Not taught yet this season",
+          "thin": "Taught once, on {{date}}",
+          "stale": "Last taught {{date}}"
+        }
       }
     }
   },
@@ -2061,7 +2070,8 @@
         "attendance": "Attendance",
         "payments": "Payments",
         "promotions": "Promotions",
-        "edit": "Edit"
+        "edit": "Edit",
+        "coverage": "Programme"
       },
       "contactLinks": {
         "website": "Website",
@@ -2412,6 +2422,46 @@
         "bodyOther": "{{count}} athletes added to the roster."
       },
       "another": "Choose another file"
+    },
+    "coverage": {
+      "fraction": "{{seen}} of {{total}} things the academy taught",
+      "since": "Counted from {{date}}, the day they joined.",
+      "notTaughtYet": "{{count}} more are in the programme but have not been taught yet. That is the academy's gap, not theirs.",
+      "unattributed": "{{count}} of their sessions do not say which class they were, so nothing here counts them either way.",
+      "legend": {
+        "seen": "{{count}} seen",
+        "thin": "{{count}} seen once",
+        "missed": "{{count}} missed"
+      },
+      "missed": {
+        "title": "What they missed",
+        "chances": "taught {{count}}×"
+      },
+      "seen": {
+        "title": "What they have seen"
+      },
+      "error": {
+        "title": "Could not load this",
+        "hint": "The programme view is still there. Try again."
+      },
+      "empty": {
+        "noProgramme": {
+          "title": "No programme yet",
+          "hint": "Write the academy's programme and this page starts saying what each athlete has seen of it.",
+          "cta": "Go to the programme"
+        },
+        "nothingTaught": {
+          "title": "Nothing taught yet",
+          "hint": "No lesson has been tagged since they joined on {{date}}. There is nothing here to have missed."
+        }
+      },
+      "ago": {
+        "today": "today",
+        "yesterday": "yesterday",
+        "days": "{{count}} days ago",
+        "weekOne": "a week ago",
+        "weeks": "{{count}} weeks ago"
+      }
     }
   },
   "month": {

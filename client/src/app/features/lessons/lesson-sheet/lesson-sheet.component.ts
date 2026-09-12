@@ -17,9 +17,18 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TextareaModule } from 'primeng/textarea';
-import { forkJoin, of, switchMap } from 'rxjs';
-import { Lesson, LessonService, LessonTopic } from '../../../core/services/lesson.service';
+import { TooltipModule } from 'primeng/tooltip';
+import { catchError, forkJoin, of, switchMap } from 'rxjs';
+import {
+  Lesson,
+  LessonService,
+  LessonSuggestion,
+  LessonTopic,
+  SuggestionReason,
+} from '../../../core/services/lesson.service';
+import { LanguageService } from '../../../core/services/language.service';
 import { SyllabusService, SyllabusTopic, TopicKind } from '../../../core/services/syllabus.service';
+import { localeFor } from '../../../shared/utils/locale';
 
 /** A topic as the picker shows it, whichever list it came from. */
 interface Pickable {
@@ -59,6 +68,7 @@ interface Pickable {
     InputTextModule,
     SkeletonModule,
     TextareaModule,
+    TooltipModule,
   ],
   templateUrl: './lesson-sheet.component.html',
   styleUrl: './lesson-sheet.component.scss',
@@ -68,6 +78,7 @@ export class LessonSheetComponent {
   private readonly syllabusService = inject(SyllabusService);
   private readonly translate = inject(TranslateService);
   private readonly messageService = inject(MessageService);
+  private readonly languageService = inject(LanguageService);
 
   /** Two-way, so the host can close it and the dialog can close itself. */
   readonly visible = model<boolean>(false);
@@ -89,6 +100,13 @@ export class LessonSheetComponent {
   protected readonly lesson = signal<Lesson | null>(null);
   protected readonly positions = signal<readonly SyllabusTopic[]>([]);
   protected readonly recent = signal<readonly LessonTopic[]>([]);
+  protected readonly suggestions = signal<readonly LessonSuggestion[]>([]);
+  /**
+   * Waved away for this opening only. Not persisted: "not tonight" is not
+   * "never", and a dismissal that outlives the evening would quietly shrink
+   * the programme without anyone deciding to.
+   */
+  protected readonly dismissed = signal<ReadonlySet<number>>(new Set());
   protected readonly selected = signal<ReadonlySet<number>>(new Set());
   protected readonly notes = signal<string>('');
   protected readonly query = signal<string>('');
@@ -164,6 +182,19 @@ export class LessonSheetComponent {
     return this.recent().filter((t) => !picked.has(t.id));
   });
 
+  /**
+   * The suggestions still worth showing: not already chosen, not waved away.
+   *
+   * Never pre-selected, by design — a suggestion that fills the field is a
+   * suggestion that becomes wrong data the evening the instructor teaches
+   * something else.
+   */
+  protected readonly suggestionsOffered = computed<readonly LessonSuggestion[]>(() => {
+    const picked = this.selected();
+    const waved = this.dismissed();
+    return this.suggestions().filter((s) => !picked.has(s.id) && !waved.has(s.id));
+  });
+
   protected readonly heldLabel = computed<string | null>(() => {
     const lesson = this.lesson();
     if (lesson === null) return null;
@@ -196,6 +227,42 @@ export class LessonSheetComponent {
       next.add(id);
     }
     this.selected.set(next);
+  }
+
+  /** Wave one away without touching the lesson. Always available. */
+  protected dismissSuggestion(id: number): void {
+    const next = new Set(this.dismissed());
+    next.add(id);
+    this.dismissed.set(next);
+  }
+
+  /**
+   * "Not taught yet this season" / "last taught 12 Mar" — the reason in plain
+   * words, beside the suggestion it explains.
+   *
+   * An explicit map, not a template string. The i18n canon forbids building a
+   * key by concatenation: the parity spec cannot see such a key, so a reason
+   * nobody translated would ship green and render its own key on the mat.
+   * Here an unmapped value is a compile error instead.
+   */
+  private static readonly REASON_KEYS: Readonly<Record<SuggestionReason, string>> = {
+    never: 'lessons.sheet.suggestions.reason.never',
+    thin: 'lessons.sheet.suggestions.reason.thin',
+    stale: 'lessons.sheet.suggestions.reason.stale',
+  };
+
+  protected reasonKey(reason: SuggestionReason): string {
+    return LessonSheetComponent.REASON_KEYS[reason];
+  }
+
+  /** "12 Mar" — the day a topic was last on the mat, in the reader's locale. */
+  protected shortDate(iso: string): string {
+    if (iso === '') return '';
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
+      day: 'numeric',
+      month: 'short',
+    }).format(new Date(y, m - 1, d));
   }
 
   protected clearQuery(): void {
@@ -263,16 +330,25 @@ export class LessonSheetComponent {
     this.loadFailed.set(false);
     this.query.set('');
     this.expanded.set(new Set());
+    this.dismissed.set(new Set());
 
     forkJoin({
       lesson: this.lessonService.get(this.academyClassId(), this.heldOn()),
       positions: this.syllabusService.list(),
       recent: this.lessonService.recentTopics(),
+      // Caught here and not in the shared error branch: suggestions are the
+      // one piece of this dialog nobody needs. Letting them fail the forkJoin
+      // would stop an instructor editing tonight's topics because a panel they
+      // can dismiss anyway did not load.
+      suggestions: this.lessonService
+        .suggestions(this.academyClassId())
+        .pipe(catchError(() => of<LessonSuggestion[]>([]))),
     }).subscribe({
-      next: ({ lesson, positions, recent }) => {
+      next: ({ lesson, positions, recent, suggestions }) => {
         this.lesson.set(lesson);
         this.positions.set(positions);
         this.recent.set(recent);
+        this.suggestions.set(suggestions);
 
         // Departed topics are not in the selectable set: they cannot be
         // unticked here, and the server carries them through the sync.
@@ -291,6 +367,7 @@ export class LessonSheetComponent {
         this.lesson.set(null);
         this.positions.set([]);
         this.recent.set([]);
+        this.suggestions.set([]);
         this.selected.set(new Set());
         this.notes.set('');
         this.openedWith = { topicIds: [], notes: '' };

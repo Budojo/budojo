@@ -1,0 +1,174 @@
+// What this athlete has seen of the programme (#1567).
+//
+// One hue at three strengths, never three hues: seen, seen once and missed are
+// a scale, and a palette would claim they are unrelated categories (#1550).
+// The same scale the academy's coverage view uses, because the two screens
+// answer the same shape of question about different subjects.
+
+.coverage {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__headline {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    color: var(--p-primary-color);
+  }
+
+  &__percent {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  &__percent-sign {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-left: 0.25rem;
+  }
+
+  &__fraction {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-color);
+  }
+
+  // Said out loud rather than left implicit: the window this number covers is
+  // the difference between a fair measure and an accusation.
+  &__since,
+  &__note {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__note--caveat {
+    font-style: italic;
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--p-text-muted-color);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 999px;
+
+    &--seen {
+      background: var(--p-primary-color);
+    }
+
+    &--thin {
+      background: color-mix(in srgb, var(--p-primary-color) 45%, transparent);
+    }
+
+    &--missed {
+      background: var(--p-surface-300);
+    }
+  }
+}
+
+.bar {
+  display: flex;
+  overflow: hidden;
+  height: 1rem;
+  border-radius: 999px;
+  background: var(--p-surface-200);
+
+  &__seg {
+    height: 100%;
+
+    &--seen {
+      background: var(--p-primary-color);
+    }
+
+    &--thin {
+      background: color-mix(in srgb, var(--p-primary-color) 45%, transparent);
+    }
+
+    &--missed {
+      background: var(--p-surface-300);
+    }
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--p-content-border-color);
+  font-size: 0.875rem;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &__name {
+    color: var(--p-text-color);
+  }
+
+  &__parent {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+
+  // Pushed right on a wide row, wrapping under the name on a phone.
+  &__meta {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+}

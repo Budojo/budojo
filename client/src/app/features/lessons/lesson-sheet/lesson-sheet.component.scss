@@ -352,3 +352,64 @@
   font-size: 0.875rem;
   color: var(--budojo-danger);
 }
+
+// ── Suggested tonight (#1566) ─────────────────────────────────────────────────
+//
+// One hue at one strength, and a reason under every name. The suggestions sit
+// above "taught lately" because they are the answer to the question the
+// instructor actually walked in with; the group below is the answer to a
+// different one ("what were we doing?").
+
+.suggestion {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-width: 0;
+
+  .topic {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  // 48px, because it sits under a thumb at the edge of a mat (Fitts).
+  &__dismiss {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    min-height: 3rem;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--p-text-muted-color);
+    cursor: pointer;
+    transition: background var(--budojo-motion-fast) var(--budojo-motion-ease);
+
+    &:hover {
+      background: var(--p-surface-100);
+      color: var(--p-text-color);
+    }
+  }
+}
+
+.topic {
+  &--suggested {
+    // `.topic` is a single non-wrapping row; the reason needs a line of its
+    // own or it competes with the name for the same horizontal space and both
+    // lose. Wrapping here rather than on `.topic` leaves every other group's
+    // layout exactly as it was.
+    flex-wrap: wrap;
+    border: 1px solid color-mix(in srgb, var(--p-primary-color) 35%, var(--p-content-border-color));
+    background: color-mix(in srgb, var(--p-primary-color) 6%, transparent);
+  }
+
+  // The reason, on its own line: it explains the name above it, and a
+  // suggestion nobody can question is one nobody trusts.
+  &__reason {
+    flex-basis: 100%;
+    font-size: 0.6875rem;
+    color: var(--p-text-muted-color);
+  }
+}
