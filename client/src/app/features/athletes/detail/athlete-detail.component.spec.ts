@@ -62,6 +62,13 @@ function setupTestBed(
         useValue: {
           paramMap: of(paramMap),
           snapshot: { paramMap },
+          // The router builds the activated-route tree before it activates
+          // components, so production always has a resolved child here. The
+          // mock needs one too, or the component reads no tab segment and
+          // falls back to Documents for every URL (#1600).
+          firstChild: {
+            snapshot: { url: [{ path: initialUrl.split('/').filter(Boolean).pop() ?? '' }] },
+          },
         },
       },
       ...provideI18nTesting(),
