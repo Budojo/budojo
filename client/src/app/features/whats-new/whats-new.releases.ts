@@ -60,6 +60,92 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.59.0',
+    date: '2026-09-12',
+    headline: {
+      en: 'The programme.',
+      it: 'Il programma.',
+    },
+    sections: [
+      {
+        heading: {
+          en: "📚 The academy's programme",
+          it: "📚 Il programma dell'accademia",
+        },
+        bullets: [
+          {
+            en: 'From Academy → Programme you now keep the list of what you teach, by position: "Closed guard", and under it armbar, triangle, kimura, sweeps. Two levels and no more, because "armbar" on its own is not a syllabus entry — "armbar from closed guard" is. And it is the position that tells you the thing worth knowing: "you have done nothing from half guard all year" is information you act on; "few kimuras" is not.',
+            it: "Da Accademia → Programma trovi l'elenco di quello che insegni, organizzato per posizione: «Guardia chiusa», e sotto armbar, triangolo, kimura, spazzate. Due livelli, non di più, perché «armbar» da solo non è una voce di programma — «armbar dalla guardia chiusa» sì. Ed è la posizione a dirti le cose che contano: «da mezza guardia non hai fatto niente tutt'anno» è un'informazione su cui si agisce, «pochi kimura» no.",
+          },
+          {
+            en: 'You do not start from a blank page. One press on "Start from the BJJ programme" and a full syllabus is there — from the feet, down through the guards, into the pins, out through the escapes, the leg entanglements, the submission families, all the way to self-defence. Gi and no-gi, with whatever only makes sense in one of them already marked: heel hooks are no-gi, lapel guards are gi.',
+            it: 'Non parti dal foglio bianco. Un tocco su «Parti dal programma BJJ» e ti trovi dentro un programma completo — dalla lotta in piedi, giù attraverso le guardie, dentro i controlli, fuori dalle uscite, le entrature di gamba, le famiglie di sottomissioni, fino alla difesa personale. Gi e no-gi, con le cose che valgono solo per uno dei due già marcate: gli heel hook sono no-gi, le guardie di bavero sono gi.',
+          },
+          {
+            en: 'From then on it is yours. Rename it in your words, delete what you do not teach, add what is missing. It is not a taxonomy we impose on you: it is a starting point you own from the first minute.',
+            it: 'Da lì in poi è tuo. Rinomina con le tue parole, cancella quello che non insegni, aggiungi quello che manca. Non è una tassonomia che ti imponiamo: è un punto di partenza che possiedi dal primo minuto.',
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '✅ What is in season, and what is not',
+          it: '✅ Cosa è in stagione, e cosa no',
+        },
+        bullets: [
+          {
+            en: "Every entry carries a tick: in season. It says which things are part of this year's programme — the number that, in the releases to come, how much you have actually covered will be measured against. Unticking a position unticks every technique under it: if you are not doing lapel guards this year, that is one tap, not four.",
+            it: "Accanto a ogni voce c'è una spunta: in stagione. Serve a dire quali cose fanno parte del programma di quest'anno — il numero contro cui, nelle prossime versioni, si misurerà quanto ne hai effettivamente coperto. Togliere la spunta a una posizione la toglie a tutte le tecniche che contiene: se le guardie di bavero quest'anno non le fai, è un tocco solo, non quattro.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🎟️ Carnets: is one entry a lesson or a day?',
+          it: '🎟️ Carnet: un ingresso è una lezione o un giorno?',
+        },
+        bullets: [
+          {
+            en: 'With a timetable an athlete can do fundamentals and stay for the open mat: two classes the same evening. Whether that is two entries or one depends on what you sell, and now you say so. In the academy settings, as soon as the carnet price and size are filled in, the question appears: does one entry cover a lesson or the whole day? The lesson is the default — what carnets have always meant here. Choose the day and a second class on a day already charged costs nothing more.',
+            it: "Con l'orario, un atleta può fare i fondamentali e restare per l'open mat: due lezioni la stessa sera. Che siano due ingressi o uno dipende da cosa vendi, e ora glielo dici tu. Nelle impostazioni dell'accademia, appena hai compilato prezzo e numero di ingressi del carnet, compare la domanda: un ingresso copre una lezione o l'intera giornata? Di default è la lezione — quello che i carnet hanno sempre significato. Se scegli la giornata, la seconda lezione dello stesso giorno non costa niente in più.",
+          },
+          {
+            en: "Changing the setting recounts every carnet you have already sold, straight away: the balance you see is always what the current rule produces, never a leftover of the old one. And where the balance is read — the athlete's card and their own page — the day rule says so, so a balance dropping by one after two check-ins is not a surprise.",
+            it: "Cambiando l'impostazione ricontiamo tutti i carnet già venduti, subito: il saldo che vedi è sempre quello che la regola attuale produce, non un residuo di com'era prima. E dove il saldo si legge — sulla scheda dell'atleta e nella sua area personale — quando vale la regola «giornata» c'è scritto, così un saldo che scende di uno dopo due check-in non è una sorpresa.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🗓️ The training days come from the timetable',
+          it: "🗓️ I giorni di allenamento li deriva l'orario",
+        },
+        bullets: [
+          {
+            en: 'While the timetable holds at least one class, the days your academy trains are no longer set by hand: they are the days you have a class on, and they follow along every time you add, move or remove one. In place of the seven pills, the settings now carry a line saying so and a link to the timetable. Remove the last class and the days stay where they were: a timetable taken down is not a claim that nobody trains any more.',
+            it: "Finché l'orario ha almeno una lezione, i giorni in cui l'accademia si allena non si impostano più a mano: sono i giorni in cui hai lezione, e si aggiornano da soli ogni volta che ne aggiungi, sposti o togli una. Al posto delle sette pastiglie, nelle impostazioni trovi una riga che lo dice e un collegamento all'orario. Se togli l'ultima lezione, i giorni restano dov'erano: un orario smontato non è una dichiarazione che nessuno si allena più.",
+          },
+        ],
+      },
+      {
+        heading: {
+          en: '🔧 Fixed',
+          it: '🔧 Sistemato',
+        },
+        bullets: [
+          {
+            en: 'The attendance card in the stats is now entirely in the language you are reading: the range picker stayed in English even in Italian, and switching language did not refresh it until you reloaded. It also said "lessons realized", which is not English — they are lessons held.',
+            it: 'La scheda presenze nelle statistiche ora è tutta nella lingua che stai leggendo: prima il selettore del periodo restava in inglese anche in italiano, e cambiando lingua non si aggiornava finché non ricaricavi. Diceva anche «lezioni realizzate», che non è italiano: sono lezioni svolte.',
+          },
+          {
+            en: 'The attendance heatmap scaled its shades against a fixed scale, so in many academies every cell came out the same colour and the chart said nothing. The scale now fits your own numbers, and a caption underneath says what each shade means.',
+            it: "Il calendario delle presenze tarava le sue tonalità su una scala fissa, così in molte accademie tutte le caselle finivano dello stesso colore e il grafico non diceva niente. Ora la scala si adatta ai tuoi numeri, e sotto c'è scritto cosa vuol dire ogni tonalità.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.58.0',
     date: '2026-09-11',
     headline: {
