@@ -2454,13 +2454,6 @@
           "title": "Ancora nessuna lezione",
           "hint": "Nessuna lezione è stata segnata da quando si è iscritto, il {{date}}. Non c'è niente che possa essersi perso."
         }
-      },
-      "ago": {
-        "today": "oggi",
-        "yesterday": "ieri",
-        "days": "{{count}} giorni fa",
-        "weekOne": "una settimana fa",
-        "weeks": "{{count}} settimane fa"
       }
     }
   },
@@ -2614,13 +2607,6 @@
       "season": {
         "previous": "Stagione precedente",
         "next": "Stagione successiva"
-      },
-      "ago": {
-        "today": "oggi",
-        "yesterday": "ieri",
-        "days": "{{count}} giorni fa",
-        "weekOne": "una settimana fa",
-        "weeks": "{{count}} settimane fa"
       },
       "empty": {
         "noProgrammeTitle": "Nessun programma da confrontare",
@@ -2843,5 +2829,12 @@
     "tooltipCheck": "Controlla se ci sono aggiornamenti",
     "tooltipInstall": "Installa l'aggiornamento e riavvia",
     "tooltipUnavailable": "Questa versione non si aggiorna da sola"
+  },
+  "relativeDay": {
+    "today": "oggi",
+    "yesterday": "ieri",
+    "days": "{{count}} giorni fa",
+    "weekOne": "una settimana fa",
+    "weeks": "{{count}} settimane fa"
   }
 }

@@ -17,6 +17,7 @@ import { LanguageService } from '../../../core/services/language.service';
 import { StatsService, SyllabusCoverage } from '../../../core/services/stats.service';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state.component';
+import { relativeDay } from '../../../shared/utils/relative-day';
 import { localeFor } from '../../../shared/utils/locale';
 
 type KindFilter = 'all' | 'gi' | 'nogi';
@@ -149,46 +150,6 @@ export class StatsSyllabusComponent {
     this.seasonsBack.set(Math.min(MAX_SEASONS_BACK, Math.max(0, this.seasonsBack() + by)));
   }
 
-  /** Segment widths as percentages of the position's own scope. */
-  protected segment(value: number, total: number): string {
-    return total === 0 ? '0%' : `${(value / total) * 100}%`;
-  }
-
-  /** "12 Oct" — the day a topic was last on the mat, in the reader's locale. */
-  protected shortDate(iso: string): string {
-    const [y, m, d] = iso.split('-').map(Number);
-    return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
-      day: 'numeric',
-      month: 'short',
-    }).format(new Date(y, m - 1, d));
-  }
-
-  /**
-   * "3 weeks ago" — the answer to "didn't I just do armbars?", which is a
-   * question about distance, not about a date. Whole weeks once past seven
-   * days, because nobody plans in days at this range.
-   */
-  protected ago(iso: string): string {
-    this.languageService.currentLang(); // signal dep — recompute on toggle
-    const [y, m, d] = iso.split('-').map(Number);
-    const then = new Date(y, m - 1, d).getTime();
-    const now = new Date();
-    const days = Math.max(
-      0,
-      Math.round(
-        (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - then) / 86_400_000,
-      ),
-    );
-
-    if (days === 0) return this.translate.instant('stats.syllabus.ago.today');
-    if (days === 1) return this.translate.instant('stats.syllabus.ago.yesterday');
-    if (days < 7) return this.translate.instant('stats.syllabus.ago.days', { count: days });
-    const weeks = Math.floor(days / 7);
-    return weeks === 1
-      ? this.translate.instant('stats.syllabus.ago.weekOne')
-      : this.translate.instant('stats.syllabus.ago.weeks', { count: weeks });
-  }
-
   /**
    * Cumulative covered topics across the season.
    *
@@ -233,6 +194,32 @@ export class StatsSyllabusComponent {
   protected readonly seasonLabel = computed<string>(
     () => this.report()?.season.label ?? this.academyService.academy()?.season_label ?? '',
   );
+
+  /** Segment widths as percentages of the position's own scope. */
+  protected segment(value: number, total: number): string {
+    return total === 0 ? '0%' : `${(value / total) * 100}%`;
+  }
+
+  /** "12 Oct" — the day a topic was last on the mat, in the reader's locale. */
+  protected shortDate(iso: string): string {
+    if (iso === '') return '';
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Intl.DateTimeFormat(localeFor(this.languageService.currentLang()), {
+      day: 'numeric',
+      month: 'short',
+    }).format(new Date(y, m - 1, d));
+  }
+
+  /**
+   * "3 weeks ago" — the shared helper (#1602), so the wording and its
+   * pluralisation live in one place rather than drifting between the two
+   * coverage screens.
+   */
+  protected ago(iso: string): string {
+    this.languageService.currentLang(); // signal dep — recompute on toggle
+
+    return relativeDay(iso, this.translate);
+  }
 
   protected retry(): void {
     this.reloadTick.update((n) => n + 1);
