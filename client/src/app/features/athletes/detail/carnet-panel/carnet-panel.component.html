@@ -32,6 +32,11 @@
           <span class="carnets__total">/ {{ active.total_entries }}</span>
           <span class="carnets__unit">{{ 'athletes.detail.carnets.entriesWord' | translate }}</span>
         </p>
+        @if (entryCoversDay()) {
+          <p class="carnets__entry-unit" data-cy="carnet-entry-unit">
+            {{ 'athletes.detail.carnets.entryCoversDay' | translate }}
+          </p>
+        }
 
         <p class="carnets__dates">
           <!--

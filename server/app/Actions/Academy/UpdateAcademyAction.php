@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Academy;
 
 use App\Actions\Address\SyncAddressAction;
+use App\Actions\Payment\ReconcileAcademyCarnetsAction;
 use App\Models\Academy;
 use Illuminate\Support\Facades\DB;
 
@@ -13,6 +14,7 @@ class UpdateAcademyAction
     public function __construct(
         private readonly SyncAddressAction $syncAddress,
         private readonly RecordTrainingDaysAction $recordTrainingDays,
+        private readonly ReconcileAcademyCarnetsAction $reconcileCarnets,
     ) {
     }
 
@@ -31,6 +33,12 @@ class UpdateAcademyAction
      * "the schedule starting today", which leaves a history row as well as
      * the column, and the timetable writes them through the same Action —
      * see `RecordTrainingDaysAction`.
+     *
+     * What a carnet entry pays for (#1576) is an input of every carnet
+     * ledger in the academy, so changing it recounts them all — in the same
+     * transaction, because a setting that says "one entry a day" over a
+     * ledger still charging two is the drift the derived balance exists to
+     * rule out.
      *
      * `update()` hydrates the academy's scalar attributes in-memory before
      * persisting, so those are in sync with the DB on return. The address
@@ -61,6 +69,10 @@ class UpdateAcademyAction
                 $this->recordTrainingDays->execute($academy, $trainingDays);
             } else {
                 $academy->save();
+            }
+
+            if ($academy->wasChanged('carnet_entry_unit')) {
+                $this->reconcileCarnets->execute($academy);
             }
 
             if ($addressKeyPresent) {

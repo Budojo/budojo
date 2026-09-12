@@ -5854,7 +5854,11 @@ paths:
       operationId: meAcademyShow
       responses:
         '200':
-          description: Academy snapshot for the linked user.
+          description: |
+            Academy snapshot for the linked user — name, contacts, address,
+            logo, `training_days`, `owner`, and `carnet_entry_unit` (#1576,
+            see `CarnetEntryUnit`) so the portal can say what one entry of the
+            athlete's carnet pays for.
           content:
             application/json:
               schema:
@@ -6916,6 +6920,14 @@ components:
             How many entries one carnet holds. Snapshotted onto each carnet
             at sale, so changing it never resizes carnets already sold.
           example: 10
+        carnet_entry_unit:
+          allOf:
+            - $ref: '#/components/schemas/CarnetEntryUnit'
+          description: |
+            What one entry pays for (#1576). Not nullable — there is no
+            "not configured", `lesson` is the answer until the owner changes
+            it, so `null` is a 422. Changing it recounts every carnet the
+            academy has ever sold, in the same transaction as this update.
         training_days:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
@@ -7001,6 +7013,7 @@ components:
           monthly_fee_cents,
           carnet_price_cents,
           carnet_entries,
+          carnet_entry_unit,
           training_days,
           season_start_month,
           season_start,
@@ -7117,6 +7130,11 @@ components:
             How many entries one carnet holds. Snapshotted onto each carnet
             at sale.
           example: 10
+        carnet_entry_unit:
+          allOf:
+            - $ref: '#/components/schemas/CarnetEntryUnit'
+          description: |
+            Always present — `lesson` until the owner changes it (#1576).
         training_days:
           $ref: '#/components/schemas/TrainingDays'
         season_start_month:
@@ -7173,6 +7191,19 @@ components:
             transitions on the FE.
           items:
             $ref: '#/components/schemas/AcademySchedule'
+
+    CarnetEntryUnit:
+      type: string
+      enum: [lesson, day]
+      default: lesson
+      description: |
+        What one carnet entry pays for (#1576). With a timetable an athlete
+        can be checked into two classes on the same day: under `lesson` that
+        spends two entries, under `day` the second class on a day already
+        charged costs nothing. A rule of the ledger rather than of the sale,
+        so it is not snapshotted onto carnets — changing it recounts every
+        carnet the academy has sold.
+      example: lesson
 
     ClassKind:
       type: string
