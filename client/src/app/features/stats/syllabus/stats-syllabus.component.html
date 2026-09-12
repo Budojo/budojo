@@ -45,6 +45,7 @@
           <button
             type="button"
             class="coverage__season-step"
+            [disabled]="atOldestSeason()"
             [attr.aria-label]="'stats.syllabus.season.previous' | translate"
             (click)="shiftSeason(1)"
             data-cy="syllabus-coverage-prev"
@@ -55,7 +56,7 @@
           <button
             type="button"
             class="coverage__season-step"
-            [disabled]="canGoBack()"
+            [disabled]="atCurrentSeason()"
             [attr.aria-label]="'stats.syllabus.season.next' | translate"
             (click)="shiftSeason(-1)"
             data-cy="syllabus-coverage-next"

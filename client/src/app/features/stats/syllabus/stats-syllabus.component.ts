@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ChartModule } from 'primeng/chart';
 import { SelectButtonModule } from 'primeng/selectbutton';
@@ -13,6 +20,13 @@ import { ErrorStateComponent } from '../../../shared/components/error-state/erro
 import { localeFor } from '../../../shared/utils/locale';
 
 type KindFilter = 'all' | 'gi' | 'nogi';
+
+/**
+ * The furthest back the report will go, mirroring `SyllabusCoverageRequest`'s
+ * own `max:10`. Without the cap the eleventh press is a 422 the retry button
+ * cannot get out of.
+ */
+const MAX_SEASONS_BACK = 10;
 
 interface FilterOption {
   readonly label: string;
@@ -64,8 +78,36 @@ export class StatsSyllabusComponent {
   protected readonly kind = signal<KindFilter>('all');
   protected readonly seasonsBack = signal<number>(0);
 
+  /** Bumped by the retry button; the effect below watches it. */
+  private readonly reloadTick = signal<number>(0);
+
   constructor() {
-    this.load();
+    // The same refetch shape the attendance tab uses: an effect keyed on the
+    // controls, and `onCleanup` cancelling the previous request. Two quick
+    // presses on "previous season" would otherwise leave two reads in flight,
+    // and the slower one would paint a season the label no longer names.
+    effect((onCleanup) => {
+      const seasonsBack = this.seasonsBack();
+      const kind = this.kind();
+      this.reloadTick();
+
+      this.loading.set(true);
+      this.failed.set(false);
+
+      const sub = this.stats.syllabusCoverage(seasonsBack, kind === 'all' ? null : kind).subscribe({
+        next: (report) => {
+          this.report.set(report);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.report.set(null);
+          this.failed.set(true);
+          this.loading.set(false);
+        },
+      });
+
+      onCleanup(() => sub.unsubscribe());
+    });
   }
 
   protected readonly kindOptions = computed<FilterOption[]>(() => {
@@ -90,20 +132,21 @@ export class StatsSyllabusComponent {
     () => !this.nothingInScope() && (this.report()?.taught.length ?? 0) === 0,
   );
 
-  /** The previous season is offered only once this one is not the first. */
-  protected readonly canGoBack = computed<boolean>(() => this.seasonsBack() < 1);
+  /** Nowhere forward to go — bound to the "next season" button. */
+  protected readonly atCurrentSeason = computed<boolean>(() => this.seasonsBack() === 0);
+
+  /** Nowhere further back — the server refuses past ten. */
+  protected readonly atOldestSeason = computed<boolean>(
+    () => this.seasonsBack() >= MAX_SEASONS_BACK,
+  );
 
   protected setKind(kind: KindFilter): void {
-    if (kind === this.kind()) return;
     this.kind.set(kind);
-    this.load();
   }
 
+  /** Clamped at both ends: past ten the server answers 422, not a report. */
   protected shiftSeason(by: number): void {
-    const next = Math.max(0, this.seasonsBack() + by);
-    if (next === this.seasonsBack()) return;
-    this.seasonsBack.set(next);
-    this.load();
+    this.seasonsBack.set(Math.min(MAX_SEASONS_BACK, Math.max(0, this.seasonsBack() + by)));
   }
 
   /** Segment widths as percentages of the position's own scope. */
@@ -191,26 +234,7 @@ export class StatsSyllabusComponent {
     () => this.report()?.season.label ?? this.academyService.academy()?.season_label ?? '',
   );
 
-  private load(): void {
-    this.loading.set(true);
-    this.failed.set(false);
-
-    const kind = this.kind();
-
-    this.stats.syllabusCoverage(this.seasonsBack(), kind === 'all' ? null : kind).subscribe({
-      next: (report) => {
-        this.report.set(report);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.report.set(null);
-        this.failed.set(true);
-        this.loading.set(false);
-      },
-    });
-  }
-
   protected retry(): void {
-    this.load();
+    this.reloadTick.update((n) => n + 1);
   }
 }

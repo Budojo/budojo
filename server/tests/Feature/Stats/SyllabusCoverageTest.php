@@ -283,6 +283,59 @@ it('draws no bar for a position with nothing left in season', function (): void 
     expect($names)->toBe(['Closed guard']);
 });
 
+// ─── The bars and the total have to agree ────────────────────────────────────
+
+it('keeps a technique whose position is out of season, and still gives it a bar', function (): void {
+    // Adding a technique never re-ticks its parent, so this is reachable
+    // without doing anything strange.
+    $this->closedGuard->update(['in_season' => false]);
+
+    $data = coverage($this);
+
+    expect($data['totals']['in_scope'])->toBe(2);
+    expect($data['positions'])->toHaveCount(1);
+    expect($data['positions'][0])->toMatchArray(['name' => 'Closed guard', 'in_scope' => 2]);
+    // The denominator and the bars cannot disagree.
+    expect(array_sum(array_column($data['positions'], 'in_scope')))->toBe($data['totals']['in_scope']);
+});
+
+it('names the position of a missing technique even when the filter excludes the position', function (): void {
+    $this->closedGuard->update(['kind' => TopicKind::Gi]);
+
+    // `both` techniques survive a no-gi filter; their `gi` position does not.
+    $data = coverage($this, ['kind' => 'nogi']);
+
+    expect($data['totals']['in_scope'])->toBe(2);
+    expect($data['missing'][0]['parent_name'])->toBe('Closed guard');
+    expect(array_sum(array_column($data['positions'], 'in_scope')))->toBe(2);
+});
+
+it('lists what is missing in programme order, not interleaved across positions', function (): void {
+    // sort_order is numbered per parent, so a flat sort by it alone would
+    // emit every position's first technique, then every second, and so on.
+    $mount = SyllabusTopic::factory()->for($this->academy)->create(['name' => 'Mount', 'sort_order' => 1]);
+    SyllabusTopic::factory()->under($mount)->create(['name' => 'Ezekiel', 'sort_order' => 0]);
+    SyllabusTopic::factory()->under($mount)->create(['name' => 'Americana', 'sort_order' => 1]);
+    $this->armbar->update(['sort_order' => 0]);
+    $this->triangle->update(['sort_order' => 1]);
+
+    $names = array_column(coverage($this)['missing'], 'name');
+
+    expect($names)->toBe(['Armbar', 'Triangle', 'Ezekiel', 'Americana']);
+});
+
+it('draws the week that ends today, not the one before it', function (): void {
+    // A Sunday: `endOfWeek()` lands on 23:59:59 of the same day, and the
+    // comparison against midnight dropped the newest point entirely.
+    Carbon::setTestNow(Carbon::parse('2026-11-15 10:00:00')); // a Sunday
+    lessonOn($this, '2026-11-09', [$this->armbar]);
+
+    $timeline = coverage($this)['timeline'];
+    $last = $timeline[count($timeline) - 1]['on'];
+
+    expect($last)->toBe('2026-11-15');
+});
+
 // ─── Scoping ─────────────────────────────────────────────────────────────────
 
 it('never counts another academy lessons or topics', function (): void {

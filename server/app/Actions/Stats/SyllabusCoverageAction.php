@@ -53,9 +53,16 @@ class SyllabusCoverageAction
         $start = Season::startFor($academy, $reference);
         $end = Season::endFor($academy, $reference);
 
-        $topics = $this->topicsInScope($academy, $kind);
-        $positions = $topics->filter(static fn (SyllabusTopic $t): bool => $t->parent_id === null)->keyBy('id');
-        $techniques = $topics->filter(static fn (SyllabusTopic $t): bool => $t->parent_id !== null);
+        // Techniques are the denominator; positions are the grouping, and
+        // they are loaded **unfiltered** on purpose. A technique can be in
+        // season under a position that is not (adding one never re-ticks its
+        // parent), and `both` survives a `gi` filter under a `gi` position —
+        // so filtering the grouping too would leave in-scope techniques with
+        // no bar to sit in and no name to print, and the bars would stop
+        // summing to the total.
+        $techniques = $this->topicsInScope($academy, $kind)
+            ->filter(static fn (SyllabusTopic $t): bool => $t->parent_id !== null);
+        $positions = $this->positions($academy);
 
         $taught = $this->taughtInSeason($academy, $start, $end);
 
@@ -86,6 +93,23 @@ class SyllabusCoverageAction
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * Every living position, in programme order — the grouping and the source
+     * of the names, never the denominator.
+     *
+     * @return Collection<int, SyllabusTopic>
+     */
+    private function positions(Academy $academy): Collection
+    {
+        return SyllabusTopic::query()
+            ->where('academy_id', $academy->id)
+            ->positions()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->keyBy('id');
     }
 
     /**
@@ -162,6 +186,8 @@ class SyllabusCoverageAction
             $state = $lessons >= self::COVERED_AT ? 'covered' : ($lessons === 1 ? 'thin' : 'missing');
 
             $parentId = $technique->parent_id ?? 0;
+            $parent = $positions->get($parentId);
+            $parentOrder = $parent instanceof SyllabusTopic ? $parent->sort_order : 0;
             $byPosition[$parentId] ??= ['covered' => 0, 'thin' => 0, 'missing' => 0];
             $byPosition[$parentId][$state]++;
 
@@ -173,8 +199,10 @@ class SyllabusCoverageAction
                 $missing[] = [
                     'id' => $technique->id,
                     'name' => $technique->name,
-                    'parent_name' => $positions->get($parentId)?->name,
+                    'parent_name' => $parent?->name,
                     'kind' => $technique->kind->value,
+                    // Sort key only; stripped before the list is returned.
+                    '_order' => [$parentOrder, $technique->sort_order],
                 ];
             }
 
@@ -182,7 +210,7 @@ class SyllabusCoverageAction
                 $done[] = [
                     'id' => $technique->id,
                     'name' => $technique->name,
-                    'parent_name' => $positions->get($parentId)?->name,
+                    'parent_name' => $parent?->name,
                     'kind' => $technique->kind->value,
                     'lessons' => $lessons,
                     'last_taught_on' => $taught[$technique->id]['last'],
@@ -198,6 +226,16 @@ class SyllabusCoverageAction
             (string) $b['last_taught_on'],
             (string) $a['last_taught_on'],
         ));
+
+        // `sort_order` is numbered per parent, so a flat list sorted by it
+        // alone ping-pongs between positions on consecutive rows. This is the
+        // list an instructor reads top to bottom; it reads in programme order.
+        usort($missing, static fn (array $a, array $b): int => $a['_order'] <=> $b['_order']);
+        $missing = array_map(static function (array $row): array {
+            unset($row['_order']);
+
+            return $row;
+        }, $missing);
 
         $inScope = $techniques->count();
 
@@ -286,7 +324,10 @@ class SyllabusCoverageAction
         $last = CarbonImmutable::today()->lessThan($end) ? CarbonImmutable::today() : $end;
 
         $points = [];
-        $cursor = $start->endOfWeek();
+        // Start of day, not the 23:59:59.999999 `endOfWeek()` hands back: the
+        // comparison below is against midnight today, and the difference
+        // silently dropped the newest point every Sunday.
+        $cursor = $start->endOfWeek()->startOfDay();
         $index = 0;
         $running = 0;
 

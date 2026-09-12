@@ -198,6 +198,7 @@ describe('StatsSyllabusComponent (#1565)', () => {
     fixture.detectChanges();
 
     component['setKind']('nogi');
+    fixture.detectChanges(); // the refetch is an effect — flush it
 
     const req = httpMock.expectOne((r) => r.url === URL);
     expect(req.request.params.get('kind')).toBe('nogi');
@@ -224,6 +225,7 @@ describe('StatsSyllabusComponent (#1565)', () => {
     expect(next.disabled).toBe(true);
 
     component['shiftSeason'](1);
+    fixture.detectChanges();
     const back = httpMock.expectOne((r) => r.url === URL);
     expect(back.request.params.get('seasons_back')).toBe('1');
     back.flush({
@@ -293,10 +295,36 @@ describe('StatsSyllabusComponent (#1565)', () => {
     ).not.toBeNull();
 
     fixture.componentInstance['retry']();
+    fixture.detectChanges();
     flush(httpMock);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-cy="syllabus-coverage"]')).not.toBeNull();
+  });
+
+  it('will not walk back past the tenth season — the server refuses it', () => {
+    const { fixture, component, httpMock } = setup();
+    flush(httpMock);
+    fixture.detectChanges();
+
+    for (let i = 0; i < 10; i++) {
+      component['shiftSeason'](1);
+      fixture.detectChanges();
+      flush(httpMock);
+      fixture.detectChanges();
+    }
+
+    expect(component['seasonsBack']()).toBe(10);
+    const prev = fixture.nativeElement.querySelector(
+      '[data-cy="syllabus-coverage-prev"]',
+    ) as HTMLButtonElement;
+    expect(prev.disabled).toBe(true);
+
+    // One more press asks for nothing: eleven is a 422 the retry cannot
+    // escape, so the control stops instead.
+    component['shiftSeason'](1);
+    fixture.detectChanges();
+    httpMock.expectNone((r) => r.url === URL);
   });
 
   it('scales the timeline against the denominator, not against its own peak', () => {
