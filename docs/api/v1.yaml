@@ -7355,6 +7355,7 @@ components:
             How many classes are on the weekly timetable (#1562) — enough for
             the academy page to say "4 classes a week" or "not set up yet"
             without a second request.
+          example: 4
         syllabus_topics_count:
           type: integer
           minimum: 0
@@ -7362,7 +7363,7 @@ components:
             How many techniques the programme holds (#1563) — living ones,
             positions excluded. Enough for the academy page to say "84
             techniques" or "not set up yet" without a second request.
-          example: 4
+          example: 84
         schedules:
           type: array
           description: |

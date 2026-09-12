@@ -40,6 +40,7 @@
         [hint]="'academy.syllabus.empty.hint' | translate"
         [ctaLabel]="'academy.syllabus.empty.cta' | translate"
         ctaIcon="pi pi-sparkles"
+        [ctaLoading]="seeding()"
         (ctaClick)="seedFromStarter()"
         dataCy="syllabus-empty"
       />

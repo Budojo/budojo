@@ -72,6 +72,8 @@ import { ButtonModule } from 'primeng/button';
           size="small"
           [label]="label"
           [icon]="ctaIcon()"
+          [loading]="ctaLoading()"
+          [disabled]="ctaLoading()"
           (onClick)="ctaClick.emit()"
           [attr.data-cy]="dataCy() ? dataCy() + '-cta' : null"
         />
@@ -128,6 +130,13 @@ export class EmptyStateComponent {
   readonly ctaLabel = input<string | null>(null);
   /** Optional CTA icon. Defaults to plus when only a label is given. */
   readonly ctaIcon = input<string>('pi pi-plus');
+  /**
+   * The CTA is working — spinner on, button inert. An empty state's action is
+   * sometimes a long write (the syllabus seed copies ~340 rows, #1563), and
+   * an idle-looking button through it is the canon's "feedback within 300 ms"
+   * missed at the one place the page has nothing else to show.
+   */
+  readonly ctaLoading = input<boolean>(false);
   /** Cypress hook. By convention `{feature}-empty`. */
   readonly dataCy = input<string | null>(null);
 

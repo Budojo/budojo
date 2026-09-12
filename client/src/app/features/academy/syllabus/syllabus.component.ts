@@ -300,12 +300,19 @@ export class SyllabusComponent {
       ? (this.positions().find((p) => p.id === current.id)?.children?.length ?? 0)
       : 0;
 
+    // Three keys, because ngx-translate has no plural rule and "and the 1
+    // techniques under it" is how that shows up the first time somebody
+    // deletes a position holding exactly one.
+    const messageKey =
+      under === 0
+        ? 'academy.syllabus.confirm.remove'
+        : under === 1
+          ? 'academy.syllabus.confirm.removePositionOne'
+          : 'academy.syllabus.confirm.removePositionOther';
+
     this.confirmationService.confirm({
       target: event.currentTarget as EventTarget,
-      message: this.translate.instant(
-        under > 0 ? 'academy.syllabus.confirm.removePosition' : 'academy.syllabus.confirm.remove',
-        { name: current.name, count: under },
-      ),
+      message: this.translate.instant(messageKey, { name: current.name, count: under }),
       acceptLabel: this.translate.instant('academy.syllabus.confirm.accept'),
       rejectLabel: this.translate.instant('academy.syllabus.confirm.reject'),
       acceptButtonProps: { severity: 'danger' },

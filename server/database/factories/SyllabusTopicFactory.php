@@ -26,9 +26,11 @@ class SyllabusTopicFactory extends Factory
         return [
             'academy_id' => Academy::factory(),
             'parent_id' => null,
-            'name' => $this->faker->unique()->randomElement([
-                'Closed guard', 'Half guard', 'Mount', 'Side control', 'Back control', 'Butterfly guard',
-            ]),
+            // Unbounded, not a curated list: `unique()` buckets by generator
+            // method, so a fixed set of names caps how many topics one test
+            // may create — and `definition()` runs even when the caller
+            // passes a name of its own, which almost every test does.
+            'name' => ucfirst($this->faker->unique()->words(2, true)),
             'kind' => TopicKind::Both,
             'in_season' => true,
             'sort_order' => 0,
@@ -41,9 +43,6 @@ class SyllabusTopicFactory extends Factory
         return $this->state([
             'academy_id' => $position->academy_id,
             'parent_id' => $position->id,
-            'name' => $this->faker->unique()->randomElement([
-                'Armbar', 'Triangle', 'Kimura', 'Omoplata', 'Hip bump sweep', 'Scissor sweep',
-            ]),
         ]);
     }
 }

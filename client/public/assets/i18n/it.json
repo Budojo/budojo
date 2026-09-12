@@ -1644,7 +1644,8 @@
       },
       "confirm": {
         "remove": "Rimuovere {{name}} dal programma?",
-        "removePosition": "Rimuovere {{name}} e le {{count}} tecniche che contiene?",
+        "removePositionOne": "Rimuovere {{name}} e la tecnica che contiene?",
+        "removePositionOther": "Rimuovere {{name}} e le {{count}} tecniche che contiene?",
         "accept": "Rimuovi",
         "reject": "Tieni"
       },

@@ -162,6 +162,26 @@ describe('SyllabusComponent (#1563)', () => {
     expect(TestBed.inject(AcademyService).academy()?.syllabus_topics_count).toBe(2);
   });
 
+  it('holds the starter button while the seed runs — it writes three hundred rows', () => {
+    const { fixture, httpMock } = setup();
+    flushTree(httpMock, []);
+    fixture.detectChanges();
+
+    const cta = () =>
+      fixture.nativeElement.querySelector(
+        '[data-cy="syllabus-empty-cta"] button',
+      ) as HTMLButtonElement | null;
+    expect(cta()?.disabled).toBe(false);
+
+    cta()!.click();
+    fixture.detectChanges();
+    expect(cta()?.disabled).toBe(true);
+
+    httpMock.expectOne(`${SYLLABUS_URL}/seed`).flush({ data: { written: 348 } });
+    flushTree(httpMock, [CLOSED_GUARD]);
+    flushAcademy(httpMock, 2);
+  });
+
   it('adds a position with no parent', () => {
     const { fixture, component, httpMock } = setup();
     flushTree(httpMock, [CLOSED_GUARD]);
@@ -355,6 +375,7 @@ describe('SyllabusComponent (#1563)', () => {
 
     // What goes with it is said before it goes, not after.
     expect(spy.mock.calls[0][0].message).toContain('2 techniques');
+    expect(spy.mock.calls[0][0].message).toContain('Closed guard');
 
     const req = httpMock.expectOne(`${SYLLABUS_URL}/1`);
     expect(req.request.method).toBe('DELETE');
@@ -362,5 +383,38 @@ describe('SyllabusComponent (#1563)', () => {
 
     flushTree(httpMock, []);
     flushAcademy(httpMock, 0);
+  });
+
+  it('counts in words a reader would use — one technique, not "1 techniques"', () => {
+    const onlyArmbar = { ...CLOSED_GUARD, children: [ARMBAR] };
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [onlyArmbar]);
+    fixture.detectChanges();
+
+    component['startEditing'](onlyArmbar);
+    const confirmation = fixture.debugElement.injector.get(ConfirmationService);
+    const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+    component['confirmRemove']({
+      currentTarget: document.createElement('button'),
+    } as unknown as Event);
+
+    expect(spy.mock.calls[0][0].message).toBe(
+      'Remove Closed guard and the one technique under it?',
+    );
+  });
+
+  it('says nothing about what goes with a technique — nothing does', () => {
+    const { fixture, component, httpMock } = setup();
+    flushTree(httpMock, [CLOSED_GUARD]);
+    fixture.detectChanges();
+
+    component['startEditing'](ARMBAR);
+    const confirmation = fixture.debugElement.injector.get(ConfirmationService);
+    const spy = vi.spyOn(confirmation, 'confirm').mockImplementation(() => confirmation);
+    component['confirmRemove']({
+      currentTarget: document.createElement('button'),
+    } as unknown as Event);
+
+    expect(spy.mock.calls[0][0].message).toBe('Remove Armbar from the programme?');
   });
 });
