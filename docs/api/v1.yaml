@@ -3499,6 +3499,69 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /stats/syllabus/coverage:
+    get:
+      tags: [Stats]
+      summary: Syllabus coverage across a season (#1565)
+      description: |
+        What the academy said it would teach this season, against what it
+        actually did — the payoff of the timetable (#1562), the programme
+        (#1563) and lesson tagging (#1564).
+
+        **Covered takes two held lessons.** Taught exactly once is `thin`, and
+        never taught is `missing`: teaching a thing in September and calling
+        it done is the self-deception a single percentage would hide.
+
+        Only **held** lessons count — a lesson planned and never checked into
+        contributes nothing. Only `in_season` topics count. **Positions are
+        not in the denominator**: the programme's top level is a chapter
+        heading, and "have I covered closed guard" is answered by its
+        techniques. A position tagged on its own is still reported, per row,
+        as `worked`.
+
+        `kind` narrows **both halves** of the fraction, never just the
+        numerator: a gi topic counted against a no-gi academy is a number
+        that is quietly wrong, which is worse than no number. `both` is not a
+        filter value — it is the kind a topic carries when it makes sense
+        either way, and every filter admits it.
+
+        Owner-only, and requires `stats_view`.
+      operationId: statsSyllabusCoverage
+      parameters:
+        - in: query
+          name: seasons_back
+          description: |
+            How many seasons before the current one, 0 being now. The boundary
+            is resolved server-side from `academies.season_start_month`
+            (#1484) so no client re-implements the same off-by-one.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 10
+            default: 0
+        - in: query
+          name: kind
+          schema:
+            type: string
+            enum: [gi, nogi]
+      responses:
+        '200':
+          description: The coverage report
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SyllabusCoverage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /search:
     get:
       tags: [auth]
@@ -7747,6 +7810,109 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LessonTopic'
+
+    SyllabusCoverage:
+      type: object
+      description: |
+        The coverage report for one season (#1565). Every count is of
+        **techniques** — positions are a grouping, not a unit of work.
+      required: [season, kind, totals, positions, missing, taught, timeline]
+      properties:
+        season:
+          type: object
+          required: [start, end, label]
+          properties:
+            start: { type: string, format: date }
+            end: { type: string, format: date }
+            label:
+              type: string
+              description: '`2026/27` for a season crossing new year, `2026` for one that does not.'
+              example: 2026/27
+        kind:
+          type: string
+          nullable: true
+          enum: [gi, nogi]
+          description: The filter in force, or null for the whole programme.
+        totals:
+          type: object
+          required: [in_scope, covered, thin, missing, percentage]
+          properties:
+            in_scope:
+              type: integer
+              description: In-season techniques the filter admits — the denominator.
+            covered:
+              type: integer
+              description: Taught in two or more held lessons.
+            thin:
+              type: integer
+              description: Taught in exactly one.
+            missing:
+              type: integer
+              description: Never taught this season.
+            percentage:
+              type: integer
+              description: '`covered / in_scope`, rounded. 0 rather than a division by zero when there is no programme.'
+        positions:
+          type: array
+          description: One row per position with anything in scope under it.
+          items:
+            type: object
+            required: [id, name, kind, in_scope, covered, thin, missing, worked]
+            properties:
+              id: { type: integer, format: int64 }
+              name: { type: string }
+              kind: { $ref: '#/components/schemas/TopicKind' }
+              in_scope: { type: integer }
+              covered: { type: integer }
+              thin: { type: integer }
+              missing: { type: integer }
+              worked:
+                type: integer
+                description: |
+                  Held lessons that tagged the position itself — "we worked
+                  half guard". Fills no technique, and is not nothing either.
+        missing:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoverageTopic'
+        taught:
+          type: array
+          description: Everything taught at least once, most recently taught first.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/CoverageTopic'
+              - type: object
+                required: [lessons, last_taught_on, state]
+                properties:
+                  lessons: { type: integer }
+                  last_taught_on: { type: string, format: date }
+                  state:
+                    type: string
+                    enum: [covered, thin, missing]
+        timeline:
+          type: array
+          description: |
+            Cumulative covered techniques, one point per week from the season
+            start up to today — a topic joins on the day of its **second**
+            lesson, the same rule the headline uses.
+          items:
+            type: object
+            required: [on, covered]
+            properties:
+              on: { type: string, format: date }
+              covered: { type: integer }
+
+    CoverageTopic:
+      type: object
+      required: [id, name, parent_name, kind]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string, example: Omoplata }
+        parent_name:
+          type: string
+          nullable: true
+          example: Closed guard
+        kind: { $ref: '#/components/schemas/TopicKind' }
 
     TopicKind:
       type: string

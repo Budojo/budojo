@@ -1,0 +1,357 @@
+// Syllabus coverage (#1565).
+//
+// The three states are one hue at three strengths, never three hues (#1550):
+// covered → thin → missing is a scale, and a palette would claim they are
+// unrelated categories. Intensity is the channel; the meaning is how much of
+// a thing has actually been taught.
+
+.coverage {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__head {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+  }
+
+  &__headline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  &__percentage {
+    margin: 0;
+    font-size: 3rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--p-primary-color);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__percent-sign {
+    font-size: 1.5rem;
+    margin-left: 0.25rem;
+  }
+
+  &__caption {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+
+    @media (min-width: 768px) {
+      align-items: flex-end;
+    }
+  }
+
+  &__season {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__season-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__season-step {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    background: none;
+    border: 1px solid var(--p-content-border-color);
+    border-radius: var(--budojo-radius-small, 0.5rem);
+    color: var(--p-text-muted-color);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--p-content-hover-background);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--p-primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  &__totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  &__empty-link {
+    margin: 0;
+    text-align: center;
+    font-size: 0.875rem;
+  }
+}
+
+// The legend, carrying the same three strengths the bars use.
+.tally {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &__dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 4px;
+  }
+
+  &--covered &__dot {
+    background: var(--p-primary-color);
+  }
+
+  &--thin &__dot {
+    background: color-mix(in srgb, var(--p-primary-color) 35%, transparent);
+  }
+
+  &--missing &__dot {
+    background: var(--p-surface-200);
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--budojo-radius-medium, 0.75rem);
+
+  &__title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+  }
+
+  &__none {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+  }
+
+  // Chart.js needs a sized box; the canvas fills it.
+  &__chart {
+    position: relative;
+    height: 200px;
+  }
+}
+
+// Missing and last-taught sit side by side once there is room for two
+// columns; stacked below, where a column would be a strip.
+.panel-pair {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+// ── The position bars ─────────────────────────────────────────────────────────
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'name count'
+      'bar bar';
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+
+    // Name, bar and count on one line once the row is wide enough to hold
+    // all three without the name ellipsing away to nothing.
+    @media (min-width: 768px) {
+      grid-template-columns: 12rem minmax(0, 1fr) auto;
+      grid-template-areas: 'name bar count';
+    }
+  }
+
+  &__name {
+    grid-area: name;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--p-text-color);
+    overflow-wrap: anywhere;
+  }
+
+  &__worked {
+    flex: 0 0 auto;
+    font-size: 0.6875rem;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+
+  &__count {
+    grid-area: count;
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}
+
+.bar {
+  grid-area: bar;
+  display: flex;
+  width: 100%;
+  height: 0.75rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--p-surface-200);
+
+  &__seg {
+    height: 100%;
+
+    &--covered {
+      background: var(--p-primary-color);
+    }
+
+    &--thin {
+      background: color-mix(in srgb, var(--p-primary-color) 35%, transparent);
+    }
+
+    // The remainder is the track showing through: a segment that paints the
+    // same colour as the background it sits on is a rule with nothing to do.
+    &--missing {
+      background: transparent;
+    }
+  }
+}
+
+// ── The two lists ─────────────────────────────────────────────────────────────
+
+.topics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+
+  &__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2rem;
+    padding: 0.25rem 0;
+
+    & + & {
+      border-top: 1px solid color-mix(in srgb, var(--p-content-border-color) 60%, transparent);
+    }
+  }
+
+  &__name {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--p-text-color);
+    overflow-wrap: anywhere;
+  }
+
+  &__parent,
+  &__ago {
+    flex: 0 0 auto;
+    font-size: 0.6875rem;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+
+  // Taught once. The same eyebrow shape the rest of the app uses for a
+  // dimension of a row, not a second colour.
+  &__thin {
+    flex: 0 0 auto;
+    padding: 0 0.5rem;
+    line-height: 1.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--p-content-border-color);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+
+  &__when {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--p-text-color);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// The filter's accessible name. Visible labels sit above their controls
+// everywhere else in the app; this one is in a header row with no room for a
+// line of its own, so the name is given to assistive tech alone.
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

@@ -2483,7 +2483,8 @@
       "overview": "Panoramica",
       "attendance": "Presenze",
       "payments": "Pagamenti",
-      "athletes": "Atleti"
+      "athletes": "Atleti",
+      "syllabus": "Programma"
     },
     "attendance": {
       "heatmapTitle": "Mappa presenze",
@@ -2537,6 +2538,51 @@
         "master_5": "Master 5",
         "master_6": "Master 6",
         "master_7": "Master 7"
+      }
+    },
+    "syllabus": {
+      "headline": "{{covered}} di {{total}} coperti in questa stagione",
+      "byPosition": "Per posizione",
+      "overTime": "Nel corso della stagione",
+      "lastTaught": "L'ultima volta",
+      "missingList": "Non ancora fatto ({{count}})",
+      "nothingMissing": "Non manca niente: hai fatto tutto il programma.",
+      "thinTag": "Una volta",
+      "worked": "fatta {{count}}×",
+      "barAria": "{{name}}: {{covered}} coperti, {{thin}} fatti una volta, {{missing}} non fatti",
+      "state": {
+        "covered": "{{count}} coperti",
+        "thin": "{{count}} fatti una volta",
+        "missing": "{{count}} non fatti"
+      },
+      "filter": {
+        "all": "Tutto",
+        "gi": "Gi",
+        "nogi": "No-gi",
+        "aria": "Conta gi, no-gi o tutto"
+      },
+      "season": {
+        "previous": "Stagione precedente",
+        "next": "Stagione successiva"
+      },
+      "ago": {
+        "today": "oggi",
+        "yesterday": "ieri",
+        "days": "{{count}} giorni fa",
+        "weekOne": "una settimana fa",
+        "weeks": "{{count}} settimane fa"
+      },
+      "empty": {
+        "noProgrammeTitle": "Nessun programma da confrontare",
+        "noProgrammeHint": "La copertura confronta quello che hai insegnato con quello che avevi detto di insegnare. Imposta il programma e questa pagina si riempie da sola.",
+        "openProgramme": "Apri il programma",
+        "nothingTaughtTitle": "Ancora niente insegnato in questa stagione",
+        "nothingTaughtHint": "Segna dal check-in cosa copre ogni lezione e questa pagina inizia a tenere il conto."
+      },
+      "error": {
+        "title": "Impossibile caricare la copertura",
+        "hint": "Qualcosa è andato storto da parte nostra. Riprova.",
+        "retry": "Riprova"
       }
     }
   },

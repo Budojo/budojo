@@ -32,7 +32,7 @@ describe('StatsComponent (shell)', () => {
     fixture = TestBed.createComponent(StatsComponent);
   });
 
-  it('renders all four tab labels in canonical order', () => {
+  it('renders every tab label in canonical order', () => {
     fixture.detectChanges();
     const labels = Array.from(fixture.nativeElement.querySelectorAll('p-tab')).map((el) =>
       (el as Element).getAttribute('data-cy'),
@@ -42,6 +42,7 @@ describe('StatsComponent (shell)', () => {
       'stats-tab-attendance',
       'stats-tab-payments',
       'stats-tab-athletes',
+      'stats-tab-syllabus',
     ]);
   });
 });
