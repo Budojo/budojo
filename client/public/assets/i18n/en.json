@@ -2454,13 +2454,6 @@
           "title": "Nothing taught yet",
           "hint": "No lesson has been tagged since they joined on {{date}}. There is nothing here to have missed."
         }
-      },
-      "ago": {
-        "today": "today",
-        "yesterday": "yesterday",
-        "days": "{{count}} days ago",
-        "weekOne": "a week ago",
-        "weeks": "{{count}} weeks ago"
       }
     }
   },
@@ -2614,13 +2607,6 @@
       "season": {
         "previous": "Previous season",
         "next": "Next season"
-      },
-      "ago": {
-        "today": "today",
-        "yesterday": "yesterday",
-        "days": "{{count}} days ago",
-        "weekOne": "a week ago",
-        "weeks": "{{count}} weeks ago"
       },
       "empty": {
         "noProgrammeTitle": "No programme to measure against",
@@ -2843,5 +2829,12 @@
     "tooltipCheck": "Check for updates",
     "tooltipInstall": "Install the update and restart",
     "tooltipUnavailable": "This build does not update itself"
+  },
+  "relativeDay": {
+    "today": "today",
+    "yesterday": "yesterday",
+    "days": "{{count}} days ago",
+    "weekOne": "a week ago",
+    "weeks": "{{count}} weeks ago"
   }
 }
