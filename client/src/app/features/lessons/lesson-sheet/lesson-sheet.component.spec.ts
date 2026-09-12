@@ -548,3 +548,34 @@ describe('LessonSheetComponent — what to teach tonight (#1566)', () => {
     expect(fixture.nativeElement.querySelector('[data-cy="lesson-suggestion-11"]')).not.toBeNull();
   });
 });
+
+describe('LessonSheetComponent — a suggestions hiccup is not a broken sheet', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('still opens and stays editable when the suggestions call fails', () => {
+    const { fixture, component, httpMock } = setup();
+
+    httpMock
+      .expectOne((r) => r.url === LESSON_URL && r.method === 'GET')
+      .flush({ data: lesson({ topics: [] }) });
+    httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD] });
+    httpMock.expectOne(RECENT_URL).flush({ data: [] });
+    httpMock
+      .expectOne((r) => r.url === SUGGEST_URL)
+      .flush({ message: 'nope' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    // Suggestions are the one piece of this dialog nobody needs. Failing the
+    // whole open because a dismissable panel did not load would stop an
+    // instructor writing down what they just taught.
+    expect(component['loadFailed']()).toBe(false);
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-sheet-error"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-sheet-tree"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-sheet-suggestions"]')).toBeNull();
+
+    // And the lesson is still editable, which is the whole point.
+    fixture.nativeElement.querySelector('[data-cy="lesson-topic-1"]').click();
+    fixture.detectChanges();
+    expect(component['selected']().has(1)).toBe(true);
+  });
+});
