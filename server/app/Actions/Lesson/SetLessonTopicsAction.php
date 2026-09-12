@@ -13,6 +13,7 @@ class SetLessonTopicsAction
 {
     public function __construct(
         private readonly MaterialiseLessonAction $materialiseLesson,
+        private readonly AdoptUnattributedAttendanceAction $adoptAttendance,
     ) {
     }
 
@@ -53,6 +54,12 @@ class SetLessonTopicsAction
                 ->all();
 
             $lesson->topics()->sync(array_values(array_unique([...$topicIds, ...$gone])));
+
+            // Tagging is the owner naming a session, so it is also the moment
+            // the day's unattributed presences can finally say which one they
+            // were at (#1590). Without this a tagged session full of people
+            // reads as never held, and coverage reports nothing taught.
+            $this->adoptAttendance->execute($lesson);
 
             return $lesson->load('topics');
         });

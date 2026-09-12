@@ -59,6 +59,16 @@ class MarkAttendanceAction
      * spring does not read as empty once Monday has a timetable. Without a
      * class, nothing changes from before.
      *
+     * **It no longer stays unattributed, though (#1590).** Counting as present
+     * everywhere was only ever a display rule; `held` asks the stricter
+     * question of whether an attendance row actually names this lesson, and
+     * the answer stayed no forever, so a tagged session full of people read as
+     * never held and coverage reported nothing taught. Submitting an athlete
+     * for a class is the owner saying which session they were in, so their
+     * class-less row joins it here rather than being skipped. An athlete who
+     * already has a row for *this* lesson is left alone — adopting a second
+     * one would turn one evening into two presences.
+     *
      * @param  list<int>  $athleteIds
      * @return Collection<int, AttendanceRecord>
      */
@@ -98,14 +108,45 @@ class MarkAttendanceAction
             // Laravel wrote — the `date:Y-m-d` cast keeps them aligned in
             // practice, but whereDate is defensive against any edge where a
             // stray timestamp lands in the column).
-            $alreadyPresent = AttendanceRecord::query()
+            $candidates = AttendanceRecord::query()
                 ->whereIn('athlete_id', $validIds)
                 ->whereDate('attended_on', $date->toDateString())
                 ->when($lessonId !== null, static fn ($q) => $q->where(
                     static fn ($q) => $q->whereNull('lesson_id')->orWhere('lesson_id', $lessonId),
                 ))
-                ->get()
-                ->keyBy('athlete_id');
+                ->get();
+
+            // A presence that named no session joins this one rather than
+            // being silently skipped (#1590). The owner has just said these
+            // athletes were in this class, which is the attribution the row
+            // was missing — and until it carries the id, the lesson reads as
+            // never held and coverage counts it as nothing taught.
+            //
+            // Skipped when the athlete already has a row for *this* lesson:
+            // adopting a second one would turn one evening into two presences.
+            if ($lessonId !== null) {
+                $alreadyNamesIt = $candidates
+                    ->filter(static fn (AttendanceRecord $r): bool => $r->lesson_id === $lessonId)
+                    ->keyBy('athlete_id');
+
+                $adopted = $candidates->filter(
+                    static fn (AttendanceRecord $r): bool => $r->lesson_id === null
+                        && ! $alreadyNamesIt->has($r->athlete_id),
+                );
+
+                if ($adopted->isNotEmpty()) {
+                    AttendanceRecord::query()
+                        ->whereIn('id', $adopted->pluck('id')->all())
+                        ->update(['lesson_id' => $lessonId]);
+
+                    $adopted->each(static function (AttendanceRecord $record) use ($lessonId): void {
+                        $record->lesson_id = $lessonId;
+                        $record->syncOriginal();
+                    });
+                }
+            }
+
+            $alreadyPresent = $candidates->keyBy('athlete_id');
 
             /** @var Collection<int, AttendanceRecord> $newRecords */
             $newRecords = collect();
