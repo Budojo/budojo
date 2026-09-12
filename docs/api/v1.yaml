@@ -3499,6 +3499,94 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /lessons/suggestions:
+    get:
+      tags: [attendance]
+      summary: What to teach next in a class (#1566)
+      description: |
+        The coverage report (#1565) answering the question at the moment it is
+        actually asked — on the mat, ten minutes before class — rather than in
+        a screen the owner opens when they sit down to plan a season.
+
+        Three rules, applied in order, and every row says which one produced
+        it. A suggestion whose reasoning is invisible gets ignored; one that
+        says why gets trusted or overruled on the merits.
+
+          1. `never` — in season and not taught yet this season, returned in
+             programme order so a block of work stays coherent.
+          2. `thin` — taught in exactly one held lesson, oldest first.
+          3. `stale` — least recently taught, so an academy that is on top of
+             its programme still gets an answer rather than an empty panel.
+
+        Scoped to the class's own `kind`: a `gi` class is never told to teach a
+        no-gi technique, and a `nogi` class never a gi one. A `both` or `other`
+        class admits everything. Positions are never suggested — "teach closed
+        guard tonight" is not an answer.
+
+        "Held" and "this season" mean exactly what they mean in
+        `/stats/syllabus/coverage`: only lessons somebody was checked into, only
+        up to today, so a topic on next week's plan still reads as untaught.
+
+        Addressed by class alone, with no date: the ranking reads the season so
+        far, so the answer is the same for next Wednesday as for the one after.
+
+        Requires `attendance_read`. An academy with no programme gets an empty
+        list, and the client renders no panel at all.
+      operationId: lessonSuggestions
+      parameters:
+        - name: academy_class_id
+          in: query
+          required: true
+          schema: { type: integer }
+          description: A class on the caller's own timetable.
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 10, default: 3 }
+          description: |
+            How many to return. Three is what fits beside the picker without
+            becoming a list to read; the cap stops a client turning a
+            suggestion into the whole syllabus.
+      responses:
+        '200':
+          description: What to teach next, best first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, parent_name, kind, reason, last_taught_on]
+                      properties:
+                        id: { type: integer }
+                        name: { type: string }
+                        parent_name:
+                          type: string
+                          nullable: true
+                          description: The position it sits under.
+                        kind:
+                          type: string
+                          enum: [gi, nogi, both]
+                        reason:
+                          type: string
+                          enum: [never, thin, stale]
+                          description: Which of the three rules produced this row.
+                        last_taught_on:
+                          type: string
+                          format: date
+                          nullable: true
+                          description: Null exactly when `reason` is `never`.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
   /stats/syllabus/coverage:
     get:
       tags: [Stats]

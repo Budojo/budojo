@@ -7,11 +7,13 @@ namespace App\Http\Controllers\Lesson;
 use App\Actions\Lesson\RecentLessonTopicsAction;
 use App\Actions\Lesson\SetLessonNotesAction;
 use App\Actions\Lesson\SetLessonTopicsAction;
+use App\Actions\Lesson\SuggestLessonTopicsAction;
 use App\Authorization\Capability;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Lesson\SetLessonNotesRequest;
 use App\Http\Requests\Lesson\SetLessonTopicsRequest;
 use App\Http\Requests\Lesson\ShowLessonRequest;
+use App\Http\Requests\Lesson\SuggestLessonTopicsRequest;
 use App\Http\Resources\LessonResource;
 use App\Http\Resources\LessonTopicResource;
 use App\Models\Lesson;
@@ -33,6 +35,7 @@ class LessonController extends Controller
         private readonly SetLessonTopicsAction $setTopics,
         private readonly SetLessonNotesAction $setNotes,
         private readonly RecentLessonTopicsAction $recentTopics,
+        private readonly SuggestLessonTopicsAction $suggestTopics,
     ) {
     }
 
@@ -84,6 +87,25 @@ class LessonController extends Controller
         return response()->json([
             'data' => LessonTopicResource::collection($this->recentTopics->execute($academy))
                 ->resolve($request),
+        ]);
+    }
+
+    /**
+     * What to teach tonight (#1566) — the coverage data answering the question
+     * at the moment it is actually asked, rather than in a report.
+     */
+    public function suggestions(SuggestLessonTopicsRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $academy = $user->activeAcademy();
+
+        if ($academy === null) {
+            return response()->json(['data' => []]);
+        }
+
+        return response()->json([
+            'data' => $this->suggestTopics->execute($academy, $request->academyClass(), $request->limit()),
         ]);
     }
 

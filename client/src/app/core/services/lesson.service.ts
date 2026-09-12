@@ -42,6 +42,24 @@ export interface Lesson {
   readonly topics: readonly LessonTopic[];
 }
 
+/**
+ * Why a topic is being suggested (#1566). Three rules, in order, and the UI
+ * says which one fired — a suggestion whose reasoning is invisible gets
+ * ignored, and one that says why gets trusted or overruled on the merits.
+ */
+export type SuggestionReason = 'never' | 'thin' | 'stale';
+
+/** One answer to "what should I teach tonight?" (#1566). */
+export interface LessonSuggestion {
+  readonly id: number;
+  readonly name: string;
+  readonly parent_name: string | null;
+  readonly kind: TopicKind;
+  readonly reason: SuggestionReason;
+  /** `null` exactly when the reason is `never`. */
+  readonly last_taught_on: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class LessonService {
   private readonly http = inject(HttpClient);
@@ -86,6 +104,25 @@ export class LessonService {
   recentTopics(): Observable<LessonTopic[]> {
     return this.http
       .get<{ data: LessonTopic[] }>(`${this.base}/recent-topics`)
+      .pipe(map((r) => r.data));
+  }
+
+  /**
+   * What to teach next in this class (#1566).
+   *
+   * The coverage report answers this when you sit down to think about the
+   * season; this answers it on the mat, ten minutes before class. Same data,
+   * and the difference is whether anyone ever asks.
+   *
+   * Addressed by class alone: the ranking reads the season so far, so it is
+   * the same answer for next Wednesday as for the one after.
+   */
+  suggestions(academyClassId: number, limit?: number): Observable<LessonSuggestion[]> {
+    let params = new HttpParams().set('academy_class_id', academyClassId);
+    if (limit !== undefined) params = params.set('limit', limit);
+
+    return this.http
+      .get<{ data: LessonSuggestion[] }>(`${this.base}/suggestions`, { params })
       .pipe(map((r) => r.data));
   }
 }

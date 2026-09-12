@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { MessageService } from 'primeng/api';
-import { Lesson, LessonTopic } from '../../../core/services/lesson.service';
+import { Lesson, LessonSuggestion, LessonTopic } from '../../../core/services/lesson.service';
 import { SyllabusTopic } from '../../../core/services/syllabus.service';
 import { provideI18nTesting } from '../../../../test-utils/i18n-test';
 import { LessonSheetComponent } from './lesson-sheet.component';
@@ -11,6 +11,7 @@ import { LessonSheetComponent } from './lesson-sheet.component';
 const LESSON_URL = '/api/v1/lessons';
 const SYLLABUS_URL = '/api/v1/academy/syllabus';
 const RECENT_URL = '/api/v1/lessons/recent-topics';
+const SUGGEST_URL = '/api/v1/lessons/suggestions';
 
 function topic(over: Partial<SyllabusTopic> & { id: number }): SyllabusTopic {
   return {
@@ -43,6 +44,17 @@ const MOUNT = topic({
   sort_order: 1,
   children: [topic({ id: 21, parent_id: 2, name: 'Ezekiel' })],
 });
+
+function suggestion(over: Partial<LessonSuggestion> & { id: number }): LessonSuggestion {
+  return {
+    name: `Topic ${over.id}`,
+    parent_name: null,
+    kind: 'both',
+    reason: 'never',
+    last_taught_on: null,
+    ...over,
+  };
+}
 
 function lesson(over: Partial<Lesson> = {}): Lesson {
   return {
@@ -84,13 +96,19 @@ function setup() {
 
 function flushOpen(
   httpMock: HttpTestingController,
-  opts: { lesson?: Lesson | null; positions?: SyllabusTopic[]; recent?: LessonTopic[] } = {},
+  opts: {
+    lesson?: Lesson | null;
+    positions?: SyllabusTopic[];
+    recent?: LessonTopic[];
+    suggestions?: LessonSuggestion[];
+  } = {},
 ): void {
   httpMock
     .expectOne((r) => r.url === LESSON_URL && r.method === 'GET')
     .flush({ data: opts.lesson === undefined ? null : opts.lesson });
   httpMock.expectOne(SYLLABUS_URL).flush({ data: opts.positions ?? [CLOSED_GUARD, MOUNT] });
   httpMock.expectOne(RECENT_URL).flush({ data: opts.recent ?? [] });
+  httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: opts.suggestions ?? [] });
 }
 
 describe('LessonSheetComponent (#1564)', () => {
@@ -105,6 +123,7 @@ describe('LessonSheetComponent (#1564)', () => {
     read.flush({ data: null });
     httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD] });
     httpMock.expectOne(RECENT_URL).flush({ data: [] });
+    httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: [] });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-cy="lesson-sheet-tree"]')).not.toBeNull();
@@ -322,6 +341,7 @@ describe('LessonSheetComponent (#1564)', () => {
     // errors, and a cancelled request cannot be flushed.
     httpMock.expectOne(SYLLABUS_URL).flush({ data: [] });
     httpMock.expectOne(RECENT_URL).flush({ data: [] });
+    httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: [] });
     httpMock
       .expectOne((r) => r.url === LESSON_URL && r.method === 'GET')
       .flush('boom', { status: 500, statusText: 'Server Error' });
@@ -389,5 +409,142 @@ describe('LessonSheetComponent (#1564)', () => {
     read.flush({ data: null });
     httpMock.expectOne(SYLLABUS_URL).flush({ data: [] });
     httpMock.expectOne(RECENT_URL).flush({ data: [] });
+    httpMock.expectOne((r) => r.url === SUGGEST_URL).flush({ data: [] });
+  });
+});
+
+describe('LessonSheetComponent — what to teach tonight (#1566)', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('asks for suggestions by class, not by slot', () => {
+    const { httpMock } = setup();
+
+    httpMock.expectOne((r) => r.url === LESSON_URL && r.method === 'GET').flush({ data: null });
+    httpMock.expectOne(SYLLABUS_URL).flush({ data: [CLOSED_GUARD] });
+    httpMock.expectOne(RECENT_URL).flush({ data: [] });
+
+    const ask = httpMock.expectOne((r) => r.url === SUGGEST_URL);
+    // The ranking reads the season so far, so the date would imply a
+    // precision the rules do not have.
+    expect(ask.request.params.get('academy_class_id')).toBe('3');
+    expect(ask.request.params.get('held_on')).toBeNull();
+    ask.flush({ data: [] });
+  });
+
+  it('shows each suggestion with the reason it was suggested', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, {
+      suggestions: [
+        suggestion({ id: 11, name: 'Armbar', parent_name: 'Closed guard', reason: 'never' }),
+        suggestion({
+          id: 12,
+          name: 'Triangle',
+          reason: 'thin',
+          last_taught_on: '2026-03-12',
+        }),
+      ],
+    });
+    fixture.detectChanges();
+
+    const panel = fixture.nativeElement.querySelector('[data-cy="lesson-sheet-suggestions"]');
+    expect(panel).not.toBeNull();
+    expect(panel.textContent).toContain('Armbar');
+    expect(panel.textContent).toContain('Closed guard');
+    // A suggestion whose reasoning is invisible gets ignored.
+    expect(panel.textContent).toContain('Not taught yet this season');
+    expect(panel.textContent).toContain('12 Mar');
+  });
+
+  it('never pre-selects a suggestion', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { suggestions: [suggestion({ id: 11, name: 'Armbar' })] });
+    fixture.detectChanges();
+
+    // A suggestion that fills the field becomes wrong data the evening the
+    // instructor teaches something else.
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-sheet-chosen"]')).toBeNull();
+    const button = fixture.nativeElement.querySelector('[data-cy="lesson-suggestion-11"]');
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('accepts one in a single tap, and it leaves the suggestions', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, {
+      suggestions: [
+        suggestion({ id: 11, name: 'Armbar' }),
+        suggestion({ id: 12, name: 'Triangle' }),
+      ],
+    });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-cy="lesson-suggestion-11"]').click();
+    fixture.detectChanges();
+
+    const panel = fixture.nativeElement.querySelector('[data-cy="lesson-sheet-suggestions"]');
+    expect(panel.textContent).not.toContain('Armbar');
+    expect(panel.textContent).toContain('Triangle');
+  });
+
+  it('lets one be waved away without touching the lesson', () => {
+    const { fixture, component, httpMock } = setup();
+    flushOpen(httpMock, {
+      suggestions: [
+        suggestion({ id: 11, name: 'Armbar' }),
+        suggestion({ id: 12, name: 'Triangle' }),
+      ],
+    });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-cy="lesson-suggestion-dismiss-11"]').click();
+    fixture.detectChanges();
+
+    const panel = fixture.nativeElement.querySelector('[data-cy="lesson-sheet-suggestions"]');
+    expect(panel.textContent).not.toContain('Armbar');
+    expect(panel.textContent).toContain('Triangle');
+    // Dismissing is not choosing: nothing was added to the lesson.
+    expect(component['selected']().size).toBe(0);
+  });
+
+  it('hides the panel entirely when every suggestion is gone', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { suggestions: [suggestion({ id: 11, name: 'Armbar' })] });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-cy="lesson-suggestion-dismiss-11"]').click();
+    fixture.detectChanges();
+
+    // An empty group with a heading is worse than no group.
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-sheet-suggestions"]')).toBeNull();
+  });
+
+  it('renders no panel at all for an academy with no programme', () => {
+    const { fixture, httpMock } = setup();
+    flushOpen(httpMock, { positions: [], suggestions: [] });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-sheet-suggestions"]')).toBeNull();
+  });
+
+  it('forgets what was waved away when the sheet is reopened on another slot', () => {
+    const { fixture, component, httpMock } = setup();
+    flushOpen(httpMock, { suggestions: [suggestion({ id: 11, name: 'Armbar' })] });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-cy="lesson-suggestion-dismiss-11"]').click();
+    fixture.detectChanges();
+    expect(component['dismissed']().size).toBe(1);
+
+    // "Not tonight" is not "never". An internal set() does not reset the
+    // input's memo, so the close has to go through the input.
+    fixture.componentRef.setInput('visible', false);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+
+    flushOpen(httpMock, { suggestions: [suggestion({ id: 11, name: 'Armbar' })] });
+    fixture.detectChanges();
+
+    expect(component['dismissed']().size).toBe(0);
+    expect(fixture.nativeElement.querySelector('[data-cy="lesson-suggestion-11"]')).not.toBeNull();
   });
 });

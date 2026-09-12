@@ -592,6 +592,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         // not exist yet. `/recent-topics` first, or it would never be
         // reachable behind a wildcard added here later.
         Route::get('/lessons/recent-topics', [\App\Http\Controllers\Lesson\LessonController::class, 'recent']);
+        Route::get('/lessons/suggestions', [\App\Http\Controllers\Lesson\LessonController::class, 'suggestions']);
         Route::get('/lessons', [\App\Http\Controllers\Lesson\LessonController::class, 'show']);
         Route::put('/lessons/topics', [\App\Http\Controllers\Lesson\LessonController::class, 'setTopics']);
         Route::put('/lessons/notes', [\App\Http\Controllers\Lesson\LessonController::class, 'setNotes']);
