@@ -146,6 +146,58 @@
           </section>
         }
 
+        @if (suggestionsOffered().length > 0) {
+          <!--
+            What to teach tonight (#1566). The coverage report answers this
+            when you sit down to plan a season; here it answers at the moment
+            the question is actually asked. Each one carries its reason, and
+            none is pre-selected — a suggestion that fills the field becomes
+            wrong data the evening the instructor teaches something else.
+          -->
+          <section class="group" data-cy="lesson-sheet-suggestions">
+            <h3 class="group__title">{{ 'lessons.sheet.suggestions.title' | translate }}</h3>
+            <ul class="topics">
+              @for (item of suggestionsOffered(); track item.id) {
+                <li class="suggestion">
+                  <button
+                    type="button"
+                    class="topic topic--suggested"
+                    [attr.aria-pressed]="false"
+                    (click)="toggle(item.id)"
+                    [attr.data-cy]="'lesson-suggestion-' + item.id"
+                  >
+                    <i class="topic__tick pi pi-circle" aria-hidden="true"></i>
+                    <span class="topic__name">{{ item.name }}</span>
+                    @if (item.parent_name) {
+                      <span class="topic__parent">{{ item.parent_name }}</span>
+                    }
+                    <span class="topic__reason">
+                      @if (item.reason === 'never') {
+                        {{ 'lessons.sheet.suggestions.reason.never' | translate }}
+                      } @else {
+                        {{
+                          reasonKey(item.reason)
+                            | translate: { date: shortDate(item.last_taught_on ?? '') }
+                        }}
+                      }
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="suggestion__dismiss"
+                    (click)="dismissSuggestion(item.id)"
+                    [attr.aria-label]="'lessons.sheet.suggestions.dismiss' | translate"
+                    [pTooltip]="'lessons.sheet.suggestions.dismiss' | translate"
+                    [attr.data-cy]="'lesson-suggestion-dismiss-' + item.id"
+                  >
+                    <i class="pi pi-times" aria-hidden="true"></i>
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+
         @if (recentOffered().length > 0) {
           <!--
             Teaching runs in blocks, so what the academy taught last week is
