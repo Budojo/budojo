@@ -46,9 +46,14 @@ return new class extends Migration
             // from MySQL's DATE handling; both compare correctly once cut.
             $date = substr((string) $lesson->held_on, 0, 10);
 
+            // `dayOfWeek`, not `dayOfWeekIso`: `academy_classes.weekday` is
+            // Carbon's 0=Sun..6=Sat everywhere, validated `between:0,6`. The
+            // two agree Monday through Saturday and differ only on Sunday,
+            // where no stored row can equal 7 — so ISO would count zero
+            // classes and let an ambiguous Sunday through.
             $sessionsThatWeekday = DB::table('academy_classes')
                 ->where('academy_id', $academyId)
-                ->where('weekday', CarbonImmutable::parse($date)->dayOfWeekIso)
+                ->where('weekday', CarbonImmutable::parse($date)->dayOfWeek)
                 ->count();
 
             if ($sessionsThatWeekday > 1) {
@@ -66,9 +71,24 @@ return new class extends Migration
                 continue;
             }
 
+            // An athlete who already has a row naming this lesson keeps just
+            // that one. No current write path can leave such a pair on disk —
+            // every insert treats any same-date row as "already present" — but
+            // this is data written by older versions of the app, and giving
+            // somebody two presences for one evening is not a mistake worth
+            // risking to save a subquery.
+            $alreadyNamingThisLesson = DB::table('attendance_records')
+                ->where('lesson_id', $lesson->id)
+                ->pluck('athlete_id')
+                ->all();
+
             DB::table('attendance_records')
                 ->whereNull('lesson_id')
                 ->whereDate('attended_on', $date)
+                ->when(
+                    $alreadyNamingThisLesson !== [],
+                    static fn ($query) => $query->whereNotIn('athlete_id', $alreadyNamingThisLesson),
+                )
                 // No `deleted_at` filter on either side: an athlete who has
                 // since left still trained that night, and a presence that was
                 // later corrected away is still not this lesson's to claim —

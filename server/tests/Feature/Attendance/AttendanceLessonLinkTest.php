@@ -30,7 +30,9 @@ beforeEach(function (): void {
     $this->academy = $this->user->academy;
 
     $this->date = '2026-09-09';
-    $this->weekday = CarbonImmutable::parse($this->date)->dayOfWeekIso;
+    // Carbon's `dayOfWeek` (0=Sun..6=Sat), which is what `academy_classes`
+    // stores. ISO would agree here and differ only on a Sunday.
+    $this->weekday = CarbonImmutable::parse($this->date)->dayOfWeek;
 
     $this->class = AcademyClass::factory()->for($this->academy)->create([
         'name' => 'Standard Class',
@@ -263,4 +265,114 @@ it('backfill does not reach into another academy', function (): void {
     runBackfill();
 
     expect($record->fresh()->lesson_id)->toBeNull();
+});
+
+// ─── The cases the first pass missed ─────────────────────────────────────────
+
+it('still refuses a Sunday that had two sessions', function (): void {
+    // The one day Carbon's `dayOfWeek` (0) and ISO (7) disagree. Reading the
+    // column as ISO matched no row, so the guard counted zero classes and
+    // failed **open** — on the day it was most needed. Every other weekday
+    // agrees, which is why a Wednesday fixture could not see it.
+    $sunday = '2026-09-13';
+    expect(CarbonImmutable::parse($sunday)->dayOfWeek)->toBe(0)
+        ->and(CarbonImmutable::parse($sunday)->dayOfWeekIso)->toBe(7);
+
+    $morning = AcademyClass::factory()->for($this->academy)->create([
+        'name' => 'Sunday open mat', 'weekday' => 0, 'starts_at' => '10:00',
+    ]);
+    AcademyClass::factory()->for($this->academy)->create([
+        'name' => 'Sunday competition', 'weekday' => 0, 'starts_at' => '17:00',
+    ]);
+
+    $record = AttendanceRecord::factory()->create([
+        'athlete_id' => $this->athlete->id,
+        'lesson_id' => null,
+        'attended_on' => $sunday,
+        'source' => AttendanceSource::Instructor,
+    ]);
+
+    $this->actingAs($this->user)->putJson('/api/v1/lessons/topics', [
+        'academy_class_id' => $morning->id,
+        'held_on' => $sunday,
+        'topic_ids' => [$this->sMount->id],
+    ])->assertOk();
+
+    expect($record->fresh()->lesson_id)->toBeNull();
+});
+
+it('refuses a date that already carries two lessons, whatever the timetable says now', function (): void {
+    // The class was deleted or moved since that evening, so counting today's
+    // timetable finds one session where there were two. `AcademyClass` is hard
+    // deleted, so the lessons are the only surviving evidence.
+    $gone = AcademyClass::factory()->for($this->academy)->create([
+        'name' => 'Since deleted', 'weekday' => $this->weekday, 'starts_at' => '17:00',
+    ]);
+    Lesson::factory()->for($this->academy)->create([
+        'academy_class_id' => $gone->id,
+        'held_on' => $this->date,
+    ]);
+    $gone->delete();
+
+    $record = unattributedPresence($this);
+
+    tagTopics($this, [$this->sMount->id])->assertOk();
+
+    expect($record->fresh()->lesson_id)->toBeNull();
+});
+
+it('adopts the presence of an athlete who has since left', function (): void {
+    $departed = Athlete::factory()->for($this->academy)->create();
+    $record = unattributedPresence($this, $departed);
+    $departed->delete();
+
+    tagTopics($this, [$this->sMount->id])->assertOk();
+
+    $lesson = Lesson::query()->where('academy_class_id', $this->class->id)->firstOrFail();
+
+    // They still trained that night and the lesson was still held. Dropping
+    // them would make a real session read as emptier than it was.
+    expect($record->fresh()->lesson_id)->toBe($lesson->id);
+});
+
+it('never gives one athlete two presences for one lesson across the two paths', function (): void {
+    $second = Athlete::factory()->for($this->academy)->create();
+    unattributedPresence($this);
+    unattributedPresence($this, $second);
+
+    // Path one: the owner checks the first athlete into the class.
+    $this->actingAs($this->user)->postJson('/api/v1/attendance', [
+        'athlete_ids' => [$this->athlete->id],
+        'date' => $this->date,
+        'academy_class_id' => $this->class->id,
+    ])->assertSuccessful();
+
+    // Path two: then tags the session, which sweeps up the rest of the day.
+    tagTopics($this, [$this->sMount->id])->assertOk();
+
+    $lesson = Lesson::query()->where('academy_class_id', $this->class->id)->firstOrFail();
+
+    expect(AttendanceRecord::query()->where('lesson_id', $lesson->id)->count())->toBe(2)
+        ->and(AttendanceRecord::query()->where('athlete_id', $this->athlete->id)->count())->toBe(1)
+        ->and(AttendanceRecord::query()->where('athlete_id', $second->id)->count())->toBe(1);
+});
+
+it('backfill leaves an athlete who already names the lesson with a single presence', function (): void {
+    $lesson = Lesson::factory()->for($this->academy)->create([
+        'academy_class_id' => $this->class->id,
+        'held_on' => $this->date,
+    ]);
+    AttendanceRecord::factory()->create([
+        'athlete_id' => $this->athlete->id,
+        'lesson_id' => $lesson->id,
+        'attended_on' => $this->date,
+        'source' => AttendanceSource::Instructor,
+    ]);
+    // An anomaly no current write path produces, but older versions might have.
+    $stray = unattributedPresence($this);
+
+    runBackfill();
+
+    expect($stray->fresh()->lesson_id)->toBeNull()
+        ->and(AttendanceRecord::query()->where('lesson_id', $lesson->id)->count())->toBe(1);
 });
